@@ -271,6 +271,22 @@
 .sub-badge.sub-lite{color:#9aa4bf}
 .sub-badge.sub-friend{color:#7c8cff}
 .sub-badge.sub-pro{color:#a78bfa;text-shadow:0 0 6px rgba(167,139,250,.45)!important}
+/* 🖼 프로필 프레임 — 아바타 테두리.
+   ⚠️ border가 아니라 box-shadow(inset+outer)로 그린다. border를 쓰면 아바타 크기가
+      화면마다 1~2px씩 밀려서 정렬이 깨진다(아바타는 크기가 제각각인 데다 flex 안에 있다). */
+.pf-frame{position:relative;border-radius:50%}
+.pf-silver{box-shadow:0 0 0 2px #b9c0cf, 0 0 6px rgba(185,192,207,.5)}
+.pf-aqua  {box-shadow:0 0 0 2px #4dd8e6, 0 0 9px rgba(77,216,230,.55)}
+.pf-ember {box-shadow:0 0 0 2px #ff9a4d, 0 0 10px rgba(255,154,77,.55)}
+.pf-violet{box-shadow:0 0 0 2px #a78bfa, 0 0 12px rgba(167,139,250,.6)}
+.pf-prism {box-shadow:0 0 0 2px #7c8cff, 0 0 14px rgba(124,140,255,.5), 0 0 22px rgba(255,120,200,.35)}
+@media (prefers-reduced-motion: no-preference){
+  .pf-prism{animation:pfPrism 4s linear infinite}
+  @keyframes pfPrism{
+    0%,100%{box-shadow:0 0 0 2px #7c8cff, 0 0 14px rgba(124,140,255,.5), 0 0 22px rgba(255,120,200,.35)}
+    50%    {box-shadow:0 0 0 2px #ff78c8, 0 0 14px rgba(255,120,200,.5), 0 0 22px rgba(124,140,255,.35)}
+  }
+}
 .nick-title{display:inline-block;font-size:.72em;font-weight:900;vertical-align:middle;color:#c9d1e0;background:rgba(201,209,224,.14);border:1px solid rgba(201,209,224,.35);border-radius:99px;padding:1px 7px;margin-right:5px;line-height:1.5;white-space:nowrap}
 .ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;background-size:200% 100%}
 .ns-neon{background-image:linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff);text-shadow:0 0 10px rgba(0,229,255,.5);animation:nsShine 3s linear infinite}
@@ -368,11 +384,12 @@
       // gi_of_users 배치 RPC로 need 전체의 갈라 지수를 한 번에 받는다.
       // 🎫 이용권 등급도 같이 받는다 — 배지는 남의 것도 봐야 해서 전용 RPC(tiers_of).
       //    등급 문자열만 온다(만료일·결제정보 없음). 무료·게스트는 아예 결과에 없다.
-      const [{ data }, giRes, tierRes, nsRes] = await Promise.all([
+      const [{ data }, giRes, tierRes, nsRes, frRes] = await Promise.all([
         window.supabaseClient.from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need),
         window.supabaseClient.rpc("gi_of_users", { p_uids: need }),
         window.supabaseClient.rpc("tiers_of", { p_uids: need }).then(r => r, () => ({ data: null })),
         window.supabaseClient.rpc("nickstyles_of", { p_uids: need }).then(r => r, () => ({ data: null })),
+        window.supabaseClient.rpc("frames_of", { p_uids: need }).then(r => r, () => ({ data: null })),
       ]);
       (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title, nick_style: r.nick_style }; });
       const giMap = giRes && giRes.data ? giRes.data : {};
@@ -384,6 +401,8 @@
          ⚠️ RPC가 실패하면 덮어쓰지 않는다(장착 기록 그대로) — 일시 장애로 남의 꾸미기가
             통째로 사라지는 것보다는 낫다. */
       if (nsMap) need.forEach(u => { cache[u].nick_style = nsMap[u] || null; });
+      const frMap = frRes && frRes.data ? frRes.data : {};
+      need.forEach(u => { cache[u].frame = frMap[u] || null; });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -400,6 +419,29 @@
     ".lb-name[data-user-id]", ".pf-cname[data-user-id]",
     ".user-row-name[data-user-id]", ".dm-thread-name[data-user-id]",
   ].join(", ");
+  /* 🖼 아바타 선별 목록 — 닉네임(NICK_SEL)과 같은 방식. 화면마다 클래스가 달라
+     범용 마커가 없어서 열거한다. 새 화면을 만들 땐 여기 추가하거나 .gu-av를 쓰면 된다. */
+  /* 클래스 이름이 화면마다 달라서(gu-av·c-avatar·dm-ava·mah-avatar…) 열거로는 못 따라간다.
+     이 코드베이스의 아바타는 예외 없이 'avatar' 또는 '-av' 조각을 갖고 있어 패턴으로 잡는다. */
+  const AV_SEL = '[class*="avatar"], [class*="-av"], .avatar';
+  function _applyFrame(nickEl, frame) {
+    let node = nickEl, av = null;
+    for (let i = 0; i < 3 && node && !av; i++) {
+      node = node.parentElement;
+      if (!node) break;
+      const hits = node.querySelectorAll(AV_SEL);
+      /* ⚠️ 조상이 '목록'이면 옆 사람 아바타를 잡는다. 후보가 둘 이상이면 그 층은 건너뛰고
+         더 좁은 층에서만 찾는다 — 남의 아바타에 내 프레임을 씌우는 사고를 막는다. */
+      if (hits.length === 1) av = hits[0];
+      else if (hits.length > 1) break;
+    }
+    if (!av) return;
+    if (av.getAttribute("data-frame") === frame) return;   // 이미 같은 프레임
+    [...av.classList].filter(c => c.startsWith("pf-")).forEach(c => av.classList.remove(c));
+    av.classList.add("pf-frame", "pf-" + frame);
+    av.setAttribute("data-frame", frame);
+  }
+
   let _ngPending = false;
   async function _applyNickGold() {
     _ngPending = false;
@@ -439,6 +481,11 @@
            등급 아이콘(활동)과 이용권 배지(결제)는 성격이 달라 붙는 위치로 구분한다.
            ⚠️ 무료·게스트는 tiers_of 결과에 아예 없으므로 배지도 안 붙는다
               — "이 사람 무과금"이라는 정보를 흘리지 않기 위해서다. */
+        /* 🖼 프로필 프레임 — 아바타에 테두리를 입힌다.
+           아바타는 화면마다 클래스가 제각각이라(gu-av·pza-av·dm-ava…) 닉네임처럼
+           범용 마커가 없다. 그래서 **이름 요소에서 가까운 조상 안의 아바타**를 찾는다.
+           ⚠️ 3단계까지만 올라간다. 더 올라가면 남의 아바타(옆 카드)를 잡는다. */
+        if (d.frame) _applyFrame(el, d.frame);
         if (d.sub && !(el.lastElementChild && el.lastElementChild.classList.contains("sub-badge"))) {
           const sb = document.createElement("span");
           sb.className = "sub-badge sub-" + d.sub;
@@ -482,6 +529,17 @@
       // 🎫 이용권 배지는 이름 '뒤' — 안 지우면 재도색마다 겹겹이 쌓인다
       const sb = el.lastElementChild;
       if (sb && sb.classList.contains("sub-badge")) sb.remove();
+      // 🖼 프레임도 벗긴다 — 구독 해지·프레임 변경이 화면에 반영되려면 초기화가 필요하다
+      let n = el, av = null;
+      for (let i = 0; i < 3 && n && !av; i++) {
+        n = n.parentElement; if (!n) break;
+        const hits = n.querySelectorAll(AV_SEL);
+        if (hits.length === 1) av = hits[0]; else if (hits.length > 1) break;
+      }
+      if (av) {
+        [...av.classList].filter(c => c.startsWith("pf-")).forEach(c => av.classList.remove(c));
+        av.removeAttribute("data-frame");
+      }
       // 레거시(이전 형제로 넣던 버전) 잔재도 청소
       const t = el.previousElementSibling;
       if (t && (t.classList.contains("nick-title") || t.classList.contains("nick-tier"))) t.remove();

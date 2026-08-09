@@ -45,6 +45,11 @@
         background:rgba(106,123,255,.07);border:1px solid rgba(106,123,255,.2);
         color:#8a90a3;font-size:12px;font-weight:800}
       .tt-preview-nick{font-size:17px;font-weight:900;color:#fff}
+      .tt-fprev{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+        background:linear-gradient(135deg,#2a2d36,#1a1c22);border:1px solid rgba(255,255,255,.1)}
+      .tt-bal-gc{color:#f2c14e;margin-left:6px;padding-left:6px;border-left:1px solid rgba(255,255,255,.18)}
+      .tt-bysub{font-style:normal;font-size:10px;font-weight:900;color:#a78bfa;
+        background:rgba(167,139,250,.14);border-radius:5px;padding:2px 5px;margin-left:5px;vertical-align:middle}
       .tt-close{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
     `;
     document.head.appendChild(s);
@@ -52,12 +57,26 @@
 
   let sheet, tab = "style", bal = 0, ME = null, myNick = "내 닉네임";
   let gi = 0, tiers = [], awards = [], equipT = null, ownedS = new Set(), equipS = null;
+  /* 🖼 프레임 — 아바타 테두리. 닉네임 스타일이 GP인 것과 달리 **GC**로 판다.
+     겹치는 품목이 없어야 환율이 안 생긴다(닉네임=이름, 프레임=아바타). */
+  let FRAMES = [], ownedF = new Set(), equipF = null, frameBySub = false, gcBal = 0;
 
   async function refresh() {
-    const [balR, ms, sess] = await Promise.all([
+    const [balR, ms, sess, fcR, mfR, gcR] = await Promise.all([
       sb().rpc("ensure_balance"), sb().rpc("my_nickstyles"), sb().auth.getSession(),
+      sb().rpc("frames_catalog").then(r => r, () => ({ data: null })),
+      sb().rpc("my_frames").then(r => r, () => ({ data: null })),
+      sb().rpc("gc_balance").then(r => r, () => ({ data: 0 })),
     ]);
     bal = Math.round(balR.data || 0);
+    gcBal = Math.round((typeof gcR.data === "number" ? gcR.data : gcR.data?.balance) || 0);
+    const cat = fcR.data || {};
+    // 기본(none)이 항상 맨 앞, 나머지는 가격순 — 목록 순서가 매번 바뀌면 못 찾는다
+    FRAMES = Object.keys(cat).map(k => ({ k, n: cat[k].name, p: Number(cat[k].price) || 0 }))
+      .sort((a, b) => (a.k === "none" ? -1 : b.k === "none" ? 1 : a.p - b.p));
+    ownedF = new Set(mfR.data?.owned || []);
+    equipF = mfR.data?.equipped || null;
+    frameBySub = !!mfR.data?.by_sub;
     ownedS = new Set(ms.data?.owned || []); equipS = ms.data?.equipped || null;
     ME = sess.data?.session?.user?.id || null;
     if (ME && myNick === "내 닉네임") {
@@ -97,10 +116,41 @@
     return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">${label}</span>${btn}</div>`;
   }
 
+  /* 프레임 한 줄 — 미리보기 원 + 구매(GC)/선택.
+     구독으로 쓰는 중이면 '이용권' 칩을 달아, 구독이 끝나면 사라진다는 걸 미리 알린다. */
+  function frameRow(f) {
+    const isEq = (f.k === "none" && (!equipF || equipF === "none")) || (f.k === equipF && f.k !== "none");
+    const own = f.p === 0 || ownedF.has(f.k);
+    const usable = own || frameBySub;
+    const prev = `<span class="tt-fprev ${f.k === "none" ? "" : "pf-frame pf-" + f.k}"></span>`;
+    let btn;
+    if (isEq) btn = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
+    else if (usable) btn = `<button class="tt-btn equip" data-frame="${f.k}">선택</button>`;
+    else btn = `<button class="tt-btn buy${gcBal >= f.p ? "" : " no"}" data-buyframe="${f.k}" ${gcBal >= f.p ? "" : "disabled"}>${f.p.toLocaleString()} GC</button>`;
+    const sub = (!own && frameBySub && f.p > 0) ? ` <i class="tt-bysub">이용권</i>` : "";
+    return `<div class="tt-item${isEq ? " eq" : ""}">${prev}<span class="tt-name">${f.n}${sub}</span>${btn}</div>`;
+  }
+
   function render() {
-    sheet.querySelector("#tt-bal").textContent = bal.toLocaleString() + " GP";
+    sheet.querySelector("#tt-bal").innerHTML =
+      `${bal.toLocaleString()} GP <span class="tt-bal-gc">${gcBal.toLocaleString()} GC</span>`;
     const note = sheet.querySelector("#tt-note");
     const grid = sheet.querySelector("#tt-grid");
+    const tabs = sheet.querySelector("#tt-tabs");
+    if (tabs) {
+      tabs.innerHTML =
+        `<button class="tt-tab${tab === "style" ? " on" : ""}" data-tab="style" type="button">✨ 닉네임</button>` +
+        `<button class="tt-tab${tab === "frame" ? " on" : ""}" data-tab="frame" type="button">🖼 프레임</button>`;
+      tabs.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+    }
+    if (tab === "frame") {
+      note.innerHTML = frameBySub
+        ? `아바타 테두리 — <b style="color:#a78bfa">이용권으로 전부 사용 중</b>이에요 (구독이 끝나면 구매한 것만 남아요)`
+        : `아바타 테두리 — 댓글·프로필 어디서나 내 아바타에 붙어요`;
+      grid.innerHTML = FRAMES.map(frameRow).join("");
+      wire(grid);
+      return;
+    }
     /* 🏷️ 칭호 선택 폐지(사장님) — 등급은 등급 화면이 진실이고, 장착식 칭호는
        '뉴비가 여론 논객' 같은 뒤죽박죽만 만든다. 스타일 단독 시트로. */
     if (false) {
@@ -124,6 +174,14 @@
     grid.querySelectorAll("[data-tier]").forEach(b => b.onclick = () => doEquip("equip_tier_title", b.dataset.tier, "title"));
     grid.querySelectorAll("[data-award]").forEach(b => b.onclick = () => doEquip("equip_title", b.dataset.award, "title"));
     grid.querySelectorAll("[data-style]").forEach(b => b.onclick = () => doEquip("equip_nickstyle", b.dataset.style, "style"));
+    grid.querySelectorAll("[data-frame]").forEach(b => b.onclick = () => doEquip("equip_frame", b.dataset.frame, "frame"));
+    grid.querySelectorAll("[data-buyframe]").forEach(b => b.onclick = async () => {
+      b.disabled = true; b.textContent = "구매 중…";
+      const { data } = await sb().rpc("buy_frame", { p_key: b.dataset.buyframe });
+      if (!data?.ok) alert(data?.reason === "insufficient" ? "GC가 부족해요. 충전 후 다시 시도해주세요." : "구매 실패");
+      else window.BattleFX?.haptic?.("tap");
+      await refresh();
+    });
     grid.querySelectorAll("[data-buystyle]").forEach(b => b.onclick = async () => {
       b.disabled = true; b.textContent = "구매 중…";
       const { data } = await sb().rpc("buy_nickstyle", { p_key: b.dataset.buystyle });
@@ -137,10 +195,13 @@
     if (!data?.ok) { alert(data?.reason === "locked" ? `아직 잠김 — ${data.need?.toLocaleString()} GI 필요 (현재 ${data.gi?.toLocaleString()})` : "장착 실패"); return; }
     window.BattleFX?.haptic?.("tap");
     ttToast(kind === "title" ? "✓ 칭호가 적용됐어요 — 댓글·프로필 닉네임 앞에 붙어요"
+          : kind === "frame" ? "✓ 프레임이 적용됐어요 — 모든 화면의 내 아바타에 반영돼요"
                               : "✓ 스타일이 적용됐어요 — 모든 화면의 내 닉네임에 반영돼요");
     if (ME && window.GALLA_decoCache) {
       const cur = window.GALLA_decoCache[ME] || {};
-      if (kind === "title") cur.title = data.title; else cur.nick_style = data.style;
+      if (kind === "title") cur.title = data.title;
+      else if (kind === "frame") cur.frame = data.frame === "none" ? null : data.frame;
+      else cur.nick_style = data.style;
       window.GALLA_decoCache[ME] = cur;
     }
     document.dispatchEvent(new CustomEvent("galla:items-changed"));
@@ -169,7 +230,8 @@
     document.getElementById("tt-sheet")?.remove();
     sheet = document.createElement("div"); sheet.id = "tt-sheet"; sheet.className = "tt-sheet";
     sheet.innerHTML = `<div class="dim"></div><div class="tt-card">
-      <div class="tt-head"><span class="tt-title">🎨 닉네임 스타일</span><span class="tt-bal" id="tt-bal">– GP</span></div>
+      <div class="tt-head"><span class="tt-title">🎨 꾸미기</span><span class="tt-bal" id="tt-bal">– GP</span></div>
+      <div class="tt-tabs" id="tt-tabs"></div>
       <div class="tt-note" id="tt-note"></div>
       <div class="tt-grid" id="tt-grid"></div>
       <button class="tt-close">닫기</button></div>`;
