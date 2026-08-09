@@ -192,7 +192,7 @@ async function fetchPostDetail() {
 
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("id, user_id, title, body, category, nickname, view_count, created_at")
+    .select("id, user_id, title, body, category, nickname, view_count, created_at, locale")
     .eq("id", postId)
     .single();
 
@@ -203,6 +203,15 @@ async function fetchPostDetail() {
 
   if (postTitleEl) postTitleEl.textContent = data.title;
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
+  /* 🌐 다른 언어로 쓰인 글이면 '번역 보기'를 붙인다(인스타 방식).
+     ⚠️ 원문 HTML(마커·미디어)을 건드리지 않으려고 **본문 텍스트만** 대상으로 한다.
+        헬퍼가 textContent를 바꾸므로, 마커가 든 글은 번역 시 서식이 단순해진다 —
+        읽히는 게 우선이고, 다시 누르면 원문 서식으로 돌아온다. */
+  try {
+    if (postContentEl && window.GALLA_attachTranslate) {
+      window.GALLA_attachTranslate(postContentEl, { kind: "plaza", id: String(data.id), src: data.locale || "ko", field: "body" });
+    }
+  } catch (e) {}
   // 🤖 갈비스 — 이 글 맥락 채우기
   { const gb = D.querySelector("#plazaGalvisBtn"); if (gb) { gb.setAttribute("data-gv-id", String(postId || "")); gb.setAttribute("data-gv-title", data.title || ""); } }
   if (postMetaEl) {
@@ -246,7 +255,7 @@ let myCommentVotes = {};
 async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
-    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id:author_id, is_anonymous, ghost_seed")
+    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id:author_id, is_anonymous, ghost_seed, locale")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
@@ -265,7 +274,8 @@ async function fetchComments(commentCountEl) {
     dislike_count: c.dislike_count || 0,
     user_id: c.user_id,
     is_anonymous: c.is_anonymous,
-    ghost_seed: c.ghost_seed
+    ghost_seed: c.ghost_seed,
+    locale: c.locale || "ko"
   }));
 
   // 로그인 상태면 내 투표 불러와 하이라이트
@@ -361,6 +371,21 @@ async function handleCommentVote(e) {
   return true;
 }
 
+/* 🌐 댓글에 '번역 보기'를 붙인다 — 내 언어와 다른 댓글에만.
+   ⚠️ 한 번 붙은 것은 헬퍼가 자체 플래그로 걸러내므로 중복 호출해도 안전하다. */
+function attachCommentTranslate(root) {
+  if (!root || !window.GALLA_attachTranslate) return;
+  root.querySelectorAll("[data-cmt-text]").forEach(function (el) {
+    var li = el.closest("[data-cid]") || el.closest("li");
+    var cid = (li && (li.dataset.cid || li.getAttribute("data-cid"))) || "";
+    var c = comments.find(function (x) { return String(x.id) === String(cid); });
+    window.GALLA_attachTranslate(el, {
+      kind: "comment", id: String(cid || el.dataset.cmtId || ""),
+      src: (c && c.locale) || "ko", field: "body",
+    });
+  });
+}
+
 function renderComments(list) {
   if (!commentList) return;
   commentList.innerHTML = "";
@@ -431,6 +456,10 @@ function renderComments(list) {
 
     commentList.appendChild(rootLi);
   });
+
+  /* 🌐 댓글 번역 — 렌더가 innerHTML이라 '그린 뒤에' 건다.
+     ⚠️ 대댓글은 펼칠 때 따로 그려지므로 그쪽에서도 다시 호출해야 한다(아래 renderReplies). */
+  try { attachCommentTranslate(commentList); } catch (e) {}
 }
 
 function generateAnonNickname() {
@@ -556,6 +585,10 @@ function renderReplies(replies, container) {
 
     container.appendChild(li);
   });
+
+  /* 대댓글은 '펼치기'를 누를 때 따로 그려진다 — 여기서도 걸어야 번역 버튼이 붙는다.
+     ⚠️ 이걸 빠뜨리면 답글만 번역이 안 되는 반쪽 상태가 된다(이 코드베이스에서 반복된 함정). */
+  try { attachCommentTranslate(container); } catch (e) {}
 }
 
 /* =========================
