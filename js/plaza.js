@@ -580,7 +580,8 @@ async function fetchPlazaPosts() {
     if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
   }
 
-  const { data, error } = await query;
+  // 🌍 읽기 필터 — 내 언어 글만. 언어가 하나뿐이면 no-op이라 오늘은 동작이 안 바뀐다.
+  const { data, error } = await (window.GALLA_lfilter || function (q) { return q; })(query);
 
   if (error) {
     console.error("❌ plaza fetch error:", error);

@@ -811,13 +811,13 @@ async function initTrendPage() {
 
     // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 갈라 광장 + 뜨는 예측
     const [gnRes, giRes, pzRes, mkRes] = await Promise.all([
-      supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
+      (window.GALLA_lfilter || function (q) { return q; })(supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
         .eq("status", "published").not("hero_image", "is", null).neq("hero_image", "")
-        .order("published_at", { ascending: false }).limit(24),
-      supabase.from("issues")
+        .order("published_at", { ascending: false }).limit(24)),
+      (window.GALLA_lfilter || function (q) { return q; })(supabase.from("issues")
         .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
         .order("hot_score", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false }).limit(12),
+        .order("created_at", { ascending: false }).limit(12)),
       supabase.from("plaza_posts")
         .select("id,title,category,cover_image,thumbnail,up_count,down_count,score,created_at")
         .order("score", { ascending: false, nullsFirst: false })
@@ -978,10 +978,10 @@ async function initTrendPage() {
       const wrap = document.querySelector(".nh-break-mask");
       const active = document.querySelector(".tab-item.active")?.dataset.tab === "news";
       if (!wrap || !active) return;
-      const { data } = await supabase.from("galla_news")
+      const { data } = await (window.GALLA_lfilter || function (q) { return q; })(supabase.from("galla_news")
         .select("id,title").eq("status", "published")
         .not("hero_image", "is", null).neq("hero_image", "")
-        .order("published_at", { ascending: false }).limit(12);
+        .order("published_at", { ascending: false }).limit(12));
       if (!data || !data.length) return;
       const line = breakingLine(data);
       wrap.innerHTML = `<div class="nh-break-flow" style="animation-duration:${Math.max(18, data.length * 4)}s">

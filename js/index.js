@@ -902,7 +902,8 @@ async function loadData() {
         loadDuelCards()
     ]);
 
-    let { data: issues, error } = await supabase
+    // 🌍 읽기 필터 — 내 언어 콘텐츠만. 언어가 하나뿐이면 아무것도 하지 않는다(오늘은 no-op).
+    let { data: issues, error } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('issues')
         .select(`
             id, title, one_line, category, created_at,
@@ -911,7 +912,7 @@ async function loadData() {
             faction_a, faction_b
         `)
         .order('created_at', { ascending: false })
-        .limit(80);
+        .limit(80));
 
     if (error) { console.error(error); return; }
 
@@ -990,7 +991,10 @@ async function loadData() {
         });
         window.feed = feed;
         // 그 사이 카테고리 칩을 골랐다면 새 피드 기준으로 필터 재적용
-        const activeCat = IDXROOT.querySelector('.category-section .chip.active')?.textContent?.trim() || '전체';
+        // 🌍 칩의 '보이는 글자'로 필터를 걸면 안 된다 — 번역되면 '전체'가 'All'이 되어
+        //    전 카테고리가 걸러지고 홈이 통째로 빈다. data-cat(원본 값)이 정본이다.
+        const activeChip = IDXROOT.querySelector('.category-section .chip.active');
+        const activeCat = activeChip?.dataset?.cat || activeChip?.textContent?.trim() || '전체';
         viewFeed = (activeCat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === activeCat);
         const shown = rec;
         rec = 3;
@@ -1051,11 +1055,11 @@ function interleave(issues, ex = {}) {
 // 광장 글을 피드용으로 로드 (최신순 + 점수/신규 가점 가벼운 정렬)
 async function loadPlazaCards() {
     const supabase = window.supabaseClient;
-    const { data: posts } = await supabase
+    const { data: posts } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('plaza_posts')
         .select('id, category, title, body, nickname, cover_image, thumbnail, up_count, view_count, user_id, created_at')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(20));
     if (!posts || !posts.length) return [];
     // 작성자 배지(아바타·등급)용 프로필 프리페치
     if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
@@ -1116,12 +1120,12 @@ function renderPlazaCard(p) {
 /* ── 갈라뉴스 카드 ── */
 async function loadNewsCards() {
     const supabase = window.supabaseClient;
-    const { data: rows } = await supabase
+    const { data: rows } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('galla_news')
         .select('id, title, summary, category, hero_image, source_count, view_count, published_at')
         .eq('status', 'published')
         .order('published_at', { ascending: false })
-        .limit(30);
+        .limit(30));
     if (!rows || !rows.length) return [];
     const now = Date.now();
     const scored = rows.map(n => {
@@ -1160,11 +1164,11 @@ function fmtViews(v) {
 }
 async function loadVideoCards() {
     const supabase = window.supabaseClient;
-    const { data: rows } = await supabase
+    const { data: rows } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('youtube_hot')
         .select('video_id, title, channel_title, thumbnail, view_count, rank, is_short, collected_at')
         .order('collected_at', { ascending: false })
-        .limit(80);
+        .limit(80));
     if (!rows || !rows.length) return [];
     // 최신 수집분만 + video_id 중복 제거, 상위 랭크 풀에서 랜덤 추출(진입마다 새 얼굴)
     const latest = rows[0].collected_at;
