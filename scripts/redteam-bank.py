@@ -390,6 +390,9 @@ def main():
         # 🧹 테스트 계정 정리 — SFT 오염 방지(메모리에 박힌 필수 절차)
         # 🧹 은행 계정 + 손으로 돌린 탐색 배터리 계정까지 함께 정리(SFT 오염 방지)
         sql("delete from auth.users where email ~ '^(rtb|rt[0-9]|q[0-9]|p[0-9]|s[0-9])[a-z0-9-]*@galla.im$'")
+        # ⚠️ auth.users를 지워도 public.users 행은 연쇄 삭제되지 않는다(고아가 쌓인다).
+        #    실측: 다국어 케이스가 만든 locale='ja'/'en' 행 6개가 남아 통계를 오염시켰다.
+        sql("delete from users u where not exists (select 1 from auth.users a where a.id = u.id)")
 
         if not failed:
             print("\n🎉 전부 통과 — 문제은행 fail 0")
