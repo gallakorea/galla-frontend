@@ -1942,7 +1942,19 @@
         if (pe && !pe.getAttribute("data-i18n-src")) pe.setAttribute("data-i18n-src", v);
         node.nodeValue = node.nodeValue.replace(v, t(v));
       });
-      /* ③ 인라인 태그(<b>·<span>)로 쪼개진 문장 — 텍스트 노드 단위로는 절대 못 잡는다.
+      /* ③ 댓글 자동 배선 — 화면마다 렌더 함수 끝을 찾아 호출부를 넣는 건 매번 빠뜨린다
+         (대댓글에서 실제로 그랬다). 마크업에 data-cmt-locale만 달면 여기서 알아서 붙인다. */
+      (scope.querySelectorAll ? scope.querySelectorAll("[data-cmt-text][data-cmt-locale]") : []).forEach(function (el) {
+        if (!window.GALLA_attachTranslate) return;
+        window.GALLA_attachTranslate(el, {
+          kind: el.getAttribute("data-cmt-kind") || "comment",
+          id: el.getAttribute("data-cmt-id") || "",
+          src: el.getAttribute("data-cmt-locale") || "ko",
+          field: "body",
+        });
+      });
+
+      /* ④ 인라인 태그(<b>·<span>)로 쪼개진 문장 — 텍스트 노드 단위로는 절대 못 잡는다.
          예: "이슈·예측…까지 <b>한 방에 검색</b>" → 조각 두 개로 보인다.
          자식이 인라인뿐인 요소에 한해 **전체 문장**으로 사전을 찾고, 맞으면 통째로 바꾼다.
          ⚠️ 블록 요소(div·li)까지 하면 유저 콘텐츠를 삼킬 수 있어 인라인만 허용한다. */
@@ -1964,7 +1976,7 @@
         el.textContent = tr;      // 인라인 강조는 잃지만, 읽히는 게 우선이다
       });
 
-      /* ④ 속성(placeholder·title·aria-label) */
+      /* ⑤ 속성(placeholder·title·aria-label) */
       ["placeholder", "title", "aria-label"].forEach(function (attr) {
         (scope.querySelectorAll ? scope.querySelectorAll("[" + attr + "]") : []).forEach(function (el) {
           if (inSkipZone(el)) return;

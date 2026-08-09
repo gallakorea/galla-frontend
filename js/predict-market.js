@@ -533,7 +533,7 @@ async function loadComments(body){
   } else CMT_SIDE=null;
 
   const { data: rows } = await supa.from('market_comments')
-    .select('id,user_id:author_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed').eq('market_id',marketId)
+    .select('id,user_id:author_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed,locale').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
   // 베팅을 안 했어도, 이미 이 예측에 댓글을 남겼다면 '그때 입장'으로 고정한다(한 예측=한 입장, 사장님 요청).
   if(!isMulti() && !MY_POS_SIDE && ME){
@@ -590,7 +590,7 @@ function renderComments(body){
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
         ${cmtMenu}
       </div>
-      <div class="pmd-cmt-body" data-cmt-text>${cmtBody(c.content)}</div>
+      <div class="pmd-cmt-body" data-cmt-text data-cmt-kind="predict" data-cmt-id="${c.id}" data-cmt-locale="${c.locale || 'ko'}">${cmtBody(c.content)}</div>
       <div class="pmd-cmt-actions">
         <button class="pmd-cmt-like ${liked?'on':''}" data-id="${c.id}">♥ <span>${likeAgg[c.id]||0}</span></button>
         <button class="pmd-cmt-reply" data-id="${c.id}">답글</button>

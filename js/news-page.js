@@ -224,7 +224,7 @@
   async function loadGnComments(newsId) {
     GNC_NEWS = newsId; GNC_TOP_LIMIT = 8; GNC_EXPANDED.clear();
     const { data: rows } = await supabase.from("galla_news_comments")
-      .select("id,user_id:author_id,content,created_at,parent_id,is_anonymous,ghost_seed").eq("news_id", newsId)
+      .select("id,user_id:author_id,content,created_at,parent_id,is_anonymous,ghost_seed,locale").eq("news_id", newsId)
       .order("created_at", { ascending: true }).limit(500);
     const profs = await fetchProfiles((rows || []).map((c) => c.user_id));
     const ids = (rows || []).map((c) => c.id);
@@ -271,7 +271,7 @@
         ${avHtml}
         <div class="gnc-main">
           <div class="gnc-head">${nameHtml}<span class="gnc-time">${timeAgo(c.created_at)}</span>${cmtMenu}</div>
-          <div class="gnc-text" data-cmt-text>${cmtBody(c.content)}</div>
+          <div class="gnc-text" data-cmt-text data-cmt-kind="news" data-cmt-id="${c.id}" data-cmt-locale="${c.locale || "ko"}">${cmtBody(c.content)}</div>
           <div class="gnc-actions">
             <button class="gnc-like ${liked ? "on" : ""}" data-id="${c.id}">♥ <span>${likeAgg[c.id] || 0}</span></button>
             <button class="gnc-reply" data-id="${c.id}">답글</button>
