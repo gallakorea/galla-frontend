@@ -557,6 +557,7 @@ async function fetchPlazaPosts() {
       score,
       up_count,
       view_count,
+      locale,
       plaza_comments(id)
     `)
   // ⚠️ plaza_comments(count) 금지 — count 집계는 테이블級 SELECT를 요구해 user_id(유령보호 잠금)까지
@@ -669,7 +670,7 @@ function renderPlazaPosts(posts) {
             <span class="post-time">${timeAgoK(post.created_at)}</span>
           </div>
           <div class="post-title">${escP(post.title)}</div>
-          ${excerpt ? `<div class="post-excerpt">${escP(excerpt)}</div>` : ""}
+          ${excerpt ? `<div class="post-excerpt" data-cmt-text data-cmt-kind="plaza" data-cmt-id="${post.id}" data-cmt-locale="${post.locale || "ko"}">${escP(excerpt)}</div>` : ""}
           <div class="post-stats">
             <span class="pv-vote">
               <button class="pv-btn pv-up ${MY_PLAZA_VOTES[post.id] === 1 ? "on" : ""}" data-id="${post.id}" data-v="1" aria-label="추천">

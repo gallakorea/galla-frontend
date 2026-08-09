@@ -1287,7 +1287,7 @@ async function loadComments(issueId) {
 
   const { data: rows, error } = await supabase
     .from("comments")
-    .select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action")
+    .select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action,locale")
     .eq("issue_id", issueId)
     .neq("status", "deleted")
     .order("created_at", { ascending: false });
@@ -1632,7 +1632,7 @@ function makeReply(r) {
       <div class="user">${nameSpan(r)}</div>
       ${hpBarHTML(r)}
     </div>
-    <div class="body">${chip}${renderCommentText(r.content)}</div>
+    <div class="body" data-cmt-text data-cmt-kind="issue" data-cmt-id="${r.id}" data-cmt-locale="${r.locale || "ko"}">${chip}${renderCommentText(r.content)}</div>
     <div class="reply-actions" data-side="${r.faction}">
       ${likeUI(r)}
       ${battleButtonsFor(r)}
@@ -1710,7 +1710,7 @@ function makeComment(c) {
       ${hpBarHTML(c)}
     </div>
 
-    <div class="body">${renderCommentText(c.content)}</div>
+    <div class="body" data-cmt-text data-cmt-kind="issue" data-cmt-id="${c.id}" data-cmt-locale="${c.locale || "ko"}">${renderCommentText(c.content)}</div>
 
     <div class="actions">
       ${likeUI(c)}
