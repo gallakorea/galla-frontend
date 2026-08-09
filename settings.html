@@ -141,7 +141,12 @@
         <div class="menu-tile titles" id="titlesTile">
             <span class="tile-ic">🏷️</span>
             <span class="tile-name">꾸미기</span>
-            <span class="tile-sub">닉네임 스타일</span>
+            <span class="tile-sub">닉네임·프레임</span>
+        </div>
+        <div class="menu-tile stats" id="statsTile">
+            <span class="tile-ic">📊</span>
+            <span class="tile-name">내 글 통계</span>
+            <span class="tile-sub">조회·반응 추이</span>
         </div>
         <div class="menu-tile gacha" id="gachaTile">
             <span class="tile-ic">🎰</span>
@@ -282,6 +287,7 @@ function waitForSupabaseClient() {
 <script src="js/items.js?v=0809118"></script>
 <script src="js/charge.js?v=080412"></script>
 <script src="js/titles.js?v=0809121"></script>
+<script src="js/stats.js?v=0809124"></script>
 <script src="js/gacha.js?v=080412"></script>
 
 <!-- Settings 페이지 로직 -->
@@ -319,6 +325,7 @@ function waitForSupabaseClient() {
 
 <script>
   document.getElementById('titlesTile')?.addEventListener('click', function(){ window.GALLA_openTitles && window.GALLA_openTitles(); });
+  document.getElementById('statsTile')?.addEventListener('click', function(){ window.GALLA_openStats && window.GALLA_openStats(); });
   document.getElementById('gachaTile')?.addEventListener('click', function(){ window.GALLA_openGacha && window.GALLA_openGacha(); });
   document.getElementById('shopTile')?.addEventListener('click', function(e){
     e.stopPropagation();
