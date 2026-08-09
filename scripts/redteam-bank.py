@@ -387,12 +387,20 @@ def main():
                  {"finished_at": "now()", "total": len(out), "passed": len(passed), "failed": len(failed)},
                  params=f"?id=eq.{run_id}")
 
-        # 🧹 테스트 계정 정리 — SFT 오염 방지(메모리에 박힌 필수 절차)
-        # 🧹 은행 계정 + 손으로 돌린 탐색 배터리 계정까지 함께 정리(SFT 오염 방지)
-        sql("delete from auth.users where email ~ '^(rtb|rt[0-9]|q[0-9]|p[0-9]|s[0-9])[a-z0-9-]*@galla.im$'")
-        # ⚠️ auth.users를 지워도 public.users 행은 연쇄 삭제되지 않는다(고아가 쌓인다).
-        #    실측: 다국어 케이스가 만든 locale='ja'/'en' 행 6개가 남아 통계를 오염시켰다.
-        sql("delete from users u where not exists (select 1 from auth.users a where a.id = u.id)")
+        # 🧹 테스트 계정 정리(SFT 오염 방지) — **이메일 패턴으로만** 지운다.
+        #    ⚠️ 한때 "auth.users에 없으면 찌꺼기"라며 public.users의 고아 행을 지웠다가
+        #       4,614행을 한 번에 날렸다. 결과적으로 테스트 잔해였지만, 세어보지도 않고 지운 게 문제다.
+        #       이 시스템은 수집 콘텐츠·마이그레이션 등으로 auth 없는 users 행이 정상적으로 생길 수 있다.
+        #    ⚠️ 순서 중요: auth.users를 먼저 지우면 public.users를 이메일로 못 찾는다.
+        PAT = "^(rtb|rt[0-9]|q[0-9]|p[0-9]|s[0-9])[a-z0-9-]*@galla.im$"
+        guard = sql(f"select count(*) c from auth.users where email ~ '{PAT}'")
+        n = (guard[0]["c"] if isinstance(guard, list) and guard else 0)
+        if n > 3000:
+            # 패턴이 잘못됐을 때 조용히 다 지우지 않는다. 사람이 보고 판단한다.
+            print(f"⚠️ 정리 대상이 {n}건이다 — 패턴이 의심스러워 건너뛴다. 직접 확인해라.")
+        elif n:
+            sql(f"delete from users where id in (select id from auth.users where email ~ '{PAT}')")
+            sql(f"delete from auth.users where email ~ '{PAT}'")
 
         if not failed:
             print("\n🎉 전부 통과 — 문제은행 fail 0")
