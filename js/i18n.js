@@ -2081,6 +2081,11 @@
         body: { text: text, to: to, from: opts.src || "", kind: opts.kind || "", ref_id: String(opts.id || ""), field: opts.field || "body" }
       });
       var d = r && r.data;
+      /* ⚠️ supabase-js는 non-2xx면 본문을 data가 아니라 error.context(Response)에 담는다.
+         이걸 안 읽으면 401(로그인 필요)·429(한도)가 전부 "번역하지 못했어요"로 뭉개진다. */
+      if (!d && r && r.error && r.error.context && typeof r.error.context.json === "function") {
+        try { d = await r.error.context.json(); } catch (e2) {}
+      }
       if (d && d.ok && d.text) return d.text;
       /* ⚠️ 실패를 조용히 삼키지 않는다 — 유저는 버튼이 고장 난 줄 안다. */
       if (d && d.reason === "daily_cap") return { error: t("오늘 번역을 많이 하셨어요. 내일 다시 시도해주세요.") };
