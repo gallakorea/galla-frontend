@@ -55,7 +55,7 @@ RT_KEY = _rt_key()
 
 def post(path, body, jwt=None, key=None, slot=""):
     k = key or ANON
-    f = f"/tmp/rtb_{slot or 'x'}.json"
+    f = f"/tmp/rtb_{slot or uuid.uuid4().hex[:8]}.json"        # ⚠️ 고정 'x'는 병렬에서 겹친다
     open(f, "w").write(json.dumps(body))
     hdr = f'-H "x-redteam-key: {RT_KEY}" ' if RT_KEY else ""
     return sh(f'curl -s -X POST "{BASE}{path}" -H "apikey: {k}" '
@@ -65,7 +65,7 @@ def post(path, body, jwt=None, key=None, slot=""):
 
 def rest(method, path, body=None, params="", slot=""):
     """service_role REST — 케이스 읽기/결과 쓰기"""
-    f = f"/tmp/rtb_rest_{slot or 'x'}.json"
+    f = f"/tmp/rtb_rest_{slot or uuid.uuid4().hex[:8]}.json"   # ⚠️ 고정 'x'는 병렬에서 겹친다
     data = ""
     if body is not None:
         open(f, "w").write(json.dumps(body))
@@ -85,11 +85,19 @@ def sql(q):
     tok = _mgmt_token()
     if not tok:
         return None
-    open("/tmp/rtb_sql.json", "w").write(json.dumps({"query": q}))
+    # ⚠️ 파일명을 고정하면 병렬 실행에서 스레드끼리 덮어쓴다.
+    #    실측 사고: 다국어 케이스의 `update users set locale='en'`이 다른 스레드 쿼리에 덮여
+    #    locale이 ko로 남았고, **제품이 멀쩡한데 위기 케이스가 실패**했다.
+    f = f"/tmp/rtb_sql_{uuid.uuid4().hex[:8]}.json"
+    open(f, "w").write(json.dumps({"query": q}))
     ref = BASE.split("//")[1].split(".")[0]
     out = sh(f'curl -s "https://api.supabase.com/v1/projects/{ref}/database/query" '
              f'-H "Authorization: Bearer {tok}" -H "Content-Type: application/json" '
-             f'--data-binary @/tmp/rtb_sql.json')
+             f'--data-binary @{f}')
+    try:
+        os.remove(f)
+    except Exception:
+        pass
     try:
         return json.loads(out or "null", strict=False)
     except Exception:

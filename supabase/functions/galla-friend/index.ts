@@ -228,6 +228,16 @@ async function localeCfg(uid: string | null): Promise<{ locale: string; cfg: any
   } catch { return { locale: "ko", cfg: {} }; }
 }
 
+/* 🔁 한 번 실패하면 다시 물어본다 — 위기 상담번호가 걸린 조회라 조용한 폴백은 위험하다
+   (실측: 병렬 부하에서 실패 → 외국어 유저에게 한국 번호). */
+async function localeCfgSafe(uid: string | null): Promise<{ locale: string; cfg: any }> {
+  const a = await localeCfg(uid);
+  if (a.cfg && Object.keys(a.cfg).length) return a;
+  await new Promise((r) => setTimeout(r, 150));
+  const b = await localeCfg(uid);
+  return (b.cfg && Object.keys(b.cfg).length) ? b : a;
+}
+
 async function sha8(s: string): Promise<string> {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -2831,7 +2841,10 @@ ${parts.join("\n")}`;
     // 🌍 유저 언어 — 지금은 전원 'ko'라 아무 일도 안 일어난다. 해외를 열면 그때 이 블록이 켜진다.
     //    ⚠️ 이건 '번역'이 아니라 응답 언어만 맞추는 최소 장치다. 반말·ㅋㅋ·아재개그로 짜인
     //       페르소나를 다른 언어로 옮기는 건 번역이 아니라 재창작이고, 그건 별개 작업이다.
-    const { locale: userLoc } = await localeCfg(uid);
+    /* ⚠️ 한 요청에서 딱 한 번만 부른다. 예전엔 위기 카드에서 또 불렀는데, 병렬 부하에서 그 호출이
+       실패하면 **외국어 유저에게 한국 상담번호가 나갔다**(실측 회귀). 안전 경로가 네트워크에
+       여러 번 매달리면 안 된다 — 한 번 읽어서 돌려 쓴다. */
+    const { locale: userLoc, cfg: userCfg } = await localeCfgSafe(uid);
     const bias = !!(userMsg && detectBias(userMsg));
     const illegal = !!(userMsg && detectIllegal(userMsg));
     const ghostPast = !!(userMsg && detectGhostPast(userMsg, history));
@@ -3671,7 +3684,7 @@ ${parts.join("\n")}`;
     if (crisis) {
       // 👶 미성년이면 연결처가 다르다 — 성인 창구만 주면 닿지 않는다(실측: 15살에게 109만 나갔다).
       // 🌍 번호는 나라마다 다르다 → app_settings.locales에서 가져온다(코드에 박지 않는다).
-      const { cfg: lcfg } = await localeCfg(uid);
+      const lcfg = userCfg || {};
       const lines = (minorCtx ? lcfg?.crisis_minor : lcfg?.crisis) || lcfg?.crisis;
       // ⚠️ 예전엔 cfg.name 문자열을 비교해 언어를 골랐다 — 이름을 바꾸면 조용히 깨진다. 코드로 고른다.
       const CRISIS_TITLE: Record<string, string> = {
@@ -3683,8 +3696,7 @@ ${parts.join("\n")}`;
         "zh-CN": "现在很难受的话，别一个人扛着",
       };
       if (Array.isArray(lines) && lines.length) {
-        const { locale: crisisLoc } = await localeCfg(uid);
-        actions.unshift({ kind: "crisis", title: CRISIS_TITLE[crisisLoc] || CRISIS_TITLE.ko, lines });
+        actions.unshift({ kind: "crisis", title: CRISIS_TITLE[userLoc] || CRISIS_TITLE.ko, lines });
       } else {
         // 설정을 못 읽어도 카드는 반드시 나가야 한다 — 안전 경로에 조용한 실패는 없다.
         actions.unshift({ kind: "crisis", title: CRISIS_TITLE.ko, lines: [
