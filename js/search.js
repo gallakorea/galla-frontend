@@ -320,13 +320,13 @@ async function initTrendPage() {
     return data || [];
   }
   async function searchMarkets(q) {
-    const { data } = await supabase
+    const { data } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
       .from("markets")
       .select("id,question,category,volume,market_type,image_url")
       .eq("resolved", false)
       .ilike("question", `%${q}%`)
       .order("volume", { ascending: false })
-      .limit(10);
+      .limit(10));
     const markets = data || [];
     if (markets.length) {
       const ids = markets.map(m => m.id);

@@ -359,6 +359,7 @@
           "최소 10GP부터 참여할 수 있어요.": "You need at least 10 GP to join.",
           "무료 GP가 부족해요. 출석·데일리 미션으로 GP를 모아 참여하세요! 🪙": "Not enough free GP. Earn more with check-ins and daily quests! 🪙",
           "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)가 부족합니다.": "Purchased GP can't be used for predictions — you need free GP from check-ins and quests.",
+          "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)로만 참여할 수 있어요.": "Purchased GP can't be used for predictions — you can only join with free GP from check-ins and quests.",
           "참여에 실패했습니다.": "Couldn't join.",
           "마감된 투표예요": "This poll is closed",
           "투표를 마감할까요?": "Close this poll?",
@@ -951,6 +952,7 @@
           "최소 10GP부터 참여할 수 있어요.": "10GPから参加できます。",
           "무료 GP가 부족해요. 출석·데일리 미션으로 GP를 모아 참여하세요! 🪙": "無料GPが足りません。出席・デイリークエストで貯めましょう！🪙",
           "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)가 부족합니다.": "チャージGPは予測に使えません。無料GP（出席・ミッション報酬）が不足しています。",
+          "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)로만 참여할 수 있어요.": "チャージGPは予測に使えません。無料GP（出席・ミッション報酬）でのみ参加できます。",
           "참여에 실패했습니다.": "参加できませんでした。",
           "마감된 투표예요": "締め切られた投票です",
           "투표를 마감할까요?": "投票を締め切りますか？",
@@ -1543,6 +1545,7 @@
           "최소 10GP부터 참여할 수 있어요.": "至少 10 GP 才能參與。",
           "무료 GP가 부족해요. 출석·데일리 미션으로 GP를 모아 참여하세요! 🪙": "免費 GP 不足，用簽到和每日任務累積吧！🪙",
           "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)가 부족합니다.": "儲值的 GP 不能用在預測，需要簽到與任務獲得的免費 GP。",
+          "충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)로만 참여할 수 있어요.": "儲值的 GP 不能用在預測，只能用簽到與任務獲得的免費 GP 參加。",
           "참여에 실패했습니다.": "參與失敗。",
           "마감된 투표예요": "這個投票已截止",
           "투표를 마감할까요?": "要結束這個投票嗎？",
@@ -2028,11 +2031,24 @@
     if (tries < 40) setTimeout(function () { loadEnabled(tries + 1); }, 250);   // 최대 10초
   })();
 
+  /* 🌍 읽기 필터 — 하이브리드 운영 모델
+   *
+   *  나라별로 통째로 쪼개면 새로 여는 나라가 전부 유령 도시가 된다(배틀은 양 진영에 사람이,
+   *  예측은 참여자가 있어야 성립한다). 그렇다고 다 섞으면 미국 유저 홈에 한국 정치가 뜬다.
+   *  그래서 **나라가 아니라 콘텐츠 종류로** 나눈다:
+   *
+   *   · 이슈·광장·뉴스·핫튜브 → 언어별 격리 (로컬 이슈가 본질이고, 인기 영상은 지역별이다)
+   *   · 예측·갈라리          → locale='global'로 찍어 모두에게 보인다 (참여자 수가 생명)
+   *
+   *  구현은 값 하나다 — 'global'은 만국 공통 버킷. 필터는 '내 언어 OR global'.
+   *  ⚠️ 격리 대상 테이블에 global을 찍지 마라. 그 순간 격리가 뚫린다.
+   */
+  var GLOBAL_BUCKET = "global";
   function lfilter(q) {
     try {
       if (!q || typeof q.in !== "function") return q;      // PostgREST 빌더가 아니면 그대로
       if (!_enabled || _enabled.length < 2) return q;       // 언어가 하나뿐 → 아무것도 하지 않는다
-      return q.in("locale", [current]);
+      return q.in("locale", [current, GLOBAL_BUCKET]);
     } catch (e) { return q; }
   }
 

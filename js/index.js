@@ -1249,11 +1249,11 @@ function renderDuelCard(d) {
 
 async function loadPredictionCards() {
     const supabase = window.supabaseClient;
-    let { data: markets } = await supabase
+    let { data: markets } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('markets')
         .select('id, question, category, market_type, volume, close_at, resolved, created_at, created_by')
         .eq('resolved', false)
-        .limit(60);
+        .limit(60));
     if (!markets || !markets.length) return [];
 
     // 알고리즘: 반응(거래량) 많은 것 위주 + 신규 가점 + 랜덤(매번 다르게)

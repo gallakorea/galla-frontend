@@ -28,11 +28,12 @@
       box.innerHTML = '<div class="glf-loading">불러오는 중…</div>';
       if (!sb) { box.innerHTML = '<div class="glf-empty">연결 오류</div>'; loading = false; return; }
 
-      const { data: posts, error } = await sb.from('posts')
+      // 🌍 읽기 필터 — 갈라리는 기본 global이라 대부분 그대로 보인다(언어 하나면 no-op).
+      const { data: posts, error } = await (window.GALLA_lfilter || function (q) { return q; })(sb.from('posts')
         .select('id,user_id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
         .eq('kind', kind).eq('is_published', true)
         .neq('moderation_status', 'blocked')
-        .order('created_at', { ascending: false }).limit(30);
+        .order('created_at', { ascending: false }).limit(30));
 
       if (error) { box.innerHTML = '<div class="glf-empty">불러오기 실패</div>'; loading = false; return; }
       if (!posts || !posts.length) {

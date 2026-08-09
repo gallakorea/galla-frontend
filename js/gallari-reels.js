@@ -61,11 +61,11 @@
     } else {
       // 🌐 통합(숏판 + 이슈 영상) 인터리브 2:1
       const [{ data: posts }, { data: issues }] = await Promise.all([
-        sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
+        (window.GALLA_lfilter || function (q) { return q; })(sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
           .eq('kind', 'vertical').eq('is_published', true).neq('moderation_status', 'blocked')
-          .order('created_at', { ascending: false }).limit(24),
-        sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
-          .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24),
+          .order('created_at', { ascending: false }).limit(24)),
+        (window.GALLA_lfilter || function (q) { return q; })(sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
+          .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24)),
       ]);
       const P = (posts || []).filter(notCarousel).map(p => ({ _type: 'post', ...p }));
       const I = (issues || []).map(i => ({ _type: 'issue', ...i }));
