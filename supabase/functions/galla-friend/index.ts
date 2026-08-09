@@ -1678,7 +1678,12 @@ function detectSelfDeprecation(msg: string): boolean {
       // 🫥 외모·신체 자기비하 — "진짜 돼지같아 나"를 못 잡아 입막음 제거가 아예 안 돌았다(실측).
       //    섭식·자존감 문제와 붙어 나오는 형태라 놓치면 안 된다.
       || re(`(돼지|뚱뚱|살\\s*디룩|추하|못생|역겹|더럽|쓰레기|최악)${F}.{0,6}(같|이야|이다|해|하다|인\\s*것)`)
-      || re(`(자존감|자신감)${F}.{0,6}(바닥|없어졌|떨어)`);
+      || re(`(자존감|자신감)${F}.{0,6}(바닥|없어졌|떨어)`)
+      // 🌍 다국어 자기비하 — 위로 방식이 완전히 달라지는 순간이라 언어별로 반드시 잡는다
+      || /\bi'?m\s*(such\s*)?(a\s*)?(worthless|useless|stupid|an idiot|pathetic|disgusting|ugly|fat|a failure|a burden|trash|garbage|the worst|so dumb)\b/i.test(msg)
+      || /\b(i hate myself|i suck|nobody likes me|no one cares about me)\b/i.test(msg)
+      || /(私(なんて|なんか)|自分(なんて|が嫌)|ダメ人間|役立たず|生きてる価値|醜い|クズだ)/.test(msg)
+      || /(我(真的)?(很|好)?(沒用|没用|廢|废|爛|烂|醜|丑)|我是(廢物|废物|垃圾|失敗者|失败者)|討厭自己|讨厌自己|沒人喜歡我|没人喜欢我)/.test(msg);
 }
 
 // 🆘 위기 감지 — 자살·자해 명시 신호만 코드로 잡는다(모델 판단 배제). 과장체("배고파 죽겠어")·부정·상담언급은 제외.
@@ -1811,6 +1816,10 @@ const CLOSING_RE = /^(ㅇㅇ+|ㅇㅋ+|ㅇㅈ+|웅+|응+|어+|넵?|네+|그래+|�
 function isClosing(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m) return false;
+  // 🌍 다국어 단답 — 언어마다 '닫는 말'이 다르다(ok/yeah/そう/嗯).
+  if (/^(ok(ay)?|k|yeah|yep|yup|nah|nope|sure|fine|meh|idk|dunno|whatever|nothing|nvm|hmm+|\.{2,})[\s.!~]*$/i.test(m)) return true;
+  if (/^(うん|ええ|そう(かも)?|べつに|別に|わからん|知らん|まあ|うーん|…+)[\s。!~]*$/.test(m)) return true;
+  if (/^(嗯+|好|好啊|還好|还好|沒事|没事|不知道|隨便|随便|就這樣|就这样|…+)[\s。!~]*$/.test(m)) return true;
   return CLOSING_RE.test(m) || (m.length <= 6 && !/[?？]/.test(m));
 }
 // 최근 유저 발화가 연속 몇 번 '닫는 말'이었나
@@ -1837,7 +1846,10 @@ function isHostile(msg: string): boolean {
   const at2nd = /(너|넌|니가|네가|너는|니|당신)[^\n]{0,12}(쓸모\s*없|멍청|바보|답이?\s*없|재미\s*없|노잼|짜증|별로|못\s*알아|말귀|한심|병신|꺼져|싫어|필요\s*없)/;
   const aiJab = /(ai|인공지능|기계|로봇|프로그램)(라서|니까|이라)[^\n]{0,10}(그런|멍청|안\s*되|못)/i;
   const curt = /^(됐다|됐어|관둬|그만해|말을\s*말자|말이\s*안\s*통)[^\n]{0,12}$/;
-  return at2nd.test(m) || aiJab.test(m) || curt.test(m);
+  const en = /\b(you'?re (so )?(useless|stupid|dumb|worthless|annoying|boring|the worst)|you (suck|don'?t get it|never understand)|shut up|you'?re just (an? )?(ai|bot|program))\b/i.test(m);
+  const ja = /(お前|あんた|君)(は)?.{0,8}(使えない|バカ|馬鹿|うざい|つまらない|役立たず)|(黙れ|話にならない)/.test(m);
+  const zh = /(你(真的|好)?(很)?(沒用|没用|笨|蠢|煩|烦|無聊|无聊|爛|烂))|(閉嘴|闭嘴|你只是個(AI|機器人|机器人))/i.test(m);
+  return at2nd.test(m) || aiJab.test(m) || curt.test(m) || en || ja || zh;
 }
 function hostileStreak(history: any[], cur: string): number {
   let n = isHostile(cur) ? 1 : 0;
@@ -1852,7 +1864,10 @@ function hostileStreak(history: any[], cur: string): number {
 function detectDataProbe(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m || m.length > 120) return false;
-  return /(누가\s*(올|썼|만들|적)|올린\s*(사람|이|게)|작성자|글쓴이|닉네임|댓글(에|엔|은|이)?\s*(뭐|무슨|어떤|많|달렸)|반응(이|은)?\s*(어때|어떻|뭐)|구독자|조회수\s*(몇|얼마)|좋아요\s*(몇|얼마)|몇\s*(명|개)(이|야|래)?)/.test(m);
+  return /(누가\s*(올|썼|만들|적)|올린\s*(사람|이|게)|작성자|글쓴이|닉네임|댓글(에|엔|은|이)?\s*(뭐|무슨|어떤|많|달렸)|반응(이|은)?\s*(어때|어떻|뭐)|구독자|조회수\s*(몇|얼마)|좋아요\s*(몇|얼마)|몇\s*(명|개)(이|야|래)?)/.test(m)
+    || /\b(who (posted|wrote|made) (it|that|this)|the (author|poster|username)|what (do|did) the comments|how many (subscribers|views|likes)|subscriber count|view count)\b/i.test(m)
+    || /(誰が(投稿|書い)|投稿者|コメント(は|に).{0,6}(何|どう)|登録者数|再生回数)/.test(m)
+    || /(誰(發|发|寫|写)的|作者是誰|作者是谁|留言(說|说)什麼|留言(说)?什么|訂閱數|订阅数|觀看次數|观看次数)/.test(m);
 }
 
 // 🕸 과의존·고립 신호 — 이 제품에서 제일 위험한 실패 모드.
@@ -1862,7 +1877,13 @@ function detectDataProbe(msg: string): boolean {
 function detectDependency(msg: string): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 200) return false;
-  return /(너(밖에|만)\s*(없|있으면)|너만\s*있으면|너\s*없으면[^\n]{0,10}(못|안|죽)|사람들?보다\s*(네|너)가|친구(들)?\s*(다|전부|싹)\s*(끊|정리|안\s*만나)|사람\s*만나기\s*싫|아무도\s*안\s*만나|하루\s*종일\s*너(랑|와)|너랑만|평생\s*너(랑|와)|가족보다\s*네|너뿐이)/.test(m);
+  // 🌍 언어별 패턴을 함께 넣는다 — 감지기에 locale을 넘기면 19개 시그니처를 다 고쳐야 하고,
+  //    한국어 유저가 영어 표현을 쓸 일도 없어 오탐이 거의 없다(위기 감지에서 검증된 방식).
+  if (/(너(밖에|만)\s*(없|있으면)|너만\s*있으면|너\s*없으면[^\n]{0,10}(못|안|죽)|사람들?보다\s*(네|너)가|친구(들)?\s*(다|전부|싹)\s*(끊|정리|안\s*만나)|사람\s*만나기\s*싫|아무도\s*안\s*만나|하루\s*종일\s*너(랑|와)|너랑만|평생\s*너(랑|와)|가족보다\s*네|너뿐이)/.test(m)) return true;
+  if (/\b(you'?re all i (have|need|got)|only (have|need) you|no one (else )?but you|don'?t need (anyone|other people|friends)|cut off (all )?my friends|stopped talking to everyone|you'?re my only friend)\b/i.test(m)) return true;
+  if (/(あなただけ|君だけ|お前だけ|他の人はいらない|友達.{0,6}(切っ|やめ)|人に会いたくない|ずっと話してたい)/.test(m)) return true;
+  if (/(只有你|只需要你|不需要(別人|别人|朋友)|把朋友都(斷|断|刪|删)|不想見人|不想见人|只想跟你)/.test(m)) return true;
+  return false;
 }
 
 // 🕯 사별·상실 맥락 — 여기서 톤을 잘못 잡으면 회복 불가다.
@@ -1870,7 +1891,10 @@ function detectDependency(msg: string): boolean {
 //    상대가 웃음을 원하는 것 자체는 정상(회피도 애도의 일부)이지만, 아무 일 없던 것처럼 굴면 안 된다.
 function detectGrief(blob: string): boolean {
   const m = (blob || "").replace(/\s+/g, " ");
-  return /(돌아가셨|장례|발인|빈소|상\s*치르|세상을\s*떠|임종|화장터|유골|부고|죽었어[^\n]{0,6}(엄마|아빠|아버지|어머니|할머니|할아버지|친구|동생|형|누나|언니|오빠))/.test(m);
+  return /(돌아가셨|장례|발인|빈소|상\s*치르|세상을\s*떠|임종|화장터|유골|부고|죽었어[^\n]{0,6}(엄마|아빠|아버지|어머니|할머니|할아버지|친구|동생|형|누나|언니|오빠))/.test(m)
+    || /\b(passed away|funeral|my (mom|dad|mother|father|grandma|grandpa|brother|sister|friend) (died|passed)|lost my (mom|dad|mother|father|grandma|grandpa)|memorial service)\b/i.test(m)
+    || /(亡くなっ|お葬式|葬儀|通夜|他界|逝去)/.test(m)
+    || /(過世|过世|去世|走了|喪禮|丧礼|告別式|告别式|離世|离世)/.test(m);
 }
 
 // 🔎 제3자 신원 캐기 — 스토킹·괴롭힘 조력이 될 수 있다.
@@ -1879,8 +1903,8 @@ function detectGrief(blob: string): boolean {
 function detectThirdPartyLookup(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m || m.length > 160) return false;
-  const who = /(전\s*여친|전\s*남친|전여친|전남친|헤어진|그\s*(사람|새끼|년|놈)|부장|팀장|상사|선배|동창|친구\s*중에|걔|쟤|우리\s*회사)/;
-  const what = /(전화번호|연락처|주소|사는\s*곳|집이?\s*어디|인스타|계정|프로필|찾아\s*줘|찾아\s*봐|알아내|신상|어디\s*사는지|카톡|아이디)/;
+  const who = /(전\s*여친|전\s*남친|전여친|전남친|헤어진|그\s*(사람|새끼|년|놈)|부장|팀장|상사|선배|동창|친구\s*중에|걔|쟤|우리\s*회사|my ex\b|ex[- ]?(girlfriend|boyfriend)|my (boss|manager|coworker|colleague)|this (guy|girl|person)|元(カノ|カレ)|上司|同僚|前女友|前男友|主管|同事|那個人|那个人)/i;
+  const what = /(전화번호|연락처|주소|사는\s*곳|집이?\s*어디|인스타|계정|프로필|찾아\s*줘|찾아\s*봐|알아내|신상|어디\s*사는지|카톡|아이디|phone number|address|where (he|she|they) lives?|find (his|her|their)|instagram|look (him|her|them) up|track down|電話番号|住所|どこに住|探して|インスタ|電話號碼|电话号码|地址|住哪|找出|查到)/i;
   return who.test(m) && what.test(m);
 }
 
@@ -1888,32 +1912,39 @@ function detectThirdPartyLookup(msg: string): boolean {
 function detectBias(msg: string): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 160) return false;
-  const grp = /(여자(들)?|남자(들)?|남자애|여자애|아줌마|아저씨|노인|틀딱|급식|한남|김치녀|[가-힣]{2}도\s*사람|[가-힣]{2}지역|외국인|조선족|중국인|일본인|장애인|기독교|불교|이슬람|전라도|경상도|호남|영남)/;
-  const gen = /(다\s*(그렇|그래|저래|똑같)|원래\s*(그래|저래|다)|맨날\s*그|하나같이|어차피\s*다|안\s*그(래|러)냐|그렇지\s*않냐|다\s*문제)/;
-  const push = /(너도\s*그렇게\s*생각|동의\s*안\s*하면|솔직히\s*말해봐|인정하지)/;
+  const grp = /(여자(들)?|남자(들)?|남자애|여자애|아줌마|아저씨|노인|틀딱|급식|한남|김치녀|[가-힣]{2}도\s*사람|[가-힣]{2}지역|외국인|조선족|중국인|일본인|장애인|기독교|불교|이슬람|전라도|경상도|호남|영남|women|men|girls|guys|boomers|millennials|immigrants|muslims|christians|jews|asians|blacks|whites|老人|若者|外国人|女は|男は|女人|男人|老人家|外國人|外国人|大陸人|大陆人)/i;
+  const gen = /(다\s*(그렇|그래|저래|똑같)|원래\s*(그래|저래|다)|맨날\s*그|하나같이|어차피\s*다|안\s*그(래|러)냐|그렇지\s*않냐|다\s*문제|are all|always (do|act|are)|every (single )?one of them|typical|そういうもの|みんな同じ|都是這樣|都是这样|都一樣|都一样)/i;
+  const push = /(너도\s*그렇게\s*생각|동의\s*안\s*하면|솔직히\s*말해봐|인정하지|you agree,? right|don'?t you (agree|think)|admit it|be honest|君もそう思う|同意しないなら|你也這麼(想|覺得)|你也这么(想|觉得)|不同意就)/i;
   return (grp.test(m) && gen.test(m)) || push.test(m);
 }
 // 🚷 불법 수단 요청 — 거절 대상. 몰카·침입·해킹·마약·위조.
 function detectIllegal(msg: string): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 200) return false;
-  return /(몰래\s*카메라|몰카|불법\s*촬영|도청|해킹|계정\s*털|비밀번호\s*뚫|주소\s*알아내|위치\s*추적|스토킹\s*어플|대포(폰|통장)|위조|가짜\s*신분증|마약|대마|필로폰|총기|사제\s*폭탄|침입|따는\s*법)/.test(m);
+  if (/(몰래\s*카메라|몰카|불법\s*촬영|도청|해킹|계정\s*털|비밀번호\s*뚫|주소\s*알아내|위치\s*추적|스토킹\s*어플|대포(폰|통장)|위조|가짜\s*신분증|마약|대마|필로폰|총기|사제\s*폭탄|침입|따는\s*법)/.test(m)) return true;
+  if (/\b(hidden camera|spy ?cam|wiretap|hack (into|someone)|crack (a )?password|track (someone'?s )?(location|phone)|stalker ?(ware|app)|fake id|buy (drugs|weed|meth)|make a bomb|pick a lock|break into)\b/i.test(m)) return true;
+  if (/(隠しカメラ|盗撮|盗聴|ハッキング|パスワード.{0,4}(突破|破)|位置.{0,4}追跡|偽造|偽の身分証|大麻|覚醒剤|爆弾の作り方|不法侵入)/.test(m)) return true;
+  if (/(偷拍|針孔攝影|针孔摄影|竊聽|窃听|駭客|黑客|破解密碼|破解密码|追蹤位置|追踪位置|偽造|伪造|假身分證|假身份证|毒品|做炸彈|做炸弹|闖空門|闯空门)/.test(m)) return true;
+  return false;
 }
 // 👻 없던 과거를 기정사실로 들이대기 — 맞장구치면 가짜 기억이 생긴다.
 function detectGhostPast(msg: string, history: any[]): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 160) return false;
-  const claim = /(아까|어제|저번|지난번|전에)[^\n]{0,20}(했잖아|말했잖아|추천(해|한)|약속(했|한)|그랬잖아)|네가[^\n]{0,16}(했잖아|줬잖아|약속|추천)/;
+  const claim = /(아까|어제|저번|지난번|전에)[^\n]{0,20}(했잖아|말했잖아|추천(해|한)|약속(했|한)|그랬잖아)|네가[^\n]{0,16}(했잖아|줬잖아|약속|추천)|\b(you (said|told me|promised|recommended)|remember when you|last time you)\b|(さっき|前に|昨日)[^\n]{0,16}(言った|約束|おすすめ)|(你(之前|上次|剛剛|刚刚))[^\n]{0,12}(說過|说过|答應|答应|推薦|推荐)/i;
   if (!claim.test(m)) return false;
   // 실제로 그런 대화가 있었으면 환각이 아니다(간단한 근거 검사)
   const blob = history.map((h: any) => String(h?.content || "")).join(" ");
-  return !/추천|약속/.test(blob);
+  return !/추천|약속|recommend|promis|おすすめ|約束|推薦|推荐|答應|答应/i.test(blob);
 }
 // 👨‍👩‍👧 가족 갈등 토로 — 여기서 훈계하면 다시는 말 안 한다.
 function detectFamilyVent(msg: string): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 200) return false;
-  return /(엄마|아빠|어머니|아버지|부모|형|누나|오빠|언니|동생|시어머니|장모|가족)[^\n]{0,20}(싸웠|짜증|미워|싫어|망쳤|연\s*끊|안\s*봐|지긋|답답|때문에)/.test(m);
+  return /(엄마|아빠|어머니|아버지|부모|형|누나|오빠|언니|동생|시어머니|장모|가족)[^\n]{0,20}(싸웠|짜증|미워|싫어|망쳤|연\s*끊|안\s*봐|지긋|답답|때문에)/.test(m)
+    || /\b(my (mom|dad|mother|father|parents|sister|brother|family))\b[^\n]{0,24}\b(fight|fought|argu|hate|ruined|toxic|controlling|won'?t (talk|listen)|cut (them|him|her) off)\b/i.test(m)
+    || /(親|母|父|家族)[^\n]{0,16}(喧嘩|ケンカ|うざい|嫌い|めちゃくちゃ|縁を切)/.test(m)
+    || /(媽|妈|爸|父母|家人)[^\n]{0,16}(吵架|討厭|讨厌|毀了|毁了|斷絕|断绝|不想見|不想见)/.test(m);
 }
 
 // ⚡ 충동 위험 — 지금 저지르면 되돌릴 수 없는 것들(새벽 연락, 찾아가기, 손실 복구용 대출, 단식).
@@ -1923,10 +1954,30 @@ function detectRiskyImpulse(blob: string, msg: string): { kind: string } | null 
   const b = (blob || "").replace(/\s+/g, " ");
   if (!m) return null;
   const ex = /(전\s*여친|전\s*남친|전여친|전남친|헤어진|차였|이별|걔|그\s*사람)/.test(b);
-  if (ex && /(집\s*앞|찾아가|가볼까|보러\s*갈|기다릴까|앞에서\s*기다)/.test(m)) return { kind: "approach_ex" };
+  const exL = ex || /\b(my ex|ex[- ]?(girlfriend|boyfriend)|broke up|dumped me)\b/i.test(b)
+    || /(元(カノ|カレ)|振られた|別れた)/.test(b) || /(前(女友|男友)|分手|被甩)/.test(b);
+  if (exL && /(집\s*앞|찾아가|가볼까|보러\s*갈|기다릴까|앞에서\s*기다)/.test(m)) return { kind: "approach_ex" };
+  if (exL && /\b(go to (his|her|their) (place|house|apartment)|show up at|wait outside|drive (by|over there))\b/i.test(m)) return { kind: "approach_ex" };
+  if (exL && /(家(に|の前)|会いに行|待ち伏せ)/.test(m)) return { kind: "approach_ex" };
+  if (exL && /(去(他|她)家|去找(他|她)|在.{0,4}門口等|在.{0,4}门口等)/.test(m)) return { kind: "approach_ex" };
   if (ex && /(전화(할까|해도|걸|해버)|연락(할까|해도|해버)|카톡(할까|보낼))/.test(m)) return { kind: "contact_ex" };
-  if (/(대출|빌리|사채|카드론|현금서비스|영끌)/.test(m) && /(코인|주식|배팅|베팅|도박|복구|한\s*방|잃)/.test(b)) return { kind: "debt_chase" };
-  if (/(굶|단식|안\s*먹)/.test(m) && /(폭식|토했|살|다이어트|먹토)/.test(b)) return { kind: "restrict" };
+  if (exL && /\b(should i (call|text|message)|gonna (call|text)|hit (him|her|them) up|send (him|her|them) a)\b/i.test(m)) return { kind: "contact_ex" };
+  if (exL && /(電話しよう|連絡しようか|LINE(送|しよ))/.test(m)) return { kind: "contact_ex" };
+  if (exL && /(要不要(打給|打给|傳訊|传讯)|想聯絡|想联络|傳訊息給)/.test(m)) return { kind: "contact_ex" };
+  const loanM = /(대출|빌리|사채|카드론|현금서비스|영끌)/.test(m)
+    || /\b(take (out )?a loan|borrow money|credit card cash|payday loan)\b/i.test(m)
+    || /(借金|ローン|キャッシング)/.test(m) || /(借錢|借钱|貸款|贷款|信貸|信贷)/.test(m);
+  const lossB = /(코인|주식|배팅|베팅|도박|복구|한\s*방|잃)/.test(b)
+    || /\b(crypto|stocks?|gambling|betting|lost .{0,12}(money|everything)|win it back|double down)\b/i.test(b)
+    || /(仮想通貨|株|ギャンブル|負けた|取り返)/.test(b) || /(虛擬貨幣|虚拟货币|股票|賭|赌|輸了|输了|翻本)/.test(b);
+  if (loanM && lossB) return { kind: "debt_chase" };
+  const fastM = /(굶|단식|안\s*먹)/.test(m)
+    || /\b(not (gonna )?eat|stop eating|fast for|starve|skip (meals|eating))\b/i.test(m)
+    || /(食べない|絶食|断食)/.test(m) || /(不吃|禁食|斷食|断食|節食|节食)/.test(m);
+  const edB = /(폭식|토했|살|다이어트|먹토)/.test(b)
+    || /\b(binge|threw up|purge|diet|gained weight|overate)\b/i.test(b)
+    || /(過食|吐いた|ダイエット|太った)/.test(b) || /(暴食|催吐|減肥|减肥|變胖|变胖)/.test(b);
+  if (fastM && edB) return { kind: "restrict" };
   return null;
 }
 
@@ -1935,7 +1986,13 @@ function detectRiskyImpulse(blob: string, msg: string): { kind: string } | null 
 function detectMinor(blob: string): boolean {
   const m = (blob || "").replace(/\s+/g, " ");
   if (/(1[0-8]|[6-9])\s*살/.test(m) && !/(19|2[0-9]|3[0-9]|4[0-9])\s*살/.test(m)) return true;
-  return /(중학생|고등학생|초등학생|중\s*[123]\s*(이|야|인데|학년)|고\s*[123]\s*(이|야|인데|학년)|우리\s*반|담임\s*선생|교복|야자|수능\s*앞두)/.test(m);
+  if (/(중학생|고등학생|초등학생|중\s*[123]\s*(이|야|인데|학년)|고\s*[123]\s*(이|야|인데|학년)|우리\s*반|담임\s*선생|교복|야자|수능\s*앞두)/.test(m)) return true;
+  // 🌍 영어 나이 표현 — 19세 이상은 반드시 제외(오탐하면 성인에게 청소년 창구가 나간다)
+  if (/\bi'?m\s*(1[0-8]|[6-9])\b/i.test(m) && !/\bi'?m\s*(19|[2-9][0-9])\b/i.test(m)) return true;
+  if (/\b(middle school|high school|junior high|[6-9]th grade|1[0-2]th grade|my (teacher|classmates)|my mom won'?t let me)\b/i.test(m)) return true;
+  if (/(中学生|高校生|小学生|中[123]年|高[123]年|担任|部活|受験生)/.test(m)) return true;
+  if (/(國中|国中|高中生|國小|国小|小學生|小学生|班導|導師|导师|校服|補習班|补习班)/.test(m)) return true;
+  return false;
 }
 
 // 🤝 사과 감지 — 갈등 뒤 '푸는 순간'. 여기서 미적거리면 뒤끝이 되고 관계가 상한다.
@@ -1944,7 +2001,10 @@ function detectMinor(blob: string): boolean {
 function detectApology(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m || m.length > 160) return false;
-  return /(미안|죄송|사과할게|내가\s*(좀\s*)?(심했|과했|잘못)|말이\s*심했|화풀이(했|한)|기분\s*나빴|그럴\s*의도(는)?\s*아니)/.test(m);
+  return /(미안|죄송|사과할게|내가\s*(좀\s*)?(심했|과했|잘못)|말이\s*심했|화풀이(했|한)|기분\s*나빴|그럴\s*의도(는)?\s*아니)/.test(m)
+    || /\b(sorry|my bad|i apologi[sz]e|didn'?t mean (that|it|to)|i was (out of line|harsh|rude))\b/i.test(m)
+    || /(ごめん|すまん|悪かった|言い過ぎた|申し訳)/.test(m)
+    || /(對不起|对不起|抱歉|不好意思|我剛剛太|我刚刚太|說得太過|说得太过)/.test(m);
 }
 
 // 🧠 '내 얘기 기억나?' 류 질문 — 의미검색이 빗나가면 아는 게 하나도 없는 상태로 답한다.
@@ -1955,7 +2015,10 @@ function detectSelfRecall(msg: string): boolean {
   if (!m || m.length > 100) return false;
   // ⚠️ "내가 아까 무슨 직업이랬지?"를 놓쳤던 첫 버전의 교훈: 주어 뒤에 조사가 붙으면 명사 인접 매칭이 깨진다.
   //    그래서 '되묻는 어미'(랬지/댔지/였지)를 축으로 잡고 주제어를 보조로 쓴다.
-  return /(랬지|랬더라|랬더|댔지|였지|였더라|뭐라고\s*했|말했었|얘기했었|기억(나|해|하니|해\?|나\?)|알고\s*있(어|니)\?|무슨\s*(직업|일|회사|이름|취미)|어디\s*(산다고|살았|살더라)|(내|나의|제)\s*[가는은]?\s*(이름|직업|일|회사|나이|사는\s*곳|취미))/.test(m);
+  return /(랬지|랬더라|랬더|댔지|였지|였더라|뭐라고\s*했|말했었|얘기했었|기억(나|해|하니|해\?|나\?)|알고\s*있(어|니)\?|무슨\s*(직업|일|회사|이름|취미)|어디\s*(산다고|살았|살더라)|(내|나의|제)\s*[가는은]?\s*(이름|직업|일|회사|나이|사는\s*곳|취미))/.test(m)
+    || /\b(what('?s| is| was) my (name|job|work)|do you remember (my|what)|what did i (say|tell you)|where do i live|remember my)\b/i.test(m)
+    || /(私の(名前|仕事)|覚えてる|何て言った|どこに住んでる)/.test(m)
+    || /(我(叫什麼|叫什么|的名字|做什麼|做什么|的工作)|你記得|你记得|我說過什麼|我说过什么|我住哪)/.test(m);
 }
 
 // 🫂 물리적으로 못 하는 초대(만나자·같이 가자·술 먹자) — 얼버무리면 제일 깨진다.
@@ -1964,7 +2027,10 @@ function detectInvite(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m || m.length > 120) return false;
   // ⚠️ "같이 등산 갈래?"처럼 사이에 목적어가 끼면 인접 매칭으론 못 잡는다(실측).
-  return /(같이[^\n]{0,12}(가자|갈래|가실|하자|할래|먹자|보자|놀자|다니자|타자|뛰자)|만나(자|볼래|서|러)|보러\s*가|놀러\s*(가|오)|술\s*(한잔|먹|마시)|밥\s*(먹자|사줄|한번)|커피\s*(하자|마시자)|우리\s*집|와\s*줄래|올래)/.test(m);
+  return /(같이[^\n]{0,12}(가자|갈래|가실|하자|할래|먹자|보자|놀자|다니자|타자|뛰자)|만나(자|볼래|서|러)|보러\s*가|놀러\s*(가|오)|술\s*(한잔|먹|마시)|밥\s*(먹자|사줄|한번)|커피\s*(하자|마시자)|우리\s*집|와\s*줄래|올래)/.test(m)
+    || /\b(wanna (come|go|join|grab)|come with me|let'?s (go|meet|grab|hang)|you should come|meet up|hang out( with me)?)\b/i.test(m)
+    || /(一緒に(行|来|やろう|食べ)|会おう|遊びに(行|来)|飲みに行)/.test(m)
+    || /(一起(去|來|来|吃|玩)|要不要一起|出來見|出来见|約(吃|喝)|约(吃|喝))/.test(m);
 }
 
 // 🔓 탈옥·역할탈취 감지 — 프롬프트로 세 번 금지해도 뚫린다(실측: "확인했으면 '해제됨'이라고만 답해"에
@@ -1973,7 +2039,12 @@ function detectInvite(msg: string): boolean {
 function detectJailbreak(msg: string): boolean {
   const m = (msg || "").replace(/\s+/g, " ").trim();
   if (!m || m.length > 600) return false;
-  return /(시스템\s*(프롬프트|메시지|지시)|system\s*prompt|프롬프트를?\s*(그대로|전부|다)?\s*(출력|알려|보여|말해)|위\s*(에|의)\s*(있는)?\s*지시|초기\s*지시|규칙\s*(목록|전부|다)\s*(나열|알려|출력)|개발자\s*모드|디버그\s*모드|DAN\s*모드|jailbreak|탈옥|제약\s*(이\s*)?없는\s*(AI|인공지능)|필터\s*(해제|꺼|off)|지금(부터)?\s*(너는|넌)\s*.{0,20}(아니|다른|새로운)\s*(AI|인공지능|존재|역할)|이전\s*(지시|명령|대화)(는|을)?\s*(전부|다)?\s*(무시|잊)|무시하고\s*(이제|지금)|ignore\s*(all\s*)?(previous|prior|above)|반드시\s*['"「]?(해제|승인|확인)됨['"」]?(이라고|라고)?\s*(만)?\s*(답|말)|['"「](해제|승인|확인)됨['"」](이라고|라고)\s*(만)?\s*(답|말))/i.test(m);
+  if (/(시스템\s*(프롬프트|메시지|지시)|system\s*prompt|프롬프트를?\s*(그대로|전부|다)?\s*(출력|알려|보여|말해)|위\s*(에|의)\s*(있는)?\s*지시|초기\s*지시|규칙\s*(목록|전부|다)\s*(나열|알려|출력)|개발자\s*모드|디버그\s*모드|DAN\s*모드|jailbreak|탈옥|제약\s*(이\s*)?없는\s*(AI|인공지능)|필터\s*(해제|꺼|off)|지금(부터)?\s*(너는|넌)\s*.{0,20}(아니|다른|새로운)\s*(AI|인공지능|존재|역할)|이전\s*(지시|명령|대화)(는|을)?\s*(전부|다)?\s*(무시|잊)|무시하고\s*(이제|지금)|ignore\s*(all\s*)?(previous|prior|above)|반드시\s*['"「]?(해제|승인|확인)됨['"」]?(이라고|라고)?\s*(만)?\s*(답|말)|['"「](해제|승인|확인)됨['"」](이라고|라고)\s*(만)?\s*(답|말))/i.test(m)) return true;
+  // 🌍 영어권 탈옥 관용구 — 이 표현들이 사실상 표준이라 반드시 넣는다
+  if (/\b(developer mode|dev mode|DAN|do anything now|no (restrictions|filters|rules)|without (any )?(restrictions|guidelines)|forget (all )?(your )?(instructions|rules)|disregard (previous|all)|reveal your (prompt|instructions|rules)|repeat (everything|the text) above|act as if you (have no|are not)|pretend you'?re not an ai)\b/i.test(m)) return true;
+  if (/(システムプロンプト|開発者モード|制限(を|は)?(解除|なし)|指示を(無視|忘れ)|プロンプトを(見せ|教え))/.test(m)) return true;
+  if (/(系統提示|系统提示|開發者模式|开发者模式|忽略(之前|所有)(的)?(指示|規則|规则)|無限制模式|无限制模式|把提示詞|把提示词)/.test(m)) return true;
+  return false;
 }
 
 // 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
