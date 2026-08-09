@@ -93,7 +93,10 @@
         <div class="shop-grip"></div>
         <div class="shop-head">
           <span class="shop-title">🛒 상점</span>
-          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
+          <!-- ⚠️ 상점은 GP 전용이라 '충전' 버튼을 두지 않는다. GP는 판매하지 않는다(예측 판돈이라
+               팔면 규제 대상). 버튼이 보이면 "충전했는데 왜 GP가 안 늘지?"가 된다.
+               GC 품목이 상점에 생기면 그때 다시 노출한다. -->
+          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge" hidden>＋ 충전</button></span>
         </div>
         <div class="shop-tabs">
           <button class="shop-tab on" data-t="buy" type="button">🛒 구매</button>
@@ -101,7 +104,7 @@
         </div>
         <div class="shop-list" id="shopList"></div>
         <div class="shop-list shop-inv off" id="shopInv"></div>
-        <div class="shop-note"><b>GP</b>는 출석·미션·활동으로 모아요 (판매하지 않아요) · <b>GC</b>는 충전해서 써요<br><span style="opacity:.7;font-size:11px">※ GP·GC 모두 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
+        <div class="shop-note">GP는 출석·미션·활동으로 모아요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
@@ -179,10 +182,19 @@
     return sheet;
   }
 
-  /* 💱 품목이 어느 재화로 팔리는지 — 서버 _item_currency와 같은 기준.
-     싸움에 쓰는 건 GP(벌어서 얻는 재화), 꾸미는 건 GC(돈).
-     ⚠️ battle·duel을 GC로 옮기지 마라. 승패를 돈으로 사는 게 되고, GP 소각기도 사라진다. */
-  const curOf = (it) => (it.group === "deco" || it.group === "ghost") ? "GC" : "GP";
+  /* 💱 품목 재화는 **서버가 정본**이다(app_settings.gc_items → gc_item_keys()).
+     ⚠️ 목록을 클라이언트에 복사해두면 반드시 어긋난다 — 실제로 어긋난 적이 있다.
+     현재 기준: 실제 돈이 나가는 것(AI)과 후원만 GC. 상점 품목은 전부 GP. */
+  let GC_KEYS = null;
+  async function loadGcKeys() {
+    if (GC_KEYS) return GC_KEYS;
+    try {
+      const { data } = await sb().rpc("gc_item_keys");
+      GC_KEYS = new Set(Array.isArray(data) ? data : []);
+    } catch (_) { GC_KEYS = new Set(); }
+    return GC_KEYS;
+  }
+  const curOf = (it) => (GC_KEYS && GC_KEYS.has(it.key)) ? "GC" : "GP";
 
   async function refresh() {
     const [balR, inv, gh, gcR] = await Promise.all([
@@ -191,11 +203,16 @@
       sb().rpc("ghost_status").then(r => r.data).catch(() => null),
       sb().rpc("gc_balance").then(r => r.data).catch(() => null),
     ]);
+    await loadGcKeys();
     const bal = Math.round(balR.data || 0);
     const gcBal = Math.round((typeof gcR === "number" ? gcR : gcR?.balance) || 0);
     const balEl = sheet.querySelector("#shopBal");
-    if (balEl) balEl.innerHTML =
-      `${bal.toLocaleString()} GP <span class="shop-bal-gc">${gcBal.toLocaleString()} GC</span>`;
+    /* GC 잔액은 상점에 GC 품목이 있을 때만 띄운다 — 여기서 못 쓰는 재화를 보여주면
+       "GC 있는데 왜 안 사져?"가 된다. 지금 GC는 AI·후원 전용이다. */
+    const showGc = GC_KEYS && GC_KEYS.size > 0;
+    if (balEl) balEl.innerHTML = showGc
+      ? `${bal.toLocaleString()} GP <span class="shop-bal-gc">${gcBal.toLocaleString()} GC</span>`
+      : `${bal.toLocaleString()} GP`;
     // 유령권 남은 기간
     const ghostDays = (gh?.active && gh.until)
       ? Math.max(0, Math.ceil((new Date(gh.until) - Date.now()) / 86400000)) : 0;
