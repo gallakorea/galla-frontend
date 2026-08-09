@@ -11,7 +11,10 @@ const supa = createClient(
 );
 
 const KEY = Deno.env.get("YOUTUBE_API_KEY");
-const REGION = "KR";
+/* 🌍 수집 지역 — 코드에 박으면 언어를 열 때마다 배포가 필요하다.
+   app_settings.collect_sources에서 읽되, 못 읽으면 KR로 돈다(한국 수집이 멈추면 안 된다). */
+let REGION = "KR";
+let LOCALE = "ko";
 
 /* ── 키워드 (유튜브에 없는 분류) ───────────────────────── */
 const KW = {
@@ -279,6 +282,19 @@ Deno.serve(async (req) => {
   if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (!KEY) return json({ ok: false, error: "YOUTUBE_API_KEY 미설정" }, 500);
 
+  /* 🌍 한 번 호출 = 한 언어. 크론이 열린 언어 수만큼 부른다(?locale=en).
+     ⚠️ 수집 흐름(풀·카테고리·업서트)이 복잡해 한 요청에서 여러 지역을 돌리면 섞인다.
+     ⚠️ 설정을 못 읽어도 KR로 돈다 — 한국 수집이 멈추는 게 제일 나쁘다. */
+  try {
+    const want = new URL(req.url).searchParams.get("locale") || "";
+    const { data: tg } = await supa.rpc("collect_targets");
+    if (Array.isArray(tg) && tg.length) {
+      const hit = tg.find((t: any) => t.locale === want) || tg[0];
+      LOCALE = String(hit.locale || "ko");
+      REGION = String(hit.youtube_region || "KR");
+    }
+  } catch { /* 기본값 유지 */ }
+
   const now = new Date().toISOString();
   const pool = new Map<string, any>();          // 전체 풀(키워드 매칭용)
   const byCat = new Map<string, any[]>();       // 카테고리별 원본
@@ -394,7 +410,7 @@ Deno.serve(async (req) => {
 
   const { error } = await supa
     .from("youtube_hot")
-    .upsert(rows, { onConflict: "feed,video_id" });
+    .upsert(rows.map((r: any) => ({ ...r, locale: LOCALE })), { onConflict: "locale,feed,video_id" });
   if (error) return json({ ok: false, error: "upsert_failed", detail: error.message }, 500);
 
   // 이번 수집에 없던(=차트에서 내려간) 영상 정리

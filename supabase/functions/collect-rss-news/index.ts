@@ -142,7 +142,27 @@ Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
   if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   const started = Date.now();
-  const all = (await Promise.all(FEEDS.map(([n, u]) => parseFeed(n, u)))).flat();
+
+  /* 🌍 수집 대상 = '열린 언어'만. 소스 목록은 코드가 아니라 app_settings에 있다.
+     ⚠️ 언어를 열 때마다 배포하지 않으려고 뺐다. 지금은 ko뿐이라 동작이 그대로다.
+     ⚠️ rss가 비어 있으면 아래 FEEDS(기존 한국 목록)를 쓴다 — 회귀 방지. */
+  let targets: any[] = [{ locale: "ko", rss: [] }];
+  try {
+    const { data } = await supa.rpc("collect_targets");
+    if (Array.isArray(data) && data.length) targets = data;
+  } catch { /* 설정을 못 읽어도 한국 수집은 계속돼야 한다 */ }
+
+  const all: any[] = [];
+  for (const t of targets) {
+    const feeds: [string, string][] = (Array.isArray(t.rss) && t.rss.length)
+      ? t.rss.map((x: any) => [String(x[0]), String(x[1])] as [string, string])
+      : (t.locale === "ko" ? FEEDS : []);
+    if (!feeds.length) continue;
+    const got = (await Promise.all(feeds.map(([n, u]) => parseFeed(n, u)))).flat();
+    // 소스 언어를 각인한다(유저 언어가 아니다)
+    for (const row of got) (row as any).locale = t.locale;
+    all.push(...got);
+  }
 
   // url 기준 중복 제거(요청 내부)
   const seen = new Set<string>();

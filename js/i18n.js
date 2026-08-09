@@ -601,7 +601,13 @@
           "패스키 로그인 실패 —": "Passkey login failed —",
           "패스키 등록 실패 — [": "Passkey registration failed — [",
           "발행 실패": "Publish failed",
-          "투표 실패": "Vote failed"
+          "투표 실패": "Vote failed",
+          "번역 보기": "See translation",
+          "원문 보기": "See original",
+          "번역 중…": "Translating…",
+          "번역하지 못했어요.": "Couldn't translate.",
+          "번역은 로그인 후 쓸 수 있어요.": "Log in to use translation.",
+          "오늘 번역을 많이 하셨어요. 내일 다시 시도해주세요.": "You've translated a lot today. Try again tomorrow."
       },
       "ja": {
           "홈": "ホーム",
@@ -1187,7 +1193,13 @@
           "패스키 로그인 실패 —": "パスキーログインに失敗 —",
           "패스키 등록 실패 — [": "パスキー登録に失敗 — [",
           "발행 실패": "公開に失敗",
-          "투표 실패": "投票に失敗"
+          "투표 실패": "投票に失敗",
+          "번역 보기": "翻訳を見る",
+          "원문 보기": "原文を見る",
+          "번역 중…": "翻訳中…",
+          "번역하지 못했어요.": "翻訳できませんでした。",
+          "번역은 로그인 후 쓸 수 있어요.": "翻訳はログイン後に使えます。",
+          "오늘 번역을 많이 하셨어요. 내일 다시 시도해주세요.": "今日はたくさん翻訳しました。明日またお試しください。"
       },
       "zh-TW": {
           "홈": "首頁",
@@ -1773,7 +1785,13 @@
           "패스키 로그인 실패 —": "密碼金鑰登入失敗 —",
           "패스키 등록 실패 — [": "密碼金鑰註冊失敗 — [",
           "발행 실패": "發布失敗",
-          "투표 실패": "投票失敗"
+          "투표 실패": "投票失敗",
+          "번역 보기": "查看翻譯",
+          "원문 보기": "查看原文",
+          "번역 중…": "翻譯中…",
+          "번역하지 못했어요.": "無法翻譯。",
+          "번역은 로그인 후 쓸 수 있어요.": "登入後才能使用翻譯。",
+          "오늘 번역을 많이 하셨어요. 내일 다시 시도해주세요.": "今天翻譯很多了，明天再試試。"
       }
   };
 
@@ -2029,6 +2047,69 @@
     })();
   })();
 
+  /* 🌐 콘텐츠 번역 — 인스타·X처럼 '번역 보기'를 눌렀을 때만 번역한다.
+   *
+   *  왜 이 방식인가
+   *   · 유저 글을 미리 다 번역하면 아무도 안 볼 글까지 번역해 비용이 폭발한다.
+   *   · 원문은 그대로 두고 **보기 옵션**으로만 바꾼다 — 다시 누르면 원문으로 돌아온다.
+   *     (원문을 덮으면 작성자가 쓴 말이 화면에서 사라진다)
+   *   · 서버가 결과를 캐시하므로 같은 글을 100명이 봐도 번역은 1번이다.
+   *
+   *  사용:  GALLA_attachTranslate(el, { kind:'plaza', id:'123', src:'ko' })
+   *         el의 텍스트를 번역 대상으로 삼고, 그 아래에 토글 버튼을 붙인다.
+   */
+  async function translate(text, opts) {
+    opts = opts || {};
+    var to = opts.to || current;
+    if (!text || !text.trim()) return null;
+    try {
+      var c = window.supabaseClient || window.GALLA_SB;
+      if (!c || !c.functions) return null;
+      var r = await c.functions.invoke("translate", {
+        body: { text: text, to: to, from: opts.src || "", kind: opts.kind || "", ref_id: String(opts.id || ""), field: opts.field || "body" }
+      });
+      var d = r && r.data;
+      if (d && d.ok && d.text) return d.text;
+      /* ⚠️ 실패를 조용히 삼키지 않는다 — 유저는 버튼이 고장 난 줄 안다. */
+      if (d && d.reason === "daily_cap") return { error: t("오늘 번역을 많이 하셨어요. 내일 다시 시도해주세요.") };
+      if (d && d.reason === "auth") return { error: t("번역은 로그인 후 쓸 수 있어요.") };
+      return { error: t("번역하지 못했어요.") };
+    } catch (e) { return { error: t("번역하지 못했어요.") }; }
+  }
+
+  function attachTranslate(el, opts) {
+    try {
+      if (!el || el.__trAttached) return;
+      opts = opts || {};
+      var src = opts.src || "ko";
+      if (src === current) return;                 // 같은 언어면 버튼을 달 이유가 없다
+      el.__trAttached = true;
+      var original = el.textContent;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "galla-tr-btn";
+      btn.textContent = t("번역 보기");
+      btn.style.cssText = "background:none;border:0;padding:2px 0;margin-top:4px;color:inherit;opacity:.6;font:inherit;font-size:.86em;cursor:pointer;text-align:left";
+      var shown = false, translated = null;
+      btn.addEventListener("click", async function () {
+        if (shown) { el.textContent = original; btn.textContent = t("번역 보기"); shown = false; return; }
+        if (translated) { el.textContent = translated; btn.textContent = t("원문 보기"); shown = true; return; }
+        btn.disabled = true; btn.textContent = t("번역 중…");
+        var out = await translate(original, { kind: opts.kind, id: opts.id, src: src, field: opts.field });
+        btn.disabled = false;
+        if (typeof out === "string") {
+          translated = out; el.textContent = out; btn.textContent = t("원문 보기"); shown = true;
+        } else {
+          btn.textContent = (out && out.error) || t("번역하지 못했어요.");
+          setTimeout(function () { btn.textContent = t("번역 보기"); }, 2500);
+        }
+      });
+      el.insertAdjacentElement("afterend", btn);
+    } catch (e) {}
+  }
+
+  window.GALLA_translate = translate;
+  window.GALLA_attachTranslate = attachTranslate;
   window.GALLA_t = t;
   window.GALLA_lfilter = lfilter;
   window.GALLA_enabledLocales = function () { return _enabled ? _enabled.slice() : null; };
