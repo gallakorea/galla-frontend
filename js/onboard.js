@@ -37,9 +37,9 @@
 
     var sb = await sbReady();
     // 오늘 최대 격전 이슈
-    var r = await sb.from("issues").select("id,title,faction_a,faction_b,thumbnail_url,images")
+    var r = await (window.GALLA_lfilter||function(q){return q;})(sb.from("issues").select("id,title,faction_a,faction_b,thumbnail_url,images")
       .eq("status", "normal").order("hot_score", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false }).limit(1);
+      .order("created_at", { ascending: false }).limit(1));
     var iss = r.data && r.data[0];
     if (!iss) return;                                     // 콘텐츠 없으면 온보딩 생략
 

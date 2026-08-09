@@ -311,12 +311,12 @@ async function initTrendPage() {
   }
 
   async function searchIssues(q) {
-    const { data } = await supabase
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
       .from("issues")
       .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,created_at")
       .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(12));
     return data || [];
   }
   async function searchMarkets(q) {
@@ -361,23 +361,23 @@ async function initTrendPage() {
 
   // 핫유튜브 — youtube_hot 은 피드별로 같은 영상이 중복 저장되므로 video_id 로 합친다
   async function searchYoutube(q) {
-    const { data } = await supabase
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
       .from("youtube_hot")
       .select("video_id,title,channel_title,thumbnail,view_count,duration,is_short")
       .ilike("title", `%${q}%`)
       .order("view_count", { ascending: false })
-      .limit(40);
+      .limit(40));
     const seen = new Set();
     return (data || []).filter(v => !seen.has(v.video_id) && seen.add(v.video_id)).slice(0, 10);
   }
 
   async function searchPlaza(q) {
-    const { data } = await supabase
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
       .from("plaza_posts")
       .select("id,title,category,nickname,user_id,cover_image,thumbnail,up_count,down_count,created_at")
       .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(12));
     return data || [];
   }
 

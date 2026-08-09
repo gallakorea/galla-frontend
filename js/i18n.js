@@ -136,7 +136,45 @@
     } catch (e) {}
   }
 
+  /* 🔎 읽기 필터 — 탐색 화면(검색·피드·추천)이 '내 언어 콘텐츠'만 보게 한다.
+   *
+   *  ⚠️ 지원 언어가 하나뿐이면 **아무것도 하지 않는다.** 지금(ko 전용)은 완전한 no-op이라
+   *     넣어도 위험이 없고, 두 번째 언어를 여는 순간 자동으로 작동한다.
+   *  ⚠️ 어디에 걸지가 중요하다:
+   *      · 걸어야 할 곳 = 탐색(검색 결과·인기 피드·온보딩 추천) — 남의 콘텐츠를 발견하는 자리
+   *      · 걸면 안 되는 곳 = 내 글 목록(mypage), 링크로 연 개별 글/영상(watch)
+   *        → 내가 쓴 글이 안 보이거나, 공유받은 링크가 안 열리는 버그가 된다.
+   */
+  var _enabled = null;
+  /* ⚠️ i18n.js는 nav.js가 주입하므로 supabase 설정보다 먼저 뜰 수 있다.
+   *    처음엔 window.GALLA_SUPABASE_URL을 봤는데 그 시점엔 없어서 목록을 영영 못 읽었다(브라우저 실측: null).
+   *    → 공용 클라이언트가 준비될 때까지 짧게 기다렸다 RPC로 읽는다. */
+  (function loadEnabled(tries) {
+    tries = tries || 0;
+    try {
+      var c = window.supabaseClient || window.GALLA_SB;
+      if (c && typeof c.rpc === "function") {
+        c.rpc("enabled_locales").then(function (r) {
+          var j = r && r.data;
+          if (j && Array.isArray(j.enabled)) _enabled = j.enabled;
+        }).catch(function () {});
+        return;
+      }
+    } catch (e) {}
+    if (tries < 40) setTimeout(function () { loadEnabled(tries + 1); }, 250);   // 최대 10초
+  })();
+
+  function lfilter(q) {
+    try {
+      if (!q || typeof q.in !== "function") return q;      // PostgREST 빌더가 아니면 그대로
+      if (!_enabled || _enabled.length < 2) return q;       // 언어가 하나뿐 → 아무것도 하지 않는다
+      return q.in("locale", [current]);
+    } catch (e) { return q; }
+  }
+
   window.GALLA_t = t;
+  window.GALLA_lfilter = lfilter;
+  window.GALLA_enabledLocales = function () { return _enabled ? _enabled.slice() : null; };
   window.GALLA_locale = function () { return current; };
   window.GALLA_setLocale = setLocale;
   window.GALLA_localeConfig = config;

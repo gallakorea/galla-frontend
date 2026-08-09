@@ -83,14 +83,14 @@
     if (cache.has(feed)) return cache.get(feed);
     const c = await sb();
     if (!c) return [];
-    const { data, error } = await c
+    const { data, error } = await (window.GALLA_lfilter||function(q){return q;})(c
       .from("youtube_hot")
       .select("video_id,title,channel_title,thumbnail,view_count,like_count,duration,is_short,published_at,rank")
       .eq("feed", feed)
       // 🚫 '- Topic' 자동생성 음원 채널은 유튜브가 임베드를 원천 차단(오류 153) → 애초에 제외
       .not("channel_title", "ilike", "%- Topic")
       .order("rank", { ascending: true })
-      .limit(60);
+      .limit(60));
     const rows = error ? [] : (data || []);
     cache.set(feed, rows);
     return rows;
@@ -107,13 +107,13 @@
     if (cache.has("__shorts")) return cache.get("__shorts");
     const c = await sb();
     if (!c) return [];
-    const { data, error } = await c
+    const { data, error } = await (window.GALLA_lfilter||function(q){return q;})(c
       .from("youtube_hot")
       .select("video_id,title,channel_title,thumbnail,view_count,like_count,duration,is_short,published_at")
       .eq("is_short", true)
       .not("channel_title", "ilike", "%- Topic")
       .order("view_count", { ascending: false })
-      .limit(200);
+      .limit(200));
     const seen = new Set();
     const rows = (error ? [] : (data || []))
       .filter((v) => !seen.has(v.video_id) && seen.add(v.video_id))   // 피드별로 중복 저장됨
@@ -544,12 +544,12 @@
     try {
       const c = await sb();
       if (!c) return;
-      const { data } = await c.from("youtube_hot")
+      const { data } = await (window.GALLA_lfilter||function(q){return q;})(c.from("youtube_hot")
         .select("video_id,title,channel_title,thumbnail,view_count,duration")
         .neq("video_id", curId)
         .not("channel_title", "ilike", "%- Topic")
         .order("view_count", { ascending: false, nullsFirst: false })
-        .limit(40);
+        .limit(40));
       const seen = new Set([curId]);
       const list = (data || []).filter(v => v && v.video_id && !seen.has(v.video_id) && seen.add(v.video_id)).slice(0, 15);
       if (!list.length) { box.innerHTML = ""; return; }
