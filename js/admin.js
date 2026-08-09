@@ -15,7 +15,9 @@
     const step = (t) => { const p = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(target * e).toLocaleString(); if (p < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
-  function toast(m) { const d = document.createElement("div"); d.className = "ad-toast"; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+  function toast(m) {
+    try { if (window.GALLA_t) m = window.GALLA_t(m); } catch (e) {}
+    const d = document.createElement("div"); d.className = "ad-toast"; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
   function modal(html) {
     const w = document.createElement("div"); w.className = "ad-modal";
     w.innerHTML = `<div class="ad-modal-dim"></div><div class="ad-modal-box">${html}</div>`;

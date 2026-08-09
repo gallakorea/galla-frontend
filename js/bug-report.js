@@ -11,6 +11,7 @@
   const sb = () => window.supabaseClient || (window.supabase && window.supabase.from ? window.supabase : null);
 
   function toast(msg) {
+    try { if (window.GALLA_t) msg = window.GALLA_t(msg); } catch (e) {}   // 🌍 문구만 통과
     let t = document.getElementById("bugr-toast");
     if (!t) { t = document.createElement("div"); t.id = "bugr-toast"; document.body.appendChild(t); }
     t.textContent = msg; t.classList.add("show");

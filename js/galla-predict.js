@@ -23,7 +23,9 @@ function goDetail(url){
   }
   location.href = url;
 }
-function toast(msg){ const t=$('pmToast'); t.textContent=msg; t.hidden=false; clearTimeout(t._t); t._t=setTimeout(()=>t.hidden=true,2200); }
+function toast(msg){
+    try { if (window.GALLA_t) msg = window.GALLA_t(msg); } catch (e) {}
+    const t=$('pmToast'); t.textContent=msg; t.hidden=false; clearTimeout(t._t); t._t=setTimeout(()=>t.hidden=true,2200); }
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('ko-KR'); }
 // 헤더 포인트 알약용 축약 — 금액이 커져도 폭이 안 늘어 로고를 밀거나 겹치지 않게(사장님 요청).
 //   10만 미만: 정확히(99,999) / 1억 미만: 만 단위(99.2만) / 그 이상: 억 단위(1.2억)

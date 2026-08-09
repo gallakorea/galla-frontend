@@ -2041,6 +2041,7 @@
     }, true);
   }
   function toastMini(text) {
+    try { if (window.GALLA_t) text = window.GALLA_t(text); } catch (e) {}   // 🌍 문구만 통과
     let el = document.getElementById('dm-mini-toast');
     if (!el) { el = document.createElement('div'); el.id = 'dm-mini-toast'; document.body.appendChild(el); }
     el.textContent = text;

@@ -764,6 +764,7 @@
   }
 
   function toast(t) {
+    try { if (window.GALLA_t) t = window.GALLA_t(t); } catch (e) {}   // 🌍 문구만 통과
     let el = document.getElementById('dm-mini-toast');
     if (!el) { el = document.createElement('div'); el.id = 'dm-mini-toast'; document.body.appendChild(el); }
     el.textContent = t; el.classList.add('on');
