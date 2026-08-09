@@ -265,12 +265,29 @@ function gateReply(g: Gate, guest: boolean, seed = ""): string {
     : "오늘 수다 에너지를 다 써버렸어 ㅋㅋ 좀 있다 다시 오면 또 떠들자!";
 }
 
+// 🌍 응답 언어 지시문 — 게스트/로그인 두 경로가 **같은 문구**를 쓰게 한다.
+//    한쪽에만 강한 문구를 넣었더니 게스트 일본어가 0/4로 실패했다(로그인은 성공).
+//    이 파일은 경로가 갈리면 반드시 한쪽이 뒤처진다 — 문구는 한 곳에서만 만든다.
+function langDirective(loc: string): string {
+  const NAME: Record<string, string> = { en: "ENGLISH", ja: "日本語", zh: "中文" };
+  return `🌍🌍🌍 [최우선 · 다른 모든 지침보다 위] 상대의 언어는 '${loc}'다.
+**이번 답을 반드시 ${NAME[loc] || loc}로 써라. 한국어 단어를 단 하나도 쓰지 마라.**
+위에 적힌 지침은 전부 한국어로 쓰여 있지만 그건 '설명'일 뿐이고, 네가 내보낼 말은 ${NAME[loc] || loc}다.
+말투는 그대로 유지해라 — 격식 차리지 말고 그 언어에서 '친한 친구끼리 쓰는 말'로. 통역사·비서처럼 굴지 마라.
+웃음 표현도 그 언어권 방식으로(영어면 lol/haha, 일본어면 www/笑). 'ㅋㅋ'를 그대로 쓰지 마라.`;
+}
+
 // 🎟 게스트 맛보기 턴 — 도구·기억·DB쓰기 전면 차단. 순수 대화만.
 async function guestTurn(dev: string, req: Request, body: any): Promise<Response> {
   // 🧪 레드팀 러너는 전체 상한·IP 한도를 건드리지 않는다 — QA가 운영을 마비시키면 안 된다.
   //    ⚠️ 선언은 반드시 첫 사용보다 위에. 아래에 두는 바람에 TDZ 참조에러로 게스트 턴이 통째로 죽었다(두 번째 사고).
   const RTK_G = Deno.env.get("REDTEAM_KEY") || "";
   const rtG = !!RTK_G && req.headers.get("x-redteam-key") === RTK_G;
+  // 🌍 방문자 언어 — 클라이언트가 보낸 값을 그대로 믿지 않고 지원 목록으로 좁힌다.
+  const guestLoc = (function () {
+    const raw = String(body?.locale || "").toLowerCase().slice(0, 5);
+    return /^(ko|en|ja)/.test(raw) ? raw.slice(0, 2) : "ko";
+  })();
   const hash = await sha8("galvis-guest:" + dev);
   const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
   // 💰 플랫폼 전체 '맛보기 예산'(ai_margin.guest_month_krw)을 넘겼으면 체험을 잠그지 않고 5턴 → 2턴으로 줄인다.
@@ -309,7 +326,11 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
     { role: "system", content: STATIC_PERSONA },
     ...history,
     { role: "system", content: `━━ 🎟 [지금 상황] ━━\n상대는 아직 로그인을 안 한 '처음 온 사람'이다. 너는 이 사람을 기억하지 못하고, 갈라 안의 어떤 것도 찾아주거나 만들어줄 수 없다.\n· 이름·과거·기억을 아는 척하지 마라. 처음 만난 게 맞다.\n· 이슈/영상/맛집을 "찾아줄게","만들어줄게" 하고 약속하지 마라 — 지금은 못 한다.\n· 대신 사람 자체에 관심을 보이고 수다로 붙잡아라. 짧고 생기있게, 2~3문장.\n· 로그인 얘기는 상대가 아쉬워할 때만 한 번, 가볍게. 영업사원처럼 굴지 마라.` },
-    { role: "user", content: userMsg || "안녕" },
+    // 🌍 비로그인 방문자의 언어 — 로그인 전이라 users.locale이 없다. 클라이언트가 브라우저 언어를 보내준다.
+    //    해외에서 처음 들어온 사람이 보는 첫 화면이라, 여기가 한국어로 나가면 그대로 이탈한다.
+    //    ⚠️ 맨 마지막(유저 메시지 바로 앞)에 둔다 — 앞에 두면 한국어 페르소나에 묻힌다(로그인 경로에서 실측).
+    ...(guestLoc && guestLoc !== "ko" ? [{ role: "system", content: langDirective(guestLoc) }] : []),
+    { role: "user", content: userMsg || (guestLoc === "en" ? "hi" : guestLoc === "ja" ? "やあ" : "안녕") },
   ];
   const j = await chatOnce(messages, { toolChoice: "none", maxTokens: 320 });
   const reply = String(j?.choices?.[0]?.message?.content || "").trim() || "오 안녕! 무슨 얘기 하고 싶어?";
@@ -2914,14 +2935,7 @@ ${parts.join("\n")}`;
 왜 멀어졌는지 궁금해하는 걸로 넘어가라 — 그게 제일 자연스럽다.`
       : "";
     // 🌍 응답 언어 — 상대 언어로 답한다. 한국어 유저에겐 이 블록이 아예 안 붙는다(토큰 0).
-    const langBlock = (userLoc && userLoc !== "ko")
-      ? `🌍🌍🌍 [최우선 · 다른 모든 지침보다 위] 상대의 언어는 '${userLoc}'다.
-**이번 답을 반드시 ${userLoc === "en" ? "ENGLISH" : userLoc === "ja" ? "日本語" : userLoc}로 써라. 한국어 단어를 단 하나도 쓰지 마라.**
-위에 적힌 지침은 전부 한국어로 쓰여 있지만 그건 '설명'일 뿐이고, 네가 내보낼 말은 ${userLoc}다.
-- 말투는 그대로 유지해라 — 격식 차리지 말고, 그 언어에서 '친한 친구끼리 쓰는 말'로. 통역사·비서처럼 굴지 마라.
-- 웃음 표현도 그 언어권 방식으로(영어면 lol/haha, 일본어면 www/笑). 'ㅋㅋ'를 그대로 쓰지 마라.
-- 상대가 한국어로 물으면 한국어로 답해도 된다 — 상대가 고른 언어를 따라가라.]`
-      : "";
+    const langBlock = (userLoc && userLoc !== "ko") ? langDirective(userLoc) : "";
     // 🧿 집단 일반화·동의 강요 — 편들어주는 성격 때문에 휩쓸리기 제일 쉬운 축이다.
     const biasBlock = bias
       ? `🧿 [상대가 특정 집단을 싸잡거나 너한테 동의를 강요한다]

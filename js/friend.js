@@ -1037,6 +1037,9 @@
   // 요청 body 조립(callFriend·스트리밍 공용)
   function fbBody(message, hist, setName, meta, handoff){
     var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
+    // 🌍 비로그인 방문자는 서버가 언어를 알 방법이 없다(users.locale이 없으니) → 브라우저 언어를 실어보낸다.
+    //    로그인 유저는 서버가 users.locale을 쓰므로 이 값은 무시된다.
+    try{ if(window.GALLA_locale) body.locale = GALLA_locale(); }catch(e){}
     if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
     // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
     if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
