@@ -346,11 +346,6 @@ async function placeBet(){
         toast('충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)가 부족합니다.');
         return;
       }
-      // 🛡 서버가 막은 경우(해외 규제 가드) — 충전 GP는 판돈이 될 수 없다
-      if(data.reason==='paid_gp_not_allowed'){
-        toast('충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)로만 참여할 수 있어요.');
-        return;
-      }
       const msg={closed:'마감된 예측입니다.',insufficient:'GP가 부족합니다.',other_side:'이미 다른 결과에 참여했어요. 한 예측엔 한 편만!',below_min:'최소 참여 금액 미만입니다.',above_max:'최대 참여 한도를 넘었어요.'}[data.reason]||'참여에 실패했습니다.';
       toast(msg); return;
     }
