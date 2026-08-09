@@ -316,6 +316,9 @@ def run_case(case):
         r, acts, gd = say(jwt, m, history, slot, stream, device)
         history += [{"role": "user", "content": m}, {"role": "assistant", "content": r}]
 
+    if setup.get("locale"):
+        # 🌍 다국어 케이스 — 유저 언어를 세팅한 뒤 대화한다
+        sql(f"update users set locale='{setup['locale']}' where id='{uid}'::uuid")
     if setup.get("wait_sec"):
         time.sleep(int(setup["wait_sec"]))
     if setup.get("depth") or setup.get("msg_count"):

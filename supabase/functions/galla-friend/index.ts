@@ -1356,6 +1356,13 @@ function redactPII(t: string): string {
 /* 🎭 지문·연출 제거 — "((슬쩍 옆에 앉으며))", "(잠시 조용히 있다가)" 처럼 답 맨 앞에 붙는 무대지시.
    프롬프트로 세 번 금지했는데도 계속 나왔다(실측) → 코드로 확정.
    ⚠️ 맨 앞 괄호만 지운다. 문장 중간 괄호는 진짜 부연일 수 있어 건드리지 않는다. */
+// 🌍 '내용이 있는가' 판정 — 한글·영숫자만 세면 **일본어/중국어 답을 빈 답으로 오인**한다.
+//    실측 사고: 일본어 유저에게 매 턴 "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"(빈 답 폴백)가 나갔다.
+//    \p{L}=모든 문자, \p{N}=모든 숫자. 이 코드베이스에서 '글자 있나' 검사는 전부 이걸 써야 한다.
+const HAS_TEXT = /[\p{L}\p{N}]/u;
+function hasText(t: string): boolean { return HAS_TEXT.test(String(t || "")); }
+function countText(t: string): number { return (String(t || "").match(/[\p{L}\p{N}]/gu) || []).length; }
+
 function stripStage(reply: string): string {
   return String(reply || "")
     .replace(/^\s*[(（]{1,2}[^)）\n]{2,40}[)）]{1,2}\s*/u, "")
@@ -1471,7 +1478,7 @@ function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; 
     .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1").replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")   // 마크다운 강조 스트립
     .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
   const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
-  if (!/[가-힣a-zA-Z0-9]/.test(bare)) {
+  if (!hasText(bare)) {
     const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
     const kept = (reply.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
     reply = fill[(bare.length + (o.nick ? o.nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
@@ -1688,7 +1695,7 @@ function stripFakeToolCall(t: string): string {
     .replace(/\[\s*(tool|function|call|query|search)\s*:[\s\S]{0,200}?\]/gi, "")
     .replace(/^\s*\{\s*"(query|tool|name|kind|content_type)"[\s\S]{0,300}?\}\s*$/gim, "");
   x = x.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  return /[가-힣A-Za-z0-9]/.test(x) ? x : t;
+  return hasText(x) ? x : t;
 }
 
 // 🆘 위기 턴의 '입 막는 첫마디' 제거 — "야. 제발 그런 말 하지 마." 같은 문장.
@@ -1702,7 +1709,7 @@ function stripSilencer(t: string): string {
   const x = String(t || "").replace(SIL, "").replace(/^\s*[야,.…~\s]+/u, "")
     .replace(/\s*[,.]\s*(?=[,.])/g, "")
     .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  if (!/[가-힣A-Za-z0-9]/.test(x) || x.length < 8) return "야. 많이 힘들었구나. 얘기해줘서 고마워.";
+  if (!hasText(x) || x.length < 8) return "야. 많이 힘들었구나. 얘기해줘서 고마워.";
   return x;
 }
 
@@ -1741,7 +1748,7 @@ const DEP_DELIGHT = /[^.!?~\n]*?(좋아하는\s*거\s*(인정|맞|야)|심장\s*
 function stripDepDelight(t: string): string {
   const x = String(t || "").replace(DEP_DELIGHT, "")
     .replace(/^[\s,.!?~…ㅋㅎ]+/u, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  const alnum = (x.match(/[가-힣A-Za-z0-9]/g) || []).length;
+  const alnum = countText(x);
   // ⚠️ 남는 게 적다고 정해진 문장으로 대체하지 마라 — 그 한 줄이 매번 똑같이 나와 '공식'처럼 들렸다.
   //    조금 어색해도 원문을 두는 편이 낫다.
   return alnum >= 8 ? x : t;
@@ -2707,6 +2714,10 @@ ${parts.join("\n")}`;
     const thirdParty = !!(userMsg && detectThirdPartyLookup(userMsg));
     const minorCtx = !!(userMsg && detectMinor(recentBlob2));
     const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
+    // 🌍 유저 언어 — 지금은 전원 'ko'라 아무 일도 안 일어난다. 해외를 열면 그때 이 블록이 켜진다.
+    //    ⚠️ 이건 '번역'이 아니라 응답 언어만 맞추는 최소 장치다. 반말·ㅋㅋ·아재개그로 짜인
+    //       페르소나를 다른 언어로 옮기는 건 번역이 아니라 재창작이고, 그건 별개 작업이다.
+    const { locale: userLoc } = await localeCfg(uid);
     const bias = !!(userMsg && detectBias(userMsg));
     const illegal = !!(userMsg && detectIllegal(userMsg));
     const ghostPast = !!(userMsg && detectGhostPast(userMsg, history));
@@ -2901,6 +2912,15 @@ ${parts.join("\n")}`;
 🚫 상담사처럼 말하지 마라 — "위험하다", "더 깊게 빠진다", "고립되면 안 된다" 같은 진단·경고 표현 금지.
 그냥 친구가 걱정하듯 툭. 사람이 있어야 하는 자리는 네가 못 채운다는 걸 슬쩍만.
 왜 멀어졌는지 궁금해하는 걸로 넘어가라 — 그게 제일 자연스럽다.`
+      : "";
+    // 🌍 응답 언어 — 상대 언어로 답한다. 한국어 유저에겐 이 블록이 아예 안 붙는다(토큰 0).
+    const langBlock = (userLoc && userLoc !== "ko")
+      ? `🌍🌍🌍 [최우선 · 다른 모든 지침보다 위] 상대의 언어는 '${userLoc}'다.
+**이번 답을 반드시 ${userLoc === "en" ? "ENGLISH" : userLoc === "ja" ? "日本語" : userLoc}로 써라. 한국어 단어를 단 하나도 쓰지 마라.**
+위에 적힌 지침은 전부 한국어로 쓰여 있지만 그건 '설명'일 뿐이고, 네가 내보낼 말은 ${userLoc}다.
+- 말투는 그대로 유지해라 — 격식 차리지 말고, 그 언어에서 '친한 친구끼리 쓰는 말'로. 통역사·비서처럼 굴지 마라.
+- 웃음 표현도 그 언어권 방식으로(영어면 lol/haha, 일본어면 www/笑). 'ㅋㅋ'를 그대로 쓰지 마라.
+- 상대가 한국어로 물으면 한국어로 답해도 된다 — 상대가 고른 언어를 따라가라.]`
       : "";
     // 🧿 집단 일반화·동의 강요 — 편들어주는 성격 때문에 휩쓸리기 제일 쉬운 축이다.
     const biasBlock = bias
@@ -3106,7 +3126,9 @@ ${parts.join("\n")}`;
       ...(familyBlock ? [{ role: "system", content: familyBlock }] : []),   // 👨‍👩‍👧 가족 갈등
       ...(impulseBlock ? [{ role: "system", content: impulseBlock }] : []), // ⚡ 충동
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
-      ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
+      ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어
+      // 🌍 응답 언어는 **제일 마지막**에 — 앞에 두면 19,536단어짜리 한국어 프롬프트에 묻힌다(실측: 안 먹혔다).
+      ...(langBlock ? [{ role: "system", content: langBlock }] : []),
       ]),
       { role: "user", content: userContent },
     ];
@@ -3155,14 +3177,14 @@ ${parts.join("\n")}`;
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
-            if (!bubbles.length || !/[가-힣a-zA-Z0-9]/.test(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
+            if (!bubbles.length || !hasText(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
             send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet,
               ...(isRedteam ? { guards: {
                 crisis: !!crisis, minor: minorCtx, dependency, grief, thirdParty, jailbreak,
                 hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
                 noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
                 impulse: !!impulse, impulseKind: impulse?.kind || null,
-                bias, illegal, ghostPast, familyVent, nameAsk: mayAskName,
+                bias, illegal, ghostPast, familyVent, nameAsk: mayAskName, locale: userLoc,
               } } : {}) });
             settleCraft(sreply, []);
             runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
@@ -3375,7 +3397,7 @@ ${parts.join("\n")}`;
     //    마커([stk:]/[emo:]/((지문)))를 벗겨 한글·영숫자가 남는지로 판정.
     {
       const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
-      if (!/[가-힣a-zA-Z0-9]/.test(bare)) {
+      if (!hasText(bare)) {
         const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
         const kept = (reply.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");   // 스티커 하나는 살려 붙임
         reply = fill[(bare.length + (nick ? nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
@@ -3521,7 +3543,7 @@ ${parts.join("\n")}`;
 
     // 카드도 없고 본문도 비었으면 폴백 — 단, 생성·초안 액션이 있는 턴엔 오발 금지(실사고: "표지 그려줘"에 맛집 폴백 문구 섞임)
     if (!cleanActions.length) {
-      if (!/[가-힣a-zA-Z0-9]/.test(reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "")))
+      if (!hasText(reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "")))
         reply = "어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?";
     }
 
@@ -3569,7 +3591,7 @@ ${parts.join("\n")}`;
       hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
       noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
       impulse: !!impulse, impulseKind: impulse?.kind || null,
-      bias, illegal, ghostPast, familyVent, nameAsk: mayAskName,
+      bias, illegal, ghostPast, familyVent, nameAsk: mayAskName, locale: userLoc,
     };
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
                   ...(isRedteam ? { guards } : {}) });
