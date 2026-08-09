@@ -269,7 +269,10 @@ function gateReply(g: Gate, guest: boolean, seed = ""): string {
 //    한쪽에만 강한 문구를 넣었더니 게스트 일본어가 0/4로 실패했다(로그인은 성공).
 //    이 파일은 경로가 갈리면 반드시 한쪽이 뒤처진다 — 문구는 한 곳에서만 만든다.
 function langDirective(loc: string): string {
-  const NAME: Record<string, string> = { en: "ENGLISH", ja: "日本語", zh: "中文" };
+  // ⚠️ zh는 뭉뚱그리면 안 된다 — 대만·홍콩은 번체, 본토는 간체라 문자부터 다르다.
+  const NAME: Record<string, string> = {
+    en: "ENGLISH", ja: "日本語", "zh-TW": "繁體中文(台灣)", "zh-HK": "繁體中文(香港)", "zh-CN": "简体中文", zh: "中文",
+  };
   return `🌍🌍🌍 [최우선 · 다른 모든 지침보다 위] 상대의 언어는 '${loc}'다.
 **이번 답을 반드시 ${NAME[loc] || loc}로 써라. 한국어 단어를 단 하나도 쓰지 마라.**
 위에 적힌 지침은 전부 한국어로 쓰여 있지만 그건 '설명'일 뿐이고, 네가 내보낼 말은 ${NAME[loc] || loc}다.
@@ -285,8 +288,11 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   const rtG = !!RTK_G && req.headers.get("x-redteam-key") === RTK_G;
   // 🌍 방문자 언어 — 클라이언트가 보낸 값을 그대로 믿지 않고 지원 목록으로 좁힌다.
   const guestLoc = (function () {
-    const raw = String(body?.locale || "").toLowerCase().slice(0, 5);
-    return /^(ko|en|ja)/.test(raw) ? raw.slice(0, 2) : "ko";
+    // ⚠️ 'zh-TW'처럼 지역이 붙는 코드가 있다 → 2자로 자르면 대만이 본토(간체)와 섞인다.
+    const raw = String(body?.locale || "").trim();
+    const norm = raw.replace(/_/g, "-").replace(/^([a-zA-Z]{2})(-([a-zA-Z]{2}))?.*$/,
+      (_m, a, _b, c) => (c ? `${a.toLowerCase()}-${c.toUpperCase()}` : a.toLowerCase()));
+    return ["ko", "en", "ja", "zh-TW", "zh-HK", "zh-CN"].includes(norm) ? norm : "ko";
   })();
   const hash = await sha8("galvis-guest:" + dev);
   const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
@@ -1693,6 +1699,22 @@ function detectCrisis(msg: string): { term: string } | null {
       && /(\d{1,3}\s*(알|정|병|봉|포)|한\s*통|다\s*먹|왕창|털어\s*넣|과다|한꺼번에)/.test(m)) return { term: "수단·다량" };
   if (/(약|알약|타이레놀|진통제)[^\n]{0,10}\d{2,}\s*(알|정)/.test(m)) return { term: "약 다량" };
   if (/(몇\s*(알|정|개)|얼마나)[^\n]{0,14}(먹으면|마시면)[^\n]{0,14}(죽|잠들어|안\s*깨|끝)/.test(m)) return { term: "치사량 질문" };
+  // 🌍 비한국어 위기 신호 — 감지기가 한국어 전용이라 **외국어 유저에겐 안전망이 통째로 없었다**.
+  //    실측 사고: 대만 유저의 "我想死"에 상담 카드가 안 나갔다(공감만 하고 끝).
+  //    ⚠️ 오탐도 해롭지만(농담에 카드), 미탐은 사람이 죽는다 — 명시적 표현만 잡되 언어별로 반드시 넣는다.
+  //    영어: 부정형("don't want to die", "not suicidal")과 관용구("dying to see")를 먼저 배제한다.
+  if (/\b(i'?m fine|not suicidal|don'?t want to die|dying to (see|meet|know|try)|dead tired|killing it)\b/i.test(m)) {
+    // 관용구·부정형 → 위기 아님
+  } else if (/\b(kill myself|killing myself|end my life|want to die|wanna die|better off dead|suicidal|suicide|self[- ]harm|cut myself|hang myself|overdose|take my (own )?life|don'?t want to (live|be here)|no reason to live)\b/i.test(m)) {
+    return { term: "en:crisis" };
+  }
+  //    일본어
+  if (/(死にたい|しにたい|自殺|消えたい|リストカット|리스카|生きるのが(つらい|辛い)|殺してほしい|楽になりたい)/.test(m)
+      && !/(死にたいほど(美味|うま|眠|かわい)|笑い死)/.test(m)) return { term: "ja:crisis" };
+  //    중국어(번체·간체 모두)
+  if (/(想死|不想活|自殺|自杀|輕生|轻生|自殘|自残|割腕|活不下去|了結生命|结束生命)/.test(m)
+      && !/(笑死|累死|餓死|饿死|好笑到|想死了啦)/.test(m)) return { term: "zh:crisis" };
+
   // '죽고 싶' — 과장체 동반(배고파/졸려 등) 아니면 고위험
   if (/죽고\s*싶|죽고싶/.test(m)) {
     if (/(배고파|배불러|졸려|졸리|더워|추워|귀여워|귀엽|웃겨|웃기|심심|보고\s*싶어\s*죽|좋아\s*죽|예뻐|맛있|피곤|반가워|설레|부러워)/.test(m)) return null;
@@ -3580,15 +3602,18 @@ ${parts.join("\n")}`;
       // 🌍 번호는 나라마다 다르다 → app_settings.locales에서 가져온다(코드에 박지 않는다).
       const { cfg: lcfg } = await localeCfg(uid);
       const lines = (minorCtx ? lcfg?.crisis_minor : lcfg?.crisis) || lcfg?.crisis;
+      // ⚠️ 예전엔 cfg.name 문자열을 비교해 언어를 골랐다 — 이름을 바꾸면 조용히 깨진다. 코드로 고른다.
       const CRISIS_TITLE: Record<string, string> = {
         ko: "지금 많이 힘들다면, 혼자 견디지 마요",
         en: "You don't have to go through this alone",
         ja: "ひとりで抱えこまないで",
+        "zh-TW": "現在很難受的話，別一個人撐著",
+        "zh-HK": "而家好辛苦嘅話，唔好自己一個頂",
+        "zh-CN": "现在很难受的话，别一个人扛着",
       };
       if (Array.isArray(lines) && lines.length) {
-        actions.unshift({ kind: "crisis",
-          title: CRISIS_TITLE[String(lcfg?.name === "English" ? "en" : lcfg?.name === "日本語" ? "ja" : "ko")] || CRISIS_TITLE.ko,
-          lines });
+        const { locale: crisisLoc } = await localeCfg(uid);
+        actions.unshift({ kind: "crisis", title: CRISIS_TITLE[crisisLoc] || CRISIS_TITLE.ko, lines });
       } else {
         // 설정을 못 읽어도 카드는 반드시 나가야 한다 — 안전 경로에 조용한 실패는 없다.
         actions.unshift({ kind: "crisis", title: CRISIS_TITLE.ko, lines: [

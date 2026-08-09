@@ -26,6 +26,14 @@
       "검색": "Search",
       "알림": "Notifications"
     },
+    "zh-TW": {
+      "로그인": "登入",
+      "회원가입": "註冊",
+      "설정": "設定",
+      "홈": "首頁",
+      "검색": "搜尋",
+      "알림": "通知"
+    },
     ja: {
       "로그인": "ログイン",
       "회원가입": "新規登録",
@@ -46,6 +54,13 @@
     var nav = (navigator.language || "ko").toLowerCase();
     if (nav.indexOf("ko") === 0) return "ko";
     if (nav.indexOf("ja") === 0) return "ja";
+    /* ⚠️ 중국어는 지역이 문자를 결정한다 — 대만·홍콩은 번체(Hant), 본토는 간체(Hans).
+       'zh'로 뭉뚱그리면 대만 유저에게 간체가 나간다. */
+    if (nav.indexOf("zh") === 0) {
+      if (nav.indexOf("tw") >= 0 || nav.indexOf("hant") >= 0) return "zh-TW";
+      if (nav.indexOf("hk") >= 0 || nav.indexOf("mo") >= 0) return "zh-HK";
+      return "zh-CN";
+    }
     if (nav.indexOf("en") === 0) return "en";
     return FALLBACK;
   }
@@ -94,7 +109,8 @@
 
   /* 숫자·통화·날짜 — 나라마다 표기가 다르다. 여기 한 곳에서만 만든다. */
   function money(amount) {
-    var cur = (_cfg && _cfg.currency) || (current === "ko" ? "KRW" : current === "ja" ? "JPY" : "USD");
+    var DEFAULT_CUR = { ko: "KRW", ja: "JPY", "zh-TW": "TWD", "zh-HK": "HKD", "zh-CN": "CNY", en: "USD" };
+    var cur = (_cfg && _cfg.currency) || DEFAULT_CUR[current] || "USD";
     try {
       return new Intl.NumberFormat(current, { style: "currency", currency: cur,
         maximumFractionDigits: cur === "KRW" || cur === "JPY" ? 0 : 2 }).format(amount);
