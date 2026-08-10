@@ -151,6 +151,34 @@
      그래서 loop를 3회로 끊는다. 3회 뒤엔 멈추고, 유저가 다시 누르면 카운터가 초기화된다.
      ⚠️ 무한 반복이 꼭 필요한 영상은 data-loop-forever를 달아라(현재는 없다).
      ⚠️ 재생 지점마다 고치면 새 화면이 생길 때 또 빠뜨린다 → video[loop]를 전역으로 훑는다. */
+  /* 🔊 앱(iOS)에서 영상 소리만 작던 것 —
+     앱 전역 오디오 세션이 통화용 .playAndRecord라, iOS가 마이크 하울링을 막으려고 출력을 감쇠시킨다.
+     그래서 **볼륨을 최대로 올려도 작다**(볼륨과 무관한 감쇠라서). 브라우저는 .playback을 써서 크게 들린다.
+     → 영상이 실제로 재생되는 동안만 네이티브에 .playback을 요청하고, 끝나면 원복한다.
+     ⚠️ 통화·난장 중엔 네이티브가 알아서 무시한다(마이크가 열린 채 바꾸면 통화가 죽는다).
+     ⚠️ 웹에선 브리지가 없으니 아무 일도 안 일어난다. */
+  function nativeAudio(op) {
+    try { window.webkit?.messageHandlers?.gallaAudio?.postMessage({ op: op }); } catch (_) {}
+  }
+  function bindMediaSession(v) {
+    if (v.__mediaSessionBound) return;
+    v.__mediaSessionBound = true;
+    /* ⚠️ on/off는 반드시 짝이 맞아야 한다. 자기가 켠 적 없는데 off를 보내면
+       네이티브 카운터가 0으로 떨어져, **다른 영상이 소리내며 재생 중인데도 세션이 꺼진다**
+       (그 영상 소리가 다시 작아진다). 요소별로 켠 상태를 기억한다. */
+    const on = () => { if (v.__mediaOn) return; v.__mediaOn = true; nativeAudio("mediaOn"); };
+    const off = () => { if (!v.__mediaOn) return; v.__mediaOn = false; nativeAudio("mediaOff"); };
+    v.addEventListener("play", () => { if (!v.muted) on(); });
+    // 음소거 해제도 '소리가 나기 시작하는' 순간이다 — 피드 영상은 음소거로 시작한다
+    v.addEventListener("volumechange", () => {
+      if (!v.muted && !v.paused) on();
+      else if (v.muted) off();          // 다시 음소거하면 세션을 붙들고 있을 이유가 없다
+    });
+    v.addEventListener("pause", off);
+    v.addEventListener("ended", off);
+    v.addEventListener("emptied", off);
+  }
+
   const LOOP_CAP = 3;
   function capLoop(v) {
     if (!v || v.__loopCapped || v.hasAttribute("data-loop-forever")) return;
@@ -165,7 +193,17 @@
     v.addEventListener("play", () => { if (v.__plays >= LOOP_CAP) v.__plays = 0; });
   }
   function sweepLoops(root) {
-    try { (root || document).querySelectorAll("video[loop]").forEach(capLoop); } catch (_) {}
+    try {
+      const r = root || document;
+      r.querySelectorAll("video[loop]").forEach(capLoop);
+      /* 오디오 세션은 loop 여부와 무관하게 **모든 영상**에 건다.
+         ⚠️ 통화·라이브 영상은 제외 — 네이티브가 세션을 직접 관리하는 영역이다. */
+      r.querySelectorAll("video").forEach(v => {
+        if (v.srcObject) return;
+        if (v.closest && v.closest("#dm-call, .live-room, [data-no-blur-pause]")) return;
+        bindMediaSession(v);
+      });
+    } catch (_) {}
   }
   if (!window.__GALLA_LOOPCAP__) {
     window.__GALLA_LOOPCAP__ = true;
