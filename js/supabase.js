@@ -181,7 +181,16 @@
        visibilitychange는 '탭 숨김'만 잡는다 — 보이는 채로 방치된 창은 계속 돌아간다.
        그 방치 시간이 이번 청구서의 주범이다. */
     window.addEventListener("blur", () => {
-      try { document.querySelectorAll("video").forEach(v => { if (!v.paused) { v.pause(); v.__blurPaused = true; } }); } catch (_) {}
+      try {
+        document.querySelectorAll("video").forEach(v => {
+          /* ⚠️ 통화·라이브는 절대 멈추면 안 된다. WebRTC 영상은 srcObject로 붙고
+             다른 창을 잠깐 봤다고 통화가 끊기면 그건 고장이다.
+             (내가 처음에 '모든 video'를 멈춰서 통화까지 죽였다) */
+          if (v.srcObject) return;
+          if (v.closest("#dm-call, .live-room, [data-no-blur-pause]")) return;
+          if (!v.paused) { v.pause(); v.__blurPaused = true; }
+        });
+      } catch (_) {}
     });
   }
 
