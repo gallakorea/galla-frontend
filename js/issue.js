@@ -324,6 +324,19 @@ function renderIssueMedia(issue) {
         if (window.GALLA_attachHls) window.GALLA_attachHls(v, v.dataset.src);
         else v.src = v.dataset.src;
     }
+    /* ⏱ 이어보기 — 릴스가 "issue.html?id=..&t=12.3" 으로 보던 위치를 넘긴다(shorts.js).
+       ⚠️ 여태 issue.js가 이 t를 **아무도 안 읽어서** 상세로 들어가면 항상 처음부터 재생됐다.
+          첫 재생 1회만 적용한다(두 번째부터는 유저가 스스로 움직인 위치를 존중). */
+    /* ⚠️ location.search로 읽으면 **앱(SPA)에서는 항상 빈값**이다.
+       SPA 라우터는 쿼리를 mount params 객체로 넘기고 주소창은 안 건드린다.
+       pageQuery()가 두 경우를 모두 처리한다(이 파일 상단의 공용 헬퍼). */
+    let pendingSeek = (() => {
+        try {
+            const t = parseFloat(pageQuery().get('t'));
+            return isFinite(t) && t > 0.3 ? t : 0;
+        } catch (_) { return 0; }
+    })();
+
     function syncActiveVideo() {
         vids.forEach(v => {
             const idx = Number(v.closest('.issue-slide').dataset.i);
@@ -331,7 +344,15 @@ function renderIssueMedia(issue) {
                 attachOnce(v);
                 const wantSound = window.GALLA_soundOn && window.GALLA_soundOn();
                 v.muted = !wantSound;
+                if (pendingSeek) {
+                    const t = pendingSeek; pendingSeek = 0;
+                    // 메타데이터가 와야 seek이 먹는다 — 아직이면 로드된 뒤에 적용
+                    const seek = () => { try { v.currentTime = t; } catch (_) {} };
+                    if (v.readyState >= 1) seek();
+                    else v.addEventListener('loadedmetadata', seek, { once: true });
+                }
                 v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+                if (!v.muted && window.GALLA_soloAudio) window.GALLA_soloAudio(v);
             } else {
                 v.pause();
             }
