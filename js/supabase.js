@@ -183,6 +183,8 @@
     } catch (_) {}
   }
 
+  window.GALLA_soloAudio = soloAudio;   // 피드/릴스가 '현재 영상만 소리'를 강제할 때 쓴다
+
   function bindMediaSession(v) {
     if (v.__mediaSessionBound) return;
     v.__mediaSessionBound = true;

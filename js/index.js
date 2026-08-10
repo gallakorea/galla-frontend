@@ -36,16 +36,25 @@ let bestList, recommendList, bestMore;
  * =========================== */
 /* 피드 영상 소리 — 전역 사운드 선호(media-sound.js) 사용. 인덱스·릴스·이슈 통일 */
 function syncMuteBtn(vid) { window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns(); }
+/* 🔊 '지금 보는 영상'에 소리 선호를 적용한다.
+   ⚠️ 이걸 따로 뺀 이유: 피드 영상은 autoplay라 스크롤 전에 이미 음소거로 재생 중인 경우가 많다.
+      예전엔 playWithSound가 '이미 재생 중'이면 통째로 조기 반환해서 **소리를 영영 안 켜줬다**
+      (사장님 재현: "밑에 영상 가면 소리 안 나와, 버튼 한번 더 눌러야 나와").
+      재생 시작과 소리 적용은 별개다. */
+function applySoundPref(vid) {
+    if (window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured) {
+        vid.muted = false;
+        if (window.GALLA_soloAudio) window.GALLA_soloAudio(vid);   // 소리는 항상 한 영상만
+    }
+    if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
+}
+
 function playWithSound(vid) {
-    if (!vid.paused) return;              // 이미 재생 중이면 재호출 무시(깜빡임 방지)
+    if (!vid.paused) { applySoundPref(vid); return; }   // 이미 재생 중이어도 소리는 이어준다
     vid.muted = true;                     // 항상 음소거로 시작 → iOS 자동재생 허용(리젝트/재시도 없음)
     const p = vid.play();
     if (p && typeof p.then === 'function') {
-        p.then(() => {
-            // 재생이 시작된 뒤에만 사운드 선호+제스처면 음소거 해제
-            if (window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured) vid.muted = false;
-            if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
-        }).catch(() => {});
+        p.then(() => applySoundPref(vid)).catch(() => {});
     }
 }
 
@@ -448,8 +457,14 @@ window.openReels = function (startId) {
             user_id: c.user_id, faction_a: c.faction_a, faction_b: c.faction_b
         }));
     if (!vids.length) return;
-    // 이어보기: 인라인 미리보기의 현재 재생 위치를 릴스로 넘김
-    const inlineVid = document.getElementById('vid-' + startId);
+    /* 이어보기: 인라인 미리보기의 현재 재생 위치를 릴스로 넘김.
+       ⚠️ 영상 요소 id가 두 가지다 — 단일 영상 카드는 vid-<id>, **캐러셀 카드는 cvid-<id>-<슬라이드>**.
+          vid-만 찾으면 캐러셀 카드에선 항상 못 찾아 startTime=0 → 릴스가 처음부터 재생된다
+          (사장님 재현: "영상 처음부터 다시 나오는데 이어지게 한 규칙이 무너짐"). */
+    const inlineVid = document.getElementById('vid-' + startId) || (() => {
+        const list = [...IDXROOT.querySelectorAll(`video[id^="cvid-${startId}-"]`)];
+        return list.find(v => !v.paused && v.currentTime > 0) || list.find(v => v.currentTime > 0) || list[0] || null;
+    })();
     const startTime = inlineVid && !isNaN(inlineVid.currentTime) ? inlineVid.currentTime : 0;
     // 인라인 미리보기 정지 (소리 중복 방지)
     IDXROOT.querySelectorAll('.card-media video').forEach(v => v.pause());
