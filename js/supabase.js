@@ -160,6 +160,20 @@
   function nativeAudio(op) {
     try { window.webkit?.messageHandlers?.gallaAudio?.postMessage({ op: op }); } catch (_) {}
   }
+  /* 🔬 네이티브가 실제 오디오 세션 상태를 돌려준다 → client_errors에 남긴다.
+     실기기에서만 재현되는 문제라, 남겨두지 않으면 매번 사장님께 물어봐야 한다.
+     ⚠️ 같은 값이 반복해서 쌓이지 않게 바뀔 때만 기록한다. */
+  let _lastAudioDiag = "";
+  window.__gallaAudioLog = function (op, diag) {
+    try {
+      const line = op + " " + diag;
+      if (line === _lastAudioDiag) return;
+      _lastAudioDiag = line;
+      window.GALLA_logError && window.GALLA_logError(new Error("[audio] " + line), "audio-session");
+    } catch (_) {}
+  };
+  // 앱 진입 시 한 번 현재 세션을 찍어둔다(기준값)
+  setTimeout(() => nativeAudio("probe"), 3000);
   function bindMediaSession(v) {
     if (v.__mediaSessionBound) return;
     v.__mediaSessionBound = true;
