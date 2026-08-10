@@ -144,13 +144,6 @@
   };
 
   // 전역 토스트 — 수정/삭제 등 완료 알림(전 페이지 공용). 하단 중앙, 셸 네비 위.
-  /* 🎬💸 영상 무한반복 차단 — Cloudflare Stream은 '시청 1,000분당 $1'이라
-     loop가 걸린 영상은 화면에 떠 있는 시간만큼 계속 과금된다. 테스트 13계정만으로
-     한 달 5,690분(95시간)이 찍혔다. 사람이 본 게 아니라 열어둔 탭이 돌린 것이다.
-
-     그래서 loop를 3회로 끊는다. 3회 뒤엔 멈추고, 유저가 다시 누르면 카운터가 초기화된다.
-     ⚠️ 무한 반복이 꼭 필요한 영상은 data-loop-forever를 달아라(현재는 없다).
-     ⚠️ 재생 지점마다 고치면 새 화면이 생길 때 또 빠뜨린다 → video[loop]를 전역으로 훑는다. */
   /* 🔊 앱(iOS)에서 영상 소리만 작던 것 —
      앱 전역 오디오 세션이 통화용 .playAndRecord라, iOS가 마이크 하울링을 막으려고 출력을 감쇠시킨다.
      그래서 **볼륨을 최대로 올려도 작다**(볼륨과 무관한 감쇠라서). 브라우저는 .playback을 써서 크게 들린다.
@@ -174,6 +167,22 @@
   };
   // 앱 진입 시 한 번 현재 세션을 찍어둔다(기준값)
   setTimeout(() => nativeAudio("probe"), 3000);
+  /* 🔉 소리는 언제나 '한 영상만'.
+     피드는 화면 밖 영상을 pause로만 정리하는데, 정지된 영상도 muted=false를 그대로 들고 있다.
+     그래서 스크롤하다 보면 위/아래 영상이 겹쳐 울리거나, 어느 게 소리 내는지 알 수 없게 된다
+     (사장님 재현: "밑에 영상 소리가 나고 총체적 개판").
+     ⚠️ 통화·라이브는 건드리지 않는다 — 거긴 동시에 여러 소리가 나야 정상이다. */
+  function soloAudio(cur) {
+    try {
+      document.querySelectorAll("video").forEach(o => {
+        if (o === cur || o.muted || o.srcObject) return;
+        if (o.closest && o.closest("#dm-call, .live-room, [data-no-blur-pause]")) return;
+        o.muted = true;
+      });
+      if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
+    } catch (_) {}
+  }
+
   function bindMediaSession(v) {
     if (v.__mediaSessionBound) return;
     v.__mediaSessionBound = true;
@@ -185,32 +194,26 @@
     v.addEventListener("play", () => { if (!v.muted) on(); });
     // 음소거 해제도 '소리가 나기 시작하는' 순간이다 — 피드 영상은 음소거로 시작한다
     v.addEventListener("volumechange", () => {
-      if (!v.muted && !v.paused) on();
+      if (!v.muted && !v.paused) { soloAudio(v); on(); }
       else if (v.muted) off();          // 다시 음소거하면 세션을 붙들고 있을 이유가 없다
     });
+    // 재생이 시작될 때도 단독 보장 — 스크롤로 다음 영상이 뜨는 순간이 여기다
+    v.addEventListener("play", () => { if (!v.muted) soloAudio(v); });
     v.addEventListener("pause", off);
     v.addEventListener("ended", off);
     v.addEventListener("emptied", off);
   }
 
-  const LOOP_CAP = 3;
-  function capLoop(v) {
-    if (!v || v.__loopCapped || v.hasAttribute("data-loop-forever")) return;
-    v.__loopCapped = true;
-    v.loop = false; v.removeAttribute("loop");
-    v.__plays = 0;
-    v.addEventListener("ended", () => {
-      v.__plays++;
-      if (v.__plays < LOOP_CAP) { try { v.currentTime = 0; v.play().catch(() => {}); } catch (_) {} }
-    });
-    // 유저가 직접 다시 재생하면 3회를 새로 준다(멈춰서 못 보는 일 없게)
-    v.addEventListener("play", () => { if (v.__plays >= LOOP_CAP) v.__plays = 0; });
-  }
+  /* 🔁 반복 재생 제한은 **되돌렸다**(한때 3회로 끊었음). 두 가지 이유:
+     ① 영상을 Stream → R2로 옮겨서 **재생이 공짜**가 됐다. 제한할 이유가 사라졌다.
+     ② 피드의 소리 제어가 '영상은 계속 돈다'를 전제로 짜여 있다. 3회 뒤 멈추면
+        **음소거가 아닌데 소리가 안 나는** 상태가 되고, 스크롤하며 보면 어느 영상이
+        소리를 내는지 통째로 꼬인다(사장님 재현: "총체적 개판").
+     낭비 방지는 화면 밖 정지(IntersectionObserver)와 창 비활성 정지로 충분하다. */
   function sweepLoops(root) {
     try {
       const r = root || document;
-      r.querySelectorAll("video[loop]").forEach(capLoop);
-      /* 오디오 세션은 loop 여부와 무관하게 **모든 영상**에 건다.
+      /* 오디오 세션은 **모든 영상**에 건다.
          ⚠️ 통화·라이브 영상은 제외 — 네이티브가 세션을 직접 관리하는 영역이다. */
       r.querySelectorAll("video").forEach(v => {
         if (v.srcObject) return;
@@ -221,7 +224,6 @@
   }
   if (!window.__GALLA_LOOPCAP__) {
     window.__GALLA_LOOPCAP__ = true;
-    window.GALLA_capLoop = capLoop;
     const boot = () => {
       sweepLoops();
       // 피드·댓글은 나중에 그려진다 — 늦게 들어온 영상도 잡는다

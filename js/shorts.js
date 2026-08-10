@@ -629,12 +629,11 @@ function playOnlyCurrent() {
       window.GALLA_attachHls(v, v.dataset.src);
     }
     if (i === currentIndex) {
-      /* 🔁 반복 재생 — 단, 3회까지. Cloudflare Stream이 시청 분당 과금이라
-         무한 반복은 화면에 떠 있는 시간이 그대로 요금이 된다(방치된 탭이 하루 몇 시간씩 돌았다).
-         3회 뒤 멈추고, 유저가 다시 누르면 3회를 새로 준다. */
-      v.loop = false;
-      v.removeAttribute("loop");
-      if (window.GALLA_capLoop) window.GALLA_capLoop(v);
+      /* 🔁 무한 재생 (사용자가 멈출 때까지)
+         ⚠️ 한때 Stream 요금 때문에 3회로 끊었다가 되돌렸다 — 영상이 R2로 가서 재생이 공짜고,
+            중간에 멈추면 '음소거가 아닌데 소리가 안 나는' 상태가 되어 소리 제어가 꼬인다. */
+      v.loop = true;
+      v.setAttribute("loop", "");
       // 소리는 기본 ON, 사용자가 음소거하면 다음 영상까지 그 상태 유지(스티키)
       v.muted = !!window.__REELS_MUTED__;
 
