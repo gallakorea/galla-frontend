@@ -144,6 +144,47 @@
   };
 
   // 전역 토스트 — 수정/삭제 등 완료 알림(전 페이지 공용). 하단 중앙, 셸 네비 위.
+  /* 🎬💸 영상 무한반복 차단 — Cloudflare Stream은 '시청 1,000분당 $1'이라
+     loop가 걸린 영상은 화면에 떠 있는 시간만큼 계속 과금된다. 테스트 13계정만으로
+     한 달 5,690분(95시간)이 찍혔다. 사람이 본 게 아니라 열어둔 탭이 돌린 것이다.
+
+     그래서 loop를 3회로 끊는다. 3회 뒤엔 멈추고, 유저가 다시 누르면 카운터가 초기화된다.
+     ⚠️ 무한 반복이 꼭 필요한 영상은 data-loop-forever를 달아라(현재는 없다).
+     ⚠️ 재생 지점마다 고치면 새 화면이 생길 때 또 빠뜨린다 → video[loop]를 전역으로 훑는다. */
+  const LOOP_CAP = 3;
+  function capLoop(v) {
+    if (!v || v.__loopCapped || v.hasAttribute("data-loop-forever")) return;
+    v.__loopCapped = true;
+    v.loop = false; v.removeAttribute("loop");
+    v.__plays = 0;
+    v.addEventListener("ended", () => {
+      v.__plays++;
+      if (v.__plays < LOOP_CAP) { try { v.currentTime = 0; v.play().catch(() => {}); } catch (_) {} }
+    });
+    // 유저가 직접 다시 재생하면 3회를 새로 준다(멈춰서 못 보는 일 없게)
+    v.addEventListener("play", () => { if (v.__plays >= LOOP_CAP) v.__plays = 0; });
+  }
+  function sweepLoops(root) {
+    try { (root || document).querySelectorAll("video[loop]").forEach(capLoop); } catch (_) {}
+  }
+  if (!window.__GALLA_LOOPCAP__) {
+    window.__GALLA_LOOPCAP__ = true;
+    window.GALLA_capLoop = capLoop;
+    const boot = () => {
+      sweepLoops();
+      // 피드·댓글은 나중에 그려진다 — 늦게 들어온 영상도 잡는다
+      try { new MutationObserver(() => sweepLoops()).observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+
+    /* 창이 뒤로 밀려도(다른 앱·다른 창) 재생을 멈춘다.
+       visibilitychange는 '탭 숨김'만 잡는다 — 보이는 채로 방치된 창은 계속 돌아간다.
+       그 방치 시간이 이번 청구서의 주범이다. */
+    window.addEventListener("blur", () => {
+      try { document.querySelectorAll("video").forEach(v => { if (!v.paused) { v.pause(); v.__blurPaused = true; } }); } catch (_) {}
+    });
+  }
+
   window.GALLA_toast = function (msg, ms) {
     if (!document.getElementById("galla-toast-css")) {
       const st = document.createElement("style"); st.id = "galla-toast-css";
