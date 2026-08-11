@@ -1,0 +1,96 @@
+/* =========================================================
+   charges.css — 갈라페이 내역 (결제·영수증·환불)
+   theme.css 톤 준수: 순흑 배경 + 인디고 액센트. 골드 버튼 쓰지 않는다.
+   ========================================================= */
+.cg-main{ max-width:520px; margin:0 auto; padding:14px 14px 96px; }
+
+/* 히어로 */
+.cg-hero{ text-align:center; padding:18px 14px 20px; background:linear-gradient(180deg,rgba(99,102,241,.14),transparent);
+  border:1px solid rgba(255,255,255,.08); border-radius:18px; margin-bottom:14px; }
+.cg-hero-lbl{ font-size:12.5px; font-weight:800; color:#9aa2b5; letter-spacing:.02em; }
+.cg-hero-n{ font-size:34px; font-weight:900; color:#fff; margin:6px 0 4px; font-variant-numeric:tabular-nums; }
+.cg-hero-n small{ font-size:15px; color:#9aa2b5; margin-left:4px; }
+.cg-hero-sub{ font-size:12px; color:#7c8397; line-height:1.6; }
+
+/* 탭 */
+.cg-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.cg-tab{ flex:1; padding:10px 6px; border-radius:11px; border:1px solid rgba(255,255,255,.09);
+  background:#141519; color:#8a90a0; font-size:13px; font-weight:800; cursor:pointer; transition:.14s; }
+.cg-tab.active{ background:rgba(99,102,241,.16); border-color:rgba(99,102,241,.45); color:#c7c9ff; }
+
+.cg-pane{ display:flex; flex-direction:column; gap:9px; }
+.cg-empty{ text-align:center; padding:44px 16px; color:#6c7280; font-size:13.5px; line-height:1.8; }
+.cg-loading{ text-align:center; padding:34px; color:#6c7280; font-size:13px; }
+
+/* 내역 행 */
+.cg-row{ display:flex; align-items:center; gap:11px; background:#141519; border:1px solid rgba(255,255,255,.08);
+  border-radius:14px; padding:13px 14px; }
+.cg-row.link{ cursor:pointer; transition:.12s; }
+.cg-row.link:active{ transform:scale(.995); }
+.cg-ic{ width:34px; height:34px; flex:0 0 34px; border-radius:10px; display:grid; place-items:center; font-size:16px;
+  background:rgba(255,255,255,.05); }
+.cg-row.in  .cg-ic{ background:rgba(99,102,241,.16); }
+.cg-row.out .cg-ic{ background:rgba(244,114,182,.14); }
+.cg-meta{ min-width:0; flex:1; }
+.cg-t{ font-size:14px; font-weight:800; color:#e8eaf0; }
+.cg-d{ font-size:11.5px; color:#6c7280; margin-top:3px; }
+.cg-amt{ margin-left:auto; text-align:right; white-space:nowrap; }
+.cg-amt b{ font-size:14.5px; font-weight:900; font-variant-numeric:tabular-nums; }
+.cg-amt .in{ color:#8b8fff; } .cg-amt .out{ color:#f472b6; }
+.cg-amt small{ display:block; font-size:11px; color:#6c7280; margin-top:2px; }
+
+/* 상태 배지 */
+.cg-badge{ display:inline-block; font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:999px; margin-left:6px;
+  border:1px solid transparent; vertical-align:1px; }
+.cg-badge.paid{ background:rgba(99,102,241,.16); color:#a5b4fc; border-color:rgba(99,102,241,.35); }
+.cg-badge.pending{ background:rgba(250,204,21,.13); color:#fde68a; border-color:rgba(250,204,21,.3); }
+.cg-badge.canceled,.cg-badge.rejected{ background:rgba(255,255,255,.06); color:#8a90a0; }
+.cg-badge.done{ background:rgba(52,211,153,.13); color:#6ee7b7; border-color:rgba(52,211,153,.3); }
+
+/* 액션 */
+.cg-acts{ display:flex; gap:7px; margin-top:9px; }
+.cg-btn{ flex:1; padding:9px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:#1c1d23;
+  color:#c9cddb; font-size:12.5px; font-weight:800; cursor:pointer; }
+.cg-btn.primary{ background:rgba(99,102,241,.18); border-color:rgba(99,102,241,.45); color:#c7c9ff; }
+.cg-btn[disabled]{ opacity:.45; cursor:default; }
+
+/* 정책 */
+.cg-policy{ margin-top:18px; background:#111216; border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:14px 16px; }
+.cg-policy-h{ font-size:13px; font-weight:900; color:#c9cddb; margin-bottom:9px; }
+.cg-policy ul{ margin:0; padding-left:17px; }
+.cg-policy li{ font-size:12px; color:#8a90a0; line-height:1.85; }
+.cg-policy b{ color:#c9cddb; } .cg-policy a{ color:#a5b4fc; }
+
+/* 시트 (영수증 / 환불 신청) */
+.cg-dim{ position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:12000; opacity:0; pointer-events:none; transition:opacity .2s; }
+.cg-dim.open{ opacity:1; pointer-events:auto; }
+.cg-sheet{ position:fixed; left:0; right:0; bottom:0; z-index:12001; background:#15161b; border-radius:20px 20px 0 0;
+  border-top:1px solid rgba(255,255,255,.1); padding:16px 16px calc(18px + env(safe-area-inset-bottom));
+  max-width:520px; margin:0 auto; transform:translateY(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1);
+  max-height:90vh; overflow:auto; }
+.cg-sheet.open{ transform:translateY(0); }
+.cg-grip{ width:38px; height:4px; border-radius:2px; background:rgba(255,255,255,.25); margin:2px auto 13px; }
+.cg-sheet-t{ font-size:17px; font-weight:900; color:#fff; text-align:center; }
+.cg-sheet-s{ font-size:12px; color:#7c8397; text-align:center; margin:5px 0 15px; }
+
+/* 영수증 표 */
+.cg-rc{ background:#101117; border:1px solid rgba(255,255,255,.08); border-radius:13px; padding:4px 14px; }
+.cg-rc-r{ display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px dashed rgba(255,255,255,.07); }
+.cg-rc-r:last-child{ border-bottom:none; }
+.cg-rc-r span{ font-size:12.5px; color:#7c8397; flex:0 0 auto; }
+.cg-rc-r b{ font-size:12.5px; color:#dfe3ec; font-weight:700; text-align:right; word-break:break-all;
+  font-variant-numeric:tabular-nums; }
+.cg-rc-r.total b{ font-size:16px; font-weight:900; color:#fff; }
+.cg-rc-issuer{ font-size:11px; color:#5f6472; text-align:center; margin-top:11px; line-height:1.7; }
+
+.cg-ta{ width:100%; box-sizing:border-box; background:#101117; border:1px solid rgba(255,255,255,.1); border-radius:11px;
+  color:#e8eaf0; padding:11px 12px; font-size:14px; font-family:inherit; resize:none; min-height:76px; }
+.cg-ta:focus{ outline:none; border-color:rgba(99,102,241,.5); }
+.cg-warn{ background:rgba(250,204,21,.09); border:1px solid rgba(250,204,21,.26); color:#fde68a; border-radius:11px;
+  padding:11px 13px; font-size:12.5px; line-height:1.7; margin-bottom:12px; }
+.cg-close{ width:100%; padding:14px; margin-top:12px; border:none; border-radius:12px; font-weight:900; font-size:15px;
+  cursor:pointer; background:#2a2b31; color:#fff; }
+.cg-close.primary{ background:linear-gradient(135deg,#6366f1,#4f46e5); }
+.cg-close[disabled]{ opacity:.5; cursor:default; }
+
+@media (min-width:900px){ .cg-main{ max-width:600px; } }

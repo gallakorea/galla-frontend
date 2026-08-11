@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>GALLA - 갈라페이 내역</title>
+  <link rel="stylesheet" href="./css/galla-predict.css?v=080412" />
+  <link rel="stylesheet" href="./css/header.css?v=080412">
+  <link rel="stylesheet" href="./css/nav.css?v=0808104">
+  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=080412">
+  <link rel="stylesheet" href="./css/desktop.css?v=080412">
+  <link rel="stylesheet" href="./css/charges.css?v=0811110">
+</head>
+
+<body data-page="mypage">
+<div id="app">
+
+<header class="header">
+  <div class="header-inner">
+    <button class="back-btn hb-side" data-back="wallet.html">← <span class="back-text">뒤로</span></button>
+    <img src="assets/logo.png" alt="GALLA" class="logo" onclick="(window.GALLA_nav||function(u){location.href=u})('index.html')" />
+    <button class="more-header-btn setting-btn" aria-label="설정" onclick="(window.GALLA_nav||function(u){location.href=u})('settings.html')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="cg-main">
+  <section class="cg-hero">
+    <div class="cg-hero-lbl">💳 갈라페이</div>
+    <div class="cg-hero-n" id="cgBal">–</div>
+    <div class="cg-hero-sub" id="cgSub">결제·환불·출금이 여기로 지나갑니다</div>
+  </section>
+
+  <div class="cg-tabs">
+    <button class="cg-tab active" data-tab="all">전체 내역</button>
+    <button class="cg-tab" data-tab="charge">💳 결제·영수증</button>
+    <button class="cg-tab" data-tab="refund">↩️ 환불</button>
+  </div>
+
+  <div id="cgAll"    class="cg-pane"></div>
+  <div id="cgCharge" class="cg-pane" hidden></div>
+  <div id="cgRefund" class="cg-pane" hidden></div>
+
+  <section class="cg-policy">
+    <div class="cg-policy-h">ℹ️ 환불 안내</div>
+    <ul>
+      <li>결제일로부터 <b>7일 이내</b>이고 충전한 GC를 <b>쓰지 않았다면</b> 전액 환불(청약철회)됩니다.</li>
+      <li>일부만 썼다면 <b>남은 GC만큼</b> 환불되고, 위약금은 받지 않습니다.</li>
+      <li>7일이 지난 뒤에도 <b>남은 GC</b>는 환불 신청할 수 있어요 (확인 후 처리).</li>
+      <li>이미 <b>쓴 GC</b>(AI 창작·갈비스 고급·후원)는 돌려드릴 수 없습니다.</li>
+      <li>환불은 <b>결제하신 수단</b>으로 환급되며, 신청 후 영업일 기준 3~5일이 걸립니다.</li>
+      <li>문제가 있으면 <a href="support.html">고객센터</a>로 알려주세요.</li>
+    </ul>
+  </section>
+</main>
+
+<nav class="nav">
+  <div class="nav-inner">
+      <button class="nav-item" data-page="index" data-target="index.html">
+        <img src="./assets/icons/nav-home.svg" data-base="./assets/icons/nav-home.svg" data-active="./assets/icons/nav-home-active.svg">
+      </button>
+      <button class="nav-item" data-page="predict" data-target="galla-predict.html">
+        <img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg">
+      </button>
+      <button class="nav-item nav-dm" data-page="dm" data-target="dm.html" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
+      <button class="nav-item" data-page="mypage" data-target="mypage.html">
+        <img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg">
+      </button>
+  </div>
+</nav>
+
+</div><!-- /#app -->
+
+<script src="/js/error-logger.js?v=080412"></script>
+<script src="./vendor/supabase.js?v=0809131"></script>
+<script src="./js/supabase.js?v=0809131"></script>
+<script src="js/back.js?v=080412"></script>
+<script src="./js/charges.js?v=0811110"></script>
+<script src="./js/nav.js?v=0809137"></script>
+<script src="./js/desktop-pc.js?v=080412" defer></script>
+<script src="./js/nav-jog.js?v=080412" defer></script>
+
+<script src="/js/analytics.js?v=080412"></script>
+<script src="/js/pwa.js?v=0806135"></script>
+<script src="/js/pull-refresh.js?v=080412"></script>
+</body>
+</html>
