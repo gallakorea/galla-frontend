@@ -599,11 +599,29 @@
   }
 
   function bind() {
-    document.querySelector('.tab-item[data-tab="hot"]')?.addEventListener("click", () => {
+    const hotTab = document.querySelector('.tab-item[data-tab="hot"]');
+    hotTab?.addEventListener("click", () => {
       if (booted) return;
       booted = true;
       render();
     });
+
+    /* ⚠️ 클릭에만 걸면 **클릭 없이 켜진 경우 목록이 영영 안 뜬다.**
+       search.html?tab=hot 로 직접 들어오거나, 세션 복원으로 핫튜브가 켜진 채 시작하면
+       search.js가 activateTab()으로 탭만 바꾸고 클릭 이벤트는 없다 → 빈 화면(실제로 그랬다).
+       탭이 '활성'이 되는 순간을 보고 부팅한다 — 클릭이든 프로그램이든 상관없이 잡힌다. */
+    const bootIfActive = () => {
+      if (booted || !hotTab?.classList.contains("active")) return;
+      booted = true;
+      render();
+    };
+    bootIfActive();                                  // 이미 켜진 채 들어온 경우
+    if (hotTab) {
+      try {
+        new MutationObserver(bootIfActive)
+          .observe(hotTab, { attributes: true, attributeFilter: ["class"] });
+      } catch (_) {}
+    }
 
     // 핫트렌드 탭의 '지금 뜨는 영상' 선반
     let shelfDone = false;
