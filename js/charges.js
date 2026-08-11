@@ -85,7 +85,16 @@ async function loadAll() {
 }
 
 /* ============ 결제 · 영수증 · 환불 신청 ============ */
-let CHARGES = [];
+let CHARGES = [], BLOCKED = false;
+
+/* 🍎 인앱결제(App Store / Google Play)는 우리가 돈을 쥔 적이 없다 — 스토어가 결제자다.
+   우리가 현금으로 환불하면 스토어 수수료(30%)를 그대로 손실하고, 유저가 스토어에도
+   환불을 요청하면 이중 환불이 된다. 서버(gc_refund_request)가 channel<>'web' 을 막고,
+   화면은 스토어 환불 경로를 안내한다. */
+const STORE_GUIDE = {
+  ios: { name: "App Store", url: "https://reportaproblem.apple.com" },
+  android: { name: "Google Play", url: "https://support.google.com/googleplay/answer/2479637" },
+};
 async function loadCharges() {
   const el = $("cgCharge");
   el.innerHTML = `<div class="cg-loading">불러오는 중…</div>`;
@@ -93,6 +102,7 @@ async function loadCharges() {
   if (!data?.ok) { el.innerHTML = `<div class="cg-empty">내역을 불러오지 못했어요.</div>`; return; }
 
   CHARGES = data.charges || [];
+  BLOCKED = !!data.blocked;
   $("cgBal").innerHTML = `${fmt(data.balance)}<small> GC</small>`;
   $("cgSub").innerHTML = data.held > 0
     ? `환불 신청 중 <b>${fmt(data.held)} GC</b> · 환불 가능 <b>${fmt(data.refundable_total)} GC</b>`
@@ -106,7 +116,8 @@ async function loadCharges() {
   el.innerHTML = CHARGES.map((c, i) => {
     const rf = c.refund;
     const open = rf && (rf.status === "requested" || rf.status === "approved");
-    const canRefund = c.status === "paid" && c.refundable > 0 && !open && rf?.status !== "done";
+    const store = c.store_only ? STORE_GUIDE[c.channel] : null;
+    const canRefund = !store && !BLOCKED && c.status === "paid" && c.refundable > 0 && !open && rf?.status !== "done";
     return `
       <div>
         <div class="cg-row in link" data-receipt="${i}">
@@ -120,13 +131,15 @@ async function loadCharges() {
         ${c.status === "paid" ? `
         <div class="cg-acts">
           <button class="cg-btn" data-receipt="${i}">🧾 영수증</button>
-          ${open
-            ? `<button class="cg-btn" disabled>${rf.status === "requested" ? "환불 신청 접수됨" : "환급 처리 중"}</button>`
-            : rf?.status === "done"
-              ? `<button class="cg-btn" disabled>환불 완료</button>`
-              : `<button class="cg-btn ${canRefund ? "primary" : ""}" data-refund="${i}" ${canRefund ? "" : "disabled"}>
-                   ${canRefund ? `↩️ 환불 신청 (${won(c.refundable)})` : "환불 가능 잔액 없음"}
-                 </button>`}
+          ${store
+            ? `<button class="cg-btn" data-store="${esc(c.channel)}">${esc(store.name)}에서 환불 요청</button>`
+            : open
+              ? `<button class="cg-btn" disabled>${rf.status === "requested" ? "환불 신청 접수됨" : "환급 처리 중"}</button>`
+              : rf?.status === "done"
+                ? `<button class="cg-btn" disabled>환불 완료</button>`
+                : `<button class="cg-btn ${canRefund ? "primary" : ""}" data-refund="${i}" ${canRefund ? "" : "disabled"}>
+                     ${canRefund ? `↩️ 환불 신청 (${won(c.refundable)})` : BLOCKED ? "환불 신청 불가" : "환불 가능 잔액 없음"}
+                   </button>`}
         </div>` : ""}
       </div>`;
   }).join("");
@@ -135,6 +148,8 @@ async function loadCharges() {
     b.addEventListener("click", () => openReceipt(CHARGES[+b.dataset.receipt].id)));
   el.querySelectorAll("[data-refund]").forEach(b =>
     b.addEventListener("click", () => openRefund(CHARGES[+b.dataset.refund])));
+  el.querySelectorAll("[data-store]").forEach(b =>
+    b.addEventListener("click", () => openStoreRefund(b.dataset.store)));
 }
 
 /* ============ 환불 내역 ============ */
@@ -259,6 +274,10 @@ function openRefund(c) {
         already_refunded: "이미 환불이 완료된 결제예요.",
         nothing_refundable: "환불할 수 있는 갈라코인이 남아있지 않아요.",
         not_paid: "결제가 완료되지 않은 건이에요.",
+        store_purchase: "앱에서 결제한 건은 스토어에서만 환불할 수 있어요.",
+        too_many_refunds: "최근 30일 환불 신청 횟수를 넘었어요. 고객센터로 문의해 주세요.",
+        refund_limit: "최근 30일 환불 금액 한도를 넘었어요. 고객센터로 문의해 주세요.",
+        blocked: "결제 확인이 필요한 계정이에요. 고객센터로 문의해 주세요.",
       };
       alert(MSG[data?.reason] || "환불 신청에 실패했어요.");
       btn.disabled = false; btn.textContent = "환불 신청하기";
@@ -276,6 +295,36 @@ function openRefund(c) {
     bindClose();
     refreshAll();
   });
+  openSheet();
+}
+
+/* 🍎 스토어 환불 안내 — 우리가 대신 환불해줄 수 없는 이유까지 솔직하게 적는다.
+   ⚠️ 앱스토어 anti-steering: 여기서 "웹이 더 싸다"거나 외부 결제를 권하면 심사에 걸린다.
+      환불 경로 안내만 한다. */
+function openStoreRefund(channel) {
+  buildSheet();
+  const g = STORE_GUIDE[channel] || STORE_GUIDE.ios;
+  sheet.innerHTML = `
+    <div class="cg-grip"></div>
+    <div class="cg-sheet-t">${esc(g.name)} 환불 안내</div>
+    <div class="cg-sheet-s">앱에서 결제한 건이에요</div>
+    <div class="cg-warn">
+      이 결제는 <b>${esc(g.name)}</b>가 처리했어요.<br>
+      환불도 ${esc(g.name)}에서만 신청할 수 있습니다.
+    </div>
+    <div class="cg-rc">
+      <div class="cg-rc-r"><span>1</span><b style="text-align:left">아래 버튼으로 ${esc(g.name)} 환불 페이지 열기</b></div>
+      <div class="cg-rc-r"><span>2</span><b style="text-align:left">해당 결제 건을 선택해 환불 요청</b></div>
+      <div class="cg-rc-r"><span>3</span><b style="text-align:left">환불이 승인되면 갈라코인은 자동으로 회수됩니다</b></div>
+    </div>
+    <div class="cg-rc-issuer" style="margin-top:11px">
+      이미 사용한 갈라코인이 있으면 회수하지 못한 만큼 결제가 제한될 수 있어요.<br>
+      진행이 안 되면 <a href="support.html">고객센터</a>로 알려주세요.
+    </div>
+    <a class="cg-close primary" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box"
+       href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.name)} 환불 페이지 열기</a>
+    <button class="cg-close" id="cgSheetClose">닫기</button>`;
+  bindClose();
   openSheet();
 }
 
