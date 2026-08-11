@@ -41,14 +41,10 @@
   <section class="wl-card gp" id="wlGp">
     <div class="wl-card-h"><span class="wl-ic">🪙</span> 갈라포인트 <span class="wl-tag">놀이 재화</span></div>
     <div class="wl-big" id="wlGpTotal">–</div>
-    <div class="wl-split" id="wlGpSplit" hidden>
-      <span>🎮 무료(게임 가능) <b id="wlGpFree">0</b></span>
-      <span>🛍 충전(소비 전용) <b id="wlGpPaid">0</b></span>
-    </div>
-    <div class="wl-desc">출석·미션으로 모으고, 예측·아이템·꾸미기·밀어주기에 사용해요.
-      환급·양도는 불가능한 게임 머니예요.</div>
+    <div class="wl-desc">출석·미션·활동으로 모으고, 예측·일기토·아이템·꾸미기·밀어주기에 사용해요.
+      판매하지 않으며 환급·양도도 불가능한 게임 머니예요.</div>
     <div class="wl-btns">
-      <button class="wl-btn gold" id="wlChargeBtn">💳 충전</button>
+      <button class="wl-btn" id="wlChargeBtn">🪙 모으는 법</button>
       <a class="wl-btn" href="gp-history.html">📜 내역</a>
       <a class="wl-btn" href="quest.html">🎯 무료로 받기</a>
     </div>
@@ -56,12 +52,13 @@
 
   <!-- 갈라코인 -->
   <section class="wl-card gc" id="wlGc">
-    <div class="wl-card-h"><span class="wl-ic">💝</span> 갈라코인 <span class="wl-tag pink">후원 전용</span></div>
+    <div class="wl-card-h"><span class="wl-ic">💝</span> 갈라코인 <span class="wl-tag pink">충전 재화</span></div>
     <div class="wl-big pink" id="wlGcBal">–</div>
-    <div class="wl-desc">크리에이터를 후원하는 전용 코인이에요. 1코인 = 1원, 현금으로 충전하며
-      후원 외에는 쓸 수 없고, 포인트와 바꿀 수 없습니다.</div>
+    <div class="wl-desc">갈라페이로 충전하는 코인이에요. 1코인 = 1원.
+      AI 창작·갈비스 고급 모델·크리에이터 후원에 쓰고, 남으면 잔액으로 남아요.
+      환전·양도는 불가하며 포인트와 바꿀 수 없습니다.</div>
     <div class="wl-btns">
-      <button class="wl-btn" id="wlGcChargeBtn">💳 충전 (준비 중)</button>
+      <button class="wl-btn gold" id="wlGcChargeBtn">💳 갈라페이 충전</button>
       <a class="wl-btn" href="gp-history.html?tab=gc">📜 내역</a>
     </div>
   </section>
@@ -83,9 +80,10 @@
   <section class="wl-policy">
     <div class="wl-policy-h">ℹ️ 재화 원칙</div>
     <ul>
-      <li>갈라포인트(GP)는 <b>환급·양도 불가</b> 놀이 재화입니다.</li>
-      <li>충전한 GP는 아이템·꾸미기 등 <b>소비 전용</b>이며 예측·일기토에는 쓸 수 없어요.</li>
-      <li>갈라코인(GC)은 <b>후원 전용</b>이며 GP와 서로 전환되지 않습니다.</li>
+      <li>갈라포인트(GP)는 <b>판매하지 않습니다</b> — 출석·미션·활동으로만 모아요.</li>
+      <li>예측·일기토·가챠·아이템·꾸미기는 <b>모두 GP</b>로 참여합니다.</li>
+      <li>갈라코인(GC)은 갈라페이로 충전해 <b>AI 창작·후원</b>에 쓰며, 환전·양도 불가입니다.</li>
+      <li>GC와 GP는 <b>서로 전환되지 않습니다</b>.</li>
     </ul>
   </section>
 </main>
@@ -112,9 +110,9 @@
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="./js/supabase.js?v=0809131"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="./js/charge.js?v=080412"></script>
-<script src="./js/wallet.js?v=080412"></script>
-<script src="./js/nav.js?v=0809136"></script>
+<script src="./js/charge.js?v=0811102"></script>
+<script src="./js/wallet.js?v=0811100"></script>
+<script src="./js/nav.js?v=0809137"></script>
 <script src="./js/desktop-pc.js?v=080412" defer></script>
 <script src="./js/nav-jog.js?v=080412" defer></script>
 <script src="./js/dm-call.js?v=080412" defer></script>

@@ -96,7 +96,7 @@
           <!-- ⚠️ 상점은 GP 전용이라 '충전' 버튼을 두지 않는다. GP는 판매하지 않는다(예측 판돈이라
                팔면 규제 대상). 버튼이 보이면 "충전했는데 왜 GP가 안 늘지?"가 된다.
                GC 품목이 상점에 생기면 그때 다시 노출한다. -->
-          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge" hidden>＋ 충전</button></span>
+          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span></span>
         </div>
         <div class="shop-tabs">
           <button class="shop-tab on" data-t="buy" type="button">🛒 구매</button>
@@ -171,7 +171,7 @@
     };
     card.addEventListener("touchend", tEnd);
     card.addEventListener("touchcancel", tEnd);
-    sheet.querySelector("#shopCharge").addEventListener("click", () => window.GALLA_openCharge?.());
+    /* GP 충전 버튼 폐지 — GP는 판매하지 않는다. 부족하면 GALLA_needGP가 모으는 법을 안내한다. */
     /* hidden 속성은 .shop-list{display:flex}에 진다(명세: CSS display가 이김)
        — 실제로 두 리스트가 겹쳐 보이는 사고가 났다. 클래스로 확실히 끈다. */
     sheet.querySelectorAll(".shop-tab").forEach(t => t.addEventListener("click", () => {
@@ -291,7 +291,7 @@
           /* 💱 부족한 재화에 맞는 곳으로 보낸다 — GC는 충전, GP는 벌러 가기.
              엉뚱한 곳으로 보내면 유저는 "충전했는데 왜 안 사져?"가 된다. */
           if (r?.reason === "insufficient" && r?.currency === "GC") {
-            if (confirm("GC가 부족해요. 충전할까요?")) window.GALLA_openCharge?.();
+            window.GALLA_needGC?.((r.cost || 0) - (r.balance || 0), "아이템 구매에 GC가 부족해요");
           } else if (r?.reason === "insufficient" && window.GALLA_needGP) {
             const need = (r.cost || 0) - (r.balance || 0);
             window.GALLA_needGP(need > 0 ? need : (r.cost || 0), "아이템 구매에 GP가 부족해요");

@@ -16,7 +16,7 @@ const V = () => (window.GALLA_V ? "?v=" + window.GALLA_V : "");
 const SCRIPTS = [
   "/js/items.js",          // openShop + 상점 시트 + 인벤토리(🛒 상점 버튼)
   "/js/donate.js",         // GALLA_renderEarnings(발의자 후원 수익 카드)
-  "/js/charge.js",         // GALLA_openCharge/GALLA_needGP(상점 GP 충전 진입)
+  "/js/charge.js",         // GALLA_needGP/GALLA_needGC(재화 부족 안내·갈라페이 충전)
   "/js/gallian.js",        // GALLA_gallianOf(등급 칩·레벨 텍스트)
   "/js/profile-stats.js",  // 전적·팔로워/팔로잉 시트·일기토 전적 칩(로드 즉시 boot)
   "/js/mypage.js",         // 본체(이중 모드) — GALLA_PAGE_MYPAGE 정의

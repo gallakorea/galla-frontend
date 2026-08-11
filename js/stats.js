@@ -138,7 +138,7 @@
           <button class="st-cta" type="button" id="st-cta">이용권 보기</button>
         </div>`;
       const cta = body.querySelector("#st-cta");
-      if (cta) cta.onclick = () => { close(); (window.GALLA_openPlans || window.GALLA_openCharge || function () {})(); };
+      if (cta) cta.onclick = () => { close(); (window.GALLA_openPlans || function () {})(); };
       return;
     }
 

@@ -8,7 +8,7 @@
 ### 갈라포인트 (GP) — 지갑 이원화 (2026-07-15 완전판 적용)
 - **비현금성 놀이 재화.** 환급·환전·양도·매매 불가.
 - 획득: 무료(출석·미션·활동 보상·제보·이슈 승리·가챠) + 유료 충전(`gp_charges`, 충전분은 랭킹 제외).
-- **지갑 구조** (`point_balances`): `balance` = 무료 GP / `paid_balance` = 유료 충전 GP.
+- **지갑 구조** (`point_balances`): `balance` = GP. `paid_balance`는 GP 판매 봉인(2026-08-11) 이후 0으로 고정된 레거시 컬럼이다.
   - **무료 GP**: 소각형 + 게임(예측·일기토) 모두 사용 가능.
   - **유료 GP**: **소각형 소비 전용**(아이템·꾸미기·가챠·부스트·밀어주기). **게임 투입 불가** —
     "유료 재화가 우연적 결과에 투입"되는 사행성 모사 고리를 구조적으로 차단.
@@ -45,5 +45,6 @@
 - GC 지갑: `supabase/migrations/20260715280000_gc_wallet.sql` (gc_balances/gc_ledger/gc_packages/gc_charges,
   gc_balance/gc_charge_packages/gc_charge_begin/gc_charge_confirm/gc_donate, gc_audit 뷰)
 - 현금 rail: `20260713120000_donations.sql` + `20260713130000_donation_split.sql`(20/50/30) — GC가 재사용
-- GP 충전: `20260713140000_gp_charge.sql` / GP 지갑: `point_balances`/`point_ledger`
+- GP 충전(봉인): `20260713140000_gp_charge.sql` → `20260811100000_seal_gp_sale.sql`에서 실행 권한 회수
+- GP 지갑: `point_balances`/`point_ledger` · GC 충전: `gc_packages`/`gc_charges`/`gc_balances`/`gc_ledger`
 - 프론트: `js/donate.js`(GC 결제 경로+고지), `js/charge.js`(고지), `gp-history.html`(갈라코인 탭)

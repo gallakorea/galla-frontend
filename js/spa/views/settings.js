@@ -22,7 +22,7 @@ const SCRIPTS = [
   "/js/logout-flow.js",   // GALLA_logout (만류 팝업)
   "/js/galla-type.js",    // GALLA_computeType (성향 카드)
   "/js/items.js",         // openShop (상점 타일)
-  "/js/charge.js",        // GALLA_openCharge (상점 내 충전 진입)
+  "/js/charge.js",        // GALLA_openCharge(갈라페이 GC 충전)
   "/js/titles.js",        // GALLA_openTitles (칭호 타일)
   "/js/gacha.js",         // GALLA_openGacha (가챠 타일)
   "/js/gallian.js",       // GALLA_gallianOf (레벨·XP 게이지)
