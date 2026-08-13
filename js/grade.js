@@ -28,12 +28,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const g = await window.GALLA_gallianOf(supabase, userId);
 
     // 메인 카드 — 등급 + 서브레벨(Lv), 진행바는 '다음 목표'까지의 잦은 진척도
-    set("tierName", `${g.tier.name} · Lv.${g.subLevel}`);
+    set("tierName", `${g.tier.name} · Lv.${g.level}`);
     set("tierDesc", DESC[g.tier.key] || "");
-    setW("tierProgress", g.subProgress);
+    setW("tierProgress", g.progress);
     // 근접목표 프레이밍: "앞으로 N GI면 ○○!" (이탈방지)
+    /* 목표는 '다음 레벨'로 잡는다 — 자주 차올라야 재미가 산다.
+       승급(10레벨마다)이 가까우면 그걸 같이 알려 목표를 이중으로 준다. */
+    const promo = g.promotion && g.promotion.name
+      ? `  ·  Lv.${g.promotion.level} 에서 ${g.promotion.name} 승급`
+      : "";
     set("xpText", g.goal.remaining > 0
-      ? `앞으로 ${g.goal.remaining.toLocaleString()} GI → ${g.goal.label} 🔥  (누적 ${g.gi.toLocaleString()} GI)`
+      ? `앞으로 ${g.goal.remaining.toLocaleString()} GI → ${g.goal.label} 🔥  (누적 ${g.gi.toLocaleString()} GI)${promo}`
       : `갈라 지수 ${g.gi.toLocaleString()} GI`);
     const aura = document.getElementById("tierAura");
     if (aura) aura.className = `tier-aura ${g.tier.key}-aura`;
@@ -81,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       box.style.borderColor = g.tier.color;
       box.style.boxShadow = `0 0 18px ${g.tier.color}44`;
       const t = box.querySelector(".tier-title");
-      if (t) t.insertAdjacentHTML("beforeend", ` <span style="font-size:10px;font-weight:900;color:#0a0a0b;background:${g.tier.color};padding:2px 7px;border-radius:99px;vertical-align:2px;">현재 Lv.${g.subLevel}</span>`);
+      if (t) t.insertAdjacentHTML("beforeend", ` <span style="font-size:10px;font-weight:900;color:#0a0a0b;background:${g.tier.color};padding:2px 7px;border-radius:99px;vertical-align:2px;">현재 Lv.${g.level}</span>`);
     }
 
     // 업적 도감 (실데이터)
