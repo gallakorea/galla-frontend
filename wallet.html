@@ -54,9 +54,15 @@
   <section class="wl-card gc" id="wlGc">
     <div class="wl-card-h"><span class="wl-ic">💝</span> 갈라코인 <span class="wl-tag pink">충전 재화</span></div>
     <div class="wl-big pink" id="wlGcBal">–</div>
+    <div class="wl-split" id="wlGcSplit" hidden>
+      <span>💳 충전 <b id="wlGcPaid">0</b></span>
+      <span>🎟 이용권 포함 <b id="wlGcSub">0</b></span>
+    </div>
     <div class="wl-desc">갈라페이로 충전하는 코인이에요. 1코인 = 1원.
       AI 창작·갈비스 고급 모델·크리에이터 후원에 쓰고, 남으면 잔액으로 남아요.
-      환전·양도는 불가하며 포인트와 바꿀 수 없습니다.</div>
+      환전·양도는 불가하며 포인트와 바꿀 수 없습니다.<br>
+      <b>이용권 포함 크레딧</b>은 AI 창작 전용이에요 — 후원에는 쓸 수 없고,
+      다음 달로 이월되지 않으며 환불 대상도 아니에요. <b>쓸 때 먼저 차감</b>됩니다.</div>
     <div class="wl-btns">
       <button class="wl-btn gold" id="wlGcChargeBtn">💳 갈라페이 충전</button>
       <a class="wl-btn" href="charges.html">🧾 결제·환불</a>
@@ -83,6 +89,7 @@
       <li>갈라포인트(GP)는 <b>판매하지 않습니다</b> — 출석·미션·활동으로만 모아요.</li>
       <li>예측·일기토·가챠·아이템·꾸미기는 <b>모두 GP</b>로 참여합니다.</li>
       <li>갈라코인(GC)은 갈라페이로 충전해 <b>AI 창작·후원</b>에 쓰며, 환전·양도 불가입니다.</li>
+      <li>이용권에 <b>매달 포함되는 GC</b>는 AI 창작 전용 — 후원 불가·이월 없음·환불 대상 아님(먼저 차감).</li>
       <li>GC와 GP는 <b>서로 전환되지 않습니다</b>.</li>
     </ul>
   </section>
@@ -111,7 +118,7 @@
 <script src="./js/supabase.js?v=0809131"></script>
 <script src="js/back.js?v=080412"></script>
 <script src="./js/charge.js?v=0811102"></script>
-<script src="./js/wallet.js?v=0811100"></script>
+<script src="./js/wallet.js?v=0811200"></script>
 <script src="./js/nav.js?v=0811190"></script>
 <script src="./js/desktop-pc.js?v=080412" defer></script>
 <script src="./js/nav-jog.js?v=080412" defer></script>

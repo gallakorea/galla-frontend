@@ -80,7 +80,18 @@ const GP_LABELS = [
   [/^tip:/,['📸','제보 보상']],[/^boost:/,['🚀','부스트']],[/^nickstyle:/,['🎨','닉 스타일']],
 ];
 function gpLabel(r){ for(const [re,v] of GP_LABELS){ if(re.test(r.reason||'')) return v; } return ['🪙', r.reason||'기타']; }
-function gcLabel(r){ return r.reason==='gc:charge' ? ['💳','코인 충전'] : ['💝','크리에이터 후원']; }
+function gcLabel(r){
+  const x = r.reason || '';
+  if(x==='gc:charge') return ['💳','코인 충전'];
+  if(x.startsWith('gc:sub_credit')) return ['🎟','이용권 포함 크레딧'];
+  if(x==='gc:refund_hold') return ['🔒','환불 신청(잠금)'];
+  if(x==='gc:refund_unhold') return ['🔓','환불 신청 취소'];
+  if(x==='gc:refund') return ['↩️','환불'];
+  if(x.startsWith('gc:clawback')) return ['⚠️','스토어 환불 회수'];
+  if(x.startsWith('ai_creation')) return ['🎨','AI 창작'];
+  if(x.startsWith('ai_sticker')) return ['🩹','AI 스티커'];
+  return ['💝','크리에이터 후원'];
+}
 
 /* 카드 하단 최근 내역 3건 미리보기 */
 function renderMini(card, rows, labelFn){
@@ -100,14 +111,27 @@ function renderMini(card, rows, labelFn){
 
 /* ============ 갈라코인 ============ */
 async function loadGc(){
-  const [{ data: bal }, led] = await Promise.all([
-    supa.rpc('gc_balance'),
+  const [{ data: w }, led] = await Promise.all([
+    supa.rpc('gc_wallet'),
     supa.from('gc_ledger').select('delta,reason,created_at')
       .eq('user_id', ME.id).order('created_at',{ascending:false}).limit(3),
   ]);
+  const total = w?.ok ? w.total : 0;
   $('wlGcBal').innerHTML = `0<small> GC</small>`;
-  countUp($('wlGcBal'), bal||0);
+  countUp($('wlGcBal'), total);
+  /* 🎟 이용권 포함분은 성격이 다르다 — 환불 불가·이월 없음·먼저 소진.
+     합쳐서 보여주면 "환불해달라"는 문의가 반드시 온다. 보유 중일 때만 갈라서 보여준다. */
+  if(w?.ok && w.sub > 0){
+    $('wlGcSplit').hidden = false;
+    $('wlGcPaid').textContent = fmt(w.charged);
+    $('wlGcSub').textContent  = fmt(w.sub) + (w.sub_expires ? ` (${dday(w.sub_expires)})` : '');
+  }
   renderMini($('wlGc'), led.data||[], gcLabel);
+}
+/* 만료까지 남은 날 — 이월이 없으니 "언제 사라지는지"가 유저에겐 가장 중요한 정보다 */
+function dday(ts){
+  const d = Math.ceil((new Date(ts) - Date.now()) / 86400000);
+  return d <= 0 ? '오늘 만료' : `${d}일 남음`;
 }
 
 /* ============ 결제 대기(pending) 배지 ============ */

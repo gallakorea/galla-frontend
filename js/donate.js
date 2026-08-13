@@ -93,9 +93,17 @@
 
   // ── 후원 시트 ──
   let dim, sheet, sel = null, cur = null; // cur = {issueId, creatorName}
-  let GC_BAL = 0;   // 갈라코인 잔액 (후원 전용 현금성 재화 — GP와 상호 전환 불가)
+  /* 💝 후원 가능액 = '충전한' GC 만. 이용권 포함 크레딧(sub)은 쓸 수 없다 —
+     후원의 75%는 크리에이터에게 실제 현금으로 정산되는데, 포함 크레딧은
+     우리가 그만큼 돈을 받은 적이 없다(구독료는 서비스 대가지 후원 예치금이 아니다).
+     ⚠️ gc_balance()는 총액(충전+포함)이라 여기 쓰면 안 된다 — 서버가 거절할 금액을 보여주게 된다. */
+  let GC_BAL = 0, GC_SUB = 0;
   async function loadGc() {
-    try { const { data } = await sb().rpc("gc_balance"); GC_BAL = data || 0; } catch { GC_BAL = 0; }
+    try {
+      const { data } = await sb().rpc("gc_wallet");
+      GC_BAL = data?.ok ? (data.charged || 0) : 0;
+      GC_SUB = data?.ok ? (data.sub || 0) : 0;
+    } catch { GC_BAL = 0; GC_SUB = 0; }
   }
   function build() {
     if (sheet) return;
@@ -137,7 +145,7 @@
         <label class="ds-anon"><input type="checkbox" id="ds-anon"> 익명으로 후원</label>
         <span class="ds-break" id="ds-break"></span>
       </div>
-      <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다</div>
+      <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 || GC_SUB > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다${GC_SUB > 0 ? `<br><span style="opacity:.65;font-size:11.5px">이용권 포함 ${GC_SUB.toLocaleString()} GC는 AI 창작 전용이라 후원에는 쓸 수 없어요</span>` : ""}</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
       <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 발의자 이름으로 기부</b>됩니다(수수료 20%).
         결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
@@ -183,6 +191,7 @@
         const reason = data?.reason;
         alert(reason === "self" ? "본인이 쓴 글은 후원할 수 없어요." :
               reason === "unauthorized" ? "로그인이 필요해요." :
+              reason === "sub_not_for_donation" ? "이용권 포함 갈라코인은 AI 창작 전용이라 후원에는 쓸 수 없어요.\n후원하려면 갈라페이에서 충전해 주세요." :
               reason === "insufficient" ? "갈라코인 잔액이 부족해요." : "후원에 실패했어요.");
         go.disabled = false; refreshGo(); return;
       }
