@@ -101,6 +101,20 @@
       } catch (_) { /* 압축 실패 무시, 원본 업로드 */ }
     }
 
+    /* 📱 네이티브 앱은 처음부터 프록시로 간다.
+       앱 origin(capacitor://localhost)은 R2 CORS 의 AllowedOrigins 에 넣을 수 없다 —
+       S3 호환 CORS 는 커스텀 스킴을 매칭하지 않는다(실측: capacitor://localhost 403,
+       https://galla.im 204. 대시보드에 넣어도 안 먹는다).
+       그래서 앱에서는 direct PUT 이 100% 실패하고 아래 catch 로 떨어진다.
+       기능은 되지만 매번 헛왕복 1회 + stall 타임아웃까지 기다려 체감이 느리다.
+       → 앱이면 실패가 확정된 direct 를 건너뛰고 바로 프록시(서버가 R2에 PUT)로. */
+    var isNativeApp = false;
+    try {
+      var cap = window.Capacitor;
+      isNativeApp = !!(cap && (cap.isNativePlatform ? cap.isNativePlatform() : cap.isNative));
+    } catch (_) {}
+    if (isNativeApp) return uploadViaProxy(file, kind, token);
+
     const { data, error } = await supabase.functions.invoke('upload-media', {
       body: {
         kind,
