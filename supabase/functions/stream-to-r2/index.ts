@@ -70,10 +70,18 @@ serve(async (req) => {
     const auth = req.headers.get("Authorization") || "";
     const jwt = auth.startsWith("Bearer ") ? auth.slice(7) : "";
     let isService = false;
-    try {
-      const p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      isService = p?.role === "service_role";
-    } catch { /* 사용자 토큰이면 아래 관리자 검사로 */ }
+    /* 🔑 서비스 키가 신형(sb_secret_…)이면 JWT 가 아니라 payload 디코드가 던진다.
+       그러면 관리자 검사로 떨어져 'forbidden' → 이관 워커가 20회 재시도 후 실패했다
+       (실측: video_migrations 에 forbidden × 20, 영상 2편이 깨진 채 남음).
+       그래서 환경변수와 직접 대조하는 경로를 먼저 둔다 — 구형 JWT·신형 키 모두 통과. */
+    const SRK_ENV = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (jwt && SRK_ENV && jwt === SRK_ENV) isService = true;
+    if (!isService) {
+      try {
+        const p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        isService = p?.role === "service_role";
+      } catch { /* 사용자 토큰이면 아래 관리자 검사로 */ }
+    }
     if (!isService) {
       const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: auth } } });
