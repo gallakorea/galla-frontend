@@ -199,6 +199,17 @@ function logSpend(fn: string, model: string, uid: string | null, usage: any) {
   }).catch(() => { /* best effort */ });
 }
 
+/* 📏 턴 계측 — 가드 재시도 배수를 추측 말고 재기 위한 카운터(키만, 본문 없음).
+   ai_turn_stats 에 쌓이고 관제에서 분포를 본다. 실패해도 응답에 영향 없다. */
+function turnStat(keys: string[]) {
+  if (!keys.length) return;
+  fetch(`${SUPA_URL}/rest/v1/rpc/ai_turn_stat_add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+    body: JSON.stringify({ p_keys: keys.slice(0, 20) }),
+  }).catch(() => { /* best effort */ });
+}
+
 // 🎚 이 유저(또는 게스트)에게 지금 어떤 모델을 줄지 + 예산이 남았는지. 장애 시 통과.
 async function modelFor(uid: string | null, kind = "chat"): Promise<any> {
   try {
@@ -3035,7 +3046,12 @@ ${parts.join("\n")}`;
           // chat = 상태 유지(잡담 한두 턴 끼어도 흐름 안 잃음 — 2h 감쇠가 정리)
         }
       }
-      // 정규식 fast-path가 확정/기획을 정했으면 상태도 동기화
+      /* 정규식 fast-path가 확정/기획을 정했으면 상태도 동기화.
+         ⚠️ 'confirmed'는 "이번 턴에 초안 카드가 나가야 한다"는 뜻이다.
+            라우터는 galla_news·hot_videos 같은 비창작 도구로도 붙는다(2961 등).
+            그때까지 confirmed로 만들면, 초안이 나올 리 없는 턴인데 상태만 남아
+            2시간 감쇠 동안 매 턴 '가짜 생성' 가드가 헛돈다(실측: 4회 발동 4회 헛방).
+            그래서 초안 계열 도구로 라우팅된 경우에만 confirmed로 올린다. */
       if (route) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null };
       else if (planMode) craft = { state: "planning", at: new Date().toISOString(), topic: craft.topic || null };
     }
@@ -3352,6 +3368,7 @@ ${parts.join("\n")}`;
     //       도구가 없는데 "galla_news로 조회해라" 지시만 받아, 모델이 도구 문법을 '텍스트로 흉내 낸다'.
     //       실측 사고: 유저 화면에 [(query:"...", kind:"news")]가 그대로 노출되고 3턴 내내 "찾아볼게"만 반복했다.
     if (body?.stream === true && brain === "companion" && !route && !planMode && userMsg && !body?.meta && !crisis) {   // 🆘 위기는 상담카드 첨부 위해 JSON 경로로
+      turnStat(["path:stream", "brain:companion"]);   // 📏 스트림은 1콜 — 가드 없음
       const enc = new TextEncoder();
       const rstream = new ReadableStream({
         async start(controller) {
@@ -3398,7 +3415,10 @@ ${parts.join("\n")}`;
       return new Response(rstream, { headers: { ...cors, "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache" } });
     }
 
+    const GD: string[] = [];        // 📏 이번 턴에 실제로 터진 가드
+    let steps = 0;
     for (let step = 0; step < 4; step++) {
+      steps++;
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
       // 🫂 감정이 무너진 순간(위기·충동·과의존·사별)엔 **검색도 하지 않는다.**
       //    실측 사고: "걔 집 앞에 가볼까"에 "검색까지 해봤는데 딱히 도움될 건 없네 ㅋㅋ"라고 답했다.
@@ -3448,11 +3468,14 @@ ${parts.join("\n")}`;
       const pastClaim = /만들어?\s*놨|만들었|초안[^\n]{0,10}(잡았|잡아놨|만들|썼|써놨|뽑았|뽑아놨|떴|나갔)|판\s*(만들었|열었|세웠|섰|올렸)|올려놨|생성했|띄웠|띄워\s*놨|카드[^\n]{0,6}(탭|눌러|확인)/.test(reply);
       const futureClaim = /만들게|만들어\s*(줄게|줄께|볼게|드릴게)|올릴게|올려\s*(줄게|줄께)|(바로|지금)\s*(만들|올려|생성|호출|할게|가자)|호출\s*중|초안\s*(잡을게|만들게|쓸게|쓸께)|마켓.*만들|이슈.*만들/.test(reply);
       // 🧭 상태 백스톱: confirmed(초안이 나가야 하는 턴)인데 카드(초안/기존판)가 0개면 — 문구와 무관하게 강제.
+      /* 상태 백스톱은 '방금' 확정된 턴에만 쓴다. 2시간 감쇠는 대화 흐름 유지를 위한 값이지
+         "2시간 내내 초안을 강제하라"는 뜻이 아니다 — 그렇게 쓰면 무관한 턴마다 1콜씩 샌다. */
       const stateDemands = craft.state === "confirmed" && !planMode;
       const claimsCreate = planMode ? pastClaim : (pastClaim || futureClaim || stateDemands);
       const cardWent = actions.some((a) => DRAFT_KINDS.has(a.kind) || a.kind === "view");
       // 🎨 기획 턴의 거짓 완료("초안 뽑았어")는 초안 강제가 아니라 '기획 재요구'로 교정 — 기획(3안) 가치 보존.
       if (userMsg && !body?.meta && planMode && pastClaim && !cardWent) {
+        GD.push("guard:fake_create_plan");
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/초안 뽑았다'고 말했지만 지금은 기획 타임이라 아무것도 만들어지지 않았다(= 거짓말 상태). 완료 주장을 버리고, 원래 하기로 한 '서로 다른 시각 3안'(프레임+예상 제목+먹히는 이유)을 지금 제시해라. 도구 호출 금지, 텍스트만." });
           const jp = await chatOnce(messages, { uid, toolChoice: "none", maxTokens: 520 });
@@ -3460,6 +3483,9 @@ ${parts.join("\n")}`;
           if (t && !/만들었|뽑았어|카드\s*탭/.test(t)) reply = t;
         } catch { /* 원문 유지 */ }
       } else if (userMsg && !body?.meta && claimsCreate && !cardWent) {
+        GD.push("guard:fake_create");
+        // 📏 무엇이 트리거했나 — past(진짜 거짓말) vs future(그냥 하겠다는 말) vs state
+        GD.push(pastClaim ? "fc_by:past" : futureClaim ? "fc_by:future" : "fc_by:state");
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/만들어놨다'고 말했지만 실제로 생성 도구를 호출하지 않았다(= 지금 거짓말 상태). 이전에 만든 적 있어도 상관없다 — 상대가 다시 요청했으면 지금 즉시 실제로 도구를 호출해라. 상대의 마지막 요청에 맞는 도구 하나만: 이슈=draft_issue, 예측=draft_predict, 광장=draft_plaza, 숏판/갈라리=draft_gallari. 잡담·질문 금지, 도구만 호출." });
           const jf = await chatOnce(messages, { uid, toolChoice: "required" });
@@ -3474,6 +3500,9 @@ ${parts.join("\n")}`;
             }
             if (out2.action && DRAFT_KINDS.has(out2.action.kind)) actions.push(out2.action);
           }
+          // 📏 헛방 여부 — 강제 재시도가 카드를 못 만들었으면 그 1콜은 순수 낭비다.
+          //    miss 비율이 높으면 트리거(정규식)가 과민한 것이고, 트리거를 좁혀 콜을 아낄 수 있다.
+          GD.push(actions.some((a) => DRAFT_KINDS.has(a.kind)) ? "guard:fake_create:hit" : "guard:fake_create:miss");
         } catch { /* best effort — 실패해도 원래 답 유지 */ }
       }
     }
@@ -3483,6 +3512,7 @@ ${parts.join("\n")}`;
       const claimsOpen = /(택시|카카오\s*t|kakaot|네비|길찾|지도|카카오맵|배달|배민|baemin)/i.test(reply)
         && /(열었|열어줬|열어놨|열어놓|띄웠|띄워놨|띄워놓|켜줬|켰|불러놨|잡아놨)/.test(reply);
       if (userMsg && !body?.meta && claimsOpen && !actions.some((a) => a.kind === "external")) {
+        GD.push("guard:fake_open");
         try {
           messages.push({ role: "system", content: "너는 방금 외부 앱을 '열었다/띄웠다'고 말했지만 실제로 open_external 도구를 호출하지 않았다(= 아무것도 안 열림, 지금 거짓말 상태). 지금 즉시 open_external을 호출해라 — 택시=service:taxi, 길찾기/네비=service:navi(query=목적지), 지도검색=service:map(query=장소), 배달=service:delivery. 잡담·질문 금지, 도구만 호출." });
           const jf = await chatOnce(messages, { uid, toolChoice: "required" });
@@ -3507,6 +3537,7 @@ ${parts.join("\n")}`;
         : /그려\s*(줄게|볼게|놓을게|줄까|줄테)|그리는\s*중|그려\s*놨|그렸어|커버.*그려|썸네일.*그려/;
       const claimsGen = claimRe.test(reply);
       if (userMsg && !body?.meta && claimsGen && !actions.some((a) => GEN_KINDS.has(a.kind))) {
+        GD.push("guard:fake_gen");
         try {
           messages.push({ role: "system", content: "너는 방금 '그려줄게'라고 말했지만 실제 생성 도구를 호출하지 않았다(= 진행줄·이미지 아무것도 안 뜬다). 지금 즉시 실제로 호출해라 — 이미지/커버/썸네일=gen_thumbnail(prompt에 주제 살린 그림 묘사, 글자·실존인물·유명캐릭터·로고 금지 / ratio: 예측·롱판 커버=landscape, 이슈·세로숏판=portrait)." + (VIDEO_ON ? " 자동편집 영상=gen_video." : "") + " 잡담·질문 금지, 도구만 호출." });
           const jg = await chatOnce(messages, { uid, toolChoice: "required" });
@@ -3527,6 +3558,7 @@ ${parts.join("\n")}`;
         /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘|(아까|방금|첫\s*번째|첫번째|아까\s*그)[^.!?\n]{0,10}(다시|또)|다시\s*(보여|볼|틀어|열어)|안\s*보(여|이는데|임)|안\s*열려|어떻게\s*보는|어디서\s*봐)/.test(userMsg);   // 🛡 재참조·"안 보임/어떻게 봐"(딜리버 실패 재요청)도 대상 — 레드팀 발견
       const hasView = () => actions.some((a) => a.kind === "view" || a.kind === "share");
       if (wantShow && !body?.meta && !hasView()) {
+        GD.push("guard:show");
         try {
           const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
           messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 hot_issues 또는 galla_news로 하나 찾아 그 id로 point_to(mode:view). 방금 얘기한 것과 같은 걸 또 열지 마라." : "방금 얘기한 그 갈라 콘텐츠를 point_to(mode:view, type, id)로 열어라. id를 모르면 hot_issues 또는 galla_news 또는 search_content로 그 콘텐츠를 다시 찾아 그 id로 point_to."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
@@ -3612,6 +3644,7 @@ ${parts.join("\n")}`;
       const asksVideo = userMsg && !body?.meta && /(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없)|채널\s*(뭐|추천)|유명한.*(영상|먹방|채널|유튜)|요즘\s*(뭐|무슨).*(영상|먹방|유튜|봐))/i.test(userMsg);
       const hasVideoOpen = () => actions.some((a) => a.kind === "open" && typeof a.url === "string" && /watch\.html\?v=/.test(a.url));
       if (asksVideo && !hasVideoOpen()) {
+        GD.push("guard:fake_video");
         try {
           messages.push({ role: "system", content: "상대가 유튜브·먹방·영상·핫튜브를 물었다. 지어내지 말고(가짜 1위·없는 영상 절대 금지) 지금 즉시 hot_videos를 호출해 '실제' 인기영상을 가져와라. 잡담·지어내기 금지, hot_videos만." });
           const jv = await chatOnce(messages, { uid, toolChoice: { type: "function", function: { name: "hot_videos" } } });
@@ -3647,6 +3680,7 @@ ${parts.join("\n")}`;
       //    web_search 강제→실패→맛집 폴백이 답을 덮어쓰던 사고(실앱 재현).
       const creatingNow = actions.some((a) => /^(genThumbnail|genVideo|draft|editdraft|titles|script|plan)/.test(a.kind));
       if (userMsg && !body?.meta && !work && !creatingNow && promisesSearch && !searchHits.length && !actions.some((a) => a.kind === "open")) {
+        GD.push("guard:promise_search");
         try {
           messages.push({ role: "system", content: "너는 방금 '찾아줄게/기다려봐/검색해볼게'라고 '약속만' 했다 — 넌 다음 턴에 스스로 못 돌아온다(= 상대는 영원히 못 받는다, 페르소나 명백 위반). 지금 이 턴에 즉시 web_search를 호출해 실제로 찾아라(맛집·장소=kind:local, 최신사건=news, 후기=blog). 상대가 말한 지역·메뉴로 쿼리를 만들고, 없으면 지역·키워드를 바꿔 한 번 더. 잡담·약속·질문 금지, web_search만." });
           for (let gs = 0; gs < 2 && !searchHits.length; gs++) {
@@ -3798,6 +3832,8 @@ ${parts.join("\n")}`;
       impulse: !!impulse, impulseKind: impulse?.kind || null,
       bias, illegal, ghostPast, familyVent, nameAsk: mayAskName, locale: userLoc,
     };
+    turnStat(["path:json", "brain:" + String(brain), "steps:" + steps, ...GD,
+              "calls:" + (steps + GD.length)]);   // 📏 배수 = 스텝 + 가드
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
                   ...(isRedteam ? { guards } : {}) });
   } catch (e) {
