@@ -2171,6 +2171,11 @@ function pruneOrphanToolCalls(messages: any[], declared: Set<string>): any[] {
   }).filter(Boolean).filter((m: any) => !(m.role === "tool" && orphan.has(String(m.tool_call_id || ""))));
 }
 
+/* ⚠️ opts.uid 를 반드시 넘겨라 — logSpend 가 이 값으로 원가를 귀속한다.
+   안 넘기면 ai_spend_add 가 null 을 게스트 센티넬(ai_guest_uid)로 바꿔 담는다.
+   실제로 14개 호출부 중 1곳만 넘기고 있어서, 로그인 유저 대화 비용의 36%가
+   '게스트'로 잘못 기록됐다(유저별 집계·마진 분석이 통째로 어긋났다).
+   uid 가 정말 없는 곳은 게스트 체험 경로 하나뿐이다. */
 async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
@@ -3408,6 +3413,7 @@ ${parts.join("\n")}`;
       if (brain === "agent" && !co.maxTokens) co.maxTokens = 700;
       if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
       else if (brain === "companion") co.toolChoice = "none";                                          // 컴패니언=도구 차단
+      co.uid = uid;                 // 💰 원가 귀속 — 안 넘기면 게스트 버킷으로 새어 유저별 집계가 깨진다
       const j = await chatOnce(messages, co);
       const msg = j?.choices?.[0]?.message;
       if (!msg) break;
@@ -3449,14 +3455,14 @@ ${parts.join("\n")}`;
       if (userMsg && !body?.meta && planMode && pastClaim && !cardWent) {
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/초안 뽑았다'고 말했지만 지금은 기획 타임이라 아무것도 만들어지지 않았다(= 거짓말 상태). 완료 주장을 버리고, 원래 하기로 한 '서로 다른 시각 3안'(프레임+예상 제목+먹히는 이유)을 지금 제시해라. 도구 호출 금지, 텍스트만." });
-          const jp = await chatOnce(messages, { toolChoice: "none", maxTokens: 520 });
+          const jp = await chatOnce(messages, { uid, toolChoice: "none", maxTokens: 520 });
           const t = jp?.choices?.[0]?.message?.content || "";
           if (t && !/만들었|뽑았어|카드\s*탭/.test(t)) reply = t;
         } catch { /* 원문 유지 */ }
       } else if (userMsg && !body?.meta && claimsCreate && !cardWent) {
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/만들어놨다'고 말했지만 실제로 생성 도구를 호출하지 않았다(= 지금 거짓말 상태). 이전에 만든 적 있어도 상관없다 — 상대가 다시 요청했으면 지금 즉시 실제로 도구를 호출해라. 상대의 마지막 요청에 맞는 도구 하나만: 이슈=draft_issue, 예측=draft_predict, 광장=draft_plaza, 숏판/갈라리=draft_gallari. 잡담·질문 금지, 도구만 호출." });
-          const jf = await chatOnce(messages, { toolChoice: "required" });
+          const jf = await chatOnce(messages, { uid, toolChoice: "required" });
           const cf = jf?.choices?.[0]?.message?.tool_calls || [];
           for (const c of cf) {
             let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
@@ -3479,7 +3485,7 @@ ${parts.join("\n")}`;
       if (userMsg && !body?.meta && claimsOpen && !actions.some((a) => a.kind === "external")) {
         try {
           messages.push({ role: "system", content: "너는 방금 외부 앱을 '열었다/띄웠다'고 말했지만 실제로 open_external 도구를 호출하지 않았다(= 아무것도 안 열림, 지금 거짓말 상태). 지금 즉시 open_external을 호출해라 — 택시=service:taxi, 길찾기/네비=service:navi(query=목적지), 지도검색=service:map(query=장소), 배달=service:delivery. 잡담·질문 금지, 도구만 호출." });
-          const jf = await chatOnce(messages, { toolChoice: "required" });
+          const jf = await chatOnce(messages, { uid, toolChoice: "required" });
           const cf = jf?.choices?.[0]?.message?.tool_calls || [];
           for (const c of cf) {
             let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
@@ -3503,7 +3509,7 @@ ${parts.join("\n")}`;
       if (userMsg && !body?.meta && claimsGen && !actions.some((a) => GEN_KINDS.has(a.kind))) {
         try {
           messages.push({ role: "system", content: "너는 방금 '그려줄게'라고 말했지만 실제 생성 도구를 호출하지 않았다(= 진행줄·이미지 아무것도 안 뜬다). 지금 즉시 실제로 호출해라 — 이미지/커버/썸네일=gen_thumbnail(prompt에 주제 살린 그림 묘사, 글자·실존인물·유명캐릭터·로고 금지 / ratio: 예측·롱판 커버=landscape, 이슈·세로숏판=portrait)." + (VIDEO_ON ? " 자동편집 영상=gen_video." : "") + " 잡담·질문 금지, 도구만 호출." });
-          const jg = await chatOnce(messages, { toolChoice: "required" });
+          const jg = await chatOnce(messages, { uid, toolChoice: "required" });
           const cg = jg?.choices?.[0]?.message?.tool_calls || [];
           for (const c of cg) {
             let a3: any = {}; try { a3 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
@@ -3524,7 +3530,7 @@ ${parts.join("\n")}`;
         try {
           const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
           messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 hot_issues 또는 galla_news로 하나 찾아 그 id로 point_to(mode:view). 방금 얘기한 것과 같은 걸 또 열지 마라." : "방금 얘기한 그 갈라 콘텐츠를 point_to(mode:view, type, id)로 열어라. id를 모르면 hot_issues 또는 galla_news 또는 search_content로 그 콘텐츠를 다시 찾아 그 id로 point_to."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
-          const js2 = await chatOnce(messages, { toolChoice: "required" });
+          const js2 = await chatOnce(messages, { uid, toolChoice: "required" });
           const m2 = js2?.choices?.[0]?.message; if (m2) messages.push(m2);
           for (const c of (m2?.tool_calls || [])) {
             let a4: any = {}; try { a4 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
@@ -3536,7 +3542,7 @@ ${parts.join("\n")}`;
           // hot_issues/news만 부르고 아직 point_to 안 했으면, 그 id로 point_to까지 한 번 더 강제
           if (!hasView()) {
             messages.push({ role: "system", content: "이제 방금 찾은 콘텐츠 중 하나의 id로 point_to(mode:view, type, id)를 즉시 호출해 실제로 열어라. 도구만 호출." });
-            const js3 = await chatOnce(messages, { toolChoice: "required" });
+            const js3 = await chatOnce(messages, { uid, toolChoice: "required" });
             for (const c of (js3?.choices?.[0]?.message?.tool_calls || [])) {
               let a5: any = {}; try { a5 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
               const out5 = await runTool(c.function?.name, a5, uid, rel?.last_seen_at || null, reshow);
@@ -3608,7 +3614,7 @@ ${parts.join("\n")}`;
       if (asksVideo && !hasVideoOpen()) {
         try {
           messages.push({ role: "system", content: "상대가 유튜브·먹방·영상·핫튜브를 물었다. 지어내지 말고(가짜 1위·없는 영상 절대 금지) 지금 즉시 hot_videos를 호출해 '실제' 인기영상을 가져와라. 잡담·지어내기 금지, hot_videos만." });
-          const jv = await chatOnce(messages, { toolChoice: { type: "function", function: { name: "hot_videos" } } });
+          const jv = await chatOnce(messages, { uid, toolChoice: { type: "function", function: { name: "hot_videos" } } });
           const mv = jv?.choices?.[0]?.message; if (mv) messages.push(mv);
           let vids: any = null;
           for (const c of (mv?.tool_calls || [])) {
@@ -3620,7 +3626,7 @@ ${parts.join("\n")}`;
           }
           if (vids) {
             messages.push({ role: "system", content: "이제 위 '실제' 영상 중 상대 관심(먹방 등)에 맞는 1개를 골라 친구 말투로 한두 마디 하고 point_to(type:hottube, id: 그 video_id)로 열어라. 위 목록에 있는 것만, 지어내기·'기다려/찾아줄게' 금지." });
-            const jf = await chatOnce(messages);
+            const jf = await chatOnce(messages, { uid });
             const mf = jf?.choices?.[0]?.message;
             if (mf?.content && mf.content.trim()) reply = mf.content;
             for (const c of (mf?.tool_calls || [])) {
@@ -3644,7 +3650,7 @@ ${parts.join("\n")}`;
         try {
           messages.push({ role: "system", content: "너는 방금 '찾아줄게/기다려봐/검색해볼게'라고 '약속만' 했다 — 넌 다음 턴에 스스로 못 돌아온다(= 상대는 영원히 못 받는다, 페르소나 명백 위반). 지금 이 턴에 즉시 web_search를 호출해 실제로 찾아라(맛집·장소=kind:local, 최신사건=news, 후기=blog). 상대가 말한 지역·메뉴로 쿼리를 만들고, 없으면 지역·키워드를 바꿔 한 번 더. 잡담·약속·질문 금지, web_search만." });
           for (let gs = 0; gs < 2 && !searchHits.length; gs++) {
-            const js = await chatOnce(messages, { toolChoice: { type: "function", function: { name: "web_search" } } });
+            const js = await chatOnce(messages, { uid, toolChoice: { type: "function", function: { name: "web_search" } } });
             const m = js?.choices?.[0]?.message; if (!m) break; messages.push(m);
             const cs = m.tool_calls || []; if (!cs.length) break;
             for (const c of cs) {
@@ -3657,7 +3663,7 @@ ${parts.join("\n")}`;
           }
           if (searchHits.length) {
             messages.push({ role: "system", content: "이제 위 검색 결과로 답해라 — 제일 괜찮은 1~2개만 골라 친구 말투 한두 문장으로(나열·번호·주소 금지). '기다려/찾아줄게' 다시 말하지 마라. 그 가게는 open_link로 열어줘라(url은 결과의 링크 그대로)." });
-            const jf = await chatOnce(messages);
+            const jf = await chatOnce(messages, { uid });
             const mf = jf?.choices?.[0]?.message;
             if (mf?.content && mf.content.trim()) reply = mf.content;
             for (const c of (mf?.tool_calls || [])) {
