@@ -994,6 +994,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { action: { kind: "script", text } };
   }
   if (name === "gen_thumbnail") {
+    /* 썸네일은 여기서 과금하지 않는다(프론트→generate-thumbnail 에서 200 GC).
+       그래서 액션이 두 장 나가면 200 GC 가 두 번 빠진다 — 한 턴 중복만 막는다.
+       ⚠️ 프롬프트가 다르면 다른 요청이므로 통과시킨다("다른 느낌으로 다시"는 정상).
+       최종 방어는 서버 지문 멱등(ai_creation_locks)이고, 이건 원가 자체를 아끼는 앞단이다. */
+    if (paidToolDup(uid, name + ":" + String(args?.prompt || "").slice(0, 80))) {
+      return { result: { ok: true, 실행됨: "그 썸네일은 이미 이번에 만들고 있다. 다시 부르지 말고 한 줄로만 안내해라." } };
+    }
     return { action: { kind: "genThumbnail",
       prompt: String(args?.prompt || "").slice(0, 300),
       ratio: ["portrait", "landscape", "square"].includes(args?.ratio) ? args.ratio : "portrait",

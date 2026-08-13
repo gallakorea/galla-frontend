@@ -500,7 +500,16 @@
     logEl.appendChild(wrap); scrollBottom();
   }
   // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
+  /* 🔁 진행 중 중복 실행 가드 — 액션이 두 장 오거나 유저가 연타하면 200 GC 가 두 번 빠진다.
+     서버도 지문으로 멱등하게 막지만(ai_creation_locks), 여기서 먼저 끊는 게 원가·대기시간 모두 아낀다. */
+  var thumbBusy = null;
   async function genThumbnail(a){
+    var key = String((a && a.prompt) || "") + "|" + String((a && a.ratio) || "") + "|" + String((a && a.useUserPhotos) || "");
+    if (thumbBusy === key) return;              // 같은 요청이 이미 돌고 있다
+    thumbBusy = key;
+    try { return await genThumbnailInner(a); } finally { thumbBusy = null; }
+  }
+  async function genThumbnailInner(a){
     // 🧑‍🎨 내 사진 반영 모드 — 작업모드(갈라리)에 올린 사진을 레퍼런스로
     var refUrls=[];
     if(a && a.useUserPhotos){

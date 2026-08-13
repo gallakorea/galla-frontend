@@ -42,6 +42,16 @@ const SVC_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const USER_DAILY_LIMIT = 12;   // 유저별 24시간 썸네일 생성 한도(남용 방지)
 
+
+/* 🔁 요청 지문 — 같은 요청이 두 번 들어와도 한 번만 청구되게 서버에 넘긴다.
+   프론트 중복 실행·네트워크 재시도·갈비스가 한 턴에 두 번 호출한 경우를 모두 덮는다.
+   프롬프트가 다르면 지문도 달라 정상 과금된다("다른 느낌으로 다시"는 새 주문이 맞다). */
+async function fingerprint(parts: unknown[]): Promise<string> {
+  const raw = parts.map((p) => (p == null ? "" : String(p))).join("|");
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return [...new Uint8Array(buf)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info" };
 const j = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
@@ -225,10 +235,13 @@ Deno.serve(async (req) => {
   // 🎟 등급 게이트 — 무료/프렌드/프로별 생성 한도(app_settings.ai_tiers). GP 차감보다 먼저 본다.
   { const g = await aiGate("u:" + me, "generate-thumbnail");
     if (g && g.ok === false) return j({ error: "tier_limit", gate: g }, 429); }
-  const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge", { p_kind: "thumbnail", p_n: 1 });
+  const chargeKey = await fingerprint(["thumb", prompt, String(body.ratio || ""), refUrls.join(",")]);
+  const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge",
+    { p_kind: "thumbnail", p_n: 1, p_key: chargeKey });
   if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
   const paid = (charge.charged as number) || 0;
-  const refund = async () => { if (paid > 0) { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid }); } catch (_) {} } };
+  // 생성이 실패하면 환불 + 자물쇠 해제 — 안 그러면 같은 프롬프트로 재시도할 때 "이미 청구됨"에 막힌다
+  const refund = async () => { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid, p_key: chargeKey }); } catch (_) {} };
 
   // 🧠 크리에이터 브레인 — 검증된 썸네일 구도 공식 주입(어그로 클릭률↑). 없으면 기본 STYLE만.
   let patternText = "";

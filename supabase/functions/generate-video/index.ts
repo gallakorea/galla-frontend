@@ -35,6 +35,16 @@ const CF_ACCOUNT = Deno.env.get("CF_ACCOUNT_ID")!;
 const R2_BUCKET = Deno.env.get("R2_BUCKET")!;
 const r2 = new AwsClient({ accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!, secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!, service: "s3", region: "auto" });
 
+
+/* 🔁 요청 지문 — 같은 요청이 두 번 들어와도 한 번만 청구되게 서버에 넘긴다.
+   프론트 중복 실행·네트워크 재시도·갈비스가 한 턴에 두 번 호출한 경우를 모두 덮는다.
+   프롬프트가 다르면 지문도 달라 정상 과금된다("다른 느낌으로 다시"는 새 주문이 맞다). */
+async function fingerprint(parts: unknown[]): Promise<string> {
+  const raw = parts.map((p) => (p == null ? "" : String(p))).join("|");
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return [...new Uint8Array(buf)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info" };
 const j = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
@@ -136,10 +146,12 @@ Deno.serve(async (req) => {
     // 🎟 등급 게이트 — 무료/프렌드/프로별 생성 한도(app_settings.ai_tiers). GP 차감보다 먼저 본다.
     { const g = await aiGate("u:" + me, "generate-video");
       if (g && g.ok === false) return j({ error: "tier_limit", gate: g }, 429); }
-    const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge", { p_kind: "video", p_n: 1 });
+    const chargeKey = await fingerprint(["video", String(body.ratio || ""), per, music, images.join(","), captions.join("|")]);
+    const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge",
+      { p_kind: "video", p_n: 1, p_key: chargeKey });
     if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
     const paid = (charge.charged as number) || 0;
-    const refund = async () => { if (paid > 0) { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid }); } catch (_) {} } };
+    const refund = async () => { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid, p_key: chargeKey }); } catch (_) {} };
 
     const edit = buildTimeline(images, captions, music, size, per);
     const r = await fetch(`${SS_BASE}/render`, { method: "POST", headers: { "x-api-key": SHOTSTACK_KEY, "Content-Type": "application/json" }, body: JSON.stringify(edit) });
