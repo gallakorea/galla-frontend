@@ -64,6 +64,7 @@ const ACTION_BRIEF: Record<string, string> = {
   genVideo: "영상 생성이 시작됐다(완성되면 편집기에 자동 첨부). '좀 걸려, 다 되면 붙여놓을게' 한 줄만.",
   editdraft: "편집기 폼에 수정 내용이 '실제로' 반영됐다(화면이 반짝임). '고쳐놨어, 화면 봐봐' 한 줄 안내만.",
   titles: "제목 후보 카드가 채팅에 붙었다(탭=그 제목 적용). '골라봐' 한 줄만.",
+  needGC: "❌ 갈라코인이 모자라서 '아무것도 못 만들었다'. 카드는 안 붙었다. '만들었어/뽑아줬어/카드 봐' 절대 금지 — 코인이 부족하다고 짧게 말하고 지갑에서 충전하면 된다고 한 줄만 덧붙여라.",
   script: "대본 카드가 채팅에 붙었다. 짧게 안내만.",
   plan: "기획안 카드가 채팅에 붙었다. 짧게 안내만.",
 };
@@ -712,6 +713,69 @@ async function myActivity(uid: string, since: string | null): Promise<any> {
   out.지침 = "친구가 브리핑하듯 자연스러운 반말 2~3문장으로. 불릿·번호·볼드·나열 절대 금지. 제일 큰 소식(반응 큰 이슈나 새 팔로워) 하나~둘만 콕 집어 말하고 나머진 상대가 더 물으면.";
   return out;
 }
+/* 🔁 유료 창작 툴 이중 호출 방어.
+   본 루프는 멀티스텝이고 위쪽에 가드 재시도 경로가 여럿이라, 한 턴 안에서 모델이 같은
+   도구를 두 번 부르는 일이 실제로 일어난다 — 제목 한 번 요청에 40 GC가 두 번 빠졌다(실측).
+   돈이 두 번 나가고 API 원가도 두 번 쓰고 같은 카드가 두 장 붙는다.
+   uid+도구 기준으로 짧은 시간 안의 재호출은 생성도 과금도 하지 않고 "이미 붙었다"만 알린다.
+   ⚠️ 턴 경계를 코드로 알 수 없어 시간(20초)으로 근사한다. 유저가 20초 안에 진짜로 한 번 더
+      요청하면 공짜가 되지만, 두 번 청구하는 쪽보다 이 실수가 낫다. */
+const PAID_TOOL_TTL = 20_000;
+const paidToolSeen = new Map<string, number>();
+function paidToolDup(uid: string, name: string): boolean {
+  const k = uid + "|" + name;
+  const at = paidToolSeen.get(k);
+  const now = Date.now();
+  if (at && now - at < PAID_TOOL_TTL) return true;
+  paidToolSeen.set(k, now);
+  if (paidToolSeen.size > 500) {                      // 누수 방지
+    for (const [kk, vv] of paidToolSeen) if (now - vv >= PAID_TOOL_TTL) paidToolSeen.delete(kk);
+  }
+  return false;
+}
+function paidToolRelease(uid: string, name: string) { paidToolSeen.delete(uid + "|" + name); }
+
+/* 💰 대본·제목 GC 과금.
+   이 함수는 service_role 로 돌아 auth.uid() 가 없다 → ai_creation_charge_for(유저 지정) 를 쓴다.
+   가격은 gc_prices 한 표에서만 온다(여기 숫자를 박지 말 것).
+   생성이 빈손으로 끝나면 반드시 환불한다 — 돈만 받고 아무것도 안 준 꼴이 된다. */
+async function chargeGC(uid: string, kind: string): Promise<{ ok: boolean; charged: number; reason?: string; cost?: number; balance?: number }> {
+  try {
+    const { data } = await supa.rpc("ai_creation_charge_for", { p_user: uid, p_kind: kind, p_n: 1 });
+    if (!data?.ok) {
+      // 모델이 이 result 를 보고 말한다 — 뭐라고 해야 할지까지 같이 준다.
+      return { ok: false, charged: 0, reason: data?.reason || "charge_failed",
+        cost: data?.cost, balance: data?.balance,
+        say: data?.reason === "insufficient"
+          ? `갈라코인이 ${data?.cost ?? "?"} GC 필요한데 ${data?.balance ?? 0} GC밖에 없다고 짧게 말해줘라. 지갑에서 충전하면 된다고 한 줄 덧붙여라. 변명·사과 길게 하지 마라.`
+          : "지금은 이 기능을 쓸 수 없다고 짧게만 말해라." };
+    }
+    return { ok: true, charged: Number(data.charged) || 0 };
+  } catch (_) {
+    // 과금 자체가 터지면 막지 않는다 — 유료 기능이 통째로 죽는 것보다 낫다.
+    return { ok: true, charged: 0 };
+  }
+}
+/* 과금 실패는 result 로 돌려주면 모델이 무시하고 "뽑아줬어! 카드 확인해봐"를 지어낸다(실측).
+   모델이 실제로 신뢰하는 채널은 '액션 브리핑'이라, 실패도 액션으로 만들어 그 채널에 태운다.
+   kind:"needGC" 는 프론트가 모르는 종류라 카드로 그려지지 않는다(빈 카드 안 생김). */
+function needGCAction(ch: { reason?: string; cost?: number; balance?: number }, what: string) {
+  if (ch.reason !== "insufficient") {
+    return { action: { kind: "needGC", brief: `❌ ${what}을 못 만들었다(일시적 문제). 만들었다고 말하지 말고, 지금은 안 된다고 짧게만 말해라.` } };
+  }
+  return { action: { kind: "needGC", need: ch.cost, balance: ch.balance,
+    brief: `❌ 갈라코인이 모자라서 ${what}을 '아무것도 못 만들었다'. 카드는 안 붙었다. `
+         + `'만들었어/뽑아줬어/카드 봐' 절대 금지. ${ch.cost ?? "?"} GC 필요한데 ${ch.balance ?? 0} GC뿐이라고 `
+         + `짧게 말하고, 지갑에서 충전하면 된다고 한 줄만 덧붙여라. `
+         + `⚠️ 이 숫자는 '${what}' 이번 건에만 해당한다 — 다른 걸 만들 땐 값이 다르니, `
+         + `앞 대화에 나온 금액을 가져다 쓰거나 추측해서 말하지 마라(틀린 금액을 말하면 상대가 헛돈을 충전한다). `
+         + `금액을 모르는 상황이면 숫자 없이 "코인이 모자란다"고만 해라.` } };
+}
+async function refundGC(uid: string, amount: number) {
+  if (!amount || amount <= 0) return;
+  try { await supa.rpc("ai_creation_refund", { p_user: uid, p_amount: amount }); } catch (_) { /* */ }
+}
+
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
@@ -914,13 +978,19 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { action: { kind: "editdraft", fields: f } };
   }
   if (name === "gen_titles") {
+    if (paidToolDup(uid, name)) return { result: { ok: true, 실행됨: "제목 카드는 이미 이번에 붙었다. 다시 부르지 말고 골라보라고만 해라." } };
+    const ch = await chargeGC(uid, "titles");
+    if (!ch.ok) { paidToolRelease(uid, name); return needGCAction(ch, "제목"); }
     const titles = await genTitles(String(args?.topic || "").slice(0, 200), ["issue", "plaza", "gallari", "predict"].includes(args?.content_type) ? args.content_type : "general");
-    if (!titles.length) return { result: { ok: false } };
+    if (!titles.length) { await refundGC(uid, ch.charged); paidToolRelease(uid, name); return { result: { ok: false } }; }
     return { action: { kind: "titles", titles } };
   }
   if (name === "gen_script") {
+    if (paidToolDup(uid, name)) return { result: { ok: true, 실행됨: "대본 카드는 이미 이번에 붙었다. 다시 부르지 말고 한 줄로만 안내해라." } };
+    const ch = await chargeGC(uid, "script");
+    if (!ch.ok) { paidToolRelease(uid, name); return needGCAction(ch, "대본"); }
     const text = await genScript(String(args?.topic || "").slice(0, 200), ["gallari", "issue", "plaza"].includes(args?.content_type) ? args.content_type : "gallari", args?.format === "long" ? "long" : "short");
-    if (!text) return { result: { ok: false } };
+    if (!text) { await refundGC(uid, ch.charged); paidToolRelease(uid, name); return { result: { ok: false } }; }
     return { action: { kind: "script", text } };
   }
   if (name === "gen_thumbnail") {
@@ -3347,7 +3417,7 @@ ${parts.join("\n")}`;
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
         }
-        messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
+        messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: out.action.brief || ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
       }
     }
     // 빈 답 폴백 — 초안 카드가 붙어있으면 "헷갈렸어"가 아니라 라스트마일 안내(모델이 도구만 부르고 텍스트를 안 쓴 케이스).
@@ -3454,7 +3524,7 @@ ${parts.join("\n")}`;
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "🔗 여는 중…");
             const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null, reshow);
             if (out4.action) actions.push(out4.action);
-            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { ok: true, 실행됨: ACTION_BRIEF[out4.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out4.result ?? {})).slice(0, 2000) });
+            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { ok: true, 실행됨: out4.action.brief || ACTION_BRIEF[out4.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out4.result ?? {})).slice(0, 2000) });
           }
           // hot_issues/news만 부르고 아직 point_to 안 했으면, 그 id로 point_to까지 한 번 더 강제
           if (!hasView()) {
