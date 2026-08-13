@@ -84,7 +84,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -1189,6 +1189,8 @@
      원가만 보면 판단이 안 된다(많이 쓰는 게 나쁜 게 아니라, 매출 대비 많이 쓰는 게 문제).
      모델별·유저별을 같이 보여주는 이유: 돈이 새는 지점과 남용 계정을 눈으로 잡기 위해. */
   let marginDays = 30;
+  let turnDays = 7;
+
   async function renderMargin() {
     main().innerHTML = `<h1 class="ad-h1">💰 AI 원가·마진</h1>
       <div class="ad-card"><div class="ad-card-h">기간
@@ -1229,6 +1231,64 @@
     const tu = d.top_users || [];
     $("#mg-top").innerHTML = tu.length ? `<table class="ad-table"><thead><tr><th>회원</th><th>등급</th><th>호출</th><th>원가</th></tr></thead><tbody>
       ${tu.map(u => `<tr><td>${esc(u.nickname || "-")}</td><td><span class="ad-tag">${esc(u.tier)}</span></td><td>${fmt(u.calls)}</td><td>${w(u.cost_krw)}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="ad-soon">기록이 없어요.</div>`;
+  }
+
+  /* 📏 턴 계측 — '한 턴이 LLM을 몇 번 부르나'.
+     이 배수는 고급 모델로 바꾸는 순간 원가에 그대로 곱해진다. 그래서 마진 화면 옆에 둔다.
+     가드는 헛방(miss)이 많을수록 줄일 후보다 — 다만 가드는 실사고로 넣은 방어라
+     숫자만 보고 끄면 그 사고가 재발한다(실제로 좁혔다가 초안이 안 나가 되돌린 적 있다). */
+  async function renderTurns() {
+    main().innerHTML = `<h1 class="ad-h1">📏 턴 계측 (LLM 호출 배수)</h1>
+      <div class="ad-card"><div class="ad-card-h">기간
+        <span style="float:right">${[7, 30, 90].map(d => `<button class="ad-btn${d === turnDays ? " primary" : ""}" data-tdays="${d}">${d}일</button>`).join(" ")}</span>
+      </div><div id="tn-sum"><div class="ad-loading">불러오는 중…</div></div></div>
+      <div class="ad-grid2">
+        <div class="ad-card"><div class="ad-card-h">루프 스텝 분포</div><div id="tn-steps"></div></div>
+        <div class="ad-card"><div class="ad-card-h">가드 발동 · 헛방</div><div id="tn-guards"></div></div>
+      </div>
+      <div class="ad-card"><div class="ad-card-h">일별</div><div id="tn-daily"></div></div>`;
+    main().querySelectorAll("[data-tdays]").forEach(b => b.onclick = () => { turnDays = Number(b.dataset.tdays); renderTurns(); });
+
+    const d = await rpc("admin_turn_stats", { p_days: turnDays });
+    if (!d || !d.ok) { $("#tn-sum").innerHTML = `<div class="ad-soon">권한이 없거나 불러오지 못했어요.</div>`; return; }
+    if (!d.turns_total) { $("#tn-sum").innerHTML = `<div class="ad-soon">아직 기록이 없어요. 대화가 오가면 쌓입니다.</div>`; return; }
+
+    $("#tn-sum").innerHTML = `<div class="ad-kpis k3">
+      <div class="ad-kpi"><div class="ad-kpi-l">턴당 LLM 호출</div><div class="ad-kpi-v">${d.per_turn ?? "–"}</div></div>
+      <div class="ad-kpi"><div class="ad-kpi-l">총 턴 / 호출</div><div class="ad-kpi-v">${fmt(d.turns_total)} <small>/ ${fmt(d.llm_calls)}</small></div></div>
+      <div class="ad-kpi"><div class="ad-kpi-l">수다(1콜) 비중</div><div class="ad-kpi-v">${d.turns_total ? Math.round(d.turns_stream / d.turns_total * 100) : 0}%</div></div>
+    </div>
+    <div class="ad-note" style="margin-top:10px">
+      수다는 스트리밍이라 <b>1콜 고정</b>이고, 도구가 필요한 턴만 배수가 붙어요(도구 턴 평균 ${d.per_turn_json ?? "–"}콜).<br>
+      도구 턴의 <b>2콜은 구조적 최소</b>예요 — 1회차에 도구를 부르고 2회차에 그 결과로 답을 씁니다.
+    </div>`;
+
+    const st = d.steps || [];
+    $("#tn-steps").innerHTML = st.length ? `<table class="ad-table"><thead><tr><th>스텝</th><th>턴</th><th>비중</th></tr></thead><tbody>
+      ${st.map(x => `<tr><td>${x.n}스텝${x.n >= 3 ? " ⚠️" : ""}</td><td>${fmt(x.turns)}</td>
+        <td>${d.turns_json ? Math.round(x.turns / d.turns_json * 100) : 0}%</td></tr>`).join("")}
+      </tbody></table><div class="ad-note">3스텝 이상이 늘면 모델이 도구를 여러 라운드로 나눠 부르는 것 — 그때가 손볼 시점이에요.</div>`
+      : `<div class="ad-soon">기록이 없어요.</div>`;
+
+    const gs = d.guards || [];
+    $("#tn-guards").innerHTML = gs.length ? `<table class="ad-table"><thead><tr><th>가드</th><th>발동</th><th>헛방</th></tr></thead><tbody>
+      ${gs.map(g => {
+        const has = g.hit != null || g.miss != null;
+        const miss = g.miss || 0, tot = (g.hit || 0) + miss;
+        const pct = tot ? Math.round(miss / tot * 100) : null;
+        return `<tr><td>${esc(String(g.guard).replace("guard:", ""))}</td><td>${fmt(g.fired)}</td>
+          <td>${has ? `<span style="color:${pct >= 70 ? "#ff9c9c" : "inherit"}">${miss}/${tot}${pct != null ? ` (${pct}%)` : ""}</span>` : "–"}</td></tr>`;
+      }).join("")}</tbody></table>
+      <div class="ad-note">헛방 = 가드가 돌았는데 아무것도 못 만든 경우 = 순수 낭비 콜.
+      ${(d.fc_by || []).length ? `<br>fake_create 트리거: ${(d.fc_by || []).map(f => `${esc(f.by)} ${f.n}`).join(" · ")}
+      <br><small>past=진짜 거짓말 / future=하겠다는 말 / state=상태 백스톱</small>` : ""}</div>`
+      : `<div class="ad-soon">가드가 한 번도 안 돌았어요 (좋은 신호).</div>`;
+
+    const dl = d.daily || [];
+    $("#tn-daily").innerHTML = dl.length ? `<table class="ad-table"><thead><tr><th>날짜</th><th>턴</th><th>LLM 호출</th><th>배수</th></tr></thead><tbody>
+      ${dl.slice().reverse().map(x => `<tr><td>${esc(x.day)}</td><td>${fmt(x.turns)}</td><td>${fmt(x.llm)}</td>
+        <td>${x.turns ? (x.llm / x.turns).toFixed(2) : "–"}</td></tr>`).join("")}</tbody></table>`
       : `<div class="ad-soon">기록이 없어요.</div>`;
   }
 
