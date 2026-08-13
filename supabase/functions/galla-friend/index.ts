@@ -3439,6 +3439,10 @@ ${parts.join("\n")}`;
       if (!msg) break;
       messages.push(msg);
       const calls = msg.tool_calls || [];
+      /* 📏 도구를 부르면서 본문도 같이 준 경우 — 이 본문은 지금 버려지고 한 스텝을 더 돈다.
+         공급자에 따라 자주 나온다. 자주 나온다면 그 본문을 살려 1콜을 아낄 수 있다. */
+      if (calls.length && String(msg.content || "").trim()) GD.push("loop:content_with_tools");
+      if (calls.length) GD.push("loop:tools:" + calls.length);
       if (!calls.length) { reply = msg.content || ""; break; }
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
@@ -3832,8 +3836,12 @@ ${parts.join("\n")}`;
       impulse: !!impulse, impulseKind: impulse?.kind || null,
       bias, illegal, ghostPast, familyVent, nameAsk: mayAskName, locale: userLoc,
     };
+    /* 📏 실제 LLM 호출 수 = 루프 스텝 + '가드가 부른' 콜.
+       ⚠️ GD 에는 진단용 태그(loop:*, fc_by:*, :hit/:miss)도 섞여 있다 —
+          그걸 세면 배수가 부풀어 보인다(실제로 그렇게 잘못 셌다). 가드 발동만 센다. */
+    const guardCalls = GD.filter((g) => g.startsWith("guard:") && !g.includes(":hit") && !g.includes(":miss")).length;
     turnStat(["path:json", "brain:" + String(brain), "steps:" + steps, ...GD,
-              "calls:" + (steps + GD.length)]);   // 📏 배수 = 스텝 + 가드
+              "llm:" + (steps + guardCalls)]);
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
                   ...(isRedteam ? { guards } : {}) });
   } catch (e) {
