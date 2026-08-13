@@ -340,8 +340,26 @@ async function initConfirmPage(ctx) {
       // 서버가 준 진짜 원인을 보여준다 — "발행 중 오류" 한 줄로 뭉개면 유저는 버튼 고장으로 오해(침묵 실패).
       var emsg = (err && (err.message || err.hint)) || '';
       if ((err && err.hint === 'onboard_required') || /닉네임|프로필/.test(emsg)) {
-        alert('발행하려면 프로필(닉네임)을 먼저 완성해야 해요. 홈에서 프로필부터 만들고 다시 올려줘요!');
-        location.href = 'index.html';   // 홈 진입 시 온보딩 오버레이(js/onboard.js)가 닉네임 설정을 띄운다
+        /* 🧭 여기서 홈으로 보내지 않는다.
+           supabase.js 가 이미 onboard_required 를 잡아 닉네임 모달을 그 자리에 띄운다.
+           그런데 예전엔 alert 띄우고 location.href='index.html' 로 페이지를 떠나버려
+           모달이 뜰 틈이 없었고, 유저는 홈에서 '내 초안 어디 갔지'가 됐다
+           (초안은 issues_draft 에 남아 있는데 돌아오는 길이 없었다).
+           → 이 페이지에 머무르며 닉네임만 만들면 곧바로 '최종 발행'을 다시 누를 수 있다. */
+        if (window.GALLA_openOnboard) { try { window.GALLA_openOnboard(); } catch (_) {} }
+        var hint = document.getElementById('pubHint');
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.id = 'pubHint';
+          hint.style.cssText = 'margin:12px 0;padding:11px 13px;border-radius:11px;font-size:13px;line-height:1.6;'
+            + 'background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.28);color:#fde68a';
+          publishBtn.parentNode.insertBefore(hint, publishBtn);
+        }
+        hint.innerHTML = '닉네임을 먼저 정해야 발행할 수 있어요.<br>'
+          + '<b>초안은 그대로 저장돼 있으니</b> 닉네임을 만든 뒤 아래 <b>최종 발행</b>을 다시 눌러주세요.';
+        publishBtn.disabled = false;
+        publishBtn.textContent = '최종 발행';
+        __USER_CONFIRMED_PUBLISH__ = false;
         return;
       }
       alert('발행 중 오류가 발생했습니다.' + (emsg ? '\n\n' + emsg : ''));
