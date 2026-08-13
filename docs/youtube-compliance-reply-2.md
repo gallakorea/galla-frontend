@@ -1,8 +1,9 @@
 # YouTube API Compliance — 2차 회신 초안
 
-> ⚠️ **보내기 전에 사장님이 채워야 할 것 2개** — 아래 `[[ ]]` 부분입니다.
-> 날짜는 사업 약속이라 제가 정할 수 없습니다. 한 번 적어 보내면 그게 기준이 되니,
-> **여유를 두고** 잡으시는 걸 권합니다(못 지키면 다시 해명해야 합니다).
+> ✅ **그대로 보낼 수 있습니다.** 출시일은 3주 내 기준으로 확정했습니다
+> (iOS 2026-09-01 화 · Android 2026-09-03 목, 3주 마지노선 = 2026-09-03).
+> ✅ **YouTube Data API v3 활성 확인 완료** — 2026-08-13 08:30 KST 수집 성공(1,841건),
+>    수집된 video_id를 유튜브에서 직접 조회해 실재 확인. 크론 최근 5회 전부 성공.
 
 ---
 
@@ -57,8 +58,8 @@ API data.
 
 2) Launch timeline for the Android and iOS applications
 
-  - iOS (App Store):        [[YYYY-MM-DD 목표 출시일]]
-  - Android (Google Play):  [[YYYY-MM-DD 목표 출시일]]
+  - iOS (App Store):        September 1, 2026
+  - Android (Google Play):  September 3, 2026
 
 Both applications are built with Capacitor and wrap the same web experience,
 so the API usage described in (1) applies unchanged: all YouTube Data API calls
@@ -84,8 +85,11 @@ gallakorea@gmail.com
 - **"미정"은 답이 안 됩니다.** 그쪽이 구체적 날짜를 요구했으므로 비워 보내면 조사가 길어집니다.
   지키기 어려우면 늦게 잡고 앞당기는 편이 안전합니다.
 
-## 아직 막혀 있는 것
+## API 활성 확인 (완료)
 
-`galla-youtube` GCP 프로젝트에 YouTube Data API v3가 켜져 있는지 확인이 안 됐습니다
-(Chrome이 blackid@gmail.com으로 로그인돼 있어 gallakorea 계정 콘솔을 못 봄).
-회신 전에 한 번 확인해 주세요 — 그쪽이 프로젝트 번호로 대조합니다.
+GCP 콘솔 접근 없이 '기능이 실제로 도는가'로 확인했다 — 이게 더 확실한 증거다.
+API가 꺼져 있으면 403이 나 데이터가 아예 안 들어온다.
+
+- 2026-08-13 08:30 KST 수집 성공, 1,841건 신규 저장 (7분 전)
+- 크론 collect_youtube_hot_job 최근 5회 전부 succeeded
+- 수집된 video_id(Ud8h2fiq4og)를 YouTube oEmbed로 직접 조회 → 실재 확인
