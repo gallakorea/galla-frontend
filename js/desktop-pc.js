@@ -137,9 +137,14 @@
     const p = document.body.dataset.page || '';
     if (YT_PAGES.indexOf(p) >= 0) return true;
     // 트렌드 허브의 '핫튜브' 탭도 유튜브 영상 화면이다
+    /* ⚠️ 운영은 .html 없는 주소를 쓴다(https://galla.im/search?tab=hot).
+       '/search.html$' 로만 맞추면 로컬에서만 통과하고 라이브에서 안 먹는다 —
+       실제로 그렇게 배포돼 카드가 그대로 떴다. 확장자는 선택적으로 본다. */
     try {
       const u = new URL(location.href);
-      if (/search\.html$/.test(u.pathname) && (u.searchParams.get('tab') === 'hot' || u.searchParams.get('video'))) return true;
+      if (/\/search(\.html)?$/.test(u.pathname) &&
+          (u.searchParams.get('tab') === 'hot' || u.searchParams.get('video'))) return true;
+      if (/\/watch(\.html)?$/.test(u.pathname)) return true;
     } catch (_) {}
     return false;
   }
