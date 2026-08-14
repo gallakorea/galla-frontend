@@ -213,10 +213,22 @@ verified by searching the whole repository for both the YouTube red (#FF0000) an
 the rounded-rectangle-plus-play-triangle path geometry; there are now zero
 occurrences anywhere in our web or app source.
 
-Rather than reproduce the official asset, we replaced them all with a neutral,
-non-YouTube icon in our own brand colour, so that no YouTube mark is used outside
-the official embedded player itself. There is now no YouTube logo or icon anywhere
-in our product apart from the branding rendered by the official IFrame Player.
+We chose to remove the marks rather than reproduce the official asset, so that no
+YouTube mark is used outside the official embedded player itself. The icons in those
+positions are now neutral marks in our own brand colour; they label our own UI
+controls (a tab, a list toggle), not YouTube.
+
+YouTube remains clearly identified as the source of the content wherever we show it:
+  • playback is always inside the official YouTube IFrame Player, which carries
+    YouTube's own branding and controls
+  • every video screen has a "Watch on YouTube" link that opens
+    https://www.youtube.com/watch?v=<id>
+  • the channel name is shown with every video
+
+If you would prefer that we display the official YouTube icon in these positions
+instead, we are glad to do so — we would download the asset from the YouTube brand
+site and implement it unmodified, at no less than 20dp, linking back to YouTube.
+Please let us know which you would like, and we will make the change.
 
 ────────────────────────────────────────────────────────
 
