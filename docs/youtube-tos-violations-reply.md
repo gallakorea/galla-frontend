@@ -139,11 +139,13 @@ We made four changes here.
     computed from GALLA user activity on GALLA-authored topics, with no input from
     YouTube API data.
 
-    Regardless, to remove any ambiguity, those panels are no longer rendered on any
-    screen where YouTube content is shown (our video watch page and the YouTube
-    section of our trends hub). We also renamed the remaining panels on non-YouTube
-    screens to carry our own brand explicitly: "GALLA Issue Standings" and
-    "GALLA Prediction".
+    Regardless, to remove the ambiguity on the exact screens you highlighted, those two
+    panels are no longer rendered there — on our video watch page and in the video
+    section of our trends hub. Elsewhere in the product, where our own features and
+    YouTube content can appear in the same mixed feed, every one of our cards carries
+    our own brand explicitly and on its face — "GALLA Prediction", "GALLA Issue
+    Standings" — so it is never presented as YouTube data. None of these figures is
+    computed from, or influenced by, anything returned by the YouTube API.
 
 (d) Trending keyword counts now state their source on screen.
     The number column highlighted in your report is not derived from YouTube data.
