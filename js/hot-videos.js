@@ -186,7 +186,7 @@
           <span class="hv-ch">${esc(v.channel_title || "")}</span>
           <span class="hv-stat">
             <span>조회 ${shortNum(v.view_count)}</span>
-            <span class="hv-stat-i">${shortNum(v.like_count)} ${window.__t ? __t("likes") : "likes"}</span>
+            <span class="hv-stat-i">${shortNum(v.like_count)} likes</span>
             <span>${timeAgo(v.published_at)}</span>
           </span>
         </span>
