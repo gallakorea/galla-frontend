@@ -24,7 +24,7 @@
       body: "지금 뜨는 <b>실시간 키워드</b>.<br>어제 모르면 아싸, 오늘 알면 <b>트민남·트민녀</b> 😎" },
     { sel: '.tab-item[data-tab="news"]', icon: "🧠", kicker: "AI가 떠먹여줌", title: "갈라뉴스",
       body: "기사 수십 개를 <b>AI가 3줄</b>로 씹어서 정리.<br>출근길 3분이면 오늘치 끝." },
-    { sel: '.tab-item[data-tab="hot"]', icon: "▶️", kicker: "알고리즘 무시", title: "인기 영상",
+    { sel: '.tab-item[data-tab="hot"]', icon: "▶️", kicker: "알고리즘 무시", title: "핫튜브",
       body: "지금 <b>터지는 유튜브</b>만 골라 모음.<br>영상 찾아 헤매는 시간, 여기서 아껴요." },
     { sel: '.tab-item[data-tab="plaza"]', icon: "🗣", kicker: "놀이터", title: "광장",
       body: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>.<br>댓글 전투는 덤 — 참전은 자유." },

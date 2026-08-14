@@ -199,7 +199,7 @@
         <a class="pcr-row" href="search.html?video=${encodeURIComponent(v.video_id)}">
           <b>${esc(v.title)}</b>
           <i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i>
-        </a>`).join(''), 'search.html', '인기 영상 전체 보기');
+        </a>`).join(''), 'search.html', '핫튜브 전체 보기');
     } catch (_) { fill('pcr-hot', ''); }
 
     // ② 오늘의 예측 — 마감 임박 순(살아있는 마켓)
