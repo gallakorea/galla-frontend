@@ -572,13 +572,13 @@ async function initTrendPage() {
     /* ── 핫유튜브 ── */
     if (videos.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head sr-yt">
-        <svg class="yt-ic" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="#FF0000" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8z"/>
-          <path fill="#fff" d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
-        </svg>핫유튜브 <b>${videos.length}</b></div>`;
+        <svg class="yt-ic" viewBox="0 0 24 24" fill="none" stroke="#7c5cff" stroke-width="2.1"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M10.5 8.8l5 3.2-5 3.2V8.8z"/>
+        </svg>인기 영상 <b>${videos.length}</b></div>`;
       html += videos.map(v =>
         `<div class="sr-card video" data-vid="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}">
-          <div class="sr-thumb">${isValidThumbnail(v.thumbnail) ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">YT</span>`}
+          <div class="sr-thumb">${isValidThumbnail(v.thumbnail) ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">▶</span>`}
             ${v.is_short ? `<span class="sr-badge-short">쇼츠</span>` : `<span class="sr-badge-vid">▶</span>`}</div>
           <div class="sr-body">
             <div class="sr-title">${esc(v.title)}</div>

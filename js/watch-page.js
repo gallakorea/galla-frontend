@@ -61,7 +61,7 @@
       <div class="hv-social">
         <button type="button" class="hv-sb" id="hvLike">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>
-          <span id="hvLikeN">좋아요</span>
+          <span id="hvLikeN">갈라 좋아요</span>
         </button>
         <button type="button" class="hv-sb" id="hvComment">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
@@ -137,7 +137,7 @@
   }
   function paintLike() {
     const b = q("#hvLike"); if (b) b.classList.toggle("on", liked);
-    const n = q("#hvLikeN"); if (n) n.textContent = likeN ? shortNum(likeN) : "좋아요";
+    const n = q("#hvLikeN"); if (n) n.textContent = likeN ? `${shortNum(likeN)} 갈라 좋아요` : "갈라 좋아요";
   }
   async function me() {
     const c = await sb();

@@ -186,7 +186,7 @@
           <span class="hv-ch">${esc(v.channel_title || "")}</span>
           <span class="hv-stat">
             <span>조회 ${shortNum(v.view_count)}</span>
-            <span class="hv-stat-i">${HV_LIKE_ICON} ${shortNum(v.like_count)}</span>
+            <span class="hv-stat-i">${shortNum(v.like_count)} ${window.__t ? __t("likes") : "likes"}</span>
             <span>${timeAgo(v.published_at)}</span>
           </span>
         </span>
@@ -319,7 +319,7 @@
 
   function paintLike() {
     $("#hvLike").classList.toggle("on", liked);
-    $("#hvLikeN").textContent = likeN ? shortNum(likeN) : "좋아요";
+    $("#hvLikeN").textContent = likeN ? `${shortNum(likeN)} 갈라 좋아요` : "갈라 좋아요";
   }
 
   async function me() {
