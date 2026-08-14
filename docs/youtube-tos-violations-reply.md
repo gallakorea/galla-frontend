@@ -233,9 +233,18 @@ rgb(255, 0, 0), on a black background, inside a control that navigates to our vi
 screen, and that no monochrome variant of it remains anywhere.
 
 YouTube also remains identified as the source of the content itself: playback is
-always inside the official YouTube IFrame Player, every video screen carries a
+always through the official YouTube IFrame Player, every video screen carries a
 "Watch on YouTube" link to https://www.youtube.com/watch?v=<id>, and the channel
 name is shown with every video.
+
+One implementation detail, so that nothing looks unexplained if you inspect the page:
+on our video screen the player is embedded inside a small page on our own domain
+(https://galla.im/yt). That page does nothing but load
+https://www.youtube.com/iframe_api and construct a standard YT.Player. We added it
+because our mobile app serves its web content from a custom scheme, which the player
+rejects with error 153; loading it from a normal https origin resolves that. The
+player itself, its branding and its controls are unmodified, and we never download,
+re-host or alter any video content.
 
 ────────────────────────────────────────────────────────
 
