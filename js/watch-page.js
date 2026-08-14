@@ -59,8 +59,10 @@
       </div>
 
       <div class="hv-social">
-        <button type="button" class="hv-sb" id="hvLike">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>
+        <!-- ⚠️ 하트 심볼을 두지 않는다. YouTube ToS 통보서(III.E.4h)의 지시가
+             "replace the highlighted symbol with the term 'likes'" 였다 —
+             심볼을 없애고 '단어'로 표기하라는 뜻이다. -->
+        <button type="button" class="hv-sb hv-sb-txt" id="hvLike">
           <span id="hvLikeN">갈라 좋아요</span>
         </button>
         <button type="button" class="hv-sb" id="hvComment">

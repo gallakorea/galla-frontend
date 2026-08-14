@@ -40,14 +40,6 @@
     String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-  /* 카드 통계 아이콘 — 이모지(👍)는 기기마다 크기·모양이 달라 줄 정렬이 흔들린다.
-     다른 페이지와 같은 규약(stroke 1.8 · currentColor)의 SVG로 통일. */
-  const HV_LIKE_ICON =
-    `<svg class="hv-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-       <path d="M7 10.5V21H4a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1h3z"/>
-       <path d="M7 10.5l4.2-7.4a1 1 0 0 1 1.4-.4l.6.4a2.4 2.4 0 0 1 1 2.6L13.5 9h5.3a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17.4 20H7"/>
-     </svg>`;
 
   function shortNum(n) {
     n = Number(n) || 0;
