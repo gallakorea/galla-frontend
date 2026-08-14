@@ -52,7 +52,8 @@ along with which one accesses YouTube API Services:
     This is the ONLY project that accesses YouTube API Services.
 
   • galla-analytics    — Project number 634912808454
-    Used solely for Google Analytics. It makes no YouTube API calls.
+    Used solely for Google Analytics. YouTube Data API v3 is not enabled in this
+    project, and no YouTube API call originates from it.
 
 For completeness: all YouTube Data API access happens in a single server-side job
 (one Supabase Edge Function, `collect-youtube-hot`) using one API key held as a
@@ -212,16 +213,20 @@ gallakorea@gmail.com
 
 ---
 
-## 보내기 전 확인 두 가지
+## 발송 준비 완료 ✅
 
-1. **`galla-analytics`(634912808454)에 YouTube Data API가 꺼져 있는지** — 회신문은
-   "YouTube API를 호출하지 않는다"고 씁니다. 우리 코드 기준으로는 확실합니다(호출
-   지점 1곳·키 1개). 콘솔에서 *API 및 서비스 → 사용 설정된 API*만 눈으로 확인해 주세요.
-   켜져만 있고 안 쓰는 상태여도 번호를 이미 공개했으니 문제되지 않습니다.
+1. **`galla-analytics`(634912808454) — YouTube Data API v3 꺼져 있음, 확인 완료.**
+   갈라 계정(`gallakorea@gmail.com`)으로 콘솔에서 직접 확인했습니다. 프로젝트가
+   `galla-analytics`로 잡힌 상태에서 버튼이 파란 **`사용`(Enable)** 입니다 —
+   켜져 있으면 `관리`+`사용 중지`가 뜹니다.
+   (첫 시도 때 다른 계정 `blackid@gmail.com` 으로 보다가 `serviceusage.services.list`
+    권한이 없어 상태를 못 읽는 화면을 봤습니다. 그 화면의 버튼은 근거가 안 됩니다.)
 
-2. **상호 불일치** — 통보서엔 API Client 명이 `Gala Labs Co., Lt`로 등록돼 있는데
-   정식 상호는 `Galla Labs Inc.` 입니다(L 두 개). 회신문에 정정 요청을 넣어뒀습니다.
-   나중에 불일치로 걸리는 것보다 지금 짚는 편이 낫습니다.
+2. **상호** — 정식 상호 `Galla Labs Inc.` 로 방침·회신문 모두 반영 완료.
+   통보서엔 `Gala Labs Co., Lt` 로 등록돼 있어 **기록 정정 요청**을 회신문에
+   넣어뒀습니다. 나중에 불일치로 걸리는 것보다 지금 짚는 편이 낫습니다.
+
+**→ 이제 위 영문 블록을 그대로 복사해 보내시면 됩니다. 기한 2026-08-24(월).**
 
 ## E.4h 로 지적된 게 정확히 무엇인가
 
