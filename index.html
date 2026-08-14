@@ -39,7 +39,7 @@
   {"@context":"https://schema.org","@type":"WebApplication","@id":"https://galla.im/#app","name":"GALLA 갈라","url":"https://galla.im/","applicationCategory":"SocialNetworkingApplication","operatingSystem":"Web, Android, iOS","browserRequirements":"JavaScript 필요","inLanguage":"ko-KR","isAccessibleForFree":true,"publisher":{"@id":"https://galla.im/#organization"},"image":"https://galla.im/assets/og/og-default.png","screenshot":"https://galla.im/assets/og/og-default.png","featureList":["실시간 이슈 배틀","갈라리(숏폼·롱폼 콘텐츠)","갈라예측(예측 게임)","갈라뉴스(AI 뉴스 종합)","난장 라이브","광장 커뮤니티","일기토 실시간 토론"],"offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}
   </script>
 
-    <link rel="stylesheet" href="css/index.css?v=0814250" />
+    <link rel="stylesheet" href="css/index.css?v=0814320" />
     <link rel="stylesheet" href="./css/header.css?v=080412">
     <link rel="stylesheet" href="./css/write-hub.css?v=080412">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
@@ -109,6 +109,14 @@
             <div data-cat="기타" class="chip" onclick="GALLA_filterFeed('기타', this)">기타</div>
         </div>
     </section>
+
+    <!-- 피드 정렬 — 인기(참여·시간 가중) / 최신.
+         ⚠️ 카테고리 칩 행 '안'에 넣지 않는다. 그 행은 좌우 스와이프를 쓰고
+            셸 탭 전환과 충돌하는 자리다(nav.js 3중 방어 대상). 별도 행으로 뺀다. -->
+    <div class="feed-sort" id="feedSort">
+      <button type="button" class="fs-btn on"  data-sort="hot">인기</button>
+      <button type="button" class="fs-btn"     data-sort="new">최신</button>
+    </div>
 
     <!-- 베스트/추천 큐레이션 잠시 off — 업로드 순서로 노출 -->
     <section class="section">
@@ -216,7 +224,7 @@
 <script src="js/ghost.js?v=080412"></script>
 <script src="js/user-sheet.js?v=080412"></script>
 <script src="js/report-block.js?v=080412"></script>
-<script src="js/index.js?v=0809132"></script>
+<script src="js/index.js?v=0814320"></script>
 <script type="module" src="js/shorts.js?v=0809129"></script>
 <script src="js/fx.js?v=080412"></script>
 <script src="./js/nav.js?v=0814270"></script>

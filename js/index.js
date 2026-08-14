@@ -926,6 +926,7 @@ async function loadData() {
             user_id, thumbnail_url, video_url, images, media,
             faction_a, faction_b
         `)
+        .order(GALLA_feedSort() === 'hot' ? 'hot_score' : 'created_at', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(80));
 
@@ -1066,6 +1067,27 @@ function interleave(issues, ex = {}) {
     while (queue.length) out.push(queue.shift());
     return out;
 }
+
+/* 🔀 피드 정렬 — 'hot'(참여·시간 가중) | 'new'(최신).
+   hot_score 는 10분마다 크론이 계산한다(compute_hot_scores).
+   참여가 0이면 식이 1/(나이+2)^1.4 로 줄어 사실상 최신순이 되므로,
+   콘텐츠가 적은 초기에도 이상하게 보이지 않는다. */
+function GALLA_feedSort() {
+    try { return localStorage.getItem('galla_feed_sort') || 'hot'; } catch (_) { return 'hot'; }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const box = document.getElementById('feedSort');
+    if (!box) return;
+    const cur = GALLA_feedSort();
+    box.querySelectorAll('.fs-btn').forEach(b => {
+        b.classList.toggle('on', b.dataset.sort === cur);
+        b.onclick = () => {
+            if (b.dataset.sort === GALLA_feedSort()) return;
+            try { localStorage.setItem('galla_feed_sort', b.dataset.sort); } catch (_) {}
+            location.reload();
+        };
+    });
+});
 
 // 광장 글을 피드용으로 로드 (최신순 + 점수/신규 가점 가벼운 정렬)
 async function loadPlazaCards() {
