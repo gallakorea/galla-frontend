@@ -1826,12 +1826,11 @@
         window.GALLA_gallianOf(supabase, peer),
         window.GALLA_computeType(supabase, peer).catch(() => null),
       ]);
-      if (token !== PROF_TOKEN) return;
-      const r = g.raw || {};
+      if (token !== PROF_TOKEN || !g) return;
       box.innerHTML = `
         <div class="dm-sec">아이덴티티</div>
         <div class="dm-idcard">
-          <div class="dm-id-tier" style="color:${esc(g.tier.color)}">${esc(g.tier.name)} <b>Lv.${g.subLevel}</b></div>
+          <div class="dm-id-tier" style="color:${esc(g.tier.color)}">${esc(g.tier.name)} <b>Lv.${g.level}</b></div>
           <div class="dm-id-sub">${esc(g.tier.sub)} · 갈라 지수 ${g.gi.toLocaleString()}</div>
         </div>
         ${t && !t.rookie ? `

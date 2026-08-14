@@ -7,7 +7,7 @@
 
     <!-- 공통 스타일 -->
     <link rel="stylesheet" href="./css/index.css?v=080412">
-    <link rel="stylesheet" href="./css/grade.css?v=080412">
+    <link rel="stylesheet" href="./css/grade.css?v=0814140">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
 
     <style>
@@ -47,7 +47,7 @@
         <div class="section-title">나의 갈라리안</div>
 
         <div class="card grade-main" id="gradeCard">
-            <div class="tier-name" id="tierName">🌱 눈팅 뉴비</div>
+            <div class="tier-name" id="tierName">🌱 눈팅러</div>
             <div class="tier-desc" id="tierDesc">
                 전장의 선봉에서 의견의 흐름을 바꾸는 정예 갈라리안입니다.
             </div>
@@ -57,13 +57,14 @@
             </div>
             <div class="xp-text" id="xpText">380 / 600 GP</div>
 
+            <div class="spec-badge" id="specBadge" hidden></div>
             <div class="tier-aura vanguard-aura" id="tierAura"></div>
         </div>
     </section>
 
     <!-- NEXT TIER PROGRESS -->
     <section class="section">
-        <div class="section-title">다음 단계까지 남은 진척도</div>
+        <div class="section-title">내 갈라 지수가 어디서 나왔나</div>
 
         <div class="card next-tier-card">
             <div class="next-row">
@@ -71,49 +72,18 @@
                 <div class="value" id="nextTier">–</div>
             </div>
 
-            <div class="progress-item">
-                <div class="pi-label">🔥 활동 지수 (발의·댓글·투표·광장)</div>
-                <div class="pi-bar"><div class="fill" id="giActivity"></div></div>
-                <div class="pi-text" id="giActivityText">0</div>
-            </div>
-
-            <div class="progress-item">
-                <div class="pi-label">⚔️ 전투 지수 (공격·방어·지원)</div>
-                <div class="pi-bar"><div class="fill" id="giBattle"></div></div>
-                <div class="pi-text" id="giBattleText">0</div>
-            </div>
-
-            <div class="progress-item">
-                <div class="pi-label">📈 예측 지수 (거래·수익)</div>
-                <div class="pi-bar"><div class="fill" id="giPredict"></div></div>
-                <div class="pi-text" id="giPredictText">0</div>
-            </div>
-
-            <div class="progress-item">
-                <div class="pi-label">🎬 창작 지수 (숏판·롱판·받은 반응·후원)</div>
-                <div class="pi-bar"><div class="fill" id="giCreator"></div></div>
-                <div class="pi-text" id="giCreatorText">0</div>
-            </div>
-
+            <div id="domainList"></div>
         </div>
-    </section>
-
-    <!-- 🎬 창작자 트랙 (등급과 병행) -->
-    <section class="grade-card" id="creatorTrackCard" hidden>
-        <div class="ct-head"><span class="ct-emoji" id="ctEmoji">🌱</span>
-            <div><div class="ct-name" id="ctName">새싹 크리에이터</div><div class="ct-sub" id="ctSub">창작자 등급</div></div>
-        </div>
-        <div class="ct-bar"><div class="ct-fill" id="ctFill"></div></div>
-        <div class="ct-goal" id="ctGoal"></div>
     </section>
 
     <!-- WORLD LORE -->
     <section class="section">
         <div class="section-title">갈라리안 세계관</div>
         <div class="card lore-card">
-            여기는 의견이 곧 힘(GP)이 되는 <b>갈라 아레나</b>.<br>
-            누구나 <b>🌱 눈팅 뉴비</b>로 시작해 발끈러 → 키보드 전사 → 여론 논객 → 갈라 선동가를 거쳐,
-            전장을 평정한 <b>👑 갈라 대장군</b>으로 승천합니다. 오늘도 손가락은 근질근질.
+            여기는 무엇을 하든 판이 되는 <b>갈라</b>.<br>
+            이슈로 싸우든, 숏판·롱판을 올리든, 예측을 맞히든, 난장을 열든 —
+            <b>🌱 눈팅러</b>에서 시작해 참견러 → 판벌이 → 판잡이 → 판몰이를 거쳐
+            <b>👑 갈라 대장군</b>이 됩니다. 길은 다섯 갈래, 사다리는 하나.
         </div>
     </section>
 
@@ -124,8 +94,8 @@
         <div class="tiers-list">
 
             <div class="tier-box spark">
-                <div class="tier-title">🌱 눈팅 뉴비</div>
-                <div class="tier-sub">일단 스크롤만 내리는 관망러</div>
+                <div class="tier-title">🌱 눈팅러</div>
+                <div class="tier-sub">일단 스크롤만 내리는 구경꾼</div>
                 <ul class="perk-list">
                     <li>“난 그냥 구경만…”</li>
                     <li>GP 보너스 없음</li>
@@ -133,8 +103,8 @@
             </div>
 
             <div class="tier-box breaker">
-                <div class="tier-title">🔥 발끈러</div>
-                <div class="tier-sub">못 참고 첫 댓글을 단 각성러</div>
+                <div class="tier-title">🔥 참견러</div>
+                <div class="tier-sub">못 참고 한마디 얹는 사람</div>
                 <ul class="perk-list">
                     <li>드디어 참전 개시</li>
                     <li>GP +5%</li>
@@ -142,8 +112,8 @@
             </div>
 
             <div class="tier-box vanguard">
-                <div class="tier-title">⌨️ 키보드 전사</div>
-                <div class="tier-sub">손가락이 근질근질한 참전러</div>
+                <div class="tier-title">🎪 판벌이</div>
+                <div class="tier-sub">슬슬 판을 벌이기 시작한 사람</div>
                 <ul class="perk-list">
                     <li>상단 노출 증가</li>
                     <li>대표 뱃지 활성화</li>
@@ -151,8 +121,8 @@
             </div>
 
             <div class="tier-box authority">
-                <div class="tier-title">🎤 여론 논객</div>
-                <div class="tier-sub">판을 읽고 흔드는 입담꾼</div>
+                <div class="tier-title">🎯 판잡이</div>
+                <div class="tier-sub">판을 읽고 끌고 가는 사람</div>
                 <ul class="perk-list">
                     <li>실버 오라</li>
                     <li>추천 가중치 상승</li>
@@ -160,8 +130,8 @@
             </div>
 
             <div class="tier-box dominion">
-                <div class="tier-title">🌪️ 갈라 선동가</div>
-                <div class="tier-sub">댓글창을 쥐락펴락하는 여론몰이</div>
+                <div class="tier-title">🌪️ 판몰이</div>
+                <div class="tier-sub">판 자체를 몰고 가는 사람</div>
                 <ul class="perk-list">
                     <li>48시간 상단 고정</li>
                     <li>금빛 지배자 오라</li>
@@ -170,7 +140,7 @@
 
             <div class="tier-box apex">
                 <div class="tier-title">👑 갈라 대장군</div>
-                <div class="tier-sub">전장을 평정한 전설의 논객</div>
+                <div class="tier-sub">판을 평정한 전설</div>
                 <ul class="perk-list">
                     <li>전설 오라</li>
                     <li>알고리즘 최우선</li>
@@ -185,11 +155,11 @@
         <div class="section-title">등급별 능력치</div>
 
         <div class="card benefit-card">
-            <div class="benefit-item"><span class="bt">🌱 눈팅 뉴비</span><span class="bd">GP 0% · 기본</span></div>
-            <div class="benefit-item"><span class="bt">🔥 발끈러</span><span class="bd">GP +5% · 노출 +3%</span></div>
-            <div class="benefit-item"><span class="bt">⌨️ 키보드 전사</span><span class="bd">GP +10% · 상단노출 +15%</span></div>
-            <div class="benefit-item"><span class="bt">🎤 여론 논객</span><span class="bd">GP +18% · 추천가중치 +15%</span></div>
-            <div class="benefit-item"><span class="bt">🌪️ 갈라 선동가</span><span class="bd">GP +28% · 최상단 48h</span></div>
+            <div class="benefit-item"><span class="bt">🌱 눈팅러</span><span class="bd">GP 0% · 기본</span></div>
+            <div class="benefit-item"><span class="bt">🔥 참견러</span><span class="bd">GP +5% · 노출 +3%</span></div>
+            <div class="benefit-item"><span class="bt">🎪 판벌이</span><span class="bd">GP +10% · 상단노출 +15%</span></div>
+            <div class="benefit-item"><span class="bt">🎯 판잡이</span><span class="bd">GP +18% · 추천가중치 +15%</span></div>
+            <div class="benefit-item"><span class="bt">🌪️ 판몰이</span><span class="bd">GP +28% · 최상단 48h</span></div>
             <div class="benefit-item apex-benefit"><span class="bt">👑 갈라 대장군</span><span class="bd">GP +45% · 알고리즘 최우선</span></div>
         </div>
     </section>
@@ -237,12 +207,12 @@
 
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0809131"></script>
-<script src="js/supabase.js?v=0809131"></script>
+<script src="js/supabase.js?v=0814140"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="./js/gallian.js?v=0814101"></script>
-<script src="./js/grade.js?v=0814100"></script>
+<script src="./js/gallian.js?v=0814140"></script>
+<script src="./js/grade.js?v=0814140"></script>
 <script src="./js/nav.js?v=0811190"></script>
-<script src="./js/desktop-pc.js?v=080412" defer></script>
+<script src="./js/desktop-pc.js?v=0814140" defer></script>
 <script src="./js/nav-jog.js?v=080412" defer></script>
 <script src="./js/dm-call.js?v=080412" defer></script>
 

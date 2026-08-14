@@ -59,7 +59,7 @@
   el.innerHTML =
     '<div class="gs-logo"><img src="' + IMG + '" alt="갈라"></div>' +
     '<div class="gs-bar"></div>' +
-    '<div class="gs-tag">여론이 에너지가 되는 곳</div>';
+    '<div class="gs-tag">무엇을 하든 판이 되는 곳</div>';
   document.documentElement.appendChild(el);
   document.documentElement.classList.add("splash-lock");
 

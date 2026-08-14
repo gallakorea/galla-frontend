@@ -203,9 +203,9 @@ async function GALLA_settingsInit(root) {
     // grade·마이페이지와 완전히 동일한 full 계산으로 통일
     const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, userId) : null;
     if (g) {
-      if (levelEl) levelEl.textContent = `${g.tier.name} Lv.${g.subLevel}`;
+      if (levelEl) levelEl.textContent = `${g.tier.name} Lv.${g.level}`;
       if (xpLabel) xpLabel.textContent = g.goal?.remaining > 0 ? `다음 레벨까지 ${g.goal.remaining.toLocaleString()} GI` : "최고 레벨";
-      requestAnimationFrame(() => { if (xpFill) xpFill.style.width = (g.subProgress || 0) + "%"; });
+      requestAnimationFrame(() => { if (xpFill) xpFill.style.width = (g.progress || 0) + "%"; });
     }
   } catch (_) {}
   // 전투력 = 전투 액션(공격·방어·지원) 총량 — 마이페이지와 동일 정의(전투지수)

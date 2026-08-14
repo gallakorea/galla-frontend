@@ -60,42 +60,56 @@
     };
   }
 
-  /* 🏅 갈라리안 등급표(GI 기반) — grade 페이지/gallian.js와 동일 6단계 + 서브레벨.
+  /* 🏅 갈라리안 등급표 — GI만 있고 서버를 못 부르는 자리(피드 배지 도색기)용 동기 헬퍼.
      전 페이지 '레벨/등급'의 단일 진실. users.level(죽은 컬럼)은 쓰지 않는다.
-     early-return 위에 둬 재주입에도 견고. */
+     early-return 위에 둬 재주입에도 견고.
+
+     ⚠️ 여기 곡선·티어는 서버 gi_for_level / gallian_of 의 거울이다.
+        서버만 고치고 여기를 안 고쳐서, 피드 배지가 옛 등급(150/500/1500…)에
+        옛 서브레벨 리셋까지 그대로 보여주고 있었다. 둘은 반드시 같이 고친다. */
   if (!window.GALLA_gallianTier) {
     const GALLIAN_TIERS = [
-      { icon: "🌱", label: "눈팅 뉴비",   min: 0 },
-      { icon: "🔥", label: "발끈러",     min: 150 },
-      { icon: "⌨️", label: "키보드 전사", min: 500 },
-      { icon: "🎤", label: "여론 논객",   min: 1500 },
-      { icon: "🌪️", label: "갈라 선동가", min: 4500 },
-      { icon: "👑", label: "갈라 대장군", min: 15000 },
+      { icon: "🌱", label: "눈팅러",      lv: 0 },
+      { icon: "🔥", label: "참견러",      lv: 10 },
+      { icon: "🎪", label: "판벌이",      lv: 20 },
+      { icon: "🎯", label: "판잡이",      lv: 30 },
+      { icon: "🌪️", label: "판몰이",      lv: 40 },
+      { icon: "👑", label: "갈라 대장군", lv: 50 },
     ];
-    const SUB = 5, APEX_STEP = 5000;   // gallian.js와 동일 상수
-    /* GI → 등급 + 서브레벨(Lv.1~5) + 진행도. gallian.js 공식과 동일. */
+    /* 레벨 곡선 — 밴드(10레벨) 경계가 등급 임계값. 서버와 같은 식. */
+    const BANDS = [[1, 0], [10, 600], [20, 2800], [30, 11500], [40, 35000], [50, 105000]];
+    const giForLevel = function (lv) {
+      if (lv <= 1) return 0;
+      if (lv >= 50) return Math.round(105000 * Math.pow(3.1623, (lv - 50) / 10));
+      for (let i = 0; i < BANDS.length - 1; i++) {
+        const [l0, g0] = BANDS[i], [l1, g1] = BANDS[i + 1];
+        if (lv >= l0 && lv < l1) {
+          const k = (lv - l0) / (l1 - l0);
+          return Math.round(g0 === 0 ? g1 * k * k : g0 * Math.pow(g1 / g0, k));
+        }
+      }
+      return 0;
+    };
+    const levelOfGi = function (gi) {
+      let lv = 1;
+      while (lv < 200 && giForLevel(lv + 1) <= gi) lv++;
+      return lv;
+    };
+    window.GALLA_giForLevel = giForLevel;
+
     window.GALLA_gallianOfGi = function (gi) {
       gi = Number(gi) || 0;
+      const level = levelOfGi(gi);
       let idx = 0;
-      for (let i = 0; i < GALLIAN_TIERS.length; i++) if (gi >= GALLIAN_TIERS[i].min) idx = i;
+      for (let i = 0; i < GALLIAN_TIERS.length; i++) if (level >= GALLIAN_TIERS[i].lv) idx = i;
       const t = GALLIAN_TIERS[idx], next = GALLIAN_TIERS[idx + 1] || null;
-      const into = gi - t.min;
-      let subLevel, floor, ceil;
-      if (next) {
-        const step = (next.min - t.min) / SUB;
-        subLevel = Math.min(SUB, 1 + Math.floor(into / step));
-        floor = t.min + (subLevel - 1) * step; ceil = t.min + subLevel * step;
-      } else {
-        subLevel = 1 + Math.floor(into / APEX_STEP);
-        floor = t.min + (subLevel - 1) * APEX_STEP; ceil = t.min + subLevel * APEX_STEP;
-      }
-      const subProgress = Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100));
-      const atTop = next && subLevel >= SUB;
-      const goalGi = atTop ? next.min : Math.ceil(ceil);
+      const floor = giForLevel(level), ceil = giForLevel(level + 1);
       return {
-        icon: t.icon, label: t.label, min: t.min, index: idx, gi, subLevel, subProgress,
-        goalRemaining: Math.max(0, goalGi - gi),
-        goalLabel: atTop ? `${next.label} 승급` : `${t.label} Lv.${subLevel + 1}`,
+        icon: t.icon, label: t.label, lv: t.lv, index: idx, gi, level,
+        progress: ceil > floor ? Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100)) : 100,
+        goalRemaining: Math.max(0, ceil - gi),
+        goalLabel: `Lv.${level + 1}`,
+        nextTier: next ? { label: next.label, icon: next.icon, level: next.lv } : null,
       };
     };
     /* 등급 아이콘·이름만 필요할 때(도색기) — 위 헬퍼의 얇은 래퍼 */

@@ -17,7 +17,7 @@
   <!-- 🚀 P4 확정: 앱/PWA 진입은 단일문서 SPA(app.html)가 기본. localStorage galla_spa=0 이면
        구 iframe 셸 폴백(긴급 롤백용). 웹 브라우저는 이 파일에 안 오므로 MPA 무영향. -->
   <script>try{ if(localStorage.getItem('galla_spa')!=='0'){ var t=new URLSearchParams(location.search).get('tab'); location.replace('app.html'+(t?('#/'+t):'')); } }catch(e){}</script>
-  <script src="/js/splash-boot.js?v=080412&wait=ready"></script>
+  <script src="/js/splash-boot.js?v=0814140&wait=ready"></script>
   <link rel="stylesheet" href="./css/theme.css?v=080412">
   <link rel="stylesheet" href="./css/nav.css?v=0808104">
   <!-- 📞 통화 UI(#dm-call) — 엔진이 최상위에서 돌므로 스타일도 최상위에 필요 -->
@@ -518,7 +518,7 @@
      발신은 판(iframe)이 postMessage(callstart)로 넘기고, 이 프레임의 GALLA_call.start가 처리. -->
 <script src="/js/ota.js?v=080412"></script><!-- 📦 OTA 무선 업데이트(네이티브 번들 전용) -->
 <script src="./vendor/supabase.js?v=0809131"></script>
-<script src="./js/supabase.js?v=0809131"></script>
+<script src="./js/supabase.js?v=0814140"></script>
 <script src="./js/dm-sound.js?v=080412" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc. Agora 웹SDK 미사용(CallKit 잠금답변 충돌) — 로드 제거. -->
 <!-- <script src="./js/agora-media.js?v=080412"></script> -->

@@ -299,7 +299,7 @@ export async function onRequestGet(context) {
 
   /* ===== OG 메타 + 리다이렉트형(이슈/예측/광장/포스트/뉴스/영상) ===== */
 
-  let title = "GALLA · 여론이 에너지가 되는 곳";
+  let title = "GALLA · 무엇을 하든 판이 되는 곳";
   let desc = "찬성이냐 반대냐, 당신의 진영은? 지금 갈라에서 여론 전투에 참전하세요.";
   let image = defImg;
   let dest = `${origin}/index.html`;

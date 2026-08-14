@@ -72,7 +72,7 @@
         <span>갈비스</span></button>
       <button class="pcl-getapp" type="button" aria-label="갈라 앱 받기">📲 <span>앱 받기</span></button>
       <div class="pcl-foot">
-        여론이 에너지가 되는 곳<br>
+        무엇을 하든 판이 되는 곳<br>
         <a href="help-permissions.html">도움말</a> · <a href="#" id="pclBug">버그 신고</a>
       </div>`;
     document.body.appendChild(el);

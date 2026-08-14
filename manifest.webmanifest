@@ -1,7 +1,7 @@
 {
   "name": "GALLA 갈라",
   "short_name": "갈라",
-  "description": "여론이 에너지가 되는 곳",
+  "description": "무엇을 하든 판이 되는 곳",
   "lang": "ko",
   "start_url": "/app-shell.html",
   "scope": "/",
