@@ -158,10 +158,23 @@ the YouTube logo ourselves as inline SVG, and had additionally produced a modifi
 outline variant of it. The Branding Guidelines prohibit recreating, altering, or
 recolouring the mark.
 
-We have removed every instance. There were three:
-  • the "HotTube" tab icon in our trends hub
+We audited the entire codebase and removed every instance. There were seven:
+  • the "HotTube" tab icon in our trends hub (search screen)
+  • the same tab icon on our community screen — a duplicate we had missed on the
+    first pass
   • the section header icon in unified search results
   • the entry icon in the trends onboarding guide
+  • the icon on the "Long-form" toggle above the video list — this is the element
+    highlighted in the second screenshot on page 5 of your report
+  • the icon on the adjacent "Shorts" toggle, which we removed proactively as its
+    shape could likewise be read as a variant of the YouTube Shorts mark
+  • two icons in our secondary navigation component
+
+The underlying cause was that the same mark had been hand-drawn as inline SVG in
+several separate files, so fixing one place left others behind. We have since
+verified by searching the whole repository for both the YouTube red (#FF0000) and
+the rounded-rectangle-plus-play-triangle path geometry; there are now zero
+occurrences anywhere in our web or app source.
 
 Rather than reproduce the official asset, we replaced all three with a neutral,
 non-YouTube icon in our own brand colour, so that no YouTube mark is used outside

@@ -370,7 +370,7 @@ async function initTrendPage() {
     return data || [];
   }
 
-  // 핫유튜브 — youtube_hot 은 피드별로 같은 영상이 중복 저장되므로 video_id 로 합친다
+  // 인기 영상 — youtube_hot 은 피드별로 같은 영상이 중복 저장되므로 video_id 로 합친다
   async function searchYoutube(q) {
     const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
       .from("youtube_hot")
@@ -580,7 +580,7 @@ async function initTrendPage() {
       html += `</div>`;
     }
 
-    /* ── 핫유튜브 ── */
+    /* ── 인기 영상 ── */
     if (videos.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head sr-yt">
         <svg class="yt-ic" viewBox="0 0 24 24" fill="none" stroke="#7c5cff" stroke-width="2.1"
@@ -629,7 +629,7 @@ async function initTrendPage() {
       if (url) openNewsViewer(url, news.dataset.title, news.dataset.press);
       return;
     }
-    // 유튜브 결과 → 핫유튜브 플레이어 (hot-videos.js가 노출)
+    // 영상 결과 → 재생 화면 (hot-videos.js가 노출)
     const vid = e.target.closest(".sr-card.video");
     if (vid && window.GALLA_OpenVideo) {
       window.GALLA_OpenVideo(vid.dataset.vid, vid.dataset.title, vid.dataset.ch);
