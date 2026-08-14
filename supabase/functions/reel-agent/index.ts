@@ -156,6 +156,7 @@ function chunkWords(words: Word[]) {
     }
   }
   if (cur.length) subs.push({ text: cur.map((x) => x.w).join(" "), start: cur[0].s, len: Math.max(0.3, cur[cur.length - 1].e - cur[0].s + 0.12) });
+  clampOverlap(subs);
   return subs;
 }
 
@@ -170,7 +171,7 @@ async function splitScriptUnits(script: string): Promise<string[] | null> {
       body: JSON.stringify({
         model: LLM_MODEL, temperature: 0, max_tokens: 800,
         messages: [
-          { role: "system", content: `릴스 자막 컷 편집기다. 대본을 '자막 한 장'씩 나눠라 — 한 장 = 1~4어절, 의미 덩어리가 깨지지 않게(수식어+명사, 조사 붙은 어절은 함께). 원문 어절을 더하거나 빼거나 바꾸지 마라(문장부호는 빼도 됨). JSON 문자열 배열만 출력.` },
+          { role: "system", content: `릴스 자막 컷 편집기다. 대본을 '자막 한 장'씩 나눠라 — **한 장 = 1~2어절**(기본은 1어절, "안쪽 골목"처럼 떼면 어색한 것만 2어절). 실제 히트 릴스 예: ["대치동","철수네","포장마차입니다","할아버지 혼자","운영하시는"]. 원문 어절을 더하거나 빼거나 바꾸지 마라(문장부호는 빼도 됨). JSON 문자열 배열만 출력.` },
           { role: "user", content: script.slice(0, 1500) },
         ],
       }),
@@ -194,10 +195,19 @@ function alignUnits(units: string[], words: Word[]) {
     const take = Math.max(1, Math.min(Math.round(unitCounts[i] * (words.length - wi) / Math.max(1, remainUnits)), words.length - wi - (units.length - 1 - i)));
     const grp = words.slice(wi, wi + take);
     if (!grp.length) break;
-    subs.push({ text: units[i].replace(/[.,!?…]/g, ""), start: grp[0].s, len: Math.max(0.3, grp[grp.length - 1].e - grp[0].s + 0.12) });
+    subs.push({ text: units[i].replace(/[.,!?…]/g, ""), start: grp[0].s, len: Math.max(0.25, grp[grp.length - 1].e - grp[0].s + 0.12) });
     wi += take;
   }
+  clampOverlap(subs);
   return subs.length >= 3 ? subs : null;
+}
+/* ⚠️ 자막 겹침 금지 — 끝여유(+0.12s)가 다음 장과 포개지면 두 문장이 같은 자리에 겹쳐 '깨진 글자+깜빡임'으로 보인다(실기 스크린샷 사고).
+   각 장은 다음 장이 시작되기 직전에 정확히 끝난다. */
+function clampOverlap(subs: { text: string; start: number; len: number }[]) {
+  for (let i = 0; i < subs.length - 1; i++) {
+    const maxLen = subs[i + 1].start - subs[i].start - 0.03;
+    if (subs[i].len > maxLen) subs[i].len = +Math.max(0.2, maxLen).toFixed(2);
+  }
 }
 
 // ── 클립 비전 분석: 썸네일 프레임들을 한 번에 보고 클립별 장면 설명 ──
