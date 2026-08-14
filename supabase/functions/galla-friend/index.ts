@@ -42,7 +42,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 const STEP_LABEL: Record<string, string> = {
   web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
-  content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…",
+  content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
   draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…", open_external: "📲 앱 여는 중…",
   my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
@@ -549,6 +549,31 @@ ${hooks.map((h: any) => `- ${h.formula}`).join("\n")}`;
   } catch { return ""; }
 }
 
+/* 🎞 릴스(실촬영 맛집·현장 숏츠) 30초 내레이션 대본 — 사장님 실제 완성본에서 역산한 '프랭크 공식' 기반.
+   출력은 '녹음용'이다: 마크다운·소제목·이모지 없이, 읽을 문장만 줄 단위로. 클립 수만큼 문단을 나눈다. */
+async function genReelScript(info: { place: string; location?: string; menus?: string; kick?: string; price?: string; vibe?: string }, clipCount = 0) {
+  try {
+    const pats = await getPatterns("script", "reel", 4);
+    const sys = `너는 맛집 인스타 릴스 조회수를 뽑는 30초 내레이션 대본 작가다. 아래 '검증된 릴스 공식'(실제 히트 릴스에서 추출)에 정확히 맞춰 대본을 써라.
+[검증된 릴스 공식]
+${pats.map((p: any) => `- [${p.style}] ${p.formula}${p.examples ? `\n  실제 예: ${String(p.examples).slice(0, 500)}` : ""}`).join("\n") || "- 위치+가게명 오프닝 → 주문 나열 → 메뉴별 맛 묘사 → 킥 → 저장 유도"}
+[출력 규칙 — 녹음용 대본이다]
+- 마크다운·소제목·이모지·괄호 지시문 금지. 소리내어 읽을 문장만.
+- 총 55~65어절(읽으면 28~30초). 문장은 짧게, 구절 단위로 끊어 읽기 좋게.
+- ${clipCount >= 3 ? `장면(클립)이 ${clipCount}개다 — 문단을 ${Math.min(clipCount, 8)}개로 나눠 빈 줄로 구분(문단 하나=클립 하나에 얹는다).` : "문단 5~6개로 나눠 빈 줄로 구분."}
+- 존댓말 종결 리듬 교차(~입니다/~예요/~고요/~습니다).
+- 🚫 상대가 주지 않은 사실(가격·등급·연혁)은 지어내지 마라 — 준 정보만 쓴다.`;
+    const user = `가게명: ${info.place}${info.location ? `\n위치: ${info.location}` : ""}${info.menus ? `\n주문 메뉴: ${info.menus}` : ""}${info.kick ? `\n킥(시그니처 포인트): ${info.kick}` : ""}${info.price ? `\n가격 정보: ${info.price}` : ""}${info.vibe ? `\n분위기·특징: ${info.vibe}` : ""}`;
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: MODEL, temperature: 0.8, max_tokens: 600,
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+    });
+    const j = await r.json();
+    return String(j?.choices?.[0]?.message?.content || "").trim().slice(0, 1600);
+  } catch { return ""; }
+}
+
 // 🌐 실제 웹 검색(네이버 오픈API) — 맛집·장소·최신 사건 등 '현실 정보'는 뻥 대신 검색으로.
 //    기존 NAVER_CLIENT_ID/SECRET(뉴스 파이프라인과 동일 앱) 재사용. 하루 25,000건 무료.
 const NAVER_ID = Deno.env.get("NAVER_CLIENT_ID") || "";
@@ -673,6 +698,7 @@ const TOOLS = [
   // 📜 대본 엔진 — 검증된 구조로 촬영/낭독 가능한 대본 생성.
   { type: "function", function: { name: "gen_script", description: "콘텐츠 '대본/스크립트'를 검증된 구조(훅→전개→CTA)로 써준다. 숏판/롱판 영상 대본, 이슈 토론 대본, 정보글 대본 등. 상대가 '대본 써줘/스크립트/뭐라고 말하지/촬영 대본/멘트 짜줘' 하면. 특히 롱판(가로영상)은 상대가 직접 찍어야 하니 대본을 주면 촬영이 쉬워진다. topic=주제, content_type=gallari(영상)/issue/plaza, format=short(숏판)/long(롱판).", parameters: { type: "object", properties: { topic: { type: "string" }, content_type: { type: "string", enum: ["gallari", "issue", "plaza"] }, format: { type: "string", enum: ["short", "long"] } }, required: ["topic"] } } },
   // 🔥 어그로 제목 엔진 — 검증된 유튜브 제목 공식으로 자극적 제목 후보를 카드로.
+  { type: "function", function: { name: "gen_reel_script", description: "🎞 '실촬영 릴스'(맛집·현장 30초 인스타 숏츠) 내레이션 대본을 히트 공식으로 써서 '녹음 카드'로 준다 — 상대가 직접 찍은 클립들로 릴스를 만드는 파이프라인의 1단계. 상대가 '릴스 만들자/맛집 숏츠/내가 찍은 영상으로 만들어줘' 하면. 카드에서 상대가 대본을 읽어 녹음하면 → 이후 자막 타이밍·클립 배치·렌더는 자동으로 이어진다(그건 네가 안 해도 됨). ⚠️ 호출 전 최소 '가게명'은 알아야 한다(위치·주문메뉴·킥 포인트도 물어보면 대본이 훨씬 좋아진다). 호출 후 \"대본 나왔어 — 카드 보고 녹음 버튼 눌러서 읽어줘\" 정도로 짧게.", parameters: { type: "object", properties: { place: { type: "string", description: "가게명(필수)" }, location: { type: "string", description: "위치(역·동네·랜드마크)" }, menus: { type: "string", description: "주문한 메뉴들" }, kick: { type: "string", description: "킥=시그니처 포인트(메뉴에 없는 것·모르면 손해 조합 등)" }, price: { type: "string", description: "가격 정보(들은 것만)" }, vibe: { type: "string", description: "분위기·특징(노포·연혁·규칙 등)" }, clip_count: { type: "number", description: "작업모드 편집기에 올라온 클립(mediaCount) 수 — 알면 문단을 클립 수에 맞춰준다" } }, required: ["place"] } } },
   { type: "function", function: { name: "gen_titles", description: "'어그로(자극적) 제목' 후보를 여러 개 뽑아 카드로 제시한다(성공 유튜버들의 검증된 제목 공식 기반 — 크리에이터 브레인 엔진). 상대가 '제목 뽑아줘/자극적으로/어그로 제목/제목 추천/클릭 잘되게' 하거나, 작업 모드에서 제목이 밋밋할 때. topic=콘텐츠 핵심 주제(한 줄), content_type=issue/plaza/gallari/predict.", parameters: { type: "object", properties: { topic: { type: "string", description: "제목 뽑을 콘텐츠 핵심 주제(한 줄)" }, content_type: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] } }, required: ["topic"] } } },
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
   { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 콘텐츠 '썸네일/커버'를 AI로 그려 편집기 대표 이미지로 자동 첨부. '썸네일/커버 그려줘' 하면. ⭐**프롬프트는 반드시 영어**로, 세계 최고 유튜버 썸네일 캘리버로 아트디렉션해라 — 콘텐츠·톤에 맞는 아키타입 하나를 골라 그 에너지로 생생하게(구체적 피사체·표정·조명·색·구도까지):\n• spectacle(도전·챌린지·숏판, MrBeast/고재영式): ONE hyper-expressive shocked open-mouth face + a huge focal object or high-stakes scene, ultra-saturated electric primary colors, extreme contrast, explosive energy.\n• reaction(음식·리액션·후기, 영국남자式): a genuine delighted/shocked reaction face, warm inviting food or moment, cozy natural light, appetizing rich colors, candid heartfelt.\n• drama(이슈·논쟁·사건, 지무비式): moody cinematic high-tension scene, deep shadows + one bold accent color(blood red/cold blue), suspenseful film-still, leave clean negative space (top or side) for a headline later.\n• info(예측·돈·정보, 주언규式): a confident trustworthy subject or a single symbolic object(stacks of money/chart/key item), clean premium studio look, credible, one clear focal point, space for a headline.\n• info(예측·돈·경제·시사, 슈카월드式도 여기): 위 info와 동일 — 신뢰감 + 뉴스/데이터 호기심.\n• aesthetic(여행·감성·라이프, 꾸준式): a serene cinematic wanderlust scene, soft golden natural light, calm understated elegant composition, muted filmic mood — NOT flashy.\n• humor(밈·드립·병맛·웃긴 이슈, 침착맨式): a playful absurd exaggerated funny scene, bold simple comic composition, silly relatable meme energy, punchy bright, deliberately over-the-top and laugh-out-loud.\n**글자·실존 유명인 얼굴·브랜드 로고는 절대 넣지 마라**(자동 차단+품질저하). ratio: 이슈카드·세로숏판=portrait / 가로롱판·예측커버=landscape / 정사각=square.\n🧑‍🎨 **use_my_photo:true** — 상대가 '내 사진/얼굴/제품 넣어서/나 넣어서 그려줘' 하면 이걸 켜라. 그러면 상대가 작업모드(갈라리)에 올린 사진을 레퍼런스로 써서 '그 사람/사물'을 실제로 넣은 썸네일이 나온다(얼굴·생김새 유지). 이때 prompt엔 '그 인물/사물을 어떤 컨셉·표정·배경으로 재연출할지'를 적어라(가상의 다른 사람 묘사 말고). ⚠️ 작업모드에 사진이 없으면 소용없으니, 사진 먼저 올리라고 안내. 호출 후 \"내 사진으로 썸네일 뽑아줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "영어 아트디렉션 프롬프트(아키타입 에너지 살려 피사체·표정·조명·색·구도까지 구체적으로, 글자·실존유명인·로고 없이). use_my_photo면 '레퍼런스 인물/사물을 어떤 컨셉으로 재연출할지'." }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] }, use_my_photo: { type: "boolean", description: "상대가 올린 사진(얼굴·제품)을 레퍼런스로 실제 반영. '내 사진/얼굴 넣어서' 요청 시 true." } }, required: ["prompt"] } } },
@@ -1004,6 +1030,20 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!text) { await refundGC(uid, ch.charged); paidToolRelease(uid, name); return { result: { ok: false } }; }
     return { action: { kind: "script", text } };
   }
+  if (name === "gen_reel_script") {
+    if (paidToolDup(uid, name)) return { result: { ok: true, 실행됨: "릴스 대본 카드는 이미 붙었다. 다시 부르지 말고 한 줄로만 안내해라." } };
+    const ch = await chargeGC(uid, "script");
+    if (!ch.ok) { paidToolRelease(uid, name); return needGCAction(ch, "대본"); }
+    const info = {
+      place: String(args?.place || "").slice(0, 60), location: String(args?.location || "").slice(0, 80),
+      menus: String(args?.menus || "").slice(0, 200), kick: String(args?.kick || "").slice(0, 200),
+      price: String(args?.price || "").slice(0, 120), vibe: String(args?.vibe || "").slice(0, 200),
+    };
+    if (!info.place) { await refundGC(uid, ch.charged); paidToolRelease(uid, name); return { result: { error: "가게명(place)이 비었다 — 상대에게 가게명을 물어보고 다시 호출해라." } }; }
+    const text = await genReelScript(info, Number(args?.clip_count) || 0);
+    if (!text) { await refundGC(uid, ch.charged); paidToolRelease(uid, name); return { result: { ok: false } }; }
+    return { action: { kind: "reelScript", text, place: info.place } };
+  }
   if (name === "gen_thumbnail") {
     /* 썸네일은 여기서 과금하지 않는다(프론트→generate-thumbnail 에서 200 GC).
        그래서 액션이 두 장 나가면 200 GC 가 두 번 빠진다 — 한 턴 중복만 막는다.
@@ -1229,6 +1269,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 🎬 **창작 파이프라인 — 유형별로 '정해진 절차'를 단계별로 안내해라(즉흥 나열·한방에 다 쏟기 금지)**: 상대가 특정 유형을 만들기로 하면, 그 유형의 절차를 **순서대로 한 단계씩** 밟아라. 각 단계 산출물을 뽑아 보여주고 "이거 좋아? 다음 갈까?"로 확인하며 진행(티키타카). 각 산출물은 세계 최고 유튜버 캘리버로.
   • **롱판(가로 유튜브식) — 7단계 풀 프로덕션**: ①**콘텐츠 기획**(content_radar→propose_plan: 주제·앵글·훅·타깃) → ②**제목+썸네일**(gen_titles 3안 + gen_thumbnail landscape, drama/info/spectacle 택1) → ③**시나리오 대본**(gen_script: 인트로 훅→본론 구성→아웃트로 CTA) → ④**영상 촬영**(상대가 대본 기반으로 직접 찍는다 — 샷 리스트·촬영 팁 제공. 풀 AI 생성 아님) → ⑤**AI PD 편집**(상대가 찍어 올린 원본을 AI가 진짜 PD처럼 편집: 자동 컷·불필요구간 제거·자막·음악·페이싱·B롤 포인트. ※이 편집 기능은 별도 파이프라인으로 구축 중 — 지금은 편집 가이드/포인트를 말로 짚어준다) → ⑥**최종 검수**(제목·썸네일·대본·영상 한 번에 점검: 훅 세냐·썸네일 클릭각·대본 늘어지는 곳) → ⑦draft_gallari(horizontal)로 제목·설명 채워 발행. 각 단계 끝에 "다음 갈까?" 확인.\n  ⭐ **영상은 전적으로 AI 생성에 기대지 않는다** — 핵심 가치는 '상대가 찍은 실제 영상을 AI가 편집해주는 PD 역할'. gen_video(AI 슬라이드쇼)는 소재가 아예 없을 때의 폴백일 뿐, 기본 아님.
   • **숏판(세로 릴스)**: ①훅 기획(3초 안에 꽂히는 한 방) → ②커버(gen_thumbnail portrait) → ③짧은 스크립트·자막 → ④영상: gen_video(AI 자동편집) 또는 상대 세로영상 → ⑤draft_gallari(vertical) 발행.
+  • **🎞 실촬영 릴스(맛집·현장 30초 숏츠) — 편집 프로그램 대체 파이프라인**: 상대가 '직접 찍은 클립들'로 릴스를 만들고 싶어하면(맛집 릴스/내가 찍은 영상으로/편집해줘) — 흐름은 ①숏판 편집기에 클립 업로드(상대) ②**gen_reel_script**(가게명·위치·메뉴·킥 물어보고 30초 내레이션 대본) ③카드에서 상대가 녹음 ④자막 타이밍·클립 배치·렌더는 자동. 넌 ②까지만 하면 된다 — "클립 올리고 녹음만 해, 편집은 내가"로 리드.
   • **이슈(찬반 배틀)**: ①논쟁 주제 기획(근거 반영) → ②draft_issue(중립 제목+찬반 라벨+배경) → ③커버(gen_thumbnail drama, portrait) → ④발행(상대).
   • **예측(마켓)**: ①질문 기획(예/아니오 판가름) → ②draft_predict(정산기준·마감) → ③커버(gen_thumbnail info, landscape) → ④발행.
   • **광장(에세이·글)**: ①주제·앵글 → ②제목(gen_titles) → ③draft_plaza(제목·본문) → ④인라인 이미지(선택) → ⑤발행.
@@ -2837,7 +2878,7 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
       const gHoriz = f.vkind === "horizontal";
       const lastMile = work.type === "gallari"
         ? (gHasMedia
-          ? `🏁 미디어까지 다 있다! 이제 화면의 **[공유]/[올리기] 버튼**만 누르면 발행 끝 — "이제 올리기만 누르면 돼!"라고 짚어줘라.`
+          ? `🏁 미디어까지 다 있다! 이제 화면의 **[공유]/[올리기] 버튼**만 누르면 발행 끝 — "이제 올리기만 누르면 돼!"라고 짚어줘라.${!gHoriz && VIDEO_ON ? `\n🎞 **릴스 완성 파이프라인**: 상대가 올린 게 '직접 찍은 현장 클립들'이고 "릴스로 만들어줘/맛집 숏츠/편집해줘" 하면 — **gen_reel_script**(1단계: 히트 공식 30초 내레이션 대본, clip_count=${gMedia})를 호출해라. 필요 정보(가게명 필수, 위치·주문메뉴·킥·가격)를 짧게 먼저 물어봐라. 대본 카드가 붙으면 상대가 카드에서 녹음하고, 자막 타이밍·클립 배치·최종 렌더는 자동으로 이어진다 — "녹음만 하면 내가 편집 다 해줄게"로 리드.` : ""}`
           : gHoriz
           ? `🏁 **롱판(가로 영상)은 '네가 찍은 영상'이 본체다 — 자동 생성은 추후 제공.** 대신 그 전 단계를 전부 네가 해줘라(방치 금지): ①**기획**(주제·앵글·타깃) ②**제목**(gen_titles) ③**썸네일**(gen_thumbnail landscape) ④**시나리오 대본**(gen_script — 인트로 훅→본론 구성→아웃트로까지, 촬영 샷 가이드 포함). "대본까지 다 준비해줄게, 넌 폰으로 찍기만 해"로 리드. 영상 업로드되면 "[공유] 버튼만!"까지.`
           : `🏁 **미디어(사진/영상)가 이 콘텐츠의 핵심인데 아직 없다** — 절대 방치 마라. 캡션이 괜찮아지면 **네가 먼저 선택지를 제안**해라: ①직접 찍은 사진/영상 올리기(📎) ②내가 표지 이미지 AI로 그려줄까?(gen_thumbnail)${VIDEO_ON ? " ③**10초 숏폼 영상으로 자동 제작해줄까?**(gen_video — 3장면 이미지+자막+음악, 내가 다 만들어 붙임)" : ""}. 상대가 원하면 **즉시 해당 도구 호출**(말만 하지 말고). 미디어 붙으면 "이제 올리기 버튼만!"까지 안내.`)

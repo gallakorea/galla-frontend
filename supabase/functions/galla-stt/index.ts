@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-stt-words",
 };
 const OPENAI = Deno.env.get("STT_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
 const STT_URL = Deno.env.get("STT_BASE_URL") || "https://api.openai.com/v1";
@@ -21,8 +21,9 @@ function toB64(bytes: Uint8Array): string {
   for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH));
   return btoa(bin);
 }
-// Cloudflare Workers AI whisper — base64 오디오 → 텍스트. 실패 시 null(→OpenAI 폴백).
-async function cfWhisper(bytes: Uint8Array): Promise<string | null> {
+// Cloudflare Workers AI whisper — base64 오디오 → 텍스트(+단어 타임스탬프). 실패 시 null(→OpenAI 폴백).
+type SttWord = { w: string; s: number; e: number };
+async function cfWhisper(bytes: Uint8Array): Promise<{ text: string; words: SttWord[] } | null> {
   if (!CF_AI_TOKEN || !CF_ACCOUNT) return null;
   try {
     const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${CF_STT_MODEL}`, {
@@ -33,7 +34,13 @@ async function cfWhisper(bytes: Uint8Array): Promise<string | null> {
     const d = await r.json().catch(() => null);
     const text = d?.result?.text;
     if (!r.ok || text == null) { console.error("[stt] cf", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
-    return String(text).trim();
+    // 🎬 릴스 자막 정렬용 — 모델에 따라 result.words 또는 segments[].words에 단어 타임스탬프가 있다.
+    const raw: any[] = Array.isArray(d?.result?.words) ? d.result.words
+      : Array.isArray(d?.result?.segments) ? d.result.segments.flatMap((s: any) => Array.isArray(s?.words) ? s.words : []) : [];
+    const words: SttWord[] = raw
+      .map((w: any) => ({ w: String(w?.word ?? w?.text ?? "").trim(), s: Number(w?.start), e: Number(w?.end) }))
+      .filter((w) => w.w && isFinite(w.s) && isFinite(w.e));
+    return { text: String(text).trim(), words };
   } catch (e) { console.error("[stt] cf ex", String(e).slice(0, 120)); return null; }
 }
 
@@ -49,14 +56,20 @@ Deno.serve(async (req) => {
     const ct = req.headers.get("Content-Type") || "audio/webm";
     const ext = ct.includes("mp4") || ct.includes("m4a") ? "m4a" : ct.includes("wav") ? "wav" : ct.includes("mpeg") ? "mp3" : "webm";
 
+    // 🎬 x-stt-words: 1 이면 단어 타임스탬프까지 요구(릴스 자막 정렬용) — 단어가 없으면 실패 취급하고 폴백.
+    const wantWords = (req.headers.get("x-stt-words") || "") === "1";
+
     // 1순위: Cloudflare Workers AI whisper(near-free). 실패 시 OpenAI 폴백.
-    const cfText = await cfWhisper(new Uint8Array(buf));
-    if (cfText != null) return json({ ok: true, text: cfText, via: "cf" });
+    const cf = await cfWhisper(new Uint8Array(buf));
+    if (cf != null && (!wantWords || cf.words.length)) {
+      return json({ ok: true, text: cf.text, ...(wantWords ? { words: cf.words } : {}), via: "cf" });
+    }
 
     const form = new FormData();
     form.append("file", new Blob([buf], { type: ct }), "a." + ext);
     form.append("model", STT_MODEL);
     form.append("language", "ko");
+    if (wantWords) { form.append("response_format", "verbose_json"); form.append("timestamp_granularities[]", "word"); }
     const r = await fetch(`${STT_URL}/audio/transcriptions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI}` },
@@ -64,7 +77,10 @@ Deno.serve(async (req) => {
     });
     if (!r.ok) return json({ ok: false, reason: "stt_" + r.status, detail: (await r.text()).slice(0, 200) }, 200);
     const j = await r.json();
-    return json({ ok: true, text: (j?.text || "").trim(), via: "openai" });
+    const oaWords = wantWords && Array.isArray(j?.words)
+      ? j.words.map((w: any) => ({ w: String(w?.word || "").trim(), s: Number(w?.start), e: Number(w?.end) })).filter((w: any) => w.w && isFinite(w.s) && isFinite(w.e))
+      : undefined;
+    return json({ ok: true, text: (j?.text || "").trim(), ...(oaWords ? { words: oaWords } : {}), via: "openai" });
   } catch (e) {
     return json({ ok: false, reason: "error", detail: String(e).slice(0, 200) }, 500);
   }

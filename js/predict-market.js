@@ -418,12 +418,16 @@ function celebrate(payout){
   d.onclick=e=>{ if(e.target===d) d.remove(); };
 }
 
-/* ============ 정산 패널 (생성자/관리자) ============ */
+/* ============ 정산 패널 (관리자 전용) ============ */
 function renderAdmin(closed, canResolve){
   const el=$('pbAdmin'); if(!el) return;
   el.innerHTML='';
   if(MARKET.resolved) return;
-  // 생성자이거나 관리자(canManage 비동기)일 때 표시
+  /* ⚠️ 발의자에게 절대 열지 않는다.
+     마켓을 만들고 → 남들이 베팅해 상금 풀이 쌓이면 → 자기가 건 쪽으로
+     '적중' 정산해 풀을 통째로 가져갈 수 있었다. 실제 GP 탈취 경로다.
+     마감 후엔 predict-auto-resolve 가 AI로 자동 정산하므로 수동은 관리자만 있으면 된다.
+     (서버 predict_resolve 도 같이 관리자 전용으로 좁혔다 — 여긴 노출 제어일 뿐이다) */
   const show=(ok)=>{
     if(!ok) return;
     el.innerHTML=`<div class="pb-admin">
@@ -440,8 +444,7 @@ function renderAdmin(closed, canResolve){
       location.reload();
     });
   };
-  if(ME && MARKET.created_by===ME.id) show(true);
-  else if(window.GALLA_canManage) window.GALLA_canManage(MARKET.created_by).then(show);
+  if(window.GALLA_isAdmin) window.GALLA_isAdmin().then(show);
 }
 
 /* ============ 라이브 참여 피드 ============ */

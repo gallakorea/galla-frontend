@@ -254,5 +254,10 @@
     const me = await getMe();
     return !!(me.uid && (me.uid === ownerId || me.admin));
   };
+  // 관리자인지만 확인 — 소유자는 포함하지 않는다.
+  // (예측 정산처럼 '발의자'가 자기 마켓을 처리하면 안 되는 자리에서 쓴다)
+  window.GALLA_isAdmin = async function () {
+    return !!(await getMe()).admin;
+  };
   window.GALLA_openOwnerMenu = openMenu;
 })();

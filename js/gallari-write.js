@@ -410,9 +410,18 @@
         return;
       }
 
+      // 📈 브레인 성과 역연결 — 갈비스 제목 공식으로 만든 판이면 기록(크론이 반응을 측정해 공식 점수화)
+      let titlePattern = null;
+      try {
+        const ps = JSON.parse(sessionStorage.getItem('GALLA_PICKED_STYLE') || 'null');
+        if (ps && ps.style && (Date.now() - (ps.at || 0)) < 30 * 60 * 1000) titlePattern = String(ps.style).slice(0, 40);
+        sessionStorage.removeItem('GALLA_PICKED_STYLE');
+      } catch (_) {}
+
       const payload = {
         user_id: me,
         kind: KIND,
+        title_pattern: titlePattern,
         title: isH ? title : (title || null),
         caption: caption || null,
         images: isH ? null : images,
@@ -486,6 +495,8 @@
         },
         // 이미 올린 사진 URL들(영상 소재로)
         getPhotos() { return vItems.filter(it => it.kind === 'image' && it.url).map(it => it.url); },
+        // 🎞 릴스 소스 클립들(순서 보존) — 갈비스 릴스 파이프라인이 배치에 쓴다
+        getClips() { return vItems.filter(it => it.url).map(it => ({ url: it.url, kind: it.kind, thumb: it.thumb || null })); },
         // 🎬 갈비스가 만든 mp4(R2) → 사전호스팅 영상 세팅(업로드 없이 발행). vk: vertical|horizontal
         setVideo(url, thumb, vk) {
           if (!url) return;

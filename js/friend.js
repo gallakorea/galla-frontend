@@ -611,6 +611,124 @@
       } else { addMsg("a","영상 만들다 삐끗했어 ㅜ 다시 해볼까?"); }
     }catch(e){ clearProgress(); addMsg("a","영상 만들다 문제 생겼어 ㅜ 다시?"); }
   }
+  /* 🎞 실촬영 릴스 — '릴스 실행 에이전트' 접수 카드(사장님 확정 구조: 자체 ffmpeg 렌더러 완주).
+     카드에서: 녹음(또는 AI 목소리 선택) → reel-agent 잡 생성 → 서버가 STT 정렬·클립 비전 분석·
+     AI 내용 매칭까지 자율 실행 → 렌더 워커가 완성 → 카드가 status 폴링으로 진행을 보여주고
+     완성되면 편집기에 자동 첨부(setVideo). 앱을 나가도 잡은 서버에 살아있다. */
+  function renderReelScript(text, place){
+    if(!text || !logEl) return;
+    var wrap=el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 릴스 대본'+(place?" — "+place:"")+'</div><div class="fr-script-body"></div>'+
+      '<div class="fr-reel-ctl"><button class="fr-reel-rec">🎙 녹음 시작</button><button class="fr-reel-ai">🤖 AI 목소리로</button><span class="fr-reel-time"></span></div>'+
+      '<div class="fr-reel-done" hidden><audio class="fr-reel-audio" controls></audio>'+
+      '<div class="fr-reel-ctl"><button class="fr-reel-redo">다시 녹음</button><button class="fr-reel-make">🎬 이 녹음으로 영상 만들기</button></div></div>'+
+      '<div class="fr-reel-status"></div></div>');
+    wrap.querySelector(".fr-script-body").textContent=text;
+    var recBtn=wrap.querySelector(".fr-reel-rec"), timeEl=wrap.querySelector(".fr-reel-time"),
+        doneEl=wrap.querySelector(".fr-reel-done"), audioEl=wrap.querySelector(".fr-reel-audio"),
+        stEl=wrap.querySelector(".fr-reel-status");
+    var mr=null, chunks=[], blob=null, t0=0, tick=null;
+    function status(s){ stEl.textContent=s||""; }
+    function stopTick(){ if(tick){ clearInterval(tick); tick=null; } }
+    recBtn.addEventListener("click", async function(){
+      if(mr && mr.state==="recording"){ mr.stop(); return; }
+      try{
+        var stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        // iOS Safari/앱은 mp4(m4a), 크롬은 webm — Shotstack·STT 둘 다 소화 가능한 쪽으로
+        var mime=(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4"))?"audio/mp4":"audio/webm";
+        mr=new MediaRecorder(stream,{mimeType:mime}); chunks=[];
+        mr.ondataavailable=function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+        mr.onstop=function(){
+          stopTick(); stream.getTracks().forEach(function(t){t.stop();});
+          blob=new Blob(chunks,{type:mime});
+          audioEl.src=URL.createObjectURL(blob);
+          recBtn.parentElement.hidden=true; doneEl.hidden=false;
+          status("들어보고 괜찮으면 [영상 만들기] — 대본이랑 좀 달라도 자막은 실제 녹음 기준으로 맞춰줘");
+        };
+        mr.start(250); t0=Date.now();
+        recBtn.textContent="⏹ 녹음 끝";
+        tick=setInterval(function(){ timeEl.textContent=((Date.now()-t0)/1000).toFixed(0)+"s / 목표 30s"; },500);
+        status("대본을 소리내어 읽어줘 — 구절마다 또박또박!");
+      }catch(e){ status("마이크를 못 열었어 ㅜ 권한을 확인해줘"); }
+    });
+    wrap.querySelector(".fr-reel-redo").addEventListener("click", function(){
+      blob=null; doneEl.hidden=true; recBtn.parentElement.hidden=false; recBtn.textContent="🎙 녹음 시작"; timeEl.textContent=""; status("");
+    });
+    wrap.querySelector(".fr-reel-make").addEventListener("click", function(){ if(blob) makeReel(blob, text, wrap, status); });
+    wrap.querySelector(".fr-reel-ai").addEventListener("click", function(){ makeReel(null, text, wrap, status); });
+    logEl.appendChild(wrap); scrollBottom();
+  }
+  // 클립 실제 길이(초) — 메타데이터만 로드해 잰다. 실패 시 8초 가정.
+  function clipDuration(url){
+    return new Promise(function(res){
+      var v=document.createElement("video"); v.preload="metadata"; v.muted=true;
+      var done=false, fin=function(d){ if(!done){ done=true; res(d); } };
+      v.onloadedmetadata=function(){ fin(isFinite(v.duration)&&v.duration>0?v.duration:8); };
+      v.onerror=function(){ fin(8); };
+      setTimeout(function(){ fin(8); },4000);
+      v.src=url;
+    });
+  }
+  async function makeReel(blob, script, wrap, status){
+    var makeBtn=wrap.querySelector(".fr-reel-make"), aiBtn=wrap.querySelector(".fr-reel-ai");
+    makeBtn.disabled=true; if(aiBtn) aiBtn.disabled=true;
+    var unlock=function(){ makeBtn.disabled=false; if(aiBtn) aiBtn.disabled=false; };
+    try{
+      // 1) 소스 클립 — 편집기(숏판)에서 수집(+실측 길이). 에이전트가 내용 매칭에 쓴다.
+      var items=[];
+      try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.getClips) items=window.GALLA_WORKFORM.getClips()||[]; }catch(e){}
+      var clips=items.filter(function(c){ return c.kind==="video"; });
+      if(!clips.length){
+        unlock();
+        addMsg("a", items.length ? "사진만으론 릴스 배치가 안 돼 ㅜ 현장에서 찍은 '영상 클립'을 숏판 편집기에 올려줘 (10초 내외 여러 개면 최고)" : "먼저 숏판 편집기에 네가 찍은 클립들을 올려줘! 거기서 다시 부르면 바로 만들게");
+        return;
+      }
+      var jwt=await token(); if(!jwt){ unlock(); addMsg("a","로그인해야 만들 수 있어 ㅜ"); return; }
+      status("클립 확인 중…");
+      for(var i=0;i<clips.length;i++) clips[i].dur=await clipDuration(clips[i].url);
+      // 2) 음성 — 녹음이면 업로드, 없으면 AI 목소리 모드
+      var voiceUrl=null;
+      if(blob){
+        status("🎙 녹음 올리는 중…");
+        var ext=(blob.type||"").indexOf("mp4")>=0?"m4a":"webm";
+        voiceUrl=await window.GALLA_UPLOAD_MEDIA(new File([blob],"reel-voice."+ext,{type:blob.type||"audio/webm"}),"audio");
+      }
+      // 3) 릴스 에이전트 접수 — 서버가 정렬·분석·매칭·렌더큐까지 자율 실행
+      status("🤖 에이전트 접수 중…");
+      var res=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify(blob ? { op:"create", script:script, clips:clips, voice_url:voiceUrl }
+                                 : { op:"create", script:script, clips:clips, voice_mode:"ai" }) })).json();
+      if(!res || !res.ok || !res.id){
+        unlock(); status("");
+        addMsg("a", res&&res.error==="stt_failed" ? "녹음을 못 알아들었어 ㅜ 조용한 데서 또박또박 다시 녹음해볼래?" : "접수가 안 됐어 ㅜ 다시 해볼까?");
+        return;
+      }
+      // 4) 잡 status 폴링 — 진행 로그를 카드에 흘리고, 완성되면 편집기 자동 첨부
+      var jobId=res.id, tries=0, doneUrl=null;
+      while(tries++<200){
+        await sleep(3000);
+        var st;
+        try{ st=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+          body:JSON.stringify({ op:"status", id:jobId }) })).json(); }catch(e){ continue; }
+        var job=st && st.job;
+        if(!job) continue;
+        var prog=(job.progress||[]); var last=prog.length?prog[prog.length-1].msg:"";
+        if(last) status("🎬 "+last);
+        if(job.state==="done"){ doneUrl=(job.artifacts||{}).video_url; break; }
+        if(job.state==="failed"){ unlock(); status(""); addMsg("a","만들다 실패했어 ㅜ ("+String(job.error||"").slice(0,60)+") 다시 해볼까?"); return; }
+      }
+      status("");
+      if(doneUrl){
+        var applied=false;
+        try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.setVideo){ window.GALLA_WORKFORM.setVideo(doneUrl, clips[0].thumb||null, "vertical"); applied=true; flashDock(); } }catch(e){}
+        var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline></video></div></div>');
+        m.querySelector("video").src=doneUrl; logEl.appendChild(m); scrollBottom();
+        addMsg("a", applied ? "릴스 완성! 편집기에 넣어놨어 — 확인하고 [공유]만 누르면 발행 🎬 (인스타에 올리려면 영상 꾹 눌러 저장)" : "릴스 완성! 영상 꾹 눌러서 저장해 쓰면 돼 🎬");
+        unlock();
+      } else { unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤에 '내 릴스 어떻게 됐어?' 하고 물어봐줘 — 잡은 살아있어"); }
+    }catch(e){ unlock(); status(""); addMsg("a","만들다 문제 생겼어 ㅜ 다시 해볼까?"); }
+  }
   // 편집기가 준비되면(GALLA_WORKFORM 노출) 도킹 자동 오픈. 최대 ~6s 폴링.
   function tryOpenDockForWork(){
     var raw; try{ raw=sessionStorage.getItem("GALLA_WORK"); }catch(e){}
@@ -989,6 +1107,7 @@
     if(a.kind==="plan"){ renderPlan(a.ideas); return; }             // 🗂 콘텐츠 기획안 카드
     if(a.kind==="titles"){ renderTitles(a.titles); return; }        // 🔥 어그로 제목 카드
     if(a.kind==="script"){ renderScript(a.text); return; }          // 📜 대본
+    if(a.kind==="reelScript"){ renderReelScript(a.text, a.place); return; }   // 🎞 릴스 대본(녹음→자동편집)
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -1152,7 +1271,8 @@
     acts.filter(function(a){return a.kind==="plan";}).forEach(function(a){ renderPlan(a.ideas); });
     acts.filter(function(a){return a.kind==="titles";}).forEach(function(a){ renderTitles(a.titles); });
     acts.filter(function(a){return a.kind==="script";}).forEach(function(a){ renderScript(a.text); });
-    addActions(m, acts.filter(function(a){return ["editdraft","genThumbnail","genVideo","plan","titles","script"].indexOf(a.kind)<0;}));
+    acts.filter(function(a){return a.kind==="reelScript";}).forEach(function(a){ renderReelScript(a.text, a.place); });
+    addActions(m, acts.filter(function(a){return ["editdraft","genThumbnail","genVideo","plan","titles","script","reelScript"].indexOf(a.kind)<0;}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈

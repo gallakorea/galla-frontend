@@ -529,6 +529,13 @@ async function submitMarket(){
       const _te=$('pred-tags'); const _tags=window.GALLA_collectTags(_te?_te.value:'', q, $('mDesc').value);
       if(_tags.length && data) await supa.from('markets').update({ tags:_tags }).eq('id', data);
     } catch(_){}
+    // 📈 브레인 성과 역연결 — 갈비스 제목 공식으로 만든 예측이면 기록(크론이 베팅 참여를 측정해 공식 점수화)
+    try {
+      const ps=JSON.parse(sessionStorage.getItem('GALLA_PICKED_STYLE')||'null');
+      if(ps && ps.style && (Date.now()-(ps.at||0))<30*60*1000 && data)
+        await supa.from('markets').update({ title_pattern:String(ps.style).slice(0,40) }).eq('id', data);
+      sessionStorage.removeItem('GALLA_PICKED_STYLE');
+    } catch(_){}
     $('createModal').hidden=true;
     if(__predDraft) __predDraft.clear();   // 생성 성공 → 임시저장 삭제
     toast('예측이 만들어졌습니다! 🎯');

@@ -853,6 +853,14 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const tagsEl = document.getElementById('plaza-tags');
   const tags = window.GALLA_collectTags(tagsEl ? tagsEl.value : '', title, body);
 
+  // 📈 브레인 성과 역연결 — 갈비스 제목 공식으로 쓴 글이면 기록(크론이 반응을 측정해 공식 점수화)
+  let titlePattern = null;
+  try {
+    const ps = JSON.parse(sessionStorage.getItem('GALLA_PICKED_STYLE') || 'null');
+    if (ps && ps.style && (Date.now() - (ps.at || 0)) < 30 * 60 * 1000) titlePattern = String(ps.style).slice(0, 40);
+    sessionStorage.removeItem('GALLA_PICKED_STYLE');
+  } catch (_) {}
+
   const payload = {
     category,
     title,
@@ -860,7 +868,8 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     thumbnail,
     nickname: displayName,
     user_id: user.id,
-    tags: tags.length ? tags : null
+    tags: tags.length ? tags : null,
+    title_pattern: titlePattern
   };
 
   const { error } = await supabase
