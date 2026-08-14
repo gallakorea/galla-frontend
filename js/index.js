@@ -943,12 +943,15 @@ async function loadData() {
     const issueIds = issues.map(i => i.id);
 
     // 작성자·부스트·전황·내투표 — 예전 직렬 4단계(RTT×4)를 한 번에 병렬로
-    const [profilesRes, pinsRes, warMap] = await Promise.all([
+    const [profilesRes, pinsRes, warMap, , affRes] = await Promise.all([
         supabase.from('users').select('id, nickname, level, avatar_url').in('id', userIds),
         supabase.from('content_boosts').select('target_id').eq('kind', 'pin').gt('until', new Date().toISOString()).then(r => r, () => ({ data: null })),
         loadWarData(issueIds),
-        window.GALLA_PREFETCH_VOTES ? window.GALLA_PREFETCH_VOTES(issueIds) : Promise.resolve()
+        window.GALLA_PREFETCH_VOTES ? window.GALLA_PREFETCH_VOTES(issueIds) : Promise.resolve(),
+        // 개인화 재료(카테고리 관심도·팔로우). 실패해도 피드는 그대로 뜬다.
+        supabase.rpc('my_feed_affinity').then(r => r, () => ({ data: null }))
     ]);
+    window.__aff = (affRes && affRes.data) || null;
     const profiles = profilesRes.data;
 
     const profileMap = {};
@@ -989,13 +992,24 @@ async function loadData() {
 
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
 
-    /* 인기순일 때만 작성자 다양성을 적용한다. 부스트(pinned)는 앞에 그대로 둔다. */
+    /* 🎯 개인화 + 다양성 — '인기'순에서만. 부스트(pinned)는 앞에 그대로 둔다.
+       ⚠️ '같은 진영' 가중은 하지 않는다. 갈라는 찬반이 부딪히는 곳이라
+          내 편 글만 띄우면 에코 체임버가 되고 제품이 죽는다.
+          카테고리는 양쪽이 함께 쓰는 중립 그릇이라 안전하다. */
     if (GALLA_feedSort() === 'hot') {
+        const aff = window.__aff || {};
+        const cat = aff.categories || {};
+        const following = new Set(aff.following || []);
+        const voted = window.GALLA_myVotedIds ? window.GALLA_myVotedIds() : new Set();
+
+        const personal = c => (Number(c.hot_score) || 0)
+            * (1 + 0.6 * (Number(cat[c.category]) || 0))   // 관심 주제 최대 1.6배
+            * (following.has(c.user_id) ? 1.5 : 1)          // 팔로우한 작성자
+            * (voted.has(Number(c.id)) ? 0.45 : 1);         // 이미 참전 → 내린다(제거 아님)
+
         const pinned = cards.filter(c => c.pinned);
         const rest   = cards.filter(c => !c.pinned);
-        cards = pinned.concat(
-            GALLA_diversify(rest, c => c.user_id, c => Number(c.hot_score) || 0)
-        );
+        cards = pinned.concat(GALLA_diversify(rest, c => c.user_id, personal));
     }
     window.cards = cards;
 

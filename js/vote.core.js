@@ -139,6 +139,12 @@ window.GALLA_PREFETCH_VOTES = async function (issueIds) {
   });
 };
 
+/* 내가 이미 투표한 이슈 id 집합 — 피드 개인화에서 '이미 참전'을 하향할 때 쓴다.
+   ⚠️ 캐시는 프리페치 뒤에 채워진다. 프리페치 전이면 빈 집합이 나온다(가중치가 안 걸릴 뿐, 오동작은 아님). */
+window.GALLA_myVotedIds = function () {
+  try { return new Set(__voteCache.keys()); } catch (_) { return new Set(); }
+};
+
 /* =========================
    GET MY VOTE (캐시 우선)
 ========================= */
