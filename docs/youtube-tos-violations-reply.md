@@ -71,7 +71,8 @@ client ever calls the YouTube API directly.
 Our Privacy Policy did not adequately disclose this. We have added a dedicated
 section covering it:
 
-  Section 11, "Cookies and other device storage/access technologies"
+  Section 11 — "Cookies and other device storage / access technologies"
+  (the policy is written in Korean; this is a translation of the heading)
   https://galla.im/privacy
 
 It now states, in the policy's own words, that we store information on, access
@@ -123,7 +124,7 @@ We made four changes here.
 
 (a) YouTube like counts are now labelled with the word "likes".
     Previously we rendered YouTube's like_count next to a custom heart icon. The
-    icon has been removed; the value now reads, for example, "51K likes".
+    icon has been removed and the word "likes" now follows the value.
 
 (b) Our own engagement metric is now clearly distinguished from YouTube's.
     GALLA users can "like" a video within GALLA. That count is ours, not YouTube's,
@@ -131,8 +132,7 @@ We made four changes here.
     mistaken for a YouTube metric. It is now explicitly labelled "GALLA likes"
     (Korean: "갈라 좋아요") wherever it appears.
 
-(c) We removed our own metric panels from every surface that displays YouTube
-    content.
+(c) We removed our own metric panels from the screens you highlighted.
     Reviewing the screenshots on pages 2 and 3 of your report, we understand the
     concern: the highlighted panels ("Live Standings" — our issue vote tallies —
     and "GALLA Prediction" — our in-app prediction feature) appeared in the desktop
@@ -195,15 +195,16 @@ the YouTube logo ourselves as inline SVG, and had additionally produced a modifi
 outline variant of it. The Branding Guidelines prohibit recreating, altering, or
 recolouring the mark.
 
-We audited the entire codebase and removed every instance. There were seven:
+We audited the entire codebase and removed every instance. They were:
   • the video tab icon in our trends hub (search screen)
   • the same tab icon on our community screen — a duplicate we had missed at first
+  • the section header icon above the trending video list
   • the section header icon in unified search results
   • the entry icon in the trends onboarding guide
   • the icon on the "Long-form" toggle above the video list — this is the element
     highlighted in the second screenshot on page 5 of your report
-  • the icon on the adjacent "Shorts" toggle, which we removed proactively as its
-    shape could likewise be read as a variant of the YouTube Shorts mark
+  • the icon on the adjacent "Shorts" toggle, whose shape could likewise be read as
+    a variant of the YouTube Shorts mark
   • two icons in our secondary navigation component
 
 The underlying cause was that the same mark had been hand-drawn as inline SVG in
@@ -212,7 +213,7 @@ verified by searching the whole repository for both the YouTube red (#FF0000) an
 the rounded-rectangle-plus-play-triangle path geometry; there are now zero
 occurrences anywhere in our web or app source.
 
-Rather than reproduce the official asset, we replaced all three with a neutral,
+Rather than reproduce the official asset, we replaced them all with a neutral,
 non-YouTube icon in our own brand colour, so that no YouTube mark is used outside
 the official embedded player itself. There is now no YouTube logo or icon anywhere
 in our product apart from the branding rendered by the official IFrame Player.
