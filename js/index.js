@@ -921,7 +921,7 @@ async function loadData() {
     let { data: issues, error } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('issues')
         .select(`
-            id, title, one_line, category, created_at,
+            id, title, one_line, category, created_at, hot_score,
             pro_count, con_count, sup_pro, sup_con, view_count, like_count,
             user_id, thumbnail_url, video_url, images, media,
             faction_a, faction_b
@@ -974,6 +974,7 @@ async function loadData() {
         thumbnail_url: row.thumbnail_url,
         faction_a: row.faction_a,
         faction_b: row.faction_b,
+        hot_score: row.hot_score,
         images: Array.isArray(row.images) && row.images.length > 0
             ? row.images
             : (row.thumbnail_url ? [row.thumbnail_url] : [])
@@ -987,6 +988,15 @@ async function loadData() {
     }
 
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
+
+    /* 인기순일 때만 작성자 다양성을 적용한다. 부스트(pinned)는 앞에 그대로 둔다. */
+    if (GALLA_feedSort() === 'hot') {
+        const pinned = cards.filter(c => c.pinned);
+        const rest   = cards.filter(c => !c.pinned);
+        cards = pinned.concat(
+            GALLA_diversify(rest, c => c.user_id, c => Number(c.hot_score) || 0)
+        );
+    }
     window.cards = cards;
 
     // 1차 렌더: 이슈만으로 즉시 그린다 — 타 콘텐츠를 기다리지 않음
@@ -1065,6 +1075,32 @@ function interleave(issues, ex = {}) {
         if (queue.length) out.push(queue.shift());
     });
     while (queue.length) out.push(queue.shift());
+    return out;
+}
+
+/* 🔀 작성자 다양성 — 한 사람이 상단을 독식하지 못하게 한다.
+   방식: 페널티 그리디. 남은 것 중 (점수 / (1 + k × 이미 뽑힌 수)) 가 가장 큰 것을 고른다.
+     · 같은 작성자의 2번째 글은 ÷1.8, 3번째는 ÷2.6 …
+     · '작성자당 N개 제한'처럼 잘라내지 않는다 — 정말 좋은 글이면 여전히 올라온다.
+   ⚠️ '최신순'에는 적용하지 않는다. 시간 순서를 요구한 사용자에게 순서를 흔들면 안 된다.
+   ⚠️ 부스트(pinned)는 건드리지 않고 앞에 그대로 둔다 — 유료 노출이다. */
+function GALLA_diversify(items, getAuthor, getScore, k) {
+    k = (typeof k === 'number') ? k : 0.8;
+    const pool = items.slice();
+    const seen = Object.create(null);
+    const out = [];
+    while (pool.length) {
+        let bi = 0, bv = -Infinity;
+        for (let i = 0; i < pool.length; i++) {
+            const a = getAuthor(pool[i]) || '';
+            const v = (getScore(pool[i]) || 0) / (1 + k * (seen[a] || 0));
+            if (v > bv) { bv = v; bi = i; }
+        }
+        const picked = pool.splice(bi, 1)[0];
+        const a = getAuthor(picked) || '';
+        seen[a] = (seen[a] || 0) + 1;
+        out.push(picked);
+    }
     return out;
 }
 
