@@ -126,11 +126,13 @@ We made four changes here.
     Previously we rendered YouTube's like_count next to a custom heart icon. The
     icon has been removed and the word "likes" now follows the value.
 
-(b) Our own engagement metric is now clearly distinguished from YouTube's.
-    GALLA users can "like" a video within GALLA. That count is ours, not YouTube's,
-    and previously appeared as a bare number next to an icon, which could be
-    mistaken for a YouTube metric. It is now explicitly labelled "GALLA likes"
-    (Korean: "갈라 좋아요") wherever it appears.
+(b) The control you highlighted no longer carries a symbol at all.
+    The element boxed in the first screenshot on page 2 is our own like control —
+    GALLA users can "like" a video within GALLA, and that count is ours, not
+    YouTube's. Following your instruction literally, we removed the heart symbol and
+    the control is now the term alone: "GALLA likes" (Korean: "갈라 좋아요"). The
+    GALLA prefix also makes clear the count is ours and never YouTube's. An enlarged
+    before/after of this exact control is on page 4 of the attachment.
 
 (c) We removed our own metric panels from the screens you highlighted.
     Reviewing the screenshots on pages 2 and 3 of your report, we understand the
