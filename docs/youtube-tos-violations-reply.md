@@ -190,40 +190,44 @@ The only YouTube figures we display are the values returned by the API itself
 ────────────────────────────────────────────────────────
 5) III.F.2a — Branding guidelines
 ────────────────────────────────────────────────────────
-You were right, and the root cause was worse than a sizing issue: we had recreated
-the YouTube logo ourselves as inline SVG, and had additionally produced a modified
-outline variant of it. The Branding Guidelines prohibit recreating, altering, or
-recolouring the mark.
+You were right, and there were three separate defects, not one:
 
-We audited the entire codebase and removed every instance. They were:
-  • the video tab icon in our trends hub (search screen)
-  • the same tab icon on our community screen — a duplicate we had missed at first
-  • the section header icon above the trending video list
-  • the section header icon in unified search results
-  • the entry icon in the trends onboarding guide
-  • the icon on the "Long-form" toggle above the video list — this is the element
-    highlighted in the second screenshot on page 5 of your report
-  • the icon on the adjacent "Shorts" toggle, whose shape could likewise be read as
-    a variant of the YouTube Shorts mark
-  • two icons in our secondary navigation component
+  • we had recreated the YouTube mark ourselves as inline SVG instead of using the
+    official asset;
+  • we displayed a monochrome outline version of it while the tab was inactive,
+    which is a colour modification; and
+  • the mark was rendered at 13-16px, below the 20dp minimum.
 
-The underlying cause was that the same mark had been hand-drawn as inline SVG in
-several separate files, so fixing one place left others behind. We have since
-verified by searching the whole repository for both the YouTube red (#FF0000) and
-the rounded-rectangle-plus-play-triangle path geometry; there are now zero
-occurrences anywhere in our web or app source.
+We have replaced it with the official YouTube icon, used unmodified and to the
+guidelines:
 
-We chose to remove the marks rather than reproduce the official asset, so that no
-YouTube mark is used outside the official embedded player itself. The icons in those
-positions are now neutral marks in our own brand colour; they label our own UI
-controls (a tab, a list toggle), not YouTube.
+  • the official asset, with its colours unchanged (#FF0000 / #FFFFFF)
+  • no state variants — it is always the full-colour icon, so the mark is never
+    recoloured or altered
+  • rendered at 20dp, and never smaller
+  • on a solid monochrome background (our UI is near-black), fully and clearly
+    visible with ample contrast
+  • clickable, linking through to the YouTube component of our application
+  • never the most prominent element on the page
 
-YouTube remains clearly identified as the source of the content wherever we show it:
-  • playback is always inside the official YouTube IFrame Player, which carries
-    YouTube's own branding and controls
-  • every video screen has a "Watch on YouTube" link that opens
-    https://www.youtube.com/watch?v=<id>
-  • the channel name is shown with every video
+We placed it only where it serves as attribution for YouTube content: the video tab
+(on both screens that carry that tab bar) and the section headers above the YouTube
+video lists.
+
+Elsewhere, the icons that previously carried the same hand-drawn mark label our own
+controls, not YouTube — the "Long-form" and "Shorts" toggles above the video list and
+two icons in our secondary navigation. Those now use a neutral, non-YouTube mark in
+our own brand colour, since a YouTube icon there would not be attributing YouTube
+content.
+
+We verified on the production site that the mark renders at 20 x 20 with fill
+rgb(255, 0, 0), on a black background, inside a control that navigates to our video
+screen, and that no monochrome variant of it remains anywhere.
+
+YouTube also remains identified as the source of the content itself: playback is
+always inside the official YouTube IFrame Player, every video screen carries a
+"Watch on YouTube" link to https://www.youtube.com/watch?v=<id>, and the channel
+name is shown with every video.
 
 ────────────────────────────────────────────────────────
 
