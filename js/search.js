@@ -271,9 +271,20 @@ async function initTrendPage() {
     _srcCache[src] = items;
     return items;
   }
+  /* 📌 출처 표기 — 옆 숫자가 어디서 나온 건지 화면에 못 박는다.
+     YouTube ToS III.E.4h(파생 지표) 관련 위반 통보서가 이 목록의 숫자 열을
+     지목했다. 실제로는 유튜브와 무관한 자체·외부 트렌드 집계다.
+     오해의 소지를 남기지 않도록 소스와 숫자의 의미를 같이 적는다. */
+  const SRC_NOTE = {
+    galla:  "갈라 내 이슈·뉴스에서 집계한 언급 횟수입니다. (자체 데이터)",
+    google: "Google 트렌드 제공 데이터입니다.",
+    naver:  "네이버 제공 데이터입니다.",
+    nate:   "네이트·줌 제공 데이터입니다.",
+  };
   function renderRank(items) {
-    if (!items.length) { popularEl.innerHTML = `<p class="se-muted">집계된 검색어가 없어요.</p>`; return; }
-    popularEl.innerHTML = items.map((r, i) =>
+    const note = `<p class="se-srcnote">${esc(SRC_NOTE[curSrc] || "")}</p>`;
+    if (!items.length) { popularEl.innerHTML = `<p class="se-muted">집계된 검색어가 없어요.</p>` + note; return; }
+    popularEl.innerHTML = note + items.map((r, i) =>
       `<button class="se-pop" data-kw="${esc(r.keyword)}"${r.link ? ` data-link="${esc(r.link)}"` : ""}>
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
         <span class="se-pop-title">${esc(r.keyword)}</span>

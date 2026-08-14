@@ -1856,3 +1856,6 @@ body[data-page="news"] .news-viewer-fallback {
 .area-search-clear { flex: 0 0 auto; background: #2a2e3c; color: #cfd6e6; border: none;
   width: 20px; height: 20px; border-radius: 50%; font-size: 10px; cursor: pointer; line-height: 1; }
 .area-empty { text-align: center; color: #8b909b; font-size: 13px; padding: 40px 20px; }
+
+/* 트렌드 숫자의 출처 표기 — 유튜브 파생 지표로 오인되지 않도록(ToS III.E.4h) */
+.se-srcnote{ font-size:11px; opacity:.45; margin:0 0 8px; padding:0 2px; line-height:1.5; }

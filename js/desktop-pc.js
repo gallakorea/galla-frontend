@@ -125,14 +125,34 @@
     el.innerHTML = html + (moreHref ? `<a class="pcr-more" href="${moreHref}">${moreLabel} →</a>` : '');
   }
 
+  /* 🔴 유튜브 콘텐츠가 재생되는 화면에서는 우리 지표 패널을 붙이지 않는다.
+     YouTube API ToS III.E.4h — 유튜브 API 로 '독립적으로 계산·파생된 지표'를
+     제공할 수 없다. 우리 찬반 수치·예측 시세는 유튜브와 무관한 자체 데이터지만,
+     유튜브 플레이어 바로 옆에 놓이면 '영상에서 파생된 지표'로 읽힌다.
+     실제로 2026-08-13 위반 통보서가 이 화면을 스크린샷으로 지목했다.
+     특히 예측 카드의 거래량 표기는 유튜브 콘텐츠 옆에서 가장 위험한 조합이다.
+     ⚠️ 유튜브 화면이 늘어나면 이 목록에 추가해야 한다. */
+  const YT_PAGES = ['watch'];
+  function isYouTubeSurface() {
+    const p = document.body.dataset.page || '';
+    if (YT_PAGES.indexOf(p) >= 0) return true;
+    // 트렌드 허브의 '핫튜브' 탭도 유튜브 영상 화면이다
+    try {
+      const u = new URL(location.href);
+      if (/search\.html$/.test(u.pathname) && (u.searchParams.get('tab') === 'hot' || u.searchParams.get('video'))) return true;
+    } catch (_) {}
+    return false;
+  }
+
   async function buildRight() {
     if (document.getElementById('pc-right')) return;
+    const ytSurface = isYouTubeSurface();
     const el = document.createElement('aside');
     el.id = 'pc-right';
     el.innerHTML =
-      card('pcr-battle', '실시간 전황', true) +
+      (ytSurface ? '' : card('pcr-battle', '갈라 이슈 전황', true)) +
       card('pcr-hot', '지금 뜨는 영상') +
-      card('pcr-predict', '오늘의 예측') +
+      (ytSurface ? '' : card('pcr-predict', '갈라 예측')) +
       card('pcr-rooms', '난장 라이브', true) +
       // 📲 앱 다운로드 프로모(정적) — 갈비스와 함께 핵심 전환 트리거
       `<section class="pcr-card pcr-getapp"><h3>📲 갈라 앱</h3>
