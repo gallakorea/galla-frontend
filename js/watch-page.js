@@ -101,11 +101,28 @@
     </div>`;
   }
 
+  /* 제목·채널이 비어 있으면 DB 에서 채운다.
+     ⚠️ 목록에서 들어올 때만 제목/채널이 넘어오고, 주소로 직접 열면(공유 링크·새 탭)
+        둘 다 빈 채로 남았다. 영상 출처(채널명)가 안 보이는 화면이 만들어진다. */
+  async function fillMeta(id) {
+    if (!id || (vtitle && vch)) return;
+    try {
+      const c = await sb(); if (!c) return;
+      const { data } = await c.from("youtube_hot")
+        .select("title,channel_title").eq("video_id", id).limit(1).maybeSingle();
+      if (!data) return;
+      if (!vtitle && data.title) { vtitle = data.title; const t = q("#hvTitle"); if (t) t.textContent = vtitle; }
+      if (!vch && data.channel_title) { vch = data.channel_title; const e = q("#hvCh"); if (e) e.textContent = vch; }
+      const ifr = q("#hvFrame iframe"); if (ifr && vtitle) ifr.title = vtitle;
+    } catch (_) {}
+  }
+
   /* ---------- 재생 ---------- */
   function playInto(id, title, ch) {
     vid = id; vtitle = title || ""; vch = ch || "";
     const t = q("#hvTitle"); if (t) t.textContent = vtitle;
     const c = q("#hvCh"); if (c) c.textContent = vch;
+    fillMeta(id);
     const gv = q("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", vtitle); }
     const open = q("#hvOpen"); if (open) open.href = `https://www.youtube.com/watch?v=${id}`;
     const frame = q("#hvFrame");
