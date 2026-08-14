@@ -1877,7 +1877,4 @@ body[data-page="news"] .news-viewer-fallback {
 .hv-sb.hv-sb-txt { gap: 0; }
 /* 롱폼 필터의 공식 아이콘도 20dp 이상 (hv-mode-btn 안에서 축소되지 않게) */
 .hv-mode-btn .yt-official { width: 20px !important; height: 20px !important; flex: 0 0 20px !important; }
-/* 공식 YouTube Shorts 자산 — 원본 파일을 그대로 쓴다(재제작 금지).
-   비율 유지·20dp 이상만 지킨다. 색·형태는 건드리지 않는다. */
-.yt-shorts-official { width: 20px !important; height: 20px !important; flex: 0 0 20px !important;
   display: block; object-fit: contain; }

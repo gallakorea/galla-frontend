@@ -181,15 +181,13 @@ We applied it consistently, in every place where an icon stands for YouTube:
   • the corresponding step of our product tour
   • the video entry in our secondary navigation menu
 
-The two filters above the video list carry official marks as well: the official
-YouTube icon for "Long-form", and the official YouTube Shorts asset for "Shorts" —
-both used exactly as supplied, unmodified, at 20dp.
+The "Long-form" filter above the video list also carries the official icon, at 20dp.
 
-The only icons left that previously carried the hand-drawn mark are two write-shortcut
-icons in our secondary navigation. Those label our own posting shortcuts, not YouTube,
-so we removed the play symbol from them entirely and use plain landscape / portrait
-rectangles that convey aspect ratio. Nothing in our interface resembles a YouTube mark
-unless it is an official asset.
+The remaining icons that previously carried the hand-drawn mark label our own controls
+rather than YouTube — the "Shorts" filter beside it, and two write-shortcut icons in
+our secondary navigation. We removed the play symbol from those entirely and use plain
+landscape / portrait rectangles that convey aspect ratio, so nothing in our interface
+resembles a YouTube mark unless it is the official icon.
 
 We verified on the production site that the mark renders at 20 x 20 with fill
 rgb(255, 0, 0), on a black background, inside a control that navigates to our video
