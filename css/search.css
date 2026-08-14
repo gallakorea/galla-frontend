@@ -1870,3 +1870,6 @@ body[data-page="news"] .news-viewer-fallback {
      · 페이지에서 가장 두드러진 요소가 되면 안 된다 → 20px 로만 쓴다. */
 .yt-official { width: 20px !important; height: 20px !important; flex: 0 0 20px !important;
   display: block; }
+/* 안내 목록·투어에 들어가는 공식 아이콘도 20dp 이상을 지킨다 */
+.dmg-ic .yt-official { width: 22px !important; height: 22px !important; }
+.dmt-emoji .yt-official { width: 44px !important; height: 44px !important; }

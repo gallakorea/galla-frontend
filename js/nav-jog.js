@@ -49,7 +49,8 @@
     { id: 'news',     label: '뉴스',
       icon: I('<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V18a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V5.5z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V18a2 2 0 0 1-2 2"/><path d="M7.5 8h5M7.5 11.5h5M7.5 15h3"/>') },
     { id: 'hot',      label: '핫튜브',
-      icon: I('<circle cx="12" cy="12" r="9"/><path d="M10.5 8.8l5 3.2-5 3.2V8.8z"/>') },
+      /* 유튜브 섹션으로 가는 항목 → 공식 아이콘(무변형·풀컬러) */
+      icon: '<svg class="yt-official" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#fff" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>' },
     { id: 'plaza',    label: '광장',
       icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
   ];
@@ -57,8 +58,8 @@
   const MY_ICONS = {
     all:     I('<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>'),
     galla:   I('<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>'),
-    short:   I('<rect x="6" y="3" width="12" height="18" rx="2.4"/><path d="M10.5 9l4 3-4 3V9z"/>'),
-    long:    I('<circle cx="12" cy="12" r="9"/><path d="M10.5 9l5 3-5 3V9z"/>'),
+    short:   I('<rect x="7.5" y="3" width="9" height="18" rx="2.2"/>'),      // 세로 비율
+    long:    I('<rect x="3" y="6" width="18" height="12" rx="2.2"/>'),       // 가로 비율
     predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
     plaza:   I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
   };
