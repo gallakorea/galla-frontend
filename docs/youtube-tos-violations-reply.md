@@ -225,11 +225,6 @@ YouTube remains clearly identified as the source of the content wherever we show
     https://www.youtube.com/watch?v=<id>
   • the channel name is shown with every video
 
-If you would prefer that we display the official YouTube icon in these positions
-instead, we are glad to do so — we would download the asset from the YouTube brand
-site and implement it unmodified, at no less than 20dp, linking back to YouTube.
-Please let us know which you would like, and we will make the change.
-
 ────────────────────────────────────────────────────────
 
 All of the above is already live at https://galla.im and has been verified in a
