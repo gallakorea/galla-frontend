@@ -1,0 +1,213 @@
+Hello,
+
+Thank you for the detailed report. We have resolved all listed items. Details below,
+with the corresponding policy numbers.
+
+Attached ("GALLA-YouTube-ToS-Remediation-Evidence.pdf") is a before/after screenshot
+comparison for each item, annotated in the same way as your report. Both columns were
+captured at the same viewport and in the English locale, and every "after" screenshot
+reflects what is live now at https://galla.im.
+
+────────────────────────────────────────────────────────
+1) III.D.1c — Confirmation of project numbers
+────────────────────────────────────────────────────────
+We use two Google Cloud projects in total. To be fully transparent we list both,
+along with which one accesses YouTube API Services:
+
+  • galla-youtube      — Project number 197088978210
+    This is the ONLY project that accesses YouTube API Services.
+
+  • galla-analytics    — Project number 634912808454
+    Used solely for Google Analytics. YouTube Data API v3 is not enabled in this
+    project, and no YouTube API call originates from it.
+
+For completeness: all YouTube Data API access happens in a single server-side job
+(one Supabase Edge Function, `collect-youtube-hot`) using one API key held as a
+server environment variable. No API key exists in our web or mobile clients, and no
+client ever calls the YouTube API directly.
+
+One correction for your records: the API Client is registered as "Gala Labs Co., Lt".
+Our correct legal entity name is "Galla Labs Inc." (note the double "l" in Galla).
+Please let us know if you need us to update this on our side, or if you can correct
+it in your records.
+
+────────────────────────────────────────────────────────
+2) III.A.2g — Disclosure of on-device storage and access
+────────────────────────────────────────────────────────
+Our Privacy Policy did not adequately disclose this. We have added a dedicated
+section covering it:
+
+  Section 11, "Cookies and other device storage/access technologies"
+  https://galla.im/privacy
+
+It now states, in the policy's own words, that we store information on, access
+information from, and collect information from users' devices — including by
+placing, accessing or recognizing cookies or similar technology on their devices or
+browsers — whether we do so directly or indirectly, and including where we allow third
+parties to do so. It then specifically enumerates:
+  • Cookies — session/login state, security, language and region preferences
+  • Local storage (localStorage, sessionStorage, IndexedDB) — auth tokens, draft
+    posts, UI preferences, recently viewed items
+  • Service Worker cache — offline reading and load performance
+  • Device/browser identifiers — device type, OS, browser, screen size, language, IP
+  • Push notification tokens — only when the user enables notifications
+
+It also discloses third-party storage and access, explicitly including YouTube and
+Google: video playback uses the official YouTube embedded player, and YouTube may
+store or access cookies and similar technologies on the user's device, governed by
+the Google Privacy Policy and the YouTube Terms of Service (both linked). Supabase
+and Cloudflare are disclosed as well.
+
+Finally, the section explains how users can refuse or delete this storage (browser
+settings, clearing app storage, Google Ad Settings) and what functionality is
+affected if they do.
+
+────────────────────────────────────────────────────────
+3) III.A.2i — Contact information
+────────────────────────────────────────────────────────
+Our policy previously contained an unfilled placeholder where the responsible
+person should have been named. This has been corrected.
+
+  Privacy Policy, Section 12 — https://galla.im/privacy
+  Terms of Use, Article 17 — https://galla.im/terms
+
+Because this item sits under "API Client Terms of Use and Privacy Policies", we added the
+contact block to both documents rather than only the privacy policy. Our Terms of Use
+previously carried no contact details at all.
+
+  • Operator:            Galla Labs Inc.
+  • Data Protection:     Representative Director
+  • Contact email:       gallakorea@gmail.com
+  • In-service support:  Help Center, plus a "Report a bug" entry point in the
+                         footer of every page in the web and mobile apps
+  • Response time:       within 3 business days
+
+────────────────────────────────────────────────────────
+4) III.E.4h — Independently calculated or derived metrics
+────────────────────────────────────────────────────────
+We made four changes here.
+
+(a) YouTube like counts are now labelled with the word "likes".
+    Previously we rendered YouTube's like_count next to a custom heart icon. The
+    icon has been removed; the value now reads, for example, "51K likes".
+
+(b) Our own engagement metric is now clearly distinguished from YouTube's.
+    GALLA users can "like" a video within GALLA. That count is ours, not YouTube's,
+    and previously appeared as a bare number next to an icon, which could be
+    mistaken for a YouTube metric. It is now explicitly labelled "GALLA likes"
+    (Korean: "갈라 좋아요") wherever it appears.
+
+(c) We removed our own metric panels from every surface that displays YouTube
+    content.
+    Reviewing the screenshots on pages 2 and 3 of your report, we understand the
+    concern: the highlighted panels ("Live Standings" — our issue vote tallies —
+    and "GALLA Prediction" — our in-app prediction feature) appeared in the desktop
+    sidebar alongside the YouTube player, which could reasonably be read as metrics
+    derived from the YouTube video. They are not: they are entirely our own data,
+    computed from GALLA user activity on GALLA-authored topics, with no input from
+    YouTube API data.
+
+    Regardless, to remove the ambiguity on the exact screens you highlighted, those two
+    panels are no longer rendered there — on our video watch page and in the video
+    section of our trends hub. Elsewhere in the product, where our own features and
+    YouTube content can appear in the same mixed feed, every one of our cards carries
+    our own brand explicitly and on its face — "GALLA Prediction", "GALLA Issue
+    Standings" — so it is never presented as YouTube data. None of these figures is
+    computed from, or influenced by, anything returned by the YouTube API.
+
+(d) Trending keyword counts now state their source on screen.
+    The number column highlighted in your report is not derived from YouTube data.
+    Those figures come from our own aggregation of mentions across GALLA issues and
+    news, or from Google / Naver / Nate·Zoom trend feeds, depending on the source
+    tab the user selects. We have added an on-screen caption above the list stating
+    the source and what the number means, so it cannot be read as YouTube-derived.
+
+(e) For completeness, here is what the other panels in your screenshots are — we have
+    kept these features, so we want to be explicit about them rather than leave them
+    unexplained.
+
+    - "Live Standings" (now labelled "GALLA Issue Standings"): counts of agree / disagree
+      votes cast by GALLA users on debate topics written on GALLA. Source: our own
+      database. The topics are not about videos.
+
+    - "GALLA Prediction": a prediction feature on general news, economy and sports
+      questions authored by GALLA and its users — for example "Will Google exceed 50%
+      domestic search share this month?". The YES / NO percentages are the distribution
+      of in-app points our users have placed on each side.
+
+    - "Trading volume ... P": the total of those in-app points. "P" is GP, a virtual
+      point that exists only inside GALLA. It cannot be cashed out and has no monetary
+      value; it is a measure of participation in our own feature.
+
+    - Trending keyword counts: either mentions aggregated from issues and news inside
+      GALLA, or figures supplied by Google, Naver or Nate/Zoom, depending on the source
+      tab the user selects.
+
+    None of these values takes any input from the YouTube API, and none of the topics is
+    about a YouTube video. They are not calculated from YouTube data, they do not replace
+    anything YouTube provides, and they are never presented as YouTube figures. That is
+    why we kept the features and instead made their ownership explicit on screen, while
+    removing them entirely from the two screens you highlighted.
+
+We do not compute, publish, or expose any metric derived from YouTube API data.
+The only YouTube figures we display are the values returned by the API itself
+(view count, like count), shown unmodified and attributed as such.
+
+────────────────────────────────────────────────────────
+5) III.F.2a — Branding guidelines
+────────────────────────────────────────────────────────
+You were right, and the root cause was worse than a sizing issue: we had recreated
+the YouTube logo ourselves as inline SVG, and had additionally produced a modified
+outline variant of it. The Branding Guidelines prohibit recreating, altering, or
+recolouring the mark.
+
+We audited the entire codebase and removed every instance. There were seven:
+  • the "HotTube" tab icon in our trends hub (search screen)
+  • the same tab icon on our community screen — a duplicate we had missed on the
+    first pass
+  • the section header icon in unified search results
+  • the entry icon in the trends onboarding guide
+  • the icon on the "Long-form" toggle above the video list — this is the element
+    highlighted in the second screenshot on page 5 of your report
+  • the icon on the adjacent "Shorts" toggle, which we removed proactively as its
+    shape could likewise be read as a variant of the YouTube Shorts mark
+  • two icons in our secondary navigation component
+
+The underlying cause was that the same mark had been hand-drawn as inline SVG in
+several separate files, so fixing one place left others behind. We have since
+verified by searching the whole repository for both the YouTube red (#FF0000) and
+the rounded-rectangle-plus-play-triangle path geometry; there are now zero
+occurrences anywhere in our web or app source.
+
+Rather than reproduce the official asset, we replaced all three with a neutral,
+non-YouTube icon in our own brand colour, so that no YouTube mark is used outside
+the official embedded player itself. There is now no YouTube logo or icon anywhere
+in our product apart from the branding rendered by the official IFrame Player.
+
+We also proactively removed YouTube name variants from our user-facing text, which
+we understand the guidelines also restrict:
+  • the search results section heading "핫유튜브" ("HotYouTube") → "인기 영상"
+    ("Popular videos")
+  • the "YT" placeholder shown when a thumbnail fails to load → a neutral play glyph
+
+────────────────────────────────────────────────────────
+
+All of the above is already live at https://galla.im and has been verified in a
+browser on the production site.
+
+Unchanged since our previous response, for reference:
+  • All YouTube Data API calls are server-side only; the API key is never exposed
+    to clients.
+  • We call videos.list (chart=mostPopular, regionCode=KR) every 30 minutes.
+  • Collected metadata is fully replaced on each cycle; we retain no historical
+    API data.
+  • All playback is through the official YouTube embedded player. We never
+    download, re-host, or modify video content.
+  • We do not use OAuth and never access users' YouTube accounts or private data.
+
+Please let us know if any item needs further work, or if you would like a demo
+account or a walkthrough of the implementation. We are happy to provide either.
+
+Best regards,
+GALLA Team — Galla Labs Inc.
+gallakorea@gmail.com
