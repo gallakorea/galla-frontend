@@ -53,6 +53,11 @@ For completeness: all YouTube Data API access happens in a single server-side jo
 server environment variable. No API key exists in our web or mobile clients, and no
 client ever calls the YouTube API directly.
 
+One correction for your records: the API Client is registered as "Gala Labs Co., Lt".
+Our correct legal entity name is "Galla Labs Inc." (note the double "l" in Galla).
+Please let us know if you need us to update this on our side, or if you can correct
+it in your records.
+
 ────────────────────────────────────────────────────────
 2) III.A.2g — Disclosure of on-device storage and access
 ────────────────────────────────────────────────────────
@@ -90,7 +95,7 @@ person should have been named. This has been corrected.
   Section 12, "Data Protection Officer / Contact"
   https://galla.im/privacy
 
-  • Operator:            Gala Labs Co., Ltd.
+  • Operator:            Galla Labs Inc.
   • Data Protection:     Representative Director
   • Contact email:       gallakorea@gmail.com
   • In-service support:  Help Center, plus a "Report a bug" entry point in the
@@ -182,7 +187,7 @@ Please let us know if any item needs further work, or if you would like a demo
 account or a walkthrough of the implementation. We are happy to provide either.
 
 Best regards,
-GALLA Team — Gala Labs Co., Ltd.
+GALLA Team — Galla Labs Inc.
 gallakorea@gmail.com
 ```
 
@@ -195,8 +200,9 @@ gallakorea@gmail.com
    지점 1곳·키 1개). 콘솔에서 *API 및 서비스 → 사용 설정된 API*만 눈으로 확인해 주세요.
    켜져만 있고 안 쓰는 상태여도 번호를 이미 공개했으니 문제되지 않습니다.
 
-2. **회사 정식 상호** — 방침에 `Gala Labs Co., Ltd.`로 적었습니다. 등기 상호와 다르면
-   알려주세요.
+2. **상호 불일치** — 통보서엔 API Client 명이 `Gala Labs Co., Lt`로 등록돼 있는데
+   정식 상호는 `Galla Labs Inc.` 입니다(L 두 개). 회신문에 정정 요청을 넣어뒀습니다.
+   나중에 불일치로 걸리는 것보다 지금 짚는 편이 낫습니다.
 
 ## 안 건드린 것과 그 이유
 
