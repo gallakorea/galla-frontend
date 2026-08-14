@@ -1831,7 +1831,7 @@
         <div class="dm-sec">아이덴티티</div>
         <div class="dm-idcard">
           <div class="dm-id-tier" style="color:${esc(g.tier.color)}">${esc(g.tier.name)} <b>Lv.${g.level}</b></div>
-          <div class="dm-id-sub">${esc(g.tier.sub)} · 갈라 지수 ${g.gi.toLocaleString()}</div>
+          <div class="dm-id-sub">${esc(g.tier.sub)} · 시즌 ${g.giSeason.toLocaleString()} GI</div>
         </div>
         ${t && !t.rookie ? `
         <div class="dm-idcard">

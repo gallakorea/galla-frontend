@@ -7,7 +7,7 @@
 
     <!-- 공통 스타일 -->
     <link rel="stylesheet" href="./css/index.css?v=080412">
-    <link rel="stylesheet" href="./css/grade.css?v=0814140">
+    <link rel="stylesheet" href="./css/grade.css?v=0814190">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
 
     <style>
@@ -58,8 +58,25 @@
             <div class="xp-text" id="xpText">380 / 600 GP</div>
 
             <div class="spec-badge" id="specBadge" hidden></div>
+            <div class="lifetrack" id="lifeTrack" hidden>
+              <div class="lt-head"><span id="ltName">평생 레벨</span><b id="ltLv">Lv.1</b></div>
+              <div class="lt-bar"><div class="lt-fill" id="ltFill"></div></div>
+              <div class="lt-sub" id="ltSub"></div>
+            </div>
             <div class="tier-aura vanguard-aura" id="tierAura"></div>
         </div>
+    </section>
+
+    <!-- 등급 혜택 (실제 적용되는 것만) -->
+    <section class="section">
+      <div class="section-title">지금 받고 있는 혜택</div>
+      <div class="card" id="perkCard"></div>
+    </section>
+
+    <!-- 주간 미션 (보상이 GI 다) -->
+    <section class="section">
+      <div class="section-title">이번 주 미션 <small style="opacity:.5;font-weight:600">· 보상은 GP가 아니라 GI</small></div>
+      <div class="card" id="weeklyCard"></div>
     </section>
 
     <!-- NEXT TIER PROGRESS -->
@@ -80,16 +97,15 @@
     <section class="section">
         <div class="section-title">갈라리안 세계관</div>
         <div class="card lore-card">
-            여기는 무엇을 하든 판이 되는 <b>갈라</b>.<br>
-            이슈로 싸우든, 숏판·롱판을 올리든, 예측을 맞히든, 난장을 열든 —
-            <b>🌱 눈팅러</b>에서 시작해 참견러 → 판벌이 → 판잡이 → 판몰이를 거쳐
-            <b>👑 갈라 대장군</b>이 됩니다. 길은 다섯 갈래, 사다리는 하나.
+            <b>레벨</b>은 평생 쌓입니다 — 한 번 오르면 내려가지 않아요.<br>
+            <b>등급</b>은 시즌마다 다시 겨룹니다 — 그 시즌에 잘한 사람 순으로 나눠 갖습니다.
+            그래서 늦게 시작해도 <b>다음 시즌엔 같은 출발선</b>입니다.
         </div>
     </section>
 
     <!-- TIER STRUCTURE -->
     <section class="section">
-        <div class="section-title">등급 계층 & 핵심 혜택</div>
+        <div class="section-title">시즌 등급 — 상위 % 와 최소 GI 를 <b>둘 다</b> 넘어야 승급</div>
 
         <div class="tiers-list">
 
@@ -152,16 +168,8 @@
 
     <!-- ABILITY -->
     <section class="section">
-        <div class="section-title">등급별 능력치</div>
-
-        <div class="card benefit-card">
-            <div class="benefit-item"><span class="bt">🌱 눈팅러</span><span class="bd">GP 0% · 기본</span></div>
-            <div class="benefit-item"><span class="bt">🔥 참견러</span><span class="bd">GP +5% · 노출 +3%</span></div>
-            <div class="benefit-item"><span class="bt">🎪 판벌이</span><span class="bd">GP +10% · 상단노출 +15%</span></div>
-            <div class="benefit-item"><span class="bt">🎯 판잡이</span><span class="bd">GP +18% · 추천가중치 +15%</span></div>
-            <div class="benefit-item"><span class="bt">🌪️ 판몰이</span><span class="bd">GP +28% · 최상단 48h</span></div>
-            <div class="benefit-item apex-benefit"><span class="bt">👑 갈라 대장군</span><span class="bd">GP +45% · 알고리즘 최우선</span></div>
-        </div>
+        <div class="section-title">등급별 혜택</div>
+        <div class="card benefit-card" id="benefitCard"></div>
     </section>
 
     <!-- ACHIEVEMENTS -->
@@ -207,10 +215,10 @@
 
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0809131"></script>
-<script src="js/supabase.js?v=0814140"></script>
+<script src="js/supabase.js?v=0814190"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="./js/gallian.js?v=0814140"></script>
-<script src="./js/grade.js?v=0814140"></script>
+<script src="./js/gallian.js?v=0814190"></script>
+<script src="./js/grade.js?v=0814190"></script>
 <script src="./js/nav.js?v=0811190"></script>
 <script src="./js/desktop-pc.js?v=0814140" defer></script>
 <script src="./js/nav-jog.js?v=080412" defer></script>

@@ -91,8 +91,15 @@
       try { return sb().storage.from("profiles").getPublicUrl(u.avatar_url).data.publicUrl; }
       catch (_) { return null; }
     };
-    /* 등급 아이콘 — 갈라리안 등급표(GI)와 일치 */
-    const tierIc = (uid) => (window.GALLA_gallianTier ? window.GALLA_gallianTier(giMap[uid] || 0).icon : "🌱");
+    /* 등급 아이콘 — 시즌 등급은 상대순위라 GI 만으론 계산할 수 없다.
+       서버가 미리 계산해둔 gallian_cache 를 배치로 읽는다(GALLA_tiersOf). */
+    const TIER_ICON = { 0: "🌱", 10: "🔥", 20: "🎪", 30: "🎯", 40: "🌪️", 50: "👑" };
+    let tierMap = {};
+    try {
+      const { data: tc } = await sb().from("gallian_cache").select("user_id,tier_lv").in("user_id", ids);
+      (tc || []).forEach(r => { tierMap[r.user_id] = TIER_ICON[r.tier_lv] || "🌱"; });
+    } catch (_) {}
+    const tierIc = (uid) => tierMap[uid] || "🌱";
     body.innerHTML = ids.map(id => {
       const u = byId[id] || {};
       return `

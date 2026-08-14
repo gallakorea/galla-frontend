@@ -68,51 +68,28 @@
         서버만 고치고 여기를 안 고쳐서, 피드 배지가 옛 등급(150/500/1500…)에
         옛 서브레벨 리셋까지 그대로 보여주고 있었다. 둘은 반드시 같이 고친다. */
   if (!window.GALLA_gallianTier) {
-    const GALLIAN_TIERS = [
-      { icon: "🌱", label: "눈팅러",      lv: 0 },
-      { icon: "🔥", label: "참견러",      lv: 10 },
-      { icon: "🎪", label: "판벌이",      lv: 20 },
-      { icon: "🎯", label: "판잡이",      lv: 30 },
-      { icon: "🌪️", label: "판몰이",      lv: 40 },
-      { icon: "👑", label: "갈라 대장군", lv: 50 },
-    ];
-    /* 레벨 곡선 — 밴드(10레벨) 경계가 등급 임계값. 서버와 같은 식. */
-    const BANDS = [[1, 0], [10, 600], [20, 2800], [30, 11500], [40, 35000], [50, 105000]];
-    const giForLevel = function (lv) {
-      if (lv <= 1) return 0;
-      if (lv >= 50) return Math.round(105000 * Math.pow(3.1623, (lv - 50) / 10));
-      for (let i = 0; i < BANDS.length - 1; i++) {
-        const [l0, g0] = BANDS[i], [l1, g1] = BANDS[i + 1];
-        if (lv >= l0 && lv < l1) {
-          const k = (lv - l0) / (l1 - l0);
-          return Math.round(g0 === 0 ? g1 * k * k : g0 * Math.pow(g1 / g0, k));
-        }
-      }
-      return 0;
-    };
-    const levelOfGi = function (gi) {
-      let lv = 1;
-      while (lv < 200 && giForLevel(lv + 1) <= gi) lv++;
-      return lv;
-    };
+    /* 🏅 GI → 평생 레벨. 전 페이지 '레벨'의 단일 진실.
+       ⚠️ 여기서 '등급'은 더 이상 계산하지 않는다 —
+          시즌 등급은 상위 %(상대순위)라 GI 하나만 보고는 나올 수가 없다.
+          등급 아이콘이 필요하면 GALLA_tiersOf(supabase, uids) 로 캐시를 읽어라.
+          (예전엔 이 파일이 자기만의 임계값 사본을 들고 있어 피드 배지가
+           옛 등급을 계속 보여줬다 — 사본을 다시 만들지 않는다) */
+    const giForLevel = lv => (lv <= 1 ? 0 : Math.round(20 * Math.pow(lv - 1, 2)));
+    const levelOfGi  = gi => Math.max(1, Math.floor(Math.sqrt(Math.max(0, Number(gi) || 0) / 20)) + 1);
     window.GALLA_giForLevel = giForLevel;
+    window.GALLA_levelOfGi  = levelOfGi;
 
     window.GALLA_gallianOfGi = function (gi) {
       gi = Number(gi) || 0;
       const level = levelOfGi(gi);
-      let idx = 0;
-      for (let i = 0; i < GALLIAN_TIERS.length; i++) if (level >= GALLIAN_TIERS[i].lv) idx = i;
-      const t = GALLIAN_TIERS[idx], next = GALLIAN_TIERS[idx + 1] || null;
       const floor = giForLevel(level), ceil = giForLevel(level + 1);
       return {
-        icon: t.icon, label: t.label, lv: t.lv, index: idx, gi, level,
-        progress: ceil > floor ? Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100)) : 100,
+        gi, level, icon: "🌱", label: `Lv.${level}`,
+        progress: ceil > floor ? Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100)) : 0,
         goalRemaining: Math.max(0, ceil - gi),
         goalLabel: `Lv.${level + 1}`,
-        nextTier: next ? { label: next.label, icon: next.icon, level: next.lv } : null,
       };
     };
-    /* 등급 아이콘·이름만 필요할 때(도색기) — 위 헬퍼의 얇은 래퍼 */
     window.GALLA_gallianTier = function (gi) { return window.GALLA_gallianOfGi(gi); };
   }
 
