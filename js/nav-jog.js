@@ -49,7 +49,7 @@
     { id: 'news',     label: '뉴스',
       icon: I('<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V18a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V5.5z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V18a2 2 0 0 1-2 2"/><path d="M7.5 8h5M7.5 11.5h5M7.5 15h3"/>') },
     { id: 'hot',      label: '핫튜브',
-      icon: I('<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/>') },
+      icon: I('<circle cx="12" cy="12" r="9"/><path d="M10.5 8.8l5 3.2-5 3.2V8.8z"/>') },
     { id: 'plaza',    label: '광장',
       icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
   ];
@@ -58,7 +58,7 @@
     all:     I('<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>'),
     galla:   I('<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>'),
     short:   I('<rect x="6" y="3" width="12" height="18" rx="2.4"/><path d="M10.5 9l4 3-4 3V9z"/>'),
-    long:    I('<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z"/>'),
+    long:    I('<circle cx="12" cy="12" r="9"/><path d="M10.5 9l5 3-5 3V9z"/>'),
     predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
     plaza:   I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
   };
