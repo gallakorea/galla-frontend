@@ -93,6 +93,32 @@
     window.GALLA_gallianTier = function (gi) { return window.GALLA_gallianOfGi(gi); };
   }
 
+
+  /* 🔀 작성자 다양성 — 한 사람이 피드 상단을 독식하지 못하게 한다.
+     페널티 그리디: 남은 것 중 (점수 / (1 + k × 이미 뽑힌 수)) 가 가장 큰 것을 고른다.
+       · 같은 작성자의 2번째 ÷1.8, 3번째 ÷2.6 …
+       · '작성자당 N개 제한'처럼 잘라내지 않는다 — 정말 좋은 글이면 여전히 올라온다.
+     ⚠️ '최신순'에는 쓰지 않는다. 시간 순서를 요구한 사용자에게 순서를 흔들면 안 된다. */
+  if (!window.GALLA_diversify) {
+    window.GALLA_diversify = function (items, getAuthor, getScore, k) {
+      k = (typeof k === "number") ? k : 0.8;
+      const pool = items.slice(), seen = Object.create(null), out = [];
+      while (pool.length) {
+        let bi = 0, bv = -Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          const a = getAuthor(pool[i]) || "";
+          const v = (getScore(pool[i]) || 0) / (1 + k * (seen[a] || 0));
+          if (v > bv) { bv = v; bi = i; }
+        }
+        const picked = pool.splice(bi, 1)[0];
+        const a = getAuthor(picked) || "";
+        seen[a] = (seen[a] || 0) + 1;
+        out.push(picked);
+      }
+      return out;
+    };
+  }
+
   /* ⚠️ 여기서 early-return 하지 않는다 — 그러면 아래 아바타 헬퍼·닉네임
      도색기가 client 선존재 페이지(광장 등 자체 createClient)에서 정의 안 돼
      '꾸미기 미반영'이 된다. client 생성만 아래에서 조건부로. */

@@ -30,9 +30,12 @@
 
       // 🌍 읽기 필터 — 갈라리는 기본 global이라 대부분 그대로 보인다(언어 하나면 no-op).
       const { data: posts, error } = await (window.GALLA_lfilter || function (q) { return q; })(sb.from('posts')
-        .select('id,user_id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
+        .select('id,user_id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at,hot_score')
         .eq('kind', kind).eq('is_published', true)
         .neq('moderation_status', 'blocked')
+        /* 랭킹: hot_score = (1+참여)^0.8 / (나이+2)^1.4 (10분 크론).
+           참여가 0이면 사실상 최신순이 되므로 콘텐츠가 적어도 이상하지 않다. */
+        .order('hot_score', { ascending: false })
         .order('created_at', { ascending: false }).limit(30));
 
       if (error) { box.innerHTML = '<div class="glf-empty">불러오기 실패</div>'; loading = false; return; }
@@ -41,8 +44,14 @@
         loading = false; return;
       }
 
+      /* 🔀 작성자 다양성 — 한 사람이 상단을 독식하지 못하게(공용 GALLA_diversify) */
+      let feed = posts;
+      if (window.GALLA_diversify) {
+        feed = window.GALLA_diversify(posts, p => p.user_id, p => Number(p.hot_score) || 0);
+      }
+
       // 작성자 프로필
-      const ids = [...new Set(posts.map(p => p.user_id))];
+      const ids = [...new Set(feed.map(p => p.user_id))];
       const { data: users } = await sb.from('users').select('id,nickname,avatar_url').in('id', ids);
       const U = {}; (users || []).forEach(u => U[u.id] = u);
       const ava = (uid) => {
@@ -53,7 +62,7 @@
 
       let html;
       if (kind === 'vertical') {
-        html = '<div class="glf-grid">' + posts.map(p => {
+        html = '<div class="glf-grid">' + feed.map(p => {
           const t = thumb(p);
           const mc = (Array.isArray(p.media) && p.media.length) ? p.media.length
             : (Array.isArray(p.images) && p.images.length ? p.images.length + (p.video_url ? 1 : 0) : ((p.video_url || p.thumbnail_url) ? 1 : 0));
@@ -66,7 +75,7 @@
           </div>`;
         }).join('') + '</div>';
       } else {
-        html = '<div class="glf-list">' + posts.map(p => {
+        html = '<div class="glf-list">' + feed.map(p => {
           const t = thumb(p);
           const u = U[p.user_id] || {};
           return `<div class="glf-card" data-id="${p.id}">

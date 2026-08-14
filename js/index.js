@@ -1078,32 +1078,6 @@ function interleave(issues, ex = {}) {
     return out;
 }
 
-/* 🔀 작성자 다양성 — 한 사람이 상단을 독식하지 못하게 한다.
-   방식: 페널티 그리디. 남은 것 중 (점수 / (1 + k × 이미 뽑힌 수)) 가 가장 큰 것을 고른다.
-     · 같은 작성자의 2번째 글은 ÷1.8, 3번째는 ÷2.6 …
-     · '작성자당 N개 제한'처럼 잘라내지 않는다 — 정말 좋은 글이면 여전히 올라온다.
-   ⚠️ '최신순'에는 적용하지 않는다. 시간 순서를 요구한 사용자에게 순서를 흔들면 안 된다.
-   ⚠️ 부스트(pinned)는 건드리지 않고 앞에 그대로 둔다 — 유료 노출이다. */
-function GALLA_diversify(items, getAuthor, getScore, k) {
-    k = (typeof k === 'number') ? k : 0.8;
-    const pool = items.slice();
-    const seen = Object.create(null);
-    const out = [];
-    while (pool.length) {
-        let bi = 0, bv = -Infinity;
-        for (let i = 0; i < pool.length; i++) {
-            const a = getAuthor(pool[i]) || '';
-            const v = (getScore(pool[i]) || 0) / (1 + k * (seen[a] || 0));
-            if (v > bv) { bv = v; bi = i; }
-        }
-        const picked = pool.splice(bi, 1)[0];
-        const a = getAuthor(picked) || '';
-        seen[a] = (seen[a] || 0) + 1;
-        out.push(picked);
-    }
-    return out;
-}
-
 /* 🔀 피드 정렬 — 'hot'(참여·시간 가중) | 'new'(최신).
    hot_score 는 10분마다 크론이 계산한다(compute_hot_scores).
    참여가 0이면 식이 1/(나이+2)^1.4 로 줄어 사실상 최신순이 되므로,

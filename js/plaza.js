@@ -557,7 +557,7 @@ async function fetchPlazaPosts() {
       score,
       up_count,
       view_count,
-      locale,
+      locale, hot_score,
       plaza_comments(id)
     `)
   // ⚠️ plaza_comments(count) 금지 — count 집계는 테이블級 SELECT를 요구해 user_id(유령보호 잠금)까지
@@ -569,7 +569,10 @@ async function fetchPlazaPosts() {
   } else if (currentSort === "views") {
     query = query.order("view_count", { ascending: false }).order("created_at", { ascending: false });
   } else {
-    query = query.order("score", { ascending: false }).order("created_at", { ascending: false });
+    /* 후끈 = hot_score. 예전엔 score(추천−비추천)만 봐서 시간 감쇠가 없었다 —
+       오래된 고득점 글이 영원히 상단을 차지했다.
+       hot_score = (1+참여)^0.8 / (나이+2)^1.4 (compute_hot_scores, 10분 크론) */
+    query = query.order("hot_score", { ascending: false }).order("created_at", { ascending: false });
   }
 
   if (currentCategory !== "전체") {
@@ -591,7 +594,12 @@ async function fetchPlazaPosts() {
     return;
   }
 
-  const posts = data || [];
+  let posts = data || [];
+
+  /* 🔀 작성자 다양성 — '후끈'(랭킹)일 때만. 최신/조회는 사용자가 순서를 지정한 것이라 흔들지 않는다. */
+  if (currentSort !== "new" && currentSort !== "views" && window.GALLA_diversify) {
+    posts = window.GALLA_diversify(posts, p => p.user_id, p => Number(p.hot_score) || 0);
+  }
 
   // ✅ 목록을 '먼저' 그린다 — 아래 보강조회(프로필/저장/투표)는 있으면 좋은 부가정보일 뿐,
   //    그게 실패하든 네트워크에서 멈추든(hang) 목록은 이미 떠 있어야 한다.
