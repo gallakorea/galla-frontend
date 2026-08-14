@@ -79,8 +79,11 @@ section covering it:
   Section 11, "Cookies and other device storage/access technologies"
   https://galla.im/privacy
 
-It now discloses that we store information on, and access information from, users'
-devices, and specifically enumerates:
+It now states, in the policy's own words, that we store information on, access
+information from, and collect information from users' devices — including by
+placing, accessing or recognizing cookies or similar technology on their devices or
+browsers — whether we do so directly or indirectly, and including where we allow third
+parties to do so. It then specifically enumerates:
   • Cookies — session/login state, security, language and region preferences
   • Local storage (localStorage, sessionStorage, IndexedDB) — auth tokens, draft
     posts, UI preferences, recently viewed items
@@ -104,8 +107,12 @@ affected if they do.
 Our policy previously contained an unfilled placeholder where the responsible
 person should have been named. This has been corrected.
 
-  Section 12, "Data Protection Officer / Contact"
-  https://galla.im/privacy
+  Privacy Policy, Section 12 — https://galla.im/privacy
+  Terms of Use, Article 17 — https://galla.im/terms
+
+Because this item sits under "API Client Terms of Use and Privacy Policies", we added the
+contact block to both documents rather than only the privacy policy. Our Terms of Use
+previously carried no contact details at all.
 
   • Operator:            Galla Labs Inc.
   • Data Protection:     Representative Director
