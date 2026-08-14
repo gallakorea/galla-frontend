@@ -48,6 +48,7 @@ def poll_loop(render_fn):
                     out = os.path.join(wd, "out.mp4")
                     render_fn({"segments": [{"src": s["src"], "in": s.get("in", 0), "dur": s["dur"]} for s in spec["segments"]],
                                "voice": spec["voice"], "subtitles": [{"text": x["text"], "start": x["start"], "len": x.get("len", 0.5)} for x in spec["subtitles"]],
+                               "voice_tempo": spec.get("voice_tempo", 1),
                                "width": spec.get("width", 1080), "height": spec.get("height", 1920), "fps": spec.get("fps", 30)}, out, wd, progress=prog)
                     ps = _call(url, key, anon, {"op": "presign", "id": jid})
                     put = urllib.request.Request(ps["url"], data=open(out, "rb").read(), method="PUT",

@@ -144,7 +144,7 @@ async function ttsToR2(uid: string, script: string): Promise<string | null> {
   return `${R2_PUBLIC_URL}/${key}`;
 }
 
-// ── 단어 → Vrew식 구절 자막(2~4어절, 실제 완성본 리듬) ──
+// ── 단어 → Vrew식 구절 자막(2~4어절) — 대본 의미분할 실패 시 폴백 ──
 function chunkWords(words: Word[]) {
   const subs: { text: string; start: number; len: number }[] = [];
   let cur: Word[] = [];
@@ -157,6 +157,47 @@ function chunkWords(words: Word[]) {
   }
   if (cur.length) subs.push({ text: cur.map((x) => x.w).join(" "), start: cur[0].s, len: Math.max(0.3, cur[cur.length - 1].e - cur[0].s + 0.12) });
   return subs;
+}
+
+/* ── 자막 '의미 단위' 분할(사장님 지적: 기계적 3단어 컷은 구절이 깨진다) ──
+   대본을 LLM으로 Vrew식 구절(1~4어절, 조사·의미 경계 보존)로 나누고,
+   각 구절의 어절 수만큼 STT 단어를 순서대로 소비해 타임스탬프를 입힌다.
+   (녹음이 대본과 어긋나 어절 수가 크게 다르면 null → chunkWords 폴백) */
+async function splitScriptUnits(script: string): Promise<string[] | null> {
+  try {
+    const r = await fetch(`${LLM_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${LLM_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: LLM_MODEL, temperature: 0, max_tokens: 800,
+        messages: [
+          { role: "system", content: `릴스 자막 컷 편집기다. 대본을 '자막 한 장'씩 나눠라 — 한 장 = 1~4어절, 의미 덩어리가 깨지지 않게(수식어+명사, 조사 붙은 어절은 함께). 원문 어절을 더하거나 빼거나 바꾸지 마라(문장부호는 빼도 됨). JSON 문자열 배열만 출력.` },
+          { role: "user", content: script.slice(0, 1500) },
+        ],
+      }),
+    });
+    const d = await r.json();
+    const m = /\[[\s\S]*\]/.exec(d?.choices?.[0]?.message?.content || "");
+    if (!m) return null;
+    const arr = JSON.parse(m[0]).map((s: any) => String(s).trim()).filter(Boolean);
+    return arr.length >= 3 ? arr : null;
+  } catch { return null; }
+}
+function alignUnits(units: string[], words: Word[]) {
+  const unitCounts = units.map((u) => u.split(/\s+/).filter(Boolean).length);
+  const total = unitCounts.reduce((a, b) => a + b, 0);
+  if (!total || Math.abs(total - words.length) > Math.max(4, total * 0.25)) return null;   // 대본↔녹음 어긋남 크면 폴백
+  const subs: { text: string; start: number; len: number }[] = [];
+  let wi = 0;
+  for (let i = 0; i < units.length; i++) {
+    // 남은 단어를 남은 구절에 비례 배분(누적 오차 방지) — 기본은 구절의 어절 수만큼
+    const remainUnits = unitCounts.slice(i).reduce((a, b) => a + b, 0);
+    const take = Math.max(1, Math.min(Math.round(unitCounts[i] * (words.length - wi) / Math.max(1, remainUnits)), words.length - wi - (units.length - 1 - i)));
+    const grp = words.slice(wi, wi + take);
+    if (!grp.length) break;
+    subs.push({ text: units[i].replace(/[.,!?…]/g, ""), start: grp[0].s, len: Math.max(0.3, grp[grp.length - 1].e - grp[0].s + 0.12) });
+    wi += take;
+  }
+  return subs.length >= 3 ? subs : null;
 }
 
 // ── 클립 비전 분석: 썸네일 프레임들을 한 번에 보고 클립별 장면 설명 ──
@@ -227,15 +268,30 @@ async function captionClips(clips: any[]): Promise<string[]> {
 async function matchTimeline(subs: any[], captions: string[], clips: any[], voiceDur: number): Promise<{ clip: number; start: number; end: number }[] | null> {
   try {
     const sys = `너는 맛집 릴스 편집 PD다. 내레이션 자막 타임라인과 소스 클립 목록을 보고, 각 시간 구간에 '내용이 맞는' 클립을 배치해라.
-규칙: ①구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이 이어져야 한다 ②구간당 1.5~5초 ③말하는 내용과 장면이 맞는 클립 선택(가게 소개=외관/간판, 메뉴 설명=그 음식 클로즈업, 먹는 얘기=먹방/리액션) ④같은 클립 재사용 가능하되 연속 반복은 피해라 ⑤클립의 길이(dur)를 넘는 구간을 그 클립에 주지 마라.
+규칙: ①구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이 이어져야 한다 ②구간당 2.5~5.5초(잘게 썰면 깜빡거려 못 쓴다 — 총 ${Math.round(voiceDur / 3.2)}컷 안팎) ③말하는 내용과 장면이 맞는 클립 선택(가게 소개=외관/간판, 메뉴 설명=그 음식 클로즈업, 먹는 얘기=먹방/리액션) ④**같은 클립은 한 번만 써라**(클립이 모자랄 때만 예외, 그때도 연속 배치 금지) ⑤클립의 길이(dur)를 넘는 구간을 그 클립에 주지 마라.
 JSON만 출력: {"segments":[{"clip":클립번호(0부터),"start":초,"end":초},...]}`;
-    const user = `내레이션 자막(시각순):\n${subs.map((s: any) => `${s.start.toFixed(1)}s "${s.text}"`).join("\n")}\n\n클립 목록:\n${captions.map((c, i) => `${i}: ${c} (길이 ${Number(clips[i]?.dur || 8).toFixed(1)}s)`).join("\n")}`;
-    const r = await fetch(`${LLM_URL}/chat/completions`, {
-      method: "POST", headers: { Authorization: `Bearer ${LLM_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: LLM_MODEL, temperature: 0.2, max_tokens: 900, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
-    });
-    const d = await r.json();
-    const m = /\{[\s\S]*\}/.exec(d?.choices?.[0]?.message?.content || "");
+    const user = `내레이션 자막(시각순):\n${subs.map((s: any) => `${s.start.toFixed(1)}s "${s.text}"`).join("\n")}\n\n클립 목록:\n${captions.map((c, i) => `${i}: ${c} (길이 ${Number(clips[i]?.dur || 8).toFixed(1)}s)`).join("\n")}\n\n끝 구간까지 내용이 맞는지 스스로 검증해라 — 냉면 얘기에 빈대떡 화면이 나오면 실패다.`;
+    // 지시 이행이 좋은 Gemini 우선(실사고: 딥시크가 앞 클립만 순서대로 깔고 끝냄 — 후반 내용 불일치), 실패 시 딥시크
+    let txt = "";
+    if (GEMINI_KEY) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 1500, thinkingConfig: { thinkingBudget: 0 } } }),
+        });
+        const d = await r.json().catch(() => null);
+        txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+      } catch { /* 딥시크 폴백 */ }
+    }
+    if (!/\{[\s\S]*\}/.test(txt)) {
+      const r = await fetch(`${LLM_URL}/chat/completions`, {
+        method: "POST", headers: { Authorization: `Bearer ${LLM_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: LLM_MODEL, temperature: 0.2, max_tokens: 900, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+      });
+      const d = await r.json();
+      txt = d?.choices?.[0]?.message?.content || "";
+    }
+    const m = /\{[\s\S]*\}/.exec(txt);
     if (!m) return null;
     const segs = (JSON.parse(m[0])?.segments || [])
       .map((s: any) => ({ clip: Math.max(0, Math.min(clips.length - 1, Number(s.clip) || 0)), start: Number(s.start) || 0, end: Number(s.end) || 0 }))
@@ -285,8 +341,22 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     await pushProgress(id, uid, "녹음 받아쓰는 중(자막 타이밍)");
     const stt = await sttWords(voiceUrl);
     if (!stt) throw new Error("stt_failed");
-    const subs = chunkWords(stt.words);
-    const voiceDur = stt.words[stt.words.length - 1].e + 0.6;
+    // 🎬 자막은 '의미 단위'로(사장님 지적) — 대본 구절 분할→타임스탬프 정렬, 실패 시 기계 분할 폴백
+    let subs = null as any;
+    if (script) {
+      const units = await splitScriptUnits(script);
+      if (units) subs = alignUnits(units, stt.words);
+    }
+    if (!subs) subs = chunkWords(stt.words);
+    let voiceDur = stt.words[stt.words.length - 1].e + 0.6;
+
+    // ⏱ 30초 타겟 — 내레이션이 길면 오디오 템포를 올리고(캡 1.25배) 모든 타이밍을 같은 비율로 압축
+    let tempo = 1;
+    if (voiceDur > 32) {
+      tempo = +Math.min(1.25, voiceDur / 30).toFixed(3);
+      subs = subs.map((s: any) => ({ text: s.text, start: +(s.start / tempo).toFixed(2), len: +(s.len / tempo).toFixed(2) }));
+      voiceDur = +(voiceDur / tempo).toFixed(2);
+    }
 
     await pushProgress(id, uid, "클립 장면 분석 중");
     const captions = await captionClips(clips);
@@ -294,25 +364,59 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     await pushProgress(id, uid, "장면·내레이션 매칭 중");
     let segs = await matchTimeline(subs, captions, clips, voiceDur);
     if (!segs) segs = orderTimeline(clips, voiceDur);
-    // 타임라인 무결성 보정: 시간순 정렬 + 빈틈/겹침 제거 + 총합을 음성 길이에 맞춤
+    /* 타임라인 무결성(사장님 지적 반영):
+       - 컷 최소 2.2초(깜빡임 방지) — 짧으면 앞 컷에 흡수
+       - 클립 재사용 시 '이어서' 재생(같은 장면이 처음부터 또 나오는 중복 금지, per-clip 오프셋)
+       - 꼬리 채움도 '안 쓴 클립' 우선 */
     segs.sort((a, b) => a.start - b.start);
+    const used = new Map<number, number>();   // clip idx → 소비한 초
     const timeline: { src: string; in: number; dur: number }[] = [];
     let t = 0;
+    const pushSeg = (ci: number, want: number) => {
+      const c = clips[ci];
+      const off = used.get(ci) || 0;
+      const avail = Math.max(0, (Number(c.dur) || 8) - 0.1 - off);
+      const dur = +Math.min(want, avail, voiceDur - t).toFixed(2);
+      if (dur < 0.8) return false;
+      timeline.push({ src: c.url, in: +off.toFixed(2), dur });
+      used.set(ci, off + dur);
+      t += dur;
+      return true;
+    };
     for (const s of segs) {
-      const dur = Math.min(Math.max(0.8, s.end - Math.max(s.start, t)), 6);
       if (t >= voiceDur - 0.05) break;
-      const c = clips[s.clip];
-      timeline.push({ src: c.url, in: 0, dur: +Math.min(dur, Math.max(1.0, c.dur - 0.1), voiceDur - t).toFixed(2) });
-      t += timeline[timeline.length - 1].dur;
+      const want = Math.min(Math.max(2.2, s.end - Math.max(s.start, t)), 6);
+      if (!pushSeg(s.clip, want)) {
+        // 그 클립이 바닥났으면 아직 안 쓴 클립으로 대체
+        const fresh = clips.findIndex((_: any, i: number) => !used.has(i));
+        if (fresh >= 0) pushSeg(fresh, want);
+      }
     }
-    while (t < voiceDur - 0.1 && timeline.length < 30) {   // 매칭이 못 덮은 꼬리는 순서 폴백으로 채움
-      const c = clips[timeline.length % clips.length];
-      const take = +Math.min(3, Math.max(1.0, c.dur - 0.1), voiceDur - t).toFixed(2);
-      timeline.push({ src: c.url, in: 0, dur: take });
-      t += take;
+    while (t < voiceDur - 0.1 && timeline.length < 20) {   // 꼬리: 안 쓴 클립 → 잔여 많은 클립 순
+      let ci = clips.findIndex((_: any, i: number) => !used.has(i));
+      if (ci < 0) {
+        let best = -1, bestAvail = 0.8;
+        for (let i = 0; i < clips.length; i++) {
+          const avail = (Number(clips[i].dur) || 8) - 0.1 - (used.get(i) || 0);
+          if (avail > bestAvail) { best = i; bestAvail = avail; }
+        }
+        if (best < 0) break;
+        ci = best;
+      }
+      if (!pushSeg(ci, Math.min(4, voiceDur - t))) break;
+    }
+    // 남은 공백은 마지막 컷 연장으로 마감
+    if (t < voiceDur - 0.1 && timeline.length) {
+      const last = timeline[timeline.length - 1];
+      last.dur = +(last.dur + (voiceDur - t)).toFixed(2);
+    }
+    // 🔚 2.2초 미만 꼬리 컷은 앞 컷에 흡수(끝에서 깜빡 — 실검수에서 1.4s 꼬리 발견)
+    while (timeline.length >= 2 && timeline[timeline.length - 1].dur < 2.2) {
+      const tail = timeline.pop()!;
+      timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + tail.dur).toFixed(2);
     }
 
-    await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_captions: captions, timeline, voice_dur: +voiceDur.toFixed(2) } });
+    await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_captions: captions, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo } });
     await pushProgress(id, uid, "렌더 대기열 진입");
     return j({ ok: true, id, state: "render_queued", captions, segments: timeline.length, cap_dbg: _capDbg || undefined });
   } catch (e) {
@@ -399,7 +503,8 @@ Deno.serve(async (req) => {
       if (!claimed) return j({ ok: true, job: null });   // 다른 워커가 선점
       const a = job.artifacts as any;
       return j({ ok: true, job: { id: job.id, user_id: job.user_id, spec: {
-        segments: a.timeline, voice: (job.inputs as any).voice_url, subtitles: a.subtitles, width: 1080, height: 1920, fps: 30 } } });
+        segments: a.timeline, voice: (job.inputs as any).voice_url, subtitles: a.subtitles,
+        voice_tempo: Number(a.voice_tempo) || 1, width: 1080, height: 1920, fps: 30 } } });
     }
     if (op === "progress") { const { data } = await sb.from("agent_jobs").select("user_id").eq("id", body.id).single();
       if (data) await pushProgress(body.id, data.user_id, String(body.msg || "").slice(0, 120)); return j({ ok: true }); }

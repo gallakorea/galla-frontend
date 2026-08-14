@@ -154,11 +154,15 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     # 번들 폰트 우선(워커와 함께 배포되는 fonts/ — 컨테이너 이식 시에도 동일), 없으면 시스템 폰트
     bundled = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
     fontsdir = job.get("fontsdir") or (bundled if os.path.isdir(bundled) else "/System/Library/Fonts")
-    run([FFMPEG, "-y", "-v", "error", "-i", video, "-i", voice,
-         "-map", "0:v", "-map", "1:a",
-         "-vf", f"ass=filename='{ass}':fontsdir='{fontsdir}'",
-         "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-         "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", out_path])
+    tempo = float(job.get("voice_tempo") or 1)   # ⏱ 30초 타겟 — 에이전트가 정한 배속(자막·컷 타이밍도 같은 비율로 이미 압축됨)
+    cmd = [FFMPEG, "-y", "-v", "error", "-i", video, "-i", voice,
+           "-map", "0:v", "-map", "1:a",
+           "-vf", f"ass=filename='{ass}':fontsdir='{fontsdir}'"]
+    if tempo > 1.001:
+        cmd += ["-filter:a", f"atempo={tempo:.3f}"]
+    cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "19",
+            "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", out_path]
+    run(cmd)
     progress("완성")
     return out_path
 
