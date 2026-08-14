@@ -154,6 +154,33 @@ We made four changes here.
     tab the user selects. We have added an on-screen caption above the list stating
     the source and what the number means, so it cannot be read as YouTube-derived.
 
+(e) For completeness, here is what the other panels in your screenshots are — we have
+    kept these features, so we want to be explicit about them rather than leave them
+    unexplained.
+
+    - "Live Standings" (now labelled "GALLA Issue Standings"): counts of agree / disagree
+      votes cast by GALLA users on debate topics written on GALLA. Source: our own
+      database. The topics are not about videos.
+
+    - "GALLA Prediction": a prediction feature on general news, economy and sports
+      questions authored by GALLA and its users — for example "Will Google exceed 50%
+      domestic search share this month?". The YES / NO percentages are the distribution
+      of in-app points our users have placed on each side.
+
+    - "Trading volume ... P": the total of those in-app points. "P" is GP, a virtual
+      point that exists only inside GALLA. It cannot be cashed out and has no monetary
+      value; it is a measure of participation in our own feature.
+
+    - Trending keyword counts: either mentions aggregated from issues and news inside
+      GALLA, or figures supplied by Google, Naver or Nate/Zoom, depending on the source
+      tab the user selects.
+
+    None of these values takes any input from the YouTube API, and none of the topics is
+    about a YouTube video. They are not calculated from YouTube data, they do not replace
+    anything YouTube provides, and they are never presented as YouTube figures. That is
+    why we kept the features and instead made their ownership explicit on screen, while
+    removing them entirely from the two screens you highlighted.
+
 We do not compute, publish, or expose any metric derived from YouTube API data.
 The only YouTube figures we display are the values returned by the API itself
 (view count, like count), shown unmodified and attributed as such.
@@ -237,7 +264,7 @@ gallakorea@gmail.com
 
 ## 첨부 파일
 
-`docs/GALLA-YouTube-ToS-Remediation-Evidence.pdf` (7쪽) — **같이 첨부하세요.**
+`docs/GALLA-YouTube-ToS-Remediation-Evidence.pdf` (8쪽) — **같이 첨부하세요.**
 
 Before/After를 나란히 놓고, 통보서와 **같은 방식으로 빨간 박스**를 쳐뒀습니다.
 심사자가 사이트를 직접 뒤지지 않아도 눈으로 확인됩니다.
@@ -246,6 +273,9 @@ Before/After를 나란히 놓고, 통보서와 **같은 방식으로 빨간 박�
   같은 영어 로케일이라 쌍이 정확히 맞습니다.
 - After 는 현재 라이브와 동일한 코드입니다.
 - 개인정보처리방침은 한국어라 **영문 번역 요약 표**를 같은 페이지에 넣었습니다.
+- **안 바꾼 것도 한 쪽을 할애해 설명했습니다** — 통보서 2(하)·3·4페이지에 박스가
+  쳐진 '갈라 이슈 전황·갈라 예측·트렌드 숫자'가 각각 무엇이고 숫자가 어디서
+  나오는지. 안 바꿀 거면 왜 위반이 아닌지를 적어둬야 재차 지적이 안 옵니다.
 
 ## E.4h 로 지적된 게 정확히 무엇인가
 
