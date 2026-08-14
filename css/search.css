@@ -1859,3 +1859,14 @@ body[data-page="news"] .news-viewer-fallback {
 
 /* 트렌드 숫자의 출처 표기 — 유튜브 파생 지표로 오인되지 않도록(ToS III.E.4h) */
 .se-srcnote{ font-size:11px; opacity:.45; margin:0 0 8px; padding:0 2px; line-height:1.5; }
+
+/* ▶ 공식 YouTube 아이콘 — 유튜브 콘텐츠에 대한 저작자 표시(attribution).
+   브랜딩 가이드 준수 사항:
+     · 색 변경 금지 → 항상 풀컬러(#FF0000/#FFF). 비활성 상태의 단색 변형을 두지 않는다.
+       (예전엔 .ic-line 단색 윤곽을 비활성용으로 써서 '색 변경'에 걸렸다)
+     · 최소 크기 20dp → .tab-ic 의 13~16px 규칙을 이기도록 명시한다.
+     · 단색 배경 위에 충분한 대비로 완전히 보이게 → 앱 배경이 순흑 계열이라 충족.
+     · 클릭 시 유튜브 컴포넌트로 이동해야 한다 → 탭·섹션 헤더가 영상 화면으로 간다.
+     · 페이지에서 가장 두드러진 요소가 되면 안 된다 → 20px 로만 쓴다. */
+.yt-official { width: 20px !important; height: 20px !important; flex: 0 0 20px !important;
+  display: block; }

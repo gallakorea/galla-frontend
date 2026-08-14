@@ -583,10 +583,7 @@ async function initTrendPage() {
     /* ── 인기 영상 ── */
     if (videos.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head sr-yt">
-        <svg class="yt-ic" viewBox="0 0 24 24" fill="none" stroke="#7c5cff" stroke-width="2.1"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="9"/><path d="M10.5 8.8l5 3.2-5 3.2V8.8z"/>
-        </svg>인기 영상 <b>${videos.length}</b></div>`;
+        <svg class="yt-official" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#fff" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>인기 영상 <b>${videos.length}</b></div>`;
       html += videos.map(v =>
         `<div class="sr-card video" data-vid="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}">
           <div class="sr-thumb">${isValidThumbnail(v.thumbnail) ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">▶</span>`}

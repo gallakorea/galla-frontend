@@ -36,7 +36,7 @@
     { ic: "🎬", t: "숏판 · 롱판", s: "세로 <b>숏판</b>은 릴스처럼, 가로 <b>롱판</b>은 유튜브처럼. 영상도 올려요.", tab: "gallari", url: "gallari.html" },
     { ic: "🎯", t: "갈라예측", s: "결과를 맞히면 GP <b>왕창</b>. 소수파일수록 리턴이 커져요.", tab: "predict", url: "galla-predict.html" },
     { ic: "📟", t: "갈라톡 (메신저)", s: "<b>무전기</b>(꾹 눌러 말하기)·삐삐·음성/영상통화까지. 카톡 은퇴각.", tab: "dm", url: "dm.html" },
-    { ic: "🔥", t: "트렌드", s: "실시간 검색어·<b>갈라뉴스</b>(AI 3줄)·핫튜브·<b>광장</b>이 한 탭에.", tab: "trend", url: "search.html" },
+    { ic: "🔥", t: "트렌드", s: "실시간 검색어·<b>갈라뉴스</b>(AI 3줄)·인기 영상·<b>광장</b>이 한 탭에.", tab: "trend", url: "search.html" },
     { ic: "🏅", t: "마이페이지", s: "<b>갈라리안 등급</b>·지갑·전적, 그리고 내 <b>정치 DNA</b> 4축 분석.", tab: "mypage", url: "mypage.html" },
     { ic: "🤩", t: "크리에이터", s: "받은 후원의 <b>75%</b>가 창작자 몫. 배분·출금 안내.", top: "creator.html" }
   ];
