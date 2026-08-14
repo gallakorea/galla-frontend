@@ -26,11 +26,6 @@ For completeness: all YouTube Data API access happens in a single server-side jo
 server environment variable. No API key exists in our web or mobile clients, and no
 client ever calls the YouTube API directly.
 
-One correction for your records: the API Client is registered as "Gala Labs Co., Lt".
-Our correct legal entity name is "Galla Labs Inc." (note the double "l" in Galla).
-Please let us know if you need us to update this on our side, or if you can correct
-it in your records.
-
 ────────────────────────────────────────────────────────
 2) III.A.2g — Disclosure of on-device storage and access
 ────────────────────────────────────────────────────────
@@ -162,9 +157,8 @@ outline variant of it. The Branding Guidelines prohibit recreating, altering, or
 recolouring the mark.
 
 We audited the entire codebase and removed every instance. There were seven:
-  • the "HotTube" tab icon in our trends hub (search screen)
-  • the same tab icon on our community screen — a duplicate we had missed on the
-    first pass
+  • the video tab icon in our trends hub (search screen)
+  • the same tab icon on our community screen — a duplicate we had missed at first
   • the section header icon in unified search results
   • the entry icon in the trends onboarding guide
   • the icon on the "Long-form" toggle above the video list — this is the element
@@ -183,12 +177,6 @@ Rather than reproduce the official asset, we replaced all three with a neutral,
 non-YouTube icon in our own brand colour, so that no YouTube mark is used outside
 the official embedded player itself. There is now no YouTube logo or icon anywhere
 in our product apart from the branding rendered by the official IFrame Player.
-
-We also proactively removed YouTube name variants from our user-facing text, which
-we understand the guidelines also restrict:
-  • the search results section heading "핫유튜브" ("HotYouTube") → "인기 영상"
-    ("Popular videos")
-  • the "YT" placeholder shown when a thumbnail fails to load → a neutral play glyph
 
 ────────────────────────────────────────────────────────
 
