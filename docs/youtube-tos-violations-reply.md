@@ -210,15 +210,20 @@ guidelines:
   • clickable, linking through to the YouTube component of our application
   • never the most prominent element on the page
 
-We placed it only where it serves as attribution for YouTube content: the video tab
-(on both screens that carry that tab bar) and the section headers above the YouTube
-video lists.
+We applied it consistently, in every place where an icon stands for YouTube:
+  • the video tab, on both screens that carry that tab bar
+  • the section header above the trending video list
+  • the section header for video results in unified search
+  • the entry for the video section in our onboarding guide
+  • the corresponding step of our product tour
+  • the video entry in our secondary navigation menu
 
-Elsewhere, the icons that previously carried the same hand-drawn mark label our own
-controls, not YouTube — the "Long-form" and "Shorts" toggles above the video list and
-two icons in our secondary navigation. Those now use a neutral, non-YouTube mark in
-our own brand colour, since a YouTube icon there would not be attributing YouTube
-content.
+Everywhere else, the icons that previously carried the hand-drawn mark label our own
+controls rather than YouTube — the "Long-form" and "Shorts" filters above the video
+list, and two write-shortcut icons in our secondary navigation. We removed the play
+symbol from those entirely and now use plain landscape / portrait rectangles that
+convey aspect ratio, so nothing in our interface resembles a YouTube mark unless it
+is the official icon.
 
 We verified on the production site that the mark renders at 20 x 20 with fill
 rgb(255, 0, 0), on a black background, inside a control that navigates to our video
