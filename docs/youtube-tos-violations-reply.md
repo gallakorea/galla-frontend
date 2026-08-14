@@ -42,6 +42,11 @@ Hello,
 Thank you for the detailed report. We have resolved all listed items. Details below,
 with the corresponding policy numbers.
 
+Attached ("GALLA-YouTube-ToS-Remediation-Evidence.pdf") is a before/after screenshot
+comparison for each item, annotated in the same way as your report. Both columns were
+captured at the same viewport and in the English locale, and every "after" screenshot
+reflects what is live now at https://galla.im.
+
 ────────────────────────────────────────────────────────
 1) III.D.1c — Confirmation of project numbers
 ────────────────────────────────────────────────────────
@@ -227,6 +232,18 @@ gallakorea@gmail.com
    넣어뒀습니다. 나중에 불일치로 걸리는 것보다 지금 짚는 편이 낫습니다.
 
 **→ 이제 위 영문 블록을 그대로 복사해 보내시면 됩니다. 기한 2026-08-24(월).**
+
+## 첨부 파일
+
+`docs/GALLA-YouTube-ToS-Remediation-Evidence.pdf` (7쪽) — **같이 첨부하세요.**
+
+Before/After를 나란히 놓고, 통보서와 **같은 방식으로 빨간 박스**를 쳐뒀습니다.
+심사자가 사이트를 직접 뒤지지 않아도 눈으로 확인됩니다.
+
+- Before 는 수정 직전 커밋(`c83b0f49a`)을 로컬에 띄워 캡처 — 같은 뷰포트(1400×1000),
+  같은 영어 로케일이라 쌍이 정확히 맞습니다.
+- After 는 현재 라이브와 동일한 코드입니다.
+- 개인정보처리방침은 한국어라 **영문 번역 요약 표**를 같은 페이지에 넣었습니다.
 
 ## E.4h 로 지적된 게 정확히 무엇인가
 
