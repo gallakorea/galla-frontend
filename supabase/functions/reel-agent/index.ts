@@ -24,6 +24,7 @@ const DS_KEY = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const LLM_URL = DS_KEY ? "https://api.deepseek.com" : "https://api.openai.com/v1";
 const LLM_KEY = DS_KEY || OPENAI_KEY;
 const LLM_MODEL = DS_KEY ? "deepseek-chat" : "gpt-4o-mini";
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const CF_AI_TOKEN = Deno.env.get("CF_AI_TOKEN") || Deno.env.get("CF_WORKERS_AI_TOKEN") || "";
 const CF_ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") || "";
 const R2_PUBLIC_URL = Deno.env.get("R2_PUBLIC_URL")!;
@@ -92,21 +93,52 @@ async function sttWords(audioUrl: string): Promise<{ text: string; words: Word[]
   return words.length ? { text: String(d?.text || "").trim(), words } : null;
 }
 
-// ── AI 음성(TTS): OpenAI → R2 저장 → 공개 URL (본인 녹음 대신 선택 가능 — 사장님 '둘 다') ──
+// ── AI 음성(TTS) → R2 저장 → 공개 URL (본인 녹음 대신 선택 가능 — 사장님 '둘 다')
+//    1순위 Gemini TTS(키 살아있음), 폴백 OpenAI(⚠️ 2026-08-14 현재 billing_not_active로 죽어있음 — 사장님 결제 필요) ──
+function pcmToWav(pcm: Uint8Array, rate = 24000, ch = 1, bits = 16): Uint8Array {
+  const ba = ch * bits / 8, br = rate * ba;
+  const buf = new ArrayBuffer(44 + pcm.length); const v = new DataView(buf);
+  const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, "RIFF"); v.setUint32(4, 36 + pcm.length, true); ws(8, "WAVE"); ws(12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+  v.setUint32(24, rate, true); v.setUint32(28, br, true); v.setUint16(32, ba, true); v.setUint16(34, bits, true);
+  ws(36, "data"); v.setUint32(40, pcm.length, true);
+  new Uint8Array(buf).set(pcm, 44);
+  return new Uint8Array(buf);
+}
 async function ttsToR2(uid: string, script: string): Promise<string | null> {
-  if (!OPENAI_KEY) return null;
-  const r = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-4o-mini-tts", voice: "ash", input: script.slice(0, 1500), response_format: "mp3",
-      instructions: "한국 맛집 릴스 내레이션. 30대 남성, 차분하고 신뢰감 있게, 또박또박 정보 전달. 과장 없이 담백하게, 존댓말.",
-    }),
-  });
-  if (!r.ok) return null;
-  const bytes = new Uint8Array(await r.arrayBuffer());
-  const key = `audios/${uid}/reel-tts-${crypto.randomUUID()}.mp3`;
+  let bytes: Uint8Array | null = null, ext = "wav", ctype = "audio/wav";
+  if (GEMINI_KEY) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `차분하고 신뢰감 있는 30대 한국 남성 맛집 내레이션 톤으로, 또박또박 읽어라:\n${script.slice(0, 1500)}` }] }],
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } } },
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      const b64 = d?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (r.ok && b64) {
+        const pcm = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        bytes = pcmToWav(pcm);   // Gemini TTS = 24kHz s16le mono PCM
+      } else console.error("[reel] gemini tts", r.status, JSON.stringify(d?.error || "").slice(0, 200));
+    } catch (e) { console.error("[reel] gemini tts ex", String(e).slice(0, 120)); }
+  }
+  if (!bytes && OPENAI_KEY) {
+    const r = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts", voice: "ash", input: script.slice(0, 1500), response_format: "mp3",
+        instructions: "한국 맛집 릴스 내레이션. 30대 남성, 차분하고 신뢰감 있게, 또박또박 정보 전달. 과장 없이 담백하게, 존댓말.",
+      }),
+    });
+    if (r.ok) { bytes = new Uint8Array(await r.arrayBuffer()); ext = "mp3"; ctype = "audio/mpeg"; }
+  }
+  if (!bytes) return null;
+  const key = `audios/${uid}/reel-tts-${crypto.randomUUID()}.${ext}`;
   const put = await r2.fetch(`https://${CF_ACCOUNT}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`, {
-    method: "PUT", headers: { "content-type": "audio/mpeg", "cache-control": "public, max-age=31536000, immutable" }, body: bytes,
+    method: "PUT", headers: { "content-type": ctype, "cache-control": "public, max-age=31536000, immutable" }, body: bytes,
   });
   if (!put.ok) return null;
   return `${R2_PUBLIC_URL}/${key}`;
@@ -128,24 +160,67 @@ function chunkWords(words: Word[]) {
 }
 
 // ── 클립 비전 분석: 썸네일 프레임들을 한 번에 보고 클립별 장면 설명 ──
+//    1순위 Gemini(이미지는 바이트로 인라인 — 외부 URL fetch를 모델이 못 하므로 서버가 받아서 넣는다),
+//    폴백 OpenAI(billing_not_active로 현재 죽어있음), 최후 폴백 "클립 N"(순서 배치로 강등).
+let _capDbg = "";   // 🔬 진단: 마지막 캡션 실패 원인(create 응답에 노출)
 async function captionClips(clips: any[]): Promise<string[]> {
+  _capDbg = "";
   const thumbs = clips.map((c) => c.thumb || (c.kind === "image" ? c.url : null));
-  if (!OPENAI_KEY || !thumbs.some(Boolean)) return clips.map((_, i) => `클립 ${i + 1}`);
-  try {
-    const content: any[] = [{ type: "text", text: `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지가 어떤 장면인지 짧게(한 줄, 예: "가게 외관 간판", "찌개 끓는 클로즈업", "고기 굽는 손") 순서대로 JSON 배열로만 답해라. 이미지 ${thumbs.filter(Boolean).length}개.` }];
-    for (const t of thumbs) if (t) content.push({ type: "image_url", image_url: { url: t, detail: "low" } });
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 500, temperature: 0.2, messages: [{ role: "user", content }] }),
-    });
-    const d = await r.json();
-    const m = /\[[\s\S]*\]/.exec(d?.choices?.[0]?.message?.content || "");
-    const arr = m ? JSON.parse(m[0]) : [];
-    // 썸네일 없는 클립 자리 메꾸며 원래 인덱스에 매핑
-    const out: string[] = []; let k = 0;
-    for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? String(arr[k++] || `클립 ${i + 1}`) : `클립 ${i + 1}(프레임 없음)`);
-    return out;
-  } catch { return clips.map((_, i) => `클립 ${i + 1}`); }
+  const fallback = clips.map((_, i) => `클립 ${i + 1}`);
+  if (!thumbs.some(Boolean)) return fallback;
+  const ask = `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지가 어떤 장면인지 '아주 짧게(6~14자)' 순서대로, 이미지 개수와 똑같은 길이의 JSON 문자열 배열로만 답해라. 예: ["가게 간판 외관","물냉면 클로즈업","시장 골목"]. 설명 문장 금지, 배열만.`;
+  if (GEMINI_KEY) {
+    try {
+      const parts: any[] = [{ text: ask }];
+      for (const t of thumbs) {
+        if (!t) continue;
+        const res = await fetch(t);
+        if (!res.ok) continue;
+        const b = new Uint8Array(await res.arrayBuffer());
+        let bin = ""; const CH = 0x8000;
+        for (let i = 0; i < b.length; i += CH) bin += String.fromCharCode(...b.subarray(i, i + CH));
+        parts.push({ inlineData: { mimeType: "image/jpeg", data: btoa(bin) } });
+      }
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        // ⚠️ Gemini 3.x는 기본 thinking이 maxOutputTokens를 먹어치움(실측: 600 전부 사고에 소진→빈 출력) → 명시적으로 끈다
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } } }),
+      });
+      const d = await r.json().catch(() => null);
+      const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+      // 정상 파스 → 실패 시 절단 복구(따옴표 문자열만 긁기 — MAX_TOKENS로 배열이 안 닫힌 실사고 대응)
+      let arr: string[] = [];
+      const m = /\[[\s\S]*\]/.exec(txt);
+      try { arr = m ? JSON.parse(m[0]) : []; } catch { arr = []; }
+      if (!arr.length) arr = [...txt.matchAll(/"([^"\n]{2,40})"/g)].map((x) => x[1]);
+      if (arr.length) {
+        const out: string[] = []; let k = 0;
+        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? String(arr[k++] || `클립 ${i + 1}`) : `클립 ${i + 1}(프레임 없음)`);
+        return out;
+      }
+      _capDbg = `empty s=${r.status} err=${JSON.stringify(d?.error || "").slice(0, 200)} fin=${d?.candidates?.[0]?.finishReason} txt=${txt.slice(0, 120)}`;
+      console.error("[reel] gemini vision", _capDbg);
+    } catch (e) { _capDbg = "ex " + String(e).slice(0, 200); console.error("[reel] gemini vision ex", _capDbg); }
+  }
+  if (OPENAI_KEY) {
+    try {
+      const content: any[] = [{ type: "text", text: ask }];
+      for (const t of thumbs) if (t) content.push({ type: "image_url", image_url: { url: t, detail: "low" } });
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 500, temperature: 0.2, messages: [{ role: "user", content }] }),
+      });
+      const d = await r.json();
+      const m = /\[[\s\S]*\]/.exec(d?.choices?.[0]?.message?.content || "");
+      const arr = m ? JSON.parse(m[0]) : [];
+      if (arr.length) {
+        const out: string[] = []; let k = 0;
+        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? String(arr[k++] || `클립 ${i + 1}`) : `클립 ${i + 1}(프레임 없음)`);
+        return out;
+      }
+    } catch { /* 아래 폴백 */ }
+  }
+  return fallback;
 }
 
 // ── AI 내용 매칭: 자막 타임라인 × 클립 장면 → 세그먼트 배치(사장님 확정: 순서 아닌 '내용' 매칭) ──
@@ -239,7 +314,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
 
     await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_captions: captions, timeline, voice_dur: +voiceDur.toFixed(2) } });
     await pushProgress(id, uid, "렌더 대기열 진입");
-    return j({ ok: true, id, state: "render_queued", captions, segments: timeline.length });
+    return j({ ok: true, id, state: "render_queued", captions, segments: timeline.length, cap_dbg: _capDbg || undefined });
   } catch (e) {
     await setJob(id, { state: "failed", error: String(e).slice(0, 200) });
     await pushProgress(id, uid, "실패 — " + String(e).slice(0, 80));
@@ -255,6 +330,66 @@ Deno.serve(async (req) => {
 
   // ── 워커 경로(x-worker-key) ──
   if ((req.headers.get("x-worker-key") || "") === WORKER_KEY && WORKER_KEY) {
+    if (op === "gcaps") {   // 🔬 captionClips 배치 호출 원문 진단(워커키 보호)
+      const clips = (Array.isArray(body.clips) ? body.clips : []).slice(0, 15);
+      try {
+        const parts: any[] = [{ text: "각 이미지가 어떤 장면인지 한 줄씩, 이미지 개수 길이의 JSON 배열로만." }];
+        for (const c of clips) {
+          const res = await fetch(String(c.thumb));
+          if (!res.ok) { parts.push({ text: `(fetch ${res.status})` }); continue; }
+          const b = new Uint8Array(await res.arrayBuffer());
+          let bin = ""; const CH = 0x8000;
+          for (let i = 0; i < b.length; i += CH) bin += String.fromCharCode(...b.subarray(i, i + CH));
+          parts.push({ inlineData: { mimeType: "image/jpeg", data: btoa(bin) } });
+        }
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 900, thinkingConfig: { thinkingBudget: 0 } } }),
+        });
+        const t = await r.text();
+        return j({ n: parts.length - 1, status: r.status, out: t.slice(0, 900) });
+      } catch (e) { return j({ ex: String(e).slice(0, 300) }); }
+    }
+    if (op === "gvision") {   // 🔬 Gemini 비전 단건 진단(워커키 보호)
+      try {
+        const res = await fetch(String(body.img || "https://cdn.galla.im/test/buwon/t8554.jpg"));
+        const b = new Uint8Array(await res.arrayBuffer());
+        let bin = ""; const CH = 0x8000;
+        for (let i = 0; i < b.length; i += CH) bin += String.fromCharCode(...b.subarray(i, i + CH));
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: "이 이미지 뭐야 한 줄로" }, { inlineData: { mimeType: "image/jpeg", data: btoa(bin) } }] }], generationConfig: { maxOutputTokens: 100 } }),
+        });
+        const d = await r.json().catch(() => null);
+        return j({ img_fetch: res.status, bytes: b.length, status: r.status, out: JSON.stringify(d).slice(0, 800) });
+      } catch (e) { return j({ ex: String(e).slice(0, 300) }); }
+    }
+    if (op === "gmodels") {   // 🔬 Gemini 모델 목록(워커키 보호)
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}&pageSize=50`);
+      const d = await r.json().catch(() => null);
+      return j({ status: r.status, models: (d?.models || []).map((m: any) => m.name) });
+    }
+    if (op === "probe") {   // 🔬 진단용 — OpenAI TTS/비전 상태를 원문 그대로(워커키 보호)
+      const out: Record<string, unknown> = { openai_key: !!OPENAI_KEY };
+      try {
+        const r = await fetch("https://api.openai.com/v1/audio/speech", {
+          method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: "ash", input: "테스트", response_format: "mp3" }),
+        });
+        out.tts_status = r.status;
+        if (!r.ok) out.tts_err = (await r.text()).slice(0, 300);
+      } catch (e) { out.tts_ex = String(e).slice(0, 200); }
+      try {
+        const r = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 20, messages: [{ role: "user", content: [{ type: "text", text: "이 이미지 뭐야 한 단어로" }, { type: "image_url", image_url: { url: String(body.img || "https://cdn.galla.im/test/buwon/t8554.jpg"), detail: "low" } }] }] }),
+        });
+        out.vision_status = r.status;
+        const d = await r.json().catch(() => null);
+        out.vision_out = r.ok ? d?.choices?.[0]?.message?.content : JSON.stringify(d).slice(0, 300);
+      } catch (e) { out.vision_ex = String(e).slice(0, 200); }
+      return j(out);
+    }
     if (op === "pick") {
       const { data: rows } = await sb.from("agent_jobs").select("id,user_id,inputs,artifacts").eq("state", "render_queued").order("created_at").limit(1);
       const job = rows?.[0];
