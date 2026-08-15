@@ -152,15 +152,25 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     for path, sg in zip(local, segs):
         start, remain = float(sg.get("in", 0)), float(sg["dur"])
         rot = 0
+        first_chunk = True
         while remain > 0.05:
             take = min(remain, CUT_MAX)
             avail = max(0.0, durs.get(path, 8) - 0.1 - start)
-            if avail < min(take, 1.0):          # 이 클립은 바닥 — 다른 클립의 앞부분으로 이어간다
+            # ⚠️ 초과분을 '같은 클립 이어서'로 채우면 컷이 안 보여 10초짜리 한 컷처럼 느껴진다(사장님 지적).
+            #    두 번째 조각부터는 무조건 다른 클립으로 넘겨 눈에 보이는 컷을 만든다.
+            if not first_chunk:
                 cands = [p for p in order if p != path] or [path]
                 path = cands[rot % len(cands)]
                 rot += 1
                 start = 0.0
                 avail = max(0.0, durs.get(path, 8) - 0.1)
+            elif avail < min(take, 1.0):        # 이 클립은 바닥 — 다른 클립의 앞부분으로 이어간다
+                cands = [p for p in order if p != path] or [path]
+                path = cands[rot % len(cands)]
+                rot += 1
+                start = 0.0
+                avail = max(0.0, durs.get(path, 8) - 0.1)
+            first_chunk = False
             if avail < 0.3:                     # 이 클립도 바닥 — 가장 긴 클립의 앞부분으로 강제 전환(시간 손실 금지)
                 path = max(order, key=lambda p: durs.get(p, 8))
                 start, avail = 0.0, max(0.0, durs.get(path, 8) - 0.1)

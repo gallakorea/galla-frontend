@@ -308,8 +308,10 @@ const bigramsOf = (s: string) => {
   return out;
 };
 const sharedBigrams = (a: Set<string>, b: Set<string>) => { let n = 0; for (const x of a) if (b.has(x)) n++; return n; };
+let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
 function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "") {
-  if (!subs.length || clips.length < 2) return null;
+  _matchDbg = "";
+  if (!subs.length || clips.length < 2) { _matchDbg = `skip subs=${subs.length} clips=${clips.length}`; return null; }
   const target = Math.max(2.8, Math.min(4.6, voiceDur / Math.max(4, Math.min(clips.length, 9))));
   /* ① 컷 구간 = '문장' 단위. 한 문장이 곧 한 소재다("빈대떡은 겉은 바삭…" = 빈대떡 컷).
      문장을 가로질러 4초씩 끊으면 "…돕니다 / 빈대떡은"이 한 구간에 섞여 매칭이 뭉개진다(실사고).
@@ -371,6 +373,7 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
       }
     }
   }
+  _matchDbg = `${built ? "sentence" : "time"} wins=${wins.length} [${wins.slice(0, 8).map((w) => `${w.start.toFixed(1)}-${w.end.toFixed(1)}:${w.text.slice(0, 10)}`).join(" | ")}]`;
   if (wins.length < 2) return null;
   // ② 구간별로 '말한 내용'과 장면 설명이 가장 겹치는 클립 배정(같은 클립 재사용 없음)
   const sigs = info.map((c) => bigramsOf(`${c.cap} ${c.key}`));
@@ -606,18 +609,31 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       usedSec.set(i, off + dur);
       return dur;
     };
+    /* ⚠️ t는 '실제로 만든 영상 길이'다. 예전 코드는 채우지 못한 구간도 t = segEnd로 넘겨버려
+       (영상은 안 늘고 시간만 소비) 뒤 구간이 통째로 밀리고 7구간이 4컷으로 뭉갰다 — 실사고. */
+    const idxByUrl = new Map<string, number>(fClips.map((c: any, i: number) => [c.url, i]));
+    const extendLast = (want: number) => {   // 마지막 컷 연장(클립에 실제 남은 분량 안에서만)
+      if (!timeline.length || want <= 0.01) return 0;
+      const last = timeline[timeline.length - 1];
+      const li = idxByUrl.get(last.src);
+      const room = (Number(durOfAll.get(last.src)) || 8) - 0.15 - last.in - last.dur;
+      const add = +Math.min(want, Math.max(0, room), Math.max(0, CUT_MAX - last.dur)).toFixed(2);
+      if (add <= 0.01) return 0;
+      last.dur = +(last.dur + add).toFixed(2);
+      if (li !== undefined) usedSec.set(li, (usedSec.get(li) || 0) + add);
+      return add;
+    };
     let t = 0;
     for (const s of segs) {
-      // 구간 경계는 절대 시각으로 지키되, 컷은 항상 CUT_MAX 이하로 쪼갠다(거대 컷 원천 차단)
-      const segEnd = Math.min(Math.max(s.end, t + 0.2), voiceDur);
+      const segEnd = Math.min(s.end, voiceDur);
+      if (segEnd - t < 0.25) continue;   // 이미 채운 구간
       const main = poolPos.get(s.clip) ?? -1;
       let firstInWindow = true;
       while (segEnd - t > 0.15) {
         const need = +(segEnd - t).toFixed(2);
         // 자투리(1.6초 미만)는 새 컷을 만들지 않고 직전 컷을 늘려 흡수한다(1초짜리 컷 = 깜빡임)
         if (need < CUT_MIN && timeline.length) {
-          timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + need).toFixed(2);
-          t = segEnd;
+          t = +(t + extendLast(need)).toFixed(2);
           break;
         }
         let pick = -1;
@@ -650,9 +666,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       while (segEnd - t > 0.15 && guard++ < 12) {
         const need = +(segEnd - t).toFixed(2);
         if (need < CUT_MIN && timeline.length) {
-          timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + need).toFixed(2);
-          t = segEnd;
-          break;
+          const added = extendLast(need);
+          t = +(t + added).toFixed(2);
+          if (added <= 0.01) { /* 연장 불가 — 아래에서 새 컷으로 채운다 */ } else break;
         }
         const lastSrc = timeline.length ? timeline[timeline.length - 1].src : "";
         let best = -1, bestRoom = -1;
@@ -675,7 +691,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         if (!got) break;
         t += got;
       }
-      if (t < segEnd - 0.15 && timeline.length) { timeline[timeline.length - 1].dur = +Math.min(timeline[timeline.length - 1].dur + (segEnd - t), CUT_MAX).toFixed(2); t = segEnd; }
+      if (t < segEnd - 0.15) t = +(t + extendLast(segEnd - t)).toFixed(2);   // 남은 자투리는 '실제로 늘린 만큼만' 반영
     }
     const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
 
@@ -740,10 +756,28 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         if (fj >= 1) swap(i, fj);
       }
     }
-    // 남은 공백은 마지막 컷 연장으로 마감
-    if (t < voiceDur - 0.1 && timeline.length) {
-      const last = timeline[timeline.length - 1];
-      last.dur = +(last.dur + (voiceDur - t)).toFixed(2);
+    /* 남은 공백 마감 — ⚠️ 예전엔 여기서 부족분을 통째로 마지막 컷에 얹었다.
+       그 결과 8초가 한 컷에 실려 13~16초짜리 정지화면이 됐다(사장님 지적의 진범).
+       이제는 5.5초 이하 컷으로 클립을 돌려가며 채운다. */
+    {
+      let guard = 0;
+      while (voiceDur - t > 0.15 && guard < 12) {
+        const want = +(voiceDur - t).toFixed(2);
+        const lastSrc = timeline.length ? timeline[timeline.length - 1].src : "";
+        let best = -1, bestRoom = -1;
+        for (let i = 0; i < fClips.length; i++) {
+          if (fClips[i].url === lastSrc) continue;
+          const room = Math.max(availOf(i), (Number(fClips[i].dur) || 8) - 0.15);
+          if (room > bestRoom) { best = i; bestRoom = room; }
+        }
+        if (best < 0) break;
+        if (availOf(best) < Math.min(want, 1.0)) usedSec.set(best, 0);
+        const got = take(best, Math.min(want, CUT_MAX));
+        if (!got) break;
+        t += got;
+        guard++;
+      }
+      if (voiceDur - t > 0.15) t = +(t + extendLast(voiceDur - t)).toFixed(2);
     }
     // 🔚 2.2초 미만 꼬리 컷은 앞 컷에 흡수(끝에서 깜빡 — 실검수에서 1.4s 꼬리 발견)
     while (timeline.length >= 2 && timeline[timeline.length - 1].dur < 2.2) {
@@ -753,7 +787,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
 
     await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_info: info, pool_info: poolInfo, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo } });
     await pushProgress(id, uid, "렌더 대기열 진입");
-    return j({ ok: true, id, state: "render_queued", used: poolInfo.map((c) => `${c.cap}[${c.role}]`), dropped, segments: timeline.length, cap_dbg: _capDbg || undefined });
+    return j({ ok: true, id, state: "render_queued", used: poolInfo.map((c) => `${c.cap}[${c.role}]`), dropped, segments: timeline.length, cap_dbg: _capDbg || undefined, match_dbg: _matchDbg || undefined });
   } catch (e) {
     await setJob(id, { state: "failed", error: String(e).slice(0, 200) });
     await pushProgress(id, uid, "실패 — " + String(e).slice(0, 80));
