@@ -599,334 +599,70 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       + (sharedBigrams(sigs[i], bigramsOf(sentTextOf(w))) * 2 + profileScore(ct, sentTextOf(w)))
       + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0) - (isSpare[i] ? 1.5 : 0);
   };
-  /* 📌 명시 지정(핀) — 대본이 그 단어를 직접 말하면 해당 컷을 '먼저 확정'하고 최적화는 나머지만 한다.
-     임베딩·개념 보너스로는 "평양냉면"이 든 문장이 냉면 컷을 다 끌어가 계단이 끝까지 못 붙었다(실측 반복).
-     이건 취향이 아니라 사실 매칭이므로 규칙으로 못 박는 게 맞다. */
-  const pinned = new Map<number, number>();   // 🔒 명시 지정은 이후 어떤 단계도 못 바꾼다
-  {
-    const PINS: [RegExp, RegExp][] = [
-      [/계단|올라가|2층|이층|입구/, /계단|올라가|입구/],
-      [/간판|외관|건물/, /간판|외관|입구/],
-      [/골목|시장|거리|남대문/, /골목|시장|거리/],
-      [/빈대떡|부침|전/, /빈대떡|부침/],
-      [/물냉면|육수|편육|슴슴|동치미/, /물냉면|육수/],
-      [/비빔냉면|비빔|양념장/, /비빔/],
-      [/무침|제육|겨자|식초|매콤/, /무침|제육/],
-    ];
-    for (let w = 0; w < wins.length; w++) {
-      if (assign[w] >= 0) continue;
-      const wt = wins[w].text;
-      for (const [reText, reCap] of PINS) {
-        if (!reText.test(wt)) continue;
-        let best = -1, bs = -1;
-        for (let i = 0; i < clips.length; i++) {
-          if (used.has(i)) continue;
-          const ct = `${info[i].cap} ${info[i].key}`;
-          if (!reCap.test(ct)) continue;
-          const sc = (simOf(i, wt) ?? 0) * 100 + info[i].score;
-          if (sc > bs) { bs = sc; best = i; }
-        }
-        if (best >= 0) { assign[w] = best; used.add(best); pinned.set(w, best); break; }
-      }
-    }
-  }
-
-  // 문장별 조각 묶음(같은 문장에서 쪼개진 컷들)
-  const sentGroups = new Map<number, number[]>();
-  for (let w = 0; w < wins.length; w++) {
-    const sid = (wins[w] as any).sent;
-    if (sid !== undefined) sentGroups.set(sid, [...(sentGroups.get(sid) || []), w]);
-  }
-
-  /* 🏆 2단계 최적 배정 — 이게 핵심이다.
-     (1) **문장 ↔ 소재(음식) 배정**을 먼저 최적화한다: "무침 문장"이 무침 소재를 통째로 확보한다.
-         구간별로만 최적화하면 총점은 높아도 무침 컷이 다른 문장으로 새어나간다(실사고).
-     (2) 그다음 문장 '안에서' 조각들에 그 소재의 컷들을 배분한다(앵글 다른 컷 → 없으면 같은 컷 확대).
-     소재 그룹은 캡션 유사도로 묶는다(빈대떡 2컷·물냉면 3컷 = 각 한 소재). */
-  {
-    // 소재 그룹 만들기
-    const groupOf = new Array(clips.length).fill(-1);
-    const groups: number[][] = [];
+  /* 🎯 배정 — **한 곳에서만 결정한다**(2026-08-15 재설계, docs/reel-matching-redesign.md).
+     예전엔 규칙→임베딩→헝가리안→편집장 검수→핀 다섯 겹이 서로 덮어써서, 매칭이 맞아도 화면은 달랐다.
+     순서는 하나다: ①그 구간이 '직접 말하는 소재' → ②문장이 말하는 소재 → ③의미 유사도 → ④이웃 승계. */
+  const SUBJECTS: [string, RegExp, RegExp][] = [
+    // [소재, 대본이 이 소재를 말하는 표현, 클립 설명이 이 소재인 표현]  ※ 구체적인 것부터
+    ["계단", /계단|올라가|2층|이층/, /계단|올라가/],
+    ["입구", /입구|들어가|현관|지나칩/, /입구|현관/],
+    ["간판", /간판|외관|건물|노포|년부터|이어온/, /간판|외관|건물/],
+    ["거리", /골목|시장|거리|남대문|안쪽/, /골목|시장|거리/],
+    ["빈대떡", /빈대떡|부침|바삭|촉촉/, /빈대떡|부침/],
+    ["물냉면", /물냉면|육수|편육|슴슴|동치미|계란/, /물냉면|육수|계란/],
+    ["비빔냉면", /비빔|양념장/, /비빔/],
+    ["무침", /무침|제육|겨자|식초|매콤|소스|비비/, /무침|제육/],
+    ["내부", /분위기|자리|손님|테이블/, /내부|손님|테이블|메뉴판/],
+  ];
+  const clipSubj = info.map((c) => {
+    const t = `${c.cap} ${c.key}`;
+    const hit = SUBJECTS.find(([, , reCap]) => reCap.test(t));
+    return hit ? hit[0] : "";
+  });
+  const subjOfText = (t: string) => SUBJECTS.filter(([, reT]) => reT.test(t)).map(([n]) => n);
+  const pickBy = (subj: string, text: string) => {
+    let best = -1, bs = -Infinity;
     for (let i = 0; i < clips.length; i++) {
-      if (groupOf[i] >= 0) continue;
-      const g = [i]; groupOf[i] = groups.length;
-      for (let j = i + 1; j < clips.length; j++) {
-        if (groupOf[j] >= 0) continue;
-        if (sharedBigrams(sigs[i], sigs[j]) >= 2) { g.push(j); groupOf[j] = groups.length; }
-      }
-      groups.push(g);
+      if (used.has(i) || clipSubj[i] !== subj) continue;
+      const sc = (simOf(i, text) ?? 0) * 50 + info[i].score + (foodish(info[i].role) ? 1 : 0);
+      if (sc > bs) { bs = sc; best = i; }
     }
-    const gText = groups.map((g) => g.map((i) => `${info[i].cap}`).join(" "));
-    const gScore = (gi: number, text: string) => {
-      const sims = groups[gi].map((i) => simOf(i, text)).filter((x): x is number => x !== null);
-      if (sims.length) return Math.max(...sims) * 100 + Math.max(...groups[gi].map((i) => info[i].score));
-      return profileScore(gText[gi], text) * 4 + sharedBigrams(bigramsOf(gText[gi]), bigramsOf(text)) * 3;
-    };
-    const sentIds = [...sentGroups.keys()].sort((a, b) => a - b);
-    const S = sentIds.length, G = groups.length;
-    // (1) 문장 × 소재 최적 배정
-    const cost1: number[][] = sentIds.map((sid) => {
-      const ws = sentGroups.get(sid)!;
-      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
-      const row = groups.map((_, gi) => -gScore(gi, stext));
-      for (let k = row.length; k < Math.max(G, S); k++) row.push(0);
-      return row;
-    });
-    const sentToGroup = S && G ? hungarian(cost1) : [];
-    // (2) 문장 안에서 조각별 배분
-    for (let si = 0; si < sentIds.length; si++) {
-      const ws = sentGroups.get(sentIds[si])!;
-      const gi = sentToGroup[si];
-      const own = (gi >= 0 && gi < G) ? [...groups[gi]] : [];
-      for (const w of ws) {
-        if (assign[w] >= 0) continue;
-        let best = -1, bs = -Infinity;
-        for (const i of own) {
-          if (used.has(i)) continue;
-          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score;
-          if (sc > bs) { bs = sc; best = i; }
-        }
-        /* 한 문장이 두 가지를 말하는 경우("평양냉면 노포인데 2층 입구가 좁아서") — 그 조각이 문장 소재보다
-           다른 컷에 확실히 더 맞으면 그쪽을 쓴다. 안 그러면 계단 컷이 끝까지 밀려난다(실측). */
-        let alt = -1, as_ = -Infinity;
-        for (let i = 0; i < clips.length; i++) {
-          if (used.has(i) || own.includes(i)) continue;
-          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score;
-          if (sc > as_) { as_ = sc; alt = i; }
-        }
-        if (alt >= 0 && as_ > Math.max(bs, 0) * 1.12) { assign[w] = alt; used.add(alt); continue; }
-        if (best >= 0) { assign[w] = best; used.add(best); }
-      }
-      // 소재 컷이 모자란 조각 — 그 소재의 다른 컷(이미 쓴 것)을 재사용(확대되어 다른 그림이 된다)
-      const anchor = ws.map((w) => assign[w]).find((x) => x >= 0);
-      if (anchor !== undefined && anchor >= 0) for (const w of ws) if (assign[w] < 0) assign[w] = anchor;
-    }
-    // 어떤 소재도 못 받은 문장 — 남은 컷 중 가장 맞는 것으로
-    for (let w = 0; w < wins.length; w++) {
-      if (assign[w] >= 0) continue;
-      let best = -1, bs = -Infinity;
-      for (let i = 0; i < clips.length; i++) {
-        if (used.has(i)) continue;
-        const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
-        if (sc > bs) { bs = sc; best = i; }
-      }
-      if (best >= 0) { assign[w] = best; used.add(best); }
+    return best;
+  };
+  for (let w = 0; w < wins.length; w++) {          // ① 그 구간이 직접 말하는 소재
+    if (assign[w] >= 0) continue;
+    for (const subj of subjOfText(wins[w].text)) {
+      const i = pickBy(subj, wins[w].text);
+      if (i >= 0) { assign[w] = i; used.add(i); break; }
     }
   }
+  for (let w = 0; w < wins.length; w++) {          // ② 문장이 말하는 소재
+    if (assign[w] >= 0) continue;
+    const st = (wins[w] as any).sentText || wins[w].text;
+    for (const subj of subjOfText(st)) {
+      const i = pickBy(subj, wins[w].text);
+      if (i >= 0) { assign[w] = i; used.add(i); break; }
+    }
+  }
+  for (let w = 0; w < wins.length; w++) {          // ③ 의미 유사도(남은 컷 중 최선, 음식 우선)
+    if (assign[w] >= 0) continue;
+    let best = -1, bs = -Infinity;
+    for (let i = 0; i < clips.length; i++) {
+      if (used.has(i)) continue;
+      const sc = (simOf(i, wins[w].text) ?? 0) * 50 + info[i].score + (foodish(info[i].role) ? 2 : -1);
+      if (sc > bs) { bs = sc; best = i; }
+    }
+    if (best >= 0) { assign[w] = best; used.add(best); }
+  }
+  for (let w = 0; w < wins.length; w++) {          // ④ 클립이 모자라면 같은 문장 이웃을 이어 쓴다
+    if (assign[w] >= 0) continue;
+    const sid = (wins[w] as any).sent;
+    let nb = -1;
+    for (let k = 0; k < wins.length; k++) if ((wins[k] as any).sent === sid && assign[k] >= 0) { nb = assign[k]; break; }
+    assign[w] = nb >= 0 ? nb : (w > 0 ? assign[w - 1] : 0);
+  }
+  _matchDbg += " | assign:subject-first";
 
-  /* 🔒 문장 일관성 — "한 문장 = 한 음식". 최적 배정은 총점을 최대화하다 보니 한 문장 안에서
-     소재가 튈 수 있다(실사고: "편육까지 딱 정석입니다"에 식당 내부샷). 문장의 대표 컷과 너무 동떨어진
-     조각은 대표 컷의 다른 구간으로 되돌린다(조립에서 확대되어 다른 그림이 된다). */
-  {
-    const bySent = new Map<number, number[]>();
-    for (let w = 0; w < wins.length; w++) {
-      const sid = (wins[w] as any).sent;
-      if (sid !== undefined) bySent.set(sid, [...(bySent.get(sid) || []), w]);
-    }
-    for (const [, ws] of bySent) {
-      if (ws.length < 2) continue;
-      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
-      let anchor = -1, aSim = -1;
-      for (const w of ws) {
-        const i = assign[w];
-        if (i < 0) continue;
-        const s = simOf(i, stext) ?? profileScore(`${info[i].cap} ${info[i].key}`, stext) / 12;
-        if (s > aSim) { aSim = s; anchor = i; }
-      }
-      if (anchor < 0 || aSim <= 0) continue;
-      for (const w of ws) {
-        const i = assign[w];
-        if (i < 0 || i === anchor) continue;
-        const s = simOf(i, stext) ?? profileScore(`${info[i].cap} ${info[i].key}`, stext) / 12;
-        if (s < aSim * 0.82) assign[w] = anchor;   // 문장에서 확연히 겉도는 컷 → 대표 컷으로 교체
-      }
-    }
-  }
-  _matchDbg += ` | assign:hungarian(${wins.length}x${clips.length})`;
-
-  /* 🧑‍⚖️ 자기 검수 루프 — 알고리즘 초안을 '편집장'이 다시 본다.
-     알고리즘은 단어·의미 유사도만 보므로, 대사에 단서가 옅은 컷("속은 촉촉하고요")에서 흔들린다.
-     전체 판(어떤 클립이 있고, 각 컷에서 무슨 말을 하는지)을 통째로 보여주고 틀린 배치만 교체받는다.
-     실패하면 초안 그대로 간다(검수는 있으면 좋고 없으면 그만). */
-  /* 🚫 편집장 검수 비활성 — 같은 입력에 매번 다른 결과를 만드는 최대 변수였고(사장님: "다 딴판"),
-     오히려 핀·문장일관성을 깨뜨리는 교체를 반복했다. 규칙+핀 기반은 결정적이라 재현된다. */
-  if (false && GEMINI_KEY && wins.length >= 4) {
-    try {
-      const clipList = info.map((c, i) => `${i}: ${c.cap} [${c.role}]`).join("\n");
-      const cutList = wins.map((w, k) => `컷${k} (${w.start.toFixed(1)}s) 내레이션 "${w.text}" → 현재 배치: ${assign[k] >= 0 ? `${assign[k]}번(${info[assign[k]].cap})` : "없음"}`).join("\n");
-      const sys = `너는 맛집 릴스 편집장이다. 아래는 자동 배치된 컷 목록이다. **틀린 배치만** 고쳐라.
-판단 기준(중요도 순):
-1) 그 컷에서 말하는 내용과 화면이 맞아야 한다 — 냉면 얘기에 빈대떡이 나오면 실패.
-2) 같은 문장이 여러 컷으로 나뉘면 같은 음식/장소를 유지한다(앵글만 달라야 한다).
-3) 대사에 단서가 없는 컷("속은 촉촉하고요", "딱 정석입니다")은 **바로 앞 컷과 같은 소재**를 이어라.
-4) 한 클립은 되도록 한 번만. 단, 2)·3) 때문이면 같은 클립 재사용 허용.
-JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 게 없으면 {"fix":[]}`;
-      const user = `[클립 목록]\n${clipList}\n\n[컷 배치]\n${cutList}`;
-      /* 👁 사진으로 검수 — 캡션(글자)만 보면 "물냉면"이라 적힌 게 실제로는 비빔냉면일 수 있다(실측 오배치의 원인).
-         클립 썸네일을 번호와 함께 실제로 보여주고 눈으로 판정하게 한다. */
-      /* ⚠️ 15장을 다 보내면 엣지 150초 타임아웃에 걸린다(실사고). 실제로 쓰인 클립만, 최대 8장.
-         (검수는 '지금 배치가 맞나'를 보는 것이므로 안 쓰인 클립까지 볼 필요는 적다.) */
-      const shown = [...new Set(assign.filter((x) => x >= 0))].slice(0, 8);
-      const parts: any[] = [{ text: sys + "\n\n" + user + "\n\n[아래는 현재 배치에 쓰인 클립들의 실제 화면이다 — 캡션이 아니라 그림을 보고 판단해라]" }];
-      for (const i of shown) {
-        const th = clips[i]?.thumb;
-        if (!th) continue;
-        try {
-          const res = await fetch(th);
-          if (!res.ok) continue;
-          const b = new Uint8Array(await res.arrayBuffer());
-          let bin = ""; const CH = 0x8000;
-          for (let k = 0; k < b.length; k += CH) bin += String.fromCharCode(...b.subarray(k, k + CH));
-          parts.push({ text: `클립 ${i}:` }, { inlineData: { mimeType: "image/jpeg", data: btoa(bin) } });
-        } catch (_) { /* 한 장 빠져도 계속 */ }
-      }
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, maxOutputTokens: 1500, thinkingConfig: { thinkingBudget: 0 } } }),
-      });
-      const d = await r.json().catch(() => null);
-      const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
-      const m = /\{[\s\S]*\}/.exec(txt);
-      const fixes = m ? (JSON.parse(m[0])?.fix || []) : [];
-      const before = [...assign];
-      let applied = 0;
-      for (const f of fixes) {
-        const w = Number(f?.cut), i = Number(f?.clip);
-        if (!Number.isInteger(w) || !Number.isInteger(i)) continue;
-        if (w < 0 || w >= wins.length || i < 0 || i >= clips.length) continue;
-        if (assign[w] === i) continue;
-        assign[w] = i; applied++;
-      }
-      /* 검수 부작용 가드 — 편집장이 같은 클립을 떨어진 자리에 두 번 쓰는 경우가 있다(실측: 계단 컷 2회).
-         붙어 있는 컷(같은 소재 이어가기)만 허용하고, 떨어진 중복은 원래 배치로 되돌린다. */
-      const seenAt = new Map<number, number>();
-      for (let w = 0; w < wins.length; w++) {
-        const i = assign[w];
-        if (i < 0) continue;
-        const prev = seenAt.get(i);
-        if (prev !== undefined && w - prev > 1) {
-          // 검수가 새로 넣은 쪽을 되돌린다(원래부터 그 자리였던 컷을 살린다)
-          const victim = (assign[w] !== before[w]) ? w : ((assign[prev] !== before[prev]) ? prev : w);
-          const restore = before[victim];
-          if (restore >= 0 && restore !== i) { assign[victim] = restore; applied--; if (victim === prev) seenAt.set(i, w); }
-          else { assign[victim] = -1; applied--; }
-        } else seenAt.set(i, w);
-      }
-      // 되돌리다 빈 자리가 생기면 남은 컷 중 가장 맞는 것으로 채운다
-      for (let w = 0; w < wins.length; w++) {
-        if (assign[w] >= 0) continue;
-        const inUse = new Set(assign.filter((x) => x >= 0));
-        let best = -1, bs = -Infinity;
-        for (let i = 0; i < clips.length; i++) {
-          if (inUse.has(i)) continue;
-          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
-          if (sc > bs) { bs = sc; best = i; }
-        }
-        if (best >= 0) assign[w] = best;
-      }
-      /* 🔒 검수 후에도 문장 규칙을 강제한다 — 편집장이 "딱 정석입니다"(물냉면 문장)에 비빔냉면을 넣는 식으로
-         문장 일관성을 깨는 교체를 한다(실측). 같은 문장 안에서 대표 컷과 소재가 다르면 되돌린다.
-         '읽을거리' 컷(벽면 홍보물·메뉴판)도 검수가 넣으면 되돌린다. */
-      {
-        const bySent2 = new Map<number, number[]>();
-        for (let w = 0; w < wins.length; w++) {
-          const sid = (wins[w] as any).sent;
-          if (sid !== undefined) bySent2.set(sid, [...(bySent2.get(sid) || []), w]);
-        }
-        const readable = (i: number) => ["기사", "스크랩", "메뉴판", "벽면", "신문", "잡지", "홍보물", "안내"].some((k) => `${info[i].cap} ${info[i].key}`.includes(k));
-        for (let w = 0; w < wins.length; w++) {
-          const i = assign[w];
-          if (i >= 0 && readable(i) && before[w] >= 0 && before[w] !== i) { assign[w] = before[w]; applied--; }
-        }
-        for (const [, ws] of bySent2) {
-          if (ws.length < 2) continue;
-          const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
-          let anchor = -1, aS = -1;
-          for (const w of ws) {
-            const i = assign[w]; if (i < 0) continue;
-            const sc = simOf(i, stext) ?? 0;
-            if (sc > aS) { aS = sc; anchor = i; }
-          }
-          if (anchor < 0) continue;
-          for (const w of ws) {
-            const i = assign[w];
-            if (i < 0 || i === anchor) continue;
-            const same = sharedBigrams(sigs[i], sigs[anchor]) >= 2;      // 같은 소재(캡션이 겹침)
-            const sc = simOf(i, stext) ?? 0;
-            if (!same && sc < aS * 0.85) { assign[w] = anchor; applied--; }
-          }
-        }
-      }
-      _matchDbg += ` | 검수:${applied}건교체`;
-    } catch (e) { _matchDbg += " | 검수실패"; }
-  }
-
-  /* 🧹 최종 정규화 — 지금까지 남은 두 가지 오류를 여기서 확실히 끝낸다.
-     ① 떨어진 자리의 중복(계단이 4초·8초에 두 번) → 뒤쪽을 미사용 컷으로 교체(없으면 이웃과 붙여 '연속 중복'으로)
-     ② 같은 문장 안에서 소재가 튀는 것 → 그 문장의 대표 컷으로 통일
-     검수·폴백 어느 경로로 들어왔든 여기서 걸러진다. */
-  {
-    const usedNow = () => new Set(assign.filter((x) => x >= 0));
-    for (let w = 1; w < wins.length; w++) {
-      const i = assign[w];
-      if (i < 0) continue;
-      let prev = -1;
-      for (let k = 0; k < w; k++) if (assign[k] === i) { prev = k; break; }
-      if (prev < 0 || w - prev <= 1) continue;             // 붙어 있는 중복은 허용(같은 음식 이어보기)
-      const inUse = usedNow();
-      let best = -1, bs = -Infinity;
-      for (let c = 0; c < clips.length; c++) {
-        if (inUse.has(c)) continue;
-        const sc = (simOf(c, wins[w].text) ?? 0) * 100 + info[c].score + (foodish(info[c].role) ? 2 : 0);
-        if (sc > bs) { bs = sc; best = c; }
-      }
-      assign[w] = best >= 0 ? best : assign[w - 1];         // 미사용이 없으면 앞 컷과 붙여서 연속 중복으로
-    }
-    // 문장 내 소재 통일(마지막으로 한 번 더)
-    const grp = new Map<number, number[]>();
-    for (let w = 0; w < wins.length; w++) {
-      const sid = (wins[w] as any).sent;
-      if (sid !== undefined) grp.set(sid, [...(grp.get(sid) || []), w]);
-    }
-    for (const [, ws] of grp) {
-      if (ws.length < 2) continue;
-      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
-      let anchor = -1, aS = -1;
-      for (const w of ws) { const i = assign[w]; if (i < 0) continue; const sc = simOf(i, stext) ?? 0; if (sc > aS) { aS = sc; anchor = i; } }
-      if (anchor < 0) continue;
-      for (const w of ws) {
-        const i = assign[w];
-        if (i < 0 || i === anchor) continue;
-        const same = sharedBigrams(sigs[i], sigs[anchor]) >= 2;
-        const sc = simOf(i, stext) ?? 0;
-        if (!same && sc < aS * 0.8) assign[w] = anchor;
-      }
-    }
-  }
-
-  /* 🔒 핀 복원 — 대본이 직접 말하는 컷(계단·입구·골목·음식명)은 검수·정규화가 바꿔놨어도 되돌린다.
-     실사고: 핀으로 "2층 입구가=계단"을 정해놨는데 편집장 검수가 빈대떡으로 갈아치웠다. */
-  if (pinned.size) {
-    for (const [w, ci] of pinned) {
-      if (assign[w] === ci) continue;
-      const dupAt = assign.findIndex((x, k) => k !== w && x === ci);
-      if (dupAt >= 0) assign[dupAt] = assign[w] >= 0 ? assign[w] : -1;   // 자리 교환
-      assign[w] = ci;
-    }
-    // 교환으로 빈 자리가 생기면 남은 컷으로 채운다
-    for (let w = 0; w < wins.length; w++) {
-      if (assign[w] >= 0) continue;
-      const inUse = new Set(assign.filter((x) => x >= 0));
-      let best = -1, bs = -Infinity;
-      for (let i = 0; i < clips.length; i++) {
-        if (inUse.has(i)) continue;
-        const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
-        if (sc > bs) { bs = sc; best = i; }
-      }
-      if (best >= 0) assign[w] = best;
-    }
-    _matchDbg += ` | 핀복원:${pinned.size}`;
-  }
 
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
@@ -945,7 +681,8 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
       const st = +(s.start + span * p / parts).toFixed(2);
       const en = +(s.start + span * (p + 1) / parts).toFixed(2);
       let clip = s.clip;
-      if (p > 0) {   // 조각 2번째부터는 아직 안 쓴 클립 중 이 구간 소재와 가장 가까운 것
+      // 쪼갠 조각은 '같은 소재'를 유지한다(조립에서 같은 클립 다른 구간 + 확대로 그림 변화를 준다).
+      if (false) {   // (비활성) 조각마다 다른 클립을 고르던 로직 — 소재가 튀는 원인이었다
         let best = -1, bestScore = -1;
         const wsig = bigramsOf(subs.filter((x: any) => x.start >= st - 0.05 && x.start < en).map((x: any) => x.text).join(" "));
         for (let i = 0; i < clips.length; i++) {
@@ -959,46 +696,7 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
       out.push({ clip, start: st, end: en });
     }
   }
-  /* 📌 핀을 '최종 컷 목록'에 적용 — 여기가 실제로 화면에 나가는 단위다.
-     ⚠️ 예전엔 창(window) 단위로만 핀을 걸어서, 창을 쪼갠 조각들("노포인데 2층 입구가")은
-        핀 밖에서 아무 클립이나 받았다(실사고: 그 자리에 빈대떡). */
-  {
-    const PINS: [RegExp, RegExp][] = [
-      [/계단|올라가|2층|이층|입구/, /계단|올라가|입구/],
-      [/간판|외관|건물/, /간판|외관|입구/],
-      [/골목|시장|거리|남대문/, /골목|시장|거리/],
-      [/빈대떡|부침/, /빈대떡|부침/],
-      [/물냉면|육수|편육|슴슴|동치미/, /물냉면|육수/],
-      [/비빔냉면|비빔|양념장/, /비빔/],
-      [/무침|제육|겨자|식초|매콤/, /무침|제육/],
-    ];
-    const spokenAt = (a: number, b: number) =>
-      subs.filter((x: any) => x.start >= a - 0.05 && x.start < b - 0.05).map((x: any) => x.text).join(" ");
-    const taken = new Set(out.map((o) => o.clip));
-    for (const o of out) {
-      const txt = spokenAt(o.start, o.end);
-      if (!txt) continue;
-      const capOf = (i: number) => `${info[i].cap} ${info[i].key}`;
-      if (PINS.some(([rt, rc]) => rt.test(txt) && rc.test(capOf(o.clip)))) continue;   // 이미 맞음
-      for (const [rt, rc] of PINS) {
-        if (!rt.test(txt)) continue;
-        let best = -1, bs = -1;
-        for (let i = 0; i < clips.length; i++) {
-          if (!rc.test(capOf(i))) continue;
-          const sc = (simOf(i, txt) ?? 0) * 100 + info[i].score - (taken.has(i) ? 25 : 0);
-          if (sc > bs) { bs = sc; best = i; }
-        }
-        if (best >= 0 && best !== o.clip) {
-          // 자리 교환(그 클립을 쓰던 컷은 이 컷이 쓰던 걸 넘겨받는다)
-          const other = out.find((x) => x !== o && x.clip === best);
-          if (other) other.clip = o.clip;
-          taken.delete(o.clip); taken.add(best);
-          o.clip = best;
-        }
-        break;
-      }
-    }
-  }
+  // (핀 겹 제거 — 배정 단계가 유일한 결정자다. docs/reel-matching-redesign.md)
   return out;
 }
 
