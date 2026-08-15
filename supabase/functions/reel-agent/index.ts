@@ -385,11 +385,13 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
       // 긴 문장은 안에서만 균등 분할(소재는 그대로 유지 — 뒤쪽엔 같은 소재 예비 컷이 붙는다)
       const parts = Math.max(1, Math.min(3, Math.round((end - start) / Math.max(target, 3.2))));
       for (let p = 0; p < parts; p++) {
-        wins.push({
-          start: +(start + (end - start) * p / parts).toFixed(2),
-          end: +(start + (end - start) * (p + 1) / parts).toFixed(2),
-          text: sent,
-        });
+        const ws = +(start + (end - start) * p / parts).toFixed(2);
+        const we = +(start + (end - start) * (p + 1) / parts).toFixed(2);
+        /* ⚠️ 조각마다 '그 순간 실제로 말하는 자막'을 텍스트로 쓴다.
+           문장 전체를 세 조각이 공유하면 첫 조각이 그 문장의 짝을 다 가져간다 —
+           실사고: "2층 입구가" 자리의 계단 컷이 "1960년부터 이어온 평양냉면" 조각에 붙었다. */
+        const spoken = subs.filter((x: any) => x.start >= ws - 0.05 && x.start < we - 0.05).map((x: any) => x.text).join(" ");
+        wins.push({ start: ws, end: we, text: spoken.trim() || sent, sent: s });   // sent = 문장 번호(같은 문장 조각끼리 묶기)
       }
       built = true;
     }
@@ -436,6 +438,26 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
   /* 짝이 없던 구간 — 남은 컷으로 채운다.
      ⚠️ 예비 컷(같은 음식의 다른 앵글)은 여기서 쓰지 않는다. 엉뚱한 구간에 끌려가면
         "빈대떡 얘기 끝났는데 또 빈대떡"처럼 보인다. 예비는 1차(내용 일치)에서만 쓰인다. */
+  /* 🧩 같은 문장의 '뒷조각'은 앞조각과 같은 음식의 다른 앵글로 — 사장님 지적의 핵심.
+     "입맛이 확 돕니다"·"속은 촉촉하고요" 같은 조각엔 음식 이름이 없어 매칭이 안 되고 엉뚱한 컷이 들어갔다.
+     같은 문장에서 이미 정해진 컷과 가장 비슷한(같은 소재) 미사용 컷을 붙인다. */
+    for (let w = 0; w < wins.length; w++) {
+      if (assign[w] >= 0) continue;
+      const sid = (wins[w] as any).sent;
+      if (sid === undefined) continue;
+      const sib = wins.map((x: any, k: number) => ({ x, k })).find(({ x, k }) => x.sent === sid && assign[k] >= 0);
+      if (!sib) continue;
+      const sibIdx = assign[sib.k];
+      let best = -1, bestScore = 3;
+      for (let i = 0; i < clips.length; i++) {
+        if (used.has(i)) continue;
+        const sc = sharedBigrams(sigs[i], sigs[sibIdx]) * 2
+          + profileScore(`${info[i].cap} ${info[i].key}`, `${info[sibIdx].cap} ${info[sibIdx].key}`);
+        if (sc > bestScore) { bestScore = sc; best = i; }
+      }
+      if (best >= 0) { assign[w] = best; used.add(best); }
+    }
+    // 그래도 남은 구간 — 본편 컷 우선, 그다음 예비
     for (let pass = 0; pass < 2; pass++) {
       for (let w = 0; w < wins.length; w++) {
         if (assign[w] >= 0) continue;
@@ -837,14 +859,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         const fi = timeline.findIndex((s, i) => i > 0 && isFood(s));
         if (fi > 0) swap(0, fi);
       }
-      /* 맥락샷은 오프닝 '두 번째~' 자리에만 — 뒤쪽(40% 이후) place는 앞쪽 음식 컷과 교체.
-         ⚠️ 0번(훅)과는 절대 교체하지 않는다 — 위에서 앞으로 보낸 음식 컷을 되돌려놔 무한 핑퐁이 된다(실사고). */
-      const cutoff = Math.max(2, Math.floor(timeline.length * 0.4));
-      for (let i = timeline.length - 1; i >= cutoff; i--) {
-        if (!isPlace(timeline[i])) continue;
-        const fj = timeline.findIndex((s, j) => j >= 1 && j < cutoff && isFood(s));
-        if (fj >= 1) swap(i, fj);
-      }
+      /* ⚠️ 예전엔 '뒤쪽 place는 앞으로 끌어온다'는 규칙이 있었는데, 매칭이 대본을 보고 맥락샷을 제자리에
+         놓기 시작한 뒤로는 오히려 그걸 흐트러뜨린다(계단이 엉뚱한 구간으로 튀던 원인) → 제거했다.
+         훅(첫 컷)만 음식으로 강제한다. */
     }
     /* 남은 공백 마감 — ⚠️ 예전엔 여기서 부족분을 통째로 마지막 컷에 얹었다.
        그 결과 8초가 한 컷에 실려 13~16초짜리 정지화면이 됐다(사장님 지적의 진범).
