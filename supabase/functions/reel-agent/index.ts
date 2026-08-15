@@ -1036,7 +1036,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       const off = usedSec.get(i) || 0;
       const dur = +Math.min(want, availOf(i), CUT_MAX).toFixed(2);
       if (dur < 0.8) return 0;
-      timeline.push({ src: fClips[i].url, in: +off.toFixed(2), dur });
+      timeline.push({ src: fClips[i].url, in: +off.toFixed(2), dur, role: fInfo[i].role });
       usedSec.set(i, off + dur);
       return dur;
     };

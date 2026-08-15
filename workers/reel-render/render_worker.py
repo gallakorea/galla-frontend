@@ -142,24 +142,97 @@ def motion_profile(path: str):
         _motion_cache[path] = []
         return []
 
-def best_start(path: str, need: float, total: float, avoid=()) -> float:
+def frame_quality(path: str, t: float, workdir: str) -> float:
+    """그 시각의 화면이 '쓸 만한 그림'인지 실측 — 선명도(엣지 에너지)와 노출을 본다.
+    ⚠️ 지금까지 못 잡던 것: 클립 안에서 카메라가 휘둘려 벽·바닥만 스치는 구간이 뽑히던 문제.
+       움직임만 보면 그런 구간이 오히려 '동작 큼'으로 뽑힌다 — 실제 화면을 봐야 걸러진다."""
+    try:
+        from PIL import Image, ImageFilter, ImageStat
+        f = os.path.join(workdir, f"q_{abs(hash((path, round(t, 2)))) % 10**9}.jpg")
+        subprocess.run([FFMPEG, "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", path,
+                        "-frames:v", "1", "-vf", "scale=240:-2", f],
+                       capture_output=True, text=True)
+        if not os.path.exists(f): return 0.0
+        im = Image.open(f).convert("L")
+        edges = im.filter(ImageFilter.FIND_EDGES)
+        sharp = ImageStat.Stat(edges).stddev[0]          # 초점·디테일
+        mean = ImageStat.Stat(im).mean[0]                 # 노출
+        expo = 1.0 - min(1.0, abs(mean - 118) / 118)      # 너무 어둡/밝으면 감점
+        try: os.remove(f)
+        except OSError: pass
+        return sharp * 0.75 + expo * 12.0
+    except Exception:
+        return 0.0
+
+def best_start(path: str, need: float, total: float, avoid=(), role: str = "food", workdir: str = "") -> float:
     """이 클립에서 'need초짜리 가장 좋은 구간'의 시작 시각.
     프로 편집자가 하는 일 = 클립 앞부분을 그냥 쓰지 않고 동작이 살아있는 대목을 고르는 것.
     움직임이 클수록 좋되(요리 동작), 손떨림처럼 과한 값은 상한을 둬서 흔들린 컷을 뽑지 않는다."""
     prof = motion_profile(path)
     if not prof or total <= need + 0.2: return 0.0
-    best, bestsc = 0.0, -1.0
+    # 🎯 역할별 전략(사장님 지적: "계단 씬에서 쓸데없는 장면이 쓰인다")
+    #    음식·조리·먹방 = 동작이 큰 대목(붓기·자르기·들기)이 결정적 순간.
+    #    맥락샷(간판·계단·거리) = 움직임이 크면 카메라가 휘두른 구간이라 오히려 못 쓴다 → '안정적인 앞부분'.
+    ctx = role in ("place", "junk")
+    cands = []
     step = 0.25
     st = 0.0
     while st + need <= total - 0.05:
         if any(abs(st - a) < 0.4 for a in avoid): st += step; continue
         seg = [v for (t, v) in prof if st <= t < st + need]
         if seg:
-            sc = sum(min(v, 22.0) for v in seg) / len(seg)      # 상한 22 = 흔들림 과보상 방지
-            sc -= 0.35 * (st / max(total, 1))                    # 동점이면 앞쪽(원래 의도한 그림) 선호
-            if sc > bestsc: bestsc, best = sc, st
+            avg = sum(min(v, 22.0) for v in seg) / len(seg)
+            if ctx:
+                # 흔들림이 적을수록 좋고, 앞쪽일수록 좋다(피사체가 프레임에 제대로 든 구간)
+                sc = -avg - 2.2 * (st / max(total, 1)) * 10
+            else:
+                sc = avg - 0.35 * (st / max(total, 1))
+            cands.append((sc, st))
         st += step
-    return round(best, 2)
+    if not cands: return 0.0
+    cands.sort(reverse=True)
+    # 🔬 후보 상위 4개는 '실제 화면'을 열어 확인한다 — 선명하고 노출 정상인 대목만 통과.
+    if workdir:
+        rescored = []
+        for sc, st0 in cands[:4]:
+            q = (frame_quality(path, st0 + need * 0.35, workdir) + frame_quality(path, st0 + need * 0.75, workdir)) / 2
+            rescored.append((q + sc * (0.25 if ctx else 0.15), st0))
+        rescored.sort(reverse=True)
+        return round(rescored[0][1], 2)
+    return round(cands[0][1], 2)
+
+_stats_cache = {}
+def clip_stats(path: str):
+    """평균 밝기(YAVG)·채도(SATAVG) — 클립마다 다른 노출/색감을 한 톤으로 맞추기 위한 재료.
+    이게 없으면 컷이 바뀔 때마다 화면이 밝아졌다 어두워졌다 해서 '아마추어 편집'처럼 보인다."""
+    if path in _stats_cache: return _stats_cache[path]
+    y, sat = [], []
+    try:
+        p = subprocess.run(
+            [FFMPEG, "-v", "info", "-i", path, "-vf",
+             "scale=160:-2,signalstats,metadata=print:file=-", "-an", "-frames:v", "60", "-f", "null", "-"],
+            capture_output=True, text=True)
+        for line in (p.stdout + p.stderr).splitlines():
+            line = line.strip()
+            if "signalstats.YAVG=" in line:
+                try: y.append(float(line.split("=")[1]))
+                except ValueError: pass
+            elif "signalstats.SATAVG=" in line:
+                try: sat.append(float(line.split("=")[1]))
+                except ValueError: pass
+    except Exception:
+        pass
+    res = (sum(y) / len(y) if y else 128.0, sum(sat) / len(sat) if sat else 60.0)
+    _stats_cache[path] = res
+    return res
+
+def grade_filter(path: str, target_y: float, target_s: float) -> str:
+    """이 클립을 전체 톤(중앙값)에 맞추는 보정 필터. 과보정하지 않도록 폭을 좁게 제한한다."""
+    y, sat = clip_stats(path)
+    b = max(-0.10, min(0.10, (target_y - y) / 255.0 * 1.15))     # 밝기 ±10%
+    sc = 1.0 if sat <= 1 else max(0.85, min(1.18, target_s / sat))
+    # 대비·선명도는 아주 살짝만(릴스는 폰에서 보므로 과하면 티가 난다)
+    return f"eq=brightness={b:.3f}:saturation={sc:.3f}:contrast=1.05,unsharp=3:3:0.35:3:3:0.0"
 
 def fetch(src, dest):
     if re.match(r"^https?://", src):
@@ -245,6 +318,13 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
     # 2) 세그먼트 트림 + 9:16 통일(커버 크롭) — 코덱 통일해 무손실 concat 가능하게
     #    🎬 프로 편집 감각 ①: 클립 앞부분을 그냥 쓰지 않고 '동작이 살아있는 구간'을 골라 쓴다.
+    # 🎨 전체 톤 기준 = 클립들의 중앙값(한 클립이 튀어도 전체가 끌려가지 않게)
+    _ys, _ss = [], []
+    for _p in set(local):
+        _y, _s2 = clip_stats(_p); _ys.append(_y); _ss.append(_s2)
+    _ys.sort(); _ss.sort()
+    tgt_y = _ys[len(_ys) // 2] if _ys else 128.0
+    tgt_s = _ss[len(_ss) // 2] if _ss else 60.0
     progress("결정적 순간 찾는 중")
     picked = {}
     for i, sg in enumerate(segs):
@@ -252,7 +332,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         need = float(sg["dur"])
         tot = durs.get(path, probe_dur(path))
         avoid = picked.get(path, [])
-        st = best_start(path, need, tot, avoid) if float(sg.get("in", 0)) == 0 else float(sg["in"])
+        st = best_start(path, need, tot, avoid, str(sg.get("role") or "food"), workdir) if float(sg.get("in", 0)) == 0 else float(sg["in"])
         picked.setdefault(path, []).append(st)
         sg["in"] = st
     seg_files = []
@@ -270,7 +350,9 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         else:
             zexp = f"max({1 + amp:.3f}-{amp / span:.6f}*in,1)"
         kb = (f"zoompan=z='{zexp}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps={fps}")
-        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h},{kb},setsar=1"
+        # 🎨 프로 편집 감각 ③: 클립마다 제각각인 노출·색을 전체 중앙값으로 수렴시킨다(한 카메라로 찍은 느낌)
+        grade = grade_filter(local[i], tgt_y, tgt_s)
+        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h},{grade},{kb},setsar=1"
         cmd = [FFMPEG, "-y", "-v", "error"]
         if float(sg.get("in", 0)) > 0: cmd += ["-ss", str(sg["in"])]
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",
