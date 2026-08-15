@@ -385,6 +385,44 @@ const cosine = (a: number[], b: number[]) => {
   return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
 };
 
+/* 🏅 최적 배정(헝가리안 알고리즘) — 탐욕 배정의 근본 한계를 없앤다.
+   "강한 짝부터 먼저 가져가기"는 뒤 문장이 앞 문장의 컷을 뺏는 걸 막지 못한다(실사고 반복:
+   마지막 문장이 골목 컷을, 다른 문장이 빈대떡 컷을 채감). 전체 조합의 총점을 한 번에 최대화하면
+   "누가 먼저 가져가느냐"가 사라지고 전역 최적 배치가 나온다. O(n³)이고 컷은 20개 안팎이라 즉시 끝난다. */
+function hungarian(cost: number[][]): number[] {
+  const n = cost.length, m = cost[0]?.length || 0;
+  if (!n || !m) return new Array(n).fill(-1);
+  const INF = 1e9;
+  const u = new Array(n + 1).fill(0), v = new Array(m + 1).fill(0);
+  const p = new Array(m + 1).fill(0), way = new Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i;
+    let j0 = 0;
+    const minv = new Array(m + 1).fill(INF);
+    const used = new Array(m + 1).fill(false);
+    do {
+      used[j0] = true;
+      const i0 = p[j0];
+      let delta = INF, j1 = 0;
+      for (let j = 1; j <= m; j++) {
+        if (used[j]) continue;
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= m; j++) {
+        if (used[j]) { u[p[j]] += delta; v[j] -= delta; }
+        else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const ans = new Array(n).fill(-1);
+  for (let j = 1; j <= m; j++) if (p[j] > 0 && p[j] <= n) ans[p[j] - 1] = j - 1;
+  return ans;
+}
+
 let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
 async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
   _matchDbg = "";
@@ -464,27 +502,14 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   const used = new Set<number>();
   const assign: number[] = new Array(wins.length).fill(-1);
 
-  /* 🍱 1단계 — **문장 단위로 클립을 배분한다**(사장님 지적의 근본 해법).
-     예전엔 구간별로 각자 고르다 보니, 자막이 비거나 음식명이 없는 조각이 무침·빈대떡 컷을 먼저 써버리고
-     정작 "입맛이 확 돕니다"·"속은 촉촉하고요"엔 벽면 기사 같은 게 남았다(실측 확인).
-     이제 '빈대떡 문장'이 빈대떡 컷들을 통째로 확보한 뒤, 그 문장의 조각들에 나눠 준다. */
-  const sentGroups = new Map<number, number[]>();
-  for (let w = 0; w < wins.length; w++) {
-    const sid = (wins[w] as any).sent;
-    if (sid === undefined) continue;
-    sentGroups.set(sid, [...(sentGroups.get(sid) || []), w]);
-  }
-  /* 🧠 의미 매칭 준비 — 클립 설명과 (문장·조각) 텍스트를 한 번에 임베딩.
-     성공하면 코사인 유사도가 주 점수, 규칙 점수는 보조로만 쓴다. */
+  /* 🧠 의미 매칭 준비 — 클립 설명 / 조각 텍스트 / 문장 텍스트를 한 번에 임베딩. */
   const clipTexts = info.map((c) => `맛집 영상 장면: ${c.cap}. 소재: ${c.key}.`);
   const winTexts = wins.map((w: any) => `내레이션: ${w.text}`);
   const sentTexts = [...new Set(wins.map((w: any) => w.sentText || w.text))].map((t) => `내레이션: ${t}`);
   const emb = await embedAll([...clipTexts, ...winTexts, ...sentTexts]);
   const eClip = emb ? emb.slice(0, clipTexts.length) : null;
   const eText = new Map<string, number[]>();
-  if (emb) {
-    [...winTexts, ...sentTexts].forEach((t, k) => eText.set(t, emb[clipTexts.length + k]));
-  }
+  if (emb) [...winTexts, ...sentTexts].forEach((t, k) => eText.set(t, emb[clipTexts.length + k]));
   const simOf = (i: number, text: string) => {
     if (!eClip) return null;
     const v = eText.get(`내레이션: ${text}`);
@@ -492,119 +517,136 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   };
   _matchDbg += emb ? " | embed:on" : ` | embed:off(${_embedDbg})`;
 
-  if (sentGroups.size >= 2) {
-    const scoreFor = (i: number, text: string) => {
-      const sim = simOf(i, text);
-      const rule = sharedBigrams(sigs[i], bigramsOf(text)) * 2 + profileScore(`${info[i].cap} ${info[i].key}`, text);
-      // 의미 유사도(0~1)를 0~20점으로 환산해 주 점수로, 규칙은 절반 가중치로 보조
-      return (sim === null ? rule : sim * 20 + rule * 0.5) + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
-    };
-    // 문장별 최고 점수 순으로 처리 — 확실한 문장이 자기 음식 컷을 먼저 가져간다
-    const order = [...sentGroups.entries()].map(([sid, ws]) => {
-      const text = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
-      const best = Math.max(...clips.map((_: any, i: number) => scoreFor(i, text)));
-      return { sid, ws, text, best };
-    }).sort((a, b) => b.best - a.best);
-    /* 1-A) 문장마다 '대표 컷 1개'를 먼저 확보한다(강한 문장 순).
-       ⚠️ 이걸 안 하면 뒤 문장이 앞 문장 컷을 채간다 — 실측: 마지막 "남대문 오면"이 골목 컷을 가져가
-          정작 인트로 "남대문시장 안쪽 골목"엔 닭무침이 붙었다. */
-    for (const g of order) {
-      const cands = clips.map((_: any, i: number) => ({ i, sc: scoreFor(i, g.text) }))
-        .filter((x) => !used.has(x.i) && x.sc >= 4).sort((a, b) => b.sc - a.sc);
-      if (!cands.length) continue;
-      const top = cands[0].i;
-      // 그 컷이 가장 잘 어울리는 '조각'에 붙인다
-      let bw = -1, bsc = -Infinity;
-      for (const w of g.ws) {
-        if (assign[w] >= 0) continue;
-        const sc = scoreFor(top, wins[w].text);
-        if (sc > bsc) { bsc = sc; bw = w; }
-      }
-      if (bw >= 0) { assign[bw] = top; used.add(top); }
+  /* 🏅 최적 배정 — 구간(행) × 클립(열) 점수표를 만들고 헝가리안으로 총점 최대 조합을 한 번에 찾는다.
+     점수 = 그 조각이 실제로 말하는 내용과의 의미 유사도(0.62) + 그 문장 전체와의 유사도(0.38)
+            + 클립 품질 보너스. 문장 전체 항이 있어 한 문장의 조각들이 같은 소재로 모인다. */
+  const sentTextOf = (w: number) => (wins[w] as any).sentText || wins[w].text;
+  const scorePair = (w: number, i: number) => {
+    const simP = simOf(i, wins[w].text);
+    const simS = simOf(i, sentTextOf(w));
+    if (simP !== null || simS !== null) {
+      return (simP ?? 0) * 62 + (simS ?? 0) * 38 + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0)
+        - (isSpare[i] ? 1.5 : 0);
     }
-    // 1-B) 남은 조각 채우기(시간 순 — 앞 문장부터 자연스럽게)
-    for (const g of [...order].sort((a, b) => a.sid - b.sid)) {
-      const ranked = clips.map((_: any, i: number) => ({ i, sc: scoreFor(i, g.text) }))
-        .filter((x) => !used.has(x.i) && x.sc >= 4)
-        .sort((a, b) => b.sc - a.sc);
-      /* 문장이 확보한 컷들을 '조각별로 제일 맞는 것'에 배정한다.
-         순서대로 나눠주면 "2층 입구가" 조각에 상차림이 가고 입구 컷이 남는다(실측). */
-      /* 조각별 후보는 '문장 풀'에 가두지 않는다 — 문장 대표컷은 이미 1-A에서 확보했으므로,
-         나머지 조각은 그 조각이 실제로 말하는 내용에 가장 맞는 컷을 전체에서 고른다.
-         (계단 컷이 문장 풀 밖에 있어 "2층 입구가"에 못 붙던 문제) */
-      const poolIdx = clips.map((_: any, i: number) => i);
-      for (const w of g.ws) {
-        if (assign[w] >= 0) continue;
-        let best = -1, bestSc = -Infinity;
-        for (const i of poolIdx) {
-          if (used.has(i)) continue;
-          const sc = scoreFor(i, wins[w].text) * 2 + scoreFor(i, g.text) * 0.5;   // 그 조각이 실제로 말하는 내용 우선
-          if (sc > bestSc) { bestSc = sc; best = i; }
-        }
-        if (best >= 0) { assign[w] = best; used.add(best); }
-      }
-      /* 문장 컷이 모자라 남은 조각 — 엉뚱한 컷을 넣느니 '그 문장이 쓰던 컷'을 다시 쓴다.
-         조립에서 뒷부분 구간 + 확대(zoom)로 처리돼 같은 화면 반복으로 보이지 않는다(사장님 지시). */
-      const own = g.ws.map((w) => assign[w]).find((x) => x >= 0);
-      if (own !== undefined && own >= 0) for (const w of g.ws) if (assign[w] < 0) assign[w] = own;
-    }
+    // 임베딩 불가 시 규칙 점수로 대체
+    const ct = `${info[i].cap} ${info[i].key}`;
+    return (sharedBigrams(sigs[i], bigramsOf(wins[w].text)) * 2 + profileScore(ct, wins[w].text)) * 2
+      + (sharedBigrams(sigs[i], bigramsOf(sentTextOf(w))) * 2 + profileScore(ct, sentTextOf(w)))
+      + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0) - (isSpare[i] ? 1.5 : 0);
+  };
+  // 문장별 조각 묶음(같은 문장에서 쪼개진 컷들)
+  const sentGroups = new Map<number, number[]>();
+  for (let w = 0; w < wins.length; w++) {
+    const sid = (wins[w] as any).sent;
+    if (sid !== undefined) sentGroups.set(sid, [...(sentGroups.get(sid) || []), w]);
   }
 
-  const pairs: { w: number; i: number; sc: number }[] = [];
-  for (let w = 0; w < wins.length; w++) {
-    const wsig = bigramsOf(wins[w].text);
+  /* 🏆 2단계 최적 배정 — 이게 핵심이다.
+     (1) **문장 ↔ 소재(음식) 배정**을 먼저 최적화한다: "무침 문장"이 무침 소재를 통째로 확보한다.
+         구간별로만 최적화하면 총점은 높아도 무침 컷이 다른 문장으로 새어나간다(실사고).
+     (2) 그다음 문장 '안에서' 조각들에 그 소재의 컷들을 배분한다(앵글 다른 컷 → 없으면 같은 컷 확대).
+     소재 그룹은 캡션 유사도로 묶는다(빈대떡 2컷·물냉면 3컷 = 각 한 소재). */
+  {
+    // 소재 그룹 만들기
+    const groupOf = new Array(clips.length).fill(-1);
+    const groups: number[][] = [];
     for (let i = 0; i < clips.length; i++) {
-      const ct = `${info[i].cap} ${info[i].key}`;
-      const sh = sharedBigrams(sigs[i], wsig);          // 고유명사·같은 단어 겹침
-      const ps = profileScore(ct, wins[w].text);        // 음식 종류·상황 프로필(오답 감점 포함)
-      const sim = simOf(i, wins[w].text);               // 🧠 의미 유사도(있으면 주 점수)
-      const sc = (sim === null ? sh * 2 + ps : sim * 20 + (sh * 2 + ps) * 0.5)
-        + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
-      if (sc >= (sim === null ? 4 : 9)) pairs.push({ w, i, sc });   // 확실한 짝만 1차 배정
+      if (groupOf[i] >= 0) continue;
+      const g = [i]; groupOf[i] = groups.length;
+      for (let j = i + 1; j < clips.length; j++) {
+        if (groupOf[j] >= 0) continue;
+        if (sharedBigrams(sigs[i], sigs[j]) >= 2) { g.push(j); groupOf[j] = groups.length; }
+      }
+      groups.push(g);
     }
-  }
-  pairs.sort((a, b) => b.sc - a.sc);
-  for (const p of pairs) {
-    if (assign[p.w] >= 0 || used.has(p.i)) continue;
-    assign[p.w] = p.i; used.add(p.i);
-  }
-  /* 짝이 없던 구간 — 남은 컷으로 채운다.
-     ⚠️ 예비 컷(같은 음식의 다른 앵글)은 여기서 쓰지 않는다. 엉뚱한 구간에 끌려가면
-        "빈대떡 얘기 끝났는데 또 빈대떡"처럼 보인다. 예비는 1차(내용 일치)에서만 쓰인다. */
-  /* 🧩 같은 문장의 '뒷조각'은 앞조각과 같은 음식의 다른 앵글로 — 사장님 지적의 핵심.
-     "입맛이 확 돕니다"·"속은 촉촉하고요" 같은 조각엔 음식 이름이 없어 매칭이 안 되고 엉뚱한 컷이 들어갔다.
-     같은 문장에서 이미 정해진 컷과 가장 비슷한(같은 소재) 미사용 컷을 붙인다. */
+    const gText = groups.map((g) => g.map((i) => `${info[i].cap}`).join(" "));
+    const gScore = (gi: number, text: string) => {
+      const sims = groups[gi].map((i) => simOf(i, text)).filter((x): x is number => x !== null);
+      if (sims.length) return Math.max(...sims) * 100 + Math.max(...groups[gi].map((i) => info[i].score));
+      return profileScore(gText[gi], text) * 4 + sharedBigrams(bigramsOf(gText[gi]), bigramsOf(text)) * 3;
+    };
+    const sentIds = [...sentGroups.keys()].sort((a, b) => a - b);
+    const S = sentIds.length, G = groups.length;
+    // (1) 문장 × 소재 최적 배정
+    const cost1: number[][] = sentIds.map((sid) => {
+      const ws = sentGroups.get(sid)!;
+      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
+      const row = groups.map((_, gi) => -gScore(gi, stext));
+      for (let k = row.length; k < Math.max(G, S); k++) row.push(0);
+      return row;
+    });
+    const sentToGroup = S && G ? hungarian(cost1) : [];
+    // (2) 문장 안에서 조각별 배분
+    for (let si = 0; si < sentIds.length; si++) {
+      const ws = sentGroups.get(sentIds[si])!;
+      const gi = sentToGroup[si];
+      const own = (gi >= 0 && gi < G) ? [...groups[gi]] : [];
+      for (const w of ws) {
+        if (assign[w] >= 0) continue;
+        let best = -1, bs = -Infinity;
+        for (const i of own) {
+          if (used.has(i)) continue;
+          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score;
+          if (sc > bs) { bs = sc; best = i; }
+        }
+        /* 한 문장이 두 가지를 말하는 경우("평양냉면 노포인데 2층 입구가 좁아서") — 그 조각이 문장 소재보다
+           다른 컷에 확실히 더 맞으면 그쪽을 쓴다. 안 그러면 계단 컷이 끝까지 밀려난다(실측). */
+        let alt = -1, as_ = -Infinity;
+        for (let i = 0; i < clips.length; i++) {
+          if (used.has(i) || own.includes(i)) continue;
+          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score;
+          if (sc > as_) { as_ = sc; alt = i; }
+        }
+        if (alt >= 0 && as_ > Math.max(bs, 0) * 1.12) { assign[w] = alt; used.add(alt); continue; }
+        if (best >= 0) { assign[w] = best; used.add(best); }
+      }
+      // 소재 컷이 모자란 조각 — 그 소재의 다른 컷(이미 쓴 것)을 재사용(확대되어 다른 그림이 된다)
+      const anchor = ws.map((w) => assign[w]).find((x) => x >= 0);
+      if (anchor !== undefined && anchor >= 0) for (const w of ws) if (assign[w] < 0) assign[w] = anchor;
+    }
+    // 어떤 소재도 못 받은 문장 — 남은 컷 중 가장 맞는 것으로
     for (let w = 0; w < wins.length; w++) {
       if (assign[w] >= 0) continue;
-      const sid = (wins[w] as any).sent;
-      if (sid === undefined) continue;
-      const sib = wins.map((x: any, k: number) => ({ x, k })).find(({ x, k }) => x.sent === sid && assign[k] >= 0);
-      if (!sib) continue;
-      const sibIdx = assign[sib.k];
-      let best = -1, bestScore = 3;
+      let best = -1, bs = -Infinity;
       for (let i = 0; i < clips.length; i++) {
         if (used.has(i)) continue;
-        const sc = sharedBigrams(sigs[i], sigs[sibIdx]) * 2
-          + profileScore(`${info[i].cap} ${info[i].key}`, `${info[sibIdx].cap} ${info[sibIdx].key}`);
-        if (sc > bestScore) { bestScore = sc; best = i; }
+        const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
+        if (sc > bs) { bs = sc; best = i; }
       }
       if (best >= 0) { assign[w] = best; used.add(best); }
     }
-    // 그래도 남은 구간 — 본편 컷 우선, 그다음 예비
-    for (let pass = 0; pass < 2; pass++) {
-      for (let w = 0; w < wins.length; w++) {
-        if (assign[w] >= 0) continue;
-        let best = -1, bestScore = -1;
-        for (let i = 0; i < clips.length; i++) {
-          if (used.has(i)) continue;
-          if (pass === 0 && isSpare[i]) continue;   // 1라운드는 본편 컷만
-          const sc = info[i].score + (foodish(info[i].role) ? 2 : -1);
-          if (sc > bestScore) { bestScore = sc; best = i; }
-        }
-        if (best < 0) continue;
-        assign[w] = best; used.add(best);
+  }
+
+  /* 🔒 문장 일관성 — "한 문장 = 한 음식". 최적 배정은 총점을 최대화하다 보니 한 문장 안에서
+     소재가 튈 수 있다(실사고: "편육까지 딱 정석입니다"에 식당 내부샷). 문장의 대표 컷과 너무 동떨어진
+     조각은 대표 컷의 다른 구간으로 되돌린다(조립에서 확대되어 다른 그림이 된다). */
+  {
+    const bySent = new Map<number, number[]>();
+    for (let w = 0; w < wins.length; w++) {
+      const sid = (wins[w] as any).sent;
+      if (sid !== undefined) bySent.set(sid, [...(bySent.get(sid) || []), w]);
+    }
+    for (const [, ws] of bySent) {
+      if (ws.length < 2) continue;
+      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
+      let anchor = -1, aSim = -1;
+      for (const w of ws) {
+        const i = assign[w];
+        if (i < 0) continue;
+        const s = simOf(i, stext) ?? profileScore(`${info[i].cap} ${info[i].key}`, stext) / 12;
+        if (s > aSim) { aSim = s; anchor = i; }
+      }
+      if (anchor < 0 || aSim <= 0) continue;
+      for (const w of ws) {
+        const i = assign[w];
+        if (i < 0 || i === anchor) continue;
+        const s = simOf(i, stext) ?? profileScore(`${info[i].cap} ${info[i].key}`, stext) / 12;
+        if (s < aSim * 0.82) assign[w] = anchor;   // 문장에서 확연히 겉도는 컷 → 대표 컷으로 교체
       }
     }
+  }
+  _matchDbg += ` | assign:hungarian(${wins.length}x${clips.length})`;
+
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;

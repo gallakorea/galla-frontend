@@ -115,6 +115,52 @@ def probe_dur(path: str) -> float:
     except Exception:
         return 8.0
 
+_motion_cache = {}
+def motion_profile(path: str):
+    """프레임 차분(YDIF)으로 '움직임 곡선'을 뽑는다 — 붓기·자르기·건져올리기 같은 결정적 순간을 찾기 위한 재료."""
+    if path in _motion_cache: return _motion_cache[path]
+    try:
+        p = subprocess.run(
+            [FFMPEG, "-v", "info", "-i", path, "-vf",
+             "scale=160:-2,signalstats,metadata=print:key=lavfi.signalstats.YDIF:file=-",
+             "-an", "-f", "null", "-"],
+            capture_output=True, text=True)
+        out = p.stdout + p.stderr
+        times, vals, tcur = [], [], None
+        for line in out.splitlines():
+            line = line.strip()
+            if line.startswith("frame:"):
+                m = re.search(r"pts_time:([0-9.]+)", line)
+                tcur = float(m.group(1)) if m else None
+            elif "YDIF=" in line and tcur is not None:
+                try: vals.append(float(line.split("=")[1])); times.append(tcur)
+                except ValueError: pass
+        prof = list(zip(times, vals))
+        _motion_cache[path] = prof
+        return prof
+    except Exception:
+        _motion_cache[path] = []
+        return []
+
+def best_start(path: str, need: float, total: float, avoid=()) -> float:
+    """이 클립에서 'need초짜리 가장 좋은 구간'의 시작 시각.
+    프로 편집자가 하는 일 = 클립 앞부분을 그냥 쓰지 않고 동작이 살아있는 대목을 고르는 것.
+    움직임이 클수록 좋되(요리 동작), 손떨림처럼 과한 값은 상한을 둬서 흔들린 컷을 뽑지 않는다."""
+    prof = motion_profile(path)
+    if not prof or total <= need + 0.2: return 0.0
+    best, bestsc = 0.0, -1.0
+    step = 0.25
+    st = 0.0
+    while st + need <= total - 0.05:
+        if any(abs(st - a) < 0.4 for a in avoid): st += step; continue
+        seg = [v for (t, v) in prof if st <= t < st + need]
+        if seg:
+            sc = sum(min(v, 22.0) for v in seg) / len(seg)      # 상한 22 = 흔들림 과보상 방지
+            sc -= 0.35 * (st / max(total, 1))                    # 동점이면 앞쪽(원래 의도한 그림) 선호
+            if sc > bestsc: bestsc, best = sc, st
+        st += step
+    return round(best, 2)
+
 def fetch(src, dest):
     if re.match(r"^https?://", src):
         # ⚠️ R2/Cloudflare가 python-urllib 기본 UA를 403으로 막는다 — 브라우저형 UA 필수
@@ -198,6 +244,17 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     progress(f"컷 {len(segs)}개 · {total:.1f}s (음성 {vdur:.1f}s)")
 
     # 2) 세그먼트 트림 + 9:16 통일(커버 크롭) — 코덱 통일해 무손실 concat 가능하게
+    #    🎬 프로 편집 감각 ①: 클립 앞부분을 그냥 쓰지 않고 '동작이 살아있는 구간'을 골라 쓴다.
+    progress("결정적 순간 찾는 중")
+    picked = {}
+    for i, sg in enumerate(segs):
+        path = local[i]
+        need = float(sg["dur"])
+        tot = durs.get(path, probe_dur(path))
+        avoid = picked.get(path, [])
+        st = best_start(path, need, tot, avoid) if float(sg.get("in", 0)) == 0 else float(sg["in"])
+        picked.setdefault(path, []).append(st)
+        sg["in"] = st
     seg_files = []
     for i, sg in enumerate(segs):
         progress(f"클립 다듬는 중 {i + 1}/{len(segs)}")
@@ -205,7 +262,15 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         z = float(sg.get("zoom") or 1)
         # 🔍 재사용 컷은 확대해서 다른 그림으로(사장님 지시) — 키워서 중앙 크롭
         sw, sh = int(w * z), int(h * z)
-        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},setsar=1"
+        # 🎬 프로 편집 감각 ②: 모든 컷에 아주 느린 줌(켄번즈). 방향을 번갈아 줘서 화면이 계속 '살아있게' 한다.
+        span = max(1, int(float(sg["dur"]) * fps))
+        amp = 0.055
+        if i % 2 == 0:
+            zexp = f"min(1+{amp / span:.6f}*in,{1 + amp:.3f})"
+        else:
+            zexp = f"max({1 + amp:.3f}-{amp / span:.6f}*in,1)"
+        kb = (f"zoompan=z='{zexp}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps={fps}")
+        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h},{kb},setsar=1"
         cmd = [FFMPEG, "-y", "-v", "error"]
         if float(sg.get("in", 0)) > 0: cmd += ["-ss", str(sg["in"])]
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",
