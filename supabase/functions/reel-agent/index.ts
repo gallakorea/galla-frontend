@@ -363,6 +363,7 @@ const conceptHits = (a: string, b: string) => {
   return n;
 };
 const SUBJ_TABLE: [string, RegExp][] = [
+  ["홍보물", /벽면|홍보|방송|기사|인증|액자|상패|현판/],
   ["계단", /계단|올라가/], ["입구", /입구|현관/], ["간판", /간판|외관|건물/], ["거리", /골목|시장|거리/],
   ["빈대떡", /빈대떡|부침/], ["물냉면", /물냉면|육수|계란/], ["비빔냉면", /비빔/], ["무침", /무침|제육/],
   ["내부", /내부|손님|테이블|메뉴판/],
@@ -517,11 +518,29 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       const nextIdx = starts[s + 1];
       const end = (nextIdx !== undefined && nextIdx < subs.length) ? subs[nextIdx].start : voiceDur;
       if (end - start < 0.8) continue;
-      // 긴 문장은 안에서만 균등 분할(소재는 그대로 유지 — 뒤쪽엔 같은 소재 예비 컷이 붙는다)
+      // 긴 문장은 안에서만 분할(소재는 그대로 유지 — 뒤쪽엔 같은 소재 예비 컷이 붙는다)
       const parts = Math.max(1, Math.min(3, Math.round((end - start) / Math.max(target, 3.2))));
+      /* ✂️ 분할 지점은 **반드시 자막 카드 경계에 스냅**한다(균등 시간 분할 금지).
+         ⚠️ 실사고: "1960년부터 이어온 평양냉면 노포인데, 2층 입구가 좁아서…" 문장을 7.96초에서 반으로 자르니
+            7.36초에 시작한 "2층 입구가"가 앞 조각에 끌려 들어가, 앞 조각이 '계단'으로 판정됐다.
+            → 1960년 구간에 계단, 정작 입구 얘기엔 간판이 나갔다(정답표 2·3행 동시 오답).
+            말 중간을 자르면 그 조각의 소재가 통째로 오염된다. */
+      const bounds: number[] = [start];
+      for (let p = 1; p < parts; p++) {
+        const ideal = start + (end - start) * p / parts;
+        let bt = ideal, bd = Infinity;
+        for (const x of subs as any[]) {
+          if (x.start <= bounds[p - 1] + 0.6 || x.start >= end - 0.6) continue;
+          const d = Math.abs(x.start - ideal);
+          if (d < bd) { bd = d; bt = x.start; }
+        }
+        bounds.push(+bt.toFixed(2));
+      }
+      bounds.push(end);
       for (let p = 0; p < parts; p++) {
-        const ws = +(start + (end - start) * p / parts).toFixed(2);
-        const we = +(start + (end - start) * (p + 1) / parts).toFixed(2);
+        const ws = +bounds[p].toFixed(2);
+        const we = +bounds[p + 1].toFixed(2);
+        if (we - ws < 0.6) continue;
         /* ⚠️ 조각마다 '그 순간 실제로 말하는 자막'을 텍스트로 쓴다.
            문장 전체를 세 조각이 공유하면 첫 조각이 그 문장의 짝을 다 가져간다 —
            실사고: "2층 입구가" 자리의 계단 컷이 "1960년부터 이어온 평양냉면" 조각에 붙었다. */
@@ -609,6 +628,7 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
      순서는 하나다: ①그 구간이 '직접 말하는 소재' → ②문장이 말하는 소재 → ③의미 유사도 → ④이웃 승계. */
   const SUBJECTS: [string, RegExp, RegExp][] = [
     // [소재, 대본이 이 소재를 말하는 표현, 클립 설명이 이 소재인 표현]  ※ 구체적인 것부터
+    ["홍보물", /백년가게|선정|인증|수상|방송|출연|미슐랭|맛집으로/, /벽면|홍보|방송|기사|인증|액자|상패|현판/],
     ["계단", /계단|올라가|2층|이층/, /계단|올라가/],
     ["입구", /입구|들어가|현관|지나칩/, /입구|현관/],
     ["간판", /간판|외관|건물|노포|년부터|이어온/, /간판|외관|건물/],
@@ -619,16 +639,19 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
     ["무침", /무침|제육|겨자|식초|매콤|소스|비비/, /무침|제육/],
     ["내부", /분위기|자리|손님|테이블/, /내부|손님|테이블|메뉴판/],
   ];
-  const clipSubj = info.map((c) => {
+  /* 한 컷이 여러 소재를 겸할 수 있다(외관 컷 = 간판이자 입구).
+     ⚠️ 첫 일치 하나만 잡으면(예전 방식) "부원면옥 가게 입구"가 '입구' 전용이 되어,
+        "1960년부터 이어온 노포인데"(=간판)가 그 컷을 못 찾고 엉뚱한 내부 컷을 받았다(실측). */
+  const clipSubjs = info.map((c) => {
     const t = `${c.cap} ${c.key}`;
-    const hit = SUBJECTS.find(([, , reCap]) => reCap.test(t));
-    return hit ? hit[0] : "";
+    return SUBJECTS.filter(([, , reCap]) => reCap.test(t)).map(([n]) => n);
   });
+  const clipSubj = clipSubjs.map((v) => v[0] || "");
   const subjOfText = (t: string) => SUBJECTS.filter(([, reT]) => reT.test(t)).map(([n]) => n);
   const pickBy = (subj: string, text: string) => {
     let best = -1, bs = -Infinity;
     for (let i = 0; i < clips.length; i++) {
-      if (used.has(i) || clipSubj[i] !== subj) continue;
+      if (used.has(i) || !clipSubjs[i].includes(subj)) continue;
       const sc = (simOf(i, text) ?? 0) * 50 + info[i].score + (foodish(info[i].role) ? 1 : 0);
       if (sc > bs) { bs = sc; best = i; }
     }
@@ -648,6 +671,26 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       const i = pickBy(subj, wins[w].text);
       if (i >= 0) { assign[w] = i; used.add(i); break; }
     }
+  }
+  /* ②-b 같은 '계열' 대체 — 말한 소재의 컷이 이미 다 쓰였을 때, 아무 컷이나 주지 말고 같은 계열에서 고른다.
+     ⚠️ 실사고: 마무리 "남대문 오면 무조건 저장입니다"에서 거리 컷이 도입부에 소진돼 물냉면이 나갔다.
+     사장님 지시로 **수미상관(도입부 컷 재사용) 금지** → 재사용 대신 같은 계열의 '아직 안 쓴' 컷으로 채운다. */
+  const FAMILY: Record<string, string> = {
+    거리: "장소", 간판: "장소", 입구: "장소", 계단: "장소", 내부: "장소", 홍보물: "장소",
+    빈대떡: "음식", 물냉면: "음식", 비빔냉면: "음식", 무침: "음식",
+  };
+  for (let w = 0; w < wins.length; w++) {
+    if (assign[w] >= 0) continue;
+    const st = (wins[w] as any).sentText || wins[w].text;
+    const fams = new Set([...subjOfText(wins[w].text), ...subjOfText(st)].map((s) => FAMILY[s]).filter(Boolean));
+    if (!fams.size) continue;
+    let best = -1, bs = -Infinity;
+    for (let i = 0; i < clips.length; i++) {
+      if (used.has(i) || !fams.has(FAMILY[clipSubj[i]] || "")) continue;
+      const sc = (simOf(i, wins[w].text) ?? 0) * 50 + info[i].score;
+      if (sc > bs) { bs = sc; best = i; }
+    }
+    if (best >= 0) { assign[w] = best; used.add(best); }
   }
   for (let w = 0; w < wins.length; w++) {          // ③ 의미 유사도(남은 컷 중 최선, 음식 우선)
     if (assign[w] >= 0) continue;
@@ -926,23 +969,34 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     const scriptSig0 = bigramsOf(script);
     const relOf = (i: number) =>
       sharedBigrams(bigramsOf(`${info[i].cap} ${info[i].key}`), scriptSig0) + conceptHits(`${info[i].cap} ${info[i].key}`, script) * 2;
+    /* 🏅 예외 — 대본이 수상·방송을 직접 말하면(백년가게 선정된 집…) 벽면 홍보물은 그 순간의 '증거 컷'이다.
+       사람 편집자도 그 한 문장에만 붙인다. 그 외에는 종전대로 읽을거리 컷을 통째 버린다. */
+    const wantsWall = /백년가게|선정|인증|수상|방송|출연|미슐랭/.test(script);
     let cand = all.filter((i) => info[i].role !== "junk" && (info[i].score >= 3 || relOf(i) >= 2))
-      .filter((i) => !isReadable(i));   // 읽을거리 컷(벽면 기사·메뉴판)은 릴스에서 통째 제외 — 사장님 반복 지적
+      .filter((i) => !isReadable(i) || (wantsWall && info[i].role === "place"));   // 읽을거리 컷(벽면 기사·메뉴판)은 기본 제외 — 사장님 반복 지적
     if (cand.length < 5) cand = all.filter((i) => info[i].role !== "junk");
     if (cand.length < 3) cand = all;
     const foods = dedupGreedy(cand.filter((i) => foodish(info[i].role)));
     /* 맥락샷(place)은 기본 1컷만 — 초반 몰림의 주범이라 대부분 버린다.
        ⚠️ 단, **대본이 그 장면을 직접 말하면 지킨다**: "2층 입구가 좁아서"라고 말하는데 계단 컷을 버려놔서
           그 구간에 냉면이 나오는 사고가 있었다(사장님 지적). 대본 글자와 겹치는 맥락샷은 최대 3컷까지 남긴다. */
-    const placeAll = dedupGreedy(cand.filter((i) => info[i].role === "place"))
+    /* ⚠️ 읽을거리 컷(벽면 홍보물)은 일반 맥락샷 정원 싸움에 끼우지 않는다 —
+       실사고: 벽면 컷을 살렸더니 place 정원 4를 밀어내 '계단' 컷이 통째로 빠졌다(정답표 3행 오답).
+       벽면은 아래에서 정원과 무관하게 따로 한 컷 추가한다. */
+    const placeAll = dedupGreedy(cand.filter((i) => info[i].role === "place" && !isReadable(i)))
       .sort((a, b) => info[b].score - info[a].score);
     // 대본이 말하는 장면일수록 먼저 지킨다(점수보다 '대본 관련성' 우선 — 계단 컷이 점수에 밀려 빠지던 문제)
     const placeNamed = placeAll
       .map((i) => ({ i, rel: relOf(i) }))
       .filter((x) => x.rel >= 2)
       .sort((a, b) => b.rel - a.rel || info[b.i].score - info[a.i].score)
-      .slice(0, 4).map((x) => x.i);
+      .slice(0, 5).map((x) => x.i);
     const places = placeNamed.length ? [...new Set([...placeNamed, placeAll[0]])].filter((i) => i !== undefined) : placeAll.slice(0, 1);
+    if (wantsWall) {   // 수상·방송 문장이 있으면 벽면 홍보물 1컷은 반드시 후보에 남긴다(위 예외와 한 쌍)
+      const wall = cand.filter((i) => isReadable(i) && info[i].role === "place")
+        .sort((a, b) => info[b].score - info[a].score)[0];
+      if (wall !== undefined && !places.includes(wall)) places.push(wall);
+    }
     let keep = [...foods, ...places].sort((a, b) => a - b);
     if (keep.length < 3) keep = cand;
     const pool = keep.map((i) => clips[i]);
@@ -992,7 +1046,20 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       while (need > 0.05 && guard++ < 8) {
         let take = Math.min(need, CUT_MAX, Math.max(0, clipDur - 0.15 - off));
         if (take < 0.5) { off = 0; take = Math.min(need, CUT_MAX, Math.max(0, clipDur - 0.15)); }
-        if (take < 0.4) break;
+        /* 🧷 자투리 흡수 — 남는 0.7초짜리를 굳이 한 컷으로 만들지 않는다.
+           ⚠️ 실사고: 4.26초 구간이 3.6+0.66으로 쪼개져 '같은 장면이 두 번 연속' 나왔다(0.66초 깜빡).
+              같은 클립을 이어 붙이는 것이므로 흡수해도 화면은 그냥 계속 재생될 뿐이다. */
+        const rest = +(need - take).toFixed(2);
+        if (rest > 0.05 && rest < 0.9 && clipDur - 0.15 - off - take >= rest) take = +(take + rest).toFixed(2);
+        if (take < 0.4) {
+          /* ⏱ 남은 자투리를 '버리면' 이후 모든 컷이 그만큼 앞으로 당겨져 대본과 어긋난다(누적 드리프트).
+             실측: 이 누락 때문에 영상 총길이가 음성보다 0.2초 짧아지고 뒷부분 매칭이 반 컷씩 밀렸다. */
+          if (timeline.length) {
+            timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + need).toFixed(2);
+            t += need;
+          }
+          break;
+        }
         timeline.push({
           src: c.url, in: +off.toFixed(2), dur: +take.toFixed(2), role: fInfo[ci]?.role,
           ...(off > 0 ? { zoom: 1.18 } : {}),
