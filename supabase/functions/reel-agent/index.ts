@@ -379,21 +379,40 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
   const sigs = info.map((c) => bigramsOf(`${c.cap} ${c.key}`));
   const sigsAll = sigs, foodishRole = (r: string) => r === "food" || r === "cook" || r === "eat";
   const foodish = foodishRole;
+  /* ⚠️ 왼쪽부터 순서대로 배정하면 앞 구간이 뒤 구간의 짝을 먼저 써버린다 —
+     실사고: 초반 구간이 물냉면 컷을 가져가서 정작 "물냉면은 슴슴한 육수에" 구간엔 가게 외관이 남았다.
+     → **내용이 확실히 겹치는 쌍(강한 매칭)부터 전역으로 배정**하고, 남은 구간을 나중에 채운다. */
   const used = new Set<number>();
-  const segs: { clip: number; start: number; end: number }[] = [];
+  const assign: number[] = new Array(wins.length).fill(-1);
+  const pairs: { w: number; i: number; sc: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     const wsig = bigramsOf(wins[w].text);
+    for (let i = 0; i < clips.length; i++) {
+      const sh = sharedBigrams(sigs[i], wsig);
+      if (sh >= 2) pairs.push({ w, i, sc: sh * 3 + info[i].score + (foodish(info[i].role) ? 1 : 0) });
+    }
+  }
+  pairs.sort((a, b) => b.sc - a.sc);
+  for (const p of pairs) {
+    if (assign[p.w] >= 0 || used.has(p.i)) continue;
+    if (p.w === 0 && !foodish(info[p.i].role)) continue;   // 훅(첫 컷)은 반드시 음식
+    assign[p.w] = p.i; used.add(p.i);
+  }
+  for (let w = 0; w < wins.length; w++) {                  // 짝이 없던 구간 — 남은 컷 중 음식 우선
+    if (assign[w] >= 0) continue;
     let best = -1, bestScore = -1;
     for (let i = 0; i < clips.length; i++) {
       if (used.has(i)) continue;
-      // 내용 일치 점수(가중 3배) + 클립 자체 품질 + 훅/본편은 음식 우선
-      let sc = sharedBigrams(sigs[i], wsig) * 3 + info[i].score;
-      if (foodish(info[i].role)) sc += 2; else sc -= (w === 0 ? 6 : 1);   // 첫 컷에 맥락샷은 강하게 배제
+      const sc = info[i].score + (foodish(info[i].role) ? 2 : (w === 0 ? -6 : -1));
       if (sc > bestScore) { bestScore = sc; best = i; }
     }
-    if (best < 0) break;
-    used.add(best);
-    segs.push({ clip: best, start: wins[w].start, end: wins[w].end });
+    if (best < 0) continue;
+    assign[w] = best; used.add(best);
+  }
+  const segs: { clip: number; start: number; end: number }[] = [];
+  for (let w = 0; w < wins.length; w++) {
+    if (assign[w] < 0) continue;
+    segs.push({ clip: assign[w], start: wins[w].start, end: wins[w].end });
   }
   if (segs.length < 2) return null;
   /* 🛡 긴 구간 강제 분할 — 문장 앵커가 실패해 여러 문장이 한 구간으로 묶이면 13초짜리 정지화면이 된다(실사고).
@@ -565,8 +584,14 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     if (cand.length < 5) cand = all.filter((i) => info[i].role !== "junk");
     if (cand.length < 3) cand = all;
     const foods = dedupGreedy(cand.filter((i) => foodish(info[i].role)));
-    const places = dedupGreedy(cand.filter((i) => info[i].role === "place"))
-      .sort((a, b) => info[b].score - info[a].score).slice(0, 1);   // 맥락샷은 딱 1컷(사장님: 버려져야 할 컷)
+    /* 맥락샷(place)은 기본 1컷만 — 초반 몰림의 주범이라 대부분 버린다.
+       ⚠️ 단, **대본이 그 장면을 직접 말하면 지킨다**: "2층 입구가 좁아서"라고 말하는데 계단 컷을 버려놔서
+          그 구간에 냉면이 나오는 사고가 있었다(사장님 지적). 대본 글자와 겹치는 맥락샷은 최대 3컷까지 남긴다. */
+    const scriptSig = bigramsOf(script);
+    const placeAll = dedupGreedy(cand.filter((i) => info[i].role === "place"))
+      .sort((a, b) => info[b].score - info[a].score);
+    const placeNamed = placeAll.filter((i) => sharedBigrams(sigOf(i), scriptSig) >= 2).slice(0, 3);
+    const places = placeNamed.length ? [...new Set([...placeNamed, placeAll[0]])].filter((i) => i !== undefined) : placeAll.slice(0, 1);
     let keep = [...foods, ...places].sort((a, b) => a - b);
     if (keep.length < 3) keep = cand;
     const pool = keep.map((i) => clips[i]);
