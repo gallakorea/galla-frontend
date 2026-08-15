@@ -311,7 +311,8 @@ const sharedBigrams = (a: Set<string>, b: Set<string>) => { let n = 0; for (cons
 /* 🧠 개념 매칭 — 글자만 대조하면 "2층 입구가 좁아서"에 '계단' 컷을 못 붙인다(대본에 '계단'이란 글자가 없다).
    맛집 릴스에서 반복되는 개념 묶음을 두고, 대본 구절과 장면 설명이 같은 묶음을 건드리면 짝으로 본다. */
 const CONCEPTS: string[][] = [
-  ["입구", "계단", "올라", "2층", "이층", "문", "간판", "외관", "건물", "골목", "시장", "거리", "지나", "좁"],
+  ["입구", "계단", "올라", "2층", "이층", "지나", "좁", "문"],          // 진입(들어가는 길) — '계단' 컷이 붙어야 하는 자리
+  ["골목", "시장", "거리", "외관", "건물", "간판", "위치", "역", "동"],   // 거리·외관(위치 소개)
   ["노포", "오래", "전통", "역사", "세월", "기사", "벽", "메뉴판", "내부", "자리", "테이블", "년"],
   ["냉면", "면발", "육수", "물냉", "비빔", "면", "계란", "편육", "슴슴", "동치미"],
   ["빈대떡", "전", "부침", "바삭", "노릇", "기름", "촉촉"],
@@ -325,8 +326,22 @@ const conceptHits = (a: string, b: string) => {
   }
   return n;
 };
+const FOOD_GROUPS = [3, 4, 5];   // CONCEPTS 인덱스: 3=냉면류 4=빈대떡류 5=무침류
+const groupProfile = (text: string) => CONCEPTS.map((g) => g.filter((w) => text.includes(w)).length);
+/* 🍜 음식 종류까지 구분하는 매칭 점수.
+   ⚠️ 단순 글자 겹침은 "매콤한 무침에"와 "매콤한 비빔냉면"을 같은 것으로 본다(실사고: 무침 구간에 냉면).
+   그룹별로 몇 단어가 겹치는지 세고, 서로 다른 음식 그룹이 주인공이면 감점한다. */
+const profileScore = (clipText: string, winText: string) => {
+  const a = groupProfile(clipText), b = groupProfile(winText);
+  let s = 0;
+  for (let g = 0; g < a.length; g++) s += Math.min(a[g], b[g]) * 3;
+  const dom = (p: number[]) => FOOD_GROUPS.reduce((best, g) => (p[g] > p[best] ? g : best), FOOD_GROUPS[0]);
+  const da = dom(a), db = dom(b);
+  if (a[da] > 0 && b[db] > 0 && da !== db) s -= 7;   // 냉면 얘기에 무침 컷 = 오답
+  return s;
+};
 let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
-function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "") {
+function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
   _matchDbg = "";
   if (!subs.length || clips.length < 2) { _matchDbg = `skip subs=${subs.length} clips=${clips.length}`; return null; }
   const target = Math.max(2.2, Math.min(3.2, voiceDur / Math.max(6, Math.min(clips.length, 12))));
@@ -405,9 +420,11 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
   for (let w = 0; w < wins.length; w++) {
     const wsig = bigramsOf(wins[w].text);
     for (let i = 0; i < clips.length; i++) {
-      const sh = sharedBigrams(sigs[i], wsig);
-      const cc = conceptHits(`${info[i].cap} ${info[i].key}`, wins[w].text);   // 개념 일치(입구≈계단, 냉면≈육수 등)
-      if (sh >= 2 || cc >= 1) pairs.push({ w, i, sc: sh * 3 + cc * 4 + info[i].score + (foodish(info[i].role) ? 1 : 0) });
+      const ct = `${info[i].cap} ${info[i].key}`;
+      const sh = sharedBigrams(sigs[i], wsig);          // 고유명사·같은 단어 겹침
+      const ps = profileScore(ct, wins[w].text);        // 음식 종류·상황 프로필(오답 감점 포함)
+      const sc = sh * 2 + ps + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
+      if (sc >= 4) pairs.push({ w, i, sc });            // 확실한 짝만 1차 배정
     }
   }
   pairs.sort((a, b) => b.sc - a.sc);
@@ -416,17 +433,23 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
     if (p.w === 0 && !foodish(info[p.i].role)) continue;   // 훅(첫 컷)은 반드시 음식
     assign[p.w] = p.i; used.add(p.i);
   }
-  for (let w = 0; w < wins.length; w++) {                  // 짝이 없던 구간 — 남은 컷 중 음식 우선
-    if (assign[w] >= 0) continue;
-    let best = -1, bestScore = -1;
-    for (let i = 0; i < clips.length; i++) {
-      if (used.has(i)) continue;
-      const sc = info[i].score + (foodish(info[i].role) ? 2 : (w === 0 ? -6 : -1));
-      if (sc > bestScore) { bestScore = sc; best = i; }
+  /* 짝이 없던 구간 — 남은 컷으로 채운다.
+     ⚠️ 예비 컷(같은 음식의 다른 앵글)은 여기서 쓰지 않는다. 엉뚱한 구간에 끌려가면
+        "빈대떡 얘기 끝났는데 또 빈대떡"처럼 보인다. 예비는 1차(내용 일치)에서만 쓰인다. */
+    for (let pass = 0; pass < 2; pass++) {
+      for (let w = 0; w < wins.length; w++) {
+        if (assign[w] >= 0) continue;
+        let best = -1, bestScore = -1;
+        for (let i = 0; i < clips.length; i++) {
+          if (used.has(i)) continue;
+          if (pass === 0 && isSpare[i]) continue;   // 1라운드는 본편 컷만
+          const sc = info[i].score + (foodish(info[i].role) ? 2 : (w === 0 ? -6 : -1));
+          if (sc > bestScore) { bestScore = sc; best = i; }
+        }
+        if (best < 0) continue;
+        assign[w] = best; used.add(best);
+      }
     }
-    if (best < 0) continue;
-    assign[w] = best; used.add(best);
-  }
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;
@@ -563,7 +586,16 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     }
 
     await pushProgress(id, uid, "클립 장면 분석 중");
-    const info = await captionClips(clips);
+    /* ⚠️ 비전이 죽으면 큐레이션·매칭이 통째로 무력화돼 '아무 컷이나 순서대로'가 된다(실사고).
+       조용히 엉터리 영상을 만들지 말고 한 번 더 시도하고, 그래도 안 되면 잡을 실패시킨다. */
+    let info = await captionClips(clips);
+    const visionDead = () => info.every((c) => /^클립 \d+/.test(c.cap));
+    if (visionDead()) {
+      await pushProgress(id, uid, "장면 분석 재시도 중");
+      await new Promise((r) => setTimeout(r, 4000));
+      info = await captionClips(clips);
+      if (visionDead()) throw new Error("vision_failed: " + (_capDbg || "unknown"));
+    }
 
     /* 🗑 컷 큐레이션 — 사장님 지적 2건의 해법(“쓸데없는 컷이 초반에 몰림”, “같은 장면 중복 절대 금지”).
        ①junk·저점수 컷은 아예 후보에서 뺀다(전부 쓸 필요 없다)
@@ -598,19 +630,23 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       return kept.sort((a, b) => a - b);
     };
     const all = clips.map((_: any, i: number) => i);
-    let cand = all.filter((i) => info[i].role !== "junk" && info[i].score >= 3);
+    /* 대본 관련성 — 비전 점수가 낮아도 '대본이 직접 말하는 장면'은 살린다.
+       ⚠️ 실사고: 계단 컷이 "쓸모 2점"으로 매겨져 점수 필터에서 잘려, "2층 입구가 좁아서" 구간에 냉면이 나왔다. */
+    const scriptSig0 = bigramsOf(script);
+    const relOf = (i: number) =>
+      sharedBigrams(bigramsOf(`${info[i].cap} ${info[i].key}`), scriptSig0) + conceptHits(`${info[i].cap} ${info[i].key}`, script) * 2;
+    let cand = all.filter((i) => info[i].role !== "junk" && (info[i].score >= 3 || relOf(i) >= 2));
     if (cand.length < 5) cand = all.filter((i) => info[i].role !== "junk");
     if (cand.length < 3) cand = all;
     const foods = dedupGreedy(cand.filter((i) => foodish(info[i].role)));
     /* 맥락샷(place)은 기본 1컷만 — 초반 몰림의 주범이라 대부분 버린다.
        ⚠️ 단, **대본이 그 장면을 직접 말하면 지킨다**: "2층 입구가 좁아서"라고 말하는데 계단 컷을 버려놔서
           그 구간에 냉면이 나오는 사고가 있었다(사장님 지적). 대본 글자와 겹치는 맥락샷은 최대 3컷까지 남긴다. */
-    const scriptSig = bigramsOf(script);
     const placeAll = dedupGreedy(cand.filter((i) => info[i].role === "place"))
       .sort((a, b) => info[b].score - info[a].score);
     // 대본이 말하는 장면일수록 먼저 지킨다(점수보다 '대본 관련성' 우선 — 계단 컷이 점수에 밀려 빠지던 문제)
     const placeNamed = placeAll
-      .map((i) => ({ i, rel: sharedBigrams(sigOf(i), scriptSig) + conceptHits(`${info[i].cap} ${info[i].key}`, script) * 2 }))
+      .map((i) => ({ i, rel: relOf(i) }))
       .filter((x) => x.rel >= 2)
       .sort((a, b) => b.rel - a.rel || info[b.i].score - info[a.i].score)
       .slice(0, 4).map((x) => x.i);
@@ -626,10 +662,16 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     if (dropped > 0) await pushProgress(id, uid, `쓸 컷 고르는 중 — ${pool.length}컷 채택, ${dropped}컷 제외(중복·맥락샷)`);
 
     await pushProgress(id, uid, "장면·내레이션 매칭 중");
-    // 1순위 글자 대조(결정적·정확), 2순위 LLM, 최후 촬영 순서
-    let segs = textMatchTimeline(subs, poolInfo, pool, voiceDur, script);
-    if (!segs) segs = await matchTimeline(subs, poolInfo, pool, voiceDur);
-    if (!segs) segs = orderTimeline(pool, voiceDur);
+    /* 매칭 대상 = 본편(소재당 1컷) + 예비(같은 소재 다른 앵글).
+       예비를 포함해야 한 문장이 두 컷으로 쪼개질 때 '같은 클립 확대 재사용' 대신 다른 앵글이 붙는다(사장님 지적). */
+    const matchIdx = [...keep, ...backups.filter((i) => !keep.includes(i))];
+    const matchClips = matchIdx.map((i) => clips[i]);
+    const matchInfo = matchIdx.map((i) => info[i]);
+    const isSpare = matchIdx.map((i) => !keep.includes(i));
+    // 1순위 글자·개념 대조(결정적·정확), 2순위 LLM, 최후 촬영 순서
+    let segs = textMatchTimeline(subs, matchInfo, matchClips, voiceDur, script, isSpare);
+    if (!segs) segs = await matchTimeline(subs, matchInfo, matchClips, voiceDur);
+    if (!segs) segs = orderTimeline(matchClips, voiceDur);
     /* 타임라인 무결성:
        - 컷 최소 2.2초(깜빡임 방지) — 짧으면 앞 컷에 흡수
        - 큐레이션을 통과한 클립은 각각 한 번씩만(소재 중복은 이미 제거됨)
@@ -641,11 +683,11 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     segs.sort((a, b) => a.start - b.start);
     const CUT_MAX = 3.5, CUT_MIN = 1.4;   // 릴스 템포(사장님: 한 화면 오래 쓰면 이탈) — 컷 1.4~3.5초
     // 본편(pool) + 예비 컷(같은 소재 다른 앵글)을 한 배열로 — 채우기는 예비까지 쓴다
-    const fillIdx = [...keep, ...backups.filter((i) => !keep.includes(i))];
-    const fClips = fillIdx.map((i) => clips[i]);
-    const fInfo = fillIdx.map((i) => info[i]);
+    const fillIdx = matchIdx;                    // 매칭과 조립이 같은 배열을 본다(인덱스 어긋남 방지)
+    const fClips = matchClips;
+    const fInfo = matchInfo;
     const fSig = fInfo.map((c: ClipInfo) => bigramsOf(`${c.cap} ${c.key}`));
-    const poolPos = new Map<number, number>(keep.map((ci, pi) => [pi, fillIdx.indexOf(ci)]));   // segs의 pool 인덱스 → fill 인덱스
+    const poolPos = new Map<number, number>(fillIdx.map((_, i) => [i, i]));   // segs.clip == fill 인덱스
     const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
     const usedSec = new Map<number, number>();
     const availOf = (i: number) => Math.max(0, (Number(fClips[i].dur) || 8) - 0.15 - (usedSec.get(i) || 0));
