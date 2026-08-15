@@ -106,7 +106,24 @@ function pcmToWav(pcm: Uint8Array, rate = 24000, ch = 1, bits = 16): Uint8Array 
   new Uint8Array(buf).set(pcm, 44);
   return new Uint8Array(buf);
 }
+async function ttsCacheKey(script: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
+  return "tts:" + [...new Uint8Array(buf)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 async function ttsToR2(uid: string, script: string): Promise<string | null> {
+  /* 🔁 같은 대본이면 같은 음성을 재사용 — 음성이 매번 바뀌면 STT 타이밍이 바뀌고 자막·컷이 통째로 달라진다.
+     "돌릴 때마다 딴 영상"의 큰 축이었다. */
+  const ck = await ttsCacheKey(script);
+  try {
+    const { data } = await sb.from("clip_analysis").select("analysis").eq("url", ck).maybeSingle();
+    const u = (data?.analysis as any)?.url;
+    if (typeof u === "string" && /^https?:\/\//.test(u)) return u;
+  } catch (_) { /* 캐시 없으면 생성 */ }
+  const made = await ttsToR2Inner(uid, script);
+  if (made) { try { await sb.from("clip_analysis").upsert([{ url: ck, analysis: { url: made } }], { onConflict: "url" }); } catch (_) {} }
+  return made;
+}
+async function ttsToR2Inner(uid: string, script: string): Promise<string | null> {
   let bytes: Uint8Array | null = null, ext = "wav", ctype = "audio/wav";
   if (GEMINI_KEY) {
     try {
@@ -731,7 +748,9 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
      알고리즘은 단어·의미 유사도만 보므로, 대사에 단서가 옅은 컷("속은 촉촉하고요")에서 흔들린다.
      전체 판(어떤 클립이 있고, 각 컷에서 무슨 말을 하는지)을 통째로 보여주고 틀린 배치만 교체받는다.
      실패하면 초안 그대로 간다(검수는 있으면 좋고 없으면 그만). */
-  if (GEMINI_KEY && wins.length >= 4) {
+  /* 🚫 편집장 검수 비활성 — 같은 입력에 매번 다른 결과를 만드는 최대 변수였고(사장님: "다 딴판"),
+     오히려 핀·문장일관성을 깨뜨리는 교체를 반복했다. 규칙+핀 기반은 결정적이라 재현된다. */
+  if (false && GEMINI_KEY && wins.length >= 4) {
     try {
       const clipList = info.map((c, i) => `${i}: ${c.cap} [${c.role}]`).join("\n");
       const cutList = wins.map((w, k) => `컷${k} (${w.start.toFixed(1)}s) 내레이션 "${w.text}" → 현재 배치: ${assign[k] >= 0 ? `${assign[k]}번(${info[assign[k]].cap})` : "없음"}`).join("\n");
