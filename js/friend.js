@@ -670,14 +670,80 @@
   }
   /* 👀 컷 미리보기 — AI가 짠 컷을 사람이 눈으로 보고 2탭으로 바꾼다.
      "AI가 100% 맞출 때까지 기다린다"가 아니라 "AI가 90% 만들고 사람이 10초 만에 완성한다"가 실전이다. */
-  function renderCutPreview(jobId, cuts, allClips, jwt, srcClips, parentWrap, status, unlock){
+  /* ▶ 미리보기 재생기 — renderCutPreview에서 쓰고, 하네스·다른 화면에서도 쓸 수 있게 밖으로 뺀다. */
+  function mountReelPlayer(box, getCuts, voiceUrl, subs, status){
+    subs=subs||[]; status=status||function(){};
+
+      var vids=box.querySelectorAll(".fr-pv-v"), act=0, curK=-1, raf=null, playing=false;
+      var subEl=box.querySelector(".fr-pv-sub span"), btn=box.querySelector(".fr-pv-btn");
+      var audio=new Audio(); audio.preload="auto"; if(voiceUrl) audio.src=voiceUrl;
+      function map(){ var t=0, a=[]; getCuts().forEach(function(c){ a.push({s:t, e:t+c.dur, c:c}); t+=c.dur; }); return a; }
+      function show(i){ vids[i].style.opacity="1"; vids[1-i].style.opacity="0"; act=i; }
+      function feed(v, src, off, then){
+        if(v.getAttribute("data-src")!==src){
+          v.setAttribute("data-src", src); v.src=src;
+          v.addEventListener("loadedmetadata", function(){ try{ v.currentTime=off; }catch(e){} if(then) then(); }, {once:true});
+        } else { try{ v.currentTime=off; }catch(e){} if(then) then(); }
+      }
+      function goCut(k, at, m){
+        var it=m[k]; if(!it || !it.c.src) return;
+        curK=k;
+        var nx=1-act, v=vids[nx];
+        feed(v, it.c.src, (it.c.in||0)+Math.max(0, at-it.s), function(){
+          v.play().catch(function(){}); show(nx);
+          var nb=m[k+1];   // 다음 클립을 지금 안 보이는 쪽에 미리 물려둔다(전환 끊김 방지)
+          if(nb && nb.c.src) feed(vids[1-nx], nb.c.src, nb.c.in||0);
+        });
+      }
+      function tick(){
+        if(!playing) return;
+        var t=audio.currentTime, m=map(), k=-1;
+        for(var i=0;i<m.length;i++){ if(t>=m[i].s && t<m[i].e){ k=i; break; } }
+        if(k<0 && t>=(m.length?m[m.length-1].e:0)){ stop(); return; }
+        if(k>=0 && k!==curK) goCut(k, t, m);
+        var s="";
+        for(var j=0;j<subs.length;j++){ var x=subs[j]; if(t>=x.start && t<x.start+(x.len||0.5)){ s=x.text; break; } }
+        subEl.textContent=s;
+        raf=requestAnimationFrame(tick);
+      }
+      function stop(){
+        playing=false; if(raf) cancelAnimationFrame(raf); raf=null;
+        try{ audio.pause(); }catch(e){}
+        vids[0].pause(); vids[1].pause(); subEl.textContent="";
+        btn.textContent="▶ 미리보기 재생";
+      }
+      btn.addEventListener("click", function(){
+        if(playing){ stop(); return; }
+        if(!voiceUrl){ status("미리보기 음성을 못 찾았어 ㅜ"); return; }
+        playing=true; curK=-1; btn.textContent="⏸ 정지";
+        try{ audio.currentTime=0; }catch(e){}
+        audio.play().then(function(){ raf=requestAnimationFrame(tick); }).catch(function(){ stop(); });
+      });
+      audio.addEventListener("ended", stop);
+  }
+  window.GALLA_ReelPreview=mountReelPlayer;
+
+  function renderCutPreview(jobId, cuts, allClips, jwt, srcClips, parentWrap, status, unlock, voiceUrl, subs){
+    subs=subs||[];
     /* 🅰🅱 문장 단위 확인 화면 — 타임라인(트랙·초·드래그)은 보여주지 않는다.
        사용자가 아는 단위는 '문장'이고, 판단은 "이 문장에 이 화면이 맞나"뿐이다.
        그리고 12개 클립을 뒤지게 하지 않는다 — **A(지금)와 B(차점 후보)를 나란히 놓고 1탭으로 고르게** 한다.
        AI가 자신 없는 자리(unsure)는 먼저 눈에 띄게 표시한다. 더 파고들 사람만 '다른 화면 더 보기'로 내려간다. */
-    var box=el('<div class="fr-cutpv"><div class="fr-cutpv-h">🎞 문장마다 화면 확인 — 어색하면 <b>B</b>를 탭</div><div class="fr-cutpv-list"></div>'+
+    var box=el('<div class="fr-cutpv"><div class="fr-cutpv-h">🎞 문장마다 화면 확인 — 어색하면 <b>B</b>를 탭</div>'+
+      '<div class="fr-pv"><div class="fr-pv-stage">'+
+      '<video class="fr-pv-v" muted playsinline webkit-playsinline preload="auto"></video>'+
+      '<video class="fr-pv-v" muted playsinline webkit-playsinline preload="auto"></video>'+
+      '<div class="fr-pv-sub"><span></span></div></div>'+
+      '<button class="fr-pv-btn">▶ 미리보기 재생</button></div>'+
+      '<div class="fr-cutpv-list"></div>'+
       '<button class="fr-cutpv-go">이대로 영상 만들기 🎬</button></div>');
     var list=box.querySelector(".fr-cutpv-list");
+    var curCuts=cuts;
+    /* ▶ 무료 미리보기 — **렌더를 두 번 돌리지 않는다.** 원본 클립을 순서대로 이어 재생하고
+       녹음(또는 AI 음성)을 같이 틀고 자막을 얹으면, 최종본과 같은 타이밍을 서버 비용 0·대기 0초로 보여줄 수 있다.
+       카드만 봐선 템포(빠른가·끊기나)를 알 수 없어서, 확인 화면엔 재생이 반드시 있어야 한다.
+       ⚠️ 최종본은 여기서 '마'(쉬는 구간)를 더 잘라내므로 완성본이 이것보다 몇 초 짧다. */
+    mountReelPlayer(box, function(){ return curCuts; }, voiceUrl, subs, status);
     async function chooseAlt(cut, clipIdx){
       try{
         var r=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
@@ -687,6 +753,7 @@
       }catch(e){}
     }
     function paint(cs){
+      curCuts=cs;
       list.innerHTML="";
       cs.forEach(function(c){
         var row=el('<div class="fr-cut2">'+
@@ -807,7 +874,7 @@
       // 4) 미리보기 — 컷을 카드로 보여주고 2탭으로 교체(완성도는 여기서 사람이 채운다)
       if(res.state==="preview" && res.cuts && res.cuts.length){
         status("");
-        renderCutPreview(res.id, res.cuts, res.clips||[], jwt, clips, wrap, status, unlock);
+        renderCutPreview(res.id, res.cuts, res.clips||[], jwt, clips, wrap, status, unlock, res.voice||voiceUrl, res.subtitles||[]);
         return;
       }
       // 4') 잡 status 폴링 — 진행 로그를 카드에 흘리고, 완성되면 편집기 자동 첨부
@@ -822,6 +889,19 @@
         if(!job) continue;
         var prog=(job.progress||[]); var last=prog.length?prog[prog.length-1].msg:"";
         if(last) status("🎬 "+last);
+        /* ⚠️ create가 잡 id만 즉시 돌려주는 구조(엣지 150초 한도)로 바뀐 뒤로는 **여기서** 미리보기를 열어야 한다.
+           안 그러면 preview 상태에서 폴링만 계속 돌다 조용히 포기한다(실사고). */
+        if(job.state==="preview"){
+          status("");
+          var cu=null;
+          try{ cu=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+            headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+            body:JSON.stringify({ op:"cuts", id:jobId }) })).json(); }catch(e){}
+          if(cu && cu.cuts && cu.cuts.length){
+            renderCutPreview(jobId, cu.cuts, cu.clips||[], jwt, clips, wrap, status, unlock, cu.voice, cu.subtitles||[]);
+            return;
+          }
+        }
         if(job.state==="done"){ doneUrl=(job.artifacts||{}).video_url; break; }
         if(job.state==="failed"){ unlock(); status(""); addMsg("a","만들다 실패했어 ㅜ ("+String(job.error||"").slice(0,60)+") 다시 해볼까?"); return; }
       }

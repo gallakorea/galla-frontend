@@ -957,6 +957,8 @@ function cutCards(timeline: any[], subs: any[], clips: any[], info: ClipInfo[]) 
       clip: ci, thumb: ci >= 0 ? (clips[ci].thumb || null) : null,
       cap: ci >= 0 ? info[ci].cap : "",
       alts, unsure: !!seg.unsure,
+      // 🎬 무료 미리보기용 — 렌더 없이 브라우저가 원본을 이어 재생하려면 소스와 시작점이 필요하다
+      src: seg.src, in: +(seg.in || 0).toFixed(2),
     });
     t = end;
   }
@@ -1348,7 +1350,15 @@ Deno.serve(async (req) => {
     const info: ClipInfo[] = a.clip_info || [];
     const timeline: any[] = a.timeline || [];
 
-    if (op === "cuts") return j({ ok: true, state: job.state, cuts: cutCards(timeline, a.subtitles || [], clips, info), clips: clipCards(clips, info) });
+    /* voice·subtitles를 같이 내려준다 — 클라이언트가 **렌더 없이** 원본 클립을 이어 재생하며
+       음성·자막을 얹어 미리 보여주기 위한 것(서버 비용 0, 대기 0초). 최종 렌더는 확정 후 한 번만. */
+    if (op === "cuts") {
+      return j({
+        ok: true, state: job.state,
+        cuts: cutCards(timeline, a.subtitles || [], clips, info), clips: clipCards(clips, info),
+        voice: (job.inputs as any)?.voice_url || null, subtitles: a.subtitles || [],
+      });
+    }
 
     if (op === "swap") {
       const k = Number(body.cut), ci = Number(body.clip);
