@@ -308,11 +308,28 @@ const bigramsOf = (s: string) => {
   return out;
 };
 const sharedBigrams = (a: Set<string>, b: Set<string>) => { let n = 0; for (const x of a) if (b.has(x)) n++; return n; };
+/* 🧠 개념 매칭 — 글자만 대조하면 "2층 입구가 좁아서"에 '계단' 컷을 못 붙인다(대본에 '계단'이란 글자가 없다).
+   맛집 릴스에서 반복되는 개념 묶음을 두고, 대본 구절과 장면 설명이 같은 묶음을 건드리면 짝으로 본다. */
+const CONCEPTS: string[][] = [
+  ["입구", "계단", "올라", "2층", "이층", "문", "간판", "외관", "건물", "골목", "시장", "거리", "지나", "좁"],
+  ["노포", "오래", "전통", "역사", "세월", "기사", "벽", "메뉴판", "내부", "자리", "테이블", "년"],
+  ["냉면", "면발", "육수", "물냉", "비빔", "면", "계란", "편육", "슴슴", "동치미"],
+  ["빈대떡", "전", "부침", "바삭", "노릇", "기름", "촉촉"],
+  ["무침", "제육", "닭", "양념", "매콤", "소스", "식초", "겨자", "비비", "새콤"],
+  ["먹", "한입", "젓가락", "리액션", "맛있", "입맛"],
+];
+const conceptHits = (a: string, b: string) => {
+  let n = 0;
+  for (const g of CONCEPTS) {
+    if (g.some((w) => a.includes(w)) && g.some((w) => b.includes(w))) n++;
+  }
+  return n;
+};
 let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
 function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "") {
   _matchDbg = "";
   if (!subs.length || clips.length < 2) { _matchDbg = `skip subs=${subs.length} clips=${clips.length}`; return null; }
-  const target = Math.max(2.8, Math.min(4.6, voiceDur / Math.max(4, Math.min(clips.length, 9))));
+  const target = Math.max(2.2, Math.min(3.2, voiceDur / Math.max(6, Math.min(clips.length, 12))));
   /* ① 컷 구간 = '문장' 단위. 한 문장이 곧 한 소재다("빈대떡은 겉은 바삭…" = 빈대떡 컷).
      문장을 가로질러 4초씩 끊으면 "…돕니다 / 빈대떡은"이 한 구간에 섞여 매칭이 뭉개진다(실사고).
      문장이 길면(>5.5s) 안에서만 쪼갠다. 대본이 없으면 종전처럼 시간 기준. */
@@ -389,7 +406,8 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
     const wsig = bigramsOf(wins[w].text);
     for (let i = 0; i < clips.length; i++) {
       const sh = sharedBigrams(sigs[i], wsig);
-      if (sh >= 2) pairs.push({ w, i, sc: sh * 3 + info[i].score + (foodish(info[i].role) ? 1 : 0) });
+      const cc = conceptHits(`${info[i].cap} ${info[i].key}`, wins[w].text);   // 개념 일치(입구≈계단, 냉면≈육수 등)
+      if (sh >= 2 || cc >= 1) pairs.push({ w, i, sc: sh * 3 + cc * 4 + info[i].score + (foodish(info[i].role) ? 1 : 0) });
     }
   }
   pairs.sort((a, b) => b.sc - a.sc);
@@ -421,7 +439,7 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
   const usedAll = new Set<number>(segs.map((s) => s.clip));
   for (const s of segs) {
     const span = s.end - s.start;
-    const parts = Math.max(1, Math.ceil(span / 5.5));
+    const parts = Math.max(1, Math.ceil(span / 3.0));   // 릴스 템포: 구간을 3초 단위로 쪼갠다
     for (let p = 0; p < parts; p++) {
       const st = +(s.start + span * p / parts).toFixed(2);
       const en = +(s.start + span * (p + 1) / parts).toFixed(2);
@@ -454,7 +472,7 @@ place(외관·간판·거리·계단·벽·내부)는 양념이라 **통틀어 �
 가게 소개·역사·위치 내레이션이 나온다고 place 컷을 줄줄이 깔지 마라 — 초반이 맥락샷으로 채워지면 3초 만에 이탈한다.
 설명 문장 구간에는 **뒤에 나올 음식·조리 장면을 미리 깔아라**(실제 히트 릴스가 그렇게 한다).
 
-규칙: ①**0초 첫 컷은 무조건 가장 군침 도는 컷**(food/cook/eat 중 점수 최고) — 훅이다 ②구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이, 구간당 2.5~5.5초(총 ${Math.round(voiceDur / 3.2)}컷 안팎) ③내용 연결은 '음식 종류' 수준으로 맞춰라(냉면 얘기=냉면 컷, 빈대떡 얘기=빈대떡 컷) ④같은 클립 반복 금지(모자랄 때만, 연속 금지) ⑤클립 길이(dur) 초과 금지 ⑥점수 낮은 컷은 아예 쓰지 마라(전부 쓸 필요 없다).
+규칙: ①**0초 첫 컷은 무조건 가장 군침 도는 컷**(food/cook/eat 중 점수 최고) — 훅이다 ②구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이, 구간당 1.5~3.5초(총 ${Math.round(voiceDur / 2.6)}컷 안팎 — 릴스는 빠른 전환이 생명) ③내용 연결은 '음식 종류' 수준으로 맞춰라(냉면 얘기=냉면 컷, 빈대떡 얘기=빈대떡 컷) ④같은 클립 반복 금지(모자랄 때만, 연속 금지) ⑤클립 길이(dur) 초과 금지 ⑥점수 낮은 컷은 아예 쓰지 마라(전부 쓸 필요 없다).
 JSON만 출력: {"segments":[{"clip":클립번호(0부터),"start":초,"end":초},...]}`;
     const user = `내레이션 자막(시각순):\n${subs.map((s: any) => `${s.start.toFixed(1)}s "${s.text}"`).join("\n")}\n\n쓸 수 있는 클립(이미 중복·버릴 컷은 걸러진 목록이다):\n${info.map((c, i) => `${i}: [${c.role}/${c.score}점] ${c.cap} (길이 ${Number(clips[i]?.dur || 8).toFixed(1)}s)`).join("\n")}\n\n끝 구간까지 내용이 맞는지 스스로 검증해라 — 냉면 얘기에 빈대떡 화면이 나오면 실패다.`;
     // 지시 이행이 좋은 Gemini 우선(실사고: 딥시크가 앞 클립만 순서대로 깔고 끝냄 — 후반 내용 불일치), 실패 시 딥시크
@@ -590,7 +608,12 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     const scriptSig = bigramsOf(script);
     const placeAll = dedupGreedy(cand.filter((i) => info[i].role === "place"))
       .sort((a, b) => info[b].score - info[a].score);
-    const placeNamed = placeAll.filter((i) => sharedBigrams(sigOf(i), scriptSig) >= 2).slice(0, 3);
+    // 대본이 말하는 장면일수록 먼저 지킨다(점수보다 '대본 관련성' 우선 — 계단 컷이 점수에 밀려 빠지던 문제)
+    const placeNamed = placeAll
+      .map((i) => ({ i, rel: sharedBigrams(sigOf(i), scriptSig) + conceptHits(`${info[i].cap} ${info[i].key}`, script) * 2 }))
+      .filter((x) => x.rel >= 2)
+      .sort((a, b) => b.rel - a.rel || info[b.i].score - info[a.i].score)
+      .slice(0, 4).map((x) => x.i);
     const places = placeNamed.length ? [...new Set([...placeNamed, placeAll[0]])].filter((i) => i !== undefined) : placeAll.slice(0, 1);
     let keep = [...foods, ...places].sort((a, b) => a - b);
     if (keep.length < 3) keep = cand;
@@ -616,13 +639,14 @@ async function runCreate(uid: string, body: any): Promise<Response> {
           "빈대떡" 말할 때 무침이 나오는 밀림을 만들었다(실사고 3회). 구간이 안 채워지면 컷을 줄이는 게 아니라
           **그 구간 안을 같은 소재의 다른 앵글로 이어 채운다**(그래서 뒤 구간 시작 시각은 절대 안 밀린다). */
     segs.sort((a, b) => a.start - b.start);
-    const CUT_MAX = 5.5, CUT_MIN = 1.6;
+    const CUT_MAX = 3.5, CUT_MIN = 1.4;   // 릴스 템포(사장님: 한 화면 오래 쓰면 이탈) — 컷 1.4~3.5초
     // 본편(pool) + 예비 컷(같은 소재 다른 앵글)을 한 배열로 — 채우기는 예비까지 쓴다
     const fillIdx = [...keep, ...backups.filter((i) => !keep.includes(i))];
     const fClips = fillIdx.map((i) => clips[i]);
     const fInfo = fillIdx.map((i) => info[i]);
     const fSig = fInfo.map((c: ClipInfo) => bigramsOf(`${c.cap} ${c.key}`));
     const poolPos = new Map<number, number>(keep.map((ci, pi) => [pi, fillIdx.indexOf(ci)]));   // segs의 pool 인덱스 → fill 인덱스
+    const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
     const usedSec = new Map<number, number>();
     const availOf = (i: number) => Math.max(0, (Number(fClips[i].dur) || 8) - 0.15 - (usedSec.get(i) || 0));
     const timeline: { src: string; in: number; dur: number }[] = [];
@@ -718,14 +742,13 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       }
       if (t < segEnd - 0.15) t = +(t + extendLast(segEnd - t)).toFixed(2);   // 남은 자투리는 '실제로 늘린 만큼만' 반영
     }
-    const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
 
     /* 🛡 최종 컷 상한(경로 무관 안전망) — 매칭이 어느 경로로 오든 5.5초 넘는 컷은 여기서 쪼갠다.
        미사용 클립이 있으면 그걸 넣고, 없으면 같은 클립의 '다음 구간'을 이어 쓴다(정지화면 방지). */
     for (let i = 0; i < timeline.length && timeline.length < 24; i++) {
-      while (timeline[i].dur > 5.6) {
-        const rest = +(timeline[i].dur - 5.5).toFixed(2);
-        timeline[i].dur = 5.5;
+      while (timeline[i].dur > 3.6) {
+        const rest = +(timeline[i].dur - CUT_MAX).toFixed(2);
+        timeline[i].dur = CUT_MAX;
         const inUse = new Set(timeline.map((s) => s.src));
         let best = -1, bestRoom = 0;
         for (let k = 0; k < fClips.length; k++) {
@@ -737,13 +760,13 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         const sameRoom = (durOfAll.get(timeline[i].src) || 8) - 0.15 - nextIn;
         // ①미사용 클립 → ②같은 클립의 다음 구간 → ③아무 다른 클립의 앞부분(최후). 셋 다 없을 때만 원복.
         let seg = (best >= 0 && bestRoom >= Math.min(rest, 1.6))
-          ? { src: fClips[best].url, in: 0, dur: +Math.min(rest, bestRoom, 5.5).toFixed(2) }
+          ? { src: fClips[best].url, in: 0, dur: +Math.min(rest, bestRoom, CUT_MAX).toFixed(2) }
           : (sameRoom >= Math.min(rest, 1.0)
-            ? { src: timeline[i].src, in: nextIn, dur: +Math.min(rest, sameRoom, 5.5).toFixed(2) }
+            ? { src: timeline[i].src, in: nextIn, dur: +Math.min(rest, sameRoom, CUT_MAX).toFixed(2) }
             : null);
         if (!seg) {
           const alt = fClips.findIndex((c: any) => c.url !== timeline[i].src && (Number(c.dur) || 8) > 1.6);
-          if (alt >= 0) seg = { src: fClips[alt].url, in: 0, dur: +Math.min(rest, (Number(fClips[alt].dur) || 8) - 0.15, 5.5).toFixed(2) };
+          if (alt >= 0) seg = { src: fClips[alt].url, in: 0, dur: +Math.min(rest, (Number(fClips[alt].dur) || 8) - 0.15, CUT_MAX).toFixed(2) };
         }
         if (!seg) { timeline[i].dur = +(timeline[i].dur + rest).toFixed(2); break; }
         timeline.splice(i + 1, 0, seg);
@@ -804,8 +827,18 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       }
       if (voiceDur - t > 0.15) t = +(t + extendLast(voiceDur - t)).toFixed(2);
     }
-    // 🔚 2.2초 미만 꼬리 컷은 앞 컷에 흡수(끝에서 깜빡 — 실검수에서 1.4s 꼬리 발견)
-    while (timeline.length >= 2 && timeline[timeline.length - 1].dur < 2.2) {
+    /* 🔍 재사용 컷은 '확대'로 다른 그림 만들기(사장님: 쓴 클립은 음식을 확대해서 쓰자).
+       같은 파일이 두 번째로 나오면 1.3배, 세 번째부터 1.55배로 크롭 인 → 같은 장면이 반복되는 느낌이 사라진다. */
+    {
+      const seen = new Map<string, number>();
+      for (const seg of timeline as any[]) {
+        const n = (seen.get(seg.src) || 0) + 1;
+        seen.set(seg.src, n);
+        if (n >= 2) seg.zoom = n === 2 ? 1.3 : 1.55;
+      }
+    }
+    // 🔚 1.4초 미만 꼬리 컷은 앞 컷에 흡수(끝에서 깜빡)
+    while (timeline.length >= 2 && timeline[timeline.length - 1].dur < 1.4) {
       const tail = timeline.pop()!;
       timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + tail.dur).toFixed(2);
     }
@@ -897,7 +930,7 @@ Deno.serve(async (req) => {
       if (!claimed) return j({ ok: true, job: null });   // 다른 워커가 선점
       const a = job.artifacts as any;
       return j({ ok: true, job: { id: job.id, user_id: job.user_id, spec: {
-        segments: a.timeline, voice: (job.inputs as any).voice_url, subtitles: a.subtitles,
+        segments: a.timeline, voice: (job.inputs as any).voice_url, subtitles: a.subtitles,   // segments[].zoom 포함(재사용 컷 확대)
         voice_tempo: Number(a.voice_tempo) || 1, width: 1080, height: 1920, fps: 30 } } });
     }
     if (op === "progress") { const { data } = await sb.from("agent_jobs").select("user_id").eq("id", body.id).single();

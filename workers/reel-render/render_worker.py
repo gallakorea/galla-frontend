@@ -145,7 +145,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
     # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).
     #    총 길이는 유지하면서 '같은 클립의 다음 구간 → 다른 클립' 순으로 쪼갠다(화면이 계속 움직인다).
-    CUT_MAX = 5.5
+    CUT_MAX = 3.5   # 릴스 템포(사장님: 한 화면 오래 쓰면 이탈률↑)
     durs = {p: probe_dur(p) for p in cache.values()}
     order = list(dict.fromkeys(local))          # 등장 순서대로 중복 없는 소스 목록
     split_segs, split_local = [], []
@@ -176,7 +176,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
                 start, avail = 0.0, max(0.0, durs.get(path, 8) - 0.1)
                 if avail < 0.3: break
             take = round(min(take, avail), 2)
-            split_segs.append({"src": sg["src"], "in": round(start, 2), "dur": take})
+            split_segs.append({"src": sg["src"], "in": round(start, 2), "dur": take, "zoom": sg.get("zoom", 1)})
             split_local.append(path)
             start += take; remain -= take
     if split_segs:
@@ -191,7 +191,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         path = order[rot % len(order)]
         take = round(min(CUT_MAX, vdur - total, durs.get(path, 8) - 0.1), 2)
         if take < 0.3: break
-        segs.append({"src": segs[-1]["src"], "in": 0.0, "dur": take})
+        segs.append({"src": segs[-1]["src"], "in": 0.0, "dur": take, "zoom": 1.3})
         local.append(path)
         total += take
         rot += 1
@@ -202,7 +202,10 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     for i, sg in enumerate(segs):
         progress(f"클립 다듬는 중 {i + 1}/{len(segs)}")
         sf = os.path.join(workdir, f"seg{i}.mp4")
-        vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},setsar=1"
+        z = float(sg.get("zoom") or 1)
+        # 🔍 재사용 컷은 확대해서 다른 그림으로(사장님 지시) — 키워서 중앙 크롭
+        sw, sh = int(w * z), int(h * z)
+        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},setsar=1"
         cmd = [FFMPEG, "-y", "-v", "error"]
         if float(sg.get("in", 0)) > 0: cmd += ["-ss", str(sg["in"])]
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",
