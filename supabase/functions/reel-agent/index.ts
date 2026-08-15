@@ -647,6 +647,70 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   }
   _matchDbg += ` | assign:hungarian(${wins.length}x${clips.length})`;
 
+  /* 🧑‍⚖️ 자기 검수 루프 — 알고리즘 초안을 '편집장'이 다시 본다.
+     알고리즘은 단어·의미 유사도만 보므로, 대사에 단서가 옅은 컷("속은 촉촉하고요")에서 흔들린다.
+     전체 판(어떤 클립이 있고, 각 컷에서 무슨 말을 하는지)을 통째로 보여주고 틀린 배치만 교체받는다.
+     실패하면 초안 그대로 간다(검수는 있으면 좋고 없으면 그만). */
+  if (GEMINI_KEY && wins.length >= 4) {
+    try {
+      const clipList = info.map((c, i) => `${i}: ${c.cap} [${c.role}]`).join("\n");
+      const cutList = wins.map((w, k) => `컷${k} (${w.start.toFixed(1)}s) 내레이션 "${w.text}" → 현재 배치: ${assign[k] >= 0 ? `${assign[k]}번(${info[assign[k]].cap})` : "없음"}`).join("\n");
+      const sys = `너는 맛집 릴스 편집장이다. 아래는 자동 배치된 컷 목록이다. **틀린 배치만** 고쳐라.
+판단 기준(중요도 순):
+1) 그 컷에서 말하는 내용과 화면이 맞아야 한다 — 냉면 얘기에 빈대떡이 나오면 실패.
+2) 같은 문장이 여러 컷으로 나뉘면 같은 음식/장소를 유지한다(앵글만 달라야 한다).
+3) 대사에 단서가 없는 컷("속은 촉촉하고요", "딱 정석입니다")은 **바로 앞 컷과 같은 소재**를 이어라.
+4) 한 클립은 되도록 한 번만. 단, 2)·3) 때문이면 같은 클립 재사용 허용.
+JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 게 없으면 {"fix":[]}`;
+      const user = `[클립 목록]\n${clipList}\n\n[컷 배치]\n${cutList}`;
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 1200, thinkingConfig: { thinkingBudget: 0 } } }),
+      });
+      const d = await r.json().catch(() => null);
+      const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+      const m = /\{[\s\S]*\}/.exec(txt);
+      const fixes = m ? (JSON.parse(m[0])?.fix || []) : [];
+      const before = [...assign];
+      let applied = 0;
+      for (const f of fixes) {
+        const w = Number(f?.cut), i = Number(f?.clip);
+        if (!Number.isInteger(w) || !Number.isInteger(i)) continue;
+        if (w < 0 || w >= wins.length || i < 0 || i >= clips.length) continue;
+        if (assign[w] === i) continue;
+        assign[w] = i; applied++;
+      }
+      /* 검수 부작용 가드 — 편집장이 같은 클립을 떨어진 자리에 두 번 쓰는 경우가 있다(실측: 계단 컷 2회).
+         붙어 있는 컷(같은 소재 이어가기)만 허용하고, 떨어진 중복은 원래 배치로 되돌린다. */
+      const seenAt = new Map<number, number>();
+      for (let w = 0; w < wins.length; w++) {
+        const i = assign[w];
+        if (i < 0) continue;
+        const prev = seenAt.get(i);
+        if (prev !== undefined && w - prev > 1) {
+          // 검수가 새로 넣은 쪽을 되돌린다(원래부터 그 자리였던 컷을 살린다)
+          const victim = (assign[w] !== before[w]) ? w : ((assign[prev] !== before[prev]) ? prev : w);
+          const restore = before[victim];
+          if (restore >= 0 && restore !== i) { assign[victim] = restore; applied--; if (victim === prev) seenAt.set(i, w); }
+          else { assign[victim] = -1; applied--; }
+        } else seenAt.set(i, w);
+      }
+      // 되돌리다 빈 자리가 생기면 남은 컷 중 가장 맞는 것으로 채운다
+      for (let w = 0; w < wins.length; w++) {
+        if (assign[w] >= 0) continue;
+        const inUse = new Set(assign.filter((x) => x >= 0));
+        let best = -1, bs = -Infinity;
+        for (let i = 0; i < clips.length; i++) {
+          if (inUse.has(i)) continue;
+          const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
+          if (sc > bs) { bs = sc; best = i; }
+        }
+        if (best >= 0) assign[w] = best;
+      }
+      _matchDbg += ` | 검수:${applied}건교체`;
+    } catch (e) { _matchDbg += " | 검수실패"; }
+  }
+
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;
