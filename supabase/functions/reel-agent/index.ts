@@ -201,12 +201,12 @@ function alignUnits(units: string[], words: Word[]) {
   clampOverlap(subs);
   return subs.length >= 3 ? subs : null;
 }
-/* ⚠️ 자막 겹침 금지 — 끝여유(+0.12s)가 다음 장과 포개지면 두 문장이 같은 자리에 겹쳐 '깨진 글자+깜빡임'으로 보인다(실기 스크린샷 사고).
-   각 장은 다음 장이 시작되기 직전에 정확히 끝난다. */
+/* ⚠️ 자막은 '빈틈없이 이어붙인다' — 원본(Vrew fcpxml) 실측: 카드가 연속이라 박스가 항상 떠있고 글자만 바뀐다.
+   v4 실사고 2건이 다 여기서 났다: ①겹침(+0.12s 끝여유 → 두 문장 포개져 깨진 글자) ②공백(카드 사이 0.8s 무자막 → 박스가 꺼졌다 켜지는 깜빡임).
+   각 장 = 정확히 다음 장 시작까지. 마지막 장만 제 길이 유지. */
 function clampOverlap(subs: { text: string; start: number; len: number }[]) {
   for (let i = 0; i < subs.length - 1; i++) {
-    const maxLen = subs[i + 1].start - subs[i].start - 0.03;
-    if (subs[i].len > maxLen) subs[i].len = +Math.max(0.2, maxLen).toFixed(2);
+    subs[i].len = +(subs[i + 1].start - subs[i].start).toFixed(2);
   }
 }
 
