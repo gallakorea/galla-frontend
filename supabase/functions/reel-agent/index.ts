@@ -585,6 +585,7 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   /* 📌 명시 지정(핀) — 대본이 그 단어를 직접 말하면 해당 컷을 '먼저 확정'하고 최적화는 나머지만 한다.
      임베딩·개념 보너스로는 "평양냉면"이 든 문장이 냉면 컷을 다 끌어가 계단이 끝까지 못 붙었다(실측 반복).
      이건 취향이 아니라 사실 매칭이므로 규칙으로 못 박는 게 맞다. */
+  const pinned = new Map<number, number>();   // 🔒 명시 지정은 이후 어떤 단계도 못 바꾼다
   {
     const PINS: [RegExp, RegExp][] = [
       [/계단|올라가|2층|이층|입구/, /계단|올라가|입구/],
@@ -608,7 +609,7 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
           const sc = (simOf(i, wt) ?? 0) * 100 + info[i].score;
           if (sc > bs) { bs = sc; best = i; }
         }
-        if (best >= 0) { assign[w] = best; used.add(best); break; }
+        if (best >= 0) { assign[w] = best; used.add(best); pinned.set(w, best); break; }
       }
     }
   }
@@ -744,8 +745,11 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
       const user = `[클립 목록]\n${clipList}\n\n[컷 배치]\n${cutList}`;
       /* 👁 사진으로 검수 — 캡션(글자)만 보면 "물냉면"이라 적힌 게 실제로는 비빔냉면일 수 있다(실측 오배치의 원인).
          클립 썸네일을 번호와 함께 실제로 보여주고 눈으로 판정하게 한다. */
-      const parts: any[] = [{ text: sys + "\n\n" + user + "\n\n[아래는 클립 0번부터 순서대로의 실제 화면이다 — 캡션이 아니라 이 그림을 보고 판단해라]" }];
-      for (let i = 0; i < clips.length; i++) {
+      /* ⚠️ 15장을 다 보내면 엣지 150초 타임아웃에 걸린다(실사고). 실제로 쓰인 클립만, 최대 8장.
+         (검수는 '지금 배치가 맞나'를 보는 것이므로 안 쓰인 클립까지 볼 필요는 적다.) */
+      const shown = [...new Set(assign.filter((x) => x >= 0))].slice(0, 8);
+      const parts: any[] = [{ text: sys + "\n\n" + user + "\n\n[아래는 현재 배치에 쓰인 클립들의 실제 화면이다 — 캡션이 아니라 그림을 보고 판단해라]" }];
+      for (const i of shown) {
         const th = clips[i]?.thumb;
         if (!th) continue;
         try {
@@ -881,6 +885,30 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
     }
   }
 
+  /* 🔒 핀 복원 — 대본이 직접 말하는 컷(계단·입구·골목·음식명)은 검수·정규화가 바꿔놨어도 되돌린다.
+     실사고: 핀으로 "2층 입구가=계단"을 정해놨는데 편집장 검수가 빈대떡으로 갈아치웠다. */
+  if (pinned.size) {
+    for (const [w, ci] of pinned) {
+      if (assign[w] === ci) continue;
+      const dupAt = assign.findIndex((x, k) => k !== w && x === ci);
+      if (dupAt >= 0) assign[dupAt] = assign[w] >= 0 ? assign[w] : -1;   // 자리 교환
+      assign[w] = ci;
+    }
+    // 교환으로 빈 자리가 생기면 남은 컷으로 채운다
+    for (let w = 0; w < wins.length; w++) {
+      if (assign[w] >= 0) continue;
+      const inUse = new Set(assign.filter((x) => x >= 0));
+      let best = -1, bs = -Infinity;
+      for (let i = 0; i < clips.length; i++) {
+        if (inUse.has(i)) continue;
+        const sc = (simOf(i, wins[w].text) ?? 0) * 100 + info[i].score + (foodish(info[i].role) ? 2 : 0);
+        if (sc > bs) { bs = sc; best = i; }
+      }
+      if (best >= 0) assign[w] = best;
+    }
+    _matchDbg += ` | 핀복원:${pinned.size}`;
+  }
+
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;
@@ -910,6 +938,46 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
         if (best >= 0) { clip = best; usedAll.add(best); }
       }
       out.push({ clip, start: st, end: en });
+    }
+  }
+  /* 📌 핀을 '최종 컷 목록'에 적용 — 여기가 실제로 화면에 나가는 단위다.
+     ⚠️ 예전엔 창(window) 단위로만 핀을 걸어서, 창을 쪼갠 조각들("노포인데 2층 입구가")은
+        핀 밖에서 아무 클립이나 받았다(실사고: 그 자리에 빈대떡). */
+  {
+    const PINS: [RegExp, RegExp][] = [
+      [/계단|올라가|2층|이층|입구/, /계단|올라가|입구/],
+      [/간판|외관|건물/, /간판|외관|입구/],
+      [/골목|시장|거리|남대문/, /골목|시장|거리/],
+      [/빈대떡|부침/, /빈대떡|부침/],
+      [/물냉면|육수|편육|슴슴|동치미/, /물냉면|육수/],
+      [/비빔냉면|비빔|양념장/, /비빔/],
+      [/무침|제육|겨자|식초|매콤/, /무침|제육/],
+    ];
+    const spokenAt = (a: number, b: number) =>
+      subs.filter((x: any) => x.start >= a - 0.05 && x.start < b - 0.05).map((x: any) => x.text).join(" ");
+    const taken = new Set(out.map((o) => o.clip));
+    for (const o of out) {
+      const txt = spokenAt(o.start, o.end);
+      if (!txt) continue;
+      const capOf = (i: number) => `${info[i].cap} ${info[i].key}`;
+      if (PINS.some(([rt, rc]) => rt.test(txt) && rc.test(capOf(o.clip)))) continue;   // 이미 맞음
+      for (const [rt, rc] of PINS) {
+        if (!rt.test(txt)) continue;
+        let best = -1, bs = -1;
+        for (let i = 0; i < clips.length; i++) {
+          if (!rc.test(capOf(i))) continue;
+          const sc = (simOf(i, txt) ?? 0) * 100 + info[i].score - (taken.has(i) ? 25 : 0);
+          if (sc > bs) { bs = sc; best = i; }
+        }
+        if (best >= 0 && best !== o.clip) {
+          // 자리 교환(그 클립을 쓰던 컷은 이 컷이 쓰던 걸 넘겨받는다)
+          const other = out.find((x) => x !== o && x.clip === best);
+          if (other) other.clip = o.clip;
+          taken.delete(o.clip); taken.add(best);
+          o.clip = best;
+        }
+        break;
+      }
     }
   }
   return out;
@@ -1011,6 +1079,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
   if (error || !job) return j({ error: "job_insert" }, 500);
   const id = job.id as string;
 
+  /* ⏱ 무거운 처리는 백그라운드로 — TTS+STT+비전+임베딩+검수를 한 요청에 담으면 엣지 150초 한도를 넘는다(실사고).
+     잡 시스템이므로 즉시 id를 돌려주고 상태는 폴링으로 따라가면 된다. */
+  const heavy = (async () => {
   try {
     if (voiceMode === "ai") {
       await pushProgress(id, uid, "AI 목소리 만드는 중");
@@ -1206,15 +1277,17 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     });
     if (wantPreview) {
       await pushProgress(id, uid, "미리보기 준비 완료 — 컷 확인하고 바꿔줘");
-      return j({ ok: true, id, state: "preview", cuts: cutCards(timeline, subs, clips, info), clips: clipCards(clips, info), match_dbg: _matchDbg || undefined });
+      return;
     }
     await pushProgress(id, uid, "렌더 대기열 진입");
-    return j({ ok: true, id, state: "render_queued", used: poolInfo.map((c) => `${c.cap}[${c.role}]`), dropped, segments: timeline.length, cap_dbg: _capDbg || undefined, match_dbg: _matchDbg || undefined });
+    return;
   } catch (e) {
     await setJob(id, { state: "failed", error: String(e).slice(0, 200) });
     await pushProgress(id, uid, "실패 — " + String(e).slice(0, 80));
-    return j({ ok: false, id, error: String(e).slice(0, 120) }, 500);
   }
+  })();
+  try { (globalThis as any).EdgeRuntime?.waitUntil?.(heavy); } catch (_) { /* 로컬 실행 등 */ }
+  return j({ ok: true, id, state: "processing" });
 }
 
 Deno.serve(async (req) => {
