@@ -668,6 +668,83 @@
       v.src=url;
     });
   }
+  /* 👀 컷 미리보기 — AI가 짠 컷을 사람이 눈으로 보고 2탭으로 바꾼다.
+     "AI가 100% 맞출 때까지 기다린다"가 아니라 "AI가 90% 만들고 사람이 10초 만에 완성한다"가 실전이다. */
+  function renderCutPreview(jobId, cuts, allClips, jwt, srcClips, parentWrap, status, unlock){
+    var box=el('<div class="fr-cutpv"><div class="fr-cutpv-h">🎞 컷 확인 — 어색한 컷은 탭해서 바꿔줘</div><div class="fr-cutpv-list"></div>'+
+      '<button class="fr-cutpv-go">이대로 영상 만들기 🎬</button></div>');
+    var list=box.querySelector(".fr-cutpv-list");
+    function paint(cs){
+      list.innerHTML="";
+      cs.forEach(function(c){
+        var row=el('<div class="fr-cut"><img class="fr-cut-th" alt=""><div class="fr-cut-mid">'+
+          '<div class="fr-cut-txt"></div><div class="fr-cut-cap"></div></div><button class="fr-cut-swap">바꾸기</button></div>');
+        var im=row.querySelector(".fr-cut-th"); if(c.thumb) im.src=c.thumb; else im.style.visibility="hidden";
+        row.querySelector(".fr-cut-txt").textContent=c.text? ("「"+c.text+"」") : ("컷 "+(c.cut+1));
+        row.querySelector(".fr-cut-cap").textContent=(c.cap||"")+" · "+c.at+"s";
+        row.querySelector(".fr-cut-swap").addEventListener("click", function(){ openPicker(c, row); });
+        list.appendChild(row);
+      });
+    }
+    function openPicker(cut, row){
+      var old=list.querySelector(".fr-pick"); if(old) old.remove();
+      var pick=el('<div class="fr-pick"></div>');
+      allClips.forEach(function(cl){
+        var b=el('<button class="fr-pick-it"><img alt=""><span></span></button>');
+        if(cl.thumb) b.querySelector("img").src=cl.thumb;
+        b.querySelector("span").textContent=cl.cap||("클립 "+(cl.clip+1));
+        b.addEventListener("click", async function(){
+          pick.remove();
+          try{
+            var r=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+              headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+              body:JSON.stringify({ op:"swap", id:jobId, cut:cut.cut, clip:cl.clip }) })).json();
+            if(r && r.cuts) paint(r.cuts);
+          }catch(e){}
+        });
+        pick.appendChild(b);
+      });
+      row.insertAdjacentElement("afterend", pick);
+    }
+    paint(cuts);
+    box.querySelector(".fr-cutpv-go").addEventListener("click", async function(){
+      box.querySelector(".fr-cutpv-go").disabled=true;
+      status("🎬 영상 만드는 중…");
+      try{
+        await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+          body:JSON.stringify({ op:"approve", id:jobId }) });
+      }catch(e){}
+      pollReelDone(jobId, jwt, srcClips, status, unlock);
+    });
+    logEl.appendChild(box); scrollBottom();
+  }
+  // 렌더 완료까지 폴링 → 편집기 자동 첨부
+  async function pollReelDone(jobId, jwt, clips, status, unlock){
+    for(var tries=0; tries<200; tries++){
+      await sleep(3000);
+      var st;
+      try{ st=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({ op:"status", id:jobId }) })).json(); }catch(e){ continue; }
+      var job=st && st.job; if(!job) continue;
+      var prog=(job.progress||[]); if(prog.length) status("🎬 "+prog[prog.length-1].msg);
+      if(job.state==="done"){
+        var url=(job.artifacts||{}).video_url; status("");
+        var applied=false;
+        try{ if(url && window.GALLA_WORKFORM && window.GALLA_WORKFORM.setVideo){ window.GALLA_WORKFORM.setVideo(url, (clips[0]||{}).thumb||null, "vertical"); applied=true; flashDock(); } }catch(e){}
+        if(url){
+          var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline></video></div></div>');
+          m.querySelector("video").src=url; logEl.appendChild(m); scrollBottom();
+        }
+        addMsg("a", applied ? "릴스 완성! 편집기에 넣어놨어 — [공유]만 누르면 발행 🎬" : "릴스 완성! 영상 꾹 눌러 저장해 쓰면 돼 🎬");
+        unlock(); return;
+      }
+      if(job.state==="failed"){ status(""); addMsg("a","만들다 실패했어 ㅜ 다시 해볼까?"); unlock(); return; }
+    }
+    unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤 '내 릴스 어떻게 됐어?' 하고 물어봐줘");
+  }
+
   async function makeReel(blob, script, wrap, status){
     var makeBtn=wrap.querySelector(".fr-reel-make"), aiBtn=wrap.querySelector(".fr-reel-ai");
     makeBtn.disabled=true; if(aiBtn) aiBtn.disabled=true;
@@ -703,7 +780,13 @@
         addMsg("a", res&&res.error==="stt_failed" ? "녹음을 못 알아들었어 ㅜ 조용한 데서 또박또박 다시 녹음해볼래?" : "접수가 안 됐어 ㅜ 다시 해볼까?");
         return;
       }
-      // 4) 잡 status 폴링 — 진행 로그를 카드에 흘리고, 완성되면 편집기 자동 첨부
+      // 4) 미리보기 — 컷을 카드로 보여주고 2탭으로 교체(완성도는 여기서 사람이 채운다)
+      if(res.state==="preview" && res.cuts && res.cuts.length){
+        status("");
+        renderCutPreview(res.id, res.cuts, res.clips||[], jwt, clips, wrap, status, unlock);
+        return;
+      }
+      // 4') 잡 status 폴링 — 진행 로그를 카드에 흘리고, 완성되면 편집기 자동 첨부
       var jobId=res.id, tries=0, doneUrl=null;
       while(tries++<200){
         await sleep(3000);

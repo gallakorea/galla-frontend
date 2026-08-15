@@ -426,3 +426,22 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
   box-shadow:0 4px 14px rgba(91,124,250,.32);
 }
 .fr-chip-cta:active{ transform:translateY(1px); }
+
+/* 👀 릴스 컷 미리보기 — AI 배치를 사람이 2탭으로 고친다(마지막 10%를 사람이 채우는 자리) */
+.fr-cutpv{ align-self:stretch; background:rgba(255,255,255,.04); border:1px solid rgba(95,216,255,.2); border-radius:14px; padding:12px; }
+.fr-cutpv-h{ font-size:12px; font-weight:800; color:#bfeeff; margin-bottom:9px; }
+.fr-cutpv-list{ display:flex; flex-direction:column; gap:6px; max-height:46vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.fr-cut{ display:flex; align-items:center; gap:9px; background:rgba(0,0,0,.25); border-radius:10px; padding:6px 8px; }
+.fr-cut-th{ width:38px; height:58px; object-fit:cover; border-radius:6px; background:#111; flex:0 0 auto; }
+.fr-cut-mid{ flex:1 1 auto; min-width:0; }
+.fr-cut-txt{ font-size:12.5px; color:#e6f3fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fr-cut-cap{ font-size:11px; color:#8fb6c9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.fr-cut-swap{ flex:0 0 auto; background:rgba(95,216,255,.12); border:1px solid rgba(95,216,255,.35); color:#bfeeff;
+  font-size:11.5px; font-weight:800; padding:6px 10px; border-radius:999px; cursor:pointer; font-family:inherit; }
+.fr-pick{ display:flex; gap:6px; overflow-x:auto; padding:6px 2px; -webkit-overflow-scrolling:touch; }
+.fr-pick-it{ flex:0 0 auto; width:64px; background:none; border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:4px; cursor:pointer; font-family:inherit; }
+.fr-pick-it img{ width:100%; height:76px; object-fit:cover; border-radius:5px; background:#111; display:block; }
+.fr-pick-it span{ display:block; font-size:9.5px; color:#cfe6f2; margin-top:3px; line-height:1.2; max-height:24px; overflow:hidden; }
+.fr-cutpv-go{ width:100%; margin-top:10px; background:rgba(255,180,92,.16); border:1px solid rgba(255,180,92,.5); color:#ffd9a8;
+  font-size:13px; font-weight:800; padding:10px; border-radius:10px; cursor:pointer; font-family:inherit; }
+.fr-cutpv-go:disabled{ opacity:.5; }

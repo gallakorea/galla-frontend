@@ -214,7 +214,7 @@ function clampOverlap(subs: { text: string; start: number; len: number }[]) {
    역할(role)이 편집의 핵심이다: food/cook/eat = 릴스의 본체, place = 맥락(양념), junk = 버릴 컷.
    사장님 지적("쓸데없는 컷이 초반에 몰림")의 해법은 여기서 시작한다 — 캡션만으론 컷을 못 버린다.
    1순위 Gemini(이미지 바이트 인라인), 폴백 OpenAI, 최후 폴백(전부 food 취급 → 순서 배치로 강등). */
-type ClipInfo = { cap: string; role: string; score: number; key: string };
+type ClipInfo = { cap: string; role: string; score: number; key: string; act?: string; shot?: string };
 let _capDbg = "";   // 🔬 진단: 마지막 캡션 실패 원인(create 응답에 노출)
 function parseClipInfo(txt: string, n: number): ClipInfo[] {
   let arr: any[] = [];
@@ -227,6 +227,8 @@ function parseClipInfo(txt: string, n: number): ClipInfo[] {
     role: ["food", "cook", "eat", "place", "junk"].includes(String(o?.r)) ? String(o.r) : "food",
     score: Math.max(1, Math.min(5, Number(o?.s) || 3)),
     key: String(o?.k || o?.c || `k${i}`).slice(0, 20),   // 소재 키(같은 음식·같은 장면 묶음) — 장면 중복 제거용
+    act: String(o?.a || "").slice(0, 12),                // 동작(붓기·자르기·들기…) — 같은 음식이라도 그림이 달라진다
+    shot: ["close", "mid", "wide"].includes(String(o?.sh)) ? String(o.sh) : "",
   }));
 }
 /* 🧠 캐시 — 같은 클립은 항상 같은 판정을 쓴다.
@@ -250,7 +252,9 @@ async function captionClips(clips: any[]): Promise<ClipInfo[]> {
   const fallback: ClipInfo[] = clips.map((_, i) => ({ cap: `클립 ${i + 1}`, role: "food", score: 3, key: `k${i}` }));
   if (!thumbs.some(Boolean)) return fallback;
   const ask = `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지를 순서대로 판정해 JSON 배열로만 답해라(이미지 개수와 같은 길이).
-원소 형식: {"c":"장면 6~14자","k":"소재키","r":"food|cook|eat|place|junk","s":1~5}
+원소 형식: {"c":"장면 6~14자","k":"소재키","r":"food|cook|eat|place|junk","s":1~5,"a":"동작","sh":"close|mid|wide"}
+a = 화면에서 벌어지는 동작 한 단어(붓기/비비기/자르기/들기/먹기/걷기/정적 등). 정지된 상차림이면 "정적".
+sh = 샷 크기(close=음식 꽉 찬 클로즈업, mid=한 상 정도, wide=공간·거리)
 k = **소재 키**: 무엇을 찍었는지 한 단어로 통일해서 붙여라. 같은 음식·같은 대상을 찍은 프레임은 각도·동작이 달라도 **반드시 똑같은 키**를 써야 한다(예: 빈대떡 클로즈업도 빈대떡 자르는 것도 전부 "빈대떡", 물냉면 여러 컷은 전부 "물냉면", 간판·외관은 "외관"). 이 키로 중복 장면을 골라낸다.
 r = food(음식 클로즈업·완성된 상차림) / cook(붓기·비비기·자르기·굽기 등 손동작) / eat(먹는 장면·리액션) / place(외관·간판·거리·계단·내부·벽·메뉴판 등 맥락샷) / junk(흔들림·초점나감·의미 없는 이동샷)
 s = 릴스에 쓸 만한 정도(5=군침 도는 결정적 컷, 1=버릴 컷)
@@ -423,6 +427,32 @@ function hungarian(cost: number[][]): number[] {
   return ans;
 }
 
+/* 🎬 샷 리스트(감독 관점) — 클립을 보기 '전에' 대본만으로 "이 문장엔 어떤 그림이 필요한가"를 정한다.
+   자막 조각("속은 촉촉하고요")은 단서가 거의 없어서 글자·의미 매칭만으로는 한계가 있다.
+   감독이 콘티를 먼저 그리듯 문장별 요구 샷을 만들어두면, 그 요구문과 장면 설명을 맞추면 되므로 정확해진다. */
+async function shotList(script: string, sentences: string[]): Promise<string[] | null> {
+  if (!GEMINI_KEY || sentences.length < 2) return null;
+  try {
+    const sys = `너는 맛집 릴스 감독이다. 아래 내레이션의 각 문장에 '어떤 그림이 필요한지' 한 줄씩 적어라.
+- 그 문장을 들을 때 화면에 무엇이 보여야 하는가를 구체적으로(예: "가게 간판과 골목 입구", "제육무침에 소스 붓는 손", "물냉면 육수와 고명 클로즈업").
+- 문장이 음식을 말하면 그 음식 이름을 반드시 포함해라.
+- 문장이 위치·역사·규칙을 말하면 그에 맞는 공간 샷을 적어라.
+JSON 문자열 배열만 출력(문장 개수와 같은 길이).`;
+    const user = sentences.map((s, i) => `${i}: ${s}`).join("\n");
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 900, thinkingConfig: { thinkingBudget: 0 } } }),
+    });
+    const d = await r.json().catch(() => null);
+    const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+    const m = /\[[\s\S]*\]/.exec(txt);
+    let arr: string[] = [];
+    try { arr = m ? JSON.parse(m[0]) : []; } catch { arr = []; }
+    if (!arr.length) arr = [...txt.matchAll(/"([^"\n]{4,60})"/g)].map((x) => x[1]);
+    return arr.length >= 2 ? arr.map((x) => String(x).slice(0, 80)) : null;
+  } catch { return null; }
+}
+
 let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
 async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
   _matchDbg = "";
@@ -503,16 +533,31 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   const assign: number[] = new Array(wins.length).fill(-1);
 
   /* 🧠 의미 매칭 준비 — 클립 설명 / 조각 텍스트 / 문장 텍스트를 한 번에 임베딩. */
-  const clipTexts = info.map((c) => `맛집 영상 장면: ${c.cap}. 소재: ${c.key}.`);
-  const winTexts = wins.map((w: any) => `내레이션: ${w.text}`);
-  const sentTexts = [...new Set(wins.map((w: any) => w.sentText || w.text))].map((t) => `내레이션: ${t}`);
+  const clipTexts = info.map((c) => `맛집 영상 장면: ${c.cap}. 소재: ${c.key}.${c.act ? ` 동작: ${c.act}.` : ""}${c.shot ? ` 샷: ${c.shot}.` : ""}`);
+  /* 🎬 샷 리스트를 문장 텍스트에 합쳐서 임베딩 — "속은 촉촉하고요"만으론 못 맞추지만
+     "빈대떡 단면과 김이 나는 촉촉한 속살" 같은 요구 샷이 붙으면 정확히 붙는다. */
+  const uniqSents = [...new Set(wins.map((w: any) => w.sentText || w.text))];
+  const shots = await shotList(script, uniqSents);
+  const shotOf = new Map<string, string>();
+  if (shots) uniqSents.forEach((s, i) => shotOf.set(s, shots[i] || ""));
+  const enrich = (t: string) => {
+    const st = shotOf.get(t);
+    return st ? `${t} (필요한 그림: ${st})` : t;
+  };
+  const winTexts = wins.map((w: any) => `내레이션: ${enrich(w.sentText || w.text)} / 지금 말: ${w.text}`);
+  const sentTexts = uniqSents.map((t) => `내레이션: ${enrich(t)}`);
+  _matchDbg += shots ? " | shotlist:on" : " | shotlist:off";
   const emb = await embedAll([...clipTexts, ...winTexts, ...sentTexts]);
   const eClip = emb ? emb.slice(0, clipTexts.length) : null;
+  // ⚠️ 조회 키는 '원문 텍스트'로 둔다(임베딩에 넣는 문장은 샷리스트가 붙어 달라지므로 키로 쓰면 안 된다)
   const eText = new Map<string, number[]>();
-  if (emb) [...winTexts, ...sentTexts].forEach((t, k) => eText.set(t, emb[clipTexts.length + k]));
+  if (emb) {
+    wins.forEach((w: any, k: number) => eText.set(w.text, emb[clipTexts.length + k]));
+    uniqSents.forEach((t, k) => eText.set(t, emb[clipTexts.length + winTexts.length + k]));
+  }
   const simOf = (i: number, text: string) => {
     if (!eClip) return null;
-    const v = eText.get(`내레이션: ${text}`);
+    const v = eText.get(text);
     return v ? cosine(eClip[i], v) : null;
   };
   _matchDbg += emb ? " | embed:on" : ` | embed:off(${_embedDbg})`;
@@ -799,6 +844,29 @@ function orderTimeline(clips: any[], voiceDur: number) {
     t += take; gi++;
   }
   return segs;
+}
+
+/* 👀 미리보기 카드 — 컷마다 [썸네일 + 그 순간 내레이션 + 현재 클립]을 클라이언트가 그릴 수 있게 만든다. */
+function cutCards(timeline: any[], subs: any[], clips: any[], info: ClipInfo[]) {
+  const idxOf = new Map<string, number>(clips.map((c: any, i: number) => [c.url, i]));
+  const out: any[] = [];
+  let t = 0;
+  for (let k = 0; k < timeline.length; k++) {
+    const seg = timeline[k];
+    const end = t + seg.dur;
+    const text = subs.filter((s: any) => s.start >= t - 0.05 && s.start < end - 0.05).map((s: any) => s.text).join(" ");
+    const ci = idxOf.get(seg.src) ?? -1;
+    out.push({
+      cut: k, at: +t.toFixed(1), dur: seg.dur, text: text.trim(),
+      clip: ci, thumb: ci >= 0 ? (clips[ci].thumb || null) : null,
+      cap: ci >= 0 ? info[ci].cap : "",
+    });
+    t = end;
+  }
+  return out;
+}
+function clipCards(clips: any[], info: ClipInfo[]) {
+  return clips.map((c: any, i: number) => ({ clip: i, thumb: c.thumb || null, cap: info[i].cap, role: info[i].role }));
 }
 
 // ── create: 정렬~매칭까지 실행 후 렌더 큐 투입 ──
@@ -1152,7 +1220,17 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + tail.dur).toFixed(2);
     }
 
-    await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_info: info, pool_info: poolInfo, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo } });
+    /* 👀 미리보기 모드 — 렌더 전에 '컷 목록'을 사람이 보고 2탭으로 바꾼다.
+       AI가 아무리 좋아져도 마지막 한두 컷은 취향이다. 여기서 손보면 바로 완성품이 된다. */
+    const wantPreview = body?.preview !== false;
+    await setJob(id, {
+      state: wantPreview ? "preview" : "render_queued",
+      artifacts: { transcript: stt.text, subtitles: subs, clip_info: info, pool_info: poolInfo, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo },
+    });
+    if (wantPreview) {
+      await pushProgress(id, uid, "미리보기 준비 완료 — 컷 확인하고 바꿔줘");
+      return j({ ok: true, id, state: "preview", cuts: cutCards(timeline, subs, clips, info), clips: clipCards(clips, info), match_dbg: _matchDbg || undefined });
+    }
     await pushProgress(id, uid, "렌더 대기열 진입");
     return j({ ok: true, id, state: "render_queued", used: poolInfo.map((c) => `${c.cap}[${c.role}]`), dropped, segments: timeline.length, cap_dbg: _capDbg || undefined, match_dbg: _matchDbg || undefined });
   } catch (e) {
@@ -1277,6 +1355,41 @@ Deno.serve(async (req) => {
   const uid = u.user.id;
 
   if (op === "create") return await runCreate(uid, body);
+
+  /* 👀 미리보기 컷 교체 — 사람이 2탭으로 고친다. AI 100%를 기다리는 대신 사람이 즉시 완성시킨다.
+     교체 기록(swap_log)은 나중에 "이런 문장엔 이런 컷" 학습 데이터가 된다. */
+  if (op === "cuts" || op === "swap" || op === "approve") {
+    const { data: job } = await sb.from("agent_jobs").select("id,state,inputs,artifacts").eq("id", String(body.id)).eq("user_id", uid).single();
+    if (!job) return j({ error: "no_job" }, 404);
+    const a: any = job.artifacts || {};
+    const clips: any[] = (job.inputs as any)?.clips || [];
+    const info: ClipInfo[] = a.clip_info || [];
+    const timeline: any[] = a.timeline || [];
+
+    if (op === "cuts") return j({ ok: true, state: job.state, cuts: cutCards(timeline, a.subtitles || [], clips, info), clips: clipCards(clips, info) });
+
+    if (op === "swap") {
+      const k = Number(body.cut), ci = Number(body.clip);
+      if (!Number.isInteger(k) || k < 0 || k >= timeline.length) return j({ error: "bad_cut" }, 400);
+      if (!Number.isInteger(ci) || ci < 0 || ci >= clips.length) return j({ error: "bad_clip" }, 400);
+      const prev = timeline[k].src;
+      timeline[k] = { ...timeline[k], src: clips[ci].url, in: 0 };
+      // 같은 클립이 다른 자리에도 있으면 이번 컷은 확대해 다른 그림으로
+      const dup = timeline.some((s: any, i: number) => i !== k && s.src === clips[ci].url);
+      if (dup) timeline[k].zoom = 1.3; else delete timeline[k].zoom;
+      const log = Array.isArray(a.swap_log) ? a.swap_log : [];
+      log.push({ cut: k, from: prev, to: clips[ci].url, at: new Date().toISOString() });
+      await setJob(String(body.id), { artifacts: { ...a, timeline, swap_log: log.slice(-50) } });
+      return j({ ok: true, cuts: cutCards(timeline, a.subtitles || [], clips, info) });
+    }
+
+    if (op === "approve") {
+      if (job.state !== "preview") return j({ error: "not_preview", state: job.state }, 409);
+      await setJob(String(body.id), { state: "render_queued" });
+      await pushProgress(String(body.id), uid, "렌더 대기열 진입");
+      return j({ ok: true, state: "render_queued" });
+    }
+  }
   if (op === "status") {
     const { data } = await sb.from("agent_jobs").select("id,state,artifacts,progress,error,created_at").eq("id", String(body.id)).eq("user_id", uid).single();
     if (!data) return j({ error: "no_job" }, 404);
