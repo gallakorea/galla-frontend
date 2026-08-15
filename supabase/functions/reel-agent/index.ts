@@ -657,6 +657,35 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
     }
     return best;
   };
+  /* 🏷 ⓪ 이름표 매칭(가게 무관 일반 규칙) — 비전이 붙인 클립 '소재 키'(빈대떡·생맥주·닭고기…)가
+     그 구간 말에 그대로 나오면 그 컷이다. 하드코딩 사전(SUBJECTS)은 냉면집 단어라 다른 가게에선 무용지물이었다
+     (실측: 광저우 화로구이 12컷 — 6문장 중 2개만 맞음. "생맥주" 말하는데 생맥주 컷을 안 씀).
+     ⚠️ 2글자 부분일치는 금지("평양냉면"이 물냉면 컷을 끌어가 간판 자리를 뺏는다). 완전일치 또는 3글자 이상만. */
+  const KEYSTOP = new Set(["내부", "외관", "입구", "결제", "암전", "기타", "전경", "전체", "손님", "사람"]);
+  const PARTICLE = /(은|는|이|가|을|를|에|의|도|만|와|과|랑|이랑|부터|까지|에서|으로|로)$/;
+  const keyTok = info.map((c) => (c.key || "").split(/[^가-힣A-Za-z0-9]+/).filter((w) => w.length >= 2 && !KEYSTOP.has(w)));
+  const nameHits = (i: number, text: string) => {
+    const words = text.split(/[^가-힣A-Za-z0-9]+/).map((w) => w.replace(PARTICLE, "")).filter((w) => w.length >= 3);
+    return keyTok[i].filter((k) => text.includes(k) || words.some((w) => k.includes(w))).length;
+  };
+  /* 2단계로 돈다: 먼저 **그 조각이 실제로 그 이름을 발음하는** 구간부터 가져간다.
+     ⚠️ 문장 전체로 한 번에 돌리면 앞 조각이 먼저 채간다 — 실측: "자리에 앉자마자 / 시원한 생맥주부터"에서
+        첫 조각이 생맥주 컷을 가져가고, 정작 '생맥주'라고 말하는 조각엔 사케가 나갔다. */
+  for (const stage of [0, 1]) {
+    for (let w = 0; w < wins.length; w++) {
+      if (assign[w] >= 0) continue;
+      const text = stage === 0 ? wins[w].text : ((wins[w] as any).sentText || wins[w].text);
+      let best = -1, bs = 0;
+      for (let i = 0; i < clips.length; i++) {
+        if (used.has(i)) continue;
+        const h = nameHits(i, text);
+        if (h <= 0) continue;
+        const sc = h * 10 + (simOf(i, wins[w].text) ?? 0) * 20 + info[i].score;
+        if (sc > bs) { bs = sc; best = i; }
+      }
+      if (best >= 0) { assign[w] = best; used.add(best); }
+    }
+  }
   for (let w = 0; w < wins.length; w++) {          // ① 그 구간이 직접 말하는 소재
     if (assign[w] >= 0) continue;
     for (const subj of subjOfText(wins[w].text)) {
@@ -671,6 +700,33 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       const i = pickBy(subj, wins[w].text);
       if (i >= 0) { assign[w] = i; used.add(i); break; }
     }
+  }
+  /* 🎬 ②-a 역할 힌트(가게 무관 일반 규칙) — 소재 이름을 못 찾아도 "무엇을 하는 말인지"는 알 수 있다.
+     조리 얘기엔 조리 컷, 먹는 얘기엔 시식 컷, 위치·소개 얘기엔 장소 컷. 그 안에서만 의미 유사도로 고른다.
+     ⚠️ 이게 없으면 "숯불에 올리면"에 접시 컷, "도심에 있는 …집입니다"에 고기 굽는 컷이 나간다(광저우 실측). */
+  const ROLE_HINT: [RegExp, string[]][] = [
+    // '나온다/담겨 나온다'는 조리가 아니라 **서빙된 상태**다 — 실측: "썰어서 나옵니다"에 불판 굽는 컷이 나갔다
+    [/나옵니다|나와요|나오고|나온|담겨|플레이팅|한 접시|상에|차려/, ["food", "eat"]],
+    [/굽|구워|익히|올리면|튀기|끓|볶|부치|비비|섞|뿌리|자르|말아|삶/, ["cook"]],
+    [/한 점|한 입|한입|먹으면|맛보|입에|후루룩|들이키|마시|씹|입맛/, ["eat", "cook"]],
+    [/도심|골목|시장|거리|안쪽|근처|위치|들어가|올라가|집입니다|가게|식당|노포|간판|자리|분위기/, ["place"]],
+  ];
+  for (let w = 0; w < wins.length; w++) {
+    if (assign[w] >= 0) continue;
+    const st = `${wins[w].text} ${(wins[w] as any).sentText || ""}`;
+    const roles = ROLE_HINT.find(([re]) => re.test(st))?.[1];
+    if (!roles) continue;
+    const cands = (r: string[]) => clips.map((_: any, i: number) => i).filter((i) => !used.has(i) && r.includes(info[i].role));
+    /* 장소 컷이 바닥나면 또 다른 밋밋한 장소 컷을 찾지 말고 음식 컷을 깐다 —
+       히트 릴스는 소개 문장 구간에 뒤에 나올 음식을 미리 보여준다. */
+    let pool2 = cands(roles);
+    if (!pool2.length && roles[0] === "place") pool2 = cands(["food", "cook", "eat"]);
+    let best = -1, bs = -Infinity;
+    for (const i of pool2) {
+      const sc = (simOf(i, wins[w].text) ?? 0) * 50 + info[i].score;
+      if (sc > bs) { bs = sc; best = i; }
+    }
+    if (best >= 0) { assign[w] = best; used.add(best); }
   }
   /* ②-b 같은 '계열' 대체 — 말한 소재의 컷이 이미 다 쓰였을 때, 아무 컷이나 주지 말고 같은 계열에서 고른다.
      ⚠️ 실사고: 마무리 "남대문 오면 무조건 저장입니다"에서 거리 컷이 도입부에 소진돼 물냉면이 나갔다.
@@ -687,7 +743,9 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       let best = -1, bs = -Infinity;
       for (let i = 0; i < clips.length; i++) {
         if (used.has(i) || !foodish(info[i].role)) continue;
-        const sc = info[i].score + (simOf(i, wins[lw].text) ?? 0) * 20;
+        // 마무리에 '생고기·손질 전' 컷이 나가면 침이 안 고인다 — 조리·시식 컷을 우선한다
+        const raw = /생고기|생물|날것|손질|다듬/.test(`${info[i].cap} ${info[i].key}`) ? 3 : 0;
+        const sc = info[i].score + (simOf(i, wins[lw].text) ?? 0) * 20 + (info[i].role === "eat" ? 1.5 : 0) - raw;
         if (sc > bs) { bs = sc; best = i; }
       }
       if (best >= 0) { assign[lw] = best; used.add(best); }
@@ -741,7 +799,10 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
     /* 쪼갤지 말지 — 같은 소재의 '다른 앵글'이 있을 때만 쪼갠다.
        대안이 없는데 쪼개면 같은 화면이 두 번 연속 나온다(사장님 지적: "장면이 두 번씩 나온다").
        그럴 땐 한 컷으로 길게 간다 — 사람 편집자도 그렇게 한다. */
+    /* 소재 판정은 **비전이 준 키를 먼저** 본다(가게 무관). 표는 그 키가 없을 때의 보조다 —
+       표는 냉면집 단어라 다른 가게(광저우 화로구이 등)에선 전부 ""로 떨어져 아무 컷이나 붙었다. */
     const subjOf2 = (i: number) => {
+      if (info[i].key) return info[i].key;
       const t = `${info[i].cap} ${info[i].key}`;
       const hit = SUBJ_TABLE.find(([, re]) => re.test(t));
       return hit ? hit[0] : "";
@@ -758,11 +819,7 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
          ⚠️ 같은 클립을 그대로 두면 모든 장면이 두 번씩 연속으로 나온다(실사고: 골목/골목, 계단/계단…).
             반대로 아무 클립이나 고르면 소재가 튄다. 그래서 '같은 소재 + 미사용'만 후보로 둔다. */
       if (p > 0) {
-        const subjOf = (i: number) => {
-          const t = `${info[i].cap} ${info[i].key}`;
-          const hit = SUBJ_TABLE.find(([, re]) => re.test(t));
-          return hit ? hit[0] : "";
-        };
+        const subjOf = subjOf2;
         const want = subjOf(s.clip);
         let alt = -1, as_ = -Infinity;
         for (let i = 0; i < clips.length; i++) {
@@ -947,7 +1004,8 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     const foodish = (r: string) => r === "food" || r === "cook" || r === "eat";
     /* 📄 '읽을거리' 컷(벽면 기사 스크랩·메뉴판·간판 텍스트)은 릴스에서 거의 쓸모없다.
        대본이 그걸 직접 말할 때(예: 백년가게 선정)만 의미가 있으므로 기본적으로 후보에서 제외한다. */
-    const READY = ["기사", "스크랩", "메뉴판", "벽면", "신문", "잡지", "안내문", "가격표"];
+    const READY = ["기사", "스크랩", "메뉴판", "벽면", "신문", "잡지", "안내문", "가격표",
+      "결제", "영수증", "휴대폰", "스마트폰", "카드", "포스"];   // 계산·폰 화면도 릴스에선 못 쓴다(광저우 실측)
     const isReadable = (i: number) => READY.some((w) => `${info[i].cap} ${info[i].key}`.includes(w));
     const groupByKey = (idxs: number[]) => {   // 소재별 그룹(점수 내림차순) — 1등만 본편, 나머지는 예비
       const m = new Map<string, number[]>();
@@ -1007,7 +1065,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       .slice(0, 5).map((x) => x.i);
     const places = placeNamed.length ? [...new Set([...placeNamed, placeAll[0]])].filter((i) => i !== undefined) : placeAll.slice(0, 1);
     if (wantsWall) {   // 수상·방송 문장이 있으면 벽면 홍보물 1컷은 반드시 후보에 남긴다(위 예외와 한 쌍)
-      const wall = cand.filter((i) => isReadable(i) && info[i].role === "place")
+      const wall = cand.filter((i) => /벽면|홍보|방송|기사|인증|액자|상패|현판/.test(`${info[i].cap} ${info[i].key}`) && info[i].role === "place")
         .sort((a, b) => info[b].score - info[a].score)[0];
       if (wall !== undefined && !places.includes(wall)) places.push(wall);
     }
