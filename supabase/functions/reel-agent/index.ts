@@ -210,16 +210,36 @@ function clampOverlap(subs: { text: string; start: number; len: number }[]) {
   }
 }
 
-// ── 클립 비전 분석: 썸네일 프레임들을 한 번에 보고 클립별 장면 설명 ──
-//    1순위 Gemini(이미지는 바이트로 인라인 — 외부 URL fetch를 모델이 못 하므로 서버가 받아서 넣는다),
-//    폴백 OpenAI(billing_not_active로 현재 죽어있음), 최후 폴백 "클립 N"(순서 배치로 강등).
+/* ── 클립 비전 분석: 대표 프레임 → [장면 설명 + 역할 + 쓸모 점수] ──
+   역할(role)이 편집의 핵심이다: food/cook/eat = 릴스의 본체, place = 맥락(양념), junk = 버릴 컷.
+   사장님 지적("쓸데없는 컷이 초반에 몰림")의 해법은 여기서 시작한다 — 캡션만으론 컷을 못 버린다.
+   1순위 Gemini(이미지 바이트 인라인), 폴백 OpenAI, 최후 폴백(전부 food 취급 → 순서 배치로 강등). */
+type ClipInfo = { cap: string; role: string; score: number; key: string };
 let _capDbg = "";   // 🔬 진단: 마지막 캡션 실패 원인(create 응답에 노출)
-async function captionClips(clips: any[]): Promise<string[]> {
+function parseClipInfo(txt: string, n: number): ClipInfo[] {
+  let arr: any[] = [];
+  const m = /\[[\s\S]*\]/.exec(txt);
+  try { arr = m ? JSON.parse(m[0]) : []; } catch { arr = []; }
+  // 절단 복구(MAX_TOKENS로 배열이 안 닫히는 실사고) — 객체 단위로 긁는다
+  if (!arr.length) arr = [...txt.matchAll(/\{[^{}]*\}/g)].map((x) => { try { return JSON.parse(x[0]); } catch { return null; } }).filter(Boolean);
+  return arr.slice(0, n).map((o: any, i: number) => ({
+    cap: String(o?.c ?? o?.caption ?? o ?? "").slice(0, 40),
+    role: ["food", "cook", "eat", "place", "junk"].includes(String(o?.r)) ? String(o.r) : "food",
+    score: Math.max(1, Math.min(5, Number(o?.s) || 3)),
+    key: String(o?.k || o?.c || `k${i}`).slice(0, 20),   // 소재 키(같은 음식·같은 장면 묶음) — 장면 중복 제거용
+  }));
+}
+async function captionClips(clips: any[]): Promise<ClipInfo[]> {
   _capDbg = "";
   const thumbs = clips.map((c) => c.thumb || (c.kind === "image" ? c.url : null));
-  const fallback = clips.map((_, i) => `클립 ${i + 1}`);
+  const fallback: ClipInfo[] = clips.map((_, i) => ({ cap: `클립 ${i + 1}`, role: "food", score: 3, key: `k${i}` }));
   if (!thumbs.some(Boolean)) return fallback;
-  const ask = `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지가 어떤 장면인지 '아주 짧게(6~14자)' 순서대로, 이미지 개수와 똑같은 길이의 JSON 문자열 배열로만 답해라. 예: ["가게 간판 외관","물냉면 클로즈업","시장 골목"]. 설명 문장 금지, 배열만.`;
+  const ask = `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지를 순서대로 판정해 JSON 배열로만 답해라(이미지 개수와 같은 길이).
+원소 형식: {"c":"장면 6~14자","k":"소재키","r":"food|cook|eat|place|junk","s":1~5}
+k = **소재 키**: 무엇을 찍었는지 한 단어로 통일해서 붙여라. 같은 음식·같은 대상을 찍은 프레임은 각도·동작이 달라도 **반드시 똑같은 키**를 써야 한다(예: 빈대떡 클로즈업도 빈대떡 자르는 것도 전부 "빈대떡", 물냉면 여러 컷은 전부 "물냉면", 간판·외관은 "외관"). 이 키로 중복 장면을 골라낸다.
+r = food(음식 클로즈업·완성된 상차림) / cook(붓기·비비기·자르기·굽기 등 손동작) / eat(먹는 장면·리액션) / place(외관·간판·거리·계단·내부·벽·메뉴판 등 맥락샷) / junk(흔들림·초점나감·의미 없는 이동샷)
+s = 릴스에 쓸 만한 정도(5=군침 도는 결정적 컷, 1=버릴 컷)
+설명 문장 금지, 배열만.`;
   if (GEMINI_KEY) {
     try {
       const parts: any[] = [{ text: ask }];
@@ -232,24 +252,28 @@ async function captionClips(clips: any[]): Promise<string[]> {
         for (let i = 0; i < b.length; i += CH) bin += String.fromCharCode(...b.subarray(i, i + CH));
         parts.push({ inlineData: { mimeType: "image/jpeg", data: btoa(bin) } });
       }
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        // ⚠️ Gemini 3.x는 기본 thinking이 maxOutputTokens를 먹어치움(실측: 600 전부 사고에 소진→빈 출력) → 명시적으로 끈다
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } } }),
-      });
-      const d = await r.json().catch(() => null);
-      const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
-      // 정상 파스 → 실패 시 절단 복구(따옴표 문자열만 긁기 — MAX_TOKENS로 배열이 안 닫힌 실사고 대응)
-      let arr: string[] = [];
-      const m = /\[[\s\S]*\]/.exec(txt);
-      try { arr = m ? JSON.parse(m[0]) : []; } catch { arr = []; }
-      if (!arr.length) arr = [...txt.matchAll(/"([^"\n]{2,40})"/g)].map((x) => x[1]);
-      if (arr.length) {
-        const out: string[] = []; let k = 0;
-        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? String(arr[k++] || `클립 ${i + 1}`) : `클립 ${i + 1}(프레임 없음)`);
+      /* 🔁 재시도·모델 폴백 — 비전이 죽으면 큐레이션이 통째로 무력화되고(전부 food 취급) 쓰레기 컷이 화면에 오른다.
+         실사고: gemini-flash-latest 503 "high demand" 1회로 큐레이션 0건. 과부하는 대개 일시적이라 붙잡는다. */
+      let r: Response | null = null, d: any = null, txt = "";
+      const models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"];
+      for (let attempt = 0; attempt < 4 && !txt; attempt++) {
+        const mdl = models[Math.min(attempt, models.length - 1)];
+        if (attempt) await new Promise((res) => setTimeout(res, 1200 * attempt));
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${GEMINI_KEY}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          // ⚠️ Gemini 3.x는 기본 thinking이 maxOutputTokens를 먹어치움(실측: 600 전부 사고에 소진→빈 출력) → 명시적으로 끈다
+          body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } } }),
+        });
+        d = await r.json().catch(() => null);
+        txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+      }
+      const info = parseClipInfo(txt, thumbs.filter(Boolean).length);
+      if (info.length) {
+        const out: ClipInfo[] = []; let k = 0;
+        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? (info[k++] || fallback[i]) : fallback[i]);
         return out;
       }
-      _capDbg = `empty s=${r.status} err=${JSON.stringify(d?.error || "").slice(0, 200)} fin=${d?.candidates?.[0]?.finishReason} txt=${txt.slice(0, 120)}`;
+      _capDbg = `empty s=${r?.status} err=${JSON.stringify(d?.error || "").slice(0, 200)} fin=${d?.candidates?.[0]?.finishReason} txt=${txt.slice(0, 120)}`;
       console.error("[reel] gemini vision", _capDbg);
     } catch (e) { _capDbg = "ex " + String(e).slice(0, 200); console.error("[reel] gemini vision ex", _capDbg); }
   }
@@ -259,14 +283,13 @@ async function captionClips(clips: any[]): Promise<string[]> {
       for (const t of thumbs) if (t) content.push({ type: "image_url", image_url: { url: t, detail: "low" } });
       const r = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST", headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 500, temperature: 0.2, messages: [{ role: "user", content }] }),
+        body: JSON.stringify({ model: "gpt-4o-mini", max_tokens: 900, temperature: 0.2, messages: [{ role: "user", content }] }),
       });
       const d = await r.json();
-      const m = /\[[\s\S]*\]/.exec(d?.choices?.[0]?.message?.content || "");
-      const arr = m ? JSON.parse(m[0]) : [];
-      if (arr.length) {
-        const out: string[] = []; let k = 0;
-        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? String(arr[k++] || `클립 ${i + 1}`) : `클립 ${i + 1}(프레임 없음)`);
+      const info = parseClipInfo(d?.choices?.[0]?.message?.content || "", thumbs.filter(Boolean).length);
+      if (info.length) {
+        const out: ClipInfo[] = []; let k = 0;
+        for (let i = 0; i < clips.length; i++) out.push(thumbs[i] ? (info[k++] || fallback[i]) : fallback[i]);
         return out;
       }
     } catch { /* 아래 폴백 */ }
@@ -274,13 +297,144 @@ async function captionClips(clips: any[]): Promise<string[]> {
   return fallback;
 }
 
-// ── AI 내용 매칭: 자막 타임라인 × 클립 장면 → 세그먼트 배치(사장님 확정: 순서 아닌 '내용' 매칭) ──
-async function matchTimeline(subs: any[], captions: string[], clips: any[], voiceDur: number): Promise<{ clip: number; start: number; end: number }[] | null> {
+/* ── 글자 대조 매칭(1순위) — "빈대떡" 말할 때 빈대떡 화면. ──
+   LLM 배치는 실측에서 계속 한 접시씩 밀렸다(빈대떡 구간에 제육무침). 대본 자막과 클립 장면 설명을
+   한글 2-gram으로 직접 대조하면 이 종류의 매칭은 결정적으로 맞출 수 있다 — 모델 편차도 없고 비용도 0.
+   컷 경계는 자막 경계에만 둔다(말 중간에 안 끊긴다). */
+const bigramsOf = (s: string) => {
+  const t = String(s).replace(/\s+/g, "");
+  const out = new Set<string>();
+  for (let i = 0; i + 1 < t.length; i++) out.add(t.slice(i, i + 2));
+  return out;
+};
+const sharedBigrams = (a: Set<string>, b: Set<string>) => { let n = 0; for (const x of a) if (b.has(x)) n++; return n; };
+function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "") {
+  if (!subs.length || clips.length < 2) return null;
+  const target = Math.max(2.8, Math.min(4.6, voiceDur / Math.max(4, Math.min(clips.length, 9))));
+  /* ① 컷 구간 = '문장' 단위. 한 문장이 곧 한 소재다("빈대떡은 겉은 바삭…" = 빈대떡 컷).
+     문장을 가로질러 4초씩 끊으면 "…돕니다 / 빈대떡은"이 한 구간에 섞여 매칭이 뭉개진다(실사고).
+     문장이 길면(>5.5s) 안에서만 쪼갠다. 대본이 없으면 종전처럼 시간 기준. */
+  const wins: { start: number; end: number; text: string }[] = [];
+  const sentences = script.split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.split(/\s+/).length >= 2);
+  let built = false;
+  if (sentences.length >= 2) {
+    let si = 0;   // 소비한 자막 인덱스
+    /* ⚠️ 문장 경계는 '길이 세기'로 잡으면 밀린다(어절 수·글자 수 둘 다 실패 — 자막이 대본과 1:1이 아닐 수 있다).
+       각 문장의 첫 단어를 자막 스트림에서 직접 찾아 그 시각을 경계로 쓴다. 못 찾으면 길이 추정으로 폴백. */
+    const norm = (s: string) => s.replace(/[^가-힣0-9a-zA-Z]/g, "");
+    const starts: number[] = [];
+    for (let s = 0; s < sentences.length; s++) {
+      const head = norm(sentences[s].split(/\s+/)[0]).slice(0, 3);
+      let found = -1;
+      for (let k = si; k < subs.length; k++) {
+        if (head && norm(subs[k].text).startsWith(head)) { found = k; break; }
+      }
+      if (found < 0) {   // 폴백 — 남은 문장 길이 비례로 추정
+        const need = norm(sentences[s]).length;
+        let got = 0; found = si;
+        while (si < subs.length && got < need * 0.9) { got += norm(subs[si].text).length; si++; }
+        starts.push(found);
+        continue;
+      }
+      starts.push(found);
+      si = found + 1;
+    }
+    si = 0;
+    for (let s = 0; s < sentences.length; s++) {
+      const sent = sentences[s];
+      const from = starts[s];
+      if (from === undefined || from >= subs.length) break;
+      const start = subs[from].start;
+      const nextIdx = starts[s + 1];
+      const end = (nextIdx !== undefined && nextIdx < subs.length) ? subs[nextIdx].start : voiceDur;
+      if (end - start < 0.8) continue;
+      // 긴 문장은 안에서만 균등 분할(소재는 그대로 유지 — 뒤쪽엔 같은 소재 예비 컷이 붙는다)
+      const parts = Math.max(1, Math.min(3, Math.round((end - start) / Math.max(target, 3.2))));
+      for (let p = 0; p < parts; p++) {
+        wins.push({
+          start: +(start + (end - start) * p / parts).toFixed(2),
+          end: +(start + (end - start) * (p + 1) / parts).toFixed(2),
+          text: sent,
+        });
+      }
+      built = true;
+    }
+  }
+  if (!built) {
+    let curStart = 0, curText: string[] = [];
+    for (let i = 0; i < subs.length; i++) {
+      curText.push(subs[i].text);
+      const end = (i + 1 < subs.length) ? subs[i + 1].start : voiceDur;
+      if (end - curStart >= target || i === subs.length - 1) {
+        wins.push({ start: curStart, end, text: curText.join(" ") });
+        curStart = end; curText = [];
+      }
+    }
+  }
+  if (wins.length < 2) return null;
+  // ② 구간별로 '말한 내용'과 장면 설명이 가장 겹치는 클립 배정(같은 클립 재사용 없음)
+  const sigs = info.map((c) => bigramsOf(`${c.cap} ${c.key}`));
+  const sigsAll = sigs, foodishRole = (r: string) => r === "food" || r === "cook" || r === "eat";
+  const foodish = foodishRole;
+  const used = new Set<number>();
+  const segs: { clip: number; start: number; end: number }[] = [];
+  for (let w = 0; w < wins.length; w++) {
+    const wsig = bigramsOf(wins[w].text);
+    let best = -1, bestScore = -1;
+    for (let i = 0; i < clips.length; i++) {
+      if (used.has(i)) continue;
+      // 내용 일치 점수(가중 3배) + 클립 자체 품질 + 훅/본편은 음식 우선
+      let sc = sharedBigrams(sigs[i], wsig) * 3 + info[i].score;
+      if (foodish(info[i].role)) sc += 2; else sc -= (w === 0 ? 6 : 1);   // 첫 컷에 맥락샷은 강하게 배제
+      if (sc > bestScore) { bestScore = sc; best = i; }
+    }
+    if (best < 0) break;
+    used.add(best);
+    segs.push({ clip: best, start: wins[w].start, end: wins[w].end });
+  }
+  if (segs.length < 2) return null;
+  /* 🛡 긴 구간 강제 분할 — 문장 앵커가 실패해 여러 문장이 한 구간으로 묶이면 13초짜리 정지화면이 된다(실사고).
+     경로와 무관하게 5.5초를 넘는 구간은 균등 분할하고, 조각마다 다른(같은 소재 우선) 클립을 배정한다. */
+  const out: { clip: number; start: number; end: number }[] = [];
+  const usedAll = new Set<number>(segs.map((s) => s.clip));
+  for (const s of segs) {
+    const span = s.end - s.start;
+    const parts = Math.max(1, Math.ceil(span / 5.5));
+    for (let p = 0; p < parts; p++) {
+      const st = +(s.start + span * p / parts).toFixed(2);
+      const en = +(s.start + span * (p + 1) / parts).toFixed(2);
+      let clip = s.clip;
+      if (p > 0) {   // 조각 2번째부터는 아직 안 쓴 클립 중 이 구간 소재와 가장 가까운 것
+        let best = -1, bestScore = -1;
+        const wsig = bigramsOf(subs.filter((x: any) => x.start >= st - 0.05 && x.start < en).map((x: any) => x.text).join(" "));
+        for (let i = 0; i < clips.length; i++) {
+          if (usedAll.has(i)) continue;
+          const sc = sharedBigrams(sigsAll[i], wsig) * 3 + sharedBigrams(sigsAll[i], sigsAll[s.clip]) * 2 + info[i].score
+            + (foodishRole(info[i].role) ? 2 : -2);
+          if (sc > bestScore) { bestScore = sc; best = i; }
+        }
+        if (best >= 0) { clip = best; usedAll.add(best); }
+      }
+      out.push({ clip, start: st, end: en });
+    }
+  }
+  return out;
+}
+
+// ── AI 내용 매칭(2순위 폴백): 자막 타임라인 × 클립 장면 → 세그먼트 배치 ──
+async function matchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number): Promise<{ clip: number; start: number; end: number }[] | null> {
   try {
-    const sys = `너는 맛집 릴스 편집 PD다. 내레이션 자막 타임라인과 소스 클립 목록을 보고, 각 시간 구간에 '내용이 맞는' 클립을 배치해라.
-규칙: ①구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이 이어져야 한다 ②구간당 2.5~5.5초(잘게 썰면 깜빡거려 못 쓴다 — 총 ${Math.round(voiceDur / 3.2)}컷 안팎) ③말하는 내용과 장면이 맞는 클립 선택(가게 소개=외관/간판, 메뉴 설명=그 음식 클로즈업, 먹는 얘기=먹방/리액션) ④**같은 클립은 한 번만 써라**(클립이 모자랄 때만 예외, 그때도 연속 배치 금지) ⑤클립의 길이(dur)를 넘는 구간을 그 클립에 주지 마라.
+    const sys = `너는 맛집 릴스 편집 PD다. 내레이션 자막 타임라인과 소스 클립 목록을 보고, 각 시간 구간에 올릴 클립을 배치해라.
+
+🎯 **제1원칙 — 화면은 대본을 문자 그대로 그리지 않는다.**
+릴스의 본체는 '음식'이다. food/cook/eat 클립이 전체 화면 시간의 80% 이상을 차지해야 한다.
+place(외관·간판·거리·계단·벽·내부)는 양념이라 **통틀어 최대 1~2컷, 각각 3초 이하**.
+가게 소개·역사·위치 내레이션이 나온다고 place 컷을 줄줄이 깔지 마라 — 초반이 맥락샷으로 채워지면 3초 만에 이탈한다.
+설명 문장 구간에는 **뒤에 나올 음식·조리 장면을 미리 깔아라**(실제 히트 릴스가 그렇게 한다).
+
+규칙: ①**0초 첫 컷은 무조건 가장 군침 도는 컷**(food/cook/eat 중 점수 최고) — 훅이다 ②구간은 0초부터 ${voiceDur.toFixed(1)}초까지 빈틈없이, 구간당 2.5~5.5초(총 ${Math.round(voiceDur / 3.2)}컷 안팎) ③내용 연결은 '음식 종류' 수준으로 맞춰라(냉면 얘기=냉면 컷, 빈대떡 얘기=빈대떡 컷) ④같은 클립 반복 금지(모자랄 때만, 연속 금지) ⑤클립 길이(dur) 초과 금지 ⑥점수 낮은 컷은 아예 쓰지 마라(전부 쓸 필요 없다).
 JSON만 출력: {"segments":[{"clip":클립번호(0부터),"start":초,"end":초},...]}`;
-    const user = `내레이션 자막(시각순):\n${subs.map((s: any) => `${s.start.toFixed(1)}s "${s.text}"`).join("\n")}\n\n클립 목록:\n${captions.map((c, i) => `${i}: ${c} (길이 ${Number(clips[i]?.dur || 8).toFixed(1)}s)`).join("\n")}\n\n끝 구간까지 내용이 맞는지 스스로 검증해라 — 냉면 얘기에 빈대떡 화면이 나오면 실패다.`;
+    const user = `내레이션 자막(시각순):\n${subs.map((s: any) => `${s.start.toFixed(1)}s "${s.text}"`).join("\n")}\n\n쓸 수 있는 클립(이미 중복·버릴 컷은 걸러진 목록이다):\n${info.map((c, i) => `${i}: [${c.role}/${c.score}점] ${c.cap} (길이 ${Number(clips[i]?.dur || 8).toFixed(1)}s)`).join("\n")}\n\n끝 구간까지 내용이 맞는지 스스로 검증해라 — 냉면 얘기에 빈대떡 화면이 나오면 실패다.`;
     // 지시 이행이 좋은 Gemini 우선(실사고: 딥시크가 앞 클립만 순서대로 깔고 끝냄 — 후반 내용 불일치), 실패 시 딥시크
     let txt = "";
     if (GEMINI_KEY) {
@@ -369,51 +523,222 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     }
 
     await pushProgress(id, uid, "클립 장면 분석 중");
-    const captions = await captionClips(clips);
+    const info = await captionClips(clips);
+
+    /* 🗑 컷 큐레이션 — 사장님 지적 2건의 해법(“쓸데없는 컷이 초반에 몰림”, “같은 장면 중복 절대 금지”).
+       ①junk·저점수 컷은 아예 후보에서 뺀다(전부 쓸 필요 없다)
+       ②**소재(key) 중복 제거** — 빈대떡 4컷·냉면 3컷이 있어도 소재당 '최고 점수 한 컷'만 남긴다(파일이 달라도 화면엔 같은 음식이면 중복이다)
+       ③place(외관·거리·계단·벽)는 통틀어 최대 2컷 — 초반 몰림의 주범
+       ④너무 적게 남으면 단계적으로 완화(완성은 시킨다) */
+    const foodish = (r: string) => r === "food" || r === "cook" || r === "eat";
+    const groupByKey = (idxs: number[]) => {   // 소재별 그룹(점수 내림차순) — 1등만 본편, 나머지는 예비
+      const m = new Map<string, number[]>();
+      for (const i of idxs) {
+        const k = info[i].key || `k${i}`;
+        m.set(k, [...(m.get(k) || []), i]);
+      }
+      for (const [k, v] of m) m.set(k, v.sort((a, b) => info[b].score - info[a].score));
+      return m;
+    };
+    const bestByKey = (idxs: number[]) => [...groupByKey(idxs).values()].map((v) => v[0]);
+    /* 🔁 같은 대상 판정 — 모델이 주는 key가 "제육무침에 식초 뿌리기"/"겨자와 제육무침 섞기"처럼 갈라지면
+       중복이 그대로 통과한다(실사고). 캡션 글자 2-gram이 2개 이상 겹치면 같은 대상으로 본다.
+       ⚠️ 전이 병합(물냉면–한상–비빔냉면이 한 덩어리로 붙는 것)을 피하려고 union이 아니라 '점수 높은 순 그리디'로 고른다. */
+    const shared = sharedBigrams;
+    const sigOf = (i: number) => bigramsOf(`${info[i].cap} ${info[i].key}`);
+    const dedupGreedy = (idxs: number[]) => {
+      const sorted = [...idxs].sort((a, b) => info[b].score - info[a].score || a - b);
+      const kept: number[] = [], keptSig: Set<string>[] = [], keptKeys = new Set<string>();
+      for (const i of sorted) {
+        if (keptKeys.has(info[i].key)) continue;
+        const sig = sigOf(i);
+        if (keptSig.some((s) => shared(sig, s) >= 2)) continue;
+        kept.push(i); keptSig.push(sig); keptKeys.add(info[i].key);
+      }
+      return kept.sort((a, b) => a - b);
+    };
+    const all = clips.map((_: any, i: number) => i);
+    let cand = all.filter((i) => info[i].role !== "junk" && info[i].score >= 3);
+    if (cand.length < 5) cand = all.filter((i) => info[i].role !== "junk");
+    if (cand.length < 3) cand = all;
+    const foods = dedupGreedy(cand.filter((i) => foodish(info[i].role)));
+    const places = dedupGreedy(cand.filter((i) => info[i].role === "place"))
+      .sort((a, b) => info[b].score - info[a].score).slice(0, 1);   // 맥락샷은 딱 1컷(사장님: 버려져야 할 컷)
+    let keep = [...foods, ...places].sort((a, b) => a - b);
+    if (keep.length < 3) keep = cand;
+    const pool = keep.map((i) => clips[i]);
+    const poolInfo = keep.map((i) => info[i]);
+    // 🎞 예비 컷 — 같은 소재의 2등 컷들. 본편만으론 시간을 못 채울 때 '같은 소재 바로 뒤'에만 붙인다
+    //    (떨어져서 다시 나오면 중복이지만, 붙여 쓰면 그 음식을 이어 보여주는 자연스러운 편집이다).
+    const backups = cand.filter((i) => foodish(info[i].role) && !foods.includes(i) && info[i].score >= 3);
+    const dropped = clips.length - pool.length;
+    if (dropped > 0) await pushProgress(id, uid, `쓸 컷 고르는 중 — ${pool.length}컷 채택, ${dropped}컷 제외(중복·맥락샷)`);
 
     await pushProgress(id, uid, "장면·내레이션 매칭 중");
-    let segs = await matchTimeline(subs, captions, clips, voiceDur);
-    if (!segs) segs = orderTimeline(clips, voiceDur);
-    /* 타임라인 무결성(사장님 지적 반영):
+    // 1순위 글자 대조(결정적·정확), 2순위 LLM, 최후 촬영 순서
+    let segs = textMatchTimeline(subs, poolInfo, pool, voiceDur, script);
+    if (!segs) segs = await matchTimeline(subs, poolInfo, pool, voiceDur);
+    if (!segs) segs = orderTimeline(pool, voiceDur);
+    /* 타임라인 무결성:
        - 컷 최소 2.2초(깜빡임 방지) — 짧으면 앞 컷에 흡수
-       - 클립 재사용 시 '이어서' 재생(같은 장면이 처음부터 또 나오는 중복 금지, per-clip 오프셋)
-       - 꼬리 채움도 '안 쓴 클립' 우선 */
+       - 큐레이션을 통과한 클립은 각각 한 번씩만(소재 중복은 이미 제거됨)
+       - 채울 게 없으면 컷을 늘려서 메운다(같은 장면 재등장보다 낫다) */
+    /* 🧱 타임라인 조립 — **구간(문장) 경계는 절대 시각으로 고정한다.**
+       ⚠️ 예전 방식(컷 길이를 이어붙이는 방식)은 클립이 구간보다 짧으면 뒤 구간이 통째로 당겨져
+          "빈대떡" 말할 때 무침이 나오는 밀림을 만들었다(실사고 3회). 구간이 안 채워지면 컷을 줄이는 게 아니라
+          **그 구간 안을 같은 소재의 다른 앵글로 이어 채운다**(그래서 뒤 구간 시작 시각은 절대 안 밀린다). */
     segs.sort((a, b) => a.start - b.start);
-    const used = new Map<number, number>();   // clip idx → 소비한 초
+    const CUT_MAX = 5.5, CUT_MIN = 1.6;
+    // 본편(pool) + 예비 컷(같은 소재 다른 앵글)을 한 배열로 — 채우기는 예비까지 쓴다
+    const fillIdx = [...keep, ...backups.filter((i) => !keep.includes(i))];
+    const fClips = fillIdx.map((i) => clips[i]);
+    const fInfo = fillIdx.map((i) => info[i]);
+    const fSig = fInfo.map((c: ClipInfo) => bigramsOf(`${c.cap} ${c.key}`));
+    const poolPos = new Map<number, number>(keep.map((ci, pi) => [pi, fillIdx.indexOf(ci)]));   // segs의 pool 인덱스 → fill 인덱스
+    const usedSec = new Map<number, number>();
+    const availOf = (i: number) => Math.max(0, (Number(fClips[i].dur) || 8) - 0.15 - (usedSec.get(i) || 0));
     const timeline: { src: string; in: number; dur: number }[] = [];
-    let t = 0;
-    const pushSeg = (ci: number, want: number) => {
-      const c = clips[ci];
-      const off = used.get(ci) || 0;
-      const avail = Math.max(0, (Number(c.dur) || 8) - 0.1 - off);
-      const dur = +Math.min(want, avail, voiceDur - t).toFixed(2);
-      if (dur < 0.8) return false;
-      timeline.push({ src: c.url, in: +off.toFixed(2), dur });
-      used.set(ci, off + dur);
-      t += dur;
-      return true;
+    const take = (i: number, want: number) => {
+      const off = usedSec.get(i) || 0;
+      const dur = +Math.min(want, availOf(i), CUT_MAX).toFixed(2);
+      if (dur < 0.8) return 0;
+      timeline.push({ src: fClips[i].url, in: +off.toFixed(2), dur });
+      usedSec.set(i, off + dur);
+      return dur;
     };
+    let t = 0;
     for (const s of segs) {
-      if (t >= voiceDur - 0.05) break;
-      const want = Math.min(Math.max(2.2, s.end - Math.max(s.start, t)), 6);
-      if (!pushSeg(s.clip, want)) {
-        // 그 클립이 바닥났으면 아직 안 쓴 클립으로 대체
-        const fresh = clips.findIndex((_: any, i: number) => !used.has(i));
-        if (fresh >= 0) pushSeg(fresh, want);
+      // 구간 경계는 절대 시각으로 지키되, 컷은 항상 CUT_MAX 이하로 쪼갠다(거대 컷 원천 차단)
+      const segEnd = Math.min(Math.max(s.end, t + 0.2), voiceDur);
+      const main = poolPos.get(s.clip) ?? -1;
+      let firstInWindow = true;
+      while (segEnd - t > 0.15) {
+        const need = +(segEnd - t).toFixed(2);
+        // 자투리(1.6초 미만)는 새 컷을 만들지 않고 직전 컷을 늘려 흡수한다(1초짜리 컷 = 깜빡임)
+        if (need < CUT_MIN && timeline.length) {
+          timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + need).toFixed(2);
+          t = segEnd;
+          break;
+        }
+        let pick = -1;
+        if (firstInWindow && main >= 0 && availOf(main) >= Math.min(need, CUT_MIN)) pick = main;
+        if (pick < 0) {
+          /* 미사용 컷이 절대 우선(같은 클립 재등장 = 중복). 남은 게 없을 때만 이미 쓴 클립의 '뒷부분'을 쓴다
+             (같은 파일이어도 다른 구간이라 화면은 다르다). 그 안에서는 같은 소재·고품질·음식 순. */
+          const ranked = fClips.map((_: any, i: number) => i)
+            .filter((i) => availOf(i) >= Math.min(need, CUT_MIN))
+            .map((i) => ({
+              i,
+              sc: (usedSec.has(i) ? 0 : 100)
+                + (main >= 0 ? sharedBigrams(fSig[i], fSig[main]) * 3 : 0)
+                + fInfo[i].score + (foodish(fInfo[i].role) ? 2 : -2),
+            }))
+            .sort((a, b) => b.sc - a.sc);
+          if (!ranked.length) break;
+          pick = ranked[0].i;
+        }
+        const got = take(pick, need);
+        if (!got) break;
+        t += got;
+        firstInWindow = false;
+      }
+      /* 쓸 컷이 동났는데 구간이 남았다 — 마지막 컷을 길게 늘이면 13초짜리 정지화면이 된다(실사고).
+         대신 가장 긴 클립들의 앞부분을 다시 열어 5.5초 이하 컷으로 이어 채운다(구간 경계는 그대로 지킨다). */
+      /* 쓸 컷이 동났는데 구간이 남았다 — 클립들의 앞부분을 다시 열어 5.5초 이하 컷으로 이어 채운다.
+         ⚠️ 마지막 컷을 늘려 때우면 13~18초짜리 정지화면이 된다(실사고 2회) — 반드시 여기서 끝낸다. */
+      let guard = 0;
+      while (segEnd - t > 0.15 && guard++ < 12) {
+        const need = +(segEnd - t).toFixed(2);
+        if (need < CUT_MIN && timeline.length) {
+          timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + need).toFixed(2);
+          t = segEnd;
+          break;
+        }
+        const lastSrc = timeline.length ? timeline[timeline.length - 1].src : "";
+        let best = -1, bestRoom = -1;
+        for (let i = 0; i < fClips.length; i++) {
+          if (fClips[i].url === lastSrc) continue;              // 바로 앞 컷과 같은 파일은 제외(정지화면처럼 보인다)
+          const room = Math.max(availOf(i), (Number(fClips[i].dur) || 8) - 0.15);
+          if (room > bestRoom) { best = i; bestRoom = room; }
+        }
+        if (best < 0) {                                        // 후보가 하나뿐 — 그 클립의 앞부분을 다시 연다
+          const only = fClips.findIndex((c: any) => c.url !== lastSrc);
+          if (only < 0) break;
+          usedSec.set(only, 0);
+          const got0 = take(only, need);
+          if (!got0) break;
+          t += got0;
+          continue;
+        }
+        if (availOf(best) < CUT_MIN) usedSec.set(best, 0);      // 다 쓴 클립이면 앞부분부터 다시(사이에 다른 컷이 낀 상태)
+        const got = take(best, Math.min(need, CUT_MAX));
+        if (!got) break;
+        t += got;
+      }
+      if (t < segEnd - 0.15 && timeline.length) { timeline[timeline.length - 1].dur = +Math.min(timeline[timeline.length - 1].dur + (segEnd - t), CUT_MAX).toFixed(2); t = segEnd; }
+    }
+    const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
+
+    /* 🛡 최종 컷 상한(경로 무관 안전망) — 매칭이 어느 경로로 오든 5.5초 넘는 컷은 여기서 쪼갠다.
+       미사용 클립이 있으면 그걸 넣고, 없으면 같은 클립의 '다음 구간'을 이어 쓴다(정지화면 방지). */
+    for (let i = 0; i < timeline.length && timeline.length < 24; i++) {
+      while (timeline[i].dur > 5.6) {
+        const rest = +(timeline[i].dur - 5.5).toFixed(2);
+        timeline[i].dur = 5.5;
+        const inUse = new Set(timeline.map((s) => s.src));
+        let best = -1, bestRoom = 0;
+        for (let k = 0; k < fClips.length; k++) {
+          if (inUse.has(fClips[k].url)) continue;
+          const room = (Number(fClips[k].dur) || 8) - 0.15;
+          if (room > bestRoom) { best = k; bestRoom = room; }
+        }
+        const nextIn = +(timeline[i].in + timeline[i].dur).toFixed(2);
+        const sameRoom = (durOfAll.get(timeline[i].src) || 8) - 0.15 - nextIn;
+        // ①미사용 클립 → ②같은 클립의 다음 구간 → ③아무 다른 클립의 앞부분(최후). 셋 다 없을 때만 원복.
+        let seg = (best >= 0 && bestRoom >= Math.min(rest, 1.6))
+          ? { src: fClips[best].url, in: 0, dur: +Math.min(rest, bestRoom, 5.5).toFixed(2) }
+          : (sameRoom >= Math.min(rest, 1.0)
+            ? { src: timeline[i].src, in: nextIn, dur: +Math.min(rest, sameRoom, 5.5).toFixed(2) }
+            : null);
+        if (!seg) {
+          const alt = fClips.findIndex((c: any) => c.url !== timeline[i].src && (Number(c.dur) || 8) > 1.6);
+          if (alt >= 0) seg = { src: fClips[alt].url, in: 0, dur: +Math.min(rest, (Number(fClips[alt].dur) || 8) - 0.15, 5.5).toFixed(2) };
+        }
+        if (!seg) { timeline[i].dur = +(timeline[i].dur + rest).toFixed(2); break; }
+        timeline.splice(i + 1, 0, seg);
+        if (seg.dur < rest) timeline[i + 1].dur = +(seg.dur).toFixed(2);
+        const covered = seg.dur;
+        if (covered < rest) {   // 남은 건 다음 루프에서 계속 쪼갠다
+          timeline.splice(i + 2, 0, { src: seg.src, in: +(seg.in + seg.dur).toFixed(2), dur: +(rest - covered).toFixed(2) });
+        }
+        i++;
       }
     }
-    while (t < voiceDur - 0.1 && timeline.length < 20) {   // 꼬리: 안 쓴 클립 → 잔여 많은 클립 순
-      let ci = clips.findIndex((_: any, i: number) => !used.has(i));
-      if (ci < 0) {
-        let best = -1, bestAvail = 0.8;
-        for (let i = 0; i < clips.length; i++) {
-          const avail = (Number(clips[i].dur) || 8) - 0.1 - (used.get(i) || 0);
-          if (avail > bestAvail) { best = i; bestAvail = avail; }
-        }
-        if (best < 0) break;
-        ci = best;
+
+    /* 🪝 훅 보정 — 첫 컷이 맥락샷(place)이면 가장 군침 도는 음식 컷과 자리를 바꾼다.
+       실제 히트 릴스는 인트로 내레이션 중에도 화면은 음식이다(수현이네 실측: 2초·6초·20초 전부 음식). */
+    if (timeline.length > 1) {
+      const roleOf = new Map<string, string>(clips.map((c: any, i: number) => [c.url, info[i].role]));
+      const isPlace = (s: any) => roleOf.get(s.src) === "place";
+      const isFood = (s: any) => foodish(String(roleOf.get(s.src)));
+      const swap = (i: number, j: number) => {   // 길이가 서로를 감당할 때만 교체
+        const a = timeline[i], b = timeline[j];
+        if ((durOfAll.get(b.src) || 8) - 0.1 < a.dur || (durOfAll.get(a.src) || 8) - 0.1 < b.dur) return false;
+        const s = a.src; a.src = b.src; b.src = s; a.in = 0; b.in = 0;
+        return true;
+      };
+      if (isPlace(timeline[0])) {   // 첫 컷은 무조건 군침 컷
+        const fi = timeline.findIndex((s, i) => i > 0 && isFood(s));
+        if (fi > 0) swap(0, fi);
       }
-      if (!pushSeg(ci, Math.min(4, voiceDur - t))) break;
+      /* 맥락샷은 오프닝 '두 번째~' 자리에만 — 뒤쪽(40% 이후) place는 앞쪽 음식 컷과 교체.
+         ⚠️ 0번(훅)과는 절대 교체하지 않는다 — 위에서 앞으로 보낸 음식 컷을 되돌려놔 무한 핑퐁이 된다(실사고). */
+      const cutoff = Math.max(2, Math.floor(timeline.length * 0.4));
+      for (let i = timeline.length - 1; i >= cutoff; i--) {
+        if (!isPlace(timeline[i])) continue;
+        const fj = timeline.findIndex((s, j) => j >= 1 && j < cutoff && isFood(s));
+        if (fj >= 1) swap(i, fj);
+      }
     }
     // 남은 공백은 마지막 컷 연장으로 마감
     if (t < voiceDur - 0.1 && timeline.length) {
@@ -426,9 +751,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       timeline[timeline.length - 1].dur = +(timeline[timeline.length - 1].dur + tail.dur).toFixed(2);
     }
 
-    await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_captions: captions, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo } });
+    await setJob(id, { state: "render_queued", artifacts: { transcript: stt.text, subtitles: subs, clip_info: info, pool_info: poolInfo, timeline, voice_dur: +voiceDur.toFixed(2), voice_tempo: tempo } });
     await pushProgress(id, uid, "렌더 대기열 진입");
-    return j({ ok: true, id, state: "render_queued", captions, segments: timeline.length, cap_dbg: _capDbg || undefined });
+    return j({ ok: true, id, state: "render_queued", used: poolInfo.map((c) => `${c.cap}[${c.role}]`), dropped, segments: timeline.length, cap_dbg: _capDbg || undefined });
   } catch (e) {
     await setJob(id, { state: "failed", error: String(e).slice(0, 200) });
     await pushProgress(id, uid, "실패 — " + String(e).slice(0, 80));

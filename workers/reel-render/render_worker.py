@@ -102,6 +102,19 @@ def run(cmd):
         raise RuntimeError(f"ffmpeg failed: {' '.join(shlex.quote(c) for c in cmd)}\n{p.stderr[-1200:]}")
     return p
 
+def probe_dur(path: str) -> float:
+    """클립 실제 길이(초). 실패 시 8초로 가정."""
+    try:
+        # ⚠️ FFMPEG 경로에 'ffmpeg-full' 같은 디렉터리명이 섞여 있어 단순 치환하면 엉뚱한 경로가 된다(실사고:
+        #    모든 클립 길이를 8초로 오인 → 컷 분할·음성 커버 계산이 통째로 틀어짐). 파일명만 바꾼다.
+        probe = os.path.join(os.path.dirname(FFMPEG), "ffprobe") if os.path.dirname(FFMPEG) else "ffprobe"
+        p = subprocess.run([probe, "-v", "error",
+                            "-show_entries", "format=duration", "-of", "csv=p=0", path],
+                           capture_output=True, text=True)
+        return float(p.stdout.strip())
+    except Exception:
+        return 8.0
+
 def fetch(src, dest):
     if re.match(r"^https?://", src):
         # ⚠️ R2/Cloudflare가 python-urllib 기본 UA를 403으로 막는다 — 브라우저형 UA 필수
@@ -119,12 +132,60 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     segs = job["segments"]
     if not segs: raise ValueError("no segments")
 
-    # 1) 소스 확보(URL이면 다운로드)
+
+    # 1) 소스 확보(URL이면 다운로드) — 같은 소스는 한 번만 받는다
     progress("소스 내려받는 중")
-    local = []
-    for i, sg in enumerate(segs):
-        local.append(fetch(sg["src"], os.path.join(workdir, f"src{i}{os.path.splitext(sg['src'].split('?')[0])[1] or '.mp4'}")))
+    cache = {}
+    for sg in segs:
+        if sg["src"] not in cache:
+            ext = os.path.splitext(sg["src"].split("?")[0])[1] or ".mp4"
+            cache[sg["src"]] = fetch(sg["src"], os.path.join(workdir, f"src{len(cache)}{ext}"))
+    local = [cache[sg["src"]] for sg in segs]
     voice = fetch(job["voice"], os.path.join(workdir, "voice" + (os.path.splitext(job["voice"].split("?")[0])[1] or ".m4a")))
+
+    # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).
+    #    총 길이는 유지하면서 '같은 클립의 다음 구간 → 다른 클립' 순으로 쪼갠다(화면이 계속 움직인다).
+    CUT_MAX = 5.5
+    durs = {p: probe_dur(p) for p in cache.values()}
+    order = list(dict.fromkeys(local))          # 등장 순서대로 중복 없는 소스 목록
+    split_segs, split_local = [], []
+    for path, sg in zip(local, segs):
+        start, remain = float(sg.get("in", 0)), float(sg["dur"])
+        rot = 0
+        while remain > 0.05:
+            take = min(remain, CUT_MAX)
+            avail = max(0.0, durs.get(path, 8) - 0.1 - start)
+            if avail < min(take, 1.0):          # 이 클립은 바닥 — 다른 클립의 앞부분으로 이어간다
+                cands = [p for p in order if p != path] or [path]
+                path = cands[rot % len(cands)]
+                rot += 1
+                start = 0.0
+                avail = max(0.0, durs.get(path, 8) - 0.1)
+            if avail < 0.3:                     # 이 클립도 바닥 — 가장 긴 클립의 앞부분으로 강제 전환(시간 손실 금지)
+                path = max(order, key=lambda p: durs.get(p, 8))
+                start, avail = 0.0, max(0.0, durs.get(path, 8) - 0.1)
+                if avail < 0.3: break
+            take = round(min(take, avail), 2)
+            split_segs.append({"src": sg["src"], "in": round(start, 2), "dur": take})
+            split_local.append(path)
+            start += take; remain -= take
+    if split_segs:
+        segs, local = split_segs, split_local
+
+    # 🔊 영상이 내레이션보다 짧으면 -shortest가 '음성 끝을 잘라먹는다'(실사고: 30s 음성에 27s 영상 → 마지막 문장 실종).
+    #    모자란 만큼 클립들을 5.5초 이하 컷으로 돌려가며 이어 붙여 반드시 음성 길이를 덮는다.
+    vdur = probe_dur(voice)
+    total = sum(s["dur"] for s in segs)
+    rot = 0
+    while vdur - total > 0.15 and rot < 12:
+        path = order[rot % len(order)]
+        take = round(min(CUT_MAX, vdur - total, durs.get(path, 8) - 0.1), 2)
+        if take < 0.3: break
+        segs.append({"src": segs[-1]["src"], "in": 0.0, "dur": take})
+        local.append(path)
+        total += take
+        rot += 1
+    progress(f"컷 {len(segs)}개 · {total:.1f}s (음성 {vdur:.1f}s)")
 
     # 2) 세그먼트 트림 + 9:16 통일(커버 크롭) — 코덱 통일해 무손실 concat 가능하게
     seg_files = []
