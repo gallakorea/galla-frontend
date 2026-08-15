@@ -362,6 +362,11 @@ const conceptHits = (a: string, b: string) => {
   }
   return n;
 };
+const SUBJ_TABLE: [string, RegExp][] = [
+  ["계단", /계단|올라가/], ["입구", /입구|현관/], ["간판", /간판|외관|건물/], ["거리", /골목|시장|거리/],
+  ["빈대떡", /빈대떡|부침/], ["물냉면", /물냉면|육수|계란/], ["비빔냉면", /비빔/], ["무침", /무침|제육/],
+  ["내부", /내부|손님|테이블|메뉴판/],
+];
 const FOOD_GROUPS = [3, 4, 5];   // CONCEPTS 인덱스: 3=냉면류 4=빈대떡류 5=무침류
 const groupProfile = (text: string) => CONCEPTS.map((g) => g.filter((w) => text.includes(w)).length);
 /* 🍜 음식 종류까지 구분하는 매칭 점수.
@@ -676,13 +681,42 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   const usedAll = new Set<number>(segs.map((s) => s.clip));
   for (const s of segs) {
     const span = s.end - s.start;
-    const parts = Math.max(1, Math.ceil(span / 3.0));   // 릴스 템포: 구간을 3초 단위로 쪼갠다
+    /* 쪼갤지 말지 — 같은 소재의 '다른 앵글'이 있을 때만 쪼갠다.
+       대안이 없는데 쪼개면 같은 화면이 두 번 연속 나온다(사장님 지적: "장면이 두 번씩 나온다").
+       그럴 땐 한 컷으로 길게 간다 — 사람 편집자도 그렇게 한다. */
+    const subjOf2 = (i: number) => {
+      const t = `${info[i].cap} ${info[i].key}`;
+      const hit = SUBJ_TABLE.find(([, re]) => re.test(t));
+      return hit ? hit[0] : "";
+    };
+    const wantSubj = subjOf2(s.clip);
+    const hasAlt = clips.some((_: any, i: number) =>
+      i !== s.clip && !usedAll.has(i) && (!wantSubj || subjOf2(i) === wantSubj));
+    const parts = hasAlt ? Math.max(1, Math.ceil(span / 3.0)) : 1;   // 릴스 템포: 3초 단위(대안 있을 때만)
     for (let p = 0; p < parts; p++) {
       const st = +(s.start + span * p / parts).toFixed(2);
       const en = +(s.start + span * (p + 1) / parts).toFixed(2);
       let clip = s.clip;
-      // 쪼갠 조각은 '같은 소재'를 유지한다(조립에서 같은 클립 다른 구간 + 확대로 그림 변화를 준다).
-      if (false) {   // (비활성) 조각마다 다른 클립을 고르던 로직 — 소재가 튀는 원인이었다
+      /* 쪼갠 조각은 **같은 소재의 '다른 앵글'**을 쓴다.
+         ⚠️ 같은 클립을 그대로 두면 모든 장면이 두 번씩 연속으로 나온다(실사고: 골목/골목, 계단/계단…).
+            반대로 아무 클립이나 고르면 소재가 튄다. 그래서 '같은 소재 + 미사용'만 후보로 둔다. */
+      if (p > 0) {
+        const subjOf = (i: number) => {
+          const t = `${info[i].cap} ${info[i].key}`;
+          const hit = SUBJ_TABLE.find(([, re]) => re.test(t));
+          return hit ? hit[0] : "";
+        };
+        const want = subjOf(s.clip);
+        let alt = -1, as_ = -Infinity;
+        for (let i = 0; i < clips.length; i++) {
+          if (usedAll.has(i) || i === s.clip) continue;
+          if (want && subjOf(i) !== want) continue;
+          const sc = info[i].score + (simOf(i, wins.find((w: any) => w.start <= st && st < w.end)?.text || "") ?? 0) * 20;
+          if (sc > as_) { as_ = sc; alt = i; }
+        }
+        if (alt >= 0) { clip = alt; usedAll.add(alt); }
+      }
+      if (false) {   // (비활성) 조각마다 '아무' 미사용 클립을 고르던 로직 — 소재가 튀는 원인이었다
         let best = -1, bestScore = -1;
         const wsig = bigramsOf(subs.filter((x: any) => x.start >= st - 0.05 && x.start < en).map((x: any) => x.text).join(" "));
         for (let i = 0; i < clips.length; i++) {
