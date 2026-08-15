@@ -792,7 +792,7 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   if (segs.length < 2) return null;
   /* 🛡 긴 구간 강제 분할 — 문장 앵커가 실패해 여러 문장이 한 구간으로 묶이면 13초짜리 정지화면이 된다(실사고).
      경로와 무관하게 5.5초를 넘는 구간은 균등 분할하고, 조각마다 다른(같은 소재 우선) 클립을 배정한다. */
-  const out: { clip: number; start: number; end: number }[] = [];
+  const out: { clip: number; start: number; end: number; alts?: number[]; unsure?: boolean }[] = [];
   const usedAll = new Set<number>(segs.map((s) => s.clip));
   for (const s of segs) {
     const span = s.end - s.start;
@@ -844,7 +844,38 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       out.push({ clip, start: st, end: en });
     }
   }
-  // (핀 겹 제거 — 배정 단계가 유일한 결정자다. docs/reel-matching-redesign.md)
+  /* 🅰🅱 후보 2개 — "말도 안 되는 화면"이 붙는 건 어차피 생긴다. 그때 사용자가 12개 클립을 뒤지게 하면 노동이고,
+     둘 중 하나 고르는 건 1초다. 그래서 컷마다 **차점 후보**를 같이 실어 보낸다.
+     `unsure`는 1등과 2등의 점수차가 작아 AI도 자신 없는 자리 — UI가 여기부터 물어보면 된다. */
+  /* 점수는 **배정이 실제로 쓴 근거 그대로**여야 한다 — 이름·소재·역할·의미.
+     ⚠️ 처음엔 의미 유사도만 봤더니, 소재 규칙으로 정해진 컷들이 전부 '자신 없음'으로 찍히고
+        B 후보엔 문장과 무관한 컷(비빔냉면)이 줄줄이 올라왔다(실측). */
+  const roleOfWin = (w: number) => ROLE_HINT.find(([re]) => re.test(`${wins[w].text} ${sentTextOf(w)}`))?.[1] || [];
+  const fit = (w: number, i: number) => {
+    const want = new Set([...subjOfText(wins[w].text), ...subjOfText(sentTextOf(w))]);
+    return nameHits(i, wins[w].text) * 8 + nameHits(i, sentTextOf(w)) * 4
+      + (clipSubjs[i].some((s) => want.has(s)) ? 8 : 0)
+      + (roleOfWin(w).includes(info[i].role) ? 3 : 0)
+      + (simOf(i, wins[w].text) ?? 0) * 20 + info[i].score * 0.5;
+  };
+  const usedFinal = new Set(out.map((o) => o.clip));
+  for (const o of out as any[]) {
+    let w = wins.findIndex((x) => x.start <= o.start && o.start < x.end);
+    if (w < 0) w = 0;
+    const top = fit(w, o.clip);
+    const ranked = clips.map((_: any, i: number) => i)
+      .filter((i) => i !== o.clip)
+      .map((i) => ({ i, s: fit(w, i) - (usedFinal.has(i) ? 2 : 0) }))   // 이미 쓴 컷은 후순위(중복 방지)
+      .sort((a, b) => b.s - a.s)
+      /* 그럴듯한 후보만 B로 올린다 — 아무 컷이나 2등이라고 보여주면 선택이 아니라 소음이다 */
+      .filter((x) => x.s >= Math.max(2.5, top * 0.6));
+    o.alts = ranked.slice(0, 2).map((x) => x.i);
+    /* '확실치 않음'은 **다른 소재**가 비슷한 점수로 붙어 있을 때만. 같은 소재의 다른 앵글은 취향이지 위험이 아니다. */
+    const b = ranked[0];
+    o.unsure = !!b && top - b.s < 2.5
+      && info[b.i].key !== info[o.clip].key
+      && !clipSubjs[b.i].some((s) => clipSubjs[o.clip].includes(s));
+  }
   return out;
 }
 
@@ -914,10 +945,18 @@ function cutCards(timeline: any[], subs: any[], clips: any[], info: ClipInfo[]) 
     const end = t + seg.dur;
     const text = subs.filter((s: any) => s.start >= t - 0.05 && s.start < end - 0.05).map((s: any) => s.text).join(" ");
     const ci = idxOf.get(seg.src) ?? -1;
+    /* 🅰🅱 후보 카드 — 매칭이 실어 보낸 차점 후보를 그대로 내려준다.
+       사용자는 "다른 화면 찾기"가 아니라 "A냐 B냐"만 고르면 된다(선택 기록은 swap_log로 학습에 쓴다). */
+    const alts = (Array.isArray(seg.alts) ? seg.alts : [])
+      .map((u: string) => idxOf.get(u))
+      .filter((i: any) => Number.isInteger(i) && i !== ci)
+      .slice(0, 2)
+      .map((i: number) => ({ clip: i, thumb: clips[i].thumb || null, cap: info[i]?.cap || "" }));
     out.push({
       cut: k, at: +t.toFixed(1), dur: seg.dur, text: text.trim(),
       clip: ci, thumb: ci >= 0 ? (clips[ci].thumb || null) : null,
       cap: ci >= 0 ? info[ci].cap : "",
+      alts, unsure: !!seg.unsure,
     });
     t = end;
   }
@@ -1134,6 +1173,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         }
         timeline.push({
           src: c.url, in: +off.toFixed(2), dur: +take.toFixed(2), role: fInfo[ci]?.role,
+          // 🅰🅱 이 컷의 차점 후보(사용자가 1탭으로 갈아끼울 화면)와 '확실치 않음' 표시를 같이 실어 보낸다
+          alts: ((sg as any).alts || []).map((i: number) => fClips[i]?.url).filter(Boolean),
+          unsure: !!(sg as any).unsure,
           ...(off > 0 ? { zoom: 1.18 } : {}),
         });
         off += take; need = +(need - take).toFixed(2); t += take;
@@ -1313,7 +1355,10 @@ Deno.serve(async (req) => {
       if (!Number.isInteger(k) || k < 0 || k >= timeline.length) return j({ error: "bad_cut" }, 400);
       if (!Number.isInteger(ci) || ci < 0 || ci >= clips.length) return j({ error: "bad_clip" }, 400);
       const prev = timeline[k].src;
-      timeline[k] = { ...timeline[k], src: clips[ci].url, in: 0 };
+      /* 바꾸기 전 화면을 후보 맨 앞에 넣어둔다 — 안 그러면 되돌릴 방법이 사라진다(A로 갔다 B로 올 수 있어야 한다). */
+      const keepAlts = [prev, ...(Array.isArray(timeline[k].alts) ? timeline[k].alts : [])]
+        .filter((u: string, i: number, a: string[]) => u && u !== clips[ci].url && a.indexOf(u) === i).slice(0, 3);
+      timeline[k] = { ...timeline[k], src: clips[ci].url, in: 0, alts: keepAlts };
       // 같은 클립이 다른 자리에도 있으면 이번 컷은 확대해 다른 그림으로
       const dup = timeline.some((s: any, i: number) => i !== k && s.src === clips[ci].url);
       if (dup) timeline[k].zoom = 1.3; else delete timeline[k].zoom;

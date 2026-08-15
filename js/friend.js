@@ -671,18 +671,42 @@
   /* 👀 컷 미리보기 — AI가 짠 컷을 사람이 눈으로 보고 2탭으로 바꾼다.
      "AI가 100% 맞출 때까지 기다린다"가 아니라 "AI가 90% 만들고 사람이 10초 만에 완성한다"가 실전이다. */
   function renderCutPreview(jobId, cuts, allClips, jwt, srcClips, parentWrap, status, unlock){
-    var box=el('<div class="fr-cutpv"><div class="fr-cutpv-h">🎞 컷 확인 — 어색한 컷은 탭해서 바꿔줘</div><div class="fr-cutpv-list"></div>'+
+    /* 🅰🅱 문장 단위 확인 화면 — 타임라인(트랙·초·드래그)은 보여주지 않는다.
+       사용자가 아는 단위는 '문장'이고, 판단은 "이 문장에 이 화면이 맞나"뿐이다.
+       그리고 12개 클립을 뒤지게 하지 않는다 — **A(지금)와 B(차점 후보)를 나란히 놓고 1탭으로 고르게** 한다.
+       AI가 자신 없는 자리(unsure)는 먼저 눈에 띄게 표시한다. 더 파고들 사람만 '다른 화면 더 보기'로 내려간다. */
+    var box=el('<div class="fr-cutpv"><div class="fr-cutpv-h">🎞 문장마다 화면 확인 — 어색하면 <b>B</b>를 탭</div><div class="fr-cutpv-list"></div>'+
       '<button class="fr-cutpv-go">이대로 영상 만들기 🎬</button></div>');
     var list=box.querySelector(".fr-cutpv-list");
+    async function chooseAlt(cut, clipIdx){
+      try{
+        var r=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+          body:JSON.stringify({ op:"swap", id:jobId, cut:cut, clip:clipIdx }) })).json();
+        if(r && r.cuts) paint(r.cuts);
+      }catch(e){}
+    }
     function paint(cs){
       list.innerHTML="";
       cs.forEach(function(c){
-        var row=el('<div class="fr-cut"><img class="fr-cut-th" alt=""><div class="fr-cut-mid">'+
-          '<div class="fr-cut-txt"></div><div class="fr-cut-cap"></div></div><button class="fr-cut-swap">바꾸기</button></div>');
-        var im=row.querySelector(".fr-cut-th"); if(c.thumb) im.src=c.thumb; else im.style.visibility="hidden";
-        row.querySelector(".fr-cut-txt").textContent=c.text? ("「"+c.text+"」") : ("컷 "+(c.cut+1));
-        row.querySelector(".fr-cut-cap").textContent=(c.cap||"")+" · "+c.at+"s";
-        row.querySelector(".fr-cut-swap").addEventListener("click", function(){ openPicker(c, row); });
+        var row=el('<div class="fr-cut2">'+
+          '<div class="fr-cut2-txt"></div>'+
+          '<div class="fr-cut2-opts"></div>'+
+          '<button class="fr-cut2-more">다른 화면 더 보기</button></div>');
+        row.querySelector(".fr-cut2-txt").textContent=(c.text? ("「"+c.text+"」") : "이어지는 화면")+(c.unsure? "  ⚠️ 확실치 않아요":"");
+        if(c.unsure) row.classList.add("unsure");
+        var opts=row.querySelector(".fr-cut2-opts");
+        var cards=[{ label:"A", clip:c.clip, thumb:c.thumb, cap:c.cap, on:true }]
+          .concat((c.alts||[]).slice(0,1).map(function(a){ return { label:"B", clip:a.clip, thumb:a.thumb, cap:a.cap, on:false }; }));
+        cards.forEach(function(o){
+          var b=el('<button class="fr-opt'+(o.on?" on":"")+'"><span class="fr-opt-tag"></span><img alt=""><span class="fr-opt-cap"></span></button>');
+          b.querySelector(".fr-opt-tag").textContent=o.label;
+          if(o.thumb) b.querySelector("img").src=o.thumb; else b.querySelector("img").style.visibility="hidden";
+          b.querySelector(".fr-opt-cap").textContent=o.cap||"";
+          if(!o.on) b.addEventListener("click", function(){ chooseAlt(c.cut, o.clip); });
+          opts.appendChild(b);
+        });
+        row.querySelector(".fr-cut2-more").addEventListener("click", function(){ openPicker(c, row); });
         list.appendChild(row);
       });
     }

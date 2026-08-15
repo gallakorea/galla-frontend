@@ -438,6 +438,21 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 .fr-cut-cap{ font-size:11px; color:#8fb6c9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
 .fr-cut-swap{ flex:0 0 auto; background:rgba(95,216,255,.12); border:1px solid rgba(95,216,255,.35); color:#bfeeff;
   font-size:11.5px; font-weight:800; padding:6px 10px; border-radius:999px; cursor:pointer; font-family:inherit; }
+/* 🅰🅱 문장 단위 확인 카드 — 지금 화면(A)과 차점 후보(B)를 나란히, 1탭으로 교체 */
+.fr-cut2{ background:rgba(0,0,0,.25); border-radius:10px; padding:8px; }
+.fr-cut2.unsure{ border:1px solid rgba(255,180,92,.45); }
+.fr-cut2-txt{ font-size:12.5px; color:#e6f3fc; line-height:1.35; margin-bottom:6px; }
+.fr-cut2-opts{ display:flex; gap:8px; }
+.fr-opt{ flex:1 1 0; min-width:0; position:relative; background:none; border:1px solid rgba(255,255,255,.14);
+  border-radius:9px; padding:4px; cursor:pointer; font-family:inherit; }
+.fr-opt.on{ border-color:rgba(95,216,255,.75); background:rgba(95,216,255,.10); cursor:default; }
+.fr-cut2-opts .fr-opt:only-child{ max-width:50%; }   /* 후보가 없으면(확실한 컷) 혼자 화면을 다 먹지 않게 */
+.fr-opt img{ width:100%; height:88px; object-fit:cover; border-radius:6px; background:#111; display:block; }
+.fr-opt-tag{ position:absolute; top:7px; left:7px; z-index:1; font-size:10px; font-weight:800; color:#0b1218;
+  background:#bfeeff; border-radius:5px; padding:1px 5px; }
+.fr-opt-cap{ display:block; font-size:10px; color:#cfe6f2; margin-top:4px; line-height:1.25; max-height:26px; overflow:hidden; }
+.fr-cut2-more{ width:100%; margin-top:6px; background:none; border:none; color:#8fb6c9; font-size:11px;
+  font-family:inherit; cursor:pointer; padding:3px; }
 .fr-pick{ display:flex; gap:6px; overflow-x:auto; padding:6px 2px; -webkit-overflow-scrolling:touch; }
 .fr-pick-it{ flex:0 0 auto; width:64px; background:none; border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:4px; cursor:pointer; font-family:inherit; }
 .fr-pick-it img{ width:100%; height:76px; object-fit:cover; border-radius:5px; background:#111; display:block; }
