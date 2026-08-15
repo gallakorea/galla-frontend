@@ -804,6 +804,49 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
     } catch (e) { _matchDbg += " | 검수실패"; }
   }
 
+  /* 🧹 최종 정규화 — 지금까지 남은 두 가지 오류를 여기서 확실히 끝낸다.
+     ① 떨어진 자리의 중복(계단이 4초·8초에 두 번) → 뒤쪽을 미사용 컷으로 교체(없으면 이웃과 붙여 '연속 중복'으로)
+     ② 같은 문장 안에서 소재가 튀는 것 → 그 문장의 대표 컷으로 통일
+     검수·폴백 어느 경로로 들어왔든 여기서 걸러진다. */
+  {
+    const usedNow = () => new Set(assign.filter((x) => x >= 0));
+    for (let w = 1; w < wins.length; w++) {
+      const i = assign[w];
+      if (i < 0) continue;
+      let prev = -1;
+      for (let k = 0; k < w; k++) if (assign[k] === i) { prev = k; break; }
+      if (prev < 0 || w - prev <= 1) continue;             // 붙어 있는 중복은 허용(같은 음식 이어보기)
+      const inUse = usedNow();
+      let best = -1, bs = -Infinity;
+      for (let c = 0; c < clips.length; c++) {
+        if (inUse.has(c)) continue;
+        const sc = (simOf(c, wins[w].text) ?? 0) * 100 + info[c].score + (foodish(info[c].role) ? 2 : 0);
+        if (sc > bs) { bs = sc; best = c; }
+      }
+      assign[w] = best >= 0 ? best : assign[w - 1];         // 미사용이 없으면 앞 컷과 붙여서 연속 중복으로
+    }
+    // 문장 내 소재 통일(마지막으로 한 번 더)
+    const grp = new Map<number, number[]>();
+    for (let w = 0; w < wins.length; w++) {
+      const sid = (wins[w] as any).sent;
+      if (sid !== undefined) grp.set(sid, [...(grp.get(sid) || []), w]);
+    }
+    for (const [, ws] of grp) {
+      if (ws.length < 2) continue;
+      const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
+      let anchor = -1, aS = -1;
+      for (const w of ws) { const i = assign[w]; if (i < 0) continue; const sc = simOf(i, stext) ?? 0; if (sc > aS) { aS = sc; anchor = i; } }
+      if (anchor < 0) continue;
+      for (const w of ws) {
+        const i = assign[w];
+        if (i < 0 || i === anchor) continue;
+        const same = sharedBigrams(sigs[i], sigs[anchor]) >= 2;
+        const sc = simOf(i, stext) ?? 0;
+        if (!same && sc < aS * 0.8) assign[w] = anchor;
+      }
+    }
+  }
+
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;

@@ -165,10 +165,104 @@ def frame_stats(path: str, t: float, workdir: str):
     except Exception:
         return None
 
+_takes_cache = {}
+def clip_takes(path: str, workdir: str, min_len: float = 3.0, max_len: float = 6.0):
+    """🎯 '쓸 수 있는 구간'만 뽑아낸다 — 사장님 지시: 흔들리고 초점 나간 부분은 통째로 버리고,
+    안정적으로 초점 맞은 3~6초 구간만 원본으로 확보한 뒤 그것들로 조합한다.
+
+    판정 기준(전부 그 클립 '자기 자신'과 비교 — 클립 간 절대비교는 글자 많은 화면이 이기는 함정이 있다):
+      · 초점: 엣지 에너지가 그 클립 최고치의 70% 이상   → 흐린 구간 탈락
+      · 흔들림: 프레임 차분이 그 클립 중앙값의 1.8배 이하 → 카메라 휘두른 구간 탈락
+    반환: [(start, end, score)] 점수 높은 순.
+    """
+    key = (path, round(min_len, 1))
+    if key in _takes_cache: return _takes_cache[key]
+    try:
+        from PIL import Image, ImageFilter, ImageStat
+        total = probe_dur(path)
+        step = 0.5
+        # 0.5초 간격 샘플 프레임 → 초점 점수
+        focus, times = [], []
+        t = 0.0
+        while t < total - 0.1 and len(times) < 60:
+            f = os.path.join(workdir, f"tk_{abs(hash((path, round(t,2))))%10**9}.jpg")
+            subprocess.run([FFMPEG, "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", path,
+                            "-frames:v", "1", "-vf", "scale=240:-2", f], capture_output=True, text=True)
+            if os.path.exists(f):
+                try:
+                    im = Image.open(f).convert("L")
+                    focus.append(ImageStat.Stat(im.filter(ImageFilter.FIND_EDGES)).stddev[0])
+                    times.append(t)
+                except Exception:
+                    pass
+                try: os.remove(f)
+                except OSError: pass
+            t += step
+        if not focus:
+            _takes_cache[key] = []
+            return []
+        prof = motion_profile(path)                    # 흔들림(프레임 차분)
+        mvals = sorted(v for _, v in prof) or [0.0]
+        med = mvals[len(mvals) // 2] or 1.0
+        fmax = max(focus) or 1.0
+        # 각 샘플이 '쓸 만한가' 판정
+        fmed = sorted(focus)[len(focus) // 2] or 1.0
+        ok = []
+        for i, tt in enumerate(times):
+            seg = [v for (mt, v) in prof if tt <= mt < tt + step]
+            mv = (sum(seg) / len(seg)) if seg else med
+            peak = max(seg) if seg else mv
+            sharp_ok = focus[i] >= fmax * 0.72        # 초점 나간 구간(블러) 탈락
+            # 🎯 '걷는 움직임'은 살리고 '카메라 휙 돌림'만 버린다(사장님 지시).
+            #    계단 오르기 = 움직임은 크지만 화면은 또렷 → 통과.
+            #    휙 패닝 = 움직임 폭발 + 모션블러로 화면이 뭉개짐 → 이 조합일 때만 버린다.
+            whip = (peak > med * 3.2) and (focus[i] < fmed * 0.92)
+            extreme = mv > med * 4.0                  # 지속적으로 화면 전체가 휘둘리는 구간
+            ok.append(sharp_ok and not whip and not extreme)
+        # 연속으로 '쓸 만한' 구간 → 테이크
+        takes, i = [], 0
+        while i < len(ok):
+            if not ok[i]: i += 1; continue
+            j = i
+            while j + 1 < len(ok) and ok[j + 1]: j += 1
+            st, en = times[i], min(times[j] + step, total)
+            if en - st >= min_len:
+                seg_focus = sum(focus[i:j + 1]) / (j - i + 1)
+                takes.append((round(st, 2), round(min(en, st + max_len), 2), round(seg_focus, 2)))
+            i = j + 1
+        if not takes:   # 전부 탈락하면 한 단계만 완화(그래도 없으면 폴백 로직이 받는다)
+            i = 0
+            while i < len(ok):
+                relaxed = [focus[k] >= fmax * 0.62 for k in range(len(focus))]
+                if not relaxed[i]: i += 1; continue
+                j = i
+                while j + 1 < len(relaxed) and relaxed[j + 1]: j += 1
+                st, en = times[i], min(times[j] + step, total)
+                if en - st >= 2.0:
+                    takes.append((round(st, 2), round(min(en, st + max_len), 2), round(sum(focus[i:j+1]) / (j - i + 1), 2)))
+                i = j + 1
+        takes.sort(key=lambda x: (-(x[1] - x[0]) * 0.5 - x[2] * 0.05))   # 길고 선명한 순
+        _takes_cache[key] = takes
+        return takes
+    except Exception:
+        _takes_cache[key] = []
+        return []
+
 def best_start(path: str, need: float, total: float, avoid=(), role: str = "food", workdir: str = "") -> float:
     """이 클립에서 'need초짜리 가장 좋은 구간'의 시작 시각.
     프로 편집자가 하는 일 = 클립 앞부분을 그냥 쓰지 않고 동작이 살아있는 대목을 고르는 것.
     움직임이 클수록 좋되(요리 동작), 손떨림처럼 과한 값은 상한을 둬서 흔들린 컷을 뽑지 않는다."""
+    # 1순위: '쓸 수 있는 구간(테이크)' 안에서 고른다 — 흔들림·초점나감 구간은 애초에 후보가 아니다
+    if workdir:
+        takes = clip_takes(path, workdir)
+        fit = [tk for tk in takes if tk[1] - tk[0] >= need - 0.05]
+        if not fit and takes: fit = [max(takes, key=lambda x: x[1] - x[0])]
+        for st0, en0, _f in fit:
+            if any(abs(st0 - a) < 0.4 for a in avoid): continue
+            room = en0 - st0
+            # 테이크 안에서 살짝 안쪽으로(경계는 보통 흔들린다)
+            pad = min(0.25, max(0.0, (room - need) / 2))
+            return round(min(st0 + pad, max(0.0, en0 - need)), 2)
     prof = motion_profile(path)
     if not prof or total <= need + 0.2: return 0.0
     # 🎯 역할별 전략(사장님 지적: "계단 씬에서 쓸데없는 장면이 쓰인다")
