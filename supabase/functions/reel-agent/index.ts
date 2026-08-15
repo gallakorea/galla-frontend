@@ -229,6 +229,21 @@ function parseClipInfo(txt: string, n: number): ClipInfo[] {
     key: String(o?.k || o?.c || `k${i}`).slice(0, 20),   // 소재 키(같은 음식·같은 장면 묶음) — 장면 중복 제거용
   }));
 }
+/* 🧠 캐시 — 같은 클립은 항상 같은 판정을 쓴다.
+   회차마다 라벨이 "식당 입구"↔"올라가는 계단"으로 바뀌어 계단 컷이 나왔다 안 나왔다 했다(사장님 반복 지적). */
+async function loadCachedAnalysis(urls: string[]): Promise<Map<string, ClipInfo>> {
+  const out = new Map<string, ClipInfo>();
+  try {
+    const { data } = await sb.from("clip_analysis").select("url,analysis").in("url", urls);
+    for (const r of data || []) out.set(r.url as string, (r as any).analysis as ClipInfo);
+  } catch (_) { /* 캐시는 있으면 좋고 없으면 그만 */ }
+  return out;
+}
+async function saveAnalysis(rows: { url: string; analysis: ClipInfo }[]) {
+  if (!rows.length) return;
+  try { await sb.from("clip_analysis").upsert(rows, { onConflict: "url" }); } catch (_) { /* */ }
+}
+
 async function captionClips(clips: any[]): Promise<ClipInfo[]> {
   _capDbg = "";
   const thumbs = clips.map((c) => c.thumb || (c.kind === "image" ? c.url : null));
@@ -340,8 +355,38 @@ const profileScore = (clipText: string, winText: string) => {
   if (a[da] > 0 && b[db] > 0 && da !== db) s -= 7;   // 냉면 얘기에 무침 컷 = 오답
   return s;
 };
+/* 🧠 의미(임베딩) 매칭 — 키워드 규칙의 천장을 넘는다.
+   규칙 방식은 "2층 입구가"와 "올라가는 계단"을 못 잇고(글자가 하나도 안 겹친다), 업종이 바뀌면 손으로 단어를 또 넣어야 했다.
+   문장과 장면 설명을 같은 의미 공간에 넣고 코사인 유사도로 붙이면 그 두 문제가 함께 사라진다.
+   실패하면 기존 규칙(profileScore)으로 조용히 되돌아간다. */
+let _embedDbg = "";
+async function embedAll(texts: string[]): Promise<number[][] | null> {
+  if (!GEMINI_KEY || !texts.length) return null;
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${GEMINI_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // ⚠️ taskType은 이 엔드포인트에서 거부된다(실측: "taskType ... is not supported for embedContent")
+        requests: texts.map((t) => ({
+          model: "models/gemini-embedding-001",
+          content: { parts: [{ text: t.slice(0, 500) }] },
+        })),
+      }),
+    });
+    const d = await r.json().catch(() => null);
+    const vs = (d?.embeddings || []).map((e: any) => e?.values).filter(Array.isArray);
+    if (vs.length !== texts.length) { _embedDbg = `embed ${r.status} got=${vs.length}/${texts.length} ${JSON.stringify(d?.error || "").slice(0, 120)}`; return null; }
+    return vs;
+  } catch (e) { _embedDbg = "embed ex " + String(e).slice(0, 100); return null; }
+}
+const cosine = (a: number[], b: number[]) => {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+};
+
 let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지 + 구간별 배정(create 응답에 노출)
-function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
+async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
   _matchDbg = "";
   if (!subs.length || clips.length < 2) { _matchDbg = `skip subs=${subs.length} clips=${clips.length}`; return null; }
   const target = Math.max(2.2, Math.min(3.2, voiceDur / Math.max(6, Math.min(clips.length, 12))));
@@ -429,10 +474,31 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
     if (sid === undefined) continue;
     sentGroups.set(sid, [...(sentGroups.get(sid) || []), w]);
   }
+  /* 🧠 의미 매칭 준비 — 클립 설명과 (문장·조각) 텍스트를 한 번에 임베딩.
+     성공하면 코사인 유사도가 주 점수, 규칙 점수는 보조로만 쓴다. */
+  const clipTexts = info.map((c) => `맛집 영상 장면: ${c.cap}. 소재: ${c.key}.`);
+  const winTexts = wins.map((w: any) => `내레이션: ${w.text}`);
+  const sentTexts = [...new Set(wins.map((w: any) => w.sentText || w.text))].map((t) => `내레이션: ${t}`);
+  const emb = await embedAll([...clipTexts, ...winTexts, ...sentTexts]);
+  const eClip = emb ? emb.slice(0, clipTexts.length) : null;
+  const eText = new Map<string, number[]>();
+  if (emb) {
+    [...winTexts, ...sentTexts].forEach((t, k) => eText.set(t, emb[clipTexts.length + k]));
+  }
+  const simOf = (i: number, text: string) => {
+    if (!eClip) return null;
+    const v = eText.get(`내레이션: ${text}`);
+    return v ? cosine(eClip[i], v) : null;
+  };
+  _matchDbg += emb ? " | embed:on" : ` | embed:off(${_embedDbg})`;
+
   if (sentGroups.size >= 2) {
-    const scoreFor = (i: number, text: string) =>
-      sharedBigrams(sigs[i], bigramsOf(text)) * 2 + profileScore(`${info[i].cap} ${info[i].key}`, text)
-      + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
+    const scoreFor = (i: number, text: string) => {
+      const sim = simOf(i, text);
+      const rule = sharedBigrams(sigs[i], bigramsOf(text)) * 2 + profileScore(`${info[i].cap} ${info[i].key}`, text);
+      // 의미 유사도(0~1)를 0~20점으로 환산해 주 점수로, 규칙은 절반 가중치로 보조
+      return (sim === null ? rule : sim * 20 + rule * 0.5) + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
+    };
     // 문장별 최고 점수 순으로 처리 — 확실한 문장이 자기 음식 컷을 먼저 가져간다
     const order = [...sentGroups.entries()].map(([sid, ws]) => {
       const text = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
@@ -463,7 +529,10 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
         .sort((a, b) => b.sc - a.sc);
       /* 문장이 확보한 컷들을 '조각별로 제일 맞는 것'에 배정한다.
          순서대로 나눠주면 "2층 입구가" 조각에 상차림이 가고 입구 컷이 남는다(실측). */
-      const poolIdx = ranked.map((x) => x.i);
+      /* 조각별 후보는 '문장 풀'에 가두지 않는다 — 문장 대표컷은 이미 1-A에서 확보했으므로,
+         나머지 조각은 그 조각이 실제로 말하는 내용에 가장 맞는 컷을 전체에서 고른다.
+         (계단 컷이 문장 풀 밖에 있어 "2층 입구가"에 못 붙던 문제) */
+      const poolIdx = clips.map((_: any, i: number) => i);
       for (const w of g.ws) {
         if (assign[w] >= 0) continue;
         let best = -1, bestSc = -Infinity;
@@ -488,8 +557,10 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
       const ct = `${info[i].cap} ${info[i].key}`;
       const sh = sharedBigrams(sigs[i], wsig);          // 고유명사·같은 단어 겹침
       const ps = profileScore(ct, wins[w].text);        // 음식 종류·상황 프로필(오답 감점 포함)
-      const sc = sh * 2 + ps + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
-      if (sc >= 4) pairs.push({ w, i, sc });            // 확실한 짝만 1차 배정
+      const sim = simOf(i, wins[w].text);               // 🧠 의미 유사도(있으면 주 점수)
+      const sc = (sim === null ? sh * 2 + ps : sim * 20 + (sh * 2 + ps) * 0.5)
+        + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
+      if (sc >= (sim === null ? 4 : 9)) pairs.push({ w, i, sc });   // 확실한 짝만 1차 배정
     }
   }
   pairs.sort((a, b) => b.sc - a.sc);
@@ -672,13 +743,22 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     await pushProgress(id, uid, "클립 장면 분석 중");
     /* ⚠️ 비전이 죽으면 큐레이션·매칭이 통째로 무력화돼 '아무 컷이나 순서대로'가 된다(실사고).
        조용히 엉터리 영상을 만들지 말고 한 번 더 시도하고, 그래도 안 되면 잡을 실패시킨다. */
-    let info = await captionClips(clips);
-    const visionDead = () => info.every((c) => /^클립 \d+/.test(c.cap));
-    if (visionDead()) {
-      await pushProgress(id, uid, "장면 분석 재시도 중");
-      await new Promise((r) => setTimeout(r, 4000));
+    // 캐시된 판정이 있으면 그대로 쓴다(라벨 안정화). 없으면 분석 후 저장.
+    const cached = await loadCachedAnalysis(clips.map((c: any) => c.url));
+    let info: ClipInfo[];
+    if (clips.every((c: any) => cached.has(c.url))) {
+      info = clips.map((c: any) => cached.get(c.url)!);
+      await pushProgress(id, uid, `클립 분석 재사용(${info.length}컷)`);
+    } else {
       info = await captionClips(clips);
-      if (visionDead()) throw new Error("vision_failed: " + (_capDbg || "unknown"));
+      const visionDead = () => info.every((c) => /^클립 \d+/.test(c.cap));
+      if (visionDead()) {
+        await pushProgress(id, uid, "장면 분석 재시도 중");
+        await new Promise((r) => setTimeout(r, 4000));
+        info = await captionClips(clips);
+        if (visionDead()) throw new Error("vision_failed: " + (_capDbg || "unknown"));
+      }
+      await saveAnalysis(clips.map((c: any, i: number) => ({ url: c.url, analysis: info[i] })));
     }
 
     /* 🗑 컷 큐레이션 — 사장님 지적 2건의 해법(“쓸데없는 컷이 초반에 몰림”, “같은 장면 중복 절대 금지”).
@@ -706,8 +786,10 @@ async function runCreate(uid: string, body: any): Promise<Response> {
       const sorted = [...idxs].sort((a, b) => info[b].score - info[a].score || a - b);
       const kept: number[] = [], keptSig: Set<string>[] = [], keptKeys = new Set<string>();
       for (const i of sorted) {
-        if (keptKeys.has(info[i].key)) continue;
         const sig = sigOf(i);
+        /* ⚠️ 소재 키만 같다고 버리면 안 된다 — 비전이 계단 컷에 key="외관"을 붙여(캡션은 "가게 올라가는 계단")
+           간판 컷과 한 소재로 묶여 매번 탈락했다(계단이 끝내 안 나오던 진짜 원인).
+           중복 판정은 '캡션이 실제로 비슷한가'로만 한다(빈대떡 2컷·물냉면 3컷은 캡션이 겹쳐 정상 병합된다). */
         if (keptSig.some((s) => shared(sig, s) >= 2)) continue;
         kept.push(i); keptSig.push(sig); keptKeys.add(info[i].key);
       }
@@ -753,7 +835,7 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     const matchInfo = matchIdx.map((i) => info[i]);
     const isSpare = matchIdx.map((i) => !keep.includes(i));
     // 1순위 글자·개념 대조(결정적·정확), 2순위 LLM, 최후 촬영 순서
-    let segs = textMatchTimeline(subs, matchInfo, matchClips, voiceDur, script, isSpare);
+    let segs = await textMatchTimeline(subs, matchInfo, matchClips, voiceDur, script, isSpare);
     if (!segs) segs = await matchTimeline(subs, matchInfo, matchClips, voiceDur);
     if (!segs) segs = orderTimeline(matchClips, voiceDur);
     /* 타임라인 무결성:
