@@ -432,6 +432,17 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
             nd = round(max(0.5, nb - na), 2)
             new_segs.append({**sg, "dur": nd})
             tcur = b
+        # ⚠️ 반올림·최소길이 때문에 컷 합계가 음성 길이와 어긋나면 뒤로 갈수록 자막이 밀린다
+        #    (실사고: "속은 촉촉하고요"에 물냉면). 합계를 압축된 음성 길이에 정확히 맞춘다.
+        tot = sum(x["dur"] for x in new_segs)
+        if tot > 0 and tight_dur > 0:
+            k = tight_dur / tot
+            acc = 0.0
+            for i, x in enumerate(new_segs):
+                if i == len(new_segs) - 1:
+                    x["dur"] = round(max(0.4, tight_dur - acc), 2)
+                else:
+                    x["dur"] = round(max(0.4, x["dur"] * k), 2); acc += x["dur"]
         segs = new_segs
 
     # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).
@@ -449,17 +460,10 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
             avail = max(0.0, durs.get(path, 8) - 0.1 - start)
             # ⚠️ 초과분을 '같은 클립 이어서'로 채우면 컷이 안 보여 10초짜리 한 컷처럼 느껴진다(사장님 지적).
             #    두 번째 조각부터는 무조건 다른 클립으로 넘겨 눈에 보이는 컷을 만든다.
-            if not first_chunk:
-                cands = [p for p in order if p != path] or [path]
-                path = cands[rot % len(cands)]
-                rot += 1
-                start = 0.0
-                avail = max(0.0, durs.get(path, 8) - 0.1)
-            elif avail < min(take, 1.0):        # 이 클립은 바닥 — 다른 클립의 앞부분으로 이어간다
-                cands = [p for p in order if p != path] or [path]
-                path = cands[rot % len(cands)]
-                rot += 1
-                start = 0.0
+            # ⚠️ 워커는 절대 다른 클립으로 바꾸지 않는다 — 에이전트가 정한 '대본↔화면' 배치가 최종이다.
+            #    (예전엔 여기서 클립을 갈아끼워, 매칭이 맞춰놓은 걸 화면에서 다시 어긋나게 만들었다.)
+            if avail < min(take, 0.8):
+                start = 0.0                      # 같은 클립의 앞부분으로 되감아 이어간다
                 avail = max(0.0, durs.get(path, 8) - 0.1)
             first_chunk = False
             if avail < 0.3:                     # 이 클립도 바닥 — 가장 긴 클립의 앞부분으로 강제 전환(시간 손실 금지)
@@ -479,7 +483,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     total = sum(s["dur"] for s in segs)
     rot = 0
     while vdur - total > 0.15 and rot < 12:
-        path = order[rot % len(order)]
+        path = local[-1] if local else order[0]   # 마지막 컷의 클립을 이어 쓴다(다른 소재를 끼워넣지 않는다)
         take = round(min(CUT_MAX, vdur - total, durs.get(path, 8) - 0.1), 2)
         if take < 0.3: break
         segs.append({"src": segs[-1]["src"], "in": 0.0, "dur": take, "zoom": 1.3})

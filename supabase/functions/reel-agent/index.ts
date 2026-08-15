@@ -1146,194 +1146,41 @@ async function runCreate(uid: string, body: any): Promise<Response> {
        - 컷 최소 2.2초(깜빡임 방지) — 짧으면 앞 컷에 흡수
        - 큐레이션을 통과한 클립은 각각 한 번씩만(소재 중복은 이미 제거됨)
        - 채울 게 없으면 컷을 늘려서 메운다(같은 장면 재등장보다 낫다) */
-    /* 🧱 타임라인 조립 — **구간(문장) 경계는 절대 시각으로 고정한다.**
-       ⚠️ 예전 방식(컷 길이를 이어붙이는 방식)은 클립이 구간보다 짧으면 뒤 구간이 통째로 당겨져
-          "빈대떡" 말할 때 무침이 나오는 밀림을 만들었다(실사고 3회). 구간이 안 채워지면 컷을 줄이는 게 아니라
-          **그 구간 안을 같은 소재의 다른 앵글로 이어 채운다**(그래서 뒤 구간 시작 시각은 절대 안 밀린다). */
+    /* 🧱 타임라인 조립 — **매칭 결과를 그대로 따른다(이번 수정의 핵심).**
+       ⚠️ 지금까지는 조립부가 자체 판단으로 컷을 쪼개고 다른 클립으로 채워서, 매칭이 "2층 입구가=계단"으로
+          정해놔도 화면엔 냉면이 나왔다 — 사장님이 지적한 불일치 전부가 이 원인이었다.
+          이제 조립은 재배치를 일절 하지 않는다: 컷 1개 = 매칭 구간 1개, 클립 교체 금지.
+          클립이 짧으면 '같은 클립'을 이어 붙여 채운다(붙어 있으므로 중복으로 보이지 않는다). */
     segs.sort((a, b) => a.start - b.start);
-    const CUT_MAX = 3.5, CUT_MIN = 1.4;   // 릴스 템포(사장님: 한 화면 오래 쓰면 이탈) — 컷 1.4~3.5초
-    // 본편(pool) + 예비 컷(같은 소재 다른 앵글)을 한 배열로 — 채우기는 예비까지 쓴다
-    const fillIdx = matchIdx;                    // 매칭과 조립이 같은 배열을 본다(인덱스 어긋남 방지)
+    const CUT_MAX = 3.6;
+    const fillIdx = matchIdx;
     const fClips = matchClips;
     const fInfo = matchInfo;
-    const fSig = fInfo.map((c: ClipInfo) => bigramsOf(`${c.cap} ${c.key}`));
-    const poolPos = new Map<number, number>(fillIdx.map((_, i) => [i, i]));   // segs.clip == fill 인덱스
     const durOfAll = new Map<string, number>(clips.map((c: any) => [c.url, Number(c.dur) || 8]));
-    const usedSec = new Map<number, number>();
-    const availOf = (i: number) => Math.max(0, (Number(fClips[i].dur) || 8) - 0.15 - (usedSec.get(i) || 0));
-    const timeline: { src: string; in: number; dur: number }[] = [];
-    const take = (i: number, want: number) => {
-      const off = usedSec.get(i) || 0;
-      const dur = +Math.min(want, availOf(i), CUT_MAX).toFixed(2);
-      if (dur < 0.8) return 0;
-      timeline.push({ src: fClips[i].url, in: +off.toFixed(2), dur, role: fInfo[i].role });
-      usedSec.set(i, off + dur);
-      return dur;
-    };
-    /* ⚠️ t는 '실제로 만든 영상 길이'다. 예전 코드는 채우지 못한 구간도 t = segEnd로 넘겨버려
-       (영상은 안 늘고 시간만 소비) 뒤 구간이 통째로 밀리고 7구간이 4컷으로 뭉갰다 — 실사고. */
-    const idxByUrl = new Map<string, number>(fClips.map((c: any, i: number) => [c.url, i]));
-    const extendLast = (want: number) => {   // 마지막 컷 연장(클립에 실제 남은 분량 안에서만)
-      if (!timeline.length || want <= 0.01) return 0;
-      const last = timeline[timeline.length - 1];
-      const li = idxByUrl.get(last.src);
-      const room = (Number(durOfAll.get(last.src)) || 8) - 0.15 - last.in - last.dur;
-      const add = +Math.min(want, Math.max(0, room), Math.max(0, CUT_MAX - last.dur)).toFixed(2);
-      if (add <= 0.01) return 0;
-      last.dur = +(last.dur + add).toFixed(2);
-      if (li !== undefined) usedSec.set(li, (usedSec.get(li) || 0) + add);
-      return add;
-    };
+    const timeline: { src: string; in: number; dur: number; role?: string; zoom?: number }[] = [];
     let t = 0;
-    for (const s of segs) {
-      const segEnd = Math.min(s.end, voiceDur);
-      if (segEnd - t < 0.25) continue;   // 이미 채운 구간
-      const main = poolPos.get(s.clip) ?? -1;
-      let firstInWindow = true;
-      while (segEnd - t > 0.15) {
-        const need = +(segEnd - t).toFixed(2);
-        // 자투리(1.6초 미만)는 새 컷을 만들지 않고 직전 컷을 늘려 흡수한다(1초짜리 컷 = 깜빡임)
-        if (need < CUT_MIN && timeline.length) {
-          t = +(t + extendLast(need)).toFixed(2);
-          break;
-        }
-        let pick = -1;
-        if (firstInWindow && main >= 0 && availOf(main) >= Math.min(need, CUT_MIN)) pick = main;
-        if (pick < 0) {
-          /* 미사용 컷이 절대 우선(같은 클립 재등장 = 중복). 남은 게 없을 때만 이미 쓴 클립의 '뒷부분'을 쓴다
-             (같은 파일이어도 다른 구간이라 화면은 다르다). 그 안에서는 같은 소재·고품질·음식 순. */
-          const ranked = fClips.map((_: any, i: number) => i)
-            .filter((i) => availOf(i) >= Math.min(need, CUT_MIN))
-            .map((i) => ({
-              i,
-              sc: (usedSec.has(i) ? 0 : 100)
-                + (main >= 0 ? sharedBigrams(fSig[i], fSig[main]) * 3 : 0)
-                + fInfo[i].score + (foodish(fInfo[i].role) ? 2 : -2),
-            }))
-            .sort((a, b) => b.sc - a.sc);
-          if (!ranked.length) break;
-          pick = ranked[0].i;
-        }
-        const got = take(pick, need);
-        if (!got) break;
-        t += got;
-        firstInWindow = false;
+    for (const sg of segs) {
+      const segEnd = Math.min(sg.end, voiceDur);
+      let need = +(segEnd - t).toFixed(2);
+      if (need <= 0.05) continue;
+      const ci = Math.max(0, Math.min(fClips.length - 1, sg.clip));
+      const c = fClips[ci];
+      const clipDur = Number(c.dur) || 8;
+      let off = 0, guard = 0;
+      while (need > 0.05 && guard++ < 8) {
+        let take = Math.min(need, CUT_MAX, Math.max(0, clipDur - 0.15 - off));
+        if (take < 0.5) { off = 0; take = Math.min(need, CUT_MAX, Math.max(0, clipDur - 0.15)); }
+        if (take < 0.4) break;
+        timeline.push({
+          src: c.url, in: +off.toFixed(2), dur: +take.toFixed(2), role: fInfo[ci]?.role,
+          ...(off > 0 ? { zoom: 1.18 } : {}),
+        });
+        off += take; need = +(need - take).toFixed(2); t += take;
+        if (off >= clipDur - 0.3) off = 0;
       }
-      /* 쓸 컷이 동났는데 구간이 남았다 — 마지막 컷을 길게 늘이면 13초짜리 정지화면이 된다(실사고).
-         대신 가장 긴 클립들의 앞부분을 다시 열어 5.5초 이하 컷으로 이어 채운다(구간 경계는 그대로 지킨다). */
-      /* 쓸 컷이 동났는데 구간이 남았다 — 클립들의 앞부분을 다시 열어 5.5초 이하 컷으로 이어 채운다.
-         ⚠️ 마지막 컷을 늘려 때우면 13~18초짜리 정지화면이 된다(실사고 2회) — 반드시 여기서 끝낸다. */
-      let guard = 0;
-      while (segEnd - t > 0.15 && guard++ < 12) {
-        const need = +(segEnd - t).toFixed(2);
-        if (need < CUT_MIN && timeline.length) {
-          const added = extendLast(need);
-          t = +(t + added).toFixed(2);
-          if (added <= 0.01) { /* 연장 불가 — 아래에서 새 컷으로 채운다 */ } else break;
-        }
-        const lastSrc = timeline.length ? timeline[timeline.length - 1].src : "";
-        let best = -1, bestRoom = -1;
-        for (let i = 0; i < fClips.length; i++) {
-          if (fClips[i].url === lastSrc) continue;              // 바로 앞 컷과 같은 파일은 제외(정지화면처럼 보인다)
-          const room = Math.max(availOf(i), (Number(fClips[i].dur) || 8) - 0.15);
-          if (room > bestRoom) { best = i; bestRoom = room; }
-        }
-        if (best < 0) {                                        // 후보가 하나뿐 — 그 클립의 앞부분을 다시 연다
-          const only = fClips.findIndex((c: any) => c.url !== lastSrc);
-          if (only < 0) break;
-          usedSec.set(only, 0);
-          const got0 = take(only, need);
-          if (!got0) break;
-          t += got0;
-          continue;
-        }
-        if (availOf(best) < CUT_MIN) usedSec.set(best, 0);      // 다 쓴 클립이면 앞부분부터 다시(사이에 다른 컷이 낀 상태)
-        const got = take(best, Math.min(need, CUT_MAX));
-        if (!got) break;
-        t += got;
-      }
-      if (t < segEnd - 0.15) t = +(t + extendLast(segEnd - t)).toFixed(2);   // 남은 자투리는 '실제로 늘린 만큼만' 반영
+      t = segEnd;
     }
 
-    /* 🛡 최종 컷 상한(경로 무관 안전망) — 매칭이 어느 경로로 오든 5.5초 넘는 컷은 여기서 쪼갠다.
-       미사용 클립이 있으면 그걸 넣고, 없으면 같은 클립의 '다음 구간'을 이어 쓴다(정지화면 방지). */
-    for (let i = 0; i < timeline.length && timeline.length < 24; i++) {
-      while (timeline[i].dur > 3.6) {
-        const rest = +(timeline[i].dur - CUT_MAX).toFixed(2);
-        timeline[i].dur = CUT_MAX;
-        const inUse = new Set(timeline.map((s) => s.src));
-        let best = -1, bestRoom = 0;
-        for (let k = 0; k < fClips.length; k++) {
-          if (inUse.has(fClips[k].url)) continue;
-          const room = (Number(fClips[k].dur) || 8) - 0.15;
-          if (room > bestRoom) { best = k; bestRoom = room; }
-        }
-        const nextIn = +(timeline[i].in + timeline[i].dur).toFixed(2);
-        const sameRoom = (durOfAll.get(timeline[i].src) || 8) - 0.15 - nextIn;
-        // ①미사용 클립 → ②같은 클립의 다음 구간 → ③아무 다른 클립의 앞부분(최후). 셋 다 없을 때만 원복.
-        let seg = (best >= 0 && bestRoom >= Math.min(rest, 1.6))
-          ? { src: fClips[best].url, in: 0, dur: +Math.min(rest, bestRoom, CUT_MAX).toFixed(2) }
-          : (sameRoom >= Math.min(rest, 1.0)
-            ? { src: timeline[i].src, in: nextIn, dur: +Math.min(rest, sameRoom, CUT_MAX).toFixed(2) }
-            : null);
-        if (!seg) {
-          const alt = fClips.findIndex((c: any) => c.url !== timeline[i].src && (Number(c.dur) || 8) > 1.6);
-          if (alt >= 0) seg = { src: fClips[alt].url, in: 0, dur: +Math.min(rest, (Number(fClips[alt].dur) || 8) - 0.15, CUT_MAX).toFixed(2) };
-        }
-        if (!seg) { timeline[i].dur = +(timeline[i].dur + rest).toFixed(2); break; }
-        timeline.splice(i + 1, 0, seg);
-        if (seg.dur < rest) timeline[i + 1].dur = +(seg.dur).toFixed(2);
-        const covered = seg.dur;
-        if (covered < rest) {   // 남은 건 다음 루프에서 계속 쪼갠다
-          timeline.splice(i + 2, 0, { src: seg.src, in: +(seg.in + seg.dur).toFixed(2), dur: +(rest - covered).toFixed(2) });
-        }
-        i++;
-      }
-    }
-
-    /* 🪝 훅 보정 — 첫 컷이 맥락샷(place)이면 가장 군침 도는 음식 컷과 자리를 바꾼다.
-       실제 히트 릴스는 인트로 내레이션 중에도 화면은 음식이다(수현이네 실측: 2초·6초·20초 전부 음식). */
-    if (timeline.length > 1) {
-      const roleOf = new Map<string, string>(clips.map((c: any, i: number) => [c.url, info[i].role]));
-      const isPlace = (s: any) => roleOf.get(s.src) === "place";
-      const isFood = (s: any) => foodish(String(roleOf.get(s.src)));
-      const swap = (i: number, j: number) => {   // 길이가 서로를 감당할 때만 교체
-        const a = timeline[i], b = timeline[j];
-        if ((durOfAll.get(b.src) || 8) - 0.1 < a.dur || (durOfAll.get(a.src) || 8) - 0.1 < b.dur) return false;
-        const s = a.src; a.src = b.src; b.src = s; a.in = 0; b.in = 0;
-        return true;
-      };
-      /* ⚠️ 예전엔 '첫 컷은 무조건 음식'으로 강제 교체했다. 그러나 매칭이 대본대로 배치한 뒤로는
-         이게 오히려 대본을 배신한다 — 실측: "남대문시장 안쪽 골목"에 배치된 골목 컷을 냉면으로 바꿔치기.
-         대본 충실도가 우선이므로 제거(사장님 지적). isPlace/isFood/swap은 아래 진단용으로만 남긴다. */
-      void isPlace; void isFood; void swap;
-      /* ⚠️ 예전엔 '뒤쪽 place는 앞으로 끌어온다'는 규칙이 있었는데, 매칭이 대본을 보고 맥락샷을 제자리에
-         놓기 시작한 뒤로는 오히려 그걸 흐트러뜨린다(계단이 엉뚱한 구간으로 튀던 원인) → 제거했다.
-         훅(첫 컷)만 음식으로 강제한다. */
-    }
-    /* 남은 공백 마감 — ⚠️ 예전엔 여기서 부족분을 통째로 마지막 컷에 얹었다.
-       그 결과 8초가 한 컷에 실려 13~16초짜리 정지화면이 됐다(사장님 지적의 진범).
-       이제는 5.5초 이하 컷으로 클립을 돌려가며 채운다. */
-    {
-      let guard = 0;
-      while (voiceDur - t > 0.15 && guard < 12) {
-        const want = +(voiceDur - t).toFixed(2);
-        const lastSrc = timeline.length ? timeline[timeline.length - 1].src : "";
-        let best = -1, bestRoom = -1;
-        for (let i = 0; i < fClips.length; i++) {
-          if (fClips[i].url === lastSrc) continue;
-          const room = Math.max(availOf(i), (Number(fClips[i].dur) || 8) - 0.15);
-          if (room > bestRoom) { best = i; bestRoom = room; }
-        }
-        if (best < 0) break;
-        if (availOf(best) < Math.min(want, 1.0)) usedSec.set(best, 0);
-        const got = take(best, Math.min(want, CUT_MAX));
-        if (!got) break;
-        t += got;
-        guard++;
-      }
-      if (voiceDur - t > 0.15) t = +(t + extendLast(voiceDur - t)).toFixed(2);
-    }
     /* 🔍 재사용 컷은 '확대'로 다른 그림 만들기(사장님: 쓴 클립은 음식을 확대해서 쓰자).
        같은 파일이 두 번째로 나오면 1.3배, 세 번째부터 1.55배로 크롭 인 → 같은 장면이 반복되는 느낌이 사라진다. */
     {
