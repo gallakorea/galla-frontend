@@ -432,17 +432,13 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
             nd = round(max(0.5, nb - na), 2)
             new_segs.append({**sg, "dur": nd})
             tcur = b
-        # ⚠️ 반올림·최소길이 때문에 컷 합계가 음성 길이와 어긋나면 뒤로 갈수록 자막이 밀린다
-        #    (실사고: "속은 촉촉하고요"에 물냉면). 합계를 압축된 음성 길이에 정확히 맞춘다.
+        # ⚠️ 합계를 맞추려고 **모든 컷을 같은 비율로 늘리면 안 된다** — 마 제거는 특정 구간만 잘라내므로
+        #    비례 보정은 컷 경계를 조금씩 밀어 뒤로 갈수록 어긋난다(실측: 마지막 문장 "백년가게"에서 0.5초 지각).
+        #    경계는 매핑값 그대로 두고, 반올림 오차는 **마지막 컷 하나로만** 흡수한다.
         tot = sum(x["dur"] for x in new_segs)
         if tot > 0 and tight_dur > 0:
-            k = tight_dur / tot
-            acc = 0.0
-            for i, x in enumerate(new_segs):
-                if i == len(new_segs) - 1:
-                    x["dur"] = round(max(0.4, tight_dur - acc), 2)
-                else:
-                    x["dur"] = round(max(0.4, x["dur"] * k), 2); acc += x["dur"]
+            acc = sum(x["dur"] for x in new_segs[:-1])
+            new_segs[-1]["dur"] = round(max(0.4, tight_dur - acc), 2)
         segs = new_segs
 
     # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).

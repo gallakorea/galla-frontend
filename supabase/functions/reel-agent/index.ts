@@ -679,6 +679,20 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
     거리: "장소", 간판: "장소", 입구: "장소", 계단: "장소", 내부: "장소", 홍보물: "장소",
     빈대떡: "음식", 물냉면: "음식", 비빔냉면: "음식", 무침: "음식",
   };
+  /* 🍜 마무리 컷은 '군침 도는 컷'으로 — 릴스 관습. 마지막은 "저장하세요" 같은 CTA라 화면이 자유롭다.
+     여기에 벽·간판을 또 깔면 밋밋하게 끝난다(실측: 벽면 홍보물 다음에 또 벽 가득한 내부 컷). */
+  {
+    const lw = wins.length - 1;
+    if (lw >= 0 && assign[lw] < 0) {
+      let best = -1, bs = -Infinity;
+      for (let i = 0; i < clips.length; i++) {
+        if (used.has(i) || !foodish(info[i].role)) continue;
+        const sc = info[i].score + (simOf(i, wins[lw].text) ?? 0) * 20;
+        if (sc > bs) { bs = sc; best = i; }
+      }
+      if (best >= 0) { assign[lw] = best; used.add(best); }
+    }
+  }
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] >= 0) continue;
     const st = (wins[w] as any).sentText || wins[w].text;
