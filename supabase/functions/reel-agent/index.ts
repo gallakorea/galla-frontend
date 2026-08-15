@@ -570,7 +570,10 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
     const simP = simOf(i, wins[w].text);
     const simS = simOf(i, sentTextOf(w));
     if (simP !== null || simS !== null) {
-      return (simP ?? 0) * 62 + (simS ?? 0) * 38 + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0)
+      /* 🧭 개념 일치 보너스 — "2층 입구가"에는 계단/입구 컷이 반드시 이겨야 한다.
+         임베딩만으로는 '평양냉면'이 들어간 문장이 냉면 컷을 다 끌어가 계단이 통째로 빠졌다(실측). */
+      const cc = conceptHits(`${info[i].cap} ${info[i].key}`, wins[w].text) * 10;
+      return (simP ?? 0) * 78 + (simS ?? 0) * 22 + cc + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0)
         - (isSpare[i] ? 1.5 : 0);
     }
     // 임베딩 불가 시 규칙 점수로 대체
@@ -579,6 +582,37 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       + (sharedBigrams(sigs[i], bigramsOf(sentTextOf(w))) * 2 + profileScore(ct, sentTextOf(w)))
       + info[i].score * 0.8 + (foodish(info[i].role) ? 1.5 : 0) - (isSpare[i] ? 1.5 : 0);
   };
+  /* 📌 명시 지정(핀) — 대본이 그 단어를 직접 말하면 해당 컷을 '먼저 확정'하고 최적화는 나머지만 한다.
+     임베딩·개념 보너스로는 "평양냉면"이 든 문장이 냉면 컷을 다 끌어가 계단이 끝까지 못 붙었다(실측 반복).
+     이건 취향이 아니라 사실 매칭이므로 규칙으로 못 박는 게 맞다. */
+  {
+    const PINS: [RegExp, RegExp][] = [
+      [/계단|올라가|2층|이층|입구/, /계단|올라가|입구/],
+      [/간판|외관|건물/, /간판|외관|입구/],
+      [/골목|시장|거리|남대문/, /골목|시장|거리/],
+      [/빈대떡|부침|전/, /빈대떡|부침/],
+      [/물냉면|육수|편육|슴슴|동치미/, /물냉면|육수/],
+      [/비빔냉면|비빔|양념장/, /비빔/],
+      [/무침|제육|겨자|식초|매콤/, /무침|제육/],
+    ];
+    for (let w = 0; w < wins.length; w++) {
+      if (assign[w] >= 0) continue;
+      const wt = wins[w].text;
+      for (const [reText, reCap] of PINS) {
+        if (!reText.test(wt)) continue;
+        let best = -1, bs = -1;
+        for (let i = 0; i < clips.length; i++) {
+          if (used.has(i)) continue;
+          const ct = `${info[i].cap} ${info[i].key}`;
+          if (!reCap.test(ct)) continue;
+          const sc = (simOf(i, wt) ?? 0) * 100 + info[i].score;
+          if (sc > bs) { bs = sc; best = i; }
+        }
+        if (best >= 0) { assign[w] = best; used.add(best); break; }
+      }
+    }
+  }
+
   // 문장별 조각 묶음(같은 문장에서 쪼개진 컷들)
   const sentGroups = new Map<number, number[]>();
   for (let w = 0; w < wins.length; w++) {

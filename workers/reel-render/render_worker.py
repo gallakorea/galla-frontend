@@ -348,6 +348,57 @@ def fetch(src, dest):
         raise FileNotFoundError(src)
     return src
 
+def strip_silence(voice: str, workdir: str, keep: float = 0.10):
+    """🔇 '마' 제거 — 내레이션의 쉬는 구간을 잘라 말이 끊기지 않게 붙인다(사장님: 쉼이 절대 없어야 함).
+    반환: (새 음성 경로, 시간매핑 함수). 매핑으로 자막·컷 경계도 같은 만큼 당겨야 싱크가 유지된다."""
+    try:
+        p = subprocess.run([FFMPEG, "-v", "info", "-i", voice, "-af",
+                            "silencedetect=noise=-34dB:d=0.22", "-f", "null", "-"],
+                           capture_output=True, text=True)
+        out = p.stdout + p.stderr
+        sil = []
+        cur = None
+        for line in out.splitlines():
+            m = re.search(r"silence_start:\s*([0-9.]+)", line)
+            if m: cur = float(m.group(1))
+            m2 = re.search(r"silence_end:\s*([0-9.]+)", line)
+            if m2 and cur is not None:
+                a, b = cur, float(m2.group(1))
+                # 앞뒤 keep초는 남겨 말이 딱 붙어 뭉치지 않게
+                a2, b2 = a + keep, b - keep
+                if b2 - a2 > 0.08: sil.append((a2, b2))
+                cur = None
+        dur = probe_dur(voice)
+        if not sil:
+            return voice, (lambda t: t), dur
+        # 남길 구간
+        keeps, prev = [], 0.0
+        for a, b in sil:
+            if a > prev: keeps.append((prev, a))
+            prev = b
+        if prev < dur: keeps.append((prev, dur))
+        if not keeps: return voice, (lambda t: t), dur
+        # 오디오 재조립
+        parts = "".join(f"[0:a]atrim=start={a:.3f}:end={b:.3f},asetpts=PTS-STARTPTS[a{i}];" for i, (a, b) in enumerate(keeps))
+        concat = "".join(f"[a{i}]" for i in range(len(keeps))) + f"concat=n={len(keeps)}:v=0:a=1[out]"
+        outp = os.path.join(workdir, "voice_tight" + os.path.splitext(voice)[1])
+        run([FFMPEG, "-y", "-v", "error", "-i", voice, "-filter_complex", parts + concat, "-map", "[out]", outp])
+        # 시간 매핑(원본 t → 압축된 t)
+        segs = []
+        acc = 0.0
+        for a, b in keeps:
+            segs.append((a, b, acc))
+            acc += (b - a)
+        def remap(t: float) -> float:
+            for a, b, base in segs:
+                if t < a: return base                      # 삭제된 구간 안 → 그 지점으로 당김
+                if t <= b: return base + (t - a)
+            return acc
+        return outp, remap, acc
+    except Exception as e:
+        print(f"[worker] strip_silence 실패(원본 사용): {e}", flush=True)
+        return voice, (lambda t: t), probe_dur(voice)
+
 def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     w = int(job.get("width", 1080)); h = int(job.get("height", 1920)); fps = int(job.get("fps", 30))
     font = job.get("font", "Noto Sans KR ExtraBold")
@@ -364,6 +415,24 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
             cache[sg["src"]] = fetch(sg["src"], os.path.join(workdir, f"src{len(cache)}{ext}"))
     local = [cache[sg["src"]] for sg in segs]
     voice = fetch(job["voice"], os.path.join(workdir, "voice" + (os.path.splitext(job["voice"].split("?")[0])[1] or ".m4a")))
+
+    # 🔇 '마' 제거 — 음성에서 쉬는 구간을 없애고, 자막·컷 경계를 같은 비율로 당긴다
+    progress("빈 구간(마) 잘라내는 중")
+    voice, remap, tight_dur = strip_silence(voice, workdir)
+    if remap(1.0) != 1.0 or tight_dur:
+        job["subtitles"] = [{"text": x["text"],
+                             "start": round(remap(float(x["start"])), 2),
+                             "len": max(0.2, round(remap(float(x["start"]) + float(x.get("len", 0.5))) - remap(float(x["start"])), 2))}
+                            for x in job.get("subtitles", [])]
+        # 컷 경계도 같은 매핑으로(구간 시작/끝을 옮긴 뒤 길이 재계산)
+        new_segs, tcur = [], 0.0
+        for sg in segs:
+            a, b = tcur, tcur + float(sg["dur"])
+            na, nb = remap(a), remap(b)
+            nd = round(max(0.5, nb - na), 2)
+            new_segs.append({**sg, "dur": nd})
+            tcur = b
+        segs = new_segs
 
     # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).
     #    총 길이는 유지하면서 '같은 클립의 다음 구간 → 다른 클립' 순으로 쪼갠다(화면이 계속 움직인다).
