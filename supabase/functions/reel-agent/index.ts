@@ -391,7 +391,7 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
            문장 전체를 세 조각이 공유하면 첫 조각이 그 문장의 짝을 다 가져간다 —
            실사고: "2층 입구가" 자리의 계단 컷이 "1960년부터 이어온 평양냉면" 조각에 붙었다. */
         const spoken = subs.filter((x: any) => x.start >= ws - 0.05 && x.start < we - 0.05).map((x: any) => x.text).join(" ");
-        wins.push({ start: ws, end: we, text: spoken.trim() || sent, sent: s });   // sent = 문장 번호(같은 문장 조각끼리 묶기)
+        wins.push({ start: ws, end: we, text: spoken.trim() || sent, sent: s, sentText: sent });   // 문장 번호·문장 전체(문장 단위 배분용)
       }
       built = true;
     }
@@ -418,6 +418,69 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
      → **내용이 확실히 겹치는 쌍(강한 매칭)부터 전역으로 배정**하고, 남은 구간을 나중에 채운다. */
   const used = new Set<number>();
   const assign: number[] = new Array(wins.length).fill(-1);
+
+  /* 🍱 1단계 — **문장 단위로 클립을 배분한다**(사장님 지적의 근본 해법).
+     예전엔 구간별로 각자 고르다 보니, 자막이 비거나 음식명이 없는 조각이 무침·빈대떡 컷을 먼저 써버리고
+     정작 "입맛이 확 돕니다"·"속은 촉촉하고요"엔 벽면 기사 같은 게 남았다(실측 확인).
+     이제 '빈대떡 문장'이 빈대떡 컷들을 통째로 확보한 뒤, 그 문장의 조각들에 나눠 준다. */
+  const sentGroups = new Map<number, number[]>();
+  for (let w = 0; w < wins.length; w++) {
+    const sid = (wins[w] as any).sent;
+    if (sid === undefined) continue;
+    sentGroups.set(sid, [...(sentGroups.get(sid) || []), w]);
+  }
+  if (sentGroups.size >= 2) {
+    const scoreFor = (i: number, text: string) =>
+      sharedBigrams(sigs[i], bigramsOf(text)) * 2 + profileScore(`${info[i].cap} ${info[i].key}`, text)
+      + info[i].score * 0.5 + (foodish(info[i].role) ? 1 : 0);
+    // 문장별 최고 점수 순으로 처리 — 확실한 문장이 자기 음식 컷을 먼저 가져간다
+    const order = [...sentGroups.entries()].map(([sid, ws]) => {
+      const text = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
+      const best = Math.max(...clips.map((_: any, i: number) => scoreFor(i, text)));
+      return { sid, ws, text, best };
+    }).sort((a, b) => b.best - a.best);
+    /* 1-A) 문장마다 '대표 컷 1개'를 먼저 확보한다(강한 문장 순).
+       ⚠️ 이걸 안 하면 뒤 문장이 앞 문장 컷을 채간다 — 실측: 마지막 "남대문 오면"이 골목 컷을 가져가
+          정작 인트로 "남대문시장 안쪽 골목"엔 닭무침이 붙었다. */
+    for (const g of order) {
+      const cands = clips.map((_: any, i: number) => ({ i, sc: scoreFor(i, g.text) }))
+        .filter((x) => !used.has(x.i) && x.sc >= 4).sort((a, b) => b.sc - a.sc);
+      if (!cands.length) continue;
+      const top = cands[0].i;
+      // 그 컷이 가장 잘 어울리는 '조각'에 붙인다
+      let bw = -1, bsc = -Infinity;
+      for (const w of g.ws) {
+        if (assign[w] >= 0) continue;
+        const sc = scoreFor(top, wins[w].text);
+        if (sc > bsc) { bsc = sc; bw = w; }
+      }
+      if (bw >= 0) { assign[bw] = top; used.add(top); }
+    }
+    // 1-B) 남은 조각 채우기(시간 순 — 앞 문장부터 자연스럽게)
+    for (const g of [...order].sort((a, b) => a.sid - b.sid)) {
+      const ranked = clips.map((_: any, i: number) => ({ i, sc: scoreFor(i, g.text) }))
+        .filter((x) => !used.has(x.i) && x.sc >= 4)
+        .sort((a, b) => b.sc - a.sc);
+      /* 문장이 확보한 컷들을 '조각별로 제일 맞는 것'에 배정한다.
+         순서대로 나눠주면 "2층 입구가" 조각에 상차림이 가고 입구 컷이 남는다(실측). */
+      const poolIdx = ranked.map((x) => x.i);
+      for (const w of g.ws) {
+        if (assign[w] >= 0) continue;
+        let best = -1, bestSc = -Infinity;
+        for (const i of poolIdx) {
+          if (used.has(i)) continue;
+          const sc = scoreFor(i, wins[w].text) * 2 + scoreFor(i, g.text) * 0.5;   // 그 조각이 실제로 말하는 내용 우선
+          if (sc > bestSc) { bestSc = sc; best = i; }
+        }
+        if (best >= 0) { assign[w] = best; used.add(best); }
+      }
+      /* 문장 컷이 모자라 남은 조각 — 엉뚱한 컷을 넣느니 '그 문장이 쓰던 컷'을 다시 쓴다.
+         조립에서 뒷부분 구간 + 확대(zoom)로 처리돼 같은 화면 반복으로 보이지 않는다(사장님 지시). */
+      const own = g.ws.map((w) => assign[w]).find((x) => x >= 0);
+      if (own !== undefined && own >= 0) for (const w of g.ws) if (assign[w] < 0) assign[w] = own;
+    }
+  }
+
   const pairs: { w: number; i: number; sc: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     const wsig = bigramsOf(wins[w].text);
@@ -432,7 +495,6 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
   pairs.sort((a, b) => b.sc - a.sc);
   for (const p of pairs) {
     if (assign[p.w] >= 0 || used.has(p.i)) continue;
-    if (p.w === 0 && !foodish(info[p.i].role)) continue;   // 훅(첫 컷)은 반드시 음식
     assign[p.w] = p.i; used.add(p.i);
   }
   /* 짝이 없던 구간 — 남은 컷으로 채운다.
@@ -465,7 +527,7 @@ function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur
         for (let i = 0; i < clips.length; i++) {
           if (used.has(i)) continue;
           if (pass === 0 && isSpare[i]) continue;   // 1라운드는 본편 컷만
-          const sc = info[i].score + (foodish(info[i].role) ? 2 : (w === 0 ? -6 : -1));
+          const sc = info[i].score + (foodish(info[i].role) ? 2 : -1);
           if (sc > bestScore) { bestScore = sc; best = i; }
         }
         if (best < 0) continue;
@@ -855,10 +917,10 @@ async function runCreate(uid: string, body: any): Promise<Response> {
         const s = a.src; a.src = b.src; b.src = s; a.in = 0; b.in = 0;
         return true;
       };
-      if (isPlace(timeline[0])) {   // 첫 컷은 무조건 군침 컷
-        const fi = timeline.findIndex((s, i) => i > 0 && isFood(s));
-        if (fi > 0) swap(0, fi);
-      }
+      /* ⚠️ 예전엔 '첫 컷은 무조건 음식'으로 강제 교체했다. 그러나 매칭이 대본대로 배치한 뒤로는
+         이게 오히려 대본을 배신한다 — 실측: "남대문시장 안쪽 골목"에 배치된 골목 컷을 냉면으로 바꿔치기.
+         대본 충실도가 우선이므로 제거(사장님 지적). isPlace/isFood/swap은 아래 진단용으로만 남긴다. */
+      void isPlace; void isFood; void swap;
       /* ⚠️ 예전엔 '뒤쪽 place는 앞으로 끌어온다'는 규칙이 있었는데, 매칭이 대본을 보고 맥락샷을 제자리에
          놓기 시작한 뒤로는 오히려 그걸 흐트러뜨린다(계단이 엉뚱한 구간으로 튀던 원인) → 제거했다.
          훅(첫 컷)만 음식으로 강제한다. */
