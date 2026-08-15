@@ -708,9 +708,24 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
 4) 한 클립은 되도록 한 번만. 단, 2)·3) 때문이면 같은 클립 재사용 허용.
 JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 게 없으면 {"fix":[]}`;
       const user = `[클립 목록]\n${clipList}\n\n[컷 배치]\n${cutList}`;
+      /* 👁 사진으로 검수 — 캡션(글자)만 보면 "물냉면"이라 적힌 게 실제로는 비빔냉면일 수 있다(실측 오배치의 원인).
+         클립 썸네일을 번호와 함께 실제로 보여주고 눈으로 판정하게 한다. */
+      const parts: any[] = [{ text: sys + "\n\n" + user + "\n\n[아래는 클립 0번부터 순서대로의 실제 화면이다 — 캡션이 아니라 이 그림을 보고 판단해라]" }];
+      for (let i = 0; i < clips.length; i++) {
+        const th = clips[i]?.thumb;
+        if (!th) continue;
+        try {
+          const res = await fetch(th);
+          if (!res.ok) continue;
+          const b = new Uint8Array(await res.arrayBuffer());
+          let bin = ""; const CH = 0x8000;
+          for (let k = 0; k < b.length; k += CH) bin += String.fromCharCode(...b.subarray(k, k + CH));
+          parts.push({ text: `클립 ${i}:` }, { inlineData: { mimeType: "image/jpeg", data: btoa(bin) } });
+        } catch (_) { /* 한 장 빠져도 계속 */ }
+      }
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 1200, thinkingConfig: { thinkingBudget: 0 } } }),
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, maxOutputTokens: 1500, thinkingConfig: { thinkingBudget: 0 } } }),
       });
       const d = await r.json().catch(() => null);
       const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
@@ -751,6 +766,39 @@ JSON만 출력: {"fix":[{"cut":컷번호,"clip":클립번호},...]}  — 고칠 
           if (sc > bs) { bs = sc; best = i; }
         }
         if (best >= 0) assign[w] = best;
+      }
+      /* 🔒 검수 후에도 문장 규칙을 강제한다 — 편집장이 "딱 정석입니다"(물냉면 문장)에 비빔냉면을 넣는 식으로
+         문장 일관성을 깨는 교체를 한다(실측). 같은 문장 안에서 대표 컷과 소재가 다르면 되돌린다.
+         '읽을거리' 컷(벽면 홍보물·메뉴판)도 검수가 넣으면 되돌린다. */
+      {
+        const bySent2 = new Map<number, number[]>();
+        for (let w = 0; w < wins.length; w++) {
+          const sid = (wins[w] as any).sent;
+          if (sid !== undefined) bySent2.set(sid, [...(bySent2.get(sid) || []), w]);
+        }
+        const readable = (i: number) => ["기사", "스크랩", "메뉴판", "벽면", "신문", "잡지", "홍보물", "안내"].some((k) => `${info[i].cap} ${info[i].key}`.includes(k));
+        for (let w = 0; w < wins.length; w++) {
+          const i = assign[w];
+          if (i >= 0 && readable(i) && before[w] >= 0 && before[w] !== i) { assign[w] = before[w]; applied--; }
+        }
+        for (const [, ws] of bySent2) {
+          if (ws.length < 2) continue;
+          const stext = (wins[ws[0]] as any).sentText || wins[ws[0]].text;
+          let anchor = -1, aS = -1;
+          for (const w of ws) {
+            const i = assign[w]; if (i < 0) continue;
+            const sc = simOf(i, stext) ?? 0;
+            if (sc > aS) { aS = sc; anchor = i; }
+          }
+          if (anchor < 0) continue;
+          for (const w of ws) {
+            const i = assign[w];
+            if (i < 0 || i === anchor) continue;
+            const same = sharedBigrams(sigs[i], sigs[anchor]) >= 2;      // 같은 소재(캡션이 겹침)
+            const sc = simOf(i, stext) ?? 0;
+            if (!same && sc < aS * 0.85) { assign[w] = anchor; applied--; }
+          }
+        }
       }
       _matchDbg += ` | 검수:${applied}건교체`;
     } catch (e) { _matchDbg += " | 검수실패"; }
@@ -941,6 +989,10 @@ async function runCreate(uid: string, body: any): Promise<Response> {
        ③place(외관·거리·계단·벽)는 통틀어 최대 2컷 — 초반 몰림의 주범
        ④너무 적게 남으면 단계적으로 완화(완성은 시킨다) */
     const foodish = (r: string) => r === "food" || r === "cook" || r === "eat";
+    /* 📄 '읽을거리' 컷(벽면 기사 스크랩·메뉴판·간판 텍스트)은 릴스에서 거의 쓸모없다.
+       대본이 그걸 직접 말할 때(예: 백년가게 선정)만 의미가 있으므로 기본적으로 후보에서 제외한다. */
+    const READY = ["기사", "스크랩", "메뉴판", "벽면", "신문", "잡지", "안내문", "가격표"];
+    const isReadable = (i: number) => READY.some((w) => `${info[i].cap} ${info[i].key}`.includes(w));
     const groupByKey = (idxs: number[]) => {   // 소재별 그룹(점수 내림차순) — 1등만 본편, 나머지는 예비
       const m = new Map<string, number[]>();
       for (const i of idxs) {
@@ -975,7 +1027,8 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     const scriptSig0 = bigramsOf(script);
     const relOf = (i: number) =>
       sharedBigrams(bigramsOf(`${info[i].cap} ${info[i].key}`), scriptSig0) + conceptHits(`${info[i].cap} ${info[i].key}`, script) * 2;
-    let cand = all.filter((i) => info[i].role !== "junk" && (info[i].score >= 3 || relOf(i) >= 2));
+    let cand = all.filter((i) => info[i].role !== "junk" && (info[i].score >= 3 || relOf(i) >= 2))
+      .filter((i) => !isReadable(i));   // 읽을거리 컷(벽면 기사·메뉴판)은 릴스에서 통째 제외 — 사장님 반복 지적
     if (cand.length < 5) cand = all.filter((i) => info[i].role !== "junk");
     if (cand.length < 3) cand = all;
     const foods = dedupGreedy(cand.filter((i) => foodish(info[i].role)));
