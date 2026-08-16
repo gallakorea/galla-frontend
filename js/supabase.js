@@ -138,7 +138,16 @@
        크로스 오리진이라 pause() 를 부를 수 없어 프레임을 버리는 게 유일한 정지 수단이다. */
     window.GALLA_stopInlineVideos = function () {
       document.querySelectorAll("[data-vplay].vplaying").forEach(el => {
-        try { el.classList.remove("vplaying"); el.innerHTML = el.__vposter || ""; } catch (_) {}
+        try {
+          if (el.__vtimer) { clearInterval(el.__vtimer); el.__vtimer = null; }
+          if (el.__vcheck) {
+            window.removeEventListener("scroll", el.__vcheck, { capture: true });
+            window.removeEventListener("resize", el.__vcheck);
+            el.__vcheck = null;
+          }
+          el.classList.remove("vplaying");
+          el.innerHTML = el.__vposter || "";
+        } catch (_) {}
       });
     };
 
@@ -155,7 +164,35 @@
       ifr.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen");
       ifr.setAttribute("allowfullscreen", "");
       host.appendChild(ifr);
+
+      /* 📴 화면 밖으로 나가면 끈다.
+         스크롤로 카드가 위로 사라져도 소리가 계속 나던 문제.
+         1/4 미만만 걸치면 정지 — 1px 걸쳤다고 틀어두면 '안 보이는데 소리만 나는'
+         상태가 그대로 남는다.
+
+         ⚠️ IntersectionObserver 를 쓰지 않는다. 피드가 스크롤되는 컨테이너와
+            SPA 의 transform 이동이 겹치면 관측이 어긋나고, 실제로 콜백이
+            한 번도 오지 않는 환경을 확인했다. rect 직접 계산이 확실하다.
+         ⚠️ scroll 은 버블링하지 않는다 — 안쪽 스크롤 컨테이너의 스크롤까지
+            받으려면 window 에서 capture 로 들어야 한다. */
+      const check = () => {
+        const r = host.getBoundingClientRect();
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const shown = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (!r.height || shown < r.height * 0.25) window.GALLA_stopInlineVideos();
+      };
+      host.__vcheck = check;
+      window.addEventListener("scroll", check, { passive: true, capture: true });
+      window.addEventListener("resize", check, { passive: true });
+      /* 이벤트만 믿지 않는다 — scroll 이 아예 발화하지 않는 환경을 실측으로 확인했다.
+         재생 중일 때만 도는 0.5초 검사라 비용은 무시할 수준이고, 정지하면 같이 멈춘다. */
+      host.__vtimer = setInterval(check, 500);
     };
+
+    /* 앱을 백그라운드로 보내거나 탭을 가리면 정지 — 안 그러면 화면이 꺼져도 소리가 난다. */
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) window.GALLA_stopInlineVideos();
+    });
 
     window.GALLA_openVideoPage = function (id, title, ch) {
       if (!id) return;
