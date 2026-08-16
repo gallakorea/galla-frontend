@@ -487,6 +487,10 @@
         push → 슬라이드인·엣지 스와이프 백·pop 이 전부 라우터 스택으로 관리된다(사장님: "느낌 말고 SPA로"). */
   function openPlayer(id, title, ch) {
     if (!id) return;
+    /* 이동 경로는 js/supabase.js 의 GALLA_openVideoPage 한 곳만 쓴다 —
+       화면마다 URL 을 따로 조립하다 PC 레일만 옛 경로(search.html?video=)에
+       남아 같은 영상을 눌러도 결과가 달랐다. */
+    if (window.GALLA_openVideoPage) return window.GALLA_openVideoPage(id, title, ch);
     const u = `watch.html?v=${encodeURIComponent(id)}`
       + (title ? `&t=${encodeURIComponent(title)}` : "")
       + (ch ? `&c=${encodeURIComponent(ch)}` : "");

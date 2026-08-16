@@ -132,7 +132,9 @@ function videoLanding({ origin, url, id, row, defImg }) {
   const image = row.thumbnail || defImg;
   const ogTitle = `🎬 ${title}`;
   const ogDesc = `지금 한국에서 가장 뜨거운 영상 · 조회 ${short(row.view_count)} — 갈라에서 보고, 한마디 남기고, 한 판까지.`;
-  const dest = withParams(`${origin}/search.html?video=${encodeURIComponent(id)}`, url);
+  /* 시청 페이지로 직행 — 예전엔 검색 페이지로 보내고 거기서 플레이어를 열었다.
+     그 경로만 남아 있어 공유로 들어온 사람만 다른 화면을 봤다(앱·웹·PC 불일치). */
+  const dest = withParams(`${origin}/watch.html?v=${encodeURIComponent(id)}`, url);
   const home = withParams(`${origin}/index.html`, url);
 
   const html = `<!doctype html><html lang="ko"><head>
@@ -204,7 +206,7 @@ const CMT = {
   market: { table: "market_comments",     fk: "market_id", content: "content", parent: "markets",     ptitle: "question", dest: (o, id) => `${o}/predict-market.html?id=${id}`,  emoji: "🗯️", label: "예측 댓글" },
   plaza:  { table: "plaza_comments",      fk: "post_id",   content: "body",    parent: "plaza_posts", ptitle: "title",    dest: (o, id) => `${o}/plaza_detail.html?id=${id}`,    emoji: "🗯️", label: "광장 댓글" },
   post:   { table: "post_comments",       fk: "post_id",   content: "body",    parent: "posts",       ptitle: "title",    dest: (o, id) => `${o}/gallari-post.html?id=${id}`,    emoji: "🗯️", label: "숏판/롱판 댓글" },
-  video:  { table: "video_comments",      fk: "video_id",  content: "body",    parent: "youtube_hot", ptitle: "title",    dest: (o, id) => `${o}/search.html?video=${id}`,       emoji: "🗯️", label: "영상 댓글" },
+  video:  { table: "video_comments",      fk: "video_id",  content: "body",    parent: "youtube_hot", ptitle: "title",    dest: (o, id) => `${o}/watch.html?v=${id}`,            emoji: "🗯️", label: "영상 댓글" },
 };
 
 export async function onRequestGet(context) {

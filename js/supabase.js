@@ -119,6 +119,70 @@
     };
   }
 
+  /* ▶️ 유튜브 카드 공용 동작 — 앱·웹·PC 가 따로 놀지 않게 한 곳에서 정의한다.
+     사장님 규칙(2026-08-16): "플레이 누르면 그 자리에서 재생, 제목 누르면 페이지로 가서 재생".
+
+     계약 — 카드를 그리는 쪽은 마크업에 이것만 붙이면 된다.
+       · 카드 루트        : data-vid="<video_id>"
+       · 재생 영역(썸네일) : data-vplay      → 그 자리에서 재생
+       · 제목·설명 영역    : data-vopen      → watch.html?v=... 로 이동
+     동작은 여기 한 벌만 존재한다. 카드마다 onclick 을 따로 달지 않는다 —
+     그렇게 갈라져 있어서 화면마다 결과가 달랐다.
+
+     ⚠️ 재생은 galla.im/yt 프록시. 네이티브(capacitor://localhost)에서 유튜브에
+        직접 붙으면 오류 153 이 난다. 프록시가 정식 https origin 으로 handshake 한다. */
+  if (!window.GALLA_bindVideoCards) {
+    const YT_PROXY = "https://galla.im/yt";
+
+    /* 재생 중인 카드를 전부 썸네일로 되돌린다(= 프레임 파기 = 소리 정지).
+       크로스 오리진이라 pause() 를 부를 수 없어 프레임을 버리는 게 유일한 정지 수단이다. */
+    window.GALLA_stopInlineVideos = function () {
+      document.querySelectorAll("[data-vplay].vplaying").forEach(el => {
+        try { el.classList.remove("vplaying"); el.innerHTML = el.__vposter || ""; } catch (_) {}
+      });
+    };
+
+    window.GALLA_playInline = function (host, id, title) {
+      if (!host || !id || host.classList.contains("vplaying")) return;
+      window.GALLA_stopInlineVideos();          // 소리 겹침 방지 — 한 번에 하나만
+      host.__vposter = host.innerHTML;
+      host.classList.add("vplaying");
+      host.innerHTML = "";
+      const ifr = document.createElement("iframe");
+      ifr.src = YT_PROXY + "?v=" + encodeURIComponent(id);
+      ifr.title = title || "";
+      ifr.setAttribute("frameborder", "0");
+      ifr.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen");
+      ifr.setAttribute("allowfullscreen", "");
+      host.appendChild(ifr);
+    };
+
+    window.GALLA_openVideoPage = function (id, title, ch) {
+      if (!id) return;
+      const u = "watch.html?v=" + encodeURIComponent(id)
+        + (title ? "&t=" + encodeURIComponent(title) : "")
+        + (ch ? "&c=" + encodeURIComponent(ch) : "");
+      (window.GALLA_nav || window.GALLA_goto || function (x) { location.href = x; })(u);
+    };
+
+    window.GALLA_bindVideoCards = function () {
+      if (window.__vcardBound) return;           // 위임 1회 — 재렌더로 리스너가 새지 않게
+      window.__vcardBound = true;
+      document.addEventListener("click", (e) => {
+        const card = e.target.closest("[data-vid]");
+        if (!card) return;
+        const id = card.getAttribute("data-vid");
+        if (!id) return;
+        const title = card.getAttribute("data-vtitle") || "";
+        const ch = card.getAttribute("data-vch") || "";
+        if (e.target.closest("[data-vopen]")) { window.GALLA_openVideoPage(id, title, ch); return; }
+        const host = e.target.closest("[data-vplay]");
+        if (host) window.GALLA_playInline(host, id, title);
+      });
+    };
+    window.GALLA_bindVideoCards();
+  }
+
   /* ⚠️ 여기서 early-return 하지 않는다 — 그러면 아래 아바타 헬퍼·닉네임
      도색기가 client 선존재 페이지(광장 등 자체 createClient)에서 정의 안 돼
      '꾸미기 미반영'이 된다. client 생성만 아래에서 조건부로. */

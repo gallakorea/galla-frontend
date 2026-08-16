@@ -95,6 +95,10 @@ function pauseAllVideos() {
     IDXROOT.querySelectorAll('video').forEach(v => {
         try { v.pause(); v.muted = true; } catch (e) {}
     });
+    /* ⚠️ 제자리 재생 중인 유튜브 임베드도 같이 접는다.
+       iframe 은 <video> 가 아니라 위 루프에 안 걸리고, SPA 는 판을 transform 으로
+       밀 뿐 DOM 을 지우지 않는다 — 안 접으면 홈을 떠난 뒤에도 소리가 계속 난다. */
+    if (window.GALLA_stopInlineVideos) window.GALLA_stopInlineVideos();
     if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
 }
 // 홈으로 돌아오면 가장 많이 보이는 피드 영상 재생 재개(셸은 transform으로 판을 밀어 IO가 다시 안 쏨)
@@ -1241,22 +1245,27 @@ async function loadVideoCards() {
     return pool.sort(() => Math.random() - 0.5).slice(0, 6);
 }
 
+/* 🔥 핫트렌드 영상 카드
+   동작은 js/supabase.js 의 공용 계약(data-vplay / data-vopen)이 담당한다.
+   여기서 onclick 을 따로 달지 않는다 — 화면마다 갈라져서 앱·웹·PC 가 따로 놀았다. */
 function renderVideoCard(v) {
     return `
-    <div class="card video-feed-card" onclick="GALLA_goto('search.html?video=${encodeURIComponent(v.video_id)}')">
-      <div class="vf-thumb">
+    <div class="card video-feed-card" data-vid="${escHtml(v.video_id)}"
+         data-vtitle="${escHtml(v.title || '')}" data-vch="${escHtml(v.channel_title || '')}">
+      <div class="vf-thumb" data-vplay>
         <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
         <span class="vf-play">▶</span>
         ${v.rank ? `<span class="vf-rank">${v.rank}위</span>` : ''}
         ${v.is_short ? `<span class="vf-short">쇼츠</span>` : ''}
       </div>
-      <div class="vf-body">
+      <div class="vf-body" data-vopen>
         <div class="nf-head"><span class="vf-badge">🔥 핫트렌드</span></div>
         <div class="vf-title">${escHtml(v.title)}</div>
         <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회</div>
       </div>
     </div>`;
 }
+
 
 /* ── 일기토(듀얼) 카드 — 라이브/투표중 우선, 없으면 최근 종전 ── */
 async function loadDuelCards() {

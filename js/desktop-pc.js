@@ -196,7 +196,7 @@
         .order('rank', { ascending: true }).limit(4);
       const sN = n => { n = Number(n) || 0; return n >= 100000000 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 10000 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : String(n); };
       fill('pcr-hot', (data || []).map(v => `
-        <a class="pcr-row" href="search.html?video=${encodeURIComponent(v.video_id)}">
+        <a class="pcr-row" href="watch.html?v=${encodeURIComponent(v.video_id)}">
           <b>${esc(v.title)}</b>
           <i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i>
         </a>`).join(''), 'search.html', '핫튜브 전체 보기');
