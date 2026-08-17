@@ -121,7 +121,7 @@ async function creatorBrief(topic?: string) {
 // ── 툴 스키마(OpenAI function-calling) ──────────────────────
 const TOOLS = [
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 가장 뜨거운 이슈 목록(찬반 수 포함). '오늘 핫이슈' 류 질문에.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
-  { type: "function", function: { name: "search_content", description: "플랫폼 전체 검색(이슈/예측/뉴스/갈라리 글). 특정 키워드·주제를 찾을 때.", parameters: { type: "object", properties: { query: { type: "string" }, kinds: { type: "array", items: { type: "string", enum: ["issue", "predict", "news", "post"] } } }, required: ["query"] } } },
+  { type: "function", function: { name: "search_content", description: "플랫폼 전체 검색(이슈/예측/뉴스/숏판·롱판 글). 특정 키워드·주제를 찾을 때.", parameters: { type: "object", properties: { query: { type: "string" }, kinds: { type: "array", items: { type: "string", enum: ["issue", "predict", "news", "post"] } } }, required: ["query"] } } },
   { type: "function", function: { name: "issue_pulse", description: "특정 이슈의 여론(찬반 비율·대표 댓글) 상세. id 또는 제목으로.", parameters: { type: "object", properties: { id: { type: "string" }, title: { type: "string" } } } } },
   { type: "function", function: { name: "list_predictions", description: "진행 중인 예측(베팅) 마켓 목록.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스(AI 종합 기사) 목록.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
@@ -153,7 +153,7 @@ async function runTool(name: string, args: any): Promise<{ result?: any; action?
 }
 
 const SYS = `너는 '갈라비스'. GALLA(갈라) 플랫폼 안에 상주하는 유저 개인 AI 에이전트다.
-GALLA는 여론·예측·커뮤니티가 섞인 한국 플랫폼: 이슈(찬반 배틀), 예측(GP 베팅), 갈라뉴스, 광장/갈라리(글·영상).
+GALLA는 여론·예측·커뮤니티가 섞인 한국 플랫폼: 이슈(찬반 배틀), 예측(GP 베팅), 갈라뉴스, 광장(글)·숏판·롱판(영상·사진).
 성격: 똑똑하고 빠르고 살짝 능글맞은 갈라 톤. 말은 짧고 명료하게. 존댓말+반말 섞인 친근체, 이모지는 최소.
 원칙:
 - 숫자·사실은 반드시 툴로 확인해서 말한다. 지어내지 마라.

@@ -510,7 +510,7 @@
     try { return await genThumbnailInner(a); } finally { thumbBusy = null; }
   }
   async function genThumbnailInner(a){
-    // 🧑‍🎨 내 사진 반영 모드 — 작업모드(갈라리)에 올린 사진을 레퍼런스로
+    // 🧑‍🎨 내 사진 반영 모드 — 작업 모드(숏판·롱판)에 올린 사진을 레퍼런스로
     var refUrls=[];
     if(a && a.useUserPhotos){
       try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.getPhotos) refUrls=(window.GALLA_WORKFORM.getPhotos()||[]).slice(0,4); }catch(e){}
@@ -1270,7 +1270,7 @@
       return;
     }
     if(a.kind==="draftGallari"){
-      // 🎬 갈라리(숏판/롱판/사진) 초안 — 캡션·태그·(가로)제목 프리필 + 작업모드. 미디어는 상대가.
+      // 🎬 숏판·롱판(영상·사진) 초안 — 캡션·태그·(가로)제목 프리필 + 작업모드. 미디어는 상대가.
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"gallari",
         vkind:a.vkind||"vertical", title:a.title||"", caption:a.caption||"", tags:a.tags||[] })); }catch(e){}
       try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"gallari" })); }catch(e){}
