@@ -8,7 +8,11 @@
 (function () {
   const KEY = 'galla_trend_tab_order';
   const OV_KEY = 'galla_trend_tab_order_v';   // 마이그레이션 버전
-  const ORDER_V = 3;                          // v3: 광장 다시 맨 뒤로(사장님 재지시). v2에서 앞으로 뺐던 것 원복
+  /* v3: 광장 다시 맨 뒤로(사장님 재지시). v2에서 앞으로 뺐던 것 원복
+     v4: '놀거리'(fun) 신설. 저장 순서가 있는 유저는 restore()가 새 탭을 맨 뒤(=광장 뒤)에
+         붙이는데, 그 자리는 320·375px에서 탭바 가로스크롤 밖이라 아예 안 보인다.
+         → 광장 바로 앞에 끼워 넣어 첫 화면에 걸리게 한다(HTML 기본 자리와 동일). */
+  const ORDER_V = 4;
   const header = () => document.querySelector('.tabs-header');
 
   function label(el) {
@@ -28,6 +32,8 @@
       if (ov < ORDER_V) {
         if (Array.isArray(saved) && saved.length) {
           saved = saved.filter(k => k !== 'plaza'); saved.push('plaza');
+          // v4: 놀거리를 광장 앞에 삽입(이미 있으면 유저가 직접 옮긴 것이니 건드리지 않는다)
+          if (!saved.includes('fun')) saved.splice(saved.indexOf('plaza'), 0, 'fun');
           localStorage.setItem(KEY, JSON.stringify(saved));
         }
         localStorage.setItem(OV_KEY, String(ORDER_V));

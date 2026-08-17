@@ -169,9 +169,21 @@ async function initTrendPage() {
     history.replaceState(history.state, "", location.pathname + (q ? `?${q}` : ""));
   }
 
+  /* 탭이 6개가 되며 좁은 기기(320·375px)에선 활성 탭이 가로스크롤 밖에 있을 수 있다.
+     ?tab=fun 딥링크로 들어왔는데 그 탭이 안 보이면 어디 있는지 알 수가 없다.
+     ⚠️ scrollIntoView는 페이지를 세로로도 움직여(헤더가 튄다) 쓰지 않고 scrollLeft만 만진다. */
+  function revealTab(el) {
+    const bar = document.querySelector(".tabs-header");
+    if (!bar || !el || !bar.clientWidth) return;
+    const l = el.offsetLeft, r = l + el.offsetWidth, pad = 12;
+    if (l < bar.scrollLeft) bar.scrollTo({ left: Math.max(0, l - pad), behavior: "smooth" });
+    else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollTo({ left: r - bar.clientWidth + pad, behavior: "smooth" });
+  }
+
   function activateTab(name, remember = true) {
     tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
     panels.forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+    revealTab(document.querySelector(`.tabs-header .tab-item[data-tab="${name}"]`));
     if (remember) rememberTab(name);
     if (name === "trending" && !trendingLoaded) { trendingLoaded = true; loadTrending(); }
     if (name === "news" && !newsInit) {
