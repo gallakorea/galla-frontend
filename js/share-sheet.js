@@ -38,6 +38,24 @@
   }
   function open(w) { window.open(w, "_blank", "noopener,nowidth"); }
 
+  /* 데일리 미션 '친구에게 갈라 공유하기' 집계용 기록.
+     공유는 이미 끝난 뒤에 부르는 것이라 무슨 일이 있어도 공유 흐름을 막으면 안 된다
+     → 전부 삼키고, 비로그인이면 조용히 통과(서버도 auth 없으면 ok:false만 돌려준다).
+     ⚠️ 전송 완료는 검증할 수 없다(시트 버튼만 눌러도 카운트). 그래서 보상이 일간 최저치다. */
+  async function logShare(url) {
+    try {
+      const sb = await (window.waitForSupabaseClient ? waitForSupabaseClient() : null);
+      if (!sb) return;
+      const { data: { user } = {} } = await sb.auth.getUser();
+      if (!user) return;
+      let kind = "link";
+      const m = String(url || "").match(/\/share\/([a-z]+)/i);
+      if (m) kind = m[1].toLowerCase();
+      else if (/\/match\b/.test(String(url || ""))) kind = "match";
+      await sb.rpc("log_share", { p_kind: kind, p_target: String(url || "").slice(0, 200) });
+    } catch (_) { /* 미션 집계 실패가 공유를 방해하면 안 된다 */ }
+  }
+
   const ICONS = {
     kakao: '<svg viewBox="0 0 24 24" fill="#3c1e1e"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.2 4.7 6.6-.2.7-.7 2.6-.8 3-.1.5.2.5.4.4.2-.1 2.6-1.8 3.6-2.5.7.1 1.4.1 2.1.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.8l-5-6.6L5.4 22H2.3l8.1-9.3L1.5 2h7l4.5 6zM17.7 20h1.7L7 4H5.2z"/></svg>',
@@ -152,7 +170,8 @@
     items.forEach(it => {
       const b = el("button", "ssh-item");
       b.innerHTML = `<span class="ssh-ic" style="background:${it.bg}">${ICONS[it.k]}</span><span class="ssh-label">${it.label}</span>`;
-      b.onclick = () => { it.fn(); if (it.k !== "link") close(); };
+      // 실제 공유 액션이 터지는 단일 관문 — 미션 기록도 여기 한 곳에서만 붙인다
+      b.onclick = () => { it.fn(); logShare(url); if (it.k !== "link") close(); };
       grid.appendChild(b);
     });
     sheet.appendChild(grid);

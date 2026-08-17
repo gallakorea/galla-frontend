@@ -21,7 +21,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 미션별 '하러 가기' 목적지 — 예측은 갈라예측, 그 외(투표·댓글·전투·광장·DM)는 홈 피드(이슈)
-  function goFor(key) { return /predict/.test(key) ? "galla-predict.html" : "index.html"; }
+  function goFor(key) {
+    if (/predict/.test(key)) return "galla-predict.html";
+    // 공유 미션은 '놀거리' 탭으로 — 거기 카드마다 공유 버튼이 1급으로 붙어 있다
+    if (key === "share") return "search.html?tab=fun";
+    return "index.html";
+  }
 
   function cardHtml(q) {
     const pct = Math.min(100, Math.round((q.progress / q.goal) * 100));
