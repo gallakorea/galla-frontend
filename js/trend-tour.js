@@ -28,6 +28,8 @@
       body: "기사 수십 개를 <b>AI가 3줄</b>로 씹어서 정리.<br>출근길 3분이면 오늘치 끝." },
     { sel: '.tab-item[data-tab="hot"]', icon: YT_ICON, kicker: "알고리즘 무시", title: "핫튜브",
       body: "지금 <b>터지는 유튜브</b>만 골라 모음.<br>영상 찾아 헤매는 시간, 여기서 아껴요." },
+    { sel: '.tab-item[data-tab="fun"]', icon: "🎲", kicker: "친구 소환술", title: "놀거리", big: true,
+      body: "<b>갈라 궁합</b> 30초 하고 링크만 던지면<br>친구가 <b>“우리 몇 %야?”</b> 하며 알아서 들어와요." },
     { sel: '.tab-item[data-tab="plaza"]', icon: "🗣", kicker: "놀이터", title: "광장",
       body: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>.<br>댓글 전투는 덤 — 참전은 자유." },
     { center: true, icon: "🚀", kicker: "준비 끝", title: "이제 아는 척하러 가요",

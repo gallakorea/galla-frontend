@@ -34,6 +34,7 @@
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
   <script src="/js/splash-boot.js?v=0814140"></script>
 <link rel="stylesheet" href="./css/guide-banner.css?v=080412">
+<link rel="stylesheet" href="./css/fun.css?v=081702">
 </head>
 
 <body data-page="trend">
@@ -83,6 +84,14 @@
     <button type="button" class="tab-item tab-yt" data-tab="hot">
       <svg class="yt-official" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#fff" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
       핫튜브
+    </button>
+    <!-- 🎲 놀거리 — 던지면 친구가 들어오는 것들. 핫튜브 뒤·광장 앞이 기본 자리다.
+         (trend-tab-order.js: 저장 순서가 없는 유저는 이 HTML 순서를 그대로 보고,
+          저장 순서가 있는 유저는 목록에 없는 탭이라 자동으로 맨 뒤에 붙는다 → 마이그레이션 불필요) -->
+    <button type="button" class="tab-item" data-tab="fun">
+      <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+      <svg class="tab-ic ic-color" viewBox="0 0 24 24" fill="none" stroke="#ff5a6e" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5" fill="#ff9d3d" stroke="none"/><circle cx="15.5" cy="15.5" r="1.5" fill="#ff9d3d" stroke="none"/><circle cx="15.5" cy="8.5" r="1.5" fill="#4d8dff" stroke="none"/><circle cx="8.5" cy="15.5" r="1.5" fill="#4d8dff" stroke="none"/></svg>
+      놀거리
     </button>
     <button type="button" class="tab-item" data-tab="plaza">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -205,6 +214,65 @@
       <!-- 방송 카테고리 칩 (JS가 채움) -->
       <div id="hv-cats" class="hv-cats"></div>
       <div id="hot-video-list"></div>
+    </div>
+
+    <!-- ===== 놀거리 =====
+         전부 정적 마크업 + inline onclick(index.html 칩과 같은 문법). 전용 JS 파일 없음.
+         공유는 GALLA_share → withRef()가 내 초대코드를 자동으로 붙여 초대 링크가 된다. -->
+    <div class="tab-panel" data-panel="fun">
+      <div class="fun-wrap">
+        <p class="fun-lead">혼자 보고 끝나는 게 아니라, <b>던지면 친구가 들어오는</b> 것들만 모았습니다.</p>
+
+        <div class="fun-card hero">
+          <div class="fun-head">
+            <div class="fun-emo">⚔️</div>
+            <div class="fun-txt">
+              <div class="fun-t">갈라 궁합<span class="fun-new">NEW</span></div>
+              <div class="fun-d">12문항 30초로 내 논쟁 유형을 판정하고, 친구에게 링크를 던지면 <b>“우리 둘 같은 편일 확률”</b>이 계산됩니다. 로그인 없이 바로 됩니다.</div>
+            </div>
+          </div>
+          <div class="fun-btns">
+            <a class="fun-btn go" href="/match?utm_source=fun">해보기</a>
+            <button type="button" class="fun-btn share" onclick="GALLA_share({
+              url: location.origin + '/match?utm_source=fun_share',
+              title: '갈라 궁합',
+              text: '우리 둘 같은 편일까 원수일까? 12문항 30초 👀'
+            })">친구에게 던지기</button>
+          </div>
+        </div>
+
+        <div class="fun-card">
+          <div class="fun-head">
+            <div class="fun-emo">🔥</div>
+            <div class="fun-txt">
+              <div class="fun-t">지금 갈라 전황</div>
+              <div class="fun-d">이 순간 가장 뜨거운 판 TOP을 카드 한 장으로 보냅니다. 받은 사람은 바로 어느 편인지 고르게 됩니다.</div>
+            </div>
+          </div>
+          <div class="fun-btns">
+            <button type="button" class="fun-btn share solo" onclick="GALLA_share({
+              url: (window.GALLA_shareTrendUrl ? GALLA_shareTrendUrl() : location.origin + '/share/trend'),
+              title: '지금 갈라 실시간 전황',
+              text: '지금 제일 시끄러운 판. 넌 어느 편?'
+            })">전황 카드 보내기</button>
+          </div>
+        </div>
+
+        <div class="fun-card">
+          <div class="fun-head">
+            <div class="fun-emo">🧬</div>
+            <div class="fun-txt">
+              <div class="fun-t">내 갈라치기 성향</div>
+              <div class="fun-d">문항이 아니라 <b>내가 갈라에서 실제로 한 행동</b>으로 판정합니다. 싸우는 방식이 바뀌면 성향도 따라 바뀝니다.</div>
+            </div>
+          </div>
+          <div class="fun-btns">
+            <a class="fun-btn go solo" href="/galla-type.html">내 성향 보기</a>
+          </div>
+        </div>
+
+        <p class="fun-next">다음 예고 — <b>오늘의 전투 운세</b> · <b>밸런스 게임</b></p>
+      </div>
     </div>
 
     <!-- ===== 광장 (plaza.html 흡수 — 2026-07-22 통합. 트렌드가 단일 소스) ===== -->
@@ -366,7 +434,7 @@
 <script src="js/dm.js?v=0814190"></script>
 <script src="js/noti-icons.js?v=080412"></script>
 <script src="js/notifications.js?v=080412"></script>
-<script src="./js/search.js?v=0814260"></script>
+<script src="./js/search.js?v=081701"></script>
 <!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
 <script src="js/plaza-render.js?v=080412"></script>
 <script src="js/share-sheet.js?v=080412"></script>
@@ -419,8 +487,8 @@
   })();
 </script>
 <!-- 📈 트렌드 상단 안내 배너(접기/더 이상 안 보기) -->
-<script src="js/trend-guide.js?v=0814270"></script>
+<script src="js/trend-guide.js?v=081701"></script>
 <!-- 📈 트렌드 첫 진입 코치마크 투어(병맛 스포트라이트) -->
-<script src="js/trend-tour.js?v=0814270"></script>
+<script src="js/trend-tour.js?v=081701"></script>
 </body>
 </html>

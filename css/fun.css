@@ -1,0 +1,71 @@
+/* ============================================================
+   놀거리 탭 — 트렌드 허브 서브탭(data-panel="fun")
+   목적: 갈라가 만든 "던지면 친구가 들어오는" 콘텐츠를 한자리에 모아
+        기존 유저가 상시로 퍼 나르게 한다. 확산이 목적이라 카드마다 공유가 1급 버튼.
+   ⚠️ 색·반경은 css/theme.css 토큰을 따른다(순흑 배경·인디고 액센트, 골드 금지).
+   ============================================================ */
+.fun-wrap { padding: 14px 16px calc(28px + env(safe-area-inset-bottom)); }
+
+.fun-lead {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-mid, #a4abb8);
+}
+
+.fun-card {
+  display: block;
+  margin-bottom: 11px;
+  padding: 16px;
+  border-radius: var(--r-lg, 18px);
+  background: var(--surface-1, #0c0d11);
+  border: 1px solid var(--line-1, rgba(255, 255, 255, .07));
+}
+/* 주력(=지금 밀고 있는 것) 한 장만 강조. 전부 강조하면 아무것도 안 강조된다. */
+.fun-card.hero {
+  background: linear-gradient(135deg, rgba(255, 90, 110, .13), rgba(67, 97, 255, .16));
+  border-color: rgba(255, 255, 255, .1);
+}
+
+.fun-head { display: flex; align-items: flex-start; gap: 12px; }
+.fun-emo { flex: 0 0 auto; font-size: 27px; line-height: 1.15; }
+.fun-txt { flex: 1; min-width: 0; }
+.fun-t {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-size: 15px; font-weight: 900; line-height: 1.35; color: var(--text-hi, #f3f4f6);
+}
+.fun-new {
+  flex: 0 0 auto;
+  font-size: 9.5px; font-weight: 900; letter-spacing: .06em;
+  padding: 3px 7px; border-radius: 999px;
+  color: #fff; background: var(--con, #ff5a6e);
+}
+.fun-d {
+  margin-top: 6px;
+  font-size: 12.5px; line-height: 1.6; color: var(--text-mid, #a4abb8);
+}
+
+.fun-btns { display: flex; gap: 8px; margin-top: 13px; }
+.fun-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 42px; border: 0; border-radius: var(--r-sm, 10px);
+  font-family: inherit; font-size: 13px; font-weight: 900; cursor: pointer;
+  transition: transform .12s;
+  text-decoration: none;   /* a와 button을 같은 버튼으로 — 없으면 <a>만 밑줄이 남는다 */
+}
+.fun-btn:active { transform: scale(.98); }
+.fun-btn.go { background: var(--accent-grad, linear-gradient(135deg, #6a7bff, #3a5bff)); color: #fff; }
+.fun-btn.share {
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid var(--line-2, rgba(255, 255, 255, .12));
+  color: var(--text-hi, #f3f4f6);
+}
+/* 공유할 결과 링크가 없는 카드(로그인 후 개인 결과만 있는 것)는 버튼 하나로 */
+.fun-btn.solo { flex: 1; }
+
+.fun-next {
+  margin: 16px 2px 0;
+  font-size: 11.5px; line-height: 1.6; color: var(--text-low, #6b7280);
+}
+.fun-next b { color: var(--text-mid, #a4abb8); font-weight: 800; }
