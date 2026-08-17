@@ -258,9 +258,41 @@ function decodeMatch(code) {
   return { key: t[0], em: t[1], name: t[2], line: t[3], scores, nick };
 }
 
+/* ── 공유 링크 실제 열림 기록 (데일리 미션 '친구가 내 링크 열기') ──────────
+   공유 시트가 붙인 ?s=<token> 이 있으면, 이 요청이 '누가 진짜로 열었다'는 증거다.
+   기기지문 = SHA-256(솔트+IP+UA) — 원본 IP는 어디에도 저장하지 않는다.
+   자기 클릭·중복은 서버(record_share_click)가 20초 룰과 기기 중복제거로 걸러낸다.
+   ⚠️ 크롤러(카톡·페북 봇)가 OG를 긁는 것도 요청이라 UA로 1차 제외한다.
+   ⚠️ 응답을 절대 지연시키지 않는다 — waitUntil로 뒤에서 보낸다. */
+const BOT_UA = /bot|crawler|spider|facebookexternalhit|kakaotalk-scrap|slurp|preview|curl|wget|headless/i;
+
+async function recordShareClick(context, url) {
+  const token = url.searchParams.get("s");
+  if (!token || token.length > 32) return;
+  const ua = context.request.headers.get("user-agent") || "";
+  if (BOT_UA.test(ua)) return;
+  const ip = context.request.headers.get("cf-connecting-ip") || "";
+  if (!ip) return;
+  try {
+    const buf = new TextEncoder().encode("galla-share-fp:" + ip + "|" + ua);
+    const dig = await crypto.subtle.digest("SHA-256", buf);
+    const fp = [...new Uint8Array(dig)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+    await fetch(`${SB}/rest/v1/rpc/record_share_click`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_token: token, p_fp: fp }),
+    });
+  } catch { /* 집계 실패가 페이지를 막으면 안 된다 */ }
+}
+
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const origin = url.origin;
+
+  if (url.searchParams.get("s")) {
+    const p = recordShareClick(context, url);
+    if (context.waitUntil) context.waitUntil(p);
+  }
   const seg = (context.params.path || []).filter(Boolean);
   const type = seg[0];
   const id = decodeURIComponent(seg[1] || "");

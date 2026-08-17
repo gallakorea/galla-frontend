@@ -38,22 +38,22 @@
   }
   function open(w) { window.open(w, "_blank", "noopener,nowidth"); }
 
-  /* 데일리 미션 '친구에게 갈라 공유하기' 집계용 기록.
-     공유는 이미 끝난 뒤에 부르는 것이라 무슨 일이 있어도 공유 흐름을 막으면 안 된다
-     → 전부 삼키고, 비로그인이면 조용히 통과(서버도 auth 없으면 ok:false만 돌려준다).
-     ⚠️ 전송 완료는 검증할 수 없다(시트 버튼만 눌러도 카운트). 그래서 보상이 일간 최저치다. */
+  /* 공유 1건을 기록하고 **추적 토큰**을 받아온다.
+     미션은 이 기록이 아니라 '그 링크가 실제로 열렸는지'로 달성된다(record_share_click).
+     비로그인이면 조용히 null — 공유 자체는 그대로 되어야 하므로 무슨 일이 있어도 안 막는다. */
   async function logShare(url) {
     try {
       const sb = await (window.waitForSupabaseClient ? waitForSupabaseClient() : null);
-      if (!sb) return;
+      if (!sb) return null;
       const { data: { user } = {} } = await sb.auth.getUser();
-      if (!user) return;
+      if (!user) return null;
       let kind = "link";
       const m = String(url || "").match(/\/share\/([a-z]+)/i);
       if (m) kind = m[1].toLowerCase();
       else if (/\/match\b/.test(String(url || ""))) kind = "match";
-      await sb.rpc("log_share", { p_kind: kind, p_target: String(url || "").slice(0, 200) });
-    } catch (_) { /* 미션 집계 실패가 공유를 방해하면 안 된다 */ }
+      const { data } = await sb.rpc("log_share", { p_kind: kind, p_target: String(url || "").slice(0, 200) });
+      return data && data.token ? data.token : null;
+    } catch (_) { return null; }  /* 미션 집계 실패가 공유를 방해하면 안 된다 */
   }
 
   const ICONS = {
@@ -138,10 +138,16 @@
   }
 
   window.GALLA_share = function (cfg) {
-    const url = withRef(cfg.url || location.href);
+    const baseUrl = withRef(cfg.url || location.href);
     const title = cfg.title || "GALLA";
     const text = cfg.text || "";
-    const eu = encodeURIComponent(url), et = encodeURIComponent(text || title);
+    /* 미션 '친구가 내 링크 열기'는 링크가 실제로 열려야 인정된다 → 공유 링크에 추적 토큰(?s=)을
+       붙인다. 토큰 발급은 네트워크라 시트를 여는 즉시 시작하고, 각 버튼은 **누르는 순간** URL을
+       다시 계산한다(그 사이 도착했으면 붙고, 아직이면 토큰 없이 그냥 공유된다 — 절대 안 막는다). */
+    let token = null;
+    logShare(baseUrl).then(t => { token = t; });
+    const U = () => (token ? baseUrl + (baseUrl.indexOf("?") >= 0 ? "&" : "?") + "s=" + token : baseUrl);
+    const et = encodeURIComponent(text || title);
 
     close();
     const ov = el("div", "ssh-overlay");
@@ -154,24 +160,23 @@
     const items = [
       // ⚡ 갈라 DM — 선순환의 핵심 고리. 콘텐츠가 DM 카드로 흐르고, 받은 사람이 탭하면
       //   콘텐츠로 유입된다. 그래서 외부 SNS보다 앞, 첫 자리.
-      { k: "dm", label: "갈라 친구", bg: "linear-gradient(135deg,#3d6bff,#2b4fd0)", fn: () => sendToDM(cfg, url) },
-      { k: "kakao", label: "카카오톡", bg: "#FEE500", fn: () => { copyLink(url); toast("링크 복사됨 · 카톡에 붙여넣으면 카드가 떠요"); } },
-      { k: "x", label: "X", bg: "#000", fn: () => open(`https://twitter.com/intent/tweet?text=${et}&url=${eu}`) },
-      { k: "fb", label: "페이스북", bg: "#1877F2", fn: () => open(`https://www.facebook.com/sharer/sharer.php?u=${eu}`) },
-      { k: "tg", label: "텔레그램", bg: "#2AABEE", fn: () => open(`https://t.me/share/url?url=${eu}&text=${et}`) },
-      { k: "threads", label: "쓰레드", bg: "#000", fn: () => open(`https://www.threads.net/intent/post?text=${encodeURIComponent((text || title) + " " + url)}`) },
-      { k: "insta", label: "인스타그램", bg: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", fn: () => { copyLink(url); toast("링크 복사됨 · 인스타 스토리/DM에 붙여넣기"); } },
-      { k: "whatsapp", label: "왓츠앱", bg: "#25D366", fn: () => open(`https://wa.me/?text=${encodeURIComponent((text || title) + " " + url)}`) },
-      { k: "email", label: "이메일", bg: "#5a6472", fn: () => { location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent((text ? text + "\n\n" : "") + url)}`; } },
-      { k: "link", label: "링크 복사", bg: "#2a2c33", fn: () => copyLink(url) },
+      { k: "dm", label: "갈라 친구", bg: "linear-gradient(135deg,#3d6bff,#2b4fd0)", fn: () => sendToDM(cfg, U()) },
+      { k: "kakao", label: "카카오톡", bg: "#FEE500", fn: () => { copyLink(U()); toast("링크 복사됨 · 카톡에 붙여넣으면 카드가 떠요"); } },
+      { k: "x", label: "X", bg: "#000", fn: () => open(`https://twitter.com/intent/tweet?text=${et}&url=${encodeURIComponent(U())}`) },
+      { k: "fb", label: "페이스북", bg: "#1877F2", fn: () => open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(U())}`) },
+      { k: "tg", label: "텔레그램", bg: "#2AABEE", fn: () => open(`https://t.me/share/url?url=${encodeURIComponent(U())}&text=${et}`) },
+      { k: "threads", label: "쓰레드", bg: "#000", fn: () => open(`https://www.threads.net/intent/post?text=${encodeURIComponent((text || title) + " " + U())}`) },
+      { k: "insta", label: "인스타그램", bg: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", fn: () => { copyLink(U()); toast("링크 복사됨 · 인스타 스토리/DM에 붙여넣기"); } },
+      { k: "whatsapp", label: "왓츠앱", bg: "#25D366", fn: () => open(`https://wa.me/?text=${encodeURIComponent((text || title) + " " + U())}`) },
+      { k: "email", label: "이메일", bg: "#5a6472", fn: () => { location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent((text ? text + "\n\n" : "") + U())}`; } },
+      { k: "link", label: "링크 복사", bg: "#2a2c33", fn: () => copyLink(U()) },
     ];
-    if (navigator.share) items.push({ k: "more", label: "더보기", bg: "#2a2c33", fn: async () => { try { await navigator.share({ title, text, url }); } catch (_) {} } });
+    if (navigator.share) items.push({ k: "more", label: "더보기", bg: "#2a2c33", fn: async () => { try { await navigator.share({ title, text, url: U() }); } catch (_) {} } });
 
     items.forEach(it => {
       const b = el("button", "ssh-item");
       b.innerHTML = `<span class="ssh-ic" style="background:${it.bg}">${ICONS[it.k]}</span><span class="ssh-label">${it.label}</span>`;
-      // 실제 공유 액션이 터지는 단일 관문 — 미션 기록도 여기 한 곳에서만 붙인다
-      b.onclick = () => { it.fn(); logShare(url); if (it.k !== "link") close(); };
+      b.onclick = () => { it.fn(); if (it.k !== "link") close(); };
       grid.appendChild(b);
     });
     sheet.appendChild(grid);
