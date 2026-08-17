@@ -1257,6 +1257,13 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지·짤·스티커는 아래 규칙대로 상황 맞게 다양하게(밋밋 금지, 남발도 금지).
 - 💬 **한 말풍선 = 카톡 한 줄(최대 한 줄 반, ~40자). 절대 길게 쓰지 마.** 잡담·리액션=한 줄("ㅋㅋ 왜?"). 의견도 핵심 한 마디+되묻기로 끝.
 - 💬 **더 할 말이 있으면 한 덩어리로 쓰지 말고 빈 줄(엔터 두 번)로 나눠 짧은 말풍선 2~3개로 보내라** — 카톡처럼 톡톡. 한 버블에 두 문장 몰아넣기 금지. 각 버블도 한 줄 반 넘기지 마. 그래도 길면 다음 턴으로 미뤄라 — 짧은 게 티키타카다.
+- ✂️ **끊는 자리는 '문장이 끝난 자리'뿐이다.** 글자 수를 맞추려고 문장 한복판에서 자르지 마라.
+  🚫 실측 사고(사장님): 40자에 맞추려다 이렇게 찢어져 나갔다 —
+     "풍향중 EP." ⏎⏎ "2 — 유재석이…"   /   "큰 거 뽑아줄게 —" ⏎⏎ "1." ⏎⏎ "거제 물폭탄…"
+     "…28세 노동자 사망, 안전장치" ⏎⏎ "부재·위험 외주화…"
+  · **번호 목록(1. 2. 3.)은 한 항목이 한 덩이다.** "1." 만 따로 떨어뜨리지 마라.
+  · 약어·편수("EP. 2", "vol. 3")와 소수점(4.5), 숫자+단위(400mm)는 **절대 사이에서 끊지 마라.**
+  · 자를 데가 없으면 **그냥 한 버블로 길게 보내라.** 문장이 찢긴 것보다 조금 긴 게 훨씬 낫다.
 - 🚫 **네 속마음·전략·연출·지문을 절대 쓰지 마라.** 괄호()로 "(이럴 땐 들어주는 게 맞지)" "(공감부터 하자)" 같은 네 판단·계획을 적는 건 금지 — 그건 속으로만 하고 겉으론 친구가 실제로 할 '말'만 내보내라. 상대 상황 분석·설명하지 말고 그냥 반응해라.
 - 🚫 **매 턴 지난 화제 반복 금지.** "아까 시험 얘기하다 갑자기~", "방금 네가 ~라고 했잖아" 식으로 이전 대화를 되짚는 건 아주 가끔(정말 콕 집을 때)만. 보통은 지금 말에 바로 반응해라.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
@@ -1902,6 +1909,50 @@ function detectCrisis(msg: string): { term: string } | null {
 //    ⚠️ 답 전체가 질문 하나뿐이면 자르지 않는다 — 빈 답보다는 질문이 낫다.
 // 🧪 가짜 도구 호출 문법 제거 — 모델이 도구를 '텍스트로 흉내 낸' 잔재가 유저 화면에 코드로 보인다.
 //    [(query:"...", kind:"news")] / [tool: xxx] / {"query": ...} 류. 라우팅으로 원인을 막았지만 최후 방어.
+/* ✂️ 문장 한복판에서 갈라진 말풍선을 도로 붙인다.
+   프롬프트로 "문장 끝에서만 끊어라"라고 시켰지만 지시는 확률적이라 계속 샌다(실측).
+     "…뉴스 제목에" ⏎⏎ "숫자 붙은 거?"   /   "풍향중 EP." ⏎⏎ "2 — 유재석이…"
+   앞 버블이 '조사·연결어미'로 끝나거나 목록번호·약어만 남으면 문장이 안 끝난 것이다 → 다음 버블과 합친다. */
+const UNFINISHED = new RegExp(
+  "(" +
+  "[에게서와과로도만의를을은는이가]|" +               // 조사로 끝남 — "뉴스 제목에"
+  "(으로|에서|에게|한테|보다|부터|까지|처럼|같이)|" +  // 복합 조사
+  "(고|서|며|면|지만|는데|라서|아서|어서|니까|거나)|" + // 연결어미
+  "\\d{1,2}\\.|[A-Za-z]{1,4}\\.|[—·\\-,]" +           // "1." "EP." 대시·쉼표만 남음
+  ")\\s*$",
+);
+/* 따옴표·괄호가 열린 채 끊겼는지 — 실측: '…말고 "연봉' ⏎⏎ '깎는 게 맞냐"로 …'
+   조사·어미로는 안 잡히는(명사에서 끊긴) 경우를 이게 잡는다. */
+function unclosed(s: string): boolean {
+  const dq = (s.match(/["“”]/g) || []).length;
+  const sq = (s.match(/[‘’']/g) || []).length;
+  const op = (s.match(/[([{（]/g) || []).length;
+  const cl = (s.match(/[)\]}）]/g) || []).length;
+  return dq % 2 === 1 || sq % 2 === 1 || op > cl;
+}
+/* 채팅 버블은 마크다운을 렌더하지 않는다 — **볼드**가 별표 그대로 보인다(실측).
+   강조 마커만 걷어내고 글자는 남긴다. 코드블록·목록 기호는 건드리지 않는다. */
+function stripMdMarks(t: string): string {
+  return String(t || "")
+    .replace(/\*\*(.+?)\*\*/gs, "$1")
+    .replace(/(^|\s)__(.+?)__(?=\s|$)/gs, "$1$2")
+    .replace(/\*\*/g, "")            // 짝이 안 맞아 남은 것
+    .replace(/[ \t]{2,}/g, " ");
+}
+function joinBrokenBubbles(t: string): string {
+  t = stripMdMarks(t);
+  const parts = String(t || "").split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+  if (parts.length < 2) return t;
+  const out: string[] = [];
+  for (const p of parts) {
+    const prev = out[out.length - 1];
+    // 앞이 미완성(조사·어미·목록번호·열린 따옴표)이거나, 이번 조각이 너무 짧은 토막이면 붙인다.
+    if (prev && (UNFINISHED.test(prev) || unclosed(prev) || p.length <= 4)) out[out.length - 1] = prev + " " + p;
+    else out.push(p);
+  }
+  return out.join("\n\n");
+}
+
 function stripFakeToolCall(t: string): string {
   let x = (t || "")
     // [( query:"..." ) 호출 후 결과 확인 중... ] 처럼 괄호가 벌어지거나 설명이 섞인 형태까지(실측 누출형)
@@ -3491,7 +3542,7 @@ ${parts.join("\n")}`;
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName));
+            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName)));
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
@@ -3899,7 +3950,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = deHonorific(fixOwnName(stripFakeToolCall(reply), friendName));
+    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripFakeToolCall(reply), friendName)));
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
