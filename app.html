@@ -13,7 +13,7 @@
   <!-- 📞 콜드스타트 대비 — CallKit '받기'가 통화엔진 로드 전에 와도 유실 없게 아주 일찍 stash -->
   <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
   <!-- ⚠️ 레거시 app-shell 폴백 제거 — MPA/SPA 혼합·부팅 이중로드 방지(사장님 지시). SPA가 유일 경로. -->
-  <script>window.GALLA_V = "081704";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <script>window.GALLA_V = "081706";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
   <!-- 🚀 앱 스플래시 — SPA 부팅/버전리로드의 CSS 미적용 번쩍임(FOUC)을 가리고 galla:ready에 내려감 -->
   <script src="/js/splash-boot.js?v=0814140&wait=ready"></script>
   <link rel="stylesheet" href="./css/theme.css?v=080412">

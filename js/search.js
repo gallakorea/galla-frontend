@@ -169,21 +169,13 @@ async function initTrendPage() {
     history.replaceState(history.state, "", location.pathname + (q ? `?${q}` : ""));
   }
 
-  /* 탭이 6개가 되며 좁은 기기(320·375px)에선 활성 탭이 가로스크롤 밖에 있을 수 있다.
-     ?tab=fun 딥링크로 들어왔는데 그 탭이 안 보이면 어디 있는지 알 수가 없다.
-     ⚠️ scrollIntoView는 페이지를 세로로도 움직여(헤더가 튄다) 쓰지 않고 scrollLeft만 만진다. */
-  function revealTab(el) {
-    const bar = document.querySelector(".tabs-header");
-    if (!bar || !el || !bar.clientWidth) return;
-    const l = el.offsetLeft, r = l + el.offsetWidth, pad = 12;
-    if (l < bar.scrollLeft) bar.scrollTo({ left: Math.max(0, l - pad), behavior: "smooth" });
-    else if (r > bar.scrollLeft + bar.clientWidth) bar.scrollTo({ left: r - bar.clientWidth + pad, behavior: "smooth" });
-  }
-
+  /* ⚠️ 여기에 '활성 탭을 가로스크롤로 끌어오는' 코드를 넣지 말 것 — 죽은 코드가 된다.
+     .tabs-header 는 css/search.css 에서 overflow-x:hidden + .tab-item{flex:1 1 0} 이라
+     탭이 늘어도 밖으로 밀리지 않고 화면 폭을 균등 분할한다(대신 글자가 잘린다).
+     좁은 기기 대응은 CSS 쪽 320px 블록이 담당한다. */
   function activateTab(name, remember = true) {
     tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
     panels.forEach(p => p.classList.toggle("active", p.dataset.panel === name));
-    revealTab(document.querySelector(`.tabs-header .tab-item[data-tab="${name}"]`));
     if (remember) rememberTab(name);
     if (name === "trending" && !trendingLoaded) { trendingLoaded = true; loadTrending(); }
     if (name === "news" && !newsInit) {
@@ -1339,13 +1331,13 @@ async function initTrendPage() {
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
     activateTab("hot", false);
-  } else if (["trending", "news", "hot", "fun", "plaza"].includes(qs.get("tab"))) {
+  } else if (["trending", "news", "hot", "plaza"].includes(qs.get("tab"))) {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
   } else {
     // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
-    activateTab(["search", "trending", "news", "hot", "fun", "plaza"].includes(saved) ? saved : "search", false);
+    activateTab(["search", "trending", "news", "hot", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
 }

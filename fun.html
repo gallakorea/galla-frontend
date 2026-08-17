@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>놀거리 · 친구 부르기 | GALLA 갈라</title>
+  <meta name="description" content="갈라 궁합·전황 카드·성향 판정 — 던지면 친구가 들어오는 것들만 모았습니다.">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=080412">
+  <link rel="stylesheet" href="./css/nav.css?v=0808104">
+  <link rel="stylesheet" href="./css/fun.css?v=081702">
+  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=080412">
+</head>
+
+<body data-page="mypage">
+
+<div id="app">
+
+  <header class="st-header">
+    <button class="st-back" data-back="settings.html" aria-label="뒤로">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="st-title">놀거리</div>
+    <div class="st-back" style="visibility:hidden"></div>
+  </header>
+
+  <section class="main">
+    <!-- 전부 정적 마크업 + inline onclick(index.html 칩과 같은 문법). 전용 JS 파일 없음.
+         공유는 GALLA_share → withRef()가 내 초대코드를 자동으로 붙여 초대 링크가 된다. -->
+    <div class="fun-wrap">
+      <p class="fun-lead">혼자 보고 끝나는 게 아니라, <b>던지면 친구가 들어오는</b> 것들만 모았습니다.</p>
+
+      <div class="fun-card hero">
+        <div class="fun-head">
+          <div class="fun-emo">⚔️</div>
+          <div class="fun-txt">
+            <div class="fun-t">갈라 궁합<span class="fun-new">NEW</span></div>
+            <div class="fun-d">12문항 30초로 내 논쟁 유형을 판정하고, 친구에게 링크를 던지면 <b>“우리 둘 같은 편일 확률”</b>이 계산됩니다. 로그인 없이 바로 됩니다.</div>
+          </div>
+        </div>
+        <div class="fun-btns">
+          <a class="fun-btn go" href="/match?utm_source=fun">해보기</a>
+          <button type="button" class="fun-btn share" onclick="GALLA_share({
+            url: location.origin + '/match?utm_source=fun_share',
+            title: '갈라 궁합',
+            text: '우리 둘 같은 편일까 원수일까? 12문항 30초 👀'
+          })">친구에게 던지기</button>
+        </div>
+      </div>
+
+      <div class="fun-card">
+        <div class="fun-head">
+          <div class="fun-emo">🔥</div>
+          <div class="fun-txt">
+            <div class="fun-t">지금 갈라 전황</div>
+            <div class="fun-d">이 순간 가장 뜨거운 판 TOP을 카드 한 장으로 보냅니다. 받은 사람은 바로 어느 편인지 고르게 됩니다.</div>
+          </div>
+        </div>
+        <div class="fun-btns">
+          <button type="button" class="fun-btn share solo" onclick="GALLA_share({
+            url: (window.GALLA_shareTrendUrl ? GALLA_shareTrendUrl() : location.origin + '/share/trend'),
+            title: '지금 갈라 실시간 전황',
+            text: '지금 제일 시끄러운 판. 넌 어느 편?'
+          })">전황 카드 보내기</button>
+        </div>
+      </div>
+
+      <div class="fun-card">
+        <div class="fun-head">
+          <div class="fun-emo">🧬</div>
+          <div class="fun-txt">
+            <div class="fun-t">내 갈라치기 성향</div>
+            <div class="fun-d">문항이 아니라 <b>내가 갈라에서 실제로 한 행동</b>으로 판정합니다. 싸우는 방식이 바뀌면 성향도 따라 바뀝니다.</div>
+          </div>
+        </div>
+        <div class="fun-btns">
+          <a class="fun-btn go solo" href="/galla-type.html">내 성향 보기</a>
+        </div>
+      </div>
+
+      <p class="fun-next">다음 예고 — <b>오늘의 전투 운세</b> · <b>밸런스 게임</b></p>
+    </div>
+  </section>
+
+  <!-- ⭐ NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <button class="nav-item" data-page="index" data-target="index.html">
+        <img src="./assets/icons/nav-home.svg" data-base="./assets/icons/nav-home.svg" data-active="./assets/icons/nav-home-active.svg">
+      </button>
+      <button class="nav-item" data-page="predict" data-target="galla-predict.html">
+        <img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg">
+      </button>
+      <button class="nav-item nav-dm" data-page="dm" data-target="dm.html" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
+      <button class="nav-item" data-page="mypage" data-target="mypage.html">
+        <img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg">
+      </button>
+    </div>
+  </nav>
+
+</div>
+
+<script src="/js/error-logger.js?v=080412"></script>
+<script src="./vendor/supabase.js?v=0809131"></script>
+<script src="js/supabase.js?v=081606"></script>
+<script src="js/back.js?v=080412"></script>
+<script src="js/share-sheet.js?v=081704"></script>
+<script src="js/nav.js?v=0815240"></script>
+<script src="js/desktop-pc.js?v=081603" defer></script>
+</body>
+</html>

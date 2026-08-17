@@ -232,7 +232,7 @@
       <button class="btn primary" id="goShare">친구에게 도전장 보내기</button>
       <button class="btn light" id="goSave">결과 카드 저장</button>
       <a class="btn ghost" id="goGalla" href="/index.html">지금 갈라에서 진짜 판 붙기 →</a>
-      <a class="btn ghost" id="goFun" href="/search?tab=fun">갈라의 다른 놀거리 보기</a>
+      <a class="btn ghost" id="goFun" href="/fun">갈라의 다른 놀거리 보기</a>
       <button class="btn ghost" id="goAgain">다시 하기</button>
     </div>
   </section>
@@ -700,7 +700,7 @@
       $("goShare").onclick = doShare;
     }
     $("goGalla").href = keep("/index.html");
-    $("goFun").href = keep("/search?tab=fun");
+    $("goFun").href = keep("/fun");
     scene("sResult");
   }
 

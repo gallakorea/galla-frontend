@@ -9,9 +9,9 @@
   const KEY = 'galla_trend_tab_order';
   const OV_KEY = 'galla_trend_tab_order_v';   // 마이그레이션 버전
   /* v3: 광장 다시 맨 뒤로(사장님 재지시). v2에서 앞으로 뺐던 것 원복
-     v4: '놀거리'(fun) 신설. 저장 순서가 있는 유저는 restore()가 새 탭을 맨 뒤(=광장 뒤)에
-         붙이는데, 그 자리는 320·375px에서 탭바 가로스크롤 밖이라 아예 안 보인다.
-         → 광장 바로 앞에 끼워 넣어 첫 화면에 걸리게 한다(HTML 기본 자리와 동일). */
+     v4: '놀거리' 탭을 넣었다가 설정 화면으로 뺐다(사장님: 트렌드 탭이 빡빡함).
+         저장 순서에 남아 있는 'fun'은 restore()가 실제 요소를 못 찾아 그냥 무시하므로 무해.
+         ORDER_V는 되돌리지 않는다 — 낮추면 이미 4를 받은 유저의 마이그레이션 상태가 꼬인다. */
   const ORDER_V = 4;
   const header = () => document.querySelector('.tabs-header');
 
@@ -32,8 +32,6 @@
       if (ov < ORDER_V) {
         if (Array.isArray(saved) && saved.length) {
           saved = saved.filter(k => k !== 'plaza'); saved.push('plaza');
-          // v4: 놀거리를 광장 앞에 삽입(이미 있으면 유저가 직접 옮긴 것이니 건드리지 않는다)
-          if (!saved.includes('fun')) saved.splice(saved.indexOf('plaza'), 0, 'fun');
           localStorage.setItem(KEY, JSON.stringify(saved));
         }
         localStorage.setItem(OV_KEY, String(ORDER_V));
