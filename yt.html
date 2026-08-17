@@ -14,6 +14,13 @@
   #err svg{width:40px;height:40px;color:#5fd8ff;opacity:.9}
   #err p{margin:0;color:#cfd6e6}
   #err a{margin-top:4px;padding:9px 16px;border-radius:999px;background:#1e2532;color:#fff;font-weight:700;text-decoration:none}
+  /* 소리 있는 자동재생이 막힌 환경에서만 뜨는 알약 — 화면은 이미 돌고 있다 */
+  #snd{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:none;
+       align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:0;
+       background:rgba(0,0,0,.72);backdrop-filter:blur(4px);color:#fff;font-weight:800;
+       font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+       cursor:pointer}
+  #snd.on{display:flex}
 </style>
 </head>
 <body>
@@ -23,6 +30,7 @@
   <p>이 영상은 저작권자 설정으로<br>앱 안에서 재생할 수 없어요.</p>
   <a id="errGo" href="#" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>
 </div>
+<button id="snd" type="button">🔊 소리 켜기</button>
 <script>
 (function(){
   var id = (new URLSearchParams(location.search).get("v") || "").trim();
@@ -34,16 +42,60 @@
 
   // YouTube IFrame Player API — 정식 origin(https://galla.im 등)으로 handshake 하므로
   // capacitor://localhost 오리진에서 나던 '오류 153'을 회피한다. onError는 소유자 임베드차단만.
+  //
+  // 🔇 두 번 눌러야 재생되던 문제(사장님 2026-08-17)
+  //   갈라 카드의 ▶ 를 누른 건 '부모 문서'에서의 탭이다. 유튜브 플레이어는
+  //   교차 출처 iframe 이라 그 제스처를 물려받지 못한다. 브라우저는 소리 있는
+  //   자동재생을 막으므로 플레이어가 자기 재생 버튼을 띄우고, 사용자는 두 번 누른다.
+  //   (앱 WKWebView 는 자동재생이 허용돼 한 번에 됐다 — 그래서 웹에서만 보였다)
+  //
+  //   해결: 소리 있는 재생을 먼저 시도하고, 잠시 뒤에도 재생이 시작되지 않았으면
+  //         '음소거 재생'으로 되돌린다. 음소거 자동재생은 어디서나 허용된다.
+  //         화면은 즉시 돌고, 소리만 한 번 더 탭하면 켜진다(프레임 안 탭이라 허용).
+  //   ⚠️ 처음부터 음소거로 시작하지 않는다 — 그러면 자동재생이 되는 앱까지
+  //      소리 없이 시작해 멀쩡하던 동작이 나빠진다.
+  var player = null, started = false;
+
+  function showSoundPill(){
+    var b = document.getElementById("snd");
+    b.classList.add("on");
+    b.onclick = function(){
+      try{ player.unMute(); player.setVolume(100); player.playVideo(); }catch(_){}
+      b.classList.remove("on");
+    };
+  }
+
   window.onYouTubeIframeAPIReady = function(){
     try{
-      new YT.Player("p", {
+      player = new YT.Player("p", {
         videoId: id, width: "100%", height: "100%",
         playerVars: {
           autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, fs: 1,
           origin: location.origin, enablejsapi: 1
         },
         events: {
-          onReady: function(e){ try{ e.target.playVideo(); }catch(_){} },
+          onReady: function(e){
+            try{ e.target.playVideo(); }catch(_){}
+            // 소리 있는 자동재생이 막혔는지 본다 — 막혔으면 음소거로 다시 시작.
+            setTimeout(function(){
+              if (started) return;
+              try{
+                e.target.mute();
+                e.target.playVideo();
+                showSoundPill();
+              }catch(_){}
+            }, 900);
+          },
+          onStateChange: function(e){
+            /* BUFFERING 도 '재생이 걸린 것'으로 본다 — 자동재생이 막히면 플레이어는
+               UNSTARTED/CUED 에 머물지 버퍼링으로 넘어가지 않는다. 이걸 빼면 느린
+               회선에서 아직 버퍼링 중인 정상 재생을 차단으로 오판해 음소거시킨다. */
+            if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING) {
+              started = true;
+              // 소리 있는 재생이 정상으로 걸렸으면 알약은 띄우지 않는다.
+              try{ if (!e.target.isMuted()) document.getElementById("snd").classList.remove("on"); }catch(_){}
+            }
+          },
           // 2/5/100/101/150 = 잘못된 id·삭제·비공개·임베드차단 → 폴백
           onError: function(){ showErr(); }
         }
