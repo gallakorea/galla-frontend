@@ -10,6 +10,7 @@
  *  /share/trend                 → 지금 갈라 실시간 트렌드 TOP (랜딩)
  *  /share/room/<id>             → 육성 난장 입장 초대 (랜딩)
  *  /share/u/<id>                → 말 걸기(오픈프로필) — 1:1 DM 초대 (랜딩)
+ *  /share/match/<code>          → 갈라 궁합 결과 (랜딩, DB 없음 — 결과가 code 에 인코딩돼 있음)
  *
  * 크롤러(카톡/페북/트위터)는 OG 태그를 읽고, 사람은 실제 페이지/랜딩으로 이동.
  * ⚠️ 공유 링크의 ?ref=초대코드는 리다이렉트 목적지까지 반드시 넘겨 초대 크레딧이 유실되지 않게 한다.
@@ -209,6 +210,54 @@ const CMT = {
   video:  { table: "video_comments",      fk: "video_id",  content: "body",    parent: "youtube_hot", ptitle: "title",    dest: (o, id) => `${o}/watch.html?v=${id}`,            emoji: "🗯️", label: "영상 댓글" },
 };
 
+/* ── 갈라 궁합 ────────────────────────────────────────────────
+   ⚠️ MATCH_TYPES 의 키 순서는 match.html 의 TYPES 와 반드시 동일해야 한다
+   (코드 첫 글자가 이 순서의 인덱스다. 순서가 어긋나면 남의 유형이 뜬다).
+   결과는 DB가 아니라 code 문자열 안에 들어 있어 조회가 필요 없다. */
+const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const MATCH_TYPES = [
+  ["HAPM", "📣", "광화문 확성기", "옳다고 믿는 쪽에 서서 제일 크게 소리치는 사람"],
+  ["HAPU", "💥", "혼자 싸우는 반란군", "전부가 반대해도 혼자 돌격하는 사람"],
+  ["HAEM", "🎪", "판 키우는 흥행사", "누가 이기든 상관없다, 판이 커지면 그만"],
+  ["HAEU", "🃏", "청개구리 트롤러", "분위기가 한쪽으로 쏠리는 순간 반대편에 서는 사람"],
+  ["HDPM", "🛡️", "우리 편 방패", "내 편이 맞으면 몸으로 막는 사람"],
+  ["HDPU", "⛰️", "고집불통 요새", "세상이 다 바뀌어도 자리를 안 옮기는 사람"],
+  ["HDEM", "🤝", "열혈 중재자", "싸움판에 뛰어들어 말리는 사람"],
+  ["HDEU", "🕊️", "소수의견 변호인", "지고 있는 쪽에 자동으로 마음이 가는 사람"],
+  ["CAPM", "🎯", "냉혈 저격수", "감정 없이 급소만 정확히 찌르는 사람"],
+  ["CAPU", "🐍", "여론 암살자", "대세를 조용히 무너뜨리는 사람"],
+  ["CAEM", "📊", "팩트 폭격기", "감정 대신 근거를 쏟아붓는 사람"],
+  ["CAEU", "🔬", "악마의 변호인", "이긴 쪽 논리를 끝까지 해부하는 사람"],
+  ["CDPM", "🧊", "침착한 방패", "흔들리지 않고 자기 자리를 지키는 사람"],
+  ["CDPU", "🗿", "침묵의 바위", "말은 안 하지만 절대 안 바뀌는 사람"],
+  ["CDEM", "🧘", "강 건너 불구경", "싸움을 구경하되 절대 안 들어가는 사람"],
+  ["CDEU", "👻", "관전만 하는 유령", "다 보고 다 알지만 흔적을 안 남기는 사람"],
+];
+
+function decodeMatch(code) {
+  if (!code || code.length < 5) return null;
+  const t = MATCH_TYPES[B62.indexOf(code[0])];
+  if (!t) return null;
+  const scores = [];
+  for (let i = 1; i <= 4; i++) {
+    const v = B62.indexOf(code[i]);
+    if (v < 0) return null;
+    scores.push(Math.round(v / 0.61));
+  }
+  let nick = "";
+  if (code.length > 5) {
+    try {
+      let b = code.slice(5).replace(/-/g, "+").replace(/_/g, "/");
+      while (b.length % 4) b += "=";
+      const bin = atob(b);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      nick = clip(new TextDecoder().decode(arr), 8);
+    } catch { nick = ""; }
+  }
+  return { key: t[0], em: t[1], name: t[2], line: t[3], scores, nick };
+}
+
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const origin = url.origin;
@@ -265,6 +314,39 @@ export async function onRequestGet(context) {
       ogImage: img, heading: `💬 ${nick}에게 말 걸기`, sub: "갈라에서 1:1로 대화를 시작할 수 있어요. 가입하면 바로 연결돼요.",
       ctaText: `${nick}에게 말 걸기`, ctaHref: dest,
     });
+  }
+
+  // ⚔️ 갈라 궁합 결과 — DB 조회 없음(결과가 code 안에 있음). 받는 사람은 "궁합 도전장"을 받는다.
+  if (type === "match" && id) {
+    const m = decodeMatch(id);
+    if (m) {
+      const who = m.nick ? `${m.nick}님` : "친구";
+      // 도전장으로 들어온 사람은 테스트를 마치는 순간 둘의 궁합이 계산된다(vs=code).
+      const dest = withParams(`${origin}/match?vs=${encodeURIComponent(id)}`, url);
+      const AX = [["🔥 열혈", "🧊 냉정"], ["⚔️ 공격", "🛡️ 수비"], ["🎯 확신", "⚖️ 균형"], ["🌊 대세", "🦅 역행"]];
+      const bars = m.scores.map((v, i) => `
+        <div class="mx"><span class="${v >= 50 ? "hi" : ""}">${AX[i][0]}</span>
+          <i><b style="width:${v}%"></b></i>
+          <span class="${v < 50 ? "hi" : ""}">${AX[i][1]}</span></div>`).join("");
+      return landingPage({
+        url, origin, badge: "갈라 궁합",
+        ogTitle: `${m.em} ${who}의 갈라 유형은 «${m.name}»`,
+        ogDesc: `${m.line} — 그래서 당신과는 같은 편일까요, 원수일까요? 12문항 30초, 로그인 없이 바로 확인.`,
+        ogImage: `${origin}/assets/og/match/${m.key}.png`,
+        heading: `${m.em} ${who}은 «${m.name}»`,
+        sub: `${m.line}.\n당신과 ${who}이 같은 편일 확률은 몇 %일까요?`,
+        bodyHtml: `<style>
+          .mx{display:flex;align-items:center;gap:9px;margin:10px 0;font-size:11.5px;font-weight:800;color:#8a909c}
+          .mx span{flex:0 0 58px;text-align:right}.mx span:last-child{text-align:left}
+          .mx span.hi{color:#fff}
+          .mx i{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;display:block}
+          .mx i b{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#ff5a6e,#6a7bff)}
+        </style>${bars}`,
+        ctaText: "나도 테스트하고 궁합 보기",
+        ctaHref: dest,
+        subText: "갈라 둘러보기",
+      });
+    }
   }
 
   // 🗯️ 댓글·대댓글 인용 카드  /share/comment/<scope>/<id>

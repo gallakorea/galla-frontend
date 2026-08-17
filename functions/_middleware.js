@@ -240,7 +240,12 @@ export async function onRequest(context) {
     const { request, next } = context;
     if (request.method !== "GET") return next();
     const url = new URL(request.url);
-    const hasRef = !!url.searchParams.get("ref");
+    /* ⚠️ /share/* 는 이미 자기 콘텐츠 전용 OG 카드를 만들어 내보낸다.
+       여기서 ?ref= 만 보고 일반 초대 카드로 덮어쓰면 훨씬 약한 카드로 바뀐다
+       (예: «고집불통 요새» 궁합 카드 → "누가 초대했어요"). 초대 크레딧은 OG가 아니라
+       목적지 페이지의 ?ref= 캡처로 붙으므로, 덮어쓰지 않아도 하나도 안 잃는다. */
+    const isShare = url.pathname.startsWith("/share/");
+    const hasRef = !isShare && !!url.searchParams.get("ref");
     const isContent = !!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn"));
     // 초대(?ref=) 또는 콘텐츠 상세일 때만 개입
     if (!hasRef && !isContent) return next();

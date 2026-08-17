@@ -33,6 +33,7 @@ export async function onRequest() {
   parts.push(u(`${HOST}/galla-predict.html`, now, "hourly", "0.9"));
   parts.push(u(`${HOST}/search.html`, now, "hourly", "0.9"));
   parts.push(u(`${HOST}/plaza.html`, now, "hourly", "0.8"));
+  parts.push(u(`${HOST}/match`, now, "weekly", "0.8")); // 갈라 궁합 — 비로그인 유입 랜딩
 
   const [issues, plaza, markets, news] = await Promise.all([
     sb("issues?select=id,created_at&order=created_at.desc&limit=2000"),
