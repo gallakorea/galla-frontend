@@ -467,6 +467,36 @@ async function fetchContentById(type: string, id: string): Promise<{ kind: strin
       } catch { /* */ }
       return { kind: "예측 마켓", text: `질문: ${data.question || ""}\n정산기준: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 250)}${odds}` };
     }
+    /* 📺 핫트렌드 영상 — 갈라 콘텐츠가 아니라 유튜브라 '여론'이 없다.
+       대신 갈라 안에서의 반응(영상 댓글)과 인기 지표를 준다. 없으면 없다고 말하게 한다. */
+    if (type === "video") {
+      const { data } = await supa.from("youtube_hot")
+        .select("title,channel_title,view_count,rank,is_short").eq("video_id", id).limit(1).maybeSingle();
+      if (!data) return null;
+      let react = `\n[지표] 조회 ${_n(data.view_count, 0).toLocaleString("ko-KR")} · 지금 ${data.rank ? data.rank + "위" : "순위권"}${data.is_short ? " · 쇼츠" : ""}`;
+      try {
+        const { data: cm } = await supa.from("video_comments").select("body").eq("video_id", id)
+          .order("created_at", { ascending: false }).limit(4);
+        const lines = (cm || []).map((x: any) => "  · " + String(x.body || "").replace(/\s+/g, " ").slice(0, 55)).filter((t: string) => t.length > 4).join("\n");
+        react += lines ? `\n[갈라 반응]\n${lines}` : "\n[갈라 반응] 아직 댓글 없음 — 갈라 안에서는 조용하다.";
+      } catch { /* */ }
+      return { kind: "핫트렌드 영상(유튜브)", text: `제목: ${data.title}\n채널: ${data.channel_title || ""}${react}` };
+    }
+
+    /* ⚔️ 일기토 — 두 사람이 붙는 판. 표가 갈린 정도가 곧 여론이다. */
+    if (type === "duel") {
+      const { data } = await supa.from("duels")
+        .select("topic,status,vote_challenger,vote_opponent,challenger,opponent,winner").eq("id", id).maybeSingle();
+      if (!data) return null;
+      const a = _n(data.vote_challenger, 0), b = _n(data.vote_opponent, 0), tot = a + b;
+      let line = tot
+        ? `\n[표심] 총 ${tot}표 — 도전자 ${a} vs 상대 ${b}` +
+          (Math.abs(a - b) <= Math.max(1, tot * 0.1) ? " → 초박빙" : a > b ? " → 도전자 우세" : " → 상대 우세")
+        : "\n[표심] 아직 0표 — 아무도 안 골랐다.";
+      const st = data.status === "live" ? "생중계 중" : data.status === "voting" ? "투표 중" : "종전";
+      return { kind: "일기토(1:1 대결)", text: `주제: ${data.topic || ""}\n상태: ${st}${line}` };
+    }
+
     if (type === "gallari" || type === "shorts") {
       const { data } = await supa.from("posts").select("title,caption,kind,view_count,like_count,comment_count").eq("id", id).maybeSingle();
       if (!data) return null;
@@ -3013,6 +3043,8 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
         plaza: "여론부터 — 추천·비추 비율이 뭘 말하는지 한 줄. 댓글이 있으면 어느 쪽으로 기우는지. 그 다음 네 편을 밝히고 '넌 어느 편?'.",
         issue: "여론부터 — 찬반 비율·참여 규모·최근 24시간 흐름 중 '가장 말할 값어치 있는 것' 한 줄. 표가 얕으면 '아직 조용한데 언론은 ~각도로 다룬다'로 넘어가라. 그 다음 네 진영 밝히고 '넌 찬성? 반대?'.",
         news: "이 보도의 쟁점이 뭔지 한 줄 — 어디서 사람들이 갈릴지 짚어라. 그리고 '넌 어떻게 봐?'.",
+        video: "이건 유튜브라 갈라 여론이 없다 — 인기 지표(조회·순위) 한 줄 + 갈라 안 반응(댓글) 있으면 그것도. 없으면 '갈라에선 아직 조용해'라고 솔직히. 그리고 '너 이거 봤어?'.",
+        duel: "표심부터 — 몇 표에 어느 쪽이 앞서는지, 박빙인지 한 줄. 0표면 '아직 아무도 안 골랐다'고. 그 다음 네가 누구 편인지 밝히고 '넌 누구 편?'.",
         content: "숫자로 드러난 반응 한 줄 + 그게 뭘 뜻하는지. 그리고 '넌?'.",
       };
       const role = HROLE[String(handoff.type)] || HROLE.content;

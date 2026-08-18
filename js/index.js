@@ -1166,6 +1166,7 @@ function renderPlazaCard(p) {
       <div class="pz-foot">
         <span>👍 ${p.up_count || 0}</span>
         <span>👁 ${p.view_count || 0}</span>
+        ${galvisBtn('plaza', p.id, p.title)}
         <span class="pz-go">글 보기 ›</span>
       </div>
     </div>`;
@@ -1204,7 +1205,7 @@ function renderNewsCard(n) {
         </div>
         <div class="nf-title">${escHtml(n.title)}</div>
         ${sum ? `<div class="nf-sum">${escHtml(sum)}</div>` : ''}
-        <div class="nf-foot"><span>👁 ${(n.view_count || 0).toLocaleString('ko-KR')}</span><span class="nf-go">기사 보기 ›</span></div>
+        <div class="nf-foot"><span>👁 ${(n.view_count || 0).toLocaleString('ko-KR')}</span>${galvisBtn('news', n.id, n.title)}<span class="nf-go">기사 보기 ›</span></div>
       </div>
     </div>`;
 }
@@ -1250,7 +1251,7 @@ function renderVideoCard(v) {
       <div class="vf-body" data-vopen>
         <div class="nf-head"><span class="vf-badge">🔥 핫트렌드</span></div>
         <div class="vf-title">${escHtml(v.title)}</div>
-        <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회</div>
+        <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회${galvisBtn('video', v.video_id, v.title)}</div>
       </div>
     </div>`;
 }
@@ -1302,7 +1303,7 @@ function renderDuelCard(d) {
         <span class="df-vsmark">VS</span>
         <span class="df-name">${escHtml(d.oppName)}</span>
       </div>
-      <div class="nf-foot"><span>🗳 ${(d.vote_challenger || 0) + (d.vote_opponent || 0)}표</span><span class="nf-go">${cta}</span></div>
+      <div class="nf-foot"><span>🗳 ${(d.vote_challenger || 0) + (d.vote_opponent || 0)}표</span>${galvisBtn('duel', d.id, d.topic)}<span class="nf-go">${cta}</span></div>
     </div>`;
 }
 
@@ -1398,6 +1399,7 @@ function renderPredictCard(m) {
         ${body}
         <div class="pf-foot">
             <span class="pf-vol">💰 거래량 <b>${(Math.round(m.volume)).toLocaleString('ko-KR')}</b>P</span>
+            ${galvisBtn('predict', m.id, m.question)}
             <span class="pf-go">예측하러 가기 <span class="pf-arrow">›</span></span>
         </div>
     </div>`;
