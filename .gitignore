@@ -12,3 +12,11 @@ supabase/.temp/
 scripts/redteam_out.json
 scripts/*_out.json
 .redteam-key
+
+# 🔐 로컬 도구 설정 — API 키가 들어간다. 레포가 PUBLIC 이라 절대 커밋 금지.
+#    (실측 2026-08-18: .claude/settings.local 2.json 의 sk- 키가 GitHub·galla.im 양쪽에 공개돼 있었다)
+.claude/settings.local*.json
+.claude/settings.json
+
+# wrangler 로컬 상태·번들 — 빌드 산출물이라 레포에 있을 이유가 없다(그대로 배포되기까지 했다)
+.wrangler/
