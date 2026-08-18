@@ -709,7 +709,10 @@
     clearTimeout(ringT);
     // 📞 인앱(포그라운드) '받기' 탭 순간, 이 통화의 CallKit 푸시를 네이티브가 억제 → 뒤늦게 온 VoIP 푸시의 중복벨 방지.
     //    CallKit로 받은 경우(ckAnswer/consume/arm)는 억제하지 않는다(그 CallKit이 실제 통화 UI라서).
-    if (via === 'tap' && CUR.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {} }
+    //    🔬 'selftest'도 인앱 받기와 동일 취급 — 자동 테스트가 억제를 안 보내면 뒤늦은 VoIP 푸시가
+    //       CallKit 통화를 만들어 오디오 세션 소유권이 충돌한다(수신폰 act=ERR → OUT=[] 무음).
+    //       이건 제품 결함이 아니라 테스트가 실제 경로를 흉내내지 못한 것이었다.
+    if ((via === 'tap' || via === 'selftest') && CUR.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {} }
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
     // 🔊 Agora: 수신자도 채널 join → 양쪽 미디어 연결(iosrtc 프리커넥트·getMedia·buildAnswer 전부 우회)

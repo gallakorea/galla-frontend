@@ -90,15 +90,17 @@ as $$
 begin
   insert into public.content_signal_daily as d
         (day, kind, content_id, imps, opens, dwell_ms, watch_sum, watch_cnt, completes, engages, uniques)
+  -- ⚠️ filter 집계는 해당 행이 없으면 NULL이다(영상 신호가 없는 광장 글에서 watch_sum=NULL →
+  --    not null 위반으로 **집계 전체가 실패**했다). 모든 합계에 coalesce 필수.
   select (created_at at time zone 'Asia/Seoul')::date, kind, content_id,
-         sum(imp),
-         count(*) filter (where act = 'open'),
-         sum(dwell_ms),
-         sum(watch_pct) filter (where watch_pct > 0),
-         count(*)       filter (where watch_pct > 0),
-         count(*)       filter (where watch_pct >= 90),
-         count(*)       filter (where act in ('like','comment','share','bookmark')),
-         count(distinct user_id)
+         coalesce(sum(imp), 0),
+         coalesce(count(*) filter (where act = 'open'), 0),
+         coalesce(sum(dwell_ms), 0),
+         coalesce(sum(watch_pct) filter (where watch_pct > 0), 0),
+         coalesce(count(*)       filter (where watch_pct > 0), 0),
+         coalesce(count(*)       filter (where watch_pct >= 90), 0),
+         coalesce(count(*)       filter (where act in ('like','comment','share','bookmark')), 0),
+         coalesce(count(distinct user_id), 0)
     from public.feed_signals
    where created_at >= now() - interval '2 days'
    group by 1, 2, 3
