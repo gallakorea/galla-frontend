@@ -245,6 +245,20 @@ export async function onRequest(context) {
        유지하고 엣지에서 접근만 차단한다. Functions 는 정적 파일보다 먼저 돈다
        (Pages 의 _redirects 는 정적 파일이 있으면 적용되지 않아 소용없다).
        ⚠️ 메서드 무관하게 막는다 — GET 만 막으면 HEAD 로 존재가 드러난다. */
+    /* 🚨 리포지토리가 통째로 배포되는 구조라 소스·설정·비밀파일까지 서빙됐다(실측).
+       실측 노출: /supabase/functions/*.ts(프롬프트·가드 로직), /supabase/migrations/*.sql(스키마·RLS),
+                 /scripts/*.py, /package.json, /CLAUDE.md, /.gitignore,
+                 그리고 API 키가 담긴 .claude/ 설정 파일까지 200 이었다.
+       퍼블릭이어야 하는 것(/ota/*, /version.txt, /assets/*, /js/*, /css/* 등)은 건드리지 않고,
+       내부 자산 경로만 막는다. 파일 삭제와 별개로 엣지에서 즉시 끊는 게 우선이다. */
+    const BLOCKED = /^\/(docs|scripts|supabase|node_modules|\.claude|\.wrangler|\.git|\.vscode|\.github)(\/|$)/i;
+    const BLOCKED_FILE = /^\/(package(-lock)?\.json|CLAUDE\.md|README\.md|cors\.json|\.gitignore|\.env.*|.*\.(sql|ts|py|sh|toml|lock))$/i;
+    if (BLOCKED.test(url0.pathname) || BLOCKED_FILE.test(url0.pathname)) {
+      return new Response("Not Found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": "noindex, nofollow" },
+      });
+    }
     if (/^\/docs(\/|$)/i.test(url0.pathname)) {
       return new Response("Not Found", {
         status: 404,
