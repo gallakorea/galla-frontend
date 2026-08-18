@@ -96,6 +96,64 @@ def build_ass(subtitles, w, h, font):
                 f"Dialogue: 1,{t0},{t1},Reel,,0,0,0,,{{\\pos({cx},{cy})}}{text}\n")
     return out
 
+def shake_score(path: str, start: float, dur: float) -> float:
+    """그 구간이 '흔들리는가' — 클립 전체 중앙값 대비 이 구간의 움직임 배수.
+    ⚠️ 절대값으로 판단하면 안 된다(계단 오르기처럼 의도된 이동도 크다). 상대값이라야
+       손떨림 구간만 고를 수 있다."""
+    prof = motion_profile(path)
+    if not prof: return 0.0
+    vals = [v for _, v in prof]
+    vals_sorted = sorted(vals)
+    med = vals_sorted[len(vals_sorted) // 2] or 1e-6
+    win = [v for t, v in prof if start - 0.15 <= t <= start + dur + 0.15]
+    if not win: return 0.0
+    return (sum(win) / len(win)) / med
+
+
+def stabilize(src: str, dst: str, workdir: str, idx: int) -> bool:
+    """vidstab 2패스 손떨림 보정. 실패하면 조용히 False(렌더 자체는 계속 가야 한다).
+    zoom=2%로 가장자리 여백을 메운다 — 보정은 프레임을 밀어내므로 약간의 확대가 필수."""
+    try:
+        trf = os.path.join(workdir, f"vs{idx}.trf")
+        run([FFMPEG, "-y", "-v", "error", "-i", src, "-vf",
+             f"vidstabdetect=shakiness=8:accuracy=15:result={trf}", "-f", "null", "-"])
+        run([FFMPEG, "-y", "-v", "error", "-i", src, "-vf",
+             f"vidstabtransform=input={trf}:smoothing=20:zoom=2:optzoom=1:interpol=bicubic,unsharp=5:5:0.3:5:5:0",
+             "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-an", dst])
+        return os.path.exists(dst) and os.path.getsize(dst) > 1000
+    except Exception:
+        return False
+
+
+def voice_filters(voice: str, tempo: float = 1.0) -> str:
+    """내레이션 마스터링 체인(무료·외부 API 없음).
+    저역컷 → 잔잡음 감쇠 → 압축 → 리미터 → 라우드니스 정규화(-14 LUFS, 소셜 기준).
+    ⚠️ 압축 없이 loudnorm만 걸면 목표에 못 간다 — 원음이 이미 피크에 붙어 있어(TP≈0)
+       트루피크 한계에 막혀 게인이 안 올라간다(실측: -14 지시에 -16.2). 압축이 먼저다.
+    ⚠️ 측정(1패스)은 반드시 '압축까지 끝난 신호'로 해야 값이 맞는다."""
+    pre = []
+    if tempo > 1.001:
+        pre.append(f"atempo={tempo:.3f}")
+    pre += ["highpass=f=90", "afftdn=nf=-24",
+            "acompressor=threshold=-18dB:ratio=3:attack=5:release=120:makeup=3",
+            "alimiter=limit=0.92"]
+    chain = ",".join(pre)
+    base = "loudnorm=I=-14:TP=-1.5:LRA=11"
+    try:
+        p = subprocess.run([FFMPEG, "-hide_banner", "-i", voice, "-af",
+                            f"{chain},{base}:print_format=json", "-f", "null", "-"],
+                           capture_output=True, text=True)
+        m = re.search(r"\{[^{}]*input_i[\s\S]*?\}", p.stdout + p.stderr)
+        if m:
+            d = json.loads(m.group(0))
+            base += (f":measured_I={d['input_i']}:measured_TP={d['input_tp']}"
+                     f":measured_LRA={d['input_lra']}:measured_thresh={d['input_thresh']}"
+                     f":offset={d.get('target_offset', 0)}:linear=true")
+    except Exception:
+        pass
+    return f"{chain},{base}"
+
+
 def run(cmd):
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
@@ -530,6 +588,17 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",
                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", sf]
         run(cmd)
+        # 🤚 손떨림 보정 — 흔들리는 컷만(중앙값의 1.35배 초과). 고프로를 들고 걸어 들어간 컷처럼
+        #    '안정 구간이 아예 없는' 원본에서 도입부가 흔들려 보이던 문제(광저우 실측)를 잡는다.
+        #    ⚠️ 전 컷에 걸면 의도된 이동(계단 오르기)까지 밋밋해지고 렌더 시간이 배로 든다.
+        try:
+            if shake_score(local[i], float(sg.get("in", 0)), float(sg["dur"])) > 1.35:
+                st_f = os.path.join(workdir, f"seg{i}_st.mp4")
+                if stabilize(sf, st_f, workdir, i):
+                    sf = st_f
+                    progress(f"흔들림 보정 적용 — 컷 {i + 1}")
+        except Exception:
+            pass
         seg_files.append(sf)
 
     # 3) 이어붙이기
@@ -551,8 +620,9 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     cmd = [FFMPEG, "-y", "-v", "error", "-i", video, "-i", voice,
            "-map", "0:v", "-map", "1:a",
            "-vf", f"ass=filename='{ass}':fontsdir='{fontsdir}'"]
-    if tempo > 1.001:
-        cmd += ["-filter:a", f"atempo={tempo:.3f}"]
+    # 🔊 목소리 마스터링(무료·API 없음) — 저역 잡음 제거 → 잔잡음 감쇠 → 방송 라우드니스(-14 LUFS).
+    #    폰 녹음은 소리가 작고 웅웅거려서, 같은 컷이라도 '아마추어 티'가 여기서 난다.
+    cmd += ["-filter:a", voice_filters(voice, tempo)]
     cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "19",
             "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", out_path]
     run(cmd)
