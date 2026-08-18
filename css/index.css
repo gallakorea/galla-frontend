@@ -926,7 +926,3 @@ body.shorts-open .header { display: none !important; }
 }
 
 /* 🔀 피드 정렬 토글 — 카테고리 칩과 시각적으로 구분되게 우측 정렬·작게 */
-.feed-sort { display:flex; justify-content:flex-end; gap:6px; padding:0 16px 8px; }
-.fs-btn { font-size:12px; font-weight:700; padding:5px 12px; border-radius:99px;
-  border:1px solid rgba(255,255,255,.12); background:transparent; color:rgba(255,255,255,.5); cursor:pointer; }
-.fs-btn.on { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.22); }

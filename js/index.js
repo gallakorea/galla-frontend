@@ -1096,26 +1096,12 @@ function interleave(issues, ex = {}) {
     return out;
 }
 
-/* 🔀 피드 정렬 — 'hot'(참여·시간 가중) | 'new'(최신).
-   hot_score 는 10분마다 크론이 계산한다(compute_hot_scores).
-   참여가 0이면 식이 1/(나이+2)^1.4 로 줄어 사실상 최신순이 되므로,
-   콘텐츠가 적은 초기에도 이상하게 보이지 않는다. */
-function GALLA_feedSort() {
-    try { return localStorage.getItem('galla_feed_sort') || 'hot'; } catch (_) { return 'hot'; }
-}
-document.addEventListener('DOMContentLoaded', () => {
-    const box = document.getElementById('feedSort');
-    if (!box) return;
-    const cur = GALLA_feedSort();
-    box.querySelectorAll('.fs-btn').forEach(b => {
-        b.classList.toggle('on', b.dataset.sort === cur);
-        b.onclick = () => {
-            if (b.dataset.sort === GALLA_feedSort()) return;
-            try { localStorage.setItem('galla_feed_sort', b.dataset.sort); } catch (_) {}
-            location.reload();
-        };
-    });
-});
+/* 🔀 피드 정렬 — 항상 'hot'(참여·시간 가중).
+   인기/최신 토글은 걷어냈다(사장님 2026-08-18). 고를 게 없으면 고민도 없다 —
+   hot_score 는 참여가 0이면 식이 1/(나이+2)^1.4 로 줄어 사실상 최신순이 되므로,
+   콘텐츠가 적은 초기에도 '최신'을 따로 둘 이유가 없다.
+   ⚠️ 함수는 남긴다 — 아래 두 군데(쿼리 정렬·개인화 분기)가 이 값을 읽는다. */
+function GALLA_feedSort() { return 'hot'; }
 
 // 광장 글을 피드용으로 로드 (최신순 + 점수/신규 가점 가벼운 정렬)
 async function loadPlazaCards() {
