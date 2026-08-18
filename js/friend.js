@@ -1662,6 +1662,15 @@
     var b=e.target.closest && e.target.closest("[data-galvis]");
     if(!b) return;
     e.preventDefault(); e.stopPropagation();
+    /* 🌐 웹에서는 대화 대신 '앱 받기'로 보낸다(사장님 2026-08-18).
+       콘텐츠 갈비스는 앱 경험이라 웹에서 열어주면 반쪽이 된다 — 대신 입구는 보여주고
+       누르는 순간 앱으로 유도한다. 분기를 여기 한 곳에 두는 이유: 갈비스 버튼은
+       홈·예측·광장 등 여러 화면이 각자 심는다. 렌더하는 쪽마다 조건을 두면 또 갈라진다. */
+    if(!window.GALLA_IS_APP){
+      if(window.GALLA_appDownload) window.GALLA_appDownload("galvis");
+      else askGalvis({ type:b.getAttribute("data-gv-type")||"", id:b.getAttribute("data-gv-id")||"", title:b.getAttribute("data-gv-title")||"" });
+      return;
+    }
     askGalvis({ type:b.getAttribute("data-gv-type")||"", id:b.getAttribute("data-gv-id")||"", title:b.getAttribute("data-gv-title")||"" });
   }, true);
 

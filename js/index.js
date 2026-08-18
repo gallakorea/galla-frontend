@@ -349,9 +349,12 @@ const bookmarkSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><
 const shareSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>`;
 // 🤖 갈비스 아이콘(미니 아크 리액터) — 액션바 끝, 탭하면 이 콘텐츠 얘기로 갈비스와 대화(SPA 전용, friend.js가 위임 처리)
 const galvisSvg = `<svg viewBox="0 0 24 24" class="fi-ic gv-galvis" aria-hidden="true" fill="none"><circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>`;
-const galvisBtn = (type, id, title) => (document.body && document.body.dataset.page === 'spa')
-  ? `<button type="button" class="fi-btn galvis-btn" data-galvis data-gv-type="${type}" data-gv-id="${id}" data-gv-title="${String(title || '').replace(/"/g, '&quot;').slice(0, 120)}" aria-label="갈비스와 얘기">${galvisSvg}</button>`
-  : '';
+/* 웹에도 버튼을 그린다(사장님 2026-08-18). 예전엔 SPA(앱)에서만 그려서
+   웹 사용자는 콘텐츠에서 갈비스로 들어갈 입구가 아예 없었다.
+   ⚠️ 웹에서 누르면 대화가 아니라 '앱 받기'로 보낸다 — 분기는 friend.js 의 위임 핸들러
+      한 곳에서만 한다(갈비스 버튼은 예측·광장 등 여러 화면이 심는다). */
+const galvisBtn = (type, id, title) =>
+  `<button type="button" class="fi-btn galvis-btn" data-galvis data-gv-type="${type}" data-gv-id="${id}" data-gv-title="${String(title || '').replace(/"/g, '&quot;').slice(0, 120)}" aria-label="갈비스와 얘기">${galvisSvg}</button>`;
 
 function renderCard(data) {
     const total = (data.pro + data.con) || 1;
