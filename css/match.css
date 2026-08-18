@@ -1,0 +1,152 @@
+/* ============================================================
+   갈라 궁합(/match) 전용 스타일
+   ⚠️ 인라인 <style> 금지 — SPA 뷰 로더(js/spa/view-loader.js fetchView)는
+      link[rel=stylesheet] 만 걷어가고 인라인 style/script는 버린다.
+      인라인으로 두면 네이티브 앱에서 날 HTML로 뜬다(실제로 그랬다).
+   ============================================================ */
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:#08080b;color:#f3f4f6;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{min-height:100dvh;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:460px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;
+    padding:0 18px calc(22px + env(safe-area-inset-bottom))}
+  .topbar{display:flex;align-items:center;gap:8px;padding:16px 0 4px}
+  .topbar img{height:16px;width:auto;display:block;opacity:.9}
+  .topbar b{font-size:12px;font-weight:900;letter-spacing:.08em;opacity:.9}
+  .topbar span{margin-left:auto;font-size:11px;color:#6b7280;font-weight:700}
+  .scene{display:none;position:relative;flex:1;flex-direction:column;animation:fadeUp .34s ease both}
+  .scene.on{display:flex}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+
+  /* ── 인트로 ── */
+  .hero{margin-top:6vh}
+  .kicker{display:inline-block;font-size:11px;font-weight:900;letter-spacing:.1em;
+    padding:6px 11px;border-radius:999px;color:#9db0ff;
+    background:rgba(67,97,255,.13);border:1px solid rgba(67,97,255,.3)}
+  .hero h1{margin:15px 0 0;font-size:31px;line-height:1.24;font-weight:900;letter-spacing:-.02em}
+  .hero h1 em{font-style:normal;background:linear-gradient(100deg,#ff5a6e,#ff9d3d 45%,#4d8dff);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{margin:14px 0 0;font-size:14px;line-height:1.65;color:#a4abb8}
+  .challenge{margin:20px 0 0;padding:15px 16px;border-radius:16px;
+    background:linear-gradient(135deg,rgba(255,90,110,.15),rgba(67,97,255,.15));
+    border:1px solid rgba(255,255,255,.1)}
+  .challenge b{display:block;font-size:15px;font-weight:900;line-height:1.45}
+  .challenge small{display:block;margin-top:6px;font-size:12.5px;color:#a4abb8;line-height:1.55}
+  .facts{margin:22px 0 0;display:flex;gap:8px}
+  .fact{flex:1;padding:12px 8px;border-radius:13px;text-align:center;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+  .fact b{display:block;font-size:16px;font-weight:900}
+  .fact small{display:block;margin-top:3px;font-size:10.5px;color:#6b7280;font-weight:700}
+
+  /* ── 버튼 ── */
+  .foot{margin-top:auto;padding-top:26px;display:flex;flex-direction:column;gap:9px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;min-height:54px;
+    border:0;border-radius:15px;font-size:15.5px;font-weight:900;cursor:pointer;
+    font-family:inherit;width:100%;transition:transform .12s}
+  .btn:active{transform:scale(.978)}
+  .btn.primary{background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff;
+    box-shadow:0 8px 26px rgba(67,97,255,.34)}
+  .btn.light{background:#fff;color:#0a0a0c}
+  .btn.ghost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);
+    color:#a4abb8;min-height:46px;font-size:13px}
+
+  /* ── 퀴즈 ── */
+  .qhead{padding:18px 0 0}
+  .bar{height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,#ff5a6e,#6a7bff);transition:width .3s cubic-bezier(.2,.8,.2,1)}
+  .qmeta{display:flex;justify-content:space-between;margin-top:9px;font-size:11px;
+    color:#6b7280;font-weight:800;letter-spacing:.03em}
+  /* 질문+선택지를 한 덩어리로 화면 중앙에 — 위아래 여백이 갈라져 빈 화면처럼 안 보인다.
+     '이전 문항'은 흐름에서 빼(absolute) 중앙 정렬이 틀어지지 않게 한다. */
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 0 8vh}
+  .qtag{font-size:11px;font-weight:900;color:#6f86ff;letter-spacing:.06em}
+  .qtext{margin:11px 0 26px;font-size:23px;line-height:1.42;font-weight:900;letter-spacing:-.015em}
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{display:flex;align-items:center;gap:13px;padding:19px 17px;border-radius:16px;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+    color:#f3f4f6;font-size:15.5px;font-weight:800;line-height:1.4;text-align:left;
+    cursor:pointer;font-family:inherit;transition:transform .12s,background .16s,border-color .16s}
+  .opt:active{transform:scale(.985)}
+  .opt.hit{background:rgba(67,97,255,.2);border-color:rgba(111,134,255,.6)}
+  .opt u{flex:0 0 26px;height:26px;border-radius:9px;display:flex;align-items:center;
+    justify-content:center;background:rgba(255,255,255,.09);font-size:11.5px;
+    font-weight:900;text-decoration:none;color:#a4abb8}
+  .qback{position:absolute;left:18px;bottom:calc(16px + env(safe-area-inset-bottom));
+    background:none;border:0;color:#6b7280;
+    font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;padding:8px 2px}
+
+  /* ── 결과 ── */
+  .rtop{text-align:center;padding:14px 0 0;animation:pop .4s ease both}
+  .rtop .who{font-size:12.5px;color:#6b7280;font-weight:800}
+  .card{margin:12px 0 0;border-radius:22px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);background:#0c0d11;
+    box-shadow:0 18px 50px rgba(0,0,0,.55)}
+  .card canvas{display:block;width:100%;height:auto}
+  .box{margin:16px 0 0;padding:16px;border-radius:16px;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+  .box h3{margin:0 0 9px;font-size:12.5px;font-weight:900;color:#6f86ff;letter-spacing:.04em}
+  .box p{margin:0;font-size:13.5px;line-height:1.68;color:#cfd4de}
+  .pair{display:flex;gap:9px;margin:14px 0 0}
+  .pcell{flex:1;padding:14px 12px;border-radius:15px;text-align:center;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+  .pcell small{display:block;font-size:10.5px;font-weight:900;letter-spacing:.05em;color:#6b7280}
+  .pcell b{display:block;margin-top:7px;font-size:13.5px;font-weight:900;line-height:1.35}
+  .pcell.good{border-color:rgba(77,141,255,.4);background:rgba(77,141,255,.1)}
+  .pcell.good small{color:#7fb0ff}
+  .pcell.bad{border-color:rgba(255,90,110,.4);background:rgba(255,90,110,.1)}
+  .pcell.bad small{color:#ff8f9c}
+
+  /* ── 궁합 ── */
+  .verdict{margin:16px 0 0;padding:24px 18px;border-radius:22px;text-align:center;
+    border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden}
+  .verdict::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 0,rgba(255,255,255,.09),transparent 70%)}
+  .verdict .pct{font-size:62px;font-weight:900;line-height:1;letter-spacing:-.04em}
+  .verdict .pct s{text-decoration:none;font-size:26px;margin-left:2px;opacity:.65}
+  .verdict .cap{margin-top:7px;font-size:11.5px;font-weight:900;letter-spacing:.1em;opacity:.75}
+  .verdict .ttl{margin-top:15px;font-size:22px;font-weight:900;letter-spacing:-.02em}
+  .verdict .sub{margin-top:9px;font-size:13.5px;line-height:1.6;opacity:.9}
+  .vs2{display:flex;align-items:stretch;gap:9px;margin:14px 0 0}
+  .vs2 .p{flex:1;padding:15px 10px;border-radius:16px;text-align:center;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+  .vs2 .p .em{font-size:30px;line-height:1}
+  .vs2 .p .nm{margin-top:7px;font-size:12.5px;font-weight:900;line-height:1.35}
+  .vs2 .p .wh{margin-top:4px;font-size:10.5px;color:#6b7280;font-weight:800}
+  .vs2 .mid{flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:900;color:#6b7280}
+  .clash{margin:14px 0 0;display:flex;flex-direction:column;gap:8px}
+  .ci{display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:13px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);font-size:13px;line-height:1.45}
+  .ci u{flex:0 0 auto;text-decoration:none;font-size:15px}
+  .ci b{font-weight:900}
+
+  .plug{margin:20px 0 0;padding:17px 16px;border-radius:18px;
+    background:linear-gradient(135deg,rgba(255,90,110,.13),rgba(67,97,255,.15));
+    border:1px solid rgba(255,255,255,.1)}
+  /* 직계 b만 제목 — 자손 선택자로 두면 본문 <b> 강조까지 블록이 돼 줄이 깨진다 */
+  .plug > b{display:block;font-size:15.5px;font-weight:900;line-height:1.42}
+  .plug p{margin:8px 0 0;font-size:12.5px;line-height:1.6;color:#b6bcc8}
+  .nickrow{display:flex;gap:8px;margin:16px 0 0}
+  .nickrow input{flex:1;min-width:0;height:50px;padding:0 15px;border-radius:14px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+    color:#f3f4f6;font-size:16px;font-weight:800;font-family:inherit;outline:none}
+  .nickrow input::placeholder{color:#5b6270;font-weight:700}
+  .nickrow input:focus{border-color:rgba(111,134,255,.6)}
+  .tiny{margin:11px 0 0;font-size:11px;color:#5b6270;text-align:center;line-height:1.6}
+  .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));
+    transform:translate(-50%,14px);background:#1c1e26;color:#f3f4f6;font-size:13px;font-weight:800;
+    padding:12px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.12);
+    opacity:0;pointer-events:none;transition:.24s;z-index:99}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ═══ SPA(네이티브 앱) 보정 ═══
+   앱은 셸의 하단 탭바가 항상 떠 있는데 match는 웹 단독 페이지 기준으로 만들어져
+   하단 CTA(시작하기·공유)가 탭바에 가렸다(실기 시뮬 확인). 뷰 호스트 안일 때만 여유를 준다. */
+.view-host .wrap,
+body[data-page="spa"] .wrap {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
