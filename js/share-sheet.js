@@ -127,7 +127,16 @@
   }
   async function sendToDM(cfg, url) {
     try {
-      if (!window.GALLA_dmShare) await Promise.all([loadOnce('/js/dm.js'), loadOnce('/css/dm.css'), loadOnce('/css/dm-quiet.css')]);
+      /* ⚠️ 예전엔 'dm.js 가 없으면 JS+CSS 를 같이 싣는다'였다. 그런데 홈처럼 dm.js 가
+         이미 다른 경로로 실려 있으면 이 분기를 통째로 건너뛰어 **CSS 만 빠진 채**
+         DM 오버레이가 무스타일로 떴다(홈에서 dm.js 를 유휴 로드로 돌리며 드러난 결합).
+         JS 와 CSS 를 따로 판정한다 — 각자 없을 때만 싣는다. */
+      const needCss = !document.querySelector('link[href*="css/dm.css"]');
+      await Promise.all([
+        window.GALLA_dmShare ? Promise.resolve() : loadOnce('/js/dm.js'),
+        needCss ? loadOnce('/css/dm.css') : Promise.resolve(),
+        needCss ? loadOnce('/css/dm-quiet.css') : Promise.resolve(),
+      ]);
       // /share/<type>/<id> 규약에서 콘텐츠 종류를 복원 → DM 카드가 앱 내부 링크로 연결된다
       const m = String(url).match(/\/share\/(\w+)\/(\d+)/);
       window.GALLA_dmShare({
