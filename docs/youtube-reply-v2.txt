@@ -1,0 +1,54 @@
+Subject: Re: YouTube API Services: Compliance Review — Violations resolved (Project 197088978210)
+
+Hello,
+
+Thank you for the detailed report. We have resolved the listed violation and
+deployed the fix to production. Details below.
+
+────────────────────────────────────────────────────────────
+F (User Experience) — Policy III.F.2a
+YouTube logos and icons must follow the Branding Guidelines;
+the icon height must never be smaller than 20dp.
+────────────────────────────────────────────────────────────
+
+RESOLVED.
+
+Root cause
+In our previous remediation we sized the icon container to 20px, but the
+official YouTube icon artwork occupies only 16.91 units of the 24x24 viewBox
+(a ratio of 0.7046). The rendered logo was therefore smaller than the
+container, which matches the measurements in your report exactly:
+
+  Trends guide list   container 22px x 0.7046 = 15.5px   (report: 15.5)
+  Search hub tab bar  container 13px x 0.7046 =  9.2px   (report: 9.1)
+
+Fix applied
+1. The SVG viewBox was tightened to the logo's own bounding box
+   ("0 3.545 24 16.91"), so the element box height equals the logo height.
+2. width="28.4" height="20" are now set as attributes directly on the SVG
+   element at all 8 locations, so the 20dp minimum holds independently of any
+   stylesheet. (Some pages that render the icon do not load the stylesheet
+   that previously carried the sizing rule; attribute sizing removes that
+   dependency entirely.)
+3. Stylesheet rules were normalised to height-based sizing.
+
+We did not alter the official artwork: the icon remains the unmodified
+full-colour YouTube icon (#FF0000 / #FFFFFF), is shown against a solid
+high-contrast background, is never the most prominent element on the page,
+and links to YouTube content within our application.
+
+Verification (measured in-browser against the rendered path bounding box)
+  Search hub tab bar .......... 20.0 px
+  Trends guide list ........... 20.0 px
+  Hot videos section header ... 20.0 px
+  Long-form filter button ..... 20.0 px
+  Page without the stylesheet . 20.0 px
+  Non-official YouTube marks .. none found (full codebase sweep)
+
+The change is live on https://galla.im and in our mobile application.
+
+Please let us know if any of the above requires further adjustment. We are
+happy to provide additional screenshots or a walkthrough on request.
+
+Best regards,
+Galla Labs Inc.

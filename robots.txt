@@ -16,6 +16,7 @@ Disallow: /withdraw-done.html
 Disallow: /confirm.html
 Disallow: /confirm.remix.html
 Disallow: /notifications.html
+Disallow: /docs/
 Disallow: /imgproxy
 Disallow: /share/
 

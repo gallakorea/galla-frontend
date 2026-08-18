@@ -238,8 +238,21 @@ function rewrite(res, seo) {
 export async function onRequest(context) {
   try {
     const { request, next } = context;
+    const url0 = new URL(request.url);
+    /* 🔒 /docs/* 는 배포에서 뺀다 — 내부 문서(심사 대응 문서·런칭 킷·IR 등)가
+       공개 URL로 그대로 열렸다(실측: /docs/youtube-reply-v2.txt → 200).
+       빌드 단계가 없어 레포가 그대로 배포되므로, 파일은 깃에 남겨 이력·백업을
+       유지하고 엣지에서 접근만 차단한다. Functions 는 정적 파일보다 먼저 돈다
+       (Pages 의 _redirects 는 정적 파일이 있으면 적용되지 않아 소용없다).
+       ⚠️ 메서드 무관하게 막는다 — GET 만 막으면 HEAD 로 존재가 드러난다. */
+    if (/^\/docs(\/|$)/i.test(url0.pathname)) {
+      return new Response("Not Found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": "noindex, nofollow" },
+      });
+    }
     if (request.method !== "GET") return next();
-    const url = new URL(request.url);
+    const url = url0;
     /* ⚠️ /share/* 는 이미 자기 콘텐츠 전용 OG 카드를 만들어 내보낸다.
        여기서 ?ref= 만 보고 일반 초대 카드로 덮어쓰면 훨씬 약한 카드로 바뀐다
        (예: «고집불통 요새» 궁합 카드 → "누가 초대했어요"). 초대 크레딧은 OG가 아니라
