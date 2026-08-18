@@ -200,8 +200,7 @@
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=081606"></script>
 <script src="js/social-auth.js?v=0806132"></script>
-<script src="./vendor/hls.min.js?v=080412"></script>
-<script src="./js/hls-attach.js?v=080412"></script>
+<script src="./js/hls-attach.js?v=081803"></script>
 <script src="js/battle-fx.js?v=080412"></script>
 <script src="js/vote-bar.js?v=080412"></script>
 <script src="js/vote-fx.js?v=080412"></script>
@@ -231,10 +230,31 @@
 
 <script src="/js/analytics.js?v=080412"></script>
 <script src="js/duel-alert.js?v=080412"></script>
-<link rel="stylesheet" href="./css/dm.css?v=080412">
-<link rel="stylesheet" href="./css/dm-quiet.css?v=080412">
 <link rel="stylesheet" href="./css/desktop.css?v=080412">
-<script src="js/dm.js?v=0814190"></script>
+<script>
+/* 🐢 DM 뭉치(dm.js 320KB + dm.css·dm-quiet.css 96KB = 홈 자원의 24%)를 첫 페인트 밖으로.
+   홈에서 dm.js 가 하는 일은 딱 둘이다 — ①하단 네비 DM 탭 클릭 바인딩 ②안읽음 배지(#navDmBadge).
+   둘 다 '첫 화면이 그려진 뒤'여도 결과가 같다. 그래서 유휴 시점에 싣는다.
+   ⚠️ 그 전에 사용자가 DM 을 누를 수 있으니, 클릭을 캡처 단계에서 잡아 즉시 당겨온다.
+   ⚠️ dm.js 는 자기 CSS 를 스스로 넣지 않는다(share-sheet 가 대신 넣어왔다) — 여기서 같이 넣는다.
+      안 그러면 홈에서 연 DM 오버레이가 무스타일로 뜬다. */
+(function () {
+  var VJ = '?v=0814190', VC = '?v=080412', done = false;
+  function load() {
+    if (done) return; done = true;
+    ['./css/dm.css' + VC, './css/dm-quiet.css' + VC].forEach(function (h) {
+      var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; document.head.appendChild(l);
+    });
+    var s = document.createElement('script'); s.src = 'js/dm.js' + VJ; document.head.appendChild(s);
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('.nav-item[data-page="dm"]');
+    if (b) load();
+  }, true);
+  if (window.requestIdleCallback) requestIdleCallback(load, { timeout: 2500 });
+  else window.addEventListener('load', function () { setTimeout(load, 600); });
+})();
+</script>
 <script src="js/bug-report.js?v=080412"></script>
 <script src="/js/pwa.js?v=0806135"></script>
   <script src="/js/pull-refresh.js?v=080412"></script>
