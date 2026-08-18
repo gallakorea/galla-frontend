@@ -33,10 +33,11 @@
         .select('id,user_id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at,hot_score')
         .eq('kind', kind).eq('is_published', true)
         .neq('moderation_status', 'blocked')
-        /* 랭킹: hot_score = (1+참여)^0.8 / (나이+2)^1.4 (10분 크론).
-           참여가 0이면 사실상 최신순이 되므로 콘텐츠가 적어도 이상하지 않다. */
-        .order('hot_score', { ascending: false })
-        .order('created_at', { ascending: false }).limit(30));
+        /* 🕒 트래픽이 붙기 전까지는 **최신순**이 맞다. hot_score는 참여가 0일 때만 최신순과 같아지고,
+           반응이 몇 개라도 붙으면 오래된 글이 상단을 점거한다(실측: 좋아요1·댓글3짜리 7/30 글이 8/3 글보다 위).
+           사용자가 붙으면 hot_score를 1순위로 되돌린다(신호 층은 그동안에도 쌓인다). */
+        .order('created_at', { ascending: false })
+        .order('hot_score', { ascending: false }).limit(30));
 
       if (error) { box.innerHTML = '<div class="glf-empty">불러오기 실패</div>'; loading = false; return; }
       if (!posts || !posts.length) {
@@ -44,10 +45,13 @@
         loading = false; return;
       }
 
-      /* 🔀 작성자 다양성 — 한 사람이 상단을 독식하지 못하게(공용 GALLA_diversify) */
+      /* 🔀 작성자 다양성 — 한 사람이 상단을 독식하지 못하게(공용 GALLA_diversify)
+         ⚠️ diversify는 **점수로 재정렬**한다. 여기에 hot_score를 넘기면 위에서 최신순으로 뽑아온 게
+            통째로 덮어써진다(배포 직전 발견). 최신순을 유지하려면 '순서 자체'를 점수로 준다. */
       let feed = posts;
       if (window.GALLA_diversify) {
-        feed = window.GALLA_diversify(posts, p => p.user_id, p => Number(p.hot_score) || 0);
+        const rank = new Map(posts.map((p, i) => [p.id, posts.length - i]));
+        feed = window.GALLA_diversify(posts, p => p.user_id, p => rank.get(p.id) || 0);
       }
 
       // 작성자 프로필

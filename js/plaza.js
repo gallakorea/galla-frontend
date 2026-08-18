@@ -41,7 +41,7 @@ window.supabaseClient = window.supabaseClient || supabase;
 
 let plazaListEl = document.querySelector(".plaza-list");
 let currentCategory = "전체";
-let currentSort = "hot";        // hot(후끈=score) | new(최신) | views(조회)
+let currentSort = "new";        // hot(후끈=score) | new(최신) | views(조회) — 트래픽 붙기 전 기본은 최신(위 index.js 주석 참조)
 let plazaSearchQ = "";          // 광장 검색어(제목·본문 ilike)
 
 /* 🩹 자가치유: 서버/CF가 이 문서에만 '광장 패널 없는 옛 HTML'을 주는 경우가 있다

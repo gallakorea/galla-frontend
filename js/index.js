@@ -1104,7 +1104,10 @@ function interleave(issues, ex = {}) {
    hot_score 는 참여가 0이면 식이 1/(나이+2)^1.4 로 줄어 사실상 최신순이 되므로,
    콘텐츠가 적은 초기에도 '최신'을 따로 둘 이유가 없다.
    ⚠️ 함수는 남긴다 — 아래 두 군데(쿼리 정렬·개인화 분기)가 이 값을 읽는다. */
-function GALLA_feedSort() { return 'hot'; }
+/* 🕒 기본 정렬 = 최신. 트래픽이 붙기 전 인기 정렬은 우연한 반응 몇 개가 상단을 점거한다
+   (실측 2026-08-19: 좋아요1·댓글3짜리 7/30 글이 8/3 신규글보다 위). 사용자가 붙으면 'hot'으로 되돌린다.
+   신호 층(feed_signals)은 그동안에도 계속 쌓이므로 되돌리는 시점에 바로 랭킹을 얹을 수 있다. */
+function GALLA_feedSort() { return 'new'; }
 
 // 광장 글을 피드용으로 로드 (최신순 + 점수/신규 가점 가벼운 정렬)
 async function loadPlazaCards() {
