@@ -231,8 +231,8 @@
     <div class="foot">
       <button class="btn primary" id="goShare">친구에게 도전장 보내기</button>
       <button class="btn light" id="goSave">결과 카드 저장</button>
-      <a class="btn ghost" id="goGalla" href="/index.html">지금 갈라에서 진짜 판 붙기 →</a>
-      <a class="btn ghost" id="goFun" href="/fun">갈라의 다른 놀거리 보기</a>
+      <a class="btn ghost" id="goGalla" href="index.html">지금 갈라에서 진짜 판 붙기 →</a>
+      <a class="btn ghost" id="goFun" href="fun.html">갈라의 다른 놀거리 보기</a>
       <button class="btn ghost" id="goAgain">다시 하기</button>
     </div>
   </section>
@@ -256,7 +256,7 @@
       <p>갈라에선 오늘의 논쟁마다 진영이 갈리고, 사람들이 실제로 편을 먹고 붙습니다. 당신 유형이 어느 진영에서 이기는지 확인해보세요.</p>
     </div>
     <div class="foot">
-      <a class="btn primary" id="vGalla" href="/index.html">갈라에서 내 편 찾기 →</a>
+      <a class="btn primary" id="vGalla" href="index.html">갈라에서 내 편 찾기 →</a>
       <button class="btn light" id="vShare">이 궁합 결과 공유</button>
       <button class="btn ghost" id="vMine">내 카드 보기</button>
     </div>
@@ -699,8 +699,8 @@
     } else {
       $("goShare").onclick = doShare;
     }
-    $("goGalla").href = keep("/index.html");
-    $("goFun").href = keep("/fun");
+    $("goGalla").href = keep("index.html");
+    $("goFun").href = keep("/fun.html");
     scene("sResult");
   }
 
@@ -717,7 +717,7 @@
       }, "image/png");
     } catch (e) { toast("저장에 실패했습니다. 화면을 캡처해 주세요"); }
   };
-  $("goAgain").onclick = function () { location.href = keep("/match"); };
+  $("goAgain").onclick = function () { location.href = keep("/match.html"); };
 
   /* 공유 링크 = 초대 링크. 로그인 유저면 share-sheet.js 가 캐시해둔 본인 초대코드를 붙여
      궁합이 퍼질 때마다 초대 크레딧(+1,000 GP)이 붙게 한다. utm_source 로 GA 채널도 분리. */
@@ -782,7 +782,7 @@
       cl.appendChild(d);
     });
 
-    $("vGalla").href = keep("/index.html");
+    $("vGalla").href = keep("index.html");
     $("vShare").onclick = function () {
       var url = buildShareUrl(x);
       var text = "우리 둘 같은 편일 확률 " + p + "% (" + tier.ttl + "). 너도 해봐 👀";
