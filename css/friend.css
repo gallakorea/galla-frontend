@@ -472,3 +472,9 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 .fr-cutpv-go{ width:100%; margin-top:10px; background:rgba(255,180,92,.16); border:1px solid rgba(255,180,92,.5); color:#ffd9a8;
   font-size:13px; font-weight:800; padding:10px; border-radius:10px; cursor:pointer; font-family:inherit; }
 .fr-cutpv-go:disabled{ opacity:.5; }
+
+/* ◀▶ 컷 가로 위치 — 가로 원본을 9:16으로 자를 때 무엇을 남길지 사람이 정한다(자동 판정은 폐기) */
+.fr-nudge{ display:flex; gap:6px; justify-content:center; margin-top:6px; }
+.fr-nudge button{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); color:#cfe6f2;
+  border-radius:7px; padding:3px 10px; font-size:11px; font-family:inherit; cursor:pointer; }
+.fr-nudge button:active{ background:rgba(95,216,255,.18); }

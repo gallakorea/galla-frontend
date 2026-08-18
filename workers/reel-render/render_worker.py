@@ -582,7 +582,13 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         kb = (f"zoompan=z='{zexp}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps={fps}")
         # 🎨 프로 편집 감각 ③: 클립마다 제각각인 노출·색을 전체 중앙값으로 수렴시킨다(한 카메라로 찍은 느낌)
         grade = ""   # 🚫 색보정 비활성(사장님 지시: 컷 편집 정확도가 먼저)
-        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,crop={w}:{h}," + (grade + "," if grade else "") + f"{kb},setsar=1"
+        # 🎯 컷별 가로 위치 — 사람이 미리보기에서 정한 값(0=왼쪽 1=오른쪽, 기본 0.5=정중앙).
+        #    ⚠️ 내용으로 자동 판정(에지·채도·모션)은 실측에서 '주인공'을 못 찾아 되레 잘라먹었다.
+        #       그래서 자동은 버리고 사람이 1탭으로 정한다 — 결정적이고 절대 틀리지 않는다.
+        cxr = min(1.0, max(0.0, float(sg.get("cx", 0.5) or 0.5)))
+        crop = f"crop={w}:{h}" if abs(cxr - 0.5) < 0.01 else \
+               f"crop={w}:{h}:x='clip(in_w*{cxr:.3f}-{w}/2,0,in_w-{w})':y='(in_h-{h})/2'"
+        vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,{crop}," + (grade + "," if grade else "") + f"{kb},setsar=1"
         cmd = [FFMPEG, "-y", "-v", "error"]
         if float(sg.get("in", 0)) > 0: cmd += ["-ss", str(sg["in"])]
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",

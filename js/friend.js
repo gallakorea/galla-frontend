@@ -689,6 +689,7 @@
         var it=m[k]; if(!it || !it.c.src) return;
         curK=k;
         var nx=1-act, v=vids[nx];
+        v.style.objectPosition=(((typeof it.c.cx==="number"?it.c.cx:0.5)*100).toFixed(0))+"% 50%";
         feed(v, it.c.src, (it.c.in||0)+Math.max(0, at-it.s), function(){
           v.play().catch(function(){}); show(nx);
           var nb=m[k+1];   // 다음 클립을 지금 안 보이는 쪽에 미리 물려둔다(전환 끊김 방지)
@@ -773,6 +774,29 @@
           if(!o.on) b.addEventListener("click", function(){ chooseAlt(c.cut, o.clip); });
           opts.appendChild(b);
         });
+        /* ◀▶ 위치 조정 — 가로로 찍은 원본만 9:16으로 자를 때 잘려나갈 여백이 생긴다.
+           세로 원본은 잘라낼 게 없어 아예 숨긴다(있지도 않은 선택지로 방해하지 않는다). */
+        var nudge=el('<div class="fr-nudge" hidden><button data-d="-1">◀</button>'+
+          '<button data-d="0">가운데</button><button data-d="1">▶</button></div>');
+        if(c.thumb){
+          var probe=new Image();
+          probe.onload=function(){ if(probe.naturalWidth/probe.naturalHeight > 0.60) nudge.hidden=false; };
+          probe.src=c.thumb;
+        }
+        nudge.querySelectorAll("button").forEach(function(b){
+          b.addEventListener("click", async function(){
+            var d=Number(b.getAttribute("data-d"));
+            var cur=(typeof c.cx==="number")?c.cx:0.5;
+            var nx=(d===0)?0.5:Math.min(0.85,Math.max(0.15,cur+d*0.12));
+            try{
+              var r=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
+                headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+                body:JSON.stringify({ op:"nudge", id:jobId, cut:c.cut, cx:nx }) })).json();
+              if(r && r.cuts) paint(r.cuts);
+            }catch(e){}
+          });
+        });
+        row.insertBefore(nudge, row.querySelector(".fr-cut2-more"));
         row.querySelector(".fr-cut2-more").addEventListener("click", function(){ openPicker(c, row); });
         list.appendChild(row);
       });

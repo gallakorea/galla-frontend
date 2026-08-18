@@ -125,9 +125,12 @@ async function ttsToR2(uid: string, script: string): Promise<string | null> {
 }
 async function ttsToR2Inner(uid: string, script: string): Promise<string | null> {
   let bytes: Uint8Array | null = null, ext = "wav", ctype = "audio/wav";
-  if (GEMINI_KEY) {
+  /* 🎙 TTS 모델 폴백 — 프리뷰 모델은 예고 없이 흔들린다(실사고: tts_failed로 잡 전체가 죽음).
+     한 모델이 실패하면 다음 모델로 넘어간다. 실패 사유는 로그에 원문 그대로 남긴다. */
+  for (const TTS_MODEL of (GEMINI_KEY ? ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview", "gemini-2.5-pro-preview-tts"] : [])) {
+    if (bytes) break;
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_KEY}`, {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${GEMINI_KEY}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `차분하고 신뢰감 있는 30대 한국 남성 맛집 내레이션 톤으로, 또박또박 읽어라:\n${script.slice(0, 1500)}` }] }],
@@ -139,8 +142,8 @@ async function ttsToR2Inner(uid: string, script: string): Promise<string | null>
       if (r.ok && b64) {
         const pcm = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
         bytes = pcmToWav(pcm);   // Gemini TTS = 24kHz s16le mono PCM
-      } else console.error("[reel] gemini tts", r.status, JSON.stringify(d?.error || "").slice(0, 200));
-    } catch (e) { console.error("[reel] gemini tts ex", String(e).slice(0, 120)); }
+      } else console.error("[reel] gemini tts", TTS_MODEL, r.status, JSON.stringify(d?.error || "").slice(0, 200));
+    } catch (e) { console.error("[reel] gemini tts ex", TTS_MODEL, String(e).slice(0, 120)); }
   }
   if (!bytes && OPENAI_KEY) {
     const r = await fetch("https://api.openai.com/v1/audio/speech", {
@@ -956,7 +959,7 @@ function cutCards(timeline: any[], subs: any[], clips: any[], info: ClipInfo[]) 
       cut: k, at: +t.toFixed(1), dur: seg.dur, text: text.trim(),
       clip: ci, thumb: ci >= 0 ? (clips[ci].thumb || null) : null,
       cap: ci >= 0 ? info[ci].cap : "",
-      alts, unsure: !!seg.unsure,
+      alts, unsure: !!seg.unsure, cx: Number(seg.cx ?? 0.5),
       // 🎬 무료 미리보기용 — 렌더 없이 브라우저가 원본을 이어 재생하려면 소스와 시작점이 필요하다
       src: seg.src, in: +(seg.in || 0).toFixed(2),
     });
@@ -1342,7 +1345,7 @@ Deno.serve(async (req) => {
 
   /* 👀 미리보기 컷 교체 — 사람이 2탭으로 고친다. AI 100%를 기다리는 대신 사람이 즉시 완성시킨다.
      교체 기록(swap_log)은 나중에 "이런 문장엔 이런 컷" 학습 데이터가 된다. */
-  if (op === "cuts" || op === "swap" || op === "approve") {
+  if (op === "cuts" || op === "swap" || op === "approve" || op === "nudge") {
     const { data: job } = await sb.from("agent_jobs").select("id,state,inputs,artifacts").eq("id", String(body.id)).eq("user_id", uid).single();
     if (!job) return j({ error: "no_job" }, 404);
     const a: any = job.artifacts || {};
@@ -1360,6 +1363,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    /* ◀▶ 컷 위치 조정 — 가로로 찍힌 원본을 9:16으로 자를 때 무엇을 남길지 사람이 정한다.
+       자동 판정은 폐기(실측: 주인공 대신 색 진한 반찬 쪽으로 끌려가 맥주잔이 화면 밖으로 나갔다). */
+    if (op === "nudge") {
+      const k = Number(body.cut), cx = Number(body.cx);
+      if (!Number.isInteger(k) || k < 0 || k >= timeline.length) return j({ error: "bad_cut" }, 400);
+      if (!Number.isFinite(cx)) return j({ error: "bad_cx" }, 400);
+      timeline[k] = { ...timeline[k], cx: Math.min(0.85, Math.max(0.15, cx)) };
+      await setJob(String(body.id), { artifacts: { ...a, timeline } });
+      return j({ ok: true, cuts: cutCards(timeline, a.subtitles || [], clips, info) });
+    }
     if (op === "swap") {
       const k = Number(body.cut), ci = Number(body.clip);
       if (!Number.isInteger(k) || k < 0 || k >= timeline.length) return j({ error: "bad_cut" }, 400);
