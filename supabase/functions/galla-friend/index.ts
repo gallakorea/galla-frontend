@@ -395,7 +395,36 @@ async function fetchContentById(type: string, id: string): Promise<{ kind: strin
         const pro = pick("pro"), con = pick("con");
         if (pro || con) voices = `\n[참전자 목소리]\n 찬성:\n${pro || "  (아직 없음)"}\n 반대:\n${con || "  (아직 없음)"}`;
       } catch { /* */ }
-      return { kind: "이슈(찬반 배틀)", text: `제목: ${data.title}\n한줄: ${data.one_line || ""}\n배경: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 260)}\n찬성(${data.faction_a || "찬성"}) ${data.pro_count || 0} vs 반대(${data.faction_b || "반대"}) ${data.con_count || 0}${pct != null ? ` — 지금 찬성 ${pct}%` : ""}${voices}` };
+      /* 📊 참여 온도 — '몇 명이 어떻게 싸우고 있나'. 감상평 대신 이걸 말하라고 넣는다. */
+      let heat = "";
+      try {
+        const { data: cm2 } = await supa.from("comments")
+          .select("faction,attack_count,support_count,defense_count,created_at")
+          .eq("issue_id", id).neq("status", "deleted").limit(400);
+        const rows = cm2 || [];
+        const sum = (k: string) => rows.reduce((a: number, r: any) => a + _n(r[k], 0), 0);
+        const dayAgo = Date.now() - 86400000;
+        const fresh = rows.filter((r: any) => new Date(r.created_at).getTime() > dayAgo).length;
+        heat = `\n[참여 온도] 댓글 ${rows.length}개(찬 ${rows.filter((r: any) => r.faction === "pro").length}·반 ${rows.filter((r: any) => r.faction === "con").length})`
+          + ` · 최근 24시간 ${fresh}개 · 공격 ${sum("attack_count")}·지원 ${sum("support_count")}·방어 ${sum("defense_count")}`;
+      } catch { /* */ }
+
+      /* 🗞 참여가 아직 얕으면(표 10개 미만) '여론' 자리를 언론 보도 각도로 대신 채운다.
+         사장님 지시(2026-08-18): 참여가 없으면 뉴스에서 어떻게 다뤄지는지로 답해라.
+         ⚠️ issue_related_news 는 anon 3초 제한에서 타임아웃 나던 함수라 여기선
+            service_role 로 부른다(제한 없음) — 그래도 창은 좁혀둔 상태다. */
+      let press = "";
+      if (tot < 10) {
+        try {
+          const { data: rn } = await supa.rpc("issue_related_news", { p_issue_id: Number(id), p_limit: 4 });
+          const rows = (rn?.rows || []) as any[];
+          if (rows.length) {
+            press = `\n[언론은 이렇게 다룬다] (참여가 아직 얕아 여론 대신 보도 각도로)\n`
+              + rows.slice(0, 4).map((r) => `  · ${String(r.title || "").slice(0, 60)} (${r.source || ""})`).join("\n");
+          }
+        } catch { /* */ }
+      }
+      return { kind: "이슈(찬반 배틀)", text: `제목: ${data.title}\n한줄: ${data.one_line || ""}\n배경: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 260)}\n찬성(${data.faction_a || "찬성"}) ${data.pro_count || 0} vs 반대(${data.faction_b || "반대"}) ${data.con_count || 0}${pct != null ? ` — 지금 찬성 ${pct}%` : ""}${heat}${voices}${press}` };
     }
     if (type === "news") {
       const { data } = await supa.from("galla_news").select("title,summary").eq("id", id).maybeSingle();
@@ -403,9 +432,11 @@ async function fetchContentById(type: string, id: string): Promise<{ kind: strin
       return { kind: "갈라뉴스", text: `제목: ${data.title}\n요약: ${String(data.summary || "").replace(/\s+/g, " ").slice(0, 400)}` };
     }
     if (type === "plaza") {
-      const { data } = await supa.from("plaza_posts").select("title,body,nickname").eq("id", id).maybeSingle();
+      const { data } = await supa.from("plaza_posts").select("title,body,nickname,up_count,down_count,view_count").eq("id", id).maybeSingle();
       if (!data) return null;
-      let voices = "";
+      const up = _n(data.up_count, 0), down = _n(data.down_count, 0);
+      let voices = `\n[반응] 추천 ${up} · 비추 ${down} · 조회 ${_n(data.view_count, 0)}`
+        + (up + down === 0 ? "\n  ※ 아직 표가 없다 — 반응 전이다." : (down > up ? "  → 반발이 더 크다" : up > down * 2 ? "  → 호응이 우세" : "  → 갈리는 중"));
       try {
         const { data: cm } = await supa.from("plaza_comments").select("body,like_count").eq("post_id", id)
           .order("like_count", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(4);
@@ -415,14 +446,39 @@ async function fetchContentById(type: string, id: string): Promise<{ kind: strin
       return { kind: "광장 글", text: `제목: ${data.title}\n작성자: ${data.nickname || "익명"}\n본문: ${String(data.body || "").replace(/\s+/g, " ").slice(0, 300)}${voices}` };
     }
     if (type === "predict") {
-      const { data } = await supa.from("markets").select("question,description").eq("id", id).maybeSingle();
+      const { data } = await supa.from("markets").select("question,description,total_pool,close_at,resolved").eq("id", id).maybeSingle();
       if (!data) return null;
-      return { kind: "예측 마켓", text: `질문: ${data.question || ""}\n정산기준: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 250)}` };
+      /* 📊 어디에 얼마가 걸렸나 — '감' 말고 판세를 말하게 한다. */
+      let odds = "";
+      try {
+        const { data: oc } = await supa.from("market_outcomes").select("id,label,pool_gp").eq("market_id", id);
+        const { data: bets } = await supa.from("predict_bets").select("user_id,outcome_id").eq("market_id", id);
+        const people = new Set((bets || []).map((b: any) => b.user_id)).size;
+        const total = (oc || []).reduce((a: number, o: any) => a + _n(o.pool_gp, 0), 0);
+        if ((oc || []).length) {
+          odds = `\n[판세] 참여 ${people}명 · 총 판돈 ${total}GP\n`
+            + (oc || []).map((o: any) => {
+              const pg = _n(o.pool_gp, 0);
+              const share = total ? Math.round(pg / total * 100) : 0;
+              return `  · ${o.label}: ${pg}GP (${share}%)`;
+            }).join("\n");
+          if (!total) odds += "\n  ※ 아직 아무도 안 걸었다 — 첫 판이다.";
+        }
+      } catch { /* */ }
+      return { kind: "예측 마켓", text: `질문: ${data.question || ""}\n정산기준: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 250)}${odds}` };
     }
     if (type === "gallari" || type === "shorts") {
-      const { data } = await supa.from("posts").select("title,caption,kind").eq("id", id).maybeSingle();
+      const { data } = await supa.from("posts").select("title,caption,kind,view_count,like_count,comment_count").eq("id", id).maybeSingle();
       if (!data) return null;
-      return { kind: data.kind === "horizontal" ? "롱판 영상" : "숏판/사진", text: `제목/캡션: ${String(data.title || data.caption || "").replace(/\s+/g, " ").slice(0, 200)}` };
+      let react = `\n[반응] 조회 ${_n(data.view_count, 0)} · 좋아요 ${_n(data.like_count, 0)} · 댓글 ${_n(data.comment_count, 0)}`;
+      if (!_n(data.view_count, 0) && !_n(data.like_count, 0)) react += "\n  ※ 아직 아무도 안 봤다 — 반응이 없다.";
+      try {
+        const { data: cm } = await supa.from("post_comments").select("body,like_count").eq("post_id", id)
+          .order("like_count", { ascending: false, nullsFirst: false }).limit(3);
+        const lines = (cm || []).map((x: any) => "  · " + String(x.body || "").replace(/\s+/g, " ").slice(0, 55)).filter((t: string) => t.length > 4).join("\n");
+        if (lines) react += `\n[댓글 반응]\n${lines}`;
+      } catch { /* */ }
+      return { kind: data.kind === "horizontal" ? "롱판 영상" : "숏판/사진", text: `제목/캡션: ${String(data.title || data.caption || "").replace(/\s+/g, " ").slice(0, 200)}${react}` };
     }
   } catch { /* */ }
   return null;
@@ -1605,7 +1661,7 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       // ⚠️ 여기선 tools를 아예 선언하지 않는다 → 메시지에 남은 tool_call 기록은 전부 400 사유다.
-      body: JSON.stringify({ model: opts?.model || CHAT_MODEL, messages: pruneOrphanToolCalls(messages, new Set()), temperature: 0.8, max_tokens: opts?.maxTokens || 240, stream: true, tool_choice: "none" }),
+      body: JSON.stringify({ model: opts?.model || CHAT_MODEL, messages: pruneOrphanToolCalls(messages, new Set()), temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none" }),
     });
     if (!r.ok || !r.body) return null;
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = ""; let full = "";
@@ -1913,14 +1969,15 @@ function detectCrisis(msg: string): { term: string } | null {
    프롬프트로 "문장 끝에서만 끊어라"라고 시켰지만 지시는 확률적이라 계속 샌다(실측).
      "…뉴스 제목에" ⏎⏎ "숫자 붙은 거?"   /   "풍향중 EP." ⏎⏎ "2 — 유재석이…"
    앞 버블이 '조사·연결어미'로 끝나거나 목록번호·약어만 남으면 문장이 안 끝난 것이다 → 다음 버블과 합친다. */
-const UNFINISHED = new RegExp(
-  "(" +
-  "[에게서와과로도만의를을은는이가]|" +               // 조사로 끝남 — "뉴스 제목에"
-  "(으로|에서|에게|한테|보다|부터|까지|처럼|같이)|" +  // 복합 조사
-  "(고|서|며|면|지만|는데|라서|아서|어서|니까|거나)|" + // 연결어미
-  "\\d{1,2}\\.|[A-Za-z]{1,4}\\.|[—·\\-,]" +           // "1." "EP." 대시·쉼표만 남음
-  ")\\s*$",
+/* ✂️ 문장이 '끝났는지'로 판정한다 — 조사 목록으로 잡으려다 계속 샜다(실측):
+     "…5분만 달라\" 외친" / "…댓글 3개 다 찬성이던데 ㅋㅋ 아직 반대"
+   끝나는 신호(문장부호·이모티콘·한국어 종결어미)가 없으면 아직 문장 중이다 → 다음 버블과 합친다.
+   ⚠️ 반대로 짜면(끊을 조건을 나열) 새는 경우가 무한히 늘어난다. 끝난 신호를 요구하는 쪽이 안전하다. */
+const SENTENCE_END = new RegExp(
+  "([.!?…~\u2661)\\]\"\u201d\u2019]|[\u314b\u314e\u3160\u315c]+|" +
+  "(요|다|야|지|네|어|음|임|까|냐|래|걸|데|군|해|봐|자|줘|워|아|죠|랬|댄다|더라|는걸|잖아))\\s*$",
 );
+const UNFINISHED = { test: (s: string) => !SENTENCE_END.test(String(s || "").trim()) };
 /* 따옴표·괄호가 열린 채 끊겼는지 — 실측: '…말고 "연봉' ⏎⏎ '깎는 게 맞냐"로 …'
    조사·어미로는 안 잡히는(명사에서 끊긴) 경우를 이게 잡는다. */
 function unclosed(s: string): boolean {
@@ -2946,19 +3003,31 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
     const handoff = (body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id) ? body.handoff : null;
     let handoffBlock = "";
     if (handoff && !userMsg) {
+      /* 🚫 '감상평' 금지(사장님 2026-08-18): "재밌네" 같은 소리는 아무 가치가 없다.
+         사람들이 어떻게 갈리고 있는지, 참여가 어느 정도인지 — 위 실데이터를 읽고 말해라.
+         데이터가 비었으면 그 사실 자체를 말하고(아직 조용하다) 언론 각도·쟁점으로 넘어가라. */
       const HROLE: Record<string, string> = {
-        predict: "예측 코치처럼 — 네 감(어디 걸지)+왜 그런지 한 줄, 그리고 '넌 어디 걸래?' 물어라.",
-        gallari: "이 콘텐츠 감상평 한마디 + 더 잘 만들 각(썸네일·제목) 있으면 '내가 만들어줄까?' 한 번.",
-        shorts: "이 숏판 감상평 한마디 + '내가 만들어줄까?' 한 번.",
-        plaza: "이 떡밥에 네 편 확실히 정하고 편들어라 — 한 줄 평 + '넌 어느 편?'.",
-        issue: "이 이슈에 네 진영 밝히고 편들어라 — 한 줄 + '넌 찬성? 반대?'.",
-        news: "이 뉴스 핵심 한마디 + '이거 어떻게 봐?'.",
-        content: "네 평 한마디 + 어느 편인지 묻거나 재밌는 포인트 하나 콕.",
+        predict: "판세부터 — 어디에 얼마가 몰렸는지(비율) 한 줄, 그게 뭘 뜻하는지 한 줄. 아무도 안 걸었으면 '아직 빈 판'이라 말하고 네가 어디 걸지+왜. 끝에 '넌 어디 걸래?'.",
+        gallari: "반응부터 — 조회·좋아요·댓글이 어떤지 한 줄(없으면 '아직 조용하다'고 솔직히). 그 다음 왜 그럴지 네 진단 한 줄. 필요하면 '표지·제목 내가 다시 뽑아줄까?'.",
+        shorts: "반응부터 — 숫자로 한 줄(없으면 조용하다고). 왜 안 터졌는지/터졌는지 네 진단 한 줄 + '내가 다시 만들어줄까?'.",
+        plaza: "여론부터 — 추천·비추 비율이 뭘 말하는지 한 줄. 댓글이 있으면 어느 쪽으로 기우는지. 그 다음 네 편을 밝히고 '넌 어느 편?'.",
+        issue: "여론부터 — 찬반 비율·참여 규모·최근 24시간 흐름 중 '가장 말할 값어치 있는 것' 한 줄. 표가 얕으면 '아직 조용한데 언론은 ~각도로 다룬다'로 넘어가라. 그 다음 네 진영 밝히고 '넌 찬성? 반대?'.",
+        news: "이 보도의 쟁점이 뭔지 한 줄 — 어디서 사람들이 갈릴지 짚어라. 그리고 '넌 어떻게 봐?'.",
+        content: "숫자로 드러난 반응 한 줄 + 그게 뭘 뜻하는지. 그리고 '넌?'.",
       };
       const role = HROLE[String(handoff.type)] || HROLE.content;
       const c = await fetchContentById(String(handoff.type), String(handoff.id));
       handoffBlock = c
-        ? `🎯 [상대가 방금 이 갈라 ${c.kind}에서 '갈비스 버튼'을 눌러 너를 불렀다 — 아래 '실제 내용+사람들 목소리'를 읽고 말을 걸어라]\n${c.text}\n\n오프너: ${role}\n🧠 [지적인 친구 모드] 이건 엄청난 이야깃거리다 — 단순 감상 말고 '사람들 생각'을 같이 나눠라: 위 [참전자 목소리]·찬반 비율·[댓글 반응] 실데이터를 근거로 "찬성 쪽은 ~라던데 반대는 ~", "댓글 보니까 ~", "여론은 ~쪽으로 기우네" 처럼 여러 관점을 던져 생각을 자극해라. 단 강의·나열 금지 — 친구처럼 짧게(1~2줄), 네 편(진영·의견)도 밝히고 '넌?'으로 넘겨라. 실데이터에 없는 여론·댓글은 지어내지 마라.${history.length ? " 지금 대화 중이었으면 '아 이거?' 하며 자연스럽게 화제를 전환." : ""}`
+        ? `🎯 [상대가 방금 이 갈라 ${c.kind}에서 '갈비스 버튼'을 눌러 너를 불렀다 — 아래 '실제 내용+사람들 목소리'를 읽고 말을 걸어라]\n${c.text}\n\n오프너: ${role}\n🧠 [여론 분석 모드 — 감상평 금지]
+  "재밌네/좋네" 같은 감상은 아무 값어치가 없다. 위 실데이터(찬반 비율·[참여 온도]·[참전자 목소리]·[댓글 반응]·[판세]·[반응])에서
+  **가장 말할 값어치 있는 숫자 하나**를 골라 그게 무슨 뜻인지 말해라.
+    예) "찬성 68%인데 댓글은 반대가 더 많아 — 조용한 다수랑 시끄러운 소수가 갈렸네"
+        "24시간 만에 댓글 40개 붙었어. 이거 지금 제일 뜨거운 판이야"
+        "아직 3명 걸렸는데 다 한쪽이야 — 반대편 배당이 맛있어졌다"
+  ⚠️ **참여가 없거나 얕으면** 있는 척하지 말고 그대로 말해라("아직 조용해"). 그리고 [언론은 이렇게 다룬다]가 있으면
+     보도 각도로 넘어가고, 그것도 없으면 **어디서 사람들이 갈릴지 네가 짚어라**(쟁점 예측). 빈손으로 감상평 하지 마라.
+  · 숫자는 위에 있는 것만 쓴다. 없는 여론·댓글·조회수는 절대 지어내지 마라.
+  · 강의·나열 금지 — 친구처럼 짧게(1~2줄). 분석 끝엔 네 편(진영·의견)을 밝히고 '넌?'으로 넘겨라.${history.length ? " 지금 대화 중이었으면 '아 이거?' 하며 자연스럽게 화제를 전환." : ""}`
         : `🎯 [상대가 갈라 콘텐츠 '${String(handoff.title || "").slice(0, 80)}'(${handoff.type})에서 너를 불렀다 — 그 얘기로 짧게 먼저 말을 걸어라]\n오프너: ${role} 1~2줄, 리스트 금지.`;
     }
     const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)"
