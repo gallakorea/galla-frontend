@@ -664,6 +664,15 @@ function renderPlazaPosts(posts) {
   posts.forEach(post => {
     const li = document.createElement("li");
     li.className = "plaza-post";
+    /* 📊 신호 — 광장은 레딧식(찬반 비율 + 시간감쇠)으로 갈 자리다. 그 랭킹의 분모가 '노출'이다.
+       지금은 조회수만 있어 "안 눌린 글"을 구분할 수 없다. */
+    if (window.GALLA_signal) {
+      setTimeout(() => window.GALLA_signal.card(li, { kind: "plaza", id: post.id, surface: "plaza" }), 0);
+      li.addEventListener("click", (e) => {
+        if (e.target.closest(".pv-btn, .plaza-save-btn")) return;   // 투표·저장은 별도 신호
+        window.GALLA_signal.act("plaza", post.id, "open", "plaza");
+      });
+    }
     const thumb = (window.GALLA_thumb ? window.GALLA_thumb(proxifyThumb(post.thumbnail) || extractFirstImage(post.body), 480) : (proxifyThumb(post.thumbnail) || extractFirstImage(post.body)));
     const cmtCount = post.plaza_comments?.length ?? 0;
     const saved = !!MY_PLAZA_SAVED[post.id];
@@ -777,6 +786,8 @@ document.addEventListener("click", async (e) => {
     MY_PLAZA_VOTES[id] = mv;
     upB.classList.toggle("on", mv === 1);
     downB.classList.toggle("on", mv === -1);
+    // 📊 신호 — 찬반은 광장 랭킹의 분자(레딧식 비율 계산에 그대로 쓴다)
+    if (window.GALLA_signal && mv !== 0) window.GALLA_signal.act("plaza", id, mv === 1 ? "like" : "skip", "plaza");
   } finally {
     plazaVoting = false;
   }

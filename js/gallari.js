@@ -101,7 +101,11 @@
 
     function bindItems() {
       box.querySelectorAll('[data-id]').forEach(el => {
+        /* 📊 신호 — 이 카드가 화면에 1초 이상 보였는지(노출)와 눌렀는지(진입).
+           노출이 있어야 '보여줬는데 안 눌렀다'를 알 수 있고, 그게 랭킹의 분모다. */
+        if (window.GALLA_signal) window.GALLA_signal.card(el, { kind: KIND, id: el.dataset.id, surface: 'gallari' });
         el.addEventListener('click', () => {
+          if (window.GALLA_signal) window.GALLA_signal.act(KIND, el.dataset.id, 'open', 'gallari');
           // 숏판 단일(세로) = 릴스로 / 숏판 캐러셀·롱판 = 상세로
           if (KIND === 'vertical' && el.dataset.car !== '1') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post');
           else nav('gallari-post.html?id=' + el.dataset.id);

@@ -219,6 +219,9 @@
       entries.forEach(en => {
         const v = en.target.querySelector('video'); if (!v) return;
         if (en.isIntersecting && en.intersectionRatio >= 0.6) {
+          /* 📊 신호 — 숏판은 '완주율'이 랭킹의 핵심이다(첫 3초 이탈이 지배적).
+             재생 시작 시 한 번만 붙이고, 멈추거나 끝날 때 최대 시청률·머문 시간이 기록된다. */
+          if (window.GALLA_signal) window.GALLA_signal.video(v, { kind: 'vertical', id: en.target.dataset.id || '', surface: 'reels' });
           v.muted = MUTED; v.play().catch(() => {});
           en.target.querySelector('.grl-playpause')?.classList.remove('show');
         } else { v.pause(); try { v.currentTime = v.currentTime; } catch (_) {} }
