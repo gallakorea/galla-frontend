@@ -260,8 +260,10 @@ input, textarea, select,
   -webkit-touch-callout: default;
 }
 
-/* 🤖 갈비스 진입 아이콘 — 앱(SPA) 전용 기능. 웹(MPA)에선 숨김(friend.js가 SPA에서만 위임 처리) */
-body:not([data-page="spa"]) [data-galvis]{ display:none !important; }
+/* 🤖 갈비스 진입 아이콘 — 웹에서도 보인다(사장님 2026-08-18).
+   예전엔 앱 전용이라 여기서 통째로 숨겼다. 그런데 렌더 조건(js/index.js)만 풀고
+   이 규칙을 못 봐서, DOM 에는 버튼이 6개 있는데 화면엔 하나도 안 보였다(실측: width 0).
+   웹에서 누르면 friend.js 가 앱 유도(GALLA_appDownload)로 보낸다. */
 /* 🤖 갈비스 아이콘 — 전역 크기·색. 각 페이지 버튼이 SVG 크기를 안 줘서 얇은 선으로 찌그러지던 것 방지(전 화면 공통). */
 .gv-galvis{ width:22px; height:22px; flex:0 0 auto; color:#5fd8ff; }
 [data-galvis]{ align-items:center; }
