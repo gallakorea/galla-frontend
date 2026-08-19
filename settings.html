@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=0808104">
+    <link rel="stylesheet" href="./css/settings.css?v=0819130">
     <link rel="stylesheet" href="./css/items.css?v=0809117">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
@@ -122,6 +122,12 @@
             <span class="tile-ic">🎯</span>
             <span class="tile-name">데일리 미션</span>
             <span class="tile-sub">오늘의 보상 받기</span>
+        </div>
+        <!-- 🎁 친구 초대 — 데일리 미션 안에만 묻혀 있어 아무도 못 찾던 것을 설정 전면으로 뺐다(2026-08-19) -->
+        <div class="menu-tile invite" id="inviteTile">
+            <span class="tile-ic">🎁</span>
+            <span class="tile-name">친구 초대</span>
+            <span class="tile-sub">친구 +500 · 나 +1000 GP</span>
         </div>
         <div class="menu-tile fun" data-target="fun.html">
             <span class="tile-ic">🎲</span>
@@ -308,8 +314,9 @@ function waitForSupabaseClient() {
     }
   })();</script>
 <script src="js/account-delete.js?v=080412"></script>
-<script src="js/notify-settings.js?v=0808104"></script>
-<script src="js/settings.js?v=0814190"></script>
+<script src="js/notify-settings.js?v=0819130"></script>
+<script src="js/invite.js?v=0819130"></script><!-- 🎁 초대 허브 -->
+<script src="js/settings.js?v=0819130"></script>
 <script src="js/bug-report.js?v=080412"></script>
 <script>
 /* 📳 흔들어서 신고 — iOS만 권한 동의가 필요하다. 필요한 기기에서만 항목을 보여준다. */
@@ -332,6 +339,12 @@ function waitForSupabaseClient() {
   document.getElementById('titlesTile')?.addEventListener('click', function(){ window.GALLA_openTitles && window.GALLA_openTitles(); });
   document.getElementById('statsTile')?.addEventListener('click', function(){ window.GALLA_openStats && window.GALLA_openStats(); });
   document.getElementById('gachaTile')?.addEventListener('click', function(){ window.GALLA_openGacha && window.GALLA_openGacha(); });
+  // 🎁 초대 허브 열기(갈라/갈비스/갈라톡 트랙별 카피)
+  document.getElementById('inviteTile')?.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (window.GALLA_openInvite) window.GALLA_openInvite();
+    else (window.GALLA_nav || function(u){ location.href = u; })('quest.html');
+  });
   document.getElementById('shopTile')?.addEventListener('click', function(e){
     e.stopPropagation();
     window.openShop && window.openShop();

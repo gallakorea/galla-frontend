@@ -81,7 +81,13 @@
   window.GALLA_openInvite = async function (defaultTrack) {
     css();
     var old = document.getElementById("gv-invite-ov"); if (old) old.remove();
-    var code = await myCode();
+    /* ⏱ 코드 조회에 시간 제한 — waitForSupabaseClient 가 안 풀리면 여기서 영원히 멈춰
+       '눌러도 아무 반응 없는 버튼'이 된다(설정 타일에서 실측). 코드가 없어도 모달은 떠야 하고,
+       inviteUrl 은 code 가 없으면 GALLA_share 의 withRef 가 나중에 붙여준다. */
+    var code = await Promise.race([
+      myCode(),
+      new Promise(function (r) { setTimeout(function () { r(null); }, 2500); })
+    ]);
 
     var ov = document.createElement("div");
     ov.className = "gv-inv-ov"; ov.id = "gv-invite-ov";

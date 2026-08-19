@@ -291,6 +291,12 @@ async function GALLA_settingsInit(root) {
     byId("notifyTile")?.addEventListener("click", () => { window.GALLA_openNotifySettings && window.GALLA_openNotifySettings(); });
     byId("titlesTile")?.addEventListener("click", () => { window.GALLA_openTitles && window.GALLA_openTitles(); });
     byId("gachaTile")?.addEventListener("click", () => { window.GALLA_openGacha && window.GALLA_openGacha(); });
+    // 🎁 친구 초대 — 설정 전면 진입로(invite.js 는 app.html 이 전역 로드)
+    byId("inviteTile")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.GALLA_openInvite) window.GALLA_openInvite();
+      else (window.GALLA_nav || function (u) { location.href = u; })("quest.html");
+    });
     byId("shopTile")?.addEventListener("click", (e) => { e.stopPropagation(); window.openShop && window.openShop(); });
     // 🎟 이용권 — 내 등급·남은 대화·업그레이드(plans.js는 nav.js가 전 페이지에 로드)
     byId("plansTile")?.addEventListener("click", (e) => {

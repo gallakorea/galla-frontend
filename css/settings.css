@@ -175,6 +175,7 @@ body {
 .menu-tile.duel   { --tc: 255, 77, 103; }    /* 레드 — 일기토 */
 .menu-tile.titles { --tc: 155, 91, 255; }    /* 퍼플 — 꾸미기 */
 .menu-tile.gacha  { --tc: 255, 122, 182; }   /* 핑크 — 뽑기 */
+.menu-tile.invite { --tc: 255, 138, 92; }    /* 코랄 — 친구 초대 */
 
 .tile-ic { font-size: 24px; line-height: 1; height: 28px; display: flex; align-items: center; }
 .tile-name { font-size: 14px; font-weight: 900; margin-top: 4px; color: #fff; }
