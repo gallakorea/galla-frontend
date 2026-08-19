@@ -42,8 +42,8 @@ IAP 를 켜는 순간 폐지한 GP 가 팔릴 뻔했다.
 
 ## 남은 작업 (순서대로)
 
-1. **App Store Connect 상품 등록** — 소모성 6종. 가격은 `_charge_price(기준가,'ios')` 결과에 맞춰
-   (1,000원 GC → 스토어 1,500원). 등록 후 `gc_products(channel='ios', product_id, pkg, store_krw, gc)` 채우기.
+1. **App Store Connect 상품 등록** — 소모성 6종. **가격표·상품ID·등록 SQL 은 `docs/appstore-products.md`**.
+   ⚠️ Apple Small Business Program(15%) 가입이 **선행**돼야 한다 — 30% 상태로 그 가격을 걸면 적자다.
 2. **앱에 StoreKit 결제 UI** — 지금은 "다음 업데이트에서 열려요" 상태. 붙이면서 anti-steering 가드 유지.
 3. **웹 PG 선정·연동** — 결제 시작은 `gc_charge_begin('web')`, 지급은 **웹훅에서만**.
 4. **Google Play** — 서비스 계정 키 → `verify-iap` 의 google 분기 구현.

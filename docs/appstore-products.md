@@ -1,0 +1,74 @@
+# App Store Connect / Google Play 상품 등록표
+
+작성 2026-08-19. 전제: **Apple Small Business Program(15%) 가입 완료 후**.
+가입 전이면 애플이 30%를 떼므로 아래 가격은 적자다 — **가입 승인 먼저**.
+
+## 등록할 상품 (소모성 / Consumable)
+
+| 상품 ID | 이름(표시) | 가격 | 지급 GC | 천원당 | 배지 |
+|---|---|---|---|---|---|
+| `im.galla.app.gc.c1`   | GC 1,000     | 1,500원   | 1,000   | 667 | — |
+| `im.galla.app.gc.c5`   | GC 4,500     | 6,000원   | 4,500   | 750 | +12% |
+| `im.galla.app.gc.c10`  | GC 9,600     | 12,000원  | 9,600   | 800 | +20% |
+| `im.galla.app.gc.c30`  | GC 31,000    | 38,000원  | 31,000  | 816 | +22% |
+| `im.galla.app.gc.c50`  | GC 49,800    | 60,000원  | 49,800  | 830 | +25% |
+| `im.galla.app.gc.c100` | GC 100,800   | 120,000원 | 100,800 | 840 | +26% |
+
+- **유형: 소모성(Consumable)** — 구독·비소모성 아님.
+- 가격은 전부 애플 한국 가격대(`app_settings.store_price_points`)에 있는 값이다.
+- 안드로이드도 같은 표를 쓴다(Play 는 첫 100만 달러까지 15%, 신청 불필요).
+  상품 ID 는 `im.galla.app.gc.c1` 동일하게 맞추면 관리가 쉽다.
+
+## 설계 근거 — 왜 '가격 인하'가 아니라 '보너스 GC'인가
+
+가격은 애플이 정한 **띄엄띄엄한 사다리**에만 올릴 수 있는데 GC 는 1 단위로 자유롭다.
+그래서 가격을 깎아 맞추면 사다리 사이 간격이 통째로 버려진다.
+→ **가격은 사다리 위 점에 두고, GC 로 미세조정**한다. 낭비가 줄고 체감 혜택은 커진다.
+
+⚠️ **'정가 15,000원 → 12,000원' 같은 줄긋기 표시는 쓰지 마라.**
+실제로 받은 적 없는 가격을 보여주는 건 오인유발이고, 표시 가격은 StoreKit 가격과 일치해야 한다.
+**"+20% 보너스"** 처럼 '더 준다'로 표현할 것.
+
+⚠️ **보너스 기준은 웹 가격이 아니라 '가장 작은 팩'이다.**
+웹은 1원=1GC 라 스토어는 어떤 경우에도 GC 당 단가가 웹보다 비싸다.
+앱 안에서 웹 가격을 언급하는 순간 anti-steering 위반이다.
+
+## 🚨 되돌아올 함정 — 수수료 30% 전환
+
+Small Business Program 은 **연 매출 100만 달러 이하**에만 적용된다. 넘기면 30%로 올라간다.
+그때 이 가격표는 **c1 을 뺀 전부가 적자**가 된다.
+
+| 패키지 | 30% 실수령 | 지급 GC | 결과 |
+|---|---|---|---|
+| c1 | 1,050원 | 1,000 | 흑자 |
+| c5 | 4,200원 | 4,500 | **-300원** |
+| c10 | 8,400원 | 9,600 | **-1,200원** |
+| c30 | 26,600원 | 31,000 | **-4,400원** |
+| c50 | 42,000원 | 49,800 | **-7,800원** |
+| c100 | 84,000원 | 100,800 | **-16,800원** |
+
+→ **매출이 100만 달러에 가까워지면 가격표를 반드시 다시 짠다.** 캘린더에 걸어둘 것.
+   (`app_settings.charge_fees` 를 0.3 으로 올리고 `gc_products.store_krw` 재계산)
+
+## 등록 후 할 일
+
+App Store Connect 에 등록하고 **실제 가격이 확정되면** 아래를 실행한다.
+가격이 표와 다르면 `store_krw` 를 실제 값으로 고칠 것 — 서버 카탈로그가 진실이다.
+
+```sql
+insert into gc_products (channel, product_id, pkg, store_krw, gc, active) values
+  ('ios','im.galla.app.gc.c1',   'c1',     1500,   1000, true),
+  ('ios','im.galla.app.gc.c5',   'c5',     6000,   4500, true),
+  ('ios','im.galla.app.gc.c10',  'c10',   12000,   9600, true),
+  ('ios','im.galla.app.gc.c30',  'c30',   38000,  31000, true),
+  ('ios','im.galla.app.gc.c50',  'c50',   60000,  49800, true),
+  ('ios','im.galla.app.gc.c100', 'c100', 120000, 100800, true)
+on conflict (channel, product_id) do update
+  set pkg = excluded.pkg, store_krw = excluded.store_krw,
+      gc = excluded.gc, active = excluded.active, updated_at = now();
+```
+
+안드로이드는 위 SQL 에서 `'ios'` 를 `'android'` 로 바꿔 같이 넣는다.
+
+⚠️ `gc_packages.gc` 는 **웹 기준(1원=1GC)** 이라 건드리지 않는다.
+   스토어 지급량은 `gc_products.gc` 가 결정한다(`grant_gc_topup` 이 그걸 읽는다).
