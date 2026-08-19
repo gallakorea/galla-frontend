@@ -138,6 +138,7 @@ async function ttsToR2Inner(uid: string, script: string): Promise<string | null>
         }),
       });
       const d = await r.json().catch(() => null);
+      logGemini("reel:tts", TTS_MODEL, d);
       const b64 = d?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (r.ok && b64) {
         const pcm = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -197,6 +198,9 @@ async function splitScriptUnits(script: string): Promise<string[] | null> {
       }),
     });
     const d = await r.json();
+    const u = d?.usage;
+    if (u) logSpend("reel:units", LLM_MODEL, Number(u.prompt_tokens || 0) - Number(u.prompt_cache_hit_tokens || 0),
+                    Number(u.completion_tokens || 0), Number(u.prompt_cache_hit_tokens || 0));
     const m = /\[[\s\S]*\]/.exec(d?.choices?.[0]?.message?.content || "");
     if (!m) return null;
     const arr = JSON.parse(m[0]).map((s: any) => String(s).trim()).filter(Boolean);
@@ -294,17 +298,25 @@ s = 릴스에 쓸 만한 정도(5=군침 도는 결정적 컷, 1=버릴 컷)
       /* 🔁 재시도·모델 폴백 — 비전이 죽으면 큐레이션이 통째로 무력화되고(전부 food 취급) 쓰레기 컷이 화면에 오른다.
          실사고: gemini-flash-latest 503 "high demand" 1회로 큐레이션 0건. 과부하는 대개 일시적이라 붙잡는다. */
       let r: Response | null = null, d: any = null, txt = "";
-      const models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"];
-      for (let attempt = 0; attempt < 4 && !txt; attempt++) {
+      /* 모델 3종 × 6회, 지수 백오프 — 비전이 죽으면 잡 전체가 죽는다(실사고: 503 'high demand'로 실패).
+         과부하는 대개 몇 초~몇십 초짜리라 붙잡을 값어치가 있다. */
+      const models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest",
+                      "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"];
+      let noThink = false;   // 400이 나면 thinkingConfig를 빼고 한 번 더(모델 버전이 바뀌면 이 인자를 거부한다)
+      for (let attempt = 0; attempt < 6 && !txt; attempt++) {
         const mdl = models[Math.min(attempt, models.length - 1)];
-        if (attempt) await new Promise((res) => setTimeout(res, 1200 * attempt));
+        if (attempt) await new Promise((res) => setTimeout(res, Math.min(8000, 1200 * Math.pow(1.8, attempt - 1))));
         r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${GEMINI_KEY}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           // ⚠️ Gemini 3.x는 기본 thinking이 maxOutputTokens를 먹어치움(실측: 600 전부 사고에 소진→빈 출력) → 명시적으로 끈다
-          body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.2, maxOutputTokens: 2000, thinkingConfig: { thinkingBudget: 0 } } }),
+          body: JSON.stringify({ contents: [{ parts }], generationConfig: {
+            temperature: 0.2, maxOutputTokens: 2000,
+            ...(noThink ? {} : { thinkingConfig: { thinkingBudget: 0 } }) } }),
         });
         d = await r.json().catch(() => null);
         txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+        if (txt) logGemini("reel:vision", mdl, d);
+        if (!txt && r.status === 400) noThink = true;   // 인자 거부면 다음 시도는 빼고 던진다
       }
       const info = parseClipInfo(txt, thumbs.filter(Boolean).length);
       if (info.length) {
@@ -380,6 +392,29 @@ function cutProfile(voiceDur: number) {
     max: +(avg * 1.75).toFixed(2),        // 실측 최장이 평균의 1.7~1.9배
   };
 }
+/* 💰 원가 계측 — 릴스가 부르는 AI 호출을 전부 원장(ai_spend)에 적는다.
+   ⚠️ 지금까지 릴스는 **기록이 0건**이었다(galla-friend만 적고 있었다). 그래서 "편당 얼마냐"에
+      추정으로 답할 수밖에 없었다. 원가표가 실제 청구와 1.9배 어긋난 전례가 있으므로(딥시크 캐시히트
+      25배 과대계상) **토큰은 사실대로 적고 단가는 app_settings에서 조회**한다 — 나중에 청구서로
+      단가만 고치면 과거 행까지 재계산된다.
+   계측이 응답을 늦추면 안 되므로 await 하지 않는다. */
+let _spendUid: string | null = null;
+function logSpend(fn: string, model: string, inTok: number, outTok: number, cache = 0) {
+  if (!model || (!inTok && !outTok && !cache)) return;
+  fetch(`${SUPA_URL}/rest/v1/rpc/ai_spend_add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+    body: JSON.stringify({ p_fn: fn, p_model: model, p_uid: _spendUid,
+                           p_in: Math.max(0, Math.round(inTok)), p_cache: Math.max(0, Math.round(cache)),
+                           p_out: Math.max(0, Math.round(outTok)) }),
+  }).catch(() => { /* best effort */ });
+}
+/** Gemini 응답의 usageMetadata → 원장. (promptTokenCount / candidatesTokenCount) */
+function logGemini(fn: string, model: string, d: any) {
+  const u = d?.usageMetadata; if (!u) return;
+  logSpend(fn, model, Number(u.promptTokenCount || 0), Number(u.candidatesTokenCount || 0),
+           Number(u.cachedContentTokenCount || 0));
+}
 const SUBJ_TABLE: [string, RegExp][] = [
   ["홍보물", /벽면|홍보|방송|기사|인증|액자|상패|현판/],
   ["계단", /계단|올라가/], ["입구", /입구|현관/], ["간판", /간판|외관|건물/], ["거리", /골목|시장|거리/],
@@ -408,6 +443,8 @@ let _embedDbg = "";
 async function embedAll(texts: string[]): Promise<number[][] | null> {
   if (!GEMINI_KEY || !texts.length) return null;
   try {
+    // ⚠️ batchEmbed는 usage를 안 돌려준다 → 글자수/4 추정치로 남긴다(모델명에 ~est 표시)
+    logSpend("reel:embed", "gemini-embedding-001~est", texts.join("").length / 4, 0);
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${GEMINI_KEY}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -485,6 +522,7 @@ JSON 문자열 배열만 출력(문장 개수와 같은 길이).`;
       body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 900, thinkingConfig: { thinkingBudget: 0 } } }),
     });
     const d = await r.json().catch(() => null);
+    logGemini("reel:shotlist", "gemini-flash-latest", d);
     const txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
     const m = /\[[\s\S]*\]/.exec(txt);
     let arr: string[] = [];
@@ -1007,6 +1045,7 @@ function clipCards(clips: any[], info: ClipInfo[]) {
 
 // ── create: 정렬~매칭까지 실행 후 렌더 큐 투입 ──
 async function runCreate(uid: string, body: any): Promise<Response> {
+  _spendUid = uid;   // 💰 이 잡의 모든 AI 호출을 이 유저 앞으로 단다
   const script = String(body?.script || "").slice(0, 2000);
   const clips = (Array.isArray(body?.clips) ? body.clips : [])
     .map((c: any) => ({ url: String(c?.url || ""), kind: String(c?.kind || "video"), thumb: c?.thumb ? String(c.thumb) : null, dur: Number(c?.dur) || 8 }))

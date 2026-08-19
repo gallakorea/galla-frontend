@@ -164,6 +164,17 @@ def audit_render(path: str) -> dict:
     return got
 
 
+_STAGE = {}
+_stage_t0 = [None, None]
+def stage(name: str):
+    """⏱ 단계별 소요 계측 — 워커를 클라우드로 올리면 **렌더 시간이 이 제품의 진짜 원가**다.
+    AI 호출 몇 번보다 CPU 분이 크다. 어디서 시간이 나가는지 모르면 가격을 못 정한다."""
+    now = time.time()
+    if _stage_t0[0]:
+        _STAGE[_stage_t0[0]] = round(_STAGE.get(_stage_t0[0], 0) + (now - _stage_t0[1]), 1)
+    _stage_t0[0], _stage_t0[1] = name, now
+
+
 def run(cmd):
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
@@ -475,7 +486,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
 
     # 1) 소스 확보(URL이면 다운로드) — 같은 소스는 한 번만 받는다
-    progress("소스 내려받는 중")
+    stage("다운로드"); progress("소스 내려받는 중")
     cache = {}
     for sg in segs:
         if sg["src"] not in cache:
@@ -485,7 +496,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     voice = fetch(job["voice"], os.path.join(workdir, "voice" + (os.path.splitext(job["voice"].split("?")[0])[1] or ".m4a")))
 
     # 🔇 '마' 제거 — 음성에서 쉬는 구간을 없애고, 자막·컷 경계를 같은 비율로 당긴다
-    progress("빈 구간(마) 잘라내는 중")
+    stage("마제거"); progress("빈 구간(마) 잘라내는 중")
     voice, remap, tight_dur = strip_silence(voice, workdir)
     if remap(1.0) != 1.0 or tight_dur:
         job["subtitles"] = [{"text": x["text"],
@@ -568,7 +579,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     _ys.sort(); _ss.sort()
     tgt_y = _ys[len(_ys) // 2] if _ys else 128.0
     tgt_s = _ss[len(_ss) // 2] if _ss else 60.0
-    progress("결정적 순간 찾는 중")
+    stage("테이크분석"); progress("결정적 순간 찾는 중")
     picked = {}
     for i, sg in enumerate(segs):
         path = local[i]
@@ -580,6 +591,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         sg["in"] = st
     seg_files = []
     for i, sg in enumerate(segs):
+        stage("컷다듬기");
         progress(f"클립 다듬는 중 {i + 1}/{len(segs)}")
         sf = os.path.join(workdir, f"seg{i}.mp4")
         z = float(sg.get("zoom") or 1)
@@ -621,7 +633,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         seg_files.append(sf)
 
     # 3) 이어붙이기
-    progress("이어붙이는 중")
+    stage("이어붙이기"); progress("이어붙이는 중")
     lst = os.path.join(workdir, "list.txt")
     with open(lst, "w") as f:
         for sf in seg_files: f.write(f"file '{sf}'\n")
@@ -629,7 +641,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     run([FFMPEG, "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", video])
 
     # 4) 자막 번인 + 내레이션 믹스(클립 원음은 이미 제거됨)
-    progress("자막·음성 입히는 중")
+    stage("자막·인코딩"); progress("자막·음성 입히는 중")
     ass = os.path.join(workdir, "subs.ass")
     with open(ass, "w") as f: f.write(build_ass(job.get("subtitles", []), w, h, font))
     # 번들 폰트 우선(워커와 함께 배포되는 fonts/ — 컨테이너 이식 시에도 동일), 없으면 시스템 폰트
@@ -649,8 +661,11 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     # 📏 자동 감사 — 결과물을 사장님 완성본과 **같은 방식으로** 재서 목표 대비 편차를 남긴다.
     #    지금까지 "좋아졌다"는 보고와 사장님 체감이 계속 어긋났다. 수치로 못 박으면 그 간극이 사라진다.
     try:
+        stage("끝")
+        job["timing"] = dict(_STAGE)
         job["audit"] = audit_render(out_path)
         progress("감사: " + json.dumps(job["audit"], ensure_ascii=False))
+        progress("소요: " + json.dumps(job["timing"], ensure_ascii=False))
     except Exception as e:
         job["audit"] = {"error": str(e)[:80]}
     progress("완성")
