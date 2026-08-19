@@ -605,6 +605,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
       idle(() => {
         warm(PAGE_ORDER[curIdx + 1]); warm(PAGE_ORDER[curIdx - 1]);
+        /* 🖥 터치가 없는 기기(데스크톱 웹)에선 좌우 스와이프 자체가 불가능하다 →
+           미리보기 iframe 2개(이웃 페이지 전체 문서)를 만들 이유가 없다.
+           예전엔 무조건 만들어서, 광장 탭 하나 눌러도 /mypage·/dm 문서까지 같이 받아
+           '여러 번 새로고침되는 것처럼' 보였다(사장님 제보, 실측 문서 4회 요청).
+           ⚠️ 터치 기기에선 그대로 둔다 — 없애면 첫 스와이프가 검은 카드로 뜬다. */
+        var canSwipe = (navigator.maxTouchPoints || 0) > 0 || "ontouchstart" in window;
+        if (!canSwipe) return;
         ensureFrame(PAGE_ORDER[curIdx + 1]);
         ensureFrame(PAGE_ORDER[curIdx - 1]);
         /* 레이아웃 선(先)수행 — display:none 상태의 iframe은 로드만 되고 레이아웃이

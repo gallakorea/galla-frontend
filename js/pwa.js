@@ -88,10 +88,31 @@
       if (Date.now() - lastProbe < 180000) return;
       lastProbe = Date.now();
       try {
-        const html = await (await fetch(location.pathname + location.search, {
-          cache: 'no-store', headers: { 'x-galla-probe': '1' } })).text();
-        const serverVers = [...html.matchAll(VER_IN_SCRIPTS)].map(m => Number(m[1]));
-        const server = maxVer(serverVers);
+        /* 📉 예전엔 '현재 문서 HTML 전체'를 다시 받아 버전을 읽었다(트렌드 페이지 기준 26,627 bytes).
+           페이지마다·탭 복귀마다 도니 '여러 번 새로고침되는 것처럼' 보이고 회선도 먹었다(사장님 제보).
+           /version.txt 는 배포 버전만 담은 7 bytes·no-store 파일이다 — 이걸 먼저 본다.
+           ⚠️ 실패하면 예전 방식(HTML 전체)으로 폴백 — 판정 자체가 멈추면 옛 버전에 갇힌다. */
+        let server = 0;
+        try {
+          const t = await (await fetch('/version.txt', { cache: 'no-store' })).text();
+          server = Number((String(t).match(/\d{5,9}/) || [])[0] || 0);
+        } catch (_) { /* 아래 HTML 경로로 간다 */ }
+        /* 🛡 안전망 — version.txt 는 '손으로' 관리돼 실제 자산 버전과 어긋난 적이 있다
+           (f4019832c: 자산 0818130인데 version.txt 0818020). 그 상태면 'server <= mine' 으로
+           판정돼 유저가 옛 버전에 영영 갇힌다 — 프로브가 막으려던 바로 그 사고다.
+           그래서 version.txt 가 '업데이트 없음'이라고 할 때만, 30분에 한 번 HTML 로 교차확인한다.
+           (평소 26KB → 7B 로 줄이면서 최악의 지체는 30분으로 묶는다) */
+        let needCross = !server;
+        if (server && server <= mine) {
+          const k = 'galla_verXcheck';
+          let last = 0; try { last = Number(sessionStorage.getItem(k) || 0); } catch (_) {}
+          if (Date.now() - last > 1800000) { needCross = true; try { sessionStorage.setItem(k, String(Date.now())); } catch (_) {} }
+        }
+        if (needCross) {
+          const html = await (await fetch(location.pathname + location.search, {
+            cache: 'no-store', headers: { 'x-galla-probe': '1' } })).text();
+          server = Math.max(server, maxVer([...html.matchAll(VER_IN_SCRIPTS)].map(m => Number(m[1]))));
+        }
         /* '다르면'이 아니라 '더 최신이면'만 — SW 캐시가 옛 HTML을 돌려주면
            다르다는 이유로 옛 버전으로 리로드하는 루프가 생긴다 */
         if (!server || server <= mine) return;
