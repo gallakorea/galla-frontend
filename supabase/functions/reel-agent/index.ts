@@ -805,26 +805,20 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   _matchDbg += " | assign:subject-first";
 
 
-  /* 🪝 훅 — **0~3초는 대본과 무관하게 가장 군침 도는 음식 컷**(사장님 완성본 실측).
-     사장님은 0.9초에 이미 면발을 들어올린다. 대본 첫 문장이 "남대문시장 안쪽 골목"이어도
-     화면은 음식으로 연다. 제 규칙("위치 문장이면 장소 컷")은 첫 9초를 골목·간판·계단으로 채웠고,
-     릴스에서 이탈이 결정되는 3초를 통째로 버리는 짓이었다.
-     장소 컷은 버리지 않고 뒤로 밀린다(자리를 맞바꾼다). */
-  {
-    const hookEnd = 3.0;
-    const hookWins = wins.map((w, i) => ({ w, i })).filter((x) => x.w.start < hookEnd);
-    const yum = (i: number) => info[i].score + (info[i].role === "eat" ? 2 : info[i].role === "cook" ? 1.5 : info[i].role === "food" ? 1 : -5);
-    for (const { i: w } of hookWins) {
-      if (assign[w] < 0 || foodish(info[assign[w]].role)) continue;   // 이미 음식이면 그대로
-      let best = -1, bs = -Infinity;
-      for (let k = 0; k < wins.length; k++) {                        // 뒤쪽 구간의 음식 컷과 자리 교환
-        if (wins[k].start < hookEnd || assign[k] < 0) continue;
-        if (!foodish(info[assign[k]].role)) continue;
-        const v = yum(assign[k]);
-        if (v > bs) { bs = v; best = k; }
-      }
-      if (best >= 0) { const t = assign[w]; assign[w] = assign[best]; assign[best] = t; }
+  /* 🪝 훅 — **첫 컷 하나만** 음식으로 연다(사장님 완성본 실측: 0.9초에 면발, 2.3초엔 이미 간판).
+     ⚠️ 첫 3초 '구간 전체'를 음식으로 바꿨더니 도입부가 냉면 5컷 연속이 되고, 앞으로 끌려온 탓에
+        정작 "물냉면은 슴슴한 육수에" 자리엔 벽 메뉴판이 갔다(실사고).
+     ⚠️ 그리고 **교환이 아니라 복제**다 — 사장님은 같은 소재를 뒤에서 또 쓴다(물냉면 4회 실측).
+        빼앗아 오면 뒤가 비고, 빌려 오면 도입부만 강해진다. */
+  if (wins.length && assign[0] >= 0 && !foodish(info[assign[0]].role)) {
+    const yum = (i: number) => info[i].score + (info[i].role === "eat" ? 2 : info[i].role === "cook" ? 1.5 : 1);
+    let best = -1, bs = -Infinity;
+    for (let k = 1; k < wins.length; k++) {
+      if (assign[k] < 0 || !foodish(info[assign[k]].role)) continue;
+      const v = yum(assign[k]) - k * 0.05;          // 앞쪽 음식일수록 자연스럽다
+      if (v > bs) { bs = v; best = k; }
     }
+    if (best >= 0) assign[0] = assign[best];        // 복제(뒤 구간은 그대로 둔다)
   }
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
