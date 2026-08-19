@@ -2,8 +2,9 @@
    호출자: 결제 성공 직후 클라이언트(JWT 필수). 흐름:
      1) JWT에서 uid 추출(클라가 보낸 uid 신뢰 안 함)
      2) 스토어(App Store / Play)에 영수증 진위·상품 확인
-     3) grant_gp_topup(멱등)로 paid_balance 지급 — 같은 txid 재검증해도 1회만
-   ⚠️ 절대 클라의 'gp 금액'을 믿지 않는다. 상품ID→GP는 서버 gp_products가 결정. */
+     3) grant_gc_topup(멱등)로 GC 지급 — 같은 txid 재검증해도 1회만
+   ⚠️ 절대 클라의 금액을 믿지 않는다. 상품ID→GC는 서버 gc_products가 결정.
+   ⚠️ GP 가 아니라 GC 다 — GP 는 판매하지 않는다(예측 판돈이라 규제 대상). */
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const sb = createClient(
@@ -26,10 +27,15 @@ function callerUid(req: Request): string | null {
   } catch { return null; }
 }
 
-// gp_products.ios_product_id → product_key 역참조
-async function productKeyByIosId(iosId: string): Promise<string | null> {
-  const { data } = await sb.from("gp_products").select("key").eq("ios_product_id", iosId).maybeSingle();
-  return data?.key ?? null;
+// gc_products.product_id → 패키지 key 역참조(채널별)
+/* 스토어 상품 id → 우리 패키지 key.
+   ⚠️ gp_products 가 아니라 gc_products 다. GP 는 판매하지 않는다(2026-08-09 확정) —
+      예측 판돈이라 돈으로 사면 '돈으로 사서 결과에 걸고 딴다'가 되어 규제 대상이 된다.
+      인앱결제는 GC 로만 받는다. */
+async function pkgByStoreProduct(channel: "ios" | "android", productId: string): Promise<string | null> {
+  const { data } = await sb.from("gc_products").select("pkg")
+    .eq("channel", channel).eq("product_id", productId).eq("active", true).maybeSingle();
+  return data?.pkg ?? null;
 }
 
 /* Apple: App Store Server API 대신, 초기엔 verifyReceipt(레거시지만 sandbox/prod 모두 즉시 동작).
@@ -65,9 +71,9 @@ Deno.serve(async (req) => {
     if (!payload.receipt) return j({ ok: false, reason: "no_receipt" }, 400);
     const v = await verifyApple(payload.receipt);
     if (!v.ok || !v.iosProductId || !v.txid) return j({ ok: false, reason: "verify_failed", raw: v.raw }, 400);
-    const pkey = await productKeyByIosId(v.iosProductId);
+    const pkey = await pkgByStoreProduct("ios", v.iosProductId);
     if (!pkey) return j({ ok: false, reason: "unknown_product" }, 400);
-    const { data, error } = await sb.rpc("grant_gp_topup", {
+    const { data, error } = await sb.rpc("grant_gc_topup", {
       p_user: uid, p_store: "apple", p_txid: v.txid, p_product: pkey, p_raw: v.raw as any,
     });
     if (error) return j({ ok: false, reason: "grant_error", detail: error.message }, 500);
