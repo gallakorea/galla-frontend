@@ -17,7 +17,7 @@
 #   "width": 1080, "height": 1920, "fps": 30
 # }
 
-import argparse, json, os, re, shlex, subprocess, sys, tempfile, time, urllib.request
+import argparse, hashlib, json, os, re, shlex, subprocess, sys, tempfile, time, urllib.request
 
 # 맥 홈브루 기본 ffmpeg는 슬림 빌드(libass 없음) — 자막 번인에는 ffmpeg-full 필요(keg-only 경로 우선)
 _FULL = "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg"
@@ -166,6 +166,40 @@ def audit_render(path: str) -> dict:
 
 _STAGE = {}
 _stage_t0 = [None, None]
+def fetch_cached(url: str, ext: str, workdir: str, idx: int) -> str:
+    """소스 클립 디스크 캐시 — **미리보기에서 컷을 바꾸고 다시 만들면 같은 클립을 또 받는다.**
+    그게 우리 기본 흐름이라(A/B 수정 → 재렌더) 다운로드가 매번 통째로 반복됐다(실측 20~94초).
+    용량이 커서 오래된 것부터 정리한다(기본 3GB 상한)."""
+    if not re.match(r"^https?://", url):
+        return url
+    d = os.path.join(CACHE_DIR, "src")
+    os.makedirs(d, exist_ok=True)
+    fp = os.path.join(d, hashlib.sha1(url.encode("utf-8")).hexdigest() + ext)
+    if os.path.exists(fp) and os.path.getsize(fp) > 1000:
+        os.utime(fp, None)          # LRU 갱신
+        return fp
+    tmp = fetch(url, os.path.join(workdir, f"src{idx}{ext}"))
+    try:
+        import shutil
+        shutil.copyfile(tmp, fp)
+        _prune_cache(d)
+        return fp
+    except Exception:
+        return tmp
+
+
+def _prune_cache(d: str, cap_bytes: int = 3 * 1024 ** 3):
+    try:
+        files = [(os.path.getatime(os.path.join(d, f)), os.path.getsize(os.path.join(d, f)), os.path.join(d, f))
+                 for f in os.listdir(d)]
+        total = sum(x[1] for x in files)
+        for at, sz, fp in sorted(files):
+            if total <= cap_bytes: break
+            os.remove(fp); total -= sz
+    except Exception:
+        pass
+
+
 def stage(name: str):
     """⏱ 단계별 소요 계측 — 워커를 클라우드로 올리면 **렌더 시간이 이 제품의 진짜 원가**다.
     AI 호출 몇 번보다 CPU 분이 크다. 어디서 시간이 나가는지 모르면 가격을 못 정한다."""
@@ -194,10 +228,43 @@ def probe_dur(path: str) -> float:
     except Exception:
         return 8.0
 
+# 💾 테이크 분석 캐시 — **로컬 경로가 아니라 소스 URL로** 기억한다.
+#    ⚠️ 기존 캐시는 임시 다운로드 경로가 키라 잡마다 경로가 바뀌어 **한 번도 안 맞았다**.
+#       실측: 테이크분석 57.9초 = 렌더 시간의 36%를 매번 다시 태우고 있었다.
+#    클립 URL은 업로드마다 유일(uuid)하고 내용이 안 바뀌므로 영구 캐시해도 안전하다.
+CACHE_DIR = os.environ.get("REEL_CACHE_DIR") or os.path.join(os.path.expanduser("~"), ".cache", "galla-reel")
+_url_of = {}          # 로컬 경로 → 소스 URL
+
+def _cache_path(url: str, kind: str) -> str:
+    h = hashlib.sha1(f"{kind}|{url}".encode("utf-8")).hexdigest()
+    return os.path.join(CACHE_DIR, h[:2], h + ".json")
+
+def cache_get(path: str, kind: str):
+    url = _url_of.get(path)
+    if not url: return None
+    try:
+        with open(_cache_path(url, kind)) as f: return json.load(f)
+    except Exception: return None
+
+def cache_put(path: str, kind: str, value):
+    url = _url_of.get(path)
+    if not url: return
+    try:
+        fp = _cache_path(url, kind)
+        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        with open(fp, "w") as f: json.dump(value, f)
+    except Exception: pass
+
+
 _motion_cache = {}
 def motion_profile(path: str):
     """프레임 차분(YDIF)으로 '움직임 곡선'을 뽑는다 — 붓기·자르기·건져올리기 같은 결정적 순간을 찾기 위한 재료."""
     if path in _motion_cache: return _motion_cache[path]
+    hit = cache_get(path, "motion")
+    if hit is not None:
+        prof = [(float(t), float(v)) for t, v in hit]
+        _motion_cache[path] = prof
+        return prof
     try:
         p = subprocess.run(
             [FFMPEG, "-v", "info", "-i", path, "-vf",
@@ -216,6 +283,7 @@ def motion_profile(path: str):
                 except ValueError: pass
         prof = list(zip(times, vals))
         _motion_cache[path] = prof
+        cache_put(path, "motion", [[t, v] for t, v in prof])
         return prof
     except Exception:
         _motion_cache[path] = []
@@ -256,6 +324,11 @@ def clip_takes(path: str, workdir: str, min_len: float = 3.0, max_len: float = 6
     """
     key = (path, round(min_len, 1))
     if key in _takes_cache: return _takes_cache[key]
+    hit = cache_get(path, f"takes{round(min_len, 1)}")
+    if hit is not None:
+        takes = [tuple(x) for x in hit]
+        _takes_cache[key] = takes
+        return takes
     try:
         from PIL import Image, ImageFilter, ImageStat
         total = probe_dur(path)
@@ -322,6 +395,7 @@ def clip_takes(path: str, workdir: str, min_len: float = 3.0, max_len: float = 6
                 i = j + 1
         takes.sort(key=lambda x: (-(x[1] - x[0]) * 0.5 - x[2] * 0.05))   # 길고 선명한 순
         _takes_cache[key] = takes
+        cache_put(path, f"takes{round(min_len, 1)}", [list(x) for x in takes])
         return takes
     except Exception:
         _takes_cache[key] = []
@@ -486,12 +560,15 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
 
     # 1) 소스 확보(URL이면 다운로드) — 같은 소스는 한 번만 받는다
+    _STAGE.clear(); _stage_t0[0] = None      # ⚠️ 워커는 상주 프로세스다 — 잡마다 타이머를 비우지 않으면 값이 누적된다
     stage("다운로드"); progress("소스 내려받는 중")
     cache = {}
     for sg in segs:
         if sg["src"] not in cache:
             ext = os.path.splitext(sg["src"].split("?")[0])[1] or ".mp4"
-            cache[sg["src"]] = fetch(sg["src"], os.path.join(workdir, f"src{len(cache)}{ext}"))
+            lp = fetch_cached(sg["src"], ext, workdir, len(cache))
+            cache[sg["src"]] = lp
+            _url_of[lp] = sg["src"]        # 💾 분석 캐시는 이 URL을 키로 쓴다(임시 경로는 매번 바뀐다)
     local = [cache[sg["src"]] for sg in segs]
     voice = fetch(job["voice"], os.path.join(workdir, "voice" + (os.path.splitext(job["voice"].split("?")[0])[1] or ".m4a")))
 
