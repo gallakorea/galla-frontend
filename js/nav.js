@@ -601,26 +601,33 @@ document.addEventListener("DOMContentLoaded", () => {
     /* 이웃 탭 미리보기 선(先)로딩 — 드래그 시작 후에 만들면 폰 네트워크에선
        그릴 시간이 없어 '검은 카드'만 보인다(에뮬레이터 프레임 실측로 확정).
        페이지가 자리잡은 뒤 유휴 시점에 좌우 이웃을 미리 만들어 둔다. */
-    setTimeout(() => {
-      const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+    /* 미리보기 비용을 '페이지 로드마다'에서 '처음 손가락이 닿을 때'로 옮긴다.
+       예전엔 로드 2.2초 뒤 무조건 이웃 문서 2개(/mypage·/dm)를 받아, 광장 탭 한 번에
+       문서를 4개나 받았다(사장님 제보 "여러 번 새로고침되면서 나옴", 실측 확인).
+         · 데스크톱: 스와이프 자체가 불가능 → 아예 안 만든다.
+         · 폰 웹: 스크롤이든 탭이든 '첫 접촉' 시점에 만든다. 대부분의 방문은 스와이프 없이
+                  끝나므로 그런 방문은 비용이 0이 된다. 접촉은 드래그 확정보다 앞서므로
+                  준비 시간도 확보된다(검은 카드 방지).
+       ⚠️ display:block 선(先)레이아웃은 유지 — 빼면 '첫 스와이프 스냅백'이 재발한다. */
+    const buildPeekFrames = () => {
+      if (buildPeekFrames.done) return; buildPeekFrames.done = true;
+      const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
       idle(() => {
-        warm(PAGE_ORDER[curIdx + 1]); warm(PAGE_ORDER[curIdx - 1]);
-        /* 🖥 터치가 없는 기기(데스크톱 웹)에선 좌우 스와이프 자체가 불가능하다 →
-           미리보기 iframe 2개(이웃 페이지 전체 문서)를 만들 이유가 없다.
-           예전엔 무조건 만들어서, 광장 탭 하나 눌러도 /mypage·/dm 문서까지 같이 받아
-           '여러 번 새로고침되는 것처럼' 보였다(사장님 제보, 실측 문서 4회 요청).
-           ⚠️ 터치 기기에선 그대로 둔다 — 없애면 첫 스와이프가 검은 카드로 뜬다. */
-        var canSwipe = (navigator.maxTouchPoints || 0) > 0 || "ontouchstart" in window;
-        if (!canSwipe) return;
         ensureFrame(PAGE_ORDER[curIdx + 1]);
         ensureFrame(PAGE_ORDER[curIdx - 1]);
-        /* 레이아웃 선(先)수행 — display:none 상태의 iframe은 로드만 되고 레이아웃이
-           안 된다. 그 비용이 '첫 드래그' 중에 터지면 제스처 프레임을 먹어
-           커밋 판정 미달 → 스냅백(사장님 재현: 첫 스와이프 튕기고 두 번째 성공).
-           보이지 않게(prewarm=visibility:hidden) 미리 펼쳐 레이아웃까지 끝내둔다. */
         peek.classList.add("prewarm");
         for (const k in pvFrames) pvFrames[k].style.display = "block";
         setTimeout(() => peek.classList.remove("prewarm"), 600);
+      });
+    };
+    setTimeout(() => {
+      const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+      idle(() => {
+        // 프리페치(<link rel=prefetch>)는 가볍고 실제 이동을 빠르게 하므로 그대로 둔다.
+        warm(PAGE_ORDER[curIdx + 1]); warm(PAGE_ORDER[curIdx - 1]);
+        const canSwipe = (navigator.maxTouchPoints || 0) > 0 || "ontouchstart" in window;
+        if (!canSwipe) return;   // 데스크톱 웹 — 미리보기 프레임 자체를 만들지 않는다
+        document.addEventListener("touchstart", buildPeekFrames, { passive: true, once: true });
       });
     }, 2200);
     const showPeek = (key) => {
