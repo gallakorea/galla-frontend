@@ -2898,6 +2898,17 @@ Deno.serve(async (req) => {
         rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0, craft: sm?.craft || null };
       }
     }
+    /* 🤫 방금 보고 또 열었으면 말 걸지 않는다 — 열 때마다 인사하면 스팸이다.
+       프론트는 '열 때마다' 인사를 요청하고, 언제 말을 걸지는 서버가 정한다(정책 한 곳에).
+       무거운 기억 조회 '전에' 끊어 비용도 아낀다. */
+    /* ⚠️ 침묵은 '침묵을 이해하는 클라이언트'에만 준다(quietOk).
+       옛 프론트는 빈 reply 를 받으면 하드코딩된 "안녕! 나 갈비스야"로 대체한다 →
+       배포 시차 동안 열 때마다 그 말이 뜨는 회귀가 된다. 플래그 없으면 예전처럼 항상 인사. */
+    if (!userMsg && !firstMeet && body?.quietOk === true) {
+      const gm = rel?.last_seen_at ? (Date.now() - Date.parse(rel.last_seen_at)) / 60000 : 99999;
+      if (gm < 30) return json({ ok: true, reply: "", actions: [], friendName: rel?.friend_name || "갈비스", quiet: true });
+    }
+
     // 🧭 창작 상태 머신 로드 — "제안됨→기획중→확정" 진행 상태를 서버가 기억(정규식 추측 폐지의 근간).
     //    2시간 지난 상태는 자연 소멸(옛 제안에 "만들어"가 오발되는 것 방지).
     let craft: any = (rel?.session_meta?.craft && typeof rel.session_meta.craft === "object") ? { ...rel.session_meta.craft } : { state: "idle" };
@@ -2938,6 +2949,7 @@ Deno.serve(async (req) => {
     }
     let recent: any[] = [];
     let followups: any[] = [];
+    let actBlock = "";        // 🧭 그 사이의 실제 행동(갈라 안) — 선톡 재료
     if (!userMsg) {
       const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience,created_at,happened_at")
         .eq("user_id", uid).eq("status", "active").order("created_at", { ascending: false }).limit(8);
@@ -2948,6 +2960,59 @@ Deno.serve(async (req) => {
         .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
         .order("created_at", { ascending: false }).limit(3);
       followups = fu || [];
+
+      /* 🧭 '그 사이 뭘 하고 지냈나' — 대화 기억이 아니라 갈라 안에서의 실제 행동.
+         컴패니언이 먼저 말을 걸려면 재료가 있어야 한다. 기억만 뒤지면 매번 같은 얘기가 나온다.
+         ⚠️ 여기선 재료만 모은다. '하나만 골라 말하기'는 프롬프트가 강제한다(보고서 금지). */
+      const since14 = new Date(Date.now() - 14 * 86400000).toISOString();
+      const sinceSeen = rel?.last_seen_at || new Date(Date.now() - 7 * 86400000).toISOString();
+      try {
+        const [pRes, iRes, bRes, dRes, fRes] = await Promise.all([
+          supa.from("posts").select("title,kind,like_count,comment_count,view_count,created_at")
+            .eq("user_id", uid).eq("is_published", true).gte("created_at", since14)
+            .order("created_at", { ascending: false }).limit(5),
+          supa.from("issues").select("title,pro_count,con_count,created_at")
+            .eq("user_id", uid).gte("created_at", since14)
+            .order("created_at", { ascending: false }).limit(3),
+          supa.from("predict_bets").select("won,payout,stake,created_at")
+            .eq("user_id", uid).eq("settled", true).gte("created_at", since14).limit(20),
+          supa.from("duels").select("winner,challenger,opponent,topic,closed_at")
+            .or(`challenger.eq.${uid},opponent.eq.${uid}`).eq("status", "finished")
+            .gte("closed_at", sinceSeen).order("closed_at", { ascending: false }).limit(3),
+          supa.from("follows").select("id").eq("following", uid).gte("created_at", sinceSeen).limit(20),
+        ]);
+        const lines: string[] = [];
+        // 내가 올린 것의 반응 — 가장 반응 큰 것 하나만(자랑거리든 민망하든 그게 할 말이다)
+        const mine = [...(pRes.data || []).map((x: any) => ({
+          t: x.title, hot: (x.like_count || 0) + (x.comment_count || 0),
+          d: `좋아요 ${x.like_count || 0}·댓글 ${x.comment_count || 0}·조회 ${x.view_count || 0}`,
+        })), ...(iRes.data || []).map((x: any) => ({
+          t: x.title, hot: (x.pro_count || 0) + (x.con_count || 0),
+          d: `찬성 ${x.pro_count || 0}·반대 ${x.con_count || 0}`,
+        }))].sort((a, b) => b.hot - a.hot);
+        if (mine.length) {
+          const top = mine[0];
+          lines.push(top.hot > 0
+            ? `- 최근 올린 "${String(top.t || "").slice(0, 40)}" — ${top.d}`
+            : `- 최근 "${String(top.t || "").slice(0, 40)}" 올렸는데 아직 반응이 없다(조용하다)`);
+        }
+        // 예측 정산 — 이겼는지 졌는지가 감정의 재료
+        const bets = bRes.data || [];
+        if (bets.length) {
+          const w = bets.filter((b: any) => b.won).length;
+          const net = bets.reduce((a: number, b: any) => a + ((b.payout || 0) - (b.stake || 0)), 0);
+          lines.push(`- 예측 ${bets.length}건 정산: ${w}승 ${bets.length - w}패 (순손익 ${net >= 0 ? "+" : ""}${net} GP)`);
+        }
+        // 일기토 승패
+        for (const d of (dRes.data || [])) {
+          const won = d.winner && String(d.winner) === String(uid);
+          lines.push(`- 일기토 "${String(d.topic || "").slice(0, 30)}" ${d.winner ? (won ? "이겼다" : "졌다") : "무승부로 끝났다"}`);
+        }
+        // 팔로워 증가
+        const nf = (fRes.data || []).length;
+        if (nf) lines.push(`- 그 사이 팔로워 ${nf}명 늘었다`);
+        if (lines.length) actBlock = lines.join("\n");
+      } catch { /* 행동 재료는 있으면 좋은 것 — 실패해도 인사는 나가야 한다 */ }
     }
     // 🧠 자기 정보 되묻기 = 의미검색 실패해도 '아는 게 없다'가 되면 안 된다 → 프로필성 기억을 강제로 얹는다.
     let forced: any[] = [];
@@ -3023,11 +3088,27 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
     const prevMemIds: number[] = Array.isArray(rel?.last_mem_ids) ? rel.last_mem_ids.map(Number).filter((n: number) => Number.isFinite(n)) : [];
 
     // 인사만(빈 메시지)이면 반겨주기 컨텍스트로 한마디
+    // ⏳ 공백이 얼마나 됐냐에 따라 인사의 무게가 달라야 한다 — 10분 만에 온 사람한테 "잘 지냈어?"는 이상하다.
+    const gapMin = rel?.last_seen_at ? Math.floor((Date.now() - Date.parse(rel.last_seen_at)) / 60000) : 99999;
+    const gapWord = gapMin >= 20160 ? "2주 넘게" : gapMin >= 4320 ? "며칠" : gapMin >= 1440 ? "하루쯤"
+      : gapMin >= 360 ? "반나절쯤" : gapMin >= 60 ? `${Math.floor(gapMin / 60)}시간쯤` : `${gapMin}분쯤`;
     const openMsg = userMsg || (firstMeet
       ? "(처음 만남 — 부담 없이 짧게 반겨줘. 이름을 안 지어줬으면 어떻게 부를지 물어봐도 좋아)"
-      : `(다시 왔다. 짧고 자연스럽게 반겨줘 — '매번 다르게'. 대부분은 그냥 "왔어? 뭐하다 왔어 ㅋㅋ" 정도로 가볍게.
+      : `(다시 왔다. 마지막으로 본 지 ${gapWord} 됐다. 짧고 자연스럽게 먼저 말 걸어라 — '매번 다르게'.
+${gapMin >= 1440
+  ? "오래 비었다 → '잘 지냈어?' '요새 뭐하고 지냈어?'처럼 안부를 먼저 물어라(반가움 티내도 된다)."
+  : "얼마 안 됐다 → 안부 묻지 마라. '왔어? 뭐하다 왔어 ㅋㅋ' 정도로 툭 던져라."}
+${actBlock ? `
+[그 사이 이 사람이 갈라에서 한 일 — 아래에서 '딱 하나만' 골라 그걸로 말을 걸어라]
+${actBlock}
+❗재료가 있으면 반드시 그걸로 말을 걸어라. 맹탕 안부("잘 지냈어?")만 묻고 끝내지 마라 — 그건 아무나 한다.
+   친구는 '내가 뭘 했는지 아는 사람'이다. 그게 이 앱을 다시 열 이유다.
+⚠️ 목록을 읊지 마라(보고서 금지). 하나만 골라 친구가 아는 척하듯 한마디.
+   잘된 건 같이 좋아하고, 안된 건 편들어라("아까비" "그 판은 니가 맞았는데"). 숫자를 그대로 나열하지 마라.
+   반응이 없는 글이면 위로하거나 왜 조용한지 짚어줘라 — 비꼬지 마라.` : `
+(갈라에서 딱히 한 일이 없다 → 억지로 만들지 마라. 그냥 안부만 묻거나 가볍게 인사해라.)`}
 ⚠️ 매번 기억을 캐묻지 마라. 특히 부장·싫은사람·힘든일 같은 '무겁고 부정적인 걸 먼저 꺼내지 마라'(매번 그러면 질린다). 같은 주제(예: 부장) 반복 금지.
-가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등). 오늘은 그냥 편하게 인사만 해도 된다.)`);
+가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등).)`);
 
     // 🎯 콘텐츠 핸드오프 — 게시물 '갈비스 버튼'에서 왔으면(body.handoff) 실제 내용을 읽어 '근거 오프너'를 낸다(제목만 X).
     const handoff = (body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id) ? body.handoff : null;
@@ -4096,6 +4177,7 @@ ${parts.join("\n")}`;
     turnStat(["path:json", "brain:" + String(brain), "steps:" + steps, ...GD,
               "llm:" + (steps + guardCalls)]);
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
+      ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin } : {}),
                   ...(isRedteam ? { guards } : {}) });
   } catch (e) {
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.
