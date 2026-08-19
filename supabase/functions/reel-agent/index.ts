@@ -365,6 +365,21 @@ const conceptHits = (a: string, b: string) => {
   }
   return n;
 };
+/* 🎚 템포 프로파일 — 사장님 완성본 28편 자동 실측(2026-08-19, scripts/measure-reels.py).
+   25초 이상(11편): 평균 컷 **1.95초** · 컷 16.6개 · 첫 5초 3.8컷
+   20초 미만(11편): 평균 컷 **1.10초** · 컷 12.1개 · 첫 5초 5.4컷
+   ⚠️ '릴스는 3초'로 뭉뚱그렸던 게 틀렸다 — 길이가 짧을수록 두 배 빠르다.
+   그리고 도입부는 본편보다 촘촘하다(첫 5초는 평균의 0.65배). */
+function cutProfile(voiceDur: number) {
+  const d = Math.max(8, Math.min(45, voiceDur || 30));
+  const avg = d <= 15 ? 1.10 : d >= 28 ? 1.95 : 1.10 + (d - 15) * (0.85 / 13);
+  return {
+    avg,
+    hook: +(avg * 0.65).toFixed(2),      // 첫 5초 구간 목표
+    min: 0.9,                             // 실측 최단 0.26~1.2 → 안전하게 0.9
+    max: +(avg * 1.75).toFixed(2),        // 실측 최장이 평균의 1.7~1.9배
+  };
+}
 const SUBJ_TABLE: [string, RegExp][] = [
   ["홍보물", /벽면|홍보|방송|기사|인증|액자|상패|현판/],
   ["계단", /계단|올라가/], ["입구", /입구|현관/], ["간판", /간판|외관|건물/], ["거리", /골목|시장|거리/],
@@ -483,7 +498,8 @@ let _matchDbg = "";   // 🔬 진단: 어떤 경로로 구간을 만들었는지
 async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number, script = "", isSpare: boolean[] = []) {
   _matchDbg = "";
   if (!subs.length || clips.length < 2) { _matchDbg = `skip subs=${subs.length} clips=${clips.length}`; return null; }
-  const target = Math.max(2.2, Math.min(3.2, voiceDur / Math.max(6, Math.min(clips.length, 12))));
+  const PROF = cutProfile(voiceDur);
+  const target = PROF.avg;
   /* ① 컷 구간 = '문장' 단위. 한 문장이 곧 한 소재다("빈대떡은 겉은 바삭…" = 빈대떡 컷).
      문장을 가로질러 4초씩 끊으면 "…돕니다 / 빈대떡은"이 한 구간에 섞여 매칭이 뭉개진다(실사고).
      문장이 길면(>5.5s) 안에서만 쪼갠다. 대본이 없으면 종전처럼 시간 기준. */
@@ -522,7 +538,9 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       const end = (nextIdx !== undefined && nextIdx < subs.length) ? subs[nextIdx].start : voiceDur;
       if (end - start < 0.8) continue;
       // 긴 문장은 안에서만 분할(소재는 그대로 유지 — 뒤쪽엔 같은 소재 예비 컷이 붙는다)
-      const parts = Math.max(1, Math.min(3, Math.round((end - start) / Math.max(target, 3.2))));
+      /* 도입부(첫 5초)는 더 촘촘하게 — 실측상 사장님은 여기서 컷을 3~5개 쓴다(제 것은 1개였다). */
+      const tgt = start < 5 ? PROF.hook : PROF.avg;
+      const parts = Math.max(1, Math.min(4, Math.round((end - start) / tgt)));
       /* ✂️ 분할 지점은 **반드시 자막 카드 경계에 스냅**한다(균등 시간 분할 금지).
          ⚠️ 실사고: "1960년부터 이어온 평양냉면 노포인데, 2층 입구가 좁아서…" 문장을 7.96초에서 반으로 자르니
             7.36초에 시작한 "2층 입구가"가 앞 조각에 끌려 들어가, 앞 조각이 '계단'으로 판정됐다.
@@ -787,6 +805,27 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   _matchDbg += " | assign:subject-first";
 
 
+  /* 🪝 훅 — **0~3초는 대본과 무관하게 가장 군침 도는 음식 컷**(사장님 완성본 실측).
+     사장님은 0.9초에 이미 면발을 들어올린다. 대본 첫 문장이 "남대문시장 안쪽 골목"이어도
+     화면은 음식으로 연다. 제 규칙("위치 문장이면 장소 컷")은 첫 9초를 골목·간판·계단으로 채웠고,
+     릴스에서 이탈이 결정되는 3초를 통째로 버리는 짓이었다.
+     장소 컷은 버리지 않고 뒤로 밀린다(자리를 맞바꾼다). */
+  {
+    const hookEnd = 3.0;
+    const hookWins = wins.map((w, i) => ({ w, i })).filter((x) => x.w.start < hookEnd);
+    const yum = (i: number) => info[i].score + (info[i].role === "eat" ? 2 : info[i].role === "cook" ? 1.5 : info[i].role === "food" ? 1 : -5);
+    for (const { i: w } of hookWins) {
+      if (assign[w] < 0 || foodish(info[assign[w]].role)) continue;   // 이미 음식이면 그대로
+      let best = -1, bs = -Infinity;
+      for (let k = 0; k < wins.length; k++) {                        // 뒤쪽 구간의 음식 컷과 자리 교환
+        if (wins[k].start < hookEnd || assign[k] < 0) continue;
+        if (!foodish(info[assign[k]].role)) continue;
+        const v = yum(assign[k]);
+        if (v > bs) { bs = v; best = k; }
+      }
+      if (best >= 0) { const t = assign[w]; assign[w] = assign[best]; assign[best] = t; }
+    }
+  }
   const segs: { clip: number; start: number; end: number }[] = [];
   for (let w = 0; w < wins.length; w++) {
     if (assign[w] < 0) continue;
@@ -810,10 +849,11 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
       const hit = SUBJ_TABLE.find(([, re]) => re.test(t));
       return hit ? hit[0] : "";
     };
-    const wantSubj = subjOf2(s.clip);
-    const hasAlt = clips.some((_: any, i: number) =>
-      i !== s.clip && !usedAll.has(i) && (!wantSubj || subjOf2(i) === wantSubj));
-    const parts = hasAlt ? Math.max(1, Math.ceil(span / 3.0)) : 1;   // 릴스 템포: 3초 단위(대안 있을 때만)
+    /* 🎚 프로파일 템포로 쪼갠다 — 대안 앵글이 없어도 쪼갠다(같은 클립의 다른 구간 + 확대로 그림이 바뀐다).
+       ⚠️ 예전엔 '대안 없으면 통으로'였는데, 그 결과 30초에 8컷(평균 3.2초)까지 늘어졌다.
+          사장님 완성본은 같은 소재를 각도·구간 바꿔 여러 번 되돌아온다(물냉면 4회·무침 3회 실측). */
+    const tgt2 = s.start < 5 ? PROF.hook : PROF.avg;
+    const parts = Math.max(1, Math.min(5, Math.round(span / tgt2)));
     for (let p = 0; p < parts; p++) {
       const st = +(s.start + span * p / parts).toFixed(2);
       const en = +(s.start + span * (p + 1) / parts).toFixed(2);
@@ -1144,7 +1184,8 @@ async function runCreate(uid: string, body: any): Promise<Response> {
           이제 조립은 재배치를 일절 하지 않는다: 컷 1개 = 매칭 구간 1개, 클립 교체 금지.
           클립이 짧으면 '같은 클립'을 이어 붙여 채운다(붙어 있으므로 중복으로 보이지 않는다). */
     segs.sort((a, b) => a.start - b.start);
-    const CUT_MAX = 3.6;
+    /* 컷 상한 — 실측상 최장 컷은 평균의 1.7~1.9배(30초물에서 3.4초). 고정 3.6초는 길었다. */
+    const CUT_MAX = cutProfile(voiceDur).max;
     const fillIdx = matchIdx;
     const fClips = matchClips;
     const fInfo = matchInfo;

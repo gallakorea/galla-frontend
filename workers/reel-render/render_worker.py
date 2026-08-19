@@ -138,6 +138,32 @@ def voice_filters(voice: str, tempo: float = 1.0, gain_db: float = 5.0) -> str:
     return ",".join(pre)
 
 
+def style_target(dur: float) -> dict:
+    """사장님 완성본 28편 실측 프로파일(2026-08-19). 길이에 따라 템포가 다르다."""
+    d = max(8.0, min(45.0, dur or 30.0))
+    avg = 1.10 if d <= 15 else (1.95 if d >= 28 else 1.10 + (d - 15) * (0.85 / 13))
+    return {"avg_cut": round(avg, 2), "cuts": round(d / avg), "first5_cuts": 5 if d <= 20 else 4}
+
+
+def audit_render(path: str) -> dict:
+    """완성본 측정과 동일한 잣대로 우리 결과물을 잰다(scripts/measure-reels.py와 같은 방식)."""
+    d = probe_dur(path)
+    p = subprocess.run([FFMPEG, "-v", "error", "-i", path, "-vf",
+                        "scale=240:-2,select='gt(scene,0.35)',metadata=print:file=-",
+                        "-an", "-f", "null", "-"], capture_output=True, text=True)
+    ts = [float(x) for x in re.findall(r"pts_time:([0-9.]+)", p.stdout + p.stderr)]
+    bounds = [0.0] + ts + [d]
+    lens = [round(bounds[i + 1] - bounds[i], 2) for i in range(len(bounds) - 1)]
+    lens = [x for x in lens if x > 0.2] or [d]
+    tgt = style_target(d)
+    got = {"dur": round(d, 1), "cuts": len(lens), "avg_cut": round(sum(lens) / len(lens), 2),
+           "min_cut": min(lens), "max_cut": max(lens), "first5_cuts": len([t for t in ts if t <= 5.0]) + 1}
+    got["target"] = tgt
+    # 목표의 ±35% 안이면 통과 — 취향을 회귀 검사로 바꾸는 지점
+    got["pass"] = abs(got["avg_cut"] - tgt["avg_cut"]) <= tgt["avg_cut"] * 0.35 and got["first5_cuts"] >= tgt["first5_cuts"] - 1
+    return got
+
+
 def run(cmd):
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
@@ -485,7 +511,10 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
     # 🛡 컷 길이 상한(최종 안전망) — 에이전트가 10초·19초짜리 컷을 보내면 정지화면처럼 보인다(실사고).
     #    총 길이는 유지하면서 '같은 클립의 다음 구간 → 다른 클립' 순으로 쪼갠다(화면이 계속 움직인다).
-    CUT_MAX = 3.5   # 릴스 템포(사장님: 한 화면 오래 쓰면 이탈률↑)
+    # 🎚 컷 상한 — 사장님 완성본 실측(28편): 30초물 최장 3.4초, 12초물 최장 1.6초.
+    #    음성 길이에 따라 상한도 달라져야 한다(고정 3.5초는 짧은 영상에서 통째로 느리다).
+    _vd = probe_dur(voice)
+    CUT_MAX = 1.9 if _vd <= 15 else (3.4 if _vd >= 28 else 1.9 + (_vd - 15) * (1.5 / 13))
     durs = {p: probe_dur(p) for p in cache.values()}
     order = list(dict.fromkeys(local))          # 등장 순서대로 중복 없는 소스 목록
     split_segs, split_local = [], []
@@ -616,6 +645,14 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
     cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "19",
             "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", out_path]
     run(cmd)
+
+    # 📏 자동 감사 — 결과물을 사장님 완성본과 **같은 방식으로** 재서 목표 대비 편차를 남긴다.
+    #    지금까지 "좋아졌다"는 보고와 사장님 체감이 계속 어긋났다. 수치로 못 박으면 그 간극이 사라진다.
+    try:
+        job["audit"] = audit_render(out_path)
+        progress("감사: " + json.dumps(job["audit"], ensure_ascii=False))
+    except Exception as e:
+        job["audit"] = {"error": str(e)[:80]}
     progress("완성")
     return out_path
 
