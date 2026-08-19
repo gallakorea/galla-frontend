@@ -125,33 +125,17 @@ def stabilize(src: str, dst: str, workdir: str, idx: int) -> bool:
         return False
 
 
-def voice_filters(voice: str, tempo: float = 1.0) -> str:
-    """내레이션 마스터링 체인(무료·외부 API 없음).
-    저역컷 → 잔잡음 감쇠 → 압축 → 리미터 → 라우드니스 정규화(-14 LUFS, 소셜 기준).
-    ⚠️ 압축 없이 loudnorm만 걸면 목표에 못 간다 — 원음이 이미 피크에 붙어 있어(TP≈0)
-       트루피크 한계에 막혀 게인이 안 올라간다(실측: -14 지시에 -16.2). 압축이 먼저다.
-    ⚠️ 측정(1패스)은 반드시 '압축까지 끝난 신호'로 해야 값이 맞는다."""
+def voice_filters(voice: str, tempo: float = 1.0, gain_db: float = 5.0) -> str:
+    """내레이션 마스터링 — **사장님 규칙: 원본 소리 +5dB**(2026-08-19 확인).
+    ⚠️ 예전엔 -14 LUFS로 정규화했는데 그건 우리 추측이었다. 완성본 14편을 실측하니 라우드니스가
+       -13.4 ~ -18.2로 흩어져 있다 — 목표 라우드니스가 아니라 **원본 대비 고정 게인**이 규칙이라는 뜻이다.
+       정규화를 하면 조용히 녹음한 날의 '분위기'까지 깎아 평평해진다.
+    저역컷·잔잡음 감쇠는 유지하고(폰 녹음 웅웅거림), 게인 뒤에 리미터로 클리핑만 막는다."""
     pre = []
     if tempo > 1.001:
         pre.append(f"atempo={tempo:.3f}")
-    pre += ["highpass=f=90", "afftdn=nf=-24",
-            "acompressor=threshold=-18dB:ratio=3:attack=5:release=120:makeup=3",
-            "alimiter=limit=0.92"]
-    chain = ",".join(pre)
-    base = "loudnorm=I=-14:TP=-1.5:LRA=11"
-    try:
-        p = subprocess.run([FFMPEG, "-hide_banner", "-i", voice, "-af",
-                            f"{chain},{base}:print_format=json", "-f", "null", "-"],
-                           capture_output=True, text=True)
-        m = re.search(r"\{[^{}]*input_i[\s\S]*?\}", p.stdout + p.stderr)
-        if m:
-            d = json.loads(m.group(0))
-            base += (f":measured_I={d['input_i']}:measured_TP={d['input_tp']}"
-                     f":measured_LRA={d['input_lra']}:measured_thresh={d['input_thresh']}"
-                     f":offset={d.get('target_offset', 0)}:linear=true")
-    except Exception:
-        pass
-    return f"{chain},{base}"
+    pre += ["highpass=f=90", "afftdn=nf=-24", f"volume={gain_db:.1f}dB", "alimiter=limit=0.95"]
+    return ",".join(pre)
 
 
 def run(cmd):
