@@ -166,6 +166,34 @@ def audit_render(path: str) -> dict:
 
 _STAGE = {}
 _stage_t0 = [None, None]
+def seg_cache_get(key: str, dst: str):
+    """다듬기가 끝난 컷(트림+크롭+켄번즈+손떨림 보정) 캐시.
+    ⚠️ 미리보기에서 컷 하나 바꾸고 다시 만들면 **나머지 15컷은 완전히 동일**한데 전부 다시 인코딩했다.
+       손떨림 보정은 2패스라 특히 비싸다(실측: 컷다듬기 44초 = 남은 렌더 시간의 70%).
+    키에 파라미터를 전부 넣어야 안전하다 — 하나라도 다르면 다른 그림이다."""
+    d = os.path.join(CACHE_DIR, "seg")
+    fp = os.path.join(d, key + ".mp4")
+    if os.path.exists(fp) and os.path.getsize(fp) > 1000:
+        try:
+            import shutil
+            shutil.copyfile(fp, dst); os.utime(fp, None)
+            return True
+        except Exception:
+            return False
+    return False
+
+
+def seg_cache_put(key: str, src: str):
+    try:
+        import shutil
+        d = os.path.join(CACHE_DIR, "seg")
+        os.makedirs(d, exist_ok=True)
+        shutil.copyfile(src, os.path.join(d, key + ".mp4"))
+        _prune_cache(d, 2 * 1024 ** 3)
+    except Exception:
+        pass
+
+
 def fetch_cached(url: str, ext: str, workdir: str, idx: int) -> str:
     """소스 클립 디스크 캐시 — **미리보기에서 컷을 바꾸고 다시 만들면 같은 클립을 또 받는다.**
     그게 우리 기본 흐름이라(A/B 수정 → 재렌더) 다운로드가 매번 통째로 반복됐다(실측 20~94초).
@@ -691,6 +719,14 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
         crop = f"crop={w}:{h}" if abs(cxr - 0.5) < 0.01 else \
                f"crop={w}:{h}:x='clip(in_w*{cxr:.3f}-{w}/2,0,in_w-{w})':y='(in_h-{h})/2'"
         vf = f"scale={sw}:{sh}:force_original_aspect_ratio=increase,{crop}," + (grade + "," if grade else "") + f"{kb},setsar=1"
+        # 💾 이 컷의 지문 — 소스·구간·확대·위치·크기·켄번즈 방향이 모두 같으면 결과가 같다
+        ck = hashlib.sha1("|".join([
+            _url_of.get(local[i], local[i]), f"{float(sg.get('in', 0)):.2f}", f"{float(sg['dur']):.2f}",
+            f"{z:.3f}", f"{cxr:.3f}", f"{w}x{h}@{fps}", "kb" + str(i % 2), "v2",
+        ]).encode("utf-8")).hexdigest()
+        if seg_cache_get(ck, sf):
+            seg_files.append(sf)
+            continue
         cmd = [FFMPEG, "-y", "-v", "error"]
         if float(sg.get("in", 0)) > 0: cmd += ["-ss", str(sg["in"])]
         cmd += ["-t", str(sg["dur"]), "-i", local[i], "-vf", vf, "-an",
@@ -707,6 +743,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
                     progress(f"흔들림 보정 적용 — 컷 {i + 1}")
         except Exception:
             pass
+        seg_cache_put(ck, sf)          # 보정까지 끝난 최종 컷을 저장
         seg_files.append(sf)
 
     # 3) 이어붙이기
