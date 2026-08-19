@@ -43,6 +43,11 @@ let plazaListEl = document.querySelector(".plaza-list");
 let currentCategory = "전체";
 let currentSort = "new";        // hot(후끈=score) | new(최신) | views(조회) — 트래픽 붙기 전 기본은 최신(위 index.js 주석 참조)
 let plazaSearchQ = "";          // 광장 검색어(제목·본문 ilike)
+/* 📄 페이지 제한 — 예전엔 limit 이 없어 글 전체(실측 743개)를 매번 받아 통째로 렌더했다.
+   진입할 때 화면이 한 번 그려졌다가 목록이 쏟아지며 다시 그려져 '재로딩'처럼 보였다(사장님 제보). */
+const PLAZA_PAGE = 30;
+let plazaLimit = PLAZA_PAGE;
+let plazaHasMore = false;
 
 /* 🩹 자가치유: 서버/CF가 이 문서에만 '광장 패널 없는 옛 HTML'을 주는 경우가 있다
    (내비게이션 요청엔 옛 HTML, page fetch엔 최신 — 사장님 크롬 직접진단으로 확정).
@@ -541,8 +546,10 @@ function timeAgoK(iso) {
   return `${Math.floor(s / 86400)}일 전`;
 }
 
-async function fetchPlazaPosts() {
+async function fetchPlazaPosts(more) {
   await ensurePlazaPanel();   // 🩹 광장 패널이 없으면(옛 HTML) 먼저 심는다
+  // 정렬·카테고리·검색이 바뀌면 처음부터, '더보기'면 창을 넓힌다.
+  if (!more) plazaLimit = PLAZA_PAGE;
   let query = supabase
     .from("plaza_posts")
     .select(`
@@ -583,6 +590,8 @@ async function fetchPlazaPosts() {
     if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
   }
 
+  query = query.limit(plazaLimit + 1);   // +1 은 '다음 쪽이 있는지'만 보기 위한 것(렌더엔 안 쓴다)
+
   // 🌍 읽기 필터 — 내 언어 글만. 언어가 하나뿐이면 no-op이라 오늘은 동작이 안 바뀐다.
   const { data, error } = await (window.GALLA_lfilter || function (q) { return q; })(query);
 
@@ -595,6 +604,8 @@ async function fetchPlazaPosts() {
   }
 
   let posts = data || [];
+  plazaHasMore = posts.length > plazaLimit;
+  if (plazaHasMore) posts = posts.slice(0, plazaLimit);
 
   /* 🔀 작성자 다양성 — '후끈'(랭킹)일 때만. 최신/조회는 사용자가 순서를 지정한 것이라 흔들지 않는다. */
   if (currentSort !== "new" && currentSort !== "views" && window.GALLA_diversify) {
@@ -729,6 +740,21 @@ function renderPlazaPosts(posts) {
     `;
     plazaListEl.appendChild(li);
   });
+
+  /* ⬇️ 더보기 — 예전엔 전체(실측 743개)를 한 번에 그려서, 진입 때 화면이 한 번 뜬 뒤
+     목록이 쏟아지며 다시 그려져 '재로딩'처럼 보였다(사장님 제보). 30개씩 끊는다. */
+  if (plazaHasMore) {
+    const more = document.createElement("li");
+    more.className = "plaza-post plaza-more";
+    more.innerHTML = '<button type="button" class="plaza-more-btn" style="width:100%;padding:14px;border:0;'
+      + 'border-radius:14px;background:rgba(255,255,255,.06);color:#cfd6e6;font-weight:800;cursor:pointer">더보기</button>';
+    plazaListEl.appendChild(more);
+    more.querySelector(".plaza-more-btn").addEventListener("click", function () {
+      this.textContent = "불러오는 중…";
+      plazaLimit += PLAZA_PAGE;
+      fetchPlazaPosts(true);
+    });
+  }
 }
 
 /* 공용 공유 (Web Share API + 클립보드 폴백) */
@@ -969,13 +995,34 @@ supabase
     },
     (payload) => {
       console.log("🔄 plaza post updated:", payload);
-      fetchPlazaPosts(); // 점수 변경 시 즉시 재정렬
+      fetchPlazaPosts(true); // 점수 변경 시 즉시 재정렬 — 보고 있던 만큼은 유지(더보기 창 보존)
     }
   )
   .subscribe();
 
 // 초기 로드 — 실패해도 조용히 죽지 않게(리트라이 UI는 함수 내부에서 처리)
-fetchPlazaPosts().catch(e => console.error("[plaza] 초기 로드 실패:", e));
+/* 🚦 광장 목록은 '광장이 실제로 보일 때' 받는다.
+   예전엔 모듈이 로드되는 즉시 무조건 받아서, 트렌드 페이지에서 검색 탭을 보고 있어도
+   글 743개를 받아 통째로 렌더했다 → 화면이 한 번 뜬 뒤 다시 그려져 '재로딩'으로 보였다(사장님 제보).
+   단독 광장 페이지(패널 없음)는 예전처럼 즉시. 탭 안에 있으면 활성화될 때 1회.
+   ⚠️ click 리스너로는 부족하다 — ?tab=plaza 진입은 search.js 가 '프로그램적으로' 활성화한다.
+      그래서 패널의 class 변화를 본다(클릭·URL·프로그램 전환 모두 커버). */
+(function bootPlazaWhenVisible() {
+  let booted = false;
+  const boot = () => {
+    if (booted) return; booted = true;
+    fetchPlazaPosts().catch(e => console.error("[plaza] 초기 로드 실패:", e));
+  };
+  const panel = document.querySelector('.tab-panel[data-panel="plaza"]');
+  if (!panel) return boot();                              // 단독 광장 페이지
+  if (panel.classList.contains("active")) return boot();   // 이미 광장 탭
+  try {
+    const mo = new MutationObserver(() => {
+      if (panel.classList.contains("active")) { mo.disconnect(); boot(); }
+    });
+    mo.observe(panel, { attributes: true, attributeFilter: ["class"] });
+  } catch (_) { boot(); }                                  // 관찰 불가 환경이면 예전처럼
+})();
 
 /* 광장 발행 후 이 화면으로 착지했으면 완료 토스트를 여기서 띄운다(이동 뒤라 확실히 보임) */
 try {

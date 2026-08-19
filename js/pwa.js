@@ -81,54 +81,59 @@
     const myVer = () => maxVer([...document.scripts]
       .map(x => (x.src.match(/[?&]v=(\d{5,9})/) || [])[1])
       .filter(Boolean).map(Number));
+    /* ⚠️ 2026-08-19 재설계 — '서버 최신 버전 vs 내 페이지 자산 버전' 비교는 틀렸다.
+       version.txt 는 배포 전체의 최대 버전인데 myVer() 는 '이 페이지가 참조하는' 최대 버전이다.
+       admin·login·app 처럼 최신 자산을 안 싣는 페이지는 항상 mine < server 가 되어
+       열 때마다 리로드가 걸린다(실측: 18개 페이지가 이 상태였다).
+       → 비교 대상을 바꾼다. '내 페이지의 자산 버전'이 아니라
+         '이 문서를 로드했을 때의 배포 번호'와 '지금의 배포 번호'를 비교한다.
+         페이지가 무엇을 싣든 무관하고, 열어둔 탭에 새 배포가 나가면 그때만 갱신된다. */
     let lastProbe = 0;
+    let baseVer = null;          // 이 문서를 로드한 시점의 배포 번호
+    function doReload() {
+      /* 🛡 루프 안전망 — 리로드 직후 또 같은 판정이 나오면(캐시·프록시) 무한 새로고침이 된다.
+         10분 내 같은 목표 버전으로는 한 번만. */
+      try {
+        const k = 'galla_verReload';
+        const prev = JSON.parse(sessionStorage.getItem(k) || '{}');
+        if (prev.v === baseVer && Date.now() - (prev.t || 0) < 600000) return;
+        sessionStorage.setItem(k, JSON.stringify({ v: baseVer, t: Date.now() }));
+      } catch (_) {}
+      const busy = document.querySelector('#dm-call.on, #pager-call, .dmc-card') ||
+        /INPUT|TEXTAREA/.test(document.activeElement?.tagName || '');
+      if (!busy) location.reload();
+      // 작업 중이면 다음 복귀 때 다시 판정(강제 리로드로 입력을 날리지 않는다)
+    }
     async function probeVersion() {
-      const mine = myVer();
-      if (!mine) return;
       if (Date.now() - lastProbe < 180000) return;
       lastProbe = Date.now();
       try {
-        /* 📉 예전엔 '현재 문서 HTML 전체'를 다시 받아 버전을 읽었다(트렌드 페이지 기준 26,627 bytes).
-           페이지마다·탭 복귀마다 도니 '여러 번 새로고침되는 것처럼' 보이고 회선도 먹었다(사장님 제보).
-           /version.txt 는 배포 버전만 담은 7 bytes·no-store 파일이다 — 이걸 먼저 본다.
-           ⚠️ 실패하면 예전 방식(HTML 전체)으로 폴백 — 판정 자체가 멈추면 옛 버전에 갇힌다. */
-        let server = 0;
+        /* 📉 예전엔 '현재 문서 HTML 전체'를 다시 받아 버전을 읽었다(트렌드 26,627 B).
+           페이지마다·복귀마다 도니 회선을 먹었다. version.txt 는 7 B·no-store 다. */
+        let dep = 0;
         try {
           const t = await (await fetch('/version.txt', { cache: 'no-store' })).text();
-          server = Number((String(t).match(/\d{5,9}/) || [])[0] || 0);
-        } catch (_) { /* 아래 HTML 경로로 간다 */ }
-        /* 🛡 안전망 — version.txt 는 '손으로' 관리돼 실제 자산 버전과 어긋난 적이 있다
-           (f4019832c: 자산 0818130인데 version.txt 0818020). 그 상태면 'server <= mine' 으로
-           판정돼 유저가 옛 버전에 영영 갇힌다 — 프로브가 막으려던 바로 그 사고다.
-           그래서 version.txt 가 '업데이트 없음'이라고 할 때만, 30분에 한 번 HTML 로 교차확인한다.
-           (평소 26KB → 7B 로 줄이면서 최악의 지체는 30분으로 묶는다) */
-        let needCross = !server;
-        if (server && server <= mine) {
-          const k = 'galla_verXcheck';
-          let last = 0; try { last = Number(sessionStorage.getItem(k) || 0); } catch (_) {}
-          if (Date.now() - last > 1800000) { needCross = true; try { sessionStorage.setItem(k, String(Date.now())); } catch (_) {} }
-        }
-        if (needCross) {
+          dep = Number((String(t).match(/\d{5,9}/) || [])[0] || 0);
+        } catch (_) { /* 아래 폴백 */ }
+
+        if (!dep) {
+          /* version.txt 를 못 읽으면 예전 방식으로 폴백 — 단, 이때는 '같은 페이지의 HTML'끼리
+             비교하므로 페이지별 버전 편차 문제가 없다. */
+          const mine = maxVer([...document.scripts]
+            .map(x => (x.src.match(/[?&]v=(\d{5,9})/) || [])[1]).filter(Boolean).map(Number));
+          if (!mine) return;
           const html = await (await fetch(location.pathname + location.search, {
             cache: 'no-store', headers: { 'x-galla-probe': '1' } })).text();
-          server = Math.max(server, maxVer([...html.matchAll(VER_IN_SCRIPTS)].map(m => Number(m[1]))));
+          const server = maxVer([...html.matchAll(VER_IN_SCRIPTS)].map(m => Number(m[1])));
+          if (server > mine) { baseVer = server; doReload(); }
+          return;
         }
-        /* '다르면'이 아니라 '더 최신이면'만 — SW 캐시가 옛 HTML을 돌려주면
-           다르다는 이유로 옛 버전으로 리로드하는 루프가 생긴다 */
-        if (!server || server <= mine) return;
-        /* 🛡 루프 안전망 — 버전 때문에 리로드한 직후 또 같은 판정이 나오면(캐시·프록시 등)
-           무한 새로고침이 된다. 10분 내 같은 목표 버전으로는 한 번만 리로드한다. */
-        try {
-          const k = 'galla_verReload';
-          const prev = JSON.parse(sessionStorage.getItem(k) || '{}');
-          if (prev.v === server && Date.now() - (prev.t || 0) < 600000) return;
-          sessionStorage.setItem(k, JSON.stringify({ v: server, t: Date.now() }));
-        } catch (_) {}
-        const busy = document.querySelector('#dm-call.on, #pager-call, .dmc-card') ||
-          /INPUT|TEXTAREA/.test(document.activeElement?.tagName || '');
-        if (!busy) location.reload();
-        // 작업 중이면 다음 복귀 때 다시 판정(강제 리로드로 입력을 날리지 않는다)
-      } catch (_) {}
+
+        if (baseVer === null) { baseVer = dep; return; }   // 첫 판정 = 기준만 잡는다
+        if (dep === baseVer) return;                        // 배포 변화 없음
+        baseVer = dep;                                      // 새 배포가 나갔다
+        doReload();
+      } catch (_) { /* 판정 실패는 조용히 — 다음 복귀 때 다시 */ }
     }
     document.addEventListener('visibilitychange', () => { if (!document.hidden) probeVersion(); });
     setTimeout(probeVersion, 4000);   // 앱 복원 직후 1회
