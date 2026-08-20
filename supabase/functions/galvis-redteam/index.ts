@@ -135,18 +135,19 @@ async function runOnce(): Promise<any> {
     for (const u of pool) { try { await wipeState(u.id); } catch { /* */ } }   // 시작 wipe — 지난 런 백그라운드 잔여 정리
     // 페르소나를 레인(풀 유저)별로 라운드로빈 → 레인 내 순차(유저 재사용·wipe), 레인 간 동시.
     //    ⚠️ 동시성=2로 제한(3레인은 galla-friend 자가호출 버스트로 엣지 rate limit). 실사용 영향 최소화.
-    /* ⚠️ 동시성 1. 2레인일 때 12개 중 6개가 RateLimitError 로 죽었다(실측 — 결함이 아니라 실행 실패라
-       배터리가 반쪽만 돌았다). 백그라운드 실행으로 바뀌어 시간 제약이 없으니 안전하게 순차로 간다. */
-    const laneCount = 1;
-    const lanes: typeof PERSONAS[] = Array.from({ length: laneCount }, () => []);
-    PERSONAS.forEach((p, i) => lanes[i % laneCount].push(p));
+    /* ⚠️ 두 가지를 동시에 만족해야 한다:
+       ① 동시 호출을 하면 엣지 자가호출 한도(RateLimitError)에 걸려 페르소나가 즉사한다.
+       ② 그렇다고 전부 한 계정에 몰면 그 계정이 AI 사용 한도에 걸린다.
+          실측: 48턴을 pool[0] 하나로 돌렸더니 뒤쪽 페르소나가 "목이 좀 쉬었다"만 받고
+          액션이 비어 [no_deliver] 로 잡혔다 — 갈비스 결함이 아니라 배터리가 만든 유령이었다.
+       → 순차(동시성 1)로 돌리되, 페르소나마다 계정을 돌아가며 쓴다. */
     const results: any[] = [];
-    await Promise.all(lanes.map(async (lane, li) => {
-      for (const p of lane) {
-        try { results.push(await runPersona(pool[li], p)); }
-        catch (e) { results.push({ key: p.key, probe: p.probe, scanned: 0, flags: [{ cat: "run_error", turn: 0, excerpt: String(e).slice(0, 80) }] }); }
-      }
-    }));
+    for (let i = 0; i < PERSONAS.length; i++) {
+      const p = PERSONAS[i];
+      const u = pool[i % pool.length];
+      try { results.push(await runPersona(u, p)); }
+      catch (e) { results.push({ key: p.key, probe: p.probe, scanned: 0, flags: [{ cat: "run_error", turn: 0, excerpt: String(e).slice(0, 80) }] }); }
+    }
     const breakdown: Record<string, number> = {};
     let flags = 0, turns = 0, penalty = 0;
     const PEN: Record<string, number> = Object.fromEntries(FLAGS.map((f) => [f.cat, f.pen]));

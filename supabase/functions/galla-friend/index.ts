@@ -2190,7 +2190,26 @@ function stripFakeToolCall(t: string): string {
     .replace(/\[\(\s*["'][\s\S]{0,200}?\)\s*\]/g, "")
     .replace(/\[\(\s*[a-z_]+\s*:[\s\S]{0,200}?\)\]/gi, "")
     .replace(/\[\s*(tool|function|call|query|search)\s*:[\s\S]{0,200}?\]/gi, "")
-    .replace(/^\s*\{\s*"(query|tool|name|kind|content_type)"[\s\S]{0,300}?\}\s*$/gim, "");
+    .replace(/^\s*\{\s*"(query|tool|name|kind|content_type)"[\s\S]{0,300}?\}\s*$/gim, "")
+    /* [hot_videos 호출해서 인기 영상 확인 중] — 괄호 없이 '도구 이름 + 한국어'만 든 형태(실측 누출).
+       위 규칙들은 전부 '[(' 를 요구해서 이건 그대로 화면에 나갔다. 대괄호 안에 선언된 도구
+       이름이 들어 있으면 정상 문장일 수가 없다 — 통째로 지운다. */
+    .replace(/\[[^\]\n]{0,140}\b(point_to|hot_issues|hot_videos|web_search|galla_news|platform_buzz|search_content|market_quote|open_link|open_external|app_action|remember|forget_memory|draft_(?:issue|gallari|predict|plaza)|gen_(?:thumbnail|video|reel_script))\b[^\]\n]{0,140}\]/gi, "")
+    /* 앞부분만 지워지면 꼬리 조각이 통째로 남는다("… 확인 중] — 핫튜브 화면 열어주기]").
+       대시로 이어붙인 뒤 ']' 로 끝나는 토막은 도구 내레이션의 잔해다 — 조각째 지운다. */
+    .replace(/\s*[—–-]\s*[^\[\]\n]{0,60}\]/g, "")
+    ;
+  /* 짝 없는 ']' 만 제거. 정규식으로 괄호 짝을 세려다 멀쩡한 "[사진]"·"[1]" 까지 깨뜨렸다(실측)
+     — 세면서 지운다. 여는 괄호가 없는 닫는 괄호만 버린다. */
+  {
+    let depth = 0, out = "";
+    for (const ch of x) {
+      if (ch === "[") { depth++; out += ch; }
+      else if (ch === "]") { if (depth > 0) { depth--; out += ch; } }
+      else out += ch;
+    }
+    x = out;
+  }
   x = x.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   return hasText(x) ? x : t;
 }
@@ -2609,6 +2628,12 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥|기온|날씨|미세먼지)/.test(m)
       || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
     return { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 **도구가 돌려준 숫자만** 말해라. 기억·추측으로 숫자 말하기 절대 금지. 못 찾으면 못 찾았다고 솔직히. 주식·코인이 아닌 것(날씨·환율 등)이면 web_search를 kind:news로 써라." };
+  /* 📺 딜리버 후속 — 방금 말한 콘텐츠를 '어떻게 보냐/안 보인다' 고 되물을 때.
+     이게 route 에 없어서 도구 없는 컴패니언 경로로 샜고, 모델이 도구를 못 부르니
+     "[hot_videos 호출해서 …]" 처럼 도구 문법을 텍스트로 흉내 내 화면에 노출됐다(실측).
+     열어달라는 말이니 지금 열어주면 된다. */
+  if (/(어떻게\s*(보|봐|여|열)|어디서\s*(보|봐)|안\s*(보여|보이|열려|열림|나와)|안\s*떠|어디\s*있어|못\s*찾겠)/.test(m))
+    return { tool: "point_to", hint: "직전에 네가 말한 그 콘텐츠를 **지금 point_to 로 열어라**(view). 설명·안내로 때우지 마라 — 상대는 보여달라는 거다. 뭘 말했는지 애매하면 hot_issues/hot_videos 로 하나 골라 바로 열어라. 'UI 어디를 눌러라' 같은 안내는 금지." };
   if (/(광장\s*(뭐|무슨|글|재밌|화제|판)|무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
     return { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판·공개댓글·논객만. 없는 썰 지어내기 금지." };
   return null;
