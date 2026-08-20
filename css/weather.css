@@ -1,0 +1,115 @@
+/* weather.css — "지금 우리 동네" 탭.
+   비 오는 지역은 화면이 젖은 느낌이 나야 한다. 캔버스 빗줄기 + 카드 글로우로 만든다. */
+
+.tab-panel[data-panel="weather"] { position: relative; overflow: hidden; }
+
+/* 하늘 — 패널 전체를 덮되 클릭은 통과시킨다 */
+#wx-sky {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0; opacity: .85;
+}
+.tab-panel[data-panel="weather"] > *:not(#wx-sky) { position: relative; z-index: 1; }
+
+.wx-head { padding: 14px 2px 6px; }
+.wx-title { font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: #eaf2ff; }
+.wx-sub { margin: 4px 0 0; font-size: 13px; color: #8d97ab; }
+.wx-sub b { color: #5fd8ff; }
+
+/* 전국 요약 */
+.wx-hero {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 10px 0 14px; padding: 16px;
+  border-radius: 18px; border: 1px solid rgba(95,216,255,.18);
+  background: linear-gradient(150deg, rgba(95,216,255,.12), rgba(95,216,255,.02)), #0d1017;
+}
+.wx-hero-big { font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 14px rgba(95,216,255,.35)); }
+.wx-hero-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wx-hero-tx b { font-size: 16px; font-weight: 900; color: #eaf2ff; }
+.wx-hero-tx span { font-size: 12.5px; color: #94a0b6; }
+
+/* 기상청과 사람들 말이 엇갈리는 순간 — 이 기능의 하이라이트 */
+.wx-clash {
+  flex: 1 0 100%; margin-top: 4px; padding: 10px 12px; border-radius: 12px;
+  font-size: 12.5px; font-weight: 700; color: #ffd9a0;
+  background: rgba(255,168,60,.12); border: 1px solid rgba(255,168,60,.3);
+  animation: wxPulse 2.2s ease-in-out infinite;
+}
+.wx-clash b { color: #ffbf6b; }
+@keyframes wxPulse { 0%,100% { opacity: .82 } 50% { opacity: 1 } }
+
+/* 지역 카드 */
+.wx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; }
+.wx-empty { grid-column: 1/-1; padding: 28px 0; text-align: center; color: #7d879b; font-size: 13px; }
+
+.wx-card {
+  --wc: 140, 155, 180;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  padding: 12px 12px 10px; border-radius: 16px; cursor: pointer; text-align: left;
+  background: linear-gradient(160deg, rgba(var(--wc), .14), rgba(var(--wc), .03)), #0c0f15;
+  border: 1px solid rgba(var(--wc), .22);
+  transition: transform .14s, border-color .14s, box-shadow .18s;
+}
+.wx-card:hover { border-color: rgba(var(--wc), .5); box-shadow: 0 6px 20px rgba(var(--wc), .16); }
+.wx-card:active { transform: scale(.97); }
+.wx-card.clear   { --wc: 255, 200, 80; }
+.wx-card.cloud   { --wc: 150, 165, 190; }
+.wx-card.fog     { --wc: 170, 175, 185; }
+.wx-card.drizzle { --wc: 110, 180, 255; }
+.wx-card.rain    { --wc: 80, 160, 255; }
+.wx-card.snow    { --wc: 190, 225, 255; }
+.wx-card.storm   { --wc: 170, 130, 255; }
+/* 젖은 지역은 은은하게 숨쉰다 */
+.wx-card.wet { animation: wxWet 3.4s ease-in-out infinite; }
+@keyframes wxWet {
+  0%,100% { box-shadow: 0 0 0 rgba(var(--wc), 0) }
+  50%     { box-shadow: 0 0 18px rgba(var(--wc), .22) }
+}
+
+.wx-c-top { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 6px; }
+.wx-c-name { font-size: 13px; font-weight: 800; color: #e6edf9; }
+.wx-c-emo { font-size: 17px; line-height: 1; }
+.wx-c-temp { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.wx-c-desc { font-size: 11.5px; color: #93a0b8; }
+
+/* 사람들이 '온다'고 한 비율 */
+.wx-c-bar { width: 100%; height: 4px; margin-top: 5px; border-radius: 999px; background: rgba(255,255,255,.09); overflow: hidden; }
+.wx-c-bar i { display: block; height: 100%; border-radius: 999px; background: rgb(var(--wc)); transition: width .4s ease; }
+.wx-c-rep { font-size: 11px; color: #9aa6bd; font-variant-numeric: tabular-nums; }
+.wx-c-rep b { color: rgb(var(--wc)); font-weight: 900; }
+.wx-c-rep.none { color: #6e788c; }
+
+.wx-foot { margin: 14px 2px 4px; font-size: 11.5px; color: #6e788c; text-align: center; }
+
+/* 제보 시트 */
+.wx-sheet {
+  position: fixed; inset: 0; z-index: 100000; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s;
+}
+.wx-sheet.on { opacity: 1; }
+.wx-sheet-in {
+  width: 100%; max-width: 520px; padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0; background: #12151c; border-top: 1px solid rgba(255,255,255,.08);
+  transform: translateY(18px); transition: transform .22s cubic-bezier(.2,.9,.3,1);
+}
+.wx-sheet.on .wx-sheet-in { transform: translateY(0); }
+.wx-sheet-t { font-size: 17px; font-weight: 900; color: #eaf2ff; text-align: center; margin-bottom: 14px; }
+.wx-sheet-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.wx-sheet-btns button {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 8px; border-radius: 16px; cursor: pointer; font-size: 24px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: #fff;
+  transition: transform .12s, background .12s;
+}
+.wx-sheet-btns button span { font-size: 12.5px; font-weight: 800; color: #cfd8ea; }
+.wx-sheet-btns button:hover { background: rgba(95,216,255,.12); }
+.wx-sheet-btns button:active { transform: scale(.95); }
+.wx-sheet-btns button:disabled { opacity: .5; }
+.wx-sheet-x {
+  width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: 12px; cursor: pointer;
+  background: transparent; color: #8d97ab; font-size: 13.5px; font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-card.wet, .wx-clash { animation: none; }
+  #wx-sky { display: none; }
+}

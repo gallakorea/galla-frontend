@@ -9,6 +9,7 @@
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
   <link rel="stylesheet" href="./css/search.css?v=081801" />
+  <link rel="stylesheet" href="./css/weather.css?v=0819140" />
   <link rel="stylesheet" href="css/plaza.css?v=080412"><!-- 광장 패널(통합) -->
   <link rel="stylesheet" href="./css/composer-page.css?v=080412">
   <link rel="stylesheet" href="./css/header.css?v=080412">
@@ -83,6 +84,11 @@
     <button type="button" class="tab-item tab-yt" data-tab="hot">
       <svg class="yt-official" width="28.4" height="20" viewBox="0 3.545 24 16.91" xmlns="http://www.w3.org/2000/svg" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#fff" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
       핫튜브
+    </button>
+    <button type="button" class="tab-item" data-tab="weather">
+      <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.3-1.8A4 4 0 0 0 6.5 19z"/><path d="M8 21.5l-.8 1.5M12 21.5l-.8 1.5M16 21.5l-.8 1.5"/></svg>
+      <svg class="tab-ic ic-color" viewBox="0 0 24 24" fill="none" stroke="#5fd8ff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.3-1.8A4 4 0 0 0 6.5 19z"/><path d="M8 21.5l-.8 1.5M12 21.5l-.8 1.5M16 21.5l-.8 1.5"/></svg>
+      날씨
     </button>
     <button type="button" class="tab-item" data-tab="plaza">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -208,6 +214,18 @@
     </div>
 
     <!-- ===== 광장 (plaza.html 흡수 — 2026-07-22 통합. 트렌드가 단일 소스) ===== -->
+    <!-- ===== 지금 우리 동네 (날씨) ===== -->
+    <div class="tab-panel" data-panel="weather">
+      <canvas id="wx-sky" aria-hidden="true"></canvas>
+      <div class="wx-head">
+        <div class="wx-title">지금 우리 동네</div>
+        <p class="wx-sub">기상청은 이렇다는데 — <b>진짜 오는지</b>는 여기 사람들이 안다.</p>
+      </div>
+      <div class="wx-hero" id="wx-hero"></div>
+      <div class="wx-grid" id="wx-grid"><div class="wx-empty">날씨 불러오는 중…</div></div>
+      <p class="wx-foot" id="wx-foot"></p>
+    </div>
+
     <div class="tab-panel" data-panel="plaza">
       <section class="plaza-guide">
         <p>
@@ -356,7 +374,7 @@
 </nav>
 
 <!-- 📸 지난 화면 즉시 복원(셸 모드) -->
-<script src="js/snapshot.js?v=080412"></script>
+<script src="js/snapshot.js?v=0819140"></script>
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=081606"></script>
@@ -366,7 +384,8 @@
 <script src="js/dm.js?v=0814190"></script>
 <script src="js/noti-icons.js?v=080412"></script>
 <script src="js/notifications.js?v=080412"></script>
-<script src="./js/search.js?v=081801"></script>
+<script src="./js/search.js?v=0819140"></script>
+<script src="./js/weather.js?v=0819140"></script>
 <!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
 <script src="js/plaza-render.js?v=080412"></script>
 <script src="js/share-sheet.js?v=081804"></script>

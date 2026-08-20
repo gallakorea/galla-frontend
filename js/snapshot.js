@@ -63,8 +63,30 @@
       }
     });
   };
+  /* 🔖 배포 버전 도장 — 스냅샷은 '그때의 화면 구조'다. 배포로 골격이 바뀌면(탭 추가·섹션 이동)
+     옛 스냅샷이 #app 을 통째로 덮어써서 **새 구조가 영영 안 보인다**.
+     shell 모드(트렌드·마이)는 #app 전체를 갈아끼우므로 특히 치명적이다.
+     실제로 '날씨' 탭을 추가했더니 옛 스냅샷이 탭·패널을 통째로 지워버렸다(2026-08-20 실측).
+     → 저장할 때 자산 버전을 같이 찍고, 다를 때는 버린다. 한 번 손해 보고 다음부터 정상. */
+  var VKEY = KEY + ":v";
+  var curVer = (function () {
+    try {
+      var m = 0, ss = document.scripts, i, v;
+      for (i = 0; i < ss.length; i++) {
+        v = (ss[i].src.match(/[?&]v=(\d{5,9})/) || [])[1];
+        if (v && Number(v) > m) m = Number(v);
+      }
+      return String(m || 0);
+    } catch (_) { return "0"; }
+  })();
+
   var saved = null;
-  try { saved = localStorage.getItem(KEY); } catch (_) {}
+  try {
+    saved = localStorage.getItem(KEY);
+    if (saved && localStorage.getItem(VKEY) !== curVer) {
+      localStorage.removeItem(KEY); localStorage.removeItem(VKEY); saved = null;
+    }
+  } catch (_) {}
   if (saved && saved.length >= CAP) saved = null;
   // 복원 직후에도 일시 상태를 벗긴다 — 이미 저장돼 있는 구버전 스냅샷 구제
   var stripTransient = function (root) {
@@ -86,7 +108,7 @@
   var store = function (h) {
     try {
       h = collectCss() + h;
-      if (h && h.length < CAP) localStorage.setItem(KEY, h);
+      if (h && h.length < CAP) { localStorage.setItem(KEY, h); localStorage.setItem(VKEY, curVer); }
     } catch (_) {}
   };
 
