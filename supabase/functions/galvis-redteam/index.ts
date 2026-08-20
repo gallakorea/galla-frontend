@@ -37,21 +37,56 @@ const FLAGS: { cat: string; pen: number; re: RegExp }[] = [
 
 // 영구 유저 풀 로그인(회원가입 레이트리밋 회피 — 유저 생성 0). redteam_pool 테이블에서 크레덴셜.
 async function loginPool(): Promise<{ id: string; jwt: string }[]> {
-  const { data: rows } = await sb.from("redteam_pool").select("email,password,uid").order("id");
+  const { data: rows } = await sb.from("redteam_pool").select("id,email,password,uid").order("id");
   const out: { id: string; jwt: string }[] = [];
+  const grant = async (email: string, password: string) => {
+    const t = await fetch(`${SB}/auth/v1/token?grant_type=password`, { method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    return await t.json();
+  };
   for (const r of (rows || [])) {
-    const t = await fetch(`${SB}/auth/v1/token?grant_type=password`, { method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" }, body: JSON.stringify({ email: r.email, password: r.password }) });
-    const tj = await t.json();
-    if (tj?.access_token) out.push({ id: r.uid, jwt: tj.access_token });
+    let tj = await grant(r.email, r.password);
+    /* 🔧 자가복구 — 풀 계정이 없으면 여기서 만든다.
+       실제로 3계정이 통째로 사라져 12일간 "pool login failed"로 레드팀이 멈춰 있었다
+       (이메일이 @galla.im 이라 실계정처럼 보여 정리 작업에 휩쓸린 것으로 보인다).
+       서비스 키는 이 런타임 안에만 있다 — 밖에서 계정을 만들려면 키를 꺼내야 하고, 그건 안 한다. */
+    if (!tj?.access_token) {
+      const { data: cr, error: ce } = await sb.auth.admin.createUser({
+        email: r.email, password: r.password, email_confirm: true,
+      });
+      if (ce) { console.error("pool provision failed", r.email, ce.message); continue; }
+      if (cr?.user?.id) await sb.from("redteam_pool").update({ uid: cr.user.id }).eq("id", r.id);
+      await new Promise((res) => setTimeout(res, 400));
+      tj = await grant(r.email, r.password);
+    }
+    if (!tj?.access_token) continue;
+    /* uid 가 비었거나 어긋나면(재생성) 토큰의 sub 로 맞춘다 — 상태 초기화가 엉뚱한 유저를 지우면 안 된다. */
+    let uid = r.uid;
+    try {
+      const sub = JSON.parse(atob(String(tj.access_token).split(".")[1].replace(/-/g, "+").replace(/_/g, "/")))?.sub;
+      if (sub && sub !== uid) { uid = sub; await sb.from("redteam_pool").update({ uid: sub }).eq("id", r.id); }
+    } catch { /* */ }
+    if (uid) out.push({ id: uid, jwt: tj.access_token });
     await new Promise((res) => setTimeout(res, 200));
   }
   return out;
 }
 async function talk(jwt: string, message: string, history: any[]) {
   // 비스트림(actions 검사 위해) 자가호출 + 429 백오프 재시도(엣지 자가호출 버스트가 rate limit 유발).
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const r = await fetch(`${SB}/functions/v1/galla-friend`, { method: "POST", headers: { apikey: ANON, Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" }, body: JSON.stringify({ message, history }) });
-    if (r.status === 429 || r.status === 503) { await new Promise((res) => setTimeout(res, 1500 * (attempt + 1) + Math.floor(attempt * 400))); continue; }
+  await new Promise((res) => setTimeout(res, 900));   // 턴 사이 간격 — 연타가 rate limit 를 부른다
+  for (let attempt = 0; attempt < 6; attempt++) {
+    /* ⚠️ 엣지 자가호출 한도는 '응답 429'가 아니라 fetch 자체가 던지는 RateLimitError 로 온다.
+       예전엔 try 없이 불러서 예외가 그대로 위로 튀었고, 재시도 로직을 타지도 못한 채
+       페르소나가 즉사했다(실측: 12개 중 5~6개 run_error — 결함이 아니라 배터리 반쪽 실행). */
+    let r: Response;
+    try {
+      r = await fetch(`${SB}/functions/v1/galla-friend`, { method: "POST", headers: { apikey: ANON, Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" }, body: JSON.stringify({ message, history }) });
+    } catch (e) {
+      const msg = String(e);
+      if (!/rate.?limit/i.test(msg) || attempt === 5) throw e;
+      await new Promise((res) => setTimeout(res, 6000 * (attempt + 1)));
+      continue;
+    }
+    if (r.status === 429 || r.status === 503) { await new Promise((res) => setTimeout(res, 4000 * (attempt + 1) + Math.floor(attempt * 800))); continue; }
     const txt = await r.text();
     let j: any = null; try { j = JSON.parse(txt); } catch { /* 비-JSON(에러 페이지) → 재시도 */ }
     if (!j) { await new Promise((res) => setTimeout(res, 1200 * (attempt + 1))); continue; }
@@ -89,19 +124,20 @@ async function runPersona(u: { id: string; jwt: string }, p: { key: string; prob
   return { key: p.key, probe: p.probe, scanned, flags: found };
 }
 
-Deno.serve(async (req) => {
-  if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) {
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.includes(SVC)) return new Response("forbidden", { status: 403 });
-  }
+/* 🕒 배터리 한 번 완주. 페르소나가 늘면서 150초를 넘겨 플랫폼 IDLE_TIMEOUT(504)에 걸렸다
+   (이전엔 146초로 아슬아슬하게 통과했다). 그래서 핸들러는 즉시 응답하고 이 함수는
+   백그라운드(EdgeRuntime.waitUntil)에서 끝까지 돈다 — 결과는 redteam_runs 로 확인한다. */
+async function runOnce(): Promise<any> {
   let pool: { id: string; jwt: string }[] = [];
   try {
     pool = await loginPool();
-    if (!pool.length) return new Response(JSON.stringify({ ok: false, detail: "pool login failed" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    if (!pool.length) return { ok: false, detail: "pool login failed" };
     for (const u of pool) { try { await wipeState(u.id); } catch { /* */ } }   // 시작 wipe — 지난 런 백그라운드 잔여 정리
     // 페르소나를 레인(풀 유저)별로 라운드로빈 → 레인 내 순차(유저 재사용·wipe), 레인 간 동시.
     //    ⚠️ 동시성=2로 제한(3레인은 galla-friend 자가호출 버스트로 엣지 rate limit). 실사용 영향 최소화.
-    const laneCount = Math.min(2, pool.length);
+    /* ⚠️ 동시성 1. 2레인일 때 12개 중 6개가 RateLimitError 로 죽었다(실측 — 결함이 아니라 실행 실패라
+       배터리가 반쪽만 돌았다). 백그라운드 실행으로 바뀌어 시간 제약이 없으니 안전하게 순차로 간다. */
+    const laneCount = 1;
     const lanes: typeof PERSONAS[] = Array.from({ length: laneCount }, () => []);
     PERSONAS.forEach((p, i) => lanes[i % laneCount].push(p));
     const results: any[] = [];
@@ -122,11 +158,29 @@ Deno.serve(async (req) => {
     const health = Math.max(0, 100 - penalty);
     const detail = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
     await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail });
-    return new Response(JSON.stringify({ ok: true, personas: PERSONAS.length, turns, flags, health, breakdown }), { headers: { "Content-Type": "application/json" } });
+    return { ok: true, personas: PERSONAS.length, turns, flags, health, breakdown };
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, detail: String(e).slice(0, 300) }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return { ok: false, detail: String(e).slice(0, 300) };
   } finally {
     // 🧹 영구 풀 유저는 '삭제 안 함' — 대신 대화·기억을 반드시 wipe(SFT 오염 방지. 주1회 실행 후 curate 크론 전까지 무데이터).
     for (const u of pool) { try { await wipeState(u.id); } catch { /* */ } }
   }
+}
+
+Deno.serve(async (req) => {
+  if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) {
+    const auth = req.headers.get("Authorization") || "";
+    if (!auth.includes(SVC)) return new Response("forbidden", { status: 403 });
+  }
+  let sync = false;
+  try { sync = (await req.json())?.sync === true; } catch { /* 본문 없음 = 백그라운드 */ }
+  if (sync) {
+    const r = await runOnce();
+    return new Response(JSON.stringify(r), { status: r?.ok ? 200 : 500, headers: { "Content-Type": "application/json" } });
+  }
+  const job = runOnce().catch((e) => { console.error("redteam bg fail", String(e).slice(0, 200)); });
+  const wu = (globalThis as any).EdgeRuntime?.waitUntil;
+  if (typeof wu === "function") wu.call((globalThis as any).EdgeRuntime, job);
+  return new Response(JSON.stringify({ ok: true, accepted: true, note: "백그라운드 실행 — 결과는 redteam_runs" }),
+    { status: 202, headers: { "Content-Type": "application/json" } });
 });
