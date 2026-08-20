@@ -1606,7 +1606,18 @@ function ageTxt(iso: string | null | undefined): string {
   if (d < 32) return `${Math.floor(d / 7)}주 전`;
   return `${Math.floor(d / 30)}달 전`;
 }
-function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[], mayAskName = true): string {
+/* 🔙 되짚기 — 상대가 '아까/방금/저번에 니가 말한' 처럼 지난 얘기를 먼저 꺼냈나.
+   시간차 재개 규칙(아래 freshStart)이 "지난 화제 먼저 꺼내지 마라"라고 막는데,
+   상대가 물었는데도 회피가 이겨서 "기억이 안 나네"가 나갔다(사장님 실로그).
+   문맥엔 있었다 — 한 턴 뒤엔 정확히 기억해냈다. 회피 지시가 참조를 눌러버린 것이다. */
+function backRefAsk(msg: string): boolean {
+  const m = String(msg || "");
+  if (!m) return false;
+  return /(아까|방금|저번|지난번|어제|전에)\s*(너|니|네|내|우리)?[^\n]{0,10}(말|얘기|한\s*거|했던|그거|그\s*얘기)/.test(m)
+      || /(뭐라고\s*했|무슨\s*얘기\s*했|기억\s*(나|해)|까먹었)/.test(m);
+}
+
+function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[], mayAskName = true, backRef = false): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
   // 🪜 관계 깊이를 '행동'으로 번역한다 — 숫자(depth 1/4)만 주면 모델이 못 쓴다.
@@ -1668,7 +1679,11 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     const sm = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
     const turns = Number(sm?.turns) || 0;
     const gapH = sm?.prev_end_at ? (Date.now() - Date.parse(sm.prev_end_at)) / 3600000 : 0;
-    if (turns === 0 && gapH >= 3) {
+    if (backRef) {
+      /* 상대가 먼저 지난 얘기를 꺼냈다 — 회피 규칙을 아예 안 건다.
+         대신 '위 대화기록에서 찾아서 답하라'를 명시한다. */
+      freshStart = `\n- 🔙 **상대가 지난 얘기를 먼저 꺼냈다**: 위 대화기록에 그 내용이 그대로 있다. 거기서 찾아 구체적으로 답해라. "기억이 안 나네 / 뭐라고 했더라 / 다시 말해줘"는 금지다 — 적혀 있는 걸 안 보고 하는 소리다. 정말 기록에 없을 때만 솔직히 없다고 해라.`;
+    } else if (turns === 0 && gapH >= 3) {
       freshStart = `\n- 🌤 **시간차 재개 = 환기(중요)**: ${gapH >= 20 ? "오랜만에" : "시간이 좀 지나"} 다시 왔다. 반갑게 맞으며 **네가 먼저 가볍게 새로 열어라** — 안부·지금 기분·그동안 어땠는지("오 왔어? 그동안 뭐하고 지냈어 ㅋㅋ"). ⚠️ 지난 대화 화제(직전에 하던 얘기)를 곧바로 이어가지 마라 — 지난 얘기는 상대가 먼저 다시 꺼낼 때만. 단 '너 화제 돌리네/갑자기 왜' 처럼 상대를 지적하지 말고, 그냥 자연스럽게 반가워하며 새로 시작. 한두 줄로 짧게.`;
     }
   } catch { /* */ }
@@ -3895,7 +3910,7 @@ ${parts.join("\n")}`;
                    그대로 앵커가 돼 매번 같은 화제로 인사했다(사장님: 해변열차 얘기 반복). */
                 .slice((freshStartBlock || !userMsg) ? -2 : undefined)
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
-      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName) },
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName, backRefAsk(userMsg || "")) },
       // 🥊 반복 시비일 때만 — 평상시엔 아예 주입하지 않는다(캐시 프리픽스 뒤라 캐시에도 영향 없음)
       ...(_hostileTurn ? [{ role: "system", content: HOSTILE_BLOCK }] : []),
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
