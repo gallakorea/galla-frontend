@@ -9,7 +9,7 @@
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
   <link rel="stylesheet" href="./css/search.css?v=081801" />
-  <link rel="stylesheet" href="./css/weather.css?v=0819140" />
+  <link rel="stylesheet" href="./css/weather.css?v=0819141" />
   <link rel="stylesheet" href="css/plaza.css?v=080412"><!-- 광장 패널(통합) -->
   <link rel="stylesheet" href="./css/composer-page.css?v=080412">
   <link rel="stylesheet" href="./css/header.css?v=080412">
@@ -219,10 +219,25 @@
       <canvas id="wx-sky" aria-hidden="true"></canvas>
       <div class="wx-head">
         <div class="wx-title">지금 우리 동네</div>
-        <p class="wx-sub">기상청은 이렇다는데 — <b>진짜 오는지</b>는 여기 사람들이 안다.</p>
+        <p class="wx-sub">기상청은 이렇다는데 — <b>진짜 오는지</b>는 거기 사람들이 안다.</p>
       </div>
+
+      <form class="wx-search" id="wx-search" role="search" autocomplete="off">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="wx-q" type="search" placeholder="동네 검색 — 전주, 여수, 안동…" maxlength="20" enterkeyhint="search">
+        <button type="button" id="wx-qx" aria-label="지우기" hidden>✕</button>
+      </form>
+      <div class="wx-results" id="wx-results" hidden></div>
+
       <div class="wx-hero" id="wx-hero"></div>
-      <div class="wx-grid" id="wx-grid"><div class="wx-empty">날씨 불러오는 중…</div></div>
+      <div class="wx-sec" id="wx-fav-sec">
+        <div class="wx-sec-t">⭐ 내 동네</div>
+        <div class="wx-grid" id="wx-fav"></div>
+      </div>
+      <div class="wx-sec">
+        <div class="wx-sec-t">전국</div>
+        <div class="wx-grid" id="wx-grid"><div class="wx-empty">날씨 불러오는 중…</div></div>
+      </div>
       <p class="wx-foot" id="wx-foot"></p>
     </div>
 
@@ -374,7 +389,7 @@
 </nav>
 
 <!-- 📸 지난 화면 즉시 복원(셸 모드) -->
-<script src="js/snapshot.js?v=0819140"></script>
+<script src="js/snapshot.js?v=0819141"></script>
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=081606"></script>
@@ -385,7 +400,7 @@
 <script src="js/noti-icons.js?v=080412"></script>
 <script src="js/notifications.js?v=080412"></script>
 <script src="./js/search.js?v=0819140"></script>
-<script src="./js/weather.js?v=0819140"></script>
+<script src="./js/weather.js?v=0819141"></script>
 <!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
 <script src="js/plaza-render.js?v=080412"></script>
 <script src="js/share-sheet.js?v=081804"></script>
