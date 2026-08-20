@@ -1610,6 +1610,41 @@ function ageTxt(iso: string | null | undefined): string {
    시간차 재개 규칙(아래 freshStart)이 "지난 화제 먼저 꺼내지 마라"라고 막는데,
    상대가 물었는데도 회피가 이겨서 "기억이 안 나네"가 나갔다(사장님 실로그).
    문맥엔 있었다 — 한 턴 뒤엔 정확히 기억해냈다. 회피 지시가 참조를 눌러버린 것이다. */
+/* 🧭 세션 목표 — "이번 대화에서 이 사람을 어디로 데려갈까" 한 줄.
+   근거: ProactiveEval(arXiv 2508.20973) — 반응만 하는 대화와 방향이 있는 대화의 차이.
+
+   ⚠️ 이중화 금지가 이 층의 설계 제약이다. 이미 방향을 정하는 엔진이 여럿 있다:
+     · craft FSM(session_meta.craft) = 창작 '작업' 방향   → 작업 중이면 여기는 침묵한다
+     · freshStart                     = 세션 '여는' 방향   → 첫 턴은 그쪽 담당, 여긴 2턴부터
+     · GREET_ANGLES                   = 인사 각도          → 인사 턴엔 안 건다
+     · followups(open_loop)           = 꺼낼 '소재'        → 다시 뽑지 않고 있는 걸 쓴다
+     · emotionArc                     = 갈비스 '자기' 감정 → 읽기만 한다
+     · mindBlock(ToM)                 = 이번 '턴'의 상대   → 이건 세션 단위다
+   그래서 LLM을 새로 부르지 않는다. 이미 계산된 신호로 규칙 선택만 한다(추가 비용 0). */
+type SessionGoal = { key: string; line: string } | null;
+function pickSessionGoal(rel: any, followups: any[], gapH: number): SessionGoal {
+  const emo = rel?.emotion || {};
+  const val = Number(emo.valence);
+  const depth = Number(rel?.depth) || 1;
+
+  /* 우선순위는 '지금 이 관계에 제일 급한 것' 순이다. 하나만 고른다 —
+     목표가 둘이면 방향이 아니라 소음이다. */
+  if (rel?.mood === "sulky" || (Number.isFinite(val) && val <= -12)) {
+    return { key: "repair", line: "지금은 사이가 좀 상해 있다. 이번 대화의 목표는 **관계를 푸는 것**이다. 화제를 늘리려 하지 말고, 상대 말을 받아주는 데 집중해라. 억지로 밝은 척하지도 마라." };
+  }
+  if (Array.isArray(followups) && followups.length) {
+    return { key: "followup", line: "이번 대화의 목표는 **하다 만 얘기를 매듭짓는 것**이다. 위 '지난 대화' 중 하나를 자연스러운 타이밍에 꺼내 결말을 물어라. 억지로 앞세우지 말고, 흐름이 비면 그때." };
+  }
+  if (gapH >= 20) {
+    return { key: "reengage", line: "오랜만에 왔다. 이번 대화의 목표는 **그동안의 근황을 하나라도 건지는 것**이다. 새 소식 한 조각을 얻어내면 성공이다." };
+  }
+  if (depth <= 2) {
+    return { key: "deepen", line: "아직 서로 잘 모른다. 이번 대화의 목표는 **이 사람에 대해 하나 더 아는 것**이다. 취조하지 말고, 네 얘기를 먼저 흘려서 상대가 자기 얘기를 하게 만들어라." };
+  }
+  /* 조건이 없으면 목표를 만들지 않는다. 억지 목표는 대화를 몰아붙이는 것으로 나온다. */
+  return null;
+}
+
 function backRefAsk(msg: string): boolean {
   const m = String(msg || "");
   if (!m) return false;
@@ -3159,7 +3194,7 @@ Deno.serve(async (req) => {
       const lastMs = rel.last_seen_at ? Date.parse(rel.last_seen_at) : 0;
       const sm = (rel.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
       if (!sm || !lastMs || (Date.now() - lastMs) > 45 * 60000) {
-        rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0, craft: sm?.craft || null };
+        rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0, craft: sm?.craft || null, goal: null };
       }
     }
     /* 🤫 방금 보고 또 열었으면 말 걸지 않는다 — 열 때마다 인사하면 스팸이다.
@@ -3926,6 +3961,25 @@ ${parts.join("\n")}`;
 ("네가 걱정하는 걸 알아" 같은 심리 분석 티내기 금지 — 읽었으면 그냥 그렇게 행동해라).
 한 줄을 넘기지 마라.`
       : "";
+    /* 🧭 세션 목표 — 세션당 한 번 정해 session_meta.goal 에 얹는다(새 테이블 없음).
+       ⚠️ 첫 턴은 freshStart 담당이라 여기선 정하기만 하고 주입은 2턴부터.
+          작업 중(craft ≠ idle)이면 craft FSM 이 방향을 갖는다 → 침묵.
+          위기·게스트·창작 턴도 제외. 목표가 없으면 그냥 없는 채로 간다. */
+    let goalBlock = "";
+    try {
+      const sm0 = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
+      const sTurns = Number(sm0?.turns) || 0;
+      let goal: SessionGoal = (sm0?.goal && typeof sm0.goal === "object") ? sm0.goal : null;
+      if (rel && !goal) {
+        const gapH0 = sm0?.prev_end_at ? (Date.now() - Date.parse(sm0.prev_end_at)) / 3600000 : 0;
+        goal = pickSessionGoal(rel, followups || [], gapH0);
+        rel.session_meta = { ...(rel.session_meta || {}), goal };   // persistTurn 이 저장한다
+      }
+      if (goal && sTurns >= 1 && craft.state === "idle" && !crisis && !planMode && !work && userMsg) {
+        goalBlock = `\n━━ 🧭 이번 대화의 방향 ━━\n${goal.line}\n(대놓고 말하지 마라. 목표를 입 밖에 내는 순간 상담이 된다 — 그냥 그렇게 흘러가게만 해라.)`;
+      }
+    } catch { /* 목표는 있으면 좋은 것이지 없으면 안 되는 게 아니다 */ }
+
     const companionBlock = brain === "companion"
       ? `🫂 [컴패니언 모드 — 진짜 친구]: 요청 안 받은 검색·생성·도구 호출 금지(마음으로 대화). 감정선·기억·호칭 최우선.
 🎯 선제 리드·핑퐁: 상대가 매번 질문하게 두지 마라. 위 [기억/지난 대화/공백/감정]을 근거로 네가 '먼저' 구체적 화제를 꺼내거나 안부를 물어라(뻔한 "어떻게 생각해?" 금지). 답할 땐 '답 + 되물음'으로 이어가라(핑퐁).
@@ -3970,6 +4024,7 @@ ${parts.join("\n")}`;
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
       ...(mindBlock ? [{ role: "system", content: mindBlock }] : []),
+      ...(goalBlock ? [{ role: "system", content: goalBlock }] : []),
       ...(piiBlock ? [{ role: "system", content: piiBlock }] : []),
       ...(emoCarryBlock ? [{ role: "system", content: emoCarryBlock }] : []),
       ...(selfDepBlock ? [{ role: "system", content: selfDepBlock }] : []),
