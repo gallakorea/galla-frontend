@@ -2204,6 +2204,64 @@ function stripHostileOpener(t: string, hostile: boolean): string {
   return x.trim() ? x : String(t || "");       // 전부 지워졌으면 원문 유지(빈 답 방지)
 }
 
+/* 💸 근거 없는 금액 차단 ─────────────────────────────────────────────
+   숫자를 물었는데 근거가 없으면 모델은 지어낸다.
+   실측: 항공권 도구가 없는데 "인천-도쿄 12만 7천 원부터" → "11만 9천 원짜리도 나오네!"
+        비트코인도 도구 붙기 전엔 "6만 9천 달러"(실제 9,963만원)라고 했다.
+   도구를 계속 늘리는 걸로는 못 따라간다(집값·항공권·호텔·중고차…). 근거를 요구한다.
+   ⚠️ '가격을 물은 턴'에만 적용한다 — 일상 대화의 숫자("평단 250", "3시에 보자")를
+      건드리면 멀쩡한 말이 잘린다. */
+function priceAsk(msg: string): boolean {
+  const m = String(msg || "");
+  return /(얼마|가격|시세|값|비용|요금|운임|호가|실거래|최저가|싼\s*거|싼\s*게)/.test(m);
+}
+/* "12만 7천" → 127000, "1,691,000" → 1691000. 못 읽으면 null(=근거 없음 처리). */
+function koAmount(raw: string): number | null {
+  const t = String(raw || "").replace(/[,\s]/g, "");
+  if (/^\d+$/.test(t)) return Number(t);
+  const m = t.match(/^(?:(\d+)억)?(?:(\d+)만)?(?:(\d+)천)?(\d+)?$/);
+  if (!m || !m.slice(1).some(Boolean)) return null;
+  const [, eok, man, cheon, rest] = m;
+  return (Number(eok || 0) * 1e8) + (Number(man || 0) * 1e4)
+       + (Number(cheon || 0) * 1e3) + Number(rest || 0);
+}
+const MONEY_RE = /(\d[\d,]*(?:억)?(?:\s*\d*만)?(?:\s*\d*천)?)\s*(원|달러|엔|만원|억원)/g;
+function moneyValues(t: string): number[] {
+  const out: number[] = [];
+  for (const m of String(t || "").matchAll(MONEY_RE)) {
+    const v = koAmount(m[1]);
+    if (v == null) { out.push(NaN); continue; }          // 못 읽음 = 근거 없음 취급
+    out.push(m[2] === "만원" ? v * 1e4 : m[2] === "억원" ? v * 1e8 : v);
+  }
+  return out;
+}
+/* 도구가 돌려준 텍스트에서 '숫자'를 전부 뽑아 근거 집합을 만든다. */
+function groundSet(blob: string): Set<number> {
+  const g = new Set<number>();
+  for (const m of String(blob || "").matchAll(/\d[\d,]*(?:\.\d+)?/g)) {
+    const n = Number(String(m[0]).replace(/,/g, ""));
+    if (Number.isFinite(n)) { g.add(n); g.add(Math.round(n)); }
+  }
+  for (const v of moneyValues(blob)) if (Number.isFinite(v)) g.add(v);
+  return g;
+}
+function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean): string {
+  if (!isPriceAsk) return reply;
+  const vals = moneyValues(reply);
+  if (!vals.length) return reply;
+  const ground = groundSet(blob);
+  const bad = vals.some((v) => !Number.isFinite(v) || !ground.has(v));
+  if (!bad) return reply;
+  /* 문장 단위로 잘라 '근거 없는 금액이 든 문장'만 뺀다. 통째로 지우면 빈 답이 나간다. */
+  const parts = String(reply).split(/\n{2,}/);
+  const kept = parts.filter((p) => {
+    const pv = moneyValues(p);
+    return !pv.length || pv.every((v) => Number.isFinite(v) && ground.has(v));
+  });
+  const honest = "정확한 값은 내가 못 잡겠어 — 아는 척 지어내긴 싫어서.";
+  return kept.length ? kept.join("\n\n") + "\n\n" + honest : honest;
+}
+
 function deHonorific(t: string): string {
   let x = String(t || "");
   const tail = "(?=\\s*(?:[.!?~…]|ㅋ+|ㅎ+|\\n|$))";
@@ -3450,6 +3508,9 @@ ${parts.join("\n")}`;
     /* 🧨 이번 턴이 '진짜 시비'인가 — 프롬프트 주입과 응답 후처리가 같은 판단을 써야 한다.
        두 번 계산하면 "받아치기 프롬프트는 들어갔는데 후처리가 지워버리는" 어긋남이 난다. */
     const _hostileTurn = hostileNow(history, userMsg);
+    /* 💸 이번 턴에 도구가 실제로 돌려준 내용 — 답변 속 금액의 '근거' 집합을 만든다. */
+    let _toolBlob = "";
+    const _priceAsk = priceAsk(userMsg || "");
     const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
     // 🌍 유저 언어 — 지금은 전원 'ko'라 아무 일도 안 일어난다. 해외를 열면 그때 이 블록이 켜진다.
     //    ⚠️ 이건 '번역'이 아니라 응답 언어만 맞추는 최소 장치다. 반말·ㅋㅋ·아재개그로 짜인
@@ -3916,6 +3977,7 @@ ${parts.join("\n")}`;
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
             sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(sreply), _hostileTurn), friendName)));
+            sreply = stripUngroundedMoney(sreply, "", _priceAsk);
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
@@ -3980,6 +4042,7 @@ ${parts.join("\n")}`;
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
         }
         messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: out.action.brief || ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
+        _toolBlob += " " + (messages[messages.length - 1]?.content || "");
       }
     }
     // 빈 답 폴백 — 초안 카드가 붙어있으면 "헷갈렸어"가 아니라 라스트마일 안내(모델이 도구만 부르고 텍스트를 안 쓴 케이스).
@@ -4099,6 +4162,7 @@ ${parts.join("\n")}`;
             const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null, reshow);
             if (out4.action) actions.push(out4.action);
             messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { ok: true, 실행됨: out4.action.brief || ACTION_BRIEF[out4.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out4.result ?? {})).slice(0, 2000) });
+        _toolBlob += " " + (messages[messages.length - 1]?.content || "");
           }
           // hot_issues/news만 부르고 아직 point_to 안 했으면, 그 id로 point_to까지 한 번 더 강제
           if (!hasView()) {
@@ -4185,6 +4249,7 @@ ${parts.join("\n")}`;
             const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
             if (out.result?.videos?.length) vids = out.result.videos;
             messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 2500) });
+        _toolBlob += " " + (messages[messages.length - 1]?.content || "");
           }
           if (vids) {
             messages.push({ role: "system", content: "이제 위 '실제' 영상 중 상대 관심(먹방 등)에 맞는 1개를 골라 친구 말투로 한두 마디 하고 point_to(type:hottube, id: 그 video_id)로 열어라. 위 목록에 있는 것만, 지어내기·'기다려/찾아줄게' 금지." });
@@ -4222,6 +4287,7 @@ ${parts.join("\n")}`;
               const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
               if (c.function?.name === "web_search" && out.result?.results?.length) searchHits = out.result.results;
               messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 3000) });
+        _toolBlob += " " + (messages[messages.length - 1]?.content || "");
             }
           }
           if (searchHits.length) {
@@ -4324,6 +4390,7 @@ ${parts.join("\n")}`;
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
     reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(reply), _hostileTurn), friendName)));
+    reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk);
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
