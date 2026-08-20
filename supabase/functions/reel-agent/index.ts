@@ -238,7 +238,7 @@ function clampOverlap(subs: { text: string; start: number; len: number }[]) {
    역할(role)이 편집의 핵심이다: food/cook/eat = 릴스의 본체, place = 맥락(양념), junk = 버릴 컷.
    사장님 지적("쓸데없는 컷이 초반에 몰림")의 해법은 여기서 시작한다 — 캡션만으론 컷을 못 버린다.
    1순위 Gemini(이미지 바이트 인라인), 폴백 OpenAI, 최후 폴백(전부 food 취급 → 순서 배치로 강등). */
-type ClipInfo = { cap: string; role: string; score: number; key: string; act?: string; shot?: string };
+type ClipInfo = { cap: string; role: string; score: number; key: string; act?: string; shot?: string; x?: number };
 let _capDbg = "";   // 🔬 진단: 마지막 캡션 실패 원인(create 응답에 노출)
 function parseClipInfo(txt: string, n: number): ClipInfo[] {
   let arr: any[] = [];
@@ -253,6 +253,10 @@ function parseClipInfo(txt: string, n: number): ClipInfo[] {
     key: String(o?.k || o?.c || `k${i}`).slice(0, 20),   // 소재 키(같은 음식·같은 장면 묶음) — 장면 중복 제거용
     act: String(o?.a || "").slice(0, 12),                // 동작(붓기·자르기·들기…) — 같은 음식이라도 그림이 달라진다
     shot: ["close", "mid", "wide"].includes(String(o?.sh)) ? String(o.sh) : "",
+    /* 🎯 피사체 가로 위치 — 9:16으로 자를 때 무엇을 남길지. 에지·채도로 자동 판정했을 땐
+       주인공 대신 색 진한 반찬 쪽으로 끌려가 맥주잔이 화면 밖으로 나갔다(실측).
+       "무엇이 주인공인가"는 신호처리가 아니라 보는 쪽의 일이다. 이미 부르는 호출에 한 줄만 더 받는다. */
+    x: Number.isFinite(Number(o?.x)) ? Math.min(1, Math.max(0, Number(o.x))) : 0.5,
   }));
 }
 /* 🧠 캐시 — 같은 클립은 항상 같은 판정을 쓴다.
@@ -276,7 +280,8 @@ async function captionClips(clips: any[]): Promise<ClipInfo[]> {
   const fallback: ClipInfo[] = clips.map((_, i) => ({ cap: `클립 ${i + 1}`, role: "food", score: 3, key: `k${i}` }));
   if (!thumbs.some(Boolean)) return fallback;
   const ask = `맛집 릴스 소스 클립들의 대표 프레임이다. 각 이미지를 순서대로 판정해 JSON 배열로만 답해라(이미지 개수와 같은 길이).
-원소 형식: {"c":"장면 6~14자","k":"소재키","r":"food|cook|eat|place|junk","s":1~5,"a":"동작","sh":"close|mid|wide"}
+원소 형식: {"c":"장면 6~14자","k":"소재키","r":"food|cook|eat|place|junk","s":1~5,"a":"동작","sh":"close|mid|wide","x":0.0~1.0}
+x = **주인공(음식·인물)의 화면 가로 위치**(0=왼쪽 끝, 0.5=한가운데, 1=오른쪽 끝). 세로로 9:16을 잘라낼 때 무엇을 남길지 정하는 값이다. 애매하면 0.5.
 a = 화면에서 벌어지는 동작 한 단어(붓기/비비기/자르기/들기/먹기/걷기/정적 등). 정지된 상차림이면 "정적".
 sh = 샷 크기(close=음식 꽉 찬 클로즈업, mid=한 상 정도, wide=공간·거리)
 k = **소재 키**: 무엇을 찍었는지 한 단어로 통일해서 붙여라. 같은 음식·같은 대상을 찍은 프레임은 각도·동작이 달라도 **반드시 똑같은 키**를 써야 한다(예: 빈대떡 클로즈업도 빈대떡 자르는 것도 전부 "빈대떡", 물냉면 여러 컷은 전부 "물냉면", 간판·외관은 "외관"). 이 키로 중복 장면을 골라낸다.
@@ -1255,6 +1260,9 @@ async function runCreate(uid: string, body: any): Promise<Response> {
           // 🅰🅱 이 컷의 차점 후보(사용자가 1탭으로 갈아끼울 화면)와 '확실치 않음' 표시를 같이 실어 보낸다
           alts: ((sg as any).alts || []).map((i: number) => fClips[i]?.url).filter(Boolean),
           unsure: !!(sg as any).unsure,
+          /* 크롭 기본값 = 비전이 본 주인공 위치. 과하게 움직이면 구도가 무너지므로 중앙에서 ±0.15로 제한.
+             세로 원본은 잘라낼 여백이 없어 워커에서 자동으로 무시된다. */
+          cx: +(0.5 + Math.max(-0.15, Math.min(0.15, (Number(fInfo[ci]?.x ?? 0.5) - 0.5)))).toFixed(3),
           ...(off > 0 ? { zoom: 1.18 } : {}),
         });
         off += take; need = +(need - take).toFixed(2); t += take;
