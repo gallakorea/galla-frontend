@@ -1085,7 +1085,11 @@
     /* 🤫 서버가 '지금은 말 걸 때가 아니다'라고 판단하면(quiet 또는 빈 reply) 조용히 물러난다.
        ⚠️ 여기서 기본 인사말로 대체하면 침묵 문턱이 통째로 무의미해진다(열 때마다 "안녕!" 스팸). */
     if(r && (r.quiet===true || (typeof r.reply==="string" && !r.reply.trim()))) return;
-    // 서버 응답 자체가 없으면(네트워크 실패) 첫 대화일 때만 기본 인사 — 기록이 있으면 조용히 넘어간다.
+    /* 기본 인사는 '화면이 비어 있을 때'만 쓴다.
+       비로그인·네트워크 실패면 서버가 판단을 못 하는데, 그때마다 폴백을 찍으면
+       열 때마다 "안녕! 나 갈비스야"가 쌓인다(열 때마다 인사 시도로 바꾼 뒤 실측). */
+    var shown = logEl && logEl.children.length;
+    if(shown && (!r || r.ok === false)) return;
     if(!r && history.length) return;
     var m = await addFriendReply((r&&r.reply) || "안녕! 나 갈비스야. 심심할 때 놀러 와.");
     if(r&&r.actions) addActions(m, r.actions);
