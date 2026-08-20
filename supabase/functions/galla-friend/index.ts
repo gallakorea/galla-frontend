@@ -2905,8 +2905,11 @@ Deno.serve(async (req) => {
        옛 프론트는 빈 reply 를 받으면 하드코딩된 "안녕! 나 갈비스야"로 대체한다 →
        배포 시차 동안 열 때마다 그 말이 뜨는 회귀가 된다. 플래그 없으면 예전처럼 항상 인사. */
     if (!userMsg && !firstMeet && body?.quietOk === true) {
+      /* ⏱ 3분. 처음엔 30분으로 뒀는데 "열어도 대답이 없다"는 제보가 계속 나왔다 —
+         컴패니언을 여는 건 사용자가 말을 건 것이고, 친구라면 답을 한다.
+         이 문턱은 '연타로 여닫을 때'만 막으면 된다. */
       const gm = rel?.last_seen_at ? (Date.now() - Date.parse(rel.last_seen_at)) / 60000 : 99999;
-      if (gm < 30) return json({ ok: true, reply: "", actions: [], friendName: rel?.friend_name || "갈비스", quiet: true });
+      if (gm < 3) return json({ ok: true, reply: "", actions: [], friendName: rel?.friend_name || "갈비스", quiet: true });
     }
 
     // 🧭 창작 상태 머신 로드 — "제안됨→기획중→확정" 진행 상태를 서버가 기억(정규식 추측 폐지의 근간).

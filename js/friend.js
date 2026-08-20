@@ -330,9 +330,13 @@
         window.GALLA_planPill(hd);
       }
     }catch(e){}
-    // 인사는 '세션 최초 1회'만 — 내렸다(닫기/미니) 다시 올리면 재-greet 금지(didIntro 가드).
-    // askGalvis가 첫 말을 책임질 땐도 인사 억제. 저장된 대화는 항상 렌더.
-    if(!logEl.children.length) restoreOrGreet(window.__frSuppressGreet===true || window.__frDidIntro===true);
+    /* 🗣 열 때마다 인사를 '시도'한다. 실제로 말을 걸지 말지는 서버가 정한다(공백 30분 미만이면 조용).
+       예전엔 __frDidIntro 로 '세션 1회'만 허용했는데, 앱(SPA)은 페이지가 안 바뀌어 그 세션 내내
+       침묵이었다. 닫았다 다시 열어도 반응이 없다는 제보가 이것이다(실측: 2차 열기 때 서버 호출 0).
+       ⚠️ 억제는 askGalvis 가 첫 말을 책임질 때(__frSuppressGreet)만. */
+    var frSuppress = (window.__frSuppressGreet === true);
+    if(!logEl.children.length) restoreOrGreet(frSuppress);   // 첫 렌더: 지난 대화 복원 + 인사
+    else if(!frSuppress) greet();                            // 이미 떠 있으면 인사만 다시
     window.__frDidIntro = true;
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
@@ -1062,7 +1066,13 @@
     greet();
   }
   var _greetStale=false;   // 🔐 greet race — 인사 응답 오기 전에 유저가 먼저 말 걸면 인사를 버린다(요청 씹힘 방지, 실사용 E2E 마찰#1)
+  var _greeting=false;
   async function greet(){
+    if(_greeting) return;            // 진행 중인 인사가 있으면 겹쳐 부르지 않는다
+    _greeting=true;
+    try{ await _greet(); } finally { _greeting=false; }
+  }
+  async function _greet(){
     // 빈 메시지 → 서버가 첫만남/재방문 판단해 반겨줌(기억 리콜 + 그 사이 갈라에서 한 일)
     _greetStale=false;
     /* ⌨️ 타이핑 표시는 '늦게' 띄운다 — 서버가 "조용히 있어라"(공백 30분 미만)로 즉답하면
