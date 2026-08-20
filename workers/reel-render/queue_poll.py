@@ -39,6 +39,13 @@ def poll_loop(render_fn):
                 time.sleep(5); continue
             jid = job["id"]; spec = job["spec"]
             print(f"[worker] 잡 {jid} — 세그먼트 {len(spec['segments'])}개", flush=True)
+            # 🎯 결정적 순간 질의 — 워커는 프레임만 뽑고, 판단은 에이전트(비전)가 한다.
+            def ask_moment(u, times, imgs):
+                try:
+                    r = _call(url, key, anon, {"op": "moment", "url": u, "times": times, "imgs": imgs})
+                    return int(r.get("pick", 0))
+                except Exception:
+                    return 0
             def prog(msg):
                 print(f"[worker] {jid} {msg}", flush=True)
                 try: _call(url, key, anon, {"op": "progress", "id": jid, "msg": "렌더: " + msg})
@@ -49,7 +56,8 @@ def poll_loop(render_fn):
                     render_fn({"segments": [{"src": s["src"], "in": s.get("in", 0), "dur": s["dur"]} for s in spec["segments"]],
                                "voice": spec["voice"], "subtitles": [{"text": x["text"], "start": x["start"], "len": x.get("len", 0.5)} for x in spec["subtitles"]],
                                "voice_tempo": spec.get("voice_tempo", 1),
-                               "width": spec.get("width", 1080), "height": spec.get("height", 1920), "fps": spec.get("fps", 30)}, out, wd, progress=prog)
+                               "width": spec.get("width", 1080), "height": spec.get("height", 1920), "fps": spec.get("fps", 30)},
+                              out, wd, progress=prog, ask_moment=ask_moment)
                     ps = _call(url, key, anon, {"op": "presign", "id": jid})
                     put = urllib.request.Request(ps["url"], data=open(out, "rb").read(), method="PUT",
                         headers={"Content-Type": "video/mp4"})

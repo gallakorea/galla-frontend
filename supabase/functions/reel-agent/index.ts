@@ -1391,6 +1391,48 @@ Deno.serve(async (req) => {
     }
     if (op === "progress") { const { data } = await sb.from("agent_jobs").select("user_id").eq("id", body.id).single();
       if (data) await pushProgress(body.id, data.user_id, String(body.msg || "").slice(0, 120)); return j({ ok: true }); }
+    /* 🎯 결정적 순간 고르기 — 워커가 후보 프레임 3장을 보내면 비전이 하나를 고른다.
+       워커엔 Gemini 키가 없다(그리고 있으면 안 된다) → 워커키로 보호된 이 경로로 대신 묻는다.
+       신호처리는 '흔들리지 않은 구간'까지는 찾지만 '붓는 순간·건져올리는 순간'은 못 찾는다.
+       클립당 1회 + clip_analysis 캐시라 재렌더는 0원. */
+    if (op === "moment") {
+      const url = String(body.url || "");
+      const times: number[] = (Array.isArray(body.times) ? body.times : []).map(Number).filter((x: number) => Number.isFinite(x));
+      const imgs: string[] = (Array.isArray(body.imgs) ? body.imgs : []).map(String);
+      if (!url || imgs.length < 2 || imgs.length !== times.length) return j({ error: "bad_args" }, 400);
+      const ck = `moment:${url}:${times.map((t) => t.toFixed(1)).join(",")}`;
+      try {
+        const { data } = await sb.from("clip_analysis").select("analysis").eq("url", ck).maybeSingle();
+        const pick = (data?.analysis as any)?.pick;
+        if (Number.isInteger(pick)) return j({ ok: true, pick, cached: true });
+      } catch (_) { /* 캐시 없으면 생성 */ }
+      if (!GEMINI_KEY) return j({ ok: true, pick: 0 });
+      const ask = `맛집 릴스 편집자다. 같은 클립에서 뽑은 후보 프레임들이다(순서대로 0번부터).
+릴스에 쓸 한 장을 골라라. 판단 기준을 **순서대로** 적용해라:
+① **음식이 프레임을 가득 채운 것** — 멀리서 잡혀 식탁·주변이 넓게 보이는 프레임은 무조건 탈락(같은 음식이라도 더 크게 잡힌 쪽이 이긴다).
+② 동작의 정점 — 소스를 붓는 중, 면을 건져올린 상태, 고기가 익는 중.
+③ 흐릿하거나 손·팔이 음식을 가린 프레임은 탈락.
+숫자 하나만 출력(예: 1). 설명 금지.`;
+      const parts: any[] = [{ text: ask }];
+      for (const b64 of imgs.slice(0, 4)) parts.push({ inlineData: { mimeType: "image/jpeg", data: b64 } });
+      let pick = 0;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const mdl = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"][attempt];
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent?key=${GEMINI_KEY}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0, maxOutputTokens: 8, thinkingConfig: { thinkingBudget: 0 } } }),
+          });
+          const d = await r.json().catch(() => null);
+          logGemini("reel:moment", mdl, d);
+          const t = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+          const m = /\d+/.exec(t);
+          if (m) { pick = Math.max(0, Math.min(times.length - 1, Number(m[0]))); break; }
+        } catch (_) { /* 다음 모델 */ }
+      }
+      try { await sb.from("clip_analysis").upsert([{ url: ck, analysis: { pick } }], { onConflict: "url" }); } catch (_) {}
+      return j({ ok: true, pick });
+    }
     if (op === "presign") {
       const { data } = await sb.from("agent_jobs").select("user_id").eq("id", body.id).single();
       if (!data) return j({ error: "no_job" }, 404);

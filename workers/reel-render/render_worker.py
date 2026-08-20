@@ -429,6 +429,35 @@ def clip_takes(path: str, workdir: str, min_len: float = 3.0, max_len: float = 6
         _takes_cache[key] = []
         return []
 
+_ASK_MOMENT = [None]     # 에이전트 경유 비전 질의(있으면 사용)
+
+def moment_pick(path: str, cands: list, workdir: str):
+    """후보 시각들 중 '결정적 순간'을 비전에게 고르게 한다(클립당 1회 + 서버 캐시).
+    ⚠️ 신호처리는 '흔들리지 않은 구간'까지는 찾지만 붓는 순간·건져올리는 순간은 못 찾는다.
+    실패하면 조용히 0번(신호처리 1순위)으로 — 렌더가 이것 때문에 멈추면 안 된다."""
+    fn = _ASK_MOMENT[0]
+    url = _url_of.get(path)
+    if not fn or not url or len(cands) < 2:
+        return 0
+    hit = cache_get(path, "moment" + ",".join(f"{t:.1f}" for t in cands))
+    if isinstance(hit, int):
+        return hit
+    imgs = []
+    try:
+        import base64
+        for k, t in enumerate(cands):
+            fp = os.path.join(workdir, f"mom{k}.jpg")
+            subprocess.run([FFMPEG, "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", path,
+                            "-frames:v", "1", "-vf", "scale=320:-2", "-q:v", "5", fp], capture_output=True)
+            if not os.path.exists(fp): return 0
+            imgs.append(base64.b64encode(open(fp, "rb").read()).decode())
+    except Exception:
+        return 0
+    pick = fn(url, [round(t, 2) for t in cands], imgs)
+    cache_put(path, "moment" + ",".join(f"{t:.1f}" for t in cands), pick)
+    return pick
+
+
 def best_start(path: str, need: float, total: float, avoid=(), role: str = "food", workdir: str = "") -> float:
     """이 클립에서 'need초짜리 가장 좋은 구간'의 시작 시각.
     프로 편집자가 하는 일 = 클립 앞부분을 그냥 쓰지 않고 동작이 살아있는 대목을 고르는 것.
@@ -438,6 +467,11 @@ def best_start(path: str, need: float, total: float, avoid=(), role: str = "food
         takes = clip_takes(path, workdir)
         fit = [tk for tk in takes if tk[1] - tk[0] >= need - 0.05]
         if not fit and takes: fit = [max(takes, key=lambda x: x[1] - x[0])]
+        # 🚫 '결정적 순간을 비전이 고른다' — **실측 후 미채택**(2026-08-19).
+        #    1차 프롬프트: 3클립 중 좋음1·나쁨1(빈대떡에서 가장 멀리서 잡힌 프레임 선택)·애매1.
+        #    2차(프레임 채움 우선으로 조임): 3클립 전부 0번만 반환 — 판별 자체를 못 한다.
+        #    대가는 첫 렌더 +119초, +₩24. 이득이 확인 안 된 기능은 넣지 않는다(스마트 크롭과 같은 판단).
+        #    엣지의 op:"moment"는 남겨뒀다 — 더 나은 모델로 다시 재볼 때 배선만 되살리면 된다.
         for st0, en0, _f in fit:
             if any(abs(st0 - a) < 0.4 for a in avoid): continue
             room = en0 - st0
@@ -580,7 +614,7 @@ def strip_silence(voice: str, workdir: str, keep: float = 0.10):
         print(f"[worker] strip_silence 실패(원본 사용): {e}", flush=True)
         return voice, (lambda t: t), probe_dur(voice)
 
-def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
+def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None, ask_moment=None):
     w = int(job.get("width", 1080)); h = int(job.get("height", 1920)); fps = int(job.get("fps", 30))
     font = job.get("font", "Noto Sans KR ExtraBold")
     segs = job["segments"]
@@ -588,6 +622,7 @@ def render(job: dict, out_path: str, workdir: str, progress=lambda msg: None):
 
 
     # 1) 소스 확보(URL이면 다운로드) — 같은 소스는 한 번만 받는다
+    _ASK_MOMENT[0] = ask_moment
     _STAGE.clear(); _stage_t0[0] = None      # ⚠️ 워커는 상주 프로세스다 — 잡마다 타이머를 비우지 않으면 값이 누적된다
     stage("다운로드"); progress("소스 내려받는 중")
     cache = {}
