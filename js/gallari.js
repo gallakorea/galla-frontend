@@ -13,6 +13,7 @@
     if (!box) return;
 
     let KIND = 'vertical';
+  window.GALLA_DOMAIN = KIND === 'vertical' ? 'short' : 'long';
     let loading = false;
     const cache = {};   // kind -> html (재조회 최소화)
 
@@ -120,6 +121,8 @@
     seg.forEach(b => b.addEventListener('click', () => {
       if (b.dataset.kind === KIND) return;
       KIND = b.dataset.kind;
+      // 배지 도색기에 지금 어느 판인지 알린다 — 숏판/롱판은 한 화면을 나눠 쓴다
+      window.GALLA_DOMAIN = KIND === 'vertical' ? 'short' : 'long';
       seg.forEach(x => x.classList.toggle('active', x.dataset.kind === KIND));
       load(KIND);
     }));

@@ -74,8 +74,10 @@
           등급 아이콘이 필요하면 GALLA_tiersOf(supabase, uids) 로 캐시를 읽어라.
           (예전엔 이 파일이 자기만의 임계값 사본을 들고 있어 피드 배지가
            옛 등급을 계속 보여줬다 — 사본을 다시 만들지 않는다) */
-    const giForLevel = lv => (lv <= 1 ? 0 : Math.round(20 * Math.pow(lv - 1, 2)));
-    const levelOfGi  = gi => Math.max(1, Math.floor(Math.sqrt(Math.max(0, Number(gi) || 0) / 20)) + 1);
+    /* ⚠️ 서버 level_of_gi/gi_for_level(÷5) 의 사본이다. 서버만 고치면
+       피드 배지가 옛 레벨을 계속 보여준다 — 실제로 그렇게 어긋났었다. */
+    const giForLevel = lv => (lv <= 1 ? 0 : Math.round(5 * Math.pow(lv - 1, 2)));
+    const levelOfGi  = gi => Math.max(1, Math.floor(Math.sqrt(Math.max(0, Number(gi) || 0) / 5)) + 1);
     window.GALLA_giForLevel = giForLevel;
     window.GALLA_levelOfGi  = levelOfGi;
 
@@ -83,8 +85,13 @@
       gi = Number(gi) || 0;
       const level = levelOfGi(gi);
       const floor = giForLevel(level), ceil = giForLevel(level + 1);
+      /* 판 밖(홈·DM·마이페이지)에서 쓰는 통합 아이콘 — 10레벨마다 띠가 바뀐다.
+         예전엔 레벨과 무관하게 늘 🌱 이라 Lv.25 도 새싹으로 보였다.
+         👑 는 왕 전용이라 쓰지 않는다. */
+      const icon = level >= 50 ? "🌟" : level >= 40 ? "🏅" : level >= 30 ? "💠"
+                 : level >= 20 ? "⚔️" : level >= 10 ? "🔰" : "🌱";
       return {
-        gi, level, icon: "🌱", label: `Lv.${level}`,
+        gi, level, icon, label: `Lv.${level}`,
         progress: ceil > floor ? Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100)) : 0,
         goalRemaining: Math.max(0, ceil - gi),
         goalLabel: `Lv.${level + 1}`,
@@ -486,6 +493,10 @@
 .nick-gold{background:linear-gradient(92deg,#f7d774 0%,#fff2b8 20%,#e8a93a 45%,#ffe89a 65%,#d98f24 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;text-shadow:0 0 10px rgba(201,209,224,.35);animation:nickGoldShine 3.4s linear infinite}
 .nick-gold::after{content:" 👑";-webkit-text-fill-color:initial;color:#c9d1e0;font-size:.82em;text-shadow:none}
 @keyframes nickGoldShine{0%{background-position:0% 0}100%{background-position:220% 0}}
+.nick-king{display:inline-block;font-size:.88em;margin-left:3px;vertical-align:baseline;
+  -webkit-text-fill-color:initial!important;color:initial!important;background:none!important;
+  -webkit-background-clip:initial!important;background-clip:initial!important;
+  animation:none!important;text-shadow:0 0 8px rgba(255,209,102,.5);filter:saturate(1.15)}
 .nick-tier{display:inline-block;font-size:.9em;margin-right:4px;vertical-align:baseline;-webkit-text-fill-color:initial!important;color:initial!important;background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;animation:none!important;text-shadow:none!important;filter:saturate(1.1)}
 /* 🎫 이용권 배지 — 이름 뒤. 닉네임 그라디언트가 배지까지 먹지 않게 클립을 리셋한다
    (nick-tier와 같은 이유). 과시가 아니라 '구독자'라는 조용한 표식이라 톤을 낮게 잡았다. */
@@ -632,6 +643,62 @@
   };
   window.GALLA_isGoldNick = uid => !!(window.GALLA_decoCache[uid] && window.GALLA_decoCache[uid].nick_gold);
 
+  /* ══ 지금 어느 판인가 ═══════════════════════════════════════
+     같은 사람이 이슈판에선 판잡이, 예측판에선 눈팅러다. 그러니 배지는
+     '누가 보느냐'가 아니라 '어느 판에서 보느냐'로 정해진다.
+     페이지가 스스로 밝히면(window.GALLA_DOMAIN) 그걸 쓰고, 아니면 URL로 추론한다.
+     SPA는 뷰가 바뀌어도 문서가 안 바뀌므로 매 도색마다 다시 읽는다. */
+  const DOM_BY_PATH = [
+    [/issue/,                         "issue"],
+    [/plaza|agora|news|room|live/,    "arena"],
+    [/shorts|reels/,                  "short"],
+    [/gallari|horizontal/,            "long"],
+    [/predict|market/,                "predict"],
+  ];
+  /* SPA는 문서가 안 바뀐다 — 뷰를 옮겨도 페이지가 밝힌 판이 그대로 남으면
+     숏판에서 이슈로 넘어가도 계속 숏판 등급이 붙는다.
+     ⚠️ pushState/replaceState 는 hashchange·popstate 를 안 띄운다. 이벤트로는
+        못 막는다. 그래서 '어느 주소에서 정했는지'를 같이 기억하고, 주소가
+        달라지면 스스로 무효가 되게 한다. */
+  let _domSet = null, _domAt = null;
+  Object.defineProperty(window, "GALLA_DOMAIN", {
+    configurable: true,
+    get() { return _domAt === location.href ? _domSet : undefined; },
+    set(v) { _domSet = v; _domAt = v === undefined ? null : location.href; },
+  });
+  window.GALLA_currentDomain = function () {
+    if (window.GALLA_DOMAIN !== undefined) return window.GALLA_DOMAIN;   // 이 주소에서 페이지가 직접 지정
+    const s = ((location.pathname || "") + (location.search || "") + (location.hash || "")).toLowerCase();
+    for (const [re, d] of DOM_BY_PATH) if (re.test(s)) return d;
+    return null;   // 홈·DM·마이페이지 등 판이 없는 곳은 통합 레벨 그대로
+  };
+
+  /* 판별 등급 — 서버 domain_tiers() 의 거울. 절대 기준(상대% 없음). */
+  const DOM_TIER_ROWS = [
+    [700, "🌪️", "판몰이"], [300, "🎯", "판잡이"], [100, "🎪", "판벌이"],
+    [30,  "🔥", "참견러"], [0,   "🌱", "눈팅러"],
+  ];
+  window.GALLA_domTierIcon = function (gi) {
+    gi = Number(gi) || 0;
+    const row = DOM_TIER_ROWS.find(r => gi >= r[0]) || DOM_TIER_ROWS[DOM_TIER_ROWS.length - 1];
+    return { icon: row[1], label: row[2], gi };
+  };
+  window.GALLA_domCache = window.GALLA_domCache || { doms: {}, kings: {} };
+  window.GALLA_loadDomBadges = async function (uids) {
+    const c = window.GALLA_domCache;
+    const need = [...new Set(uids)].filter(u => u && !(u in c.doms));
+    if (!need.length || !window.supabaseClient) return;
+    need.forEach(u => { c.doms[u] = null; });          // 중복요청 방지
+    try {
+      const { data } = await window.supabaseClient.rpc("dom_badges_of", { p_uids: need });
+      if (data) {
+        Object.assign(c.doms, data.doms || {});
+        c.kings = data.kings || {};                    // 왕좌는 항상 최신으로
+      }
+    } catch (_) { /* 무해 — 통합 배지로 떨어진다 */ }
+    need.forEach(u => { if (!c.doms[u]) c.doms[u] = {}; });
+  };
+
   /* 도색 대상 셀렉터 — data-nick-uid가 범용 마커. 레거시로 이름 클래스가
      data-user-id/profile-uid만 가진 경우도 포함(아바타·버튼 오적용 방지 위해
      '이름' 클래스만 열거). 새 렌더 지점은 data-nick-uid만 붙이면 된다. */
@@ -680,7 +747,9 @@
       map.get(uid).push(el);
     });
     if (!map.size) return;
-    await window.GALLA_loadDecos([...map.keys()]);
+    const uidList = [...map.keys()];
+    await Promise.all([window.GALLA_loadDecos(uidList), window.GALLA_loadDomBadges(uidList)]);
+    const curDom = window.GALLA_currentDomain();
     map.forEach((list, uid) => {
       const d = window.GALLA_decoCache[uid] || {};
       list.forEach(el => {
@@ -694,12 +763,32 @@
         // 아이콘이 이름 위 별도 줄로 떠버린다 — 사장님 재현). CSS가 그라디언트
         // 클립을 리셋해 아이콘은 그대로 보인다.
         if (!(el.firstElementChild && el.firstElementChild.classList.contains("nick-tier"))) {
-          const t = window.GALLA_gallianTier(d.gi || 0);
+          /* 판 안에서는 그 판의 등급을 보여준다 — 이슈판에선 이슈 등급.
+             판 밖(홈·DM·마이페이지)에서만 통합 레벨로 떨어진다. */
+          const dom = el.getAttribute("data-nick-dom") || curDom;
+          const dgi = dom ? Number((window.GALLA_domCache.doms[uid] || {})[dom]) || 0 : null;
           const tb = document.createElement("span");
           tb.className = "nick-tier";
-          tb.title = t.label + " · " + (d.gi || 0).toLocaleString() + " GI";
-          tb.textContent = t.icon;
+          if (dom) {
+            const dt = window.GALLA_domTierIcon(dgi);
+            tb.textContent = dt.icon;
+            tb.title = dt.label + " · 이번 시즌 " + Math.round(dgi).toLocaleString() + " GI";
+          } else {
+            const t = window.GALLA_gallianTier(d.gi || 0);
+            tb.textContent = t.icon;
+            tb.title = t.label + " · " + (d.gi || 0).toLocaleString() + " GI";
+          }
           el.insertBefore(tb, el.firstChild);
+          /* 👑 이 판의 왕이면 이름 뒤에 왕관. 판 밖에서는 왕중왕만 붙인다. */
+          const kingDom = dom || "all";
+          if (window.GALLA_domCache.kings[kingDom] === uid
+              && !el.querySelector(".nick-king")) {
+            const kb = document.createElement("span");
+            kb.className = "nick-king";
+            kb.textContent = "👑";
+            kb.title = kingDom === "all" ? "왕중왕" : "이 판의 왕";
+            el.appendChild(kb);
+          }
         }
         /* 🎫 이용권 배지 — 이름 '뒤'에 붙인다. 앞은 갈라리안 등급 아이콘 자리다.
            등급 아이콘(활동)과 이용권 배지(결제)는 성격이 달라 붙는 위치로 구분한다.
@@ -747,12 +836,11 @@
       el.removeAttribute("data-gold-done");
       el.classList.remove("nick-gold");
       [...el.classList].filter(c => c.startsWith("ns-")).forEach(c => el.classList.remove(c));
-      // 등급 아이콘은 이름 '안쪽' 첫 자식 — 여기서 제거
-      const ch = el.firstElementChild;
-      if (ch && ch.classList.contains("nick-tier")) ch.remove();
-      // 🎫 이용권 배지는 이름 '뒤' — 안 지우면 재도색마다 겹겹이 쌓인다
-      const sb = el.lastElementChild;
-      if (sb && sb.classList.contains("sub-badge")) sb.remove();
+      /* 등급 아이콘·왕관·이용권 배지 — 위치로 찾지 말고 클래스로 찾는다.
+         왕관이 뒤에 붙으면서 lastElementChild 가 밀려 이용권 배지가 안 지워지고
+         재도색마다 겹겹이 쌓인다. */
+      el.querySelectorAll(":scope > .nick-tier, :scope > .nick-king, :scope > .sub-badge")
+        .forEach(x => x.remove());
       // 🖼 프레임도 벗긴다 — 구독 해지·프레임 변경이 화면에 반영되려면 초기화가 필요하다
       let n = el, av = null;
       for (let i = 0; i < 3 && n && !av; i++) {

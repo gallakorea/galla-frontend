@@ -49,6 +49,7 @@
     const ava = (u) => window.GALLA_avatarSrc ? window.GALLA_avatarSrc((u || {}).avatar_url, 96) : ((u || {}).avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
     let liked = !!myLike, likeCount = post.like_count || 0;
 
+    window.GALLA_DOMAIN = post.kind === 'horizontal' ? 'long' : 'short';
     document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '롱판') : (author?.nickname || '숏판');
 
     // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
