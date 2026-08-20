@@ -78,21 +78,29 @@ async function fromKMA(rs: Region[]) {
 }
 
 async function fromOpenMeteo(rs: Region[]) {
-  const u = "https://api.open-meteo.com/v1/forecast"
-    + `?latitude=${rs.map((r) => r.lat).join(",")}&longitude=${rs.map((r) => r.lon).join(",")}`
-    + "&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FSeoul";
-  const res = await fetch(u, { signal: AbortSignal.timeout(15000) });
-  const arr = await res.json();
-  const list = Array.isArray(arr) ? arr : [arr];
+  /* 한 요청에 좌표를 여러 개 넣을 수 있다(실측 229개 OK). 지점이 244곳(시도 17 + 시군구 227)이라
+     URL 길이·타임아웃 여유를 두고 100개씩 끊는다 — 한 덩이가 실패해도 나머지는 살아남는다. */
   const out: Record<string, any> = {};
-  list.forEach((x: any, i: number) => {
-    const c = x?.current; if (!c || !rs[i]) return;
-    out[rs[i].code] = {
-      temp: c.temperature_2m, precip: c.precipitation,
-      code: c.weather_code, wind: c.wind_speed_10m,
-      obs_at: new Date().toISOString(),
-    };
-  });
+  const CH = 100;
+  for (let i = 0; i < rs.length; i += CH) {
+    const part = rs.slice(i, i + CH);
+    const u = "https://api.open-meteo.com/v1/forecast"
+      + `?latitude=${part.map((r) => r.lat).join(",")}&longitude=${part.map((r) => r.lon).join(",")}`
+      + "&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FSeoul";
+    try {
+      const res = await fetch(u, { signal: AbortSignal.timeout(20000) });
+      const arr = await res.json();
+      const list = Array.isArray(arr) ? arr : [arr];
+      list.forEach((x: any, k: number) => {
+        const c = x?.current; if (!c || !part[k]) return;
+        out[part[k].code] = {
+          temp: c.temperature_2m, precip: c.precipitation,
+          code: c.weather_code, wind: c.wind_speed_10m,
+          obs_at: new Date().toISOString(),
+        };
+      });
+    } catch { /* 이 덩이만 건너뛴다 */ }
+  }
   return out;
 }
 
