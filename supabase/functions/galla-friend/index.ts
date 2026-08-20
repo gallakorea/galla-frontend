@@ -2115,9 +2115,33 @@ function fixOwnName(t: string, friendName: string): string {
 // 🗣 존댓말 누출 교정 — 반말 페르소나인데 흥분하면 존대가 샌다("저격 좀 그만 하세요 ㅋㅋ", "저는 그냥").
 //    프롬프트로는 산발적으로 계속 뚫려서 **문장 끝 어미만** 안전하게 되돌린다.
 //    ⚠️ 문장 끝(또는 ㅋㅋ/이모지 앞)에만 적용한다 — 인용문 한가운데를 건드리면 뜻이 깨진다.
+/* 🧨 적대적 개시 제거 — "뭐 어쩌라고"는 프롬프트에 실패 로그까지 인용해 금지돼 있는데도
+   또 나왔다(사장님 실로그: "잤어" → "뭐 어쩌라고 ㅋㅋ" → "뭐 시발").
+   문구로 막는 건 두 번 실패했다. 시비가 걸린 턴이 아니면 코드로 잘라낸다.
+   ⚠️ 문장만 지우고 나머지는 살린다 — 통째로 지우면 빈 답이 나간다. */
+const HOSTILE_OPENERS = /(^|\n)\s*(뭐\s*어쩌라고|어쩌라고|그래서\s*뭐|그래서\?|알빠|내가\s*알\s*게\s*뭐|나\s*네\s*감정받이|됐다\s*너랑\s*얘기\s*안\s*해)[^\n]*(\n|$)/g;
+function stripHostileOpener(t: string, hostile: boolean): string {
+  if (hostile) return t;                       // 진짜 시비 턴에선 받아쳐도 된다
+  const x = String(t || "").replace(HOSTILE_OPENERS, "$1").replace(/^\s+/, "");
+  return x.trim() ? x : String(t || "");       // 전부 지워졌으면 원문 유지(빈 답 방지)
+}
+
 function deHonorific(t: string): string {
   let x = String(t || "");
   const tail = "(?=\\s*(?:[.!?~…]|ㅋ+|ㅎ+|\\n|$))";
+  /* ⚠️ '-습니다'를 일반 규칙으로 풀면 ㅂ불규칙이 깨진다("반갑습니다"→"반갑어").
+     틀린 활용은 존댓말보다 더 어색하니 자주 쓰는 것부터 표로 박는다. */
+  const FIXED: Array<[RegExp, string]> = [
+    [/반갑습니다/g, "반가워"], [/감사합니다/g, "고마워"], [/고맙습니다/g, "고마워"],
+    [/죄송합니다/g, "미안"],   [/미안합니다/g, "미안"],   [/알겠습니다/g, "알겠어"],
+    [/모르겠습니다/g, "모르겠어"], [/좋습니다/g, "좋아"], [/싫습니다/g, "싫어"],
+    [/있습니다/g, "있어"],     [/없습니다/g, "없어"],     [/맞습니다/g, "맞아"],
+    [/같습니다/g, "같아"],     [/그렇습니다/g, "그래"],   [/괜찮습니다/g, "괜찮아"],
+    [/하겠습니다/g, "할게"],   [/드립니다/g, "줄게"],     [/합니다/g, "해"],
+    [/됩니다/g, "돼"],         [/봅니다/g, "봐"],
+  ];
+  for (const [re, to] of FIXED) x = x.replace(re, to);
+
   const rules: Array<[RegExp, string]> = [
     [new RegExp("하세요" + tail, "g"), "해"],
     [new RegExp("주세요" + tail, "g"), "줘"],
@@ -2128,6 +2152,14 @@ function deHonorific(t: string): string {
     [new RegExp("([가-힣])습니다" + tail, "g"), "$1어"],
     [new RegExp("입니다" + tail, "g"), "이야"],
     [new RegExp("([가-힣])세요" + tail, "g"), "$1"],
+    /* 아래는 실로그에서 새어 나간 것들 — tail(문장 끝) 조건에 안 걸리던 형태.
+       "그러지 마시고요~", "반갑습니다 반가워요 ㅋㅋ"(문중이라 습니다 규칙이 안 먹었다) */
+    [/마시고요/g, "마"],
+    [/([가-힣])시고요/g, "$1고"],
+    [/([가-힣])습니다(?![가-힣])/g, "$1어"],
+    [/([가-힣])ㅂ니다(?![가-힣])/g, "$1어"],
+    [/([가-힣])시죠(?![가-힣])/g, "$1자"],
+    [/([가-힣])세요(?![가-힣])/g, "$1"],
   ];
   for (const [re, to] of rules) x = x.replace(re, to);
   return x.replace(/(^|[\s"'(])저는(?=[\s,])/g, "$1나는").replace(/(^|[\s"'(])제가(?=[\s,])/g, "$1내가");
@@ -2407,6 +2439,13 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
     return { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 없는 뉴스 지어내기 금지." };
+  /* 💹 '지금 얼마/몇' 류 실시간 사실 — 주가·코인·환율·금리·날씨.
+     이게 목록에 없어서 도구 없는 컴패니언 경로로 샜고, 모델은 도구를 못 부르니
+     "검색해볼게 → 오래 걸리네 → 다시 찾아볼까?"를 무한 반복했다(사장님 실로그, 하이닉스 주가).
+     현실 숫자를 물으면 반드시 검색해서 답한다. */
+  if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥|기온|날씨|미세먼지)/.test(m)
+      || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
+    return { tool: "web_search", hint: "web_search를 kind:news로 '지금 값'을 찾아 **검색 결과에 실제로 적힌 숫자만** 답해라. 기억·추측으로 숫자 말하기 절대 금지. 결과에 없으면 '실시간 시세까진 못 잡겠다'고 솔직히 말하고 끝내라 — '찾아볼게/잠깐만'만 하고 안 찾는 건 최악이다." };
   if (/(광장\s*(뭐|무슨|글|재밌|화제|판)|무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
     return { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판·공개댓글·논객만. 없는 썰 지어내기 금지." };
   return null;
@@ -3330,6 +3369,9 @@ ${parts.join("\n")}`;
     const dependency = !!(userMsg && !crisis && detectDependency(userMsg));
     const thirdParty = !!(userMsg && detectThirdPartyLookup(userMsg));
     const minorCtx = !!(userMsg && detectMinor(recentBlob2));
+    /* 🧨 이번 턴이 '진짜 시비'인가 — 프롬프트 주입과 응답 후처리가 같은 판단을 써야 한다.
+       두 번 계산하면 "받아치기 프롬프트는 들어갔는데 후처리가 지워버리는" 어긋남이 난다. */
+    const _hostileTurn = hostileNow(history, userMsg);
     const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
     // 🌍 유저 언어 — 지금은 전원 'ko'라 아무 일도 안 일어난다. 해외를 열면 그때 이 블록이 켜진다.
     //    ⚠️ 이건 '번역'이 아니라 응답 언어만 맞추는 최소 장치다. 반말·ㅋㅋ·아재개그로 짜인
@@ -3716,7 +3758,7 @@ ${parts.join("\n")}`;
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName) },
       // 🥊 반복 시비일 때만 — 평상시엔 아예 주입하지 않는다(캐시 프리픽스 뒤라 캐시에도 영향 없음)
-      ...(hostileNow(history, userMsg) ? [{ role: "system", content: HOSTILE_BLOCK }] : []),
+      ...(_hostileTurn ? [{ role: "system", content: HOSTILE_BLOCK }] : []),
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
@@ -3795,7 +3837,7 @@ ${parts.join("\n")}`;
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName)));
+            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(sreply), _hostileTurn), friendName)));
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
@@ -4203,7 +4245,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripFakeToolCall(reply), friendName)));
+    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(reply), _hostileTurn), friendName)));
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
