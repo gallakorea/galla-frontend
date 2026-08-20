@@ -927,3 +927,12 @@ body{
   -webkit-user-select: none; user-select: none;
   -webkit-user-drag: none;
 }
+
+/* ═══ 왕관 — 이번 시즌 쥐고 있는 왕좌 ═══ */
+.mp-crowns { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
+.mp-crown {
+  padding: 1px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 900; color: #0a0a0b;
+  background: linear-gradient(90deg, #ffd166, #ff8a3d);
+  box-shadow: 0 0 12px rgba(255,209,102,.35);
+}

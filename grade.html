@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0820104"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0820160"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>갈라리안 등급 - GALLA</title>
 
     <!-- 공통 스타일 -->
     <link rel="stylesheet" href="./css/index.css?v=081802">
-    <link rel="stylesheet" href="./css/grade.css?v=0814190">
+    <link rel="stylesheet" href="./css/grade.css?v=0820160">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
 
     <style>
@@ -81,6 +81,12 @@
     </section>
 
     <!-- NEXT TIER PROGRESS -->
+    <!-- 왕 다섯 -->
+    <section class="section">
+        <div class="section-title">왕 다섯 <small style="opacity:.5;font-weight:600">· 시즌마다 다시 뽑습니다</small></div>
+        <div class="card kings-card" id="kingsCard"></div>
+    </section>
+
     <section class="section">
         <div class="section-title">내 갈라 지수가 어디서 나왔나</div>
 
@@ -98,8 +104,11 @@
     <section class="section">
         <div class="section-title">갈라리안 세계관</div>
         <div class="card lore-card">
-            <b>레벨</b>은 평생 쌓입니다 — 한 번 오르면 내려가지 않아요.<br>
-            <b>등급</b>은 시즌마다 다시 겨룹니다 — 그 시즌에 잘한 사람 순으로 나눠 갖습니다.
+            <b class="lore-hook">갈라엔 왕이 다섯이다. 아무도 다섯을 다 갖지 못한다.</b><br><br>
+            이슈 · 광장 · 숏판 · 롱판 · 예측 — 판이 다섯이고, 판마다 주인이 따로 있습니다.
+            한 사람이 다섯을 다 잘하기는 어렵게 만들어 뒀습니다.<br><br>
+            <b>레벨</b>은 평생 쌓입니다 — 판마다 따로, 한 번 오르면 내려가지 않아요.<br>
+            <b>왕</b>은 시즌마다 다시 뽑습니다 — 그 시즌에 그 판에서 가장 앞선 한 명.
             그래서 늦게 시작해도 <b>다음 시즌엔 같은 출발선</b>입니다.
         </div>
     </section>
@@ -218,8 +227,8 @@
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=081606"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="./js/gallian.js?v=0814190"></script>
-<script src="./js/grade.js?v=0814190"></script>
+<script src="./js/gallian.js?v=0820160"></script>
+<script src="./js/grade.js?v=0820160"></script>
 <script src="./js/nav.js?v=0820104"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
 <script src="./js/nav-jog.js?v=081801" defer></script>

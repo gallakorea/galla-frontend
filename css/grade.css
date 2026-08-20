@@ -167,3 +167,45 @@ body {
 .perk-row{ display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 0; }
 .rank-chip{ font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:99px;
   background:rgba(255,255,255,.07); margin-left:7px; vertical-align:2px; }
+
+/* ═══ 왕 다섯 ═══════════════════════════════════════════════
+   영역별 레벨 배지 · 왕관 · 왕좌 목록 */
+.pi-lv {
+  display: inline-block; margin-left: 5px; padding: 1px 6px;
+  font-size: 10px; font-weight: 900; letter-spacing: .02em;
+  border-radius: 999px; border: 1px solid transparent;
+  font-variant-numeric: tabular-nums; vertical-align: 1px;
+}
+.pi-crown {
+  display: inline-block; margin-left: 5px; padding: 1px 7px;
+  font-size: 10px; font-weight: 900; vertical-align: 1px;
+  color: #0a0a0b; background: linear-gradient(90deg, #ffd166, #ff8a3d);
+  border-radius: 999px; box-shadow: 0 0 12px rgba(255,209,102,.35);
+}
+.progress-item.is-king .pi-label { color: #ffd166; }
+
+.kings-card { padding: 6px 4px; }
+.king-row {
+  display: grid; grid-template-columns: 92px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 11px 12px; border-left: 3px solid var(--kc);
+  border-radius: 3px 12px 12px 3px; margin: 6px 4px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--kc) 12%, transparent), transparent 62%);
+}
+.king-seat { font-size: 11.5px; font-weight: 900; color: var(--kc); }
+.king-who  { font-size: 13px; font-weight: 900; color: #e8e8ec; }
+.king-gi   { font-size: 10.5px; font-weight: 800; color: #6c6c72; font-variant-numeric: tabular-nums; }
+.king-row.vacant { background: none; border-left-color: #2a2a32; }
+.king-row.vacant .king-seat { color: #6c6c72; }
+.king-row.vacant .king-who  { color: #55555c; font-weight: 700; }
+.king-row.mine { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc) 45%, transparent); }
+.king-row.mine .king-who::after {
+  content: "나"; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 900; color: #0a0a0b; background: var(--kc);
+}
+.king-empty { padding: 14px; font-size: 12px; color: #6c6c72; font-weight: 700; }
+
+.lore-hook {
+  color: #ffd166; font-size: 13.5px; font-weight: 900; letter-spacing: -.01em;
+  text-shadow: 0 0 18px rgba(255,209,102,.25);
+}

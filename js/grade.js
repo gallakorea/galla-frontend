@@ -98,16 +98,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* ── 영역별 기여 ── */
     const list = $("domainList");
     if (list) {
+      /* 영역마다 자기 레벨과 진행바를 가진다 — 통합 레벨 하나만으로는
+         "숏판에서 내가 어디쯤인가"가 안 보인다. */
       list.innerHTML = g.domains.map(d => `
-        <div class="progress-item">
-          <div class="pi-label">${esc(d.emoji)} ${esc(d.name)} <small style="opacity:.55;font-weight:600">${esc(d.hint)}</small></div>
-          <div class="pi-bar"><div class="fill" style="width:0;background:${d.color}"></div></div>
-          <div class="pi-text">${n(d.points)} GI${d.points === 0 ? " · 아직 없음" : ` · ${d.pct}%`}</div>
+        <div class="progress-item${d.isKing ? " is-king" : ""}">
+          <div class="pi-label">
+            ${esc(d.emoji)} ${esc(d.name)}
+            <span class="pi-lv" style="background:${d.band.color}22;color:${d.band.color};border-color:${d.band.color}55">Lv.${d.level}</span>
+            ${d.isKing ? `<span class="pi-crown">👑 ${esc(d.king)}</span>` : ""}
+            <small style="opacity:.55;font-weight:600">${esc(d.hint)}</small>
+          </div>
+          <div class="pi-bar"><div class="fill" style="width:0;background:${d.color} !important;box-shadow:0 0 10px ${d.color}66"></div></div>
+          <div class="pi-text">${n(d.points)} GI${d.points === 0
+            ? " · 아직 없음" : ` · 다음 레벨까지 ${n(d.toNext)}`}</div>
         </div>`).join("");
       requestAnimationFrame(() => {
-        list.querySelectorAll(".fill").forEach((el, i) => { el.style.width = g.domains[i].pct + "%"; });
+        list.querySelectorAll(".fill").forEach((el, i) => { el.style.width = g.domains[i].progress + "%"; });
       });
     }
+
+    /* ── 왕 다섯 — 시즌마다 영역별 한 명 ── */
+    await renderKings();
+
     set("nextTier", g.next ? g.next.name : "정점 도달 🏆");
 
     /* ── 등급 사다리 — 승급 조건(상위 % + 최소 GI)을 그대로 보여준다 ── */
@@ -149,11 +161,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const touched = g.domains.filter(d => d.points > 0).length;
     const by = k => (g.domains.find(d => d.key === k) || { points: 0 }).points;
     const ach = [
-      { label: "🗣 이번 시즌 첫 발의",     done: by("opinion")  > 0 },
-      { label: "⚔️ 이번 시즌 첫 댓글 전투", done: by("debate")   > 0 },
-      { label: "🎬 이번 시즌 첫 창작물",    done: by("creation") > 0 },
-      { label: "🔮 이번 시즌 첫 예측",      done: by("predict")  > 0 },
-      { label: "🎪 이번 시즌 첫 난장",      done: by("arena")    > 0 },
+      { label: "⚔️ 이번 시즌 첫 이슈",     done: by("issue")   > 0 },
+      { label: "🎪 이번 시즌 첫 광장",      done: by("arena")   > 0 },
+      { label: "📱 이번 시즌 첫 숏판",      done: by("short")   > 0 },
+      { label: "🎞 이번 시즌 첫 롱판",      done: by("long")    > 0 },
+      { label: "🔮 이번 시즌 첫 예측",      done: by("predict") > 0 },
+      { label: "👑 왕좌 하나 차지",         done: (g.crowns || []).length > 0 },
       { label: "🌈 5개 영역 전부 찍기",     done: touched >= 5 },
       { label: "🏅 시즌 순위 진입",         done: !!g.rank },
       { label: "🧬 평생 Lv.20 돌파",        done: g.level >= 20 },
@@ -164,6 +177,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="ach-item"><span>${a.label}</span>
           <span class="ach-status ${a.done ? "done" : "locked"}">${a.done ? "획득" : "미획득"}</span>
         </div>`).join("");
+    }
+
+    async function renderKings() {
+      const kc = $("kingsCard");
+      if (!kc) return;
+      const { data: k } = await supabase.rpc("kings_now");
+      if (!k || !k.ok) { kc.innerHTML = `<div class="king-empty">불러오지 못했습니다</div>`; return; }
+      const meta = window.GALLA_GALLIAN_DOMAINS || [];
+      kc.innerHTML = (k.kings || []).map(x => {
+        const d = meta.find(m => m.key === x.domain) || {};
+        const mine = x.user_id && x.user_id === userId;
+        return `<div class="king-row${x.nickname ? "" : " vacant"}${mine ? " mine" : ""}"
+                     style="--kc:${d.color || "#9aa0ad"}">
+          <span class="king-seat">${esc(x.emoji)} ${esc(x.name)}</span>
+          <span class="king-who">${x.nickname ? esc(x.nickname) : "빈 자리"}</span>
+          <span class="king-gi">${x.nickname ? n(x.gi) + " GI" : `${n(k.floor)} GI부터`}</span>
+        </div>`;
+      }).join("");
     }
 
     async function renderWeekly() {

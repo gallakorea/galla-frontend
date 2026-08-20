@@ -25,13 +25,31 @@
     { key: "apex",      lv: 50, name: "👑 갈라 대장군", sub: "판을 평정한 전설",              color: "#ff8a3d" },
   ];
 
+  /* 왕 다섯 — 갈라엔 왕이 다섯이다. 아무도 다섯을 다 갖지 못한다.
+     서버 gi_domains() / kings_now() 의 거울. 키가 어긋나면 영역이 0으로 보인다. */
   const DOMAINS = [
-    { key: "opinion",  emoji: "🗣",  name: "여론", hint: "이슈 발의 · 투표 · 받은 참전",      color: "#4fc3f7" },
-    { key: "debate",   emoji: "⚔️", name: "논전", hint: "댓글 전투 · 일기토 · 전공",         color: "#ff6b6b" },
-    { key: "creation", emoji: "🎬", name: "창작", hint: "숏판 · 롱판 · AI 창작 · 조회수",    color: "#c77dff" },
-    { key: "predict",  emoji: "🔮", name: "예측", hint: "베팅 · 적중 · 연승",                color: "#ffd166" },
-    { key: "arena",    emoji: "🎪", name: "난장", hint: "광장 · 오픈챗 · 라이브 · 갈라뉴스", color: "#06d6a0" },
+    { key: "issue",   emoji: "⚔️", name: "이슈", king: "이슈왕", hint: "발의 · 투표 · 댓글 전투 · 일기토", color: "#ff6b6b" },
+    { key: "arena",   emoji: "🎪", name: "광장", king: "광장왕", hint: "광장 · 난장 · 라이브 · 갈라뉴스",   color: "#06d6a0" },
+    { key: "short",   emoji: "📱", name: "숏판", king: "숏판왕", hint: "세로 영상 · AI 창작 · 조회수",      color: "#c77dff" },
+    { key: "long",    emoji: "🎞", name: "롱판", king: "롱판왕", hint: "가로 영상 · 오래 붙잡는 힘",        color: "#4fc3f7" },
+    { key: "predict", emoji: "🔮", name: "예측", king: "예측왕", hint: "베팅 · 적중 · 연승",                color: "#ffd166" },
   ];
+
+  /* 레벨 곡선 — 서버 level_of_gi/gi_for_level 의 거울(÷5).
+     ⚠️ 서버와 이 두 줄이 어긋나면 진행바가 거짓말을 한다. */
+  const levelOf  = gi => Math.max(1, Math.floor(Math.sqrt(Math.max(gi, 0) / 5)) + 1);
+  const giForLv  = lv => (lv <= 1 ? 0 : Math.round(5 * Math.pow(lv - 1, 2)));
+
+  /* 레벨 띠 — 숫자만 올라가면 금방 무뎌진다. 10 단위로 색이 바뀐다. */
+  const BANDS = [
+    { from: 0,  name: "무명",   color: "#9aa0ad" },
+    { from: 10, name: "이름값", color: "#4fc3f7" },
+    { from: 20, name: "한가락", color: "#3d6bff" },
+    { from: 30, name: "터줏대감", color: "#c9d1e0" },
+    { from: 40, name: "거물",   color: "#ffd166" },
+    { from: 50, name: "전설",   color: "#ff8a3d" },
+  ];
+  const bandOf = lv => BANDS.reduce((a, b) => (lv >= b.from ? b : a), BANDS[0]);
 
   /* 등급 혜택 — 서버 tier_perks() 의 거울.
      ⚠️ '상단 노출·알고리즘 최우선'은 없다. hot_score 를 계산하는 코드가
@@ -47,6 +65,10 @@
 
   window.GALLA_GALLIAN_TIERS = TIERS;
   window.GALLA_GALLIAN_DOMAINS = DOMAINS;
+  window.GALLA_LEVEL_BANDS = BANDS;
+  window.GALLA_levelOf = levelOf;
+  window.GALLA_giForLevel = giForLv;
+  window.GALLA_bandOf = bandOf;
   window.GALLA_TIER_PERKS = PERKS;
   window.GALLA_tierByLv = lv => TIERS.reduce((a, t) => (lv >= t.lv ? t : a), TIERS[0]);
 
@@ -64,9 +86,19 @@
        '창작 0' 이 보여야 뭘 안 하고 있는지 알고, 그게 다음 행동이 된다. */
     const dom = g.domains || {};
     const total = Math.max(1, g.gi_season || 0);
+    const crowns = g.my_kings || [];
     const domains = DOMAINS.map(d => {
       const pts = Math.round(Number(dom[d.key]) || 0);
-      return { ...d, points: pts, pct: Math.round(pts / total * 100) };
+      /* 영역마다 따로 레벨을 매긴다 — 통합 레벨 하나만 있으면
+         "나는 숏판에서 얼마나 왔나"를 알 길이 없다. */
+      const lv = levelOf(pts), from = giForLv(lv), to = giForLv(lv + 1);
+      return {
+        ...d, points: pts, pct: Math.round(pts / total * 100),
+        level: lv, band: bandOf(lv),
+        toNext: Math.max(0, to - pts),
+        progress: to > from ? Math.min(100, Math.round((pts - from) / (to - from) * 100)) : 0,
+        isKing: crowns.indexOf(d.key) >= 0,
+      };
     });
 
     return {
@@ -85,6 +117,8 @@
       nextTier: g.next_tier || null,      // gi_short · needs_rank · top_pct · floor_gi
       perks: PERKS[tierLv] || PERKS[0],
       specialty: g.specialty || { key: "all", name: "만능형", emoji: "🎲", pct: 0 },
+      band: bandOf(g.level || 1),
+      crowns,
       domains,
     };
   };

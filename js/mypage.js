@@ -215,6 +215,14 @@ async function GALLA_mypageInit(root, spaParams) {
                 const tierIcon = (t.name || "🌱").trim().split(/\s+/)[0];
                 if (levelEl) levelEl.textContent = `${t.name} Lv.${sl}`;
                 if (tierChip) { tierChip.textContent = tierIcon; tierChip.title = `${t.name} Lv.${sl}`; }
+                /* 왕관 — 이번 시즌 이 사람이 쥐고 있는 왕좌.
+                   프로필에서 바로 보여야 "저 사람 숏판왕이네"가 성립한다. */
+                const crowns = (g?.domains || []).filter(d => d.isKing);
+                if (crowns.length && levelEl) {
+                    levelEl.insertAdjacentHTML("afterend",
+                        `<span class="mp-crowns">${crowns.map(d =>
+                            `<span class="mp-crown" title="${d.king}">👑 ${d.king}</span>`).join("")}</span>`);
+                }
             } catch (_) { if (levelEl) levelEl.textContent = "눈팅러 Lv.1"; }
         })();
         // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
