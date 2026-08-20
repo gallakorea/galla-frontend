@@ -1879,13 +1879,15 @@ body[data-page="news"] .news-viewer-fallback {
       구글은 그 '로고 실측 높이'를 재서 지적했다(리포트 수치와 정확히 일치).
       → viewBox 를 로고 bbox("0 3.545 24 16.91")로 좁혀 **박스 높이 = 로고 높이**로 만들고,
         height 로만 크기를 지정한다. 가로는 로고 비율(24:16.91)대로 따라온다. */
-.yt-official { height: 20px !important; width: auto !important; flex: 0 0 auto !important;
+/* ⚠️ 20 이 아니라 24 인 이유: 최소치(20dp)와 같으면 반올림·측정오차로 또 지적된다(V.2·V.3 두 번 겪음).
+   ⚠️ HTML 의 width/height 속성은 이 CSS(!important)에 밀린다 — 크기는 '여기서만' 바뀐다. */
+.yt-official { height: 24px !important; width: auto !important; flex: 0 0 auto !important;
   display: block; }
 /* 안내 목록·투어의 공식 아이콘 — 여기도 로고 실측 20dp 이상 */
-.dmg-ic .yt-official { height: 20px !important; }
+.dmg-ic .yt-official { height: 24px !important; }
 .dmt-emoji .yt-official { height: 31px !important; }
 /* 좋아요는 '단어'로만 표기한다(ToS III.E.4h 지시). 심볼 자리를 비운 만큼 여백 보정. */
 .hv-sb.hv-sb-txt { gap: 0; }
 /* 롱폼 필터의 공식 아이콘도 20dp 이상 (hv-mode-btn 안에서 축소되지 않게) */
-.hv-mode-btn .yt-official { height: 20px !important; width: auto !important; flex: 0 0 auto !important; }
+.hv-mode-btn .yt-official { height: 24px !important; width: auto !important; flex: 0 0 auto !important; }
   display: block; object-fit: contain; }
