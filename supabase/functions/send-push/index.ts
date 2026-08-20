@@ -100,6 +100,17 @@ const preview = (kind: string, body: string) =>
 
 // notify 브릿지 인증 — 트리거(Vault)와 공유하는 전용 시크릿. (서비스키는 신구 체계로 불일치할 수 있어 분리)
 const BRIDGE_SECRET = Deno.env.get("PUSH_BRIDGE_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+/* 🔑 브릿지 인증 — Authorization 은 '플랫폼용 유효 JWT' 자리다.
+   브릿지 시크릿이 JWT가 아니면(신형 sb_secret_… 키) Authorization 에 실을 수가 없다:
+   실으면 플랫폼이 401 UNAUTHORIZED_INVALID_JWT_FORMAT, JWT를 실으면 여기서 403.
+   두 조건이 서로 배타적이라 알림→푸시 브릿지가 통째로 죽어 있었다(2026-08-21 발견).
+   → 시크릿은 전용 헤더(x-push-key)로 받는다. 기존 방식(Authorization 안에 포함)도 계속 허용. */
+function bridgeOk(req: Request): boolean {
+  if (!BRIDGE_SECRET) return false;
+  const auth = req.headers.get("Authorization") || "";
+  if (auth.includes(BRIDGE_SECRET)) return true;
+  return (req.headers.get("x-push-key") || "") === BRIDGE_SECRET;
+}
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 // 🤪 기능별 병맛 알림 카피 — 카톡식 건조함 금지, 갈라답게. n = {nick, message}
 const NOTIFY: Record<string, { cat: string; t: string; b: (n: { nick: string; message: string }) => string }> = {
@@ -167,8 +178,7 @@ Deno.serve(async (req) => {
   // 🔔 시스템 알림 → 푸시 브릿지 — notifications INSERT 트리거가 서비스키로 호출(유저 JWT 없음).
   //    인앱 알림(🔔)이 생기면 그 카테고리·병맛 카피로 푸시도 함께 나간다(push_allowed로 카테고리 게이팅).
   if (body.kind === "notify") {
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.includes(BRIDGE_SECRET)) return j({ error: "forbidden" }, 403);
+    if (!bridgeOk(req)) return j({ error: "forbidden" }, 403);
     const { data: n } = await sb.from("notifications")
       .select("user_id,from_user,type,message,link").eq("id", body.id).maybeSingle();
     if (!n) return j({ error: "no notif" }, 404);
@@ -187,8 +197,7 @@ Deno.serve(async (req) => {
   // 📰 뉴스 속보 브로드캐스트 — 크론(generate-galla-news)이 서비스키로 호출. '뉴스 알림 켠' 유저에게만.
   //    발송 빈도는 크론 쪽에서 스로틀(퍼플렉시티식 하루 1~2회) — 여기선 순수 브로드캐스트만.
   if (body.kind === "news") {
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.includes(BRIDGE_SECRET)) return j({ error: "forbidden" }, 403);
+    if (!bridgeOk(req)) return j({ error: "forbidden" }, 403);
     const gn = String(body.id || "");
     // 프리뷰용 실제 뉴스 내용(제목·요약·히어로 이미지)을 DB에서 읽는다 — 없으면 넘어온 title로 폴백
     let headline = String((body as { title?: string }).title || "").slice(0, 90);
