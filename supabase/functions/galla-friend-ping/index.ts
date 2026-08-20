@@ -1,17 +1,11 @@
 /* 📮 갈비스 선톡 — 친구는 먼저 연락 오는 존재. 크론(하루 1회)이 호출.
-   대상: 2~7일 안 온 유저 중 실제로 대화해본 사람(msg_count>=3), 삐짐 아님, 선톡 끔 아님,
-        최근 3일 내 선톡 안 받음(주 2~3회 상한). 런당 상한으로 비용 통제.
-   동작: 기억(팔로업·관심사) 기반 개인화 한 줄 생성 → 웹푸시 → pending_ping 저장
+   대상: 10시간~3주 안 온 유저 중 실제로 대화해본 사람(msg_count>=3), 삐짐 아님, 선톡 끔 아님,
+        쿨다운 20h(하루 1회 상한). 런당 상한으로 비용 통제.
+   동작: 기억(팔로업·관심사) 기반 개인화 한 줄 생성 → notifications INSERT(→푸시) → pending_ping 저장
         (푸시를 무시해도 다음에 챗 열면 그 말로 시작 — friend.js consume_ping). */
-import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-webpush.setVapidDetails(
-  Deno.env.get("VAPID_SUBJECT") || "mailto:blackid@gmail.com",
-  Deno.env.get("VAPID_PUBLIC_KEY")!,
-  Deno.env.get("VAPID_PRIVATE_KEY")!,
-);
 const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
 const API_KEY = Deno.env.get("FRIEND_API_KEY") || (_DS || Deno.env.get("OPENAI_API_KEY")!);
@@ -94,21 +88,13 @@ Deno.serve(async (req) => {
       await sb.from("friend_relationship").update({
         pending_ping: ping, last_ping_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }).eq("user_id", uid);
-      // 웹푸시(구독 없는 유저는 pending만 남음 — 다음 접속 때 보임)
-      const { data: subs } = await sb.from("push_subscriptions")
-        .select("endpoint,p256dh,auth").eq("user_id", uid).limit(5);
-      await Promise.all((subs || []).map(async (s) => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-            JSON.stringify({ title: `💬 ${rel.friend_name || "갈비스"}`, body: ping, url: "/app.html?frping=1" }),
-            { TTL: 6 * 3600 },
-          );
-        } catch (e) {
-          const code = (e as { statusCode?: number }).statusCode;
-          if (code === 404 || code === 410) await sb.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
-        }
-      }));
+      /* 🔔 알림 파이프라인에 태운다 — 직접 web-push 를 쏘면 '웹 구독자'만 받는다.
+         실측: push_subscriptions 0건 / native_push_tokens 1건 — 즉 아무한테도 안 갔다.
+         notifications INSERT → trg_notify_push → send-push 가 웹·APNs 둘 다 처리하고
+         notify_prefs.friend 게이팅·방해금지도 거기서 걸린다. */
+      await sb.from("notifications").insert({
+        user_id: uid, type: "friend", message: ping, link: "app.html?frping=1",
+      });
       sent++;
     }
     return new Response(JSON.stringify({ ok: true, targets: targets.length, sent }), { headers: { "Content-Type": "application/json" } });

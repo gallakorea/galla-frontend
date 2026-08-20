@@ -110,6 +110,9 @@ const NOTIFY: Record<string, { cat: string; t: string; b: (n: { nick: string; me
   market_resolved: { cat: "activity", t: "🎲 판가름 났다",      b: () => pick([`네 예측 결과 나옴 — 땄나 잃었나?`, `예측 정산 완료 — 안 보면 밤에 궁금해서 잠 못 잠`]) },
   plaza_comment:   { cat: "activity", t: "💬 광장에 댓글",      b: (n) => `${n.nick}이 네 광장글에 한마디 얹음` },
   plaza_vote:      { cat: "activity", t: "👍 광장 반응 옴",     b: (n) => `${n.nick}이 네 광장글 밀어줌` },
+  /* 🫂 갈비스 선톡 — 문구는 갈비스가 그 사람 기억으로 이미 썼다.
+     여기서 병맛 카피로 덮어쓰면 개인화가 통째로 날아간다. message 를 그대로 쓴다. */
+  friend:          { cat: "friend",    t: "🫂 갈비스",          b: (n) => n.message || "잘 지내냐고 물어보러 옴" },
   pager:           { cat: "pager",    t: "📟 삐-삐- 삐삐 왔다",  b: (n) => pick([`${n.nick}이(가) 삐삐 쳤다 — 음성사서함 확인 ㄱㄱ`, `📟 띠리리- 누가 널 찾는다 — 삐삐 도착`, `${n.nick}한테서 삐삐 옴 — 90년대냐 ㅋㅋ`]) },
 };
 const NOTIFY_DEFAULT = { cat: "activity", t: "🔔 갈라 소식", b: (n: { message: string }) => n.message || "새 소식 떴다 — 확인 ㄱㄱ" };
