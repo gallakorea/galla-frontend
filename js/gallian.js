@@ -17,12 +17,11 @@
 (function () {
   /* 시즌 등급 — 서버 season_tiers() 의 거울. 순서·이름이 어긋나면 안 된다. */
   const TIERS = [
-    { key: "spark",     lv: 0,  name: "🌱 눈팅러",      sub: "일단 스크롤만 내리는 구경꾼",   color: "#9aa0ad" },
-    { key: "breaker",   lv: 10, name: "🔥 참견러",      sub: "못 참고 한마디 얹는 사람",      color: "#4fc3f7" },
-    { key: "vanguard",  lv: 20, name: "🎪 판벌이",      sub: "슬슬 판을 벌이기 시작한 사람",  color: "#3d6bff" },
-    { key: "authority", lv: 30, name: "🎯 판잡이",      sub: "판을 읽고 끌고 가는 사람",      color: "#c9d1e0" },
-    { key: "dominion",  lv: 40, name: "🌪️ 판몰이",      sub: "판 자체를 몰고 가는 사람",      color: "#ffd166" },
-    { key: "apex",      lv: 50, name: "👑 갈라 대장군", sub: "판을 평정한 전설",              color: "#ff8a3d" },
+    { key: "spark",     lv: 0,  name: "🌱 눈팅러",   sub: "일단 스크롤만 내리는 구경꾼", color: "#9aa0ad" },
+    { key: "breaker",   lv: 10, name: "🔥 참견러",   sub: "못 참고 한마디 얹는 사람",    color: "#4fc3f7" },
+    { key: "vanguard",  lv: 20, name: "🎪 단골",     sub: "이 판에 자주 오는 사람",      color: "#3d6bff" },
+    { key: "authority", lv: 30, name: "🎯 고수",     sub: "판을 읽고 끌고 가는 사람",    color: "#ffd166" },
+    { key: "dominion",  lv: 40, name: "🌪️ 터줏대감", sub: "판의 주인. 다음은 왕좌",      color: "#ff8a3d" },
   ];
 
   /* 왕 다섯 — 갈라엔 왕이 다섯이다. 아무도 다섯을 다 갖지 못한다.
@@ -39,12 +38,20 @@
      (통합 등급은 상위 10% 같은 조건 때문에 판별 모수 3~5명에선 아무도 승급을
       못 했다. 상대 순위는 왕이 맡는다 — 판마다 딱 한 명.) */
   const DOM_TIERS = [
-    { lv: 0,  name: "눈팅러", emoji: "🌱", sub: "이 판은 아직 구경만",     floor: 0,   color: "#9aa0ad" },
-    { lv: 10, name: "참견러", emoji: "🔥", sub: "못 참고 한마디 얹기 시작", floor: 30,  color: "#4fc3f7" },
-    { lv: 20, name: "판벌이", emoji: "🎪", sub: "이 판에서 판을 벌인다",   floor: 100, color: "#3d6bff" },
-    { lv: 30, name: "판잡이", emoji: "🎯", sub: "이 판을 읽고 끌고 간다",  floor: 300, color: "#ffd166" },
-    { lv: 40, name: "판몰이", emoji: "🌪️", sub: "왕 사정권. 한 끗 남았다", floor: 700, color: "#ff8a3d" },
-  ];
+    { lv: 0,  div: 0, name: "눈팅러",   emoji: "🌱", sub: "이 판은 아직 구경만",     floor: 0,    color: "#9aa0ad" },
+    { lv: 10, div: 3, name: "참견러",   emoji: "🔥", sub: "못 참고 한마디 얹기 시작", floor: 30,   color: "#4fc3f7" },
+    { lv: 10, div: 2, name: "참견러",   emoji: "🔥", sub: "못 참고 한마디 얹기 시작", floor: 60,   color: "#4fc3f7" },
+    { lv: 10, div: 1, name: "참견러",   emoji: "🔥", sub: "못 참고 한마디 얹기 시작", floor: 100,  color: "#4fc3f7" },
+    { lv: 20, div: 3, name: "단골",     emoji: "🎪", sub: "이 판에 자주 온다",       floor: 150,  color: "#3d6bff" },
+    { lv: 20, div: 2, name: "단골",     emoji: "🎪", sub: "이 판에 자주 온다",       floor: 220,  color: "#3d6bff" },
+    { lv: 20, div: 1, name: "단골",     emoji: "🎪", sub: "이 판에 자주 온다",       floor: 300,  color: "#3d6bff" },
+    { lv: 30, div: 3, name: "고수",     emoji: "🎯", sub: "이 판을 읽고 끌고 간다",   floor: 400,  color: "#ffd166" },
+    { lv: 30, div: 2, name: "고수",     emoji: "🎯", sub: "이 판을 읽고 끌고 간다",   floor: 520,  color: "#ffd166" },
+    { lv: 30, div: 1, name: "고수",     emoji: "🎯", sub: "이 판을 읽고 끌고 간다",   floor: 660,  color: "#ffd166" },
+    { lv: 40, div: 3, name: "터줏대감", emoji: "🌪️", sub: "이 판의 주인. 다음은 왕좌", floor: 820,  color: "#ff8a3d" },
+    { lv: 40, div: 2, name: "터줏대감", emoji: "🌪️", sub: "이 판의 주인. 다음은 왕좌", floor: 1000, color: "#ff8a3d" },
+    { lv: 40, div: 1, name: "터줏대감", emoji: "🌪️", sub: "이 판의 주인. 다음은 왕좌", floor: 1200, color: "#ff8a3d" },
+  ].map(t => ({ ...t, label: t.name + (t.div ? " " + "I".repeat(t.div) : "") }));
   const domTierOf = gi => DOM_TIERS.reduce((a, t) => (gi >= t.floor ? t : a), DOM_TIERS[0]);
   const domNextTier = gi => DOM_TIERS.find(t => gi < t.floor) || null;
 
@@ -113,7 +120,7 @@
       return {
         ...d, points: pts, lifePoints: life, pct: Math.round(pts / total * 100),
         level: lv, band: bandOf(lv),
-        /* 판마다 등급이 다르다 — 이슈에선 판잡이여도 예측에선 눈팅러다 */
+        /* 판마다 등급이 다르다 — 이슈에선 고수여도 예측에선 눈팅러다 */
         tier, nextTier: nextT,
         tierShort: nextT ? Math.max(0, nextT.floor - pts) : 0,
         toNext: Math.max(0, to - life),

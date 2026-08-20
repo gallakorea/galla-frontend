@@ -248,3 +248,16 @@ body {
    설명 카드는 그냥 글이다 — 블록으로 되돌린다. */
 .lore-card { display: block !important; }
 .lore-card .lore-hook { display: block; margin-bottom: 8px; }
+
+/* 등급 안의 III·II·I — 13칸을 5칸으로 접어 넣는다 */
+.tier-steps { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.tier-step {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 3px 8px; border-radius: 8px;
+  background: #17171d; border: 1px solid #26262e;
+  font-size: 10.5px; font-weight: 900; color: #6c6c72; letter-spacing: .06em;
+}
+.tier-step i { font-style: normal; font-size: 9.5px; font-weight: 800; opacity: .65;
+  letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.tier-step.on { color: #0a0a0b; border-color: transparent; }
+.tier-step.on i { opacity: .75; }

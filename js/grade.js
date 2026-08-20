@@ -20,10 +20,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const DESC = {
     spark:     "아직은 조용히 눈팅만… 하지만 곧 못 참고 한마디 얹을 운명.",
     breaker:   "드디어 참견 개시! 손가락에 슬슬 불이 붙기 시작했습니다.",
-    vanguard:  "슬슬 판을 벌이는 중. 이슈든 숏판이든 난장이든 일단 지르고 봅니다.",
-    authority: "판을 읽고 끌고 가는 사람. 당신이 뜨면 분위기가 바뀝니다.",
-    dominion:  "판 자체를 몰고 가는 사람. 갈라가 당신을 중심으로 돕니다.",
-    apex:      "판을 평정한 전설. 이번 시즌 최상위 0.1%.",
+    vanguard:  "이 판에 자주 오는 단골. 오면 뭐라도 하나 하고 갑니다.",
+    authority: "판을 읽고 끌고 가는 고수. 당신이 뜨면 분위기가 바뀝니다.",
+    dominion:  "이 판의 터줏대감. 다음은 등급이 아니라 왕좌입니다.",
   };
 
   const $  = id => document.getElementById(id);
@@ -104,13 +103,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="progress-item${d.isKing ? " is-king" : ""}">
           <div class="pi-label">
             <span class="pi-dom">${esc(d.emoji)} ${esc(d.name)}</span>
-            <span class="pi-tier" style="--tc:${d.tier.color}">${esc(d.tier.emoji)} ${esc(d.tier.name)}</span>
+            <span class="pi-tier" style="--tc:${d.tier.color}">${esc(d.tier.emoji)} ${esc(d.tier.label)}</span>
             <span class="pi-lv" style="background:${d.band.color}22;color:${d.band.color};border-color:${d.band.color}55">Lv.${d.level}</span>
             ${d.isKing ? `<span class="pi-crown">👑 ${esc(d.king)}</span>` : ""}
           </div>
           <div class="pi-bar"><div class="fill" style="width:0;background:${d.color} !important;box-shadow:0 0 10px ${d.color}66"></div></div>
           <div class="pi-text">${n(d.points)} GI · ${d.nextTier
-            ? `${esc(d.nextTier.name)}까지 ${n(d.tierShort)}`
+            ? `${esc(d.nextTier.label)}까지 ${n(d.tierShort)}`
             : "이 판 최고 등급 · 남은 건 왕좌"}</div>
         </div>`).join("");
       requestAnimationFrame(() => {
@@ -134,18 +133,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ladder = $("tierLadder");
     if (ladder) {
       const { data: dt } = await supabase.rpc("domain_tiers");
+      /* 13칸을 그대로 늘어놓으면 페이지가 다시 길어진다.
+         이름(5칸)으로 묶고 III·II·I 문턱은 그 안에 접어 넣는다 —
+         외울 단어는 5개고, 잘게 나뉜 건 '얼마 남았나'용이다. */
+      const groups = [];
+      (dt || []).forEach(t => {
+        const g0 = groups.find(x => x.lv === t.tier_lv);
+        (g0 || (groups[groups.push({ lv: t.tier_lv, name: t.name, emoji: t.emoji, sub: t.sub, steps: [] }) - 1]))
+          .steps.push(t);
+      });
       const mine = {};
-      (g.domains || []).forEach(d => { (mine[d.tier.lv] = mine[d.tier.lv] || []).push(d.name); });
-      ladder.innerHTML = (dt || []).map(t => {
-        const meta = (window.GALLA_DOM_TIERS || []).find(x => x.lv === t.tier_lv) || {};
-        const where = mine[t.tier_lv];
+      (g.domains || []).forEach(d => { (mine[d.tier.lv] = mine[d.tier.lv] || []).push(d); });
+      ladder.innerHTML = groups.map(gr => {
+        const meta = (window.GALLA_DOM_TIERS || []).find(x => x.lv === gr.lv) || {};
+        const here = mine[gr.lv] || [];
+        const steps = gr.steps.map(st => {
+          const on = here.some(d => d.tier.div === st.div);
+          return `<span class="tier-step${on ? " on" : ""}"${on ? ` style="background:${meta.color}"` : ""}>${
+            st.div ? "I".repeat(st.div) : "—"}<i>${n(st.floor_gi)}</i></span>`;
+        }).join("");
         return `<div class="tier-box" style="border-left-color:${meta.color};${
-          where ? `box-shadow:0 0 18px ${meta.color}33` : "opacity:.45"}">
-          <div class="tier-title">${esc(t.emoji)} ${esc(t.name)}${
-            where ? `<span class="tier-mine" style="background:${meta.color}">${esc(where.join(" · "))}</span>` : ""}</div>
-          <div class="tier-sub">${esc(t.sub)}</div>
-          <div class="tier-req" style="color:${meta.color}">${
-            t.floor_gi === 0 ? "시작 등급" : `그 판에서 ${n(t.floor_gi)} GI`}</div>
+          here.length ? `box-shadow:0 0 18px ${meta.color}33` : "opacity:.45"}">
+          <div class="tier-title">${esc(gr.emoji)} ${esc(gr.name)}${
+            here.length ? `<span class="tier-mine" style="background:${meta.color}">${
+              esc(here.map(d => d.name + " " + d.tier.label.replace(gr.name, "").trim()).join(" · "))}</span>` : ""}</div>
+          <div class="tier-sub">${esc(gr.sub)}</div>
+          <div class="tier-steps">${steps}</div>
         </div>`;
       }).join("");
     }
