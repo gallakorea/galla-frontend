@@ -35,6 +35,19 @@
     { key: "predict", emoji: "🔮", name: "예측", king: "예측왕", hint: "베팅 · 적중 · 연승",                color: "#ffd166" },
   ];
 
+  /* 판별 등급 — 서버 domain_tiers() 의 거울. 상대% 없이 절대 GI 만 본다.
+     (통합 등급은 상위 10% 같은 조건 때문에 판별 모수 3~5명에선 아무도 승급을
+      못 했다. 상대 순위는 왕이 맡는다 — 판마다 딱 한 명.) */
+  const DOM_TIERS = [
+    { lv: 0,  name: "눈팅러", emoji: "🌱", sub: "이 판은 아직 구경만",     floor: 0,   color: "#9aa0ad" },
+    { lv: 10, name: "참견러", emoji: "🔥", sub: "못 참고 한마디 얹기 시작", floor: 30,  color: "#4fc3f7" },
+    { lv: 20, name: "판벌이", emoji: "🎪", sub: "이 판에서 판을 벌인다",   floor: 100, color: "#3d6bff" },
+    { lv: 30, name: "판잡이", emoji: "🎯", sub: "이 판을 읽고 끌고 간다",  floor: 300, color: "#ffd166" },
+    { lv: 40, name: "판몰이", emoji: "🌪️", sub: "왕 사정권. 한 끗 남았다", floor: 700, color: "#ff8a3d" },
+  ];
+  const domTierOf = gi => DOM_TIERS.reduce((a, t) => (gi >= t.floor ? t : a), DOM_TIERS[0]);
+  const domNextTier = gi => DOM_TIERS.find(t => gi < t.floor) || null;
+
   /* 레벨 곡선 — 서버 level_of_gi/gi_for_level 의 거울(÷5).
      ⚠️ 서버와 이 두 줄이 어긋나면 진행바가 거짓말을 한다. */
   const levelOf  = gi => Math.max(1, Math.floor(Math.sqrt(Math.max(gi, 0) / 5)) + 1);
@@ -65,6 +78,8 @@
 
   window.GALLA_GALLIAN_TIERS = TIERS;
   window.GALLA_GALLIAN_DOMAINS = DOMAINS;
+  window.GALLA_DOM_TIERS = DOM_TIERS;
+  window.GALLA_domTierOf = domTierOf;
   window.GALLA_LEVEL_BANDS = BANDS;
   window.GALLA_levelOf = levelOf;
   window.GALLA_giForLevel = giForLv;
@@ -87,16 +102,22 @@
     const dom = g.domains || {};
     const total = Math.max(1, g.gi_season || 0);
     const crowns = g.my_kings || [];
+    const domLife = g.domains_life || {};
     const domains = DOMAINS.map(d => {
-      const pts = Math.round(Number(dom[d.key]) || 0);
-      /* 영역마다 따로 레벨을 매긴다 — 통합 레벨 하나만 있으면
-         "나는 숏판에서 얼마나 왔나"를 알 길이 없다. */
-      const lv = levelOf(pts), from = giForLv(lv), to = giForLv(lv + 1);
+      const pts  = Math.round(Number(dom[d.key]) || 0);       // 이번 시즌 → 등급
+      const life = Math.round(Number(domLife[d.key]) || 0);   // 평생 누적 → 레벨
+      /* 판마다 레벨(평생)과 등급(시즌)을 따로 매긴다.
+         둘 다 같은 숫자로 매기면 한 줄에서 같은 걸 두 번 말하게 된다. */
+      const lv = levelOf(life), from = giForLv(lv), to = giForLv(lv + 1);
+      const tier = domTierOf(pts), nextT = domNextTier(pts);
       return {
-        ...d, points: pts, pct: Math.round(pts / total * 100),
+        ...d, points: pts, lifePoints: life, pct: Math.round(pts / total * 100),
         level: lv, band: bandOf(lv),
-        toNext: Math.max(0, to - pts),
-        progress: to > from ? Math.min(100, Math.round((pts - from) / (to - from) * 100)) : 0,
+        /* 판마다 등급이 다르다 — 이슈에선 판잡이여도 예측에선 눈팅러다 */
+        tier, nextTier: nextT,
+        tierShort: nextT ? Math.max(0, nextT.floor - pts) : 0,
+        toNext: Math.max(0, to - life),
+        progress: to > from ? Math.min(100, Math.round((life - from) / (to - from) * 100)) : 0,
         isKing: crowns.indexOf(d.key) >= 0,
       };
     });

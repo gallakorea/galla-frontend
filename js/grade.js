@@ -103,54 +103,50 @@ document.addEventListener("DOMContentLoaded", async () => {
       list.innerHTML = g.domains.map(d => `
         <div class="progress-item${d.isKing ? " is-king" : ""}">
           <div class="pi-label">
-            ${esc(d.emoji)} ${esc(d.name)}
+            <span class="pi-dom">${esc(d.emoji)} ${esc(d.name)}</span>
+            <span class="pi-tier" style="--tc:${d.tier.color}">${esc(d.tier.emoji)} ${esc(d.tier.name)}</span>
             <span class="pi-lv" style="background:${d.band.color}22;color:${d.band.color};border-color:${d.band.color}55">Lv.${d.level}</span>
             ${d.isKing ? `<span class="pi-crown">👑 ${esc(d.king)}</span>` : ""}
-            <small style="opacity:.55;font-weight:600">${esc(d.hint)}</small>
           </div>
           <div class="pi-bar"><div class="fill" style="width:0;background:${d.color} !important;box-shadow:0 0 10px ${d.color}66"></div></div>
-          <div class="pi-text">${n(d.points)} GI${d.points === 0
-            ? " · 아직 없음" : ` · 다음 레벨까지 ${n(d.toNext)}`}</div>
+          <div class="pi-text">${n(d.points)} GI · ${d.nextTier
+            ? `${esc(d.nextTier.name)}까지 ${n(d.tierShort)}`
+            : "이 판 최고 등급 · 남은 건 왕좌"}</div>
         </div>`).join("");
       requestAnimationFrame(() => {
-        list.querySelectorAll(".fill").forEach((el, i) => { el.style.width = g.domains[i].progress + "%"; });
+        list.querySelectorAll(".fill").forEach((el, i) => {
+          const d = g.domains[i], lo = d.tier.floor;
+          const hi = d.nextTier ? d.nextTier.floor : lo + 1;
+          el.style.width = (d.nextTier
+            ? Math.max(2, Math.min(100, Math.round((d.points - lo) / (hi - lo) * 100)))
+            : 100) + "%";
+        });
       });
     }
 
     /* ── 왕 다섯 — 시즌마다 영역별 한 명 ── */
     await renderKings();
 
-    set("nextTier", g.next ? g.next.name : "정점 도달 🏆");
 
-    /* ── 등급 사다리 — 승급 조건(상위 % + 최소 GI)을 그대로 보여준다 ── */
-    const { data: tiers } = await supabase.rpc("season_tiers");
-    (tiers || []).forEach(t => {
-      const meta = (window.GALLA_GALLIAN_TIERS || []).find(x => x.lv === t.tier_lv);
-      const b = meta && document.querySelector(`.tier-box.${meta.key}`);
-      if (!b || b.querySelector(".tier-req")) return;
-      const req = document.createElement("div");
-      req.className = "tier-req";
-      req.style.cssText = "font-size:11px;font-weight:800;margin-top:6px;color:" + meta.color;
-      req.textContent = t.tier_lv === 0 ? "시작 등급"
-        : `상위 ${t.top_pct}%  ·  시즌 ${n(t.floor_gi)} GI 이상`;
-      b.querySelector(".tier-sub")?.after(req);
-    });
-
-    const box = document.querySelector(`.tier-box.${g.tier.key}`);
-    if (box) {
-      box.style.borderColor = g.tier.color;
-      box.style.boxShadow = `0 0 18px ${g.tier.color}44`;
-      const t = box.querySelector(".tier-title");
-      if (t) t.insertAdjacentHTML("beforeend", ` <span style="font-size:10px;font-weight:900;color:#0a0a0b;background:${g.tier.color};padding:2px 7px;border-radius:99px;vertical-align:2px;">현재</span>`);
-    }
-
-    /* 등급별 혜택표 — 서버 tier_perks() 를 그대로 그린다(하드코딩 금지) */
-    const bc = $("benefitCard");
-    if (bc) {
-      bc.innerHTML = (window.GALLA_GALLIAN_TIERS || []).map(t => {
-        const p = (window.GALLA_TIER_PERKS || {})[t.lv] || [];
-        return `<div class="benefit-item${t.lv === 50 ? " apex-benefit" : ""}">
-          <span class="bt">${esc(t.name)}</span><span class="bd">${esc(p.join(" · "))}</span></div>`;
+    /* ── 판별 등급 사다리 — 서버 domain_tiers() 를 그대로 그린다.
+       예전 HTML 에는 '상단 노출 증가·추천 가중치 상승·알고리즘 최우선' 이 박혀 있었다.
+       그런 코드는 없다(피드는 created_at 순). 못 지킬 약속이라 걷어냈다. ── */
+    const ladder = $("tierLadder");
+    if (ladder) {
+      const { data: dt } = await supabase.rpc("domain_tiers");
+      const mine = {};
+      (g.domains || []).forEach(d => { (mine[d.tier.lv] = mine[d.tier.lv] || []).push(d.name); });
+      ladder.innerHTML = (dt || []).map(t => {
+        const meta = (window.GALLA_DOM_TIERS || []).find(x => x.lv === t.tier_lv) || {};
+        const where = mine[t.tier_lv];
+        return `<div class="tier-box" style="border-left-color:${meta.color};${
+          where ? `box-shadow:0 0 18px ${meta.color}33` : "opacity:.45"}">
+          <div class="tier-title">${esc(t.emoji)} ${esc(t.name)}${
+            where ? `<span class="tier-mine" style="background:${meta.color}">${esc(where.join(" · "))}</span>` : ""}</div>
+          <div class="tier-sub">${esc(t.sub)}</div>
+          <div class="tier-req" style="color:${meta.color}">${
+            t.floor_gi === 0 ? "시작 등급" : `그 판에서 ${n(t.floor_gi)} GI`}</div>
+        </div>`;
       }).join("");
     }
 
@@ -180,10 +176,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function renderKings() {
-      const kc = $("kingsCard");
+      const kc = $("kingsCard"), oc = $("overlordCard");
       if (!kc) return;
       const { data: k } = await supabase.rpc("kings_now");
       if (!k || !k.ok) { kc.innerHTML = `<div class="king-empty">불러오지 못했습니다</div>`; return; }
+      /* 왕중왕 — 판 다섯 위 한 자리. 전체에서 내가 몇 등인지도 같이 보여준다. */
+      if (oc) {
+        const o = k.overlord;
+        oc.innerHTML = `<div class="ovl${o ? "" : " vacant"}${o && o.user_id === userId ? " mine" : ""}">
+            <div class="ovl-seat">👑 왕중왕</div>
+            <div class="ovl-who">${o ? esc(o.nickname || "이름 없음") : "빈 자리"}</div>
+            <div class="ovl-gi">${o ? n(o.gi) + " GI" : `시즌 ${n(k.overlord_floor)} GI부터`}</div>
+          </div>
+          <div class="ovl-me">전체 ${g.rank ? `<b>${n(g.rank)}위</b> / ${n(k.contenders)}명` : "아직 순위 밖"}${
+            g.pct != null ? ` · 상위 ${g.pct}%` : ""}</div>`;
+      }
       const meta = window.GALLA_GALLIAN_DOMAINS || [];
       kc.innerHTML = (k.kings || []).map(x => {
         const d = meta.find(m => m.key === x.domain) || {};

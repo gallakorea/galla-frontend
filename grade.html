@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0820160"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0820170"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>갈라리안 등급 - GALLA</title>
 
     <!-- 공통 스타일 -->
     <link rel="stylesheet" href="./css/index.css?v=081802">
-    <link rel="stylesheet" href="./css/grade.css?v=0820160">
+    <link rel="stylesheet" href="./css/grade.css?v=0820170">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
 
     <style>
@@ -83,19 +83,15 @@
     <!-- NEXT TIER PROGRESS -->
     <!-- 왕 다섯 -->
     <section class="section">
-        <div class="section-title">왕 다섯 <small style="opacity:.5;font-weight:600">· 시즌마다 다시 뽑습니다</small></div>
+        <div class="section-title">왕좌 <small style="opacity:.5;font-weight:600">· 시즌마다 다시 뽑습니다</small></div>
+        <div class="card overlord-card" id="overlordCard"></div>
         <div class="card kings-card" id="kingsCard"></div>
     </section>
 
     <section class="section">
-        <div class="section-title">내 갈라 지수가 어디서 나왔나</div>
+        <div class="section-title">내 판 다섯</div>
 
         <div class="card next-tier-card">
-            <div class="next-row">
-                <div class="label">다음 등급</div>
-                <div class="value" id="nextTier">–</div>
-            </div>
-
             <div id="domainList"></div>
         </div>
     </section>
@@ -108,78 +104,21 @@
             이슈 · 광장 · 숏판 · 롱판 · 예측 — 판이 다섯이고, 판마다 주인이 따로 있습니다.
             한 사람이 다섯을 다 잘하기는 어렵게 만들어 뒀습니다.<br><br>
             <b>레벨</b>은 평생 쌓입니다 — 판마다 따로, 한 번 오르면 내려가지 않아요.<br>
-            <b>왕</b>은 시즌마다 다시 뽑습니다 — 그 시즌에 그 판에서 가장 앞선 한 명.
+            <b>왕</b>은 시즌마다 다시 뽑습니다 — 그 판에서 가장 앞선 한 명.
+            다섯 왕 위에 <b>왕중왕</b>이 하나 더 있습니다. 판 하나만 잘해선 앉지 못합니다.<br>
             그래서 늦게 시작해도 <b>다음 시즌엔 같은 출발선</b>입니다.
         </div>
     </section>
 
     <!-- TIER STRUCTURE -->
     <section class="section">
-        <div class="section-title">시즌 등급 — 상위 % 와 최소 GI 를 <b>둘 다</b> 넘어야 승급</div>
-
-        <div class="tiers-list">
-
-            <div class="tier-box spark">
-                <div class="tier-title">🌱 눈팅러</div>
-                <div class="tier-sub">일단 스크롤만 내리는 구경꾼</div>
-                <ul class="perk-list">
-                    <li>“난 그냥 구경만…”</li>
-                    <li>GP 보너스 없음</li>
-                </ul>
-            </div>
-
-            <div class="tier-box breaker">
-                <div class="tier-title">🔥 참견러</div>
-                <div class="tier-sub">못 참고 한마디 얹는 사람</div>
-                <ul class="perk-list">
-                    <li>드디어 참전 개시</li>
-                    <li>GP +5%</li>
-                </ul>
-            </div>
-
-            <div class="tier-box vanguard">
-                <div class="tier-title">🎪 판벌이</div>
-                <div class="tier-sub">슬슬 판을 벌이기 시작한 사람</div>
-                <ul class="perk-list">
-                    <li>상단 노출 증가</li>
-                    <li>대표 뱃지 활성화</li>
-                </ul>
-            </div>
-
-            <div class="tier-box authority">
-                <div class="tier-title">🎯 판잡이</div>
-                <div class="tier-sub">판을 읽고 끌고 가는 사람</div>
-                <ul class="perk-list">
-                    <li>실버 오라</li>
-                    <li>추천 가중치 상승</li>
-                </ul>
-            </div>
-
-            <div class="tier-box dominion">
-                <div class="tier-title">🌪️ 판몰이</div>
-                <div class="tier-sub">판 자체를 몰고 가는 사람</div>
-                <ul class="perk-list">
-                    <li>48시간 상단 고정</li>
-                    <li>금빛 지배자 오라</li>
-                </ul>
-            </div>
-
-            <div class="tier-box apex">
-                <div class="tier-title">👑 갈라 대장군</div>
-                <div class="tier-sub">판을 평정한 전설</div>
-                <ul class="perk-list">
-                    <li>전설 오라</li>
-                    <li>알고리즘 최우선</li>
-                </ul>
-            </div>
-
+        <div class="section-title">판별 등급 — <b>판마다 따로</b> 매깁니다</div>
+        <div class="tiers-list" id="tierLadder"></div>
+        <div class="card lore-card" style="margin-top:10px">
+            이슈에선 판잡이여도 예측에선 눈팅러일 수 있습니다.
+            판별 등급은 <b>그 판에서 얼마나 했는지</b>만 봅니다 — 남들과 비교하지 않습니다.<br>
+            남들과 겨루는 자리는 <b>왕</b>입니다. 판마다 딱 한 명, 그리고 그 위에 왕중왕 하나.
         </div>
-    </section>
-
-    <!-- ABILITY -->
-    <section class="section">
-        <div class="section-title">등급별 혜택</div>
-        <div class="card benefit-card" id="benefitCard"></div>
     </section>
 
     <!-- ACHIEVEMENTS -->
@@ -227,8 +166,8 @@
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=081606"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="./js/gallian.js?v=0820160"></script>
-<script src="./js/grade.js?v=0820160"></script>
+<script src="./js/gallian.js?v=0820170"></script>
+<script src="./js/grade.js?v=0820170"></script>
 <script src="./js/nav.js?v=0820104"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
 <script src="./js/nav-jog.js?v=081801" defer></script>

@@ -209,3 +209,42 @@ body {
   color: #ffd166; font-size: 13.5px; font-weight: 900; letter-spacing: -.01em;
   text-shadow: 0 0 18px rgba(255,209,102,.25);
 }
+
+/* ═══ 판별 등급 · 왕중왕 ═══ */
+.pi-label { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.pi-dom  { font-size: 12px; font-weight: 900; color: #c9c9d1; min-width: 58px; }
+.pi-tier {
+  padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 900;
+  color: var(--tc); background: color-mix(in srgb, var(--tc) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent);
+}
+.tier-mine {
+  margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 900; color: #0a0a0b; vertical-align: 2px;
+}
+.tiers-list .tier-box { border-left-width: 3px; border-left-style: solid; }
+
+.overlord-card { padding: 12px 14px; }
+.ovl {
+  display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px;
+  padding: 13px 14px; border-radius: 14px;
+  background: linear-gradient(100deg, rgba(255,209,102,.16), rgba(255,138,61,.06) 60%, transparent);
+  border: 1px solid rgba(255,209,102,.35);
+}
+.ovl-seat { font-size: 12px; font-weight: 900; color: #ffd166; }
+.ovl-who  { font-size: 15px; font-weight: 900; color: #fff; }
+.ovl-gi   { font-size: 11px; font-weight: 800; color: #8b8b93; font-variant-numeric: tabular-nums; }
+.ovl.vacant { background: none; border-color: #2a2a32; }
+.ovl.vacant .ovl-who { color: #55555c; font-weight: 700; }
+.ovl.mine { box-shadow: 0 0 26px rgba(255,209,102,.22); }
+.ovl-me {
+  margin-top: 9px; text-align: center; font-size: 11.5px; font-weight: 800; color: #8b8b93;
+  font-variant-numeric: tabular-nums;
+}
+.ovl-me b { color: #e8e8ec; }
+
+/* .card 가 display:flex 라 안의 <b> 가 전부 flex 아이템으로 블록화됐다.
+   그래서 강조 단어마다 줄이 끊겼다("레벨 / 은 평생 쌓입니다").
+   설명 카드는 그냥 글이다 — 블록으로 되돌린다. */
+.lore-card { display: block !important; }
+.lore-card .lore-hook { display: block; margin-bottom: 8px; }
