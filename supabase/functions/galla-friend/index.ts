@@ -3128,16 +3128,42 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
     const prevMemIds: number[] = Array.isArray(rel?.last_mem_ids) ? rel.last_mem_ids.map(Number).filter((n: number) => Number.isFinite(n)) : [];
 
     // 인사만(빈 메시지)이면 반겨주기 컨텍스트로 한마디
+    /* 🎲 인사 각도를 '서버가' 돌린다. 프롬프트에 "매번 다르게"라고 적는 걸로는 안 바뀐다 —
+       예시 문장을 그대로 베껴서 매번 "오 왔네 / 잘 지냈어?"가 나왔다(사장님 지적).
+       각도를 하나만 주면 시작점이 구조적으로 갈린다. */
+    const GREET_ANGLES = [
+      "지금 네 상태·기분을 한 줄 던지고 상대에게 넘겨라(날씨·졸림·배고픔 등 사소한 것).",
+      "상대가 뭐 하다 왔는지 궁금해하는 걸로 열어라.",
+      "지금 시간대에 어울리는 한마디로 열어라(아침·점심·저녁·새벽).",
+      "요즘 갈라에서 사람들이 뭐로 시끄러운지 한 줄로 열어라.",
+      "쓸데없지만 웃긴 생각 하나를 툭 던지며 열어라.",
+      "상대의 관심사(프로필 요약 참고) 중 하나를 가볍게 건드리며 열어라.",
+      "말없이 반가워하는 짧은 한마디로만 열고 바로 질문 하나.",
+    ];
+    const greetAngle = GREET_ANGLES[Math.floor(Math.random() * GREET_ANGLES.length)];
+    /* 최근에 내가 뭘로 시작했는지 — 같은 말·같은 화제를 반복하지 않게 실제로 보여준다. */
+    const lastOpeners: string[] = (() => {
+      try {
+        const cl = Array.isArray(rel?.chat_log) ? rel.chat_log : JSON.parse(String(rel?.chat_log || "[]"));
+        return cl.filter((m: any) => m && m.role === "assistant")
+          .slice(-3)
+          .map((m: any) => String(m.content || "").split("\n")[0].trim().slice(0, 40))
+          .filter(Boolean);
+      } catch { return []; }
+    })();
+
     // ⏳ 공백이 얼마나 됐냐에 따라 인사의 무게가 달라야 한다 — 10분 만에 온 사람한테 "잘 지냈어?"는 이상하다.
     const gapMin = rel?.last_seen_at ? Math.floor((Date.now() - Date.parse(rel.last_seen_at)) / 60000) : 99999;
     const gapWord = gapMin >= 20160 ? "2주 넘게" : gapMin >= 4320 ? "며칠" : gapMin >= 1440 ? "하루쯤"
       : gapMin >= 360 ? "반나절쯤" : gapMin >= 60 ? `${Math.floor(gapMin / 60)}시간쯤` : `${gapMin}분쯤`;
     const openMsg = userMsg || (firstMeet
       ? "(처음 만남 — 부담 없이 짧게 반겨줘. 이름을 안 지어줬으면 어떻게 부를지 물어봐도 좋아)"
-      : `(다시 왔다. 마지막으로 본 지 ${gapWord} 됐다. 짧고 자연스럽게 먼저 말 걸어라 — '매번 다르게'.
-${gapMin >= 1440
-  ? "오래 비었다 → '잘 지냈어?' '요새 뭐하고 지냈어?'처럼 안부를 먼저 물어라(반가움 티내도 된다)."
-  : "얼마 안 됐다 → 안부 묻지 마라. '왔어? 뭐하다 왔어 ㅋㅋ' 정도로 툭 던져라."}
+      : `(다시 왔다. 마지막으로 본 지 ${gapWord} 됐다. 짧고 자연스럽게 먼저 말 걸어라.
+${gapMin >= 1440 ? "오래 비었다 → 반가움이 묻어나게." : "얼마 안 됐다 → 안부는 묻지 마라. 툭 던져라."}
+【이번 인사는 이 각도로 열어라 — 다른 각도로 새지 마라】 ${greetAngle}
+⚠️ 예시 문장을 그대로 베끼지 마라. 위 각도만 참고해서 네 말로 지어라.
+${lastOpeners.length ? `⚠️ 최근에 이렇게 시작했다 — 【같은 인사말·같은 화제로 시작 금지】\n${lastOpeners.map((o) => "  · " + o).join("\n")}` : ""}
+⚠️ 직전 대화 화제를 이어서 시작하지 마라. 인사는 '새로 말을 거는 것'이다.
 ${actBlock ? `
 [그 사이 이 사람이 갈라에서 한 일 — 아래에서 '딱 하나만' 골라 그걸로 말을 걸어라]
 ${actBlock}
@@ -3473,7 +3499,7 @@ ${parts.join("\n")}`;
       const turns = Number(sm?.turns) || 0;
       const gapH = sm?.prev_end_at ? (Date.now() - Date.parse(sm.prev_end_at)) / 3600000 : 0;
       if (turns === 0 && gapH >= 3 && !work && !handoff && !crisis) {
-        freshStartBlock = `🌤 [재개 환기 — 이번 턴 최우선]: 상대가 ${gapH >= 20 ? "오랜만에" : "한참 만에"} 다시 왔다(직전 대화는 ${ageTxt(sm.prev_end_at)} 전에 끝난 것). **네 첫 반응에서 위 히스토리의 '직전 화제'를 먼저 입에 올리지 마라** — "아까/저번에 그 ○○ 얘기…"로 시작하는 것 절대 금지. 반갑게 맞고 안부·근황·지금 기분으로 '새로' 열어라("오 왔어? ㅋㅋ 그동안 뭐 하고 지냈어?"). 그 화제는 상대가 먼저 다시 꺼내면 그때만. 상대를 지적("왜 갑자기/화제 돌리네")하지 말고 그냥 반가워해라.`;
+        freshStartBlock = `🌤 [재개 환기 — 이번 턴 최우선]: 상대가 ${gapH >= 20 ? "오랜만에" : "한참 만에"} 다시 왔다(직전 대화는 ${ageTxt(sm.prev_end_at)} 전에 끝난 것). **네 첫 반응에서 위 히스토리의 '직전 화제'를 먼저 입에 올리지 마라** — "아까/저번에 그 ○○ 얘기…"로 시작하는 것 절대 금지. 반갑게 맞고 안부·근황·지금 기분으로 '새로' 열어라. ⚠️ 예시 문장을 베끼지 말고 네 말로 지어라. 그 화제는 상대가 먼저 다시 꺼내면 그때만. 상대를 지적("왜 갑자기/화제 돌리네")하지 말고 그냥 반가워해라.`;
       }
     } catch { /* */ }
     const brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
@@ -3683,7 +3709,10 @@ ${parts.join("\n")}`;
       // 🌤 시간차 재개 첫 턴이면 히스토리를 마지막 2개로 잘라 '직전 화제 앵커'를 약화(장기 연속성은 profile_summary·에피소드가 유지).
       //    지침만으론 생생한 히스토리에 밀려 옛 화제가 새어나옴 → 기계적으로 앵커 제거(사장님 지적 근본수정).
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-                .slice(freshStartBlock ? -2 : undefined)
+                /* 인사 턴(userMsg 없음)은 '새로 말을 거는 것'이라 직전 화제를 이어받으면 안 된다.
+                   freshStartBlock 은 3시간+ 공백만 잡아서, 몇 분 만에 다시 들어오면 히스토리가
+                   그대로 앵커가 돼 매번 같은 화제로 인사했다(사장님: 해변열차 얘기 반복). */
+                .slice((freshStartBlock || !userMsg) ? -2 : undefined)
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName) },
       // 🥊 반복 시비일 때만 — 평상시엔 아예 주입하지 않는다(캐시 프리픽스 뒤라 캐시에도 영향 없음)
