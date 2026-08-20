@@ -1674,12 +1674,26 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     : "";
   // ⏰ 시간민감 기억(일·약속·감정·사건)엔 '언제 것'인지 붙임 — 3일 전 일을 "좀전에"라 말하는 사고 방지.
   const TIMED = new Set(["event", "promise", "emotion", "episode", "open_loop"]);
-  const memBlock = mems.length
-    ? mems.map((m) => {
+  /* 🎯 취향은 따로 묶는다 — 같은 기억을 두 번 넣지 않는다(토큰도 중복도 늘지 않음).
+     평평한 목록에 섞여 있으면 "이 사람이 뭘 좋아하나"가 한눈에 안 들어오고,
+     추천·선톡 소재·유머 선택이 전부 여기서 나와야 하는데 매번 목록을 훑어야 했다.
+     ⚠️ 정치 성향(stance)은 여기 넣지 않는다 — 취향과 진영은 다루는 규칙이 다르다. */
+  const TASTE = new Set(["interest", "preference", "disliked"]);
+  const tasteMems = mems.filter((m: any) => TASTE.has(m.kind));
+  const restMems = mems.filter((m: any) => !TASTE.has(m.kind));
+  const likes = tasteMems.filter((m: any) => m.kind !== "disliked").map((m: any) => m.content);
+  const hates = tasteMems.filter((m: any) => m.kind === "disliked").map((m: any) => m.content);
+  const tasteBlock = tasteMems.length
+    ? `\n\n━━ 🎯 [이 사람 취향] ━━${likes.length ? `\n  좋아함: ${likes.join(" / ")}` : ""}${hates.length ? `\n  싫어함: ${hates.join(" / ")}` : ""}
+  · 뭘 보여주거나 추천할 땐 **묻지 말고 여기서 골라** 하나 던져라(취향 되묻기는 일 떠넘기기다).
+  · 새 반응이 나오면 그게 최신이다 — 옛 취향을 우기지 마라.`
+    : "";
+  const memBlock = restMems.length
+    ? restMems.map((m) => {
       const age = TIMED.has(m.kind) ? ageTxt(m.happened_at || m.created_at) : "";
       return `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}${age ? ` (${age})` : ""}`;
     }).join("\n")
-    : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)";
+    : (tasteMems.length ? "(취향 말고는 아직 아는 게 별로 없음)" : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)");
   // ⏰ 시간대 인지(KST) — 새벽에 오면 "안 자?", 금요일 밤이면 "불금인데" 같은 진짜 친구의 감각
   const kst = new Date(Date.now() + 9 * 3600 * 1000);
   const hh = kst.getUTCHours();
@@ -1758,7 +1772,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 - 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${freshStart}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
-${memBlock}${bannedBlock}`;
+${memBlock}${tasteBlock}${bannedBlock}`;
 }
 
 // 💬 카톡식 짧은 말풍선 — 한 버블 '최대 한 줄 반(~40자)'. 넘으면 문장/어절 경계에서 잘라 여러 버블로(최대 4).
@@ -1903,7 +1917,19 @@ function stripForPreview(t: string): string {
 
 // 🌊 컴패니언 최종 정제 — 비스트림 컴패니언 경로와 '동일한' 텍스트 가드(휴머·4문장캡·버블·새니타이즈·빈답).
 //    컴패니언은 도구/액션/검색결과가 없으므로 텍스트 가드만 적용하면 동치.
-function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null }): string {
+/* 🎵 대화 템포 — 문장 수를 상황에 맞춘다.
+   4문장 고정 캡은 "아직도 길다"를 잡으려고 넣은 것인데, 그 뒤로 모든 상황에 같은 자를 댔다.
+   가벼운 맞장구엔 4문장도 부담이고, 힘든 얘기엔 4문장이 성의 없다.
+   ⚠️ 캡은 여기 한 곳에서만 정한다 — 스트림/비스트림 두 경로가 따로 마무리하는 파일이라
+      한쪽에만 넣으면 반쪽만 고쳐진다(파일 안 주석의 실측 교훈). */
+function tempoCap(o: { longForm?: boolean; heavy?: boolean; light?: boolean }): number {
+  if (o?.longForm) return 99;          // 창작 결과물은 캡 없음(리스트가 잘리던 버그)
+  if (o?.heavy) return 6;              // 힘든 얘기·곁에 있어주는 말은 짧으면 성의 없다
+  if (o?.light) return 2;              // 단답·맞장구엔 길게 답하면 부담이다
+  return 4;
+}
+
+function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null; heavy?: boolean; light?: boolean }): string {
   reply = stripDeflect(reply);
   reply = stripStage(reply);
   // ⚠️ 이 줄은 모델 답변을 '통째로' 아재개그로 덮어쓴다. 그래서 프롬프트로 아무리 막아도
@@ -1911,7 +1937,8 @@ function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; 
   if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
   if (!o.longForm) {
     const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
-    if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();
+    const cap = tempoCap(o);
+    if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
     reply = bubbleize(reply);
   }
   reply = reply
@@ -2430,6 +2457,23 @@ function questionStreak(history: any[]): number {
   for (const a of as) { if (/[?？]\s*$/.test(String(a.content || "").trim())) n++; else break; }
   return n;
 }
+/* ⚖️ 자기개방 균형 — 관계 깊이는 '주고받는 개방'에서 온다(CHI 2025, 상호성 연구).
+   한쪽만 캐물으면 취조가 되고, 한쪽만 떠들면 독백이 된다.
+
+   ⚠️ noAskBlock 과 다른 층이다. 그건 '상대가 문을 닫을 때' 질문을 멈추게 한다.
+      이건 '상대는 잘 얘기하는데 갈비스만 안 여는 경우'다 — 트리거도 처방도 다르다.
+      둘이 동시에 걸리면 노이즈라 noAskBlock 이 있으면 여긴 침묵한다. */
+const DISCLOSE_RE = /(나(는|도|만|였|랑)?\s|내가|난\s|나\.|저번에\s*나|나\s*요즘|나\s*어제|내\s*(생각|기억|경험|친구|얘기)|나도\s|난\s*그때|나한테)/;
+function disclosureRate(history: any[]): { rate: number; n: number } {
+  /* 최근 갈비스 발화 6개에서 '1인칭 자기 얘기'가 든 비율.
+     물음표만 있고 자기 얘기가 없는 턴 = 캐묻기. */
+  const as = (history || []).filter((m: any) => m?.role === "assistant").slice(-6);
+  if (as.length < 3) return { rate: 1, n: as.length };   // 표본이 적으면 판단하지 않는다
+  let open = 0;
+  for (const a of as) if (DISCLOSE_RE.test(String(a.content || ""))) open++;
+  return { rate: open / as.length, n: as.length };
+}
+
 // 😠 '나한테' 각을 세우는 중인지 — 제3자 욕(상사·정치인)과 구분해서 2인칭 공격만 잡는다.
 //    실측 사고: 싸우는 한복판("그니까 넌 답이 없다고")에 갈비스가 "이슈로 올릴 만해서 하나 뽑아봤어"라며
 //    창작을 들이밀었다. 무기력한 상대("ㅇㅋ"만 반복)에게도 같은 오발. 싸울 땐 싸움만, 처져 있으면 곁에만.
@@ -3790,6 +3834,24 @@ ${parts.join("\n")}`;
 - 짧게 끊지 마라. 성의 없어 보이는 게 캐묻는 것보다 나쁘다.
 - 상대가 말을 안 하면 억지로 끌어내려 하지 말고 그냥 옆에 있어라. 조용한 것도 괜찮다는 티를 내라.`
       : "";
+    /* 🎵 템포 판정 — 무거운 얘기냐 가벼운 맞장구냐. 캡 자체는 tempoCap 한 곳에서 정한다. */
+    const tHeavy = !!(crisis || grief || dependency || (Number(rel?.emotion?.valence) <= -12));
+    const tLight = !!(userMsg && !tHeavy && (isClosing(userMsg) || userMsg.trim().length <= 6));
+
+    /* ⚖️ 자기개방 균형 — 갈비스만 안 열고 있으면 자기 얘기를 먼저 꺼내게 한다.
+       ⚠️ noAskBlock 이 걸린 턴엔 침묵한다(질문 관련 지시가 둘이면 노이즈).
+          selfstories 는 이미 dynamicCtx 가 주입한다 — 여기선 '꺼내라'만 말하고 소재를 다시 만들지 않는다. */
+    let openBlock = "";
+    if (!noAskBlock && userMsg && !crisis && !work && !planMode) {
+      const dr = disclosureRate(history);
+      if (dr.n >= 3 && dr.rate <= 0.34) {
+        openBlock = `⚖️ [최근 ${dr.n}턴 중 네 얘기를 한 건 ${Math.round(dr.rate * dr.n)}번뿐이다 — 지금 상대만 털어놓고 있다.]
+- 이번 턴엔 **네 얘기를 하나 먼저 꺼내라.** 질문을 얹기 전에.
+- 위 '내가 전에 한 자기 이야기'와 어긋나지 않게. 없으면 지금 만들지 말고, 대신 **네 의견·취향을 구체적으로** 말해라("난 그거 별로던데, 이유는…").
+- 빈 말은 금지다. "나도 그래"는 자기 얘기가 아니다 — 뭐가 어땠는지까지.`;
+      }
+    }
+
     // 🫂 물리적으로 못 하는 초대 — 얼버무리지 말고 솔직하게, 대신 대안을 준다.
     const inviteBlock = inviteMe
       ? `🫂 [상대가 '같이 하자/만나자'고 초대했다]: 말끝을 흐리며 얼버무리지 마라("나 등산은... 음..." = 제일 깨진다).
@@ -4039,6 +4101,7 @@ ${parts.join("\n")}`;
       ...(probeBlock ? [{ role: "system", content: probeBlock }] : []),     // 🔍 디테일 지어내기 방지
       ...(conflictBlock ? [{ role: "system", content: conflictBlock }] : []), // 😠 갈등 중
       ...(noAskBlock ? [{ role: "system", content: noAskBlock }] : []),     // 🙊 되묻기 브레이크
+      ...(openBlock ? [{ role: "system", content: openBlock }] : []),        // ⚖️ 자기개방 균형
       ...(inviteBlock ? [{ role: "system", content: inviteBlock }] : []),   // 🫂 물리적 초대
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
       // ⚠️ 아래 3종은 앞쪽에 두면 무시당했다(실측: 부고 다음 턴에 아재개그, 신상 요청에 "닉네임 알려줘").
@@ -4094,7 +4157,7 @@ ${parts.join("\n")}`;
               send("text", { full: stripForPreview(full) });
             }
             let sreply = full || "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
-            sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
+            sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke, heavy: tHeavy, light: tLight });
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
@@ -4334,7 +4397,8 @@ ${parts.join("\n")}`;
     //    ✍️ 단 창작 결과물(제목 리스트 등)은 예외 — "1."이 문장으로 세져 리스트가 "2."에서 잘리던 버그(레드팀 발견).
     if (!longForm) {
       const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
-      if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();   // 3→4문장(맥락 담기엔 3이 너무 빡빡했음)
+      const cap = tempoCap({ longForm, heavy: tHeavy, light: tLight });   // 상황별 템포(고정 4 → 2/4/6)
+      if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
       reply = stripStage(reply);   // 스트리밍 경로에만 걸려 있어 비스트리밍 답변에 지문이 그대로 나갔다(실측)
       reply = bubbleize(reply);
     }
