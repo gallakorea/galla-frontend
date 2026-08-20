@@ -1731,7 +1731,13 @@
       }catch(e){}
     });
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
-    try{ if(/[?&]frping=1/.test(location.search)) setTimeout(open, 900); }catch(e){}
+    /* 쿼리(웹) 또는 세션 플래그(네이티브 콜드 스타트)로 들어왔으면 챗을 연다.
+       네이티브는 페이지 이동을 안 하므로 location.search 만 보면 못 잡는다. */
+    try{
+      var frPing = /[?&]frping=1/.test(location.search);
+      try{ if(sessionStorage.getItem("galla:frping")==="1"){ frPing=true; sessionStorage.removeItem("galla:frping"); } }catch(e2){}
+      if(frPing) setTimeout(open, 900);
+    }catch(e){}
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();

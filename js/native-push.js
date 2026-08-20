@@ -23,14 +23,45 @@
       } catch (_) { /* 저장 실패 무시 */ }
     });
     pn.addListener("registrationError", () => { /* 등록 실패 — 조용히 */ });
-    // 알림 탭 → 딥링크로 이동
+  }
+
+  /* 🔔 알림 탭 — ⚠️ 이건 로그인·DB 준비를 기다리면 안 된다.
+     콜드 스타트(앱이 꺼진 상태에서 푸시 탭)에서는 iOS가 실행 직후 이 이벤트를 던진다.
+     예전엔 bindListeners()가 supabaseClient+로그인 대기 뒤에 붙어서 그때쯤엔
+     이벤트가 이미 지나가 있었다 — 그래서 "푸시 눌러도 안 감"(사장님 재현).
+     그래서 탭 리스너만 스크립트 로드 시점에 따로 붙인다. */
+  let _tapBound = false;
+  function bindTap() {
+    const pn = PN(); if (!pn || _tapBound) return; _tapBound = true;
     pn.addListener("pushNotificationActionPerformed", (a) => {
-      try {
-        const url = a && a.notification && a.notification.data && a.notification.data.url;
-        if (url) (window.GALLA_nav || function (u) { location.href = u; })(url);
-      } catch (_) {}
+      try { handleTap((a && a.notification && a.notification.data && a.notification.data.url) || ""); }
+      catch (_) {}
     });
   }
+
+  function handleTap(url) {
+    if (!url) return;
+    /* 📮 갈비스 선톡 — 페이지 이동을 하지 않는다.
+       네이티브는 앱 안에 www를 번들로 들고 있어 '/app.html?...' 로 재이동하면
+       콜드 스타트 중 흰 화면에서 멈춘다(사장님 재현). 패널만 직접 연다. */
+    if (/frping=1/.test(url)) { openFriendWhenReady(); return; }
+    (window.GALLA_nav || function (u) { location.href = u; })(url);
+  }
+
+  // friend.js 가 아직 안 떴을 수 있다 — 플래그로 남기고 뜰 때까지 짧게 재시도한다.
+  function openFriendWhenReady() {
+    try { sessionStorage.setItem("galla:frping", "1"); } catch (_) {}
+    let n = 0;
+    (function tick() {
+      if (typeof window.GALLA_openFriend === "function") {
+        try { sessionStorage.removeItem("galla:frping"); } catch (_) {}
+        window.GALLA_openFriend();
+        return;
+      }
+      if (++n < 40) setTimeout(tick, 250);   // 최대 10초 대기 후 포기(플래그는 남는다)
+    })();
+  }
+  window.GALLA_handlePushUrl = handleTap;   // 테스트·다른 진입로에서도 쓸 수 있게
 
   // 권한 요청 + 등록. 이미 로그인돼 있어야 토큰이 유저에 붙는다.
   window.GALLA_registerNativePush = async function () {
@@ -45,6 +76,8 @@
       return { ok: true };
     } catch (e) { return { ok: false, reason: String(e).slice(0, 80) }; }
   };
+
+  if (isNative) bindTap();   // ⬅️ 로그인 여부와 무관하게 즉시(콜드 스타트 대비)
 
   // 이미 권한 허용된 유저는 앱 켤 때(로그인 상태) 조용히 토큰 갱신 — 토큰은 주기적으로 바뀔 수 있다.
   async function silentRefresh() {
