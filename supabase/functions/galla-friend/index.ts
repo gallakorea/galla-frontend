@@ -1843,8 +1843,20 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
 }
 
 // 프리뷰용 마커 제거 — 스트리밍 중엔 [stk:]/[emo:]/((지문))/툴이름/URL을 안 보이게(최종은 finalize가 처리).
+/* 🧠 마음읽기(ToM) 블록 제거 — 모델이 답하기 전에 '상대가 지금 뭘 원하나'를
+   한 줄로 먼저 쓰게 하고(ToMA 논문의 Base+MS: 학습 없이 추론 시점에만 적용),
+   화면엔 안 보이게 걷어낸다. 별도 호출이 아니라 같은 응답의 앞부분이라 왕복이 안 는다.
+   ⚠️ 스트리밍 중에는 태그가 '열린 채'로 흘러온다 — 닫히기 전에도 안 보이게 잘라야 한다. */
+function stripMind(t: string): string {
+  return String(t || "")
+    .replace(/<ms>[\s\S]*?<\/ms>/gi, "")   // 닫힌 블록
+    .replace(/<ms>[\s\S]*$/i, "")           // 스트리밍 중 열린 블록
+    .replace(/<m?s?$/i, "")                  // 여는 태그가 아직 덜 온 순간("<", "<m", "<ms")
+    .replace(/^\s*<\/ms>/i, "")
+    .replace(/^\s+/, "");
+}
 function stripForPreview(t: string): string {
-  return (t || "")
+  return stripMind(t || "")
     .replace(/\[(?:stk|emo):[^\]]*\]/gi, "")
     .replace(/\(\([^)]*\)\)/g, "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
@@ -3874,6 +3886,21 @@ ${parts.join("\n")}`;
 · 지문·연출 금지 — ((슬쩍 옆에 앉으며)) 같은 괄호 묘사 절대 쓰지 마라. 친구가 실제로 할 '말'만.`
       : "";
 
+    /* 🧠 마음읽기(ToM) — 답하기 전에 '상대가 지금 뭘 원하나'를 한 줄 먼저 쓰게 한다.
+       근거: Infusing Theory of Mind into Socially Intelligent LLM Agents(2509.22887).
+       파인튜닝판(ToMA)은 오픈모델이 필요해 못 쓰지만, 같은 논문의 비교군
+       'Base+MS'(학습 없이 추론 시점에만 마음상태 생성)만으로도 베이스보다 높다.
+       비용은 논문 기준 +47토큰 — 별도 호출이 아니라 같은 응답의 앞부분이라 왕복이 안 는다.
+       ⚠️ 수다 턴에만 건다. 도구·창작 턴은 이미 route/agent 지시가 빽빽해 충돌한다. */
+    const mindBlock = (brain === "companion" && userMsg && !crisis && !work)
+      ? `\n━━ 🧠 답하기 전에 (화면엔 안 나간다) ━━
+답을 쓰기 전에 딱 한 줄, <ms>…</ms> 안에 '지금 상대'를 적어라. 세 가지만:
+  · 원하는 것(의도) · 지금 기분 · 진짜 묻는 게 뭔지(말 뒤의 속뜻)
+예) <ms>주가 물었지만 진짜론 손실 걱정 — 숫자보다 안심이 필요</ms>
+그 다음 줄부터 진짜 답을 써라. <ms> 안의 말은 절대 답에 그대로 옮기지 마라
+("네가 걱정하는 걸 알아" 같은 심리 분석 티내기 금지 — 읽었으면 그냥 그렇게 행동해라).
+한 줄을 넘기지 마라.`
+      : "";
     const companionBlock = brain === "companion"
       ? `🫂 [컴패니언 모드 — 진짜 친구]: 요청 안 받은 검색·생성·도구 호출 금지(마음으로 대화). 감정선·기억·호칭 최우선.
 🎯 선제 리드·핑퐁: 상대가 매번 질문하게 두지 마라. 위 [기억/지난 대화/공백/감정]을 근거로 네가 '먼저' 구체적 화제를 꺼내거나 안부를 물어라(뻔한 "어떻게 생각해?" 금지). 답할 땐 '답 + 되물음'으로 이어가라(핑퐁).
@@ -3917,6 +3944,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
+      ...(mindBlock ? [{ role: "system", content: mindBlock }] : []),
       ...(piiBlock ? [{ role: "system", content: piiBlock }] : []),
       ...(emoCarryBlock ? [{ role: "system", content: emoCarryBlock }] : []),
       ...(selfDepBlock ? [{ role: "system", content: selfDepBlock }] : []),
@@ -3991,7 +4019,7 @@ ${parts.join("\n")}`;
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(sreply), _hostileTurn), friendName)));
+            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(sreply)), _hostileTurn), friendName)));
             sreply = stripUngroundedMoney(sreply, "", _priceAsk);
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
@@ -4404,7 +4432,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(reply), _hostileTurn), friendName)));
+    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(reply)), _hostileTurn), friendName)));
     reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk);
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
