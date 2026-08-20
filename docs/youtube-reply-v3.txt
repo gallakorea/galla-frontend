@@ -1,0 +1,61 @@
+Subject: Re: YouTube API Services: Compliance Review — Report V.3 resolved (Project 197088978210)
+
+Hello,
+
+Thank you for the report. The listed violation is resolved and verified in
+production. Evidence is attached (GALLA-YouTube-ToS-V3-Evidence.pdf).
+
+────────────────────────────────────────────────────────────
+F (User Experience) — Policy III.F.2a
+YouTube logos and icons must follow the Branding Guidelines
+(minimum icon height 20 dp; shape and corners unmodified)
+────────────────────────────────────────────────────────────
+
+RESOLVED.
+
+1) Size
+
+The icon flagged in your screenshot is the Long-form / Shorts toggle on our
+Hot-Tube tab. Measured in production today:
+
+    Tab bar                              34 x 24 px
+    Long-form / Shorts toggle (flagged)  34 x 24 px
+    In-app guide list                    34 x 24 px
+
+    Minimum required: 20 dp      Measured: 24 px  (+20% margin)
+
+These are not container sizes. We measured the red YouTube artwork itself by
+scanning the rendered screenshot for contiguous #FF0000 pixels and taking the
+bounding box — the same quantity your report measures. Figure 1 in the attached
+PDF shows the measurement drawn on the live screen.
+
+The 20 dp remediation was deployed on 2026-08-18 09:26 KST and covered all
+eight icon locations, including the toggle shown in your screenshot. We have
+now raised the height to 24 px so that rounding or measurement tolerance
+cannot bring it below the 20 dp minimum.
+
+2) Shape and corners
+
+The icon is the unmodified official artwork (the two official paths,
+#FF0000 and #FFFFFF). On the live page the icon element computes to:
+
+    border-radius: 0px      transform: none      clip-path: none
+    filter: none            opacity: 1
+
+The rounded corners visible around the icon in your screenshot belong to the
+button that contains it (border-radius: 10px, overflow: visible), not to the
+icon. No radius, transform or clipping is applied to the YouTube icon itself.
+
+3) How to verify
+
+Open https://galla.im/search?tab=hot and run in the browser console:
+
+    document.querySelector('.hv-mode-btn .yt-official').getBoundingClientRect()
+
+Height returns 24.
+
+We remain committed to full compliance and are happy to provide any further
+detail you need.
+
+Thanks,
+Gala Labs Co., Ltd.
