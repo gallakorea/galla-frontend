@@ -40,7 +40,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  market_quote: "💹 시세 확인하는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -765,6 +765,40 @@ async function marketQuote(kind: string, name: string): Promise<any> {
   return { ...r, 지침: "여기 적힌 숫자만 말해라. 반올림·환산·추측 금지. 기준 시각이 있으면 '장중/방금 기준'처럼 덧붙여라." };
 }
 
+/* 🎓 주제 이력(축 6, 전문성 깊이의 1층) — 밖에서 아는 척이 아니라 '갈라의 축적'으로 말한다.
+   갈라뉴스 24,745건 + 이슈 여론 데이터가 이미 있다. 어떤 주제가 언제부터 얼마나 다뤄졌고
+   갈라 유저 여론이 어떻게 갈렸는지는 우리만 아는 사실이다 — 그게 관점의 재료다. */
+async function topicHistory(topic: string): Promise<any> {
+  const q = String(topic || "").trim().slice(0, 40);
+  if (q.length < 2) return { error: "주제가 필요하다" };
+  const like = `%${q.replace(/[%_]/g, "")}%`;
+  const [newsR, oldR, issueR] = await Promise.all([
+    supa.from("galla_news").select("title,created_at").ilike("title", like)
+      .order("created_at", { ascending: false }).limit(120),
+    supa.from("galla_news").select("title,summary,created_at").ilike("title", like)
+      .order("created_at", { ascending: true }).limit(1),
+    supa.from("issues").select("title,pro_count,con_count,created_at").ilike("title", like)
+      .order("created_at", { ascending: false }).limit(3),
+  ]);
+  const news = newsR.data || [];
+  if (!news.length && !(issueR.data || []).length)
+    return { note: "갈라에서 이 주제를 다룬 적이 없다", 지침: "축적이 없다고 솔직히 말하고, 필요하면 web_search로 넘어가라." };
+  const days30 = news.filter((n: any) => Date.now() - Date.parse(n.created_at) < 30 * 86400000).length;
+  const issues = (issueR.data || []).map((i: any) => {
+    const t = (i.pro_count || 0) + (i.con_count || 0);
+    return { 이슈: String(i.title).slice(0, 60),
+             여론: t ? `찬성 ${Math.round((i.pro_count || 0) / t * 100)}% (${t}표)` : "표 없음" };
+  });
+  return {
+    주제: q,
+    갈라뉴스: { 총: news.length, 최근30일: days30,
+      처음_다룬_때: oldR.data?.[0]?.created_at?.slice(0, 10) || null,
+      최근_헤드라인: news.slice(0, 3).map((n: any) => String(n.title).slice(0, 60)) },
+    갈라_이슈_여론: issues,
+    지침: "이 숫자들은 '갈라의 축적'이다 — 네가 직접 본 것처럼 말해도 된다('이 얘기 갈라에서 이번 달에만 N번 다뤘어'). 단 여기 없는 숫자·전망을 지어 붙이지 마라. 세상 사실이 더 필요하면 web_search.",
+  };
+}
+
 async function webSearch(query: string, kind: string) {
   const q = (query || "").trim().slice(0, 80);
   if (!q) return { results: [], note: "empty query" };
@@ -838,6 +872,7 @@ const TOOLS = [
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
   { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인). 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
+  { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
@@ -977,6 +1012,7 @@ async function refundGC(uid: string, amount: number) {
 }
 
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
+  if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
@@ -2323,6 +2359,17 @@ function priceAsk(msg: string): boolean {
   const m = String(msg || "");
   return /(얼마|가격|시세|값|비용|요금|운임|호가|실거래|최저가|싼\s*거|싼\s*게)/.test(m);
 }
+/* 📏 축 4(불확실성 보정 확장): 가격 말고도 '정확한 수치'를 묻는 턴 —
+   통계·순위·날짜·기록. 이 턴의 답에 든 숫자도 도구 근거를 요구한다.
+   ⚠️ 오탐이 제일 무서운 가드다. "몇 살이야?"(캐릭터 질문), "몇 시에 만나?"(약속) 같은
+      대화형 숫자는 절대 걸면 안 된다 — '세상 사실'을 묻는 패턴만 좁게 잡는다. */
+function statAsk(msg: string): boolean {
+  const m = String(msg || "");
+  if (!m) return false;
+  if (/(너|네가|니가)\s*(몇|언제)/.test(m)) return false;          // 갈비스 캐릭터 질문
+  if (/(만나|보자|약속|올래|갈래|시작하자)/.test(m)) return false;   // 약속 잡기
+  return /(인구|GDP|성장률|실업률|물가|점유율|시청률|관객\s*수|조회수|구독자|키\s*(가|는)?\s*몇|신장|연봉|매출|순위|랭킹|몇\s*(위|등|명|개국|퍼센트|프로|%)|언제\s*(나왔|출시|개봉|발매|창립|설립)|몇\s*년도|무게|스펙)/.test(m);
+}
 /* "12만 7천" → 127000, "1,691,000" → 1691000. 못 읽으면 null(=근거 없음 처리). */
 function koAmount(raw: string): number | null {
   const t = String(raw || "").replace(/[,\s]/g, "");
@@ -2353,9 +2400,24 @@ function groundSet(blob: string): Set<number> {
   for (const v of moneyValues(blob)) if (Number.isFinite(v)) g.add(v);
   return g;
 }
-function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean): string {
-  if (!isPriceAsk) return reply;
-  const vals = moneyValues(reply);
+/* 수치 수집 — 감지와 문단 필터가 '같은 눈'으로 봐야 한다.
+   처음엔 감지만 통계 숫자를 봤고 문단 필터는 금액만 봐서, 지어낸 "4,800만 명"이
+   감지엔 걸리고 제거엔 안 걸려 그대로 나갔다(테스트에서 잡음). */
+function collectVals(text: string, isStatAsk: boolean): number[] {
+  const vals = moneyValues(text);
+  if (isStatAsk) {
+    /* 금액 단위 없는 수치(1500만 명, 37%, 2019년…)도 근거 대상.
+       2자리 이하는 안 건다 — "3개" 같은 대화형 숫자까지 걸면 오탐 지옥이다. */
+    for (const m of String(text || "").matchAll(/\d[\d,.]{2,}\s*(만|억|천만)?\s*(명|%|퍼센트|위|년|회|배|km|kg|cm)?/g)) {
+      const v = koAmount(String(m[0]).replace(/[^\d,만억천]/g, ""));
+      if (v != null && v >= 100) vals.push(v);
+    }
+  }
+  return vals;
+}
+function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean, isStatAsk = false): string {
+  if (!isPriceAsk && !isStatAsk) return reply;
+  const vals = collectVals(reply, isStatAsk);
   if (!vals.length) return reply;
   const ground = groundSet(blob);
   const bad = vals.some((v) => !Number.isFinite(v) || !ground.has(v));
@@ -2363,7 +2425,7 @@ function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean):
   /* 문장 단위로 잘라 '근거 없는 금액이 든 문장'만 뺀다. 통째로 지우면 빈 답이 나간다. */
   const parts = String(reply).split(/\n{2,}/);
   const kept = parts.filter((p) => {
-    const pv = moneyValues(p);
+    const pv = collectVals(p, isStatAsk);
     return !pv.length || pv.every((v) => Number.isFinite(v) && ground.has(v));
   });
   const honest = "정확한 값은 내가 못 잡겠어 — 아는 척 지어내긴 싫어서.";
@@ -2450,6 +2512,24 @@ function closingStreak(history: any[], cur: string): number {
   for (const u of us) { if (isClosing(String(u.content || ""))) n++; else break; }
   return n;
 }
+/* 🚪 이탈 감지(축 5) — '단답 길이' 하나만 보던 것을 넓힌다.
+   신호 셋: ①단답 연속(기존 closingStreak) ②응답 간격이 벌어짐 ③끝내려는 말.
+   ⚠️ 처방은 noAskBlock(질문 멈추기)과 다르다 — 이건 '놓아줄 때'를 아는 것이다.
+      붙잡는 말("가지 마", "조금만 더")은 의존 방어와도 정면 충돌하니 절대 금지. */
+const LEAVING_RE = /(자야\s*(겠|지)|잘게|잘래|이만|나중에\s*(봐|보자|얘기|하자)|다음에\s*(봐|보자|얘기|하자)|바빠서|일하러|들어가\s*(볼게|야)|가\s*볼게|가야\s*(겠|해|돼)|밥\s*먹으러|씻으러|끊을게|그만\s*할래)/;
+function disengaging(history: any[], cur: string, closeN: number): "leaving" | "fading" | null {
+  if (LEAVING_RE.test(String(cur || ""))) return "leaving";     // 명시적으로 끝내는 중
+  if (closeN >= 3) return "fading";                             // 단답 3연속 = 식는 중
+  /* 응답 간격 — 클라가 타임스탬프를 실어주면 본다(없으면 이 신호는 건너뜀) */
+  const us = (history || []).filter((m: any) => m?.role === "user" && m?.at).slice(-3);
+  if (us.length >= 2) {
+    const gaps = [];
+    for (let i = 1; i < us.length; i++) gaps.push(Date.parse(us[i].at) - Date.parse(us[i - 1].at));
+    if (gaps.every((g) => Number.isFinite(g)) && gaps[gaps.length - 1] > 5 * 60000 && closeN >= 1) return "fading";
+  }
+  return null;
+}
+
 // 갈비스가 연속 몇 턴을 물음표로 끝냈나
 function questionStreak(history: any[]): number {
   let n = 0;
@@ -3642,6 +3722,7 @@ ${parts.join("\n")}`;
     /* 💸 이번 턴에 도구가 실제로 돌려준 내용 — 답변 속 금액의 '근거' 집합을 만든다. */
     let _toolBlob = "";
     const _priceAsk = priceAsk(userMsg || "");
+    const _statAsk = statAsk(userMsg || "");
     const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
     // 🌍 유저 언어 — 지금은 전원 'ko'라 아무 일도 안 일어난다. 해외를 열면 그때 이 블록이 켜진다.
     //    ⚠️ 이건 '번역'이 아니라 응답 언어만 맞추는 최소 장치다. 반말·ㅋㅋ·아재개그로 짜인
@@ -3826,7 +3907,22 @@ ${parts.join("\n")}`;
     // 🙊 되묻기 브레이크 — 상대가 닫고 있거나 내가 연속으로 물었으면, 이번 턴은 질문을 끊는다.
     //    ⚠️ 발동 조건을 2연속 → 1회로 낮췄다. 문제은행 실측에서 2연속 기준으론 물음표 비율이
     //       0.43까지 튀어 '40% 넘으면 취조' 기준을 못 지켰다.
-    const noAskBlock = (closeN >= 1 || qStreak >= 2)
+    /* 🚪 이탈 감지 — 끝내려 하면 잡지 말고 보내준다. noAskBlock 보다 먼저 판정해서
+       '끝내는 중'이면 그쪽 지시 하나만 나간다(질문 지시 중첩 방지). */
+    const disengage = (userMsg && !crisis) ? disengaging(history, userMsg, closeN) : null;
+    const disengageBlock = disengage === "leaving"
+      ? `🚪 [상대가 대화를 끝내려 한다.]
+- **짧게 보내줘라.** "어 가봐~ 담에 봐" 한 줄이면 된다. 질문 금지, 새 화제 금지.
+- "조금만 더", "가지 마", "벌써?" 같은 붙잡는 말 절대 금지 — 부담이고, 다음에 안 온다.
+- 하다 만 얘기가 있으면 "그거 다음에 마저 듣자" 한마디만 얹어도 좋다.`
+      : disengage === "fading"
+      ? `🚪 [상대 반응이 식고 있다(단답 연속).]
+- 대화를 살리려고 애쓰지 마라 — 그게 제일 부담스럽다.
+- **네가 먼저 가볍게 접어라**: "오늘 좀 피곤한가보네, 나중에 또 얘기하자 ㅋㅋ" 식으로 출구를 열어줘라.
+- 상대가 다시 말을 이으면 그때 자연스럽게 받으면 된다.`
+      : "";
+
+    const noAskBlock = disengage ? "" : (closeN >= 1 || qStreak >= 2)
       ? `🙊 [이번 턴은 **질문으로 끝내지 마라**. ${closeN >= 1 ? `상대가 단답으로 문을 닫았다(${closeN}회 연속) — 그건 '그만 물어봐'라는 신호다.` : `네가 ${qStreak}턴 연속 물음표로 끝냈다 — 지금 상대는 취조당하는 기분이다.`}]
 - **질문만 던지고 끝내지 마라.** 물어봐도 되지만, 그 앞에 **네 얘기나 구체적인 리액션을 반드시 하나 얹어라.**
   ("나도 새벽에 치킨 생각하면 세상 다 가진 기분이던데", "그 말투 보니 진짜 피곤한가보네")
@@ -4100,6 +4196,7 @@ ${parts.join("\n")}`;
       ...(makeUpBlock ? [{ role: "system", content: makeUpBlock }] : []),   // 🤝 화해
       ...(probeBlock ? [{ role: "system", content: probeBlock }] : []),     // 🔍 디테일 지어내기 방지
       ...(conflictBlock ? [{ role: "system", content: conflictBlock }] : []), // 😠 갈등 중
+      ...(disengageBlock ? [{ role: "system", content: disengageBlock }] : []), // 🚪 이탈 — 놓아주기
       ...(noAskBlock ? [{ role: "system", content: noAskBlock }] : []),     // 🙊 되묻기 브레이크
       ...(openBlock ? [{ role: "system", content: openBlock }] : []),        // ⚖️ 자기개방 균형
       ...(inviteBlock ? [{ role: "system", content: inviteBlock }] : []),   // 🫂 물리적 초대
@@ -4163,7 +4260,7 @@ ${parts.join("\n")}`;
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
             sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(sreply)), _hostileTurn), friendName)));
-            sreply = stripUngroundedMoney(sreply, "", _priceAsk);
+            sreply = stripUngroundedMoney(sreply, "", _priceAsk, _statAsk);
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
@@ -4577,7 +4674,7 @@ ${parts.join("\n")}`;
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
     reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(reply)), _hostileTurn), friendName)));
-    reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk);
+    reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk, _statAsk);
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
