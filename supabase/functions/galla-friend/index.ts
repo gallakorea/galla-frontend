@@ -40,7 +40,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -689,6 +689,82 @@ async function fetchSource(url: string): Promise<{ title?: string; text?: string
     return { ok: true, title, text: (desc ? desc + " " : "") + bodyTxt };
   } catch { return { ok: false }; }
 }
+/* 💹 실시간 시세 — 검색으로는 '지금 숫자'가 안 나온다.
+   실측: "지금 하이닉스 가격 얼마야?" → 기사만 읽고 "정확한 현재가는 못 잡겠어".
+        비트코인은 아예 "6만 9천 달러"라고 지어냈다(실제 9,952만원).
+   전부 키가 필요 없는 공개 소스다. 종목명→코드는 네이버 자동완성으로 푼다. */
+const _UA = { "User-Agent": "Mozilla/5.0", "Accept": "application/json" };
+async function jget(url: string, ms = 6000): Promise<any> {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, { headers: _UA, signal: ac.signal });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
+async function quoteStock(name: string): Promise<any> {
+  const ac = await jget(`https://ac.stock.naver.com/ac?q=${encodeURIComponent(name)}&target=stock`);
+  const items = ac?.items || [];
+  const rows = (items[0] && items[0].stocks) ? items[0].stocks : items;
+  /* ⚠️ 첫 결과를 그냥 쓰면 "하이닉스"에 ETF·레버리지가 걸린다(실측:
+     KODEX SK하이닉스단일종목레버리지). 이름이 짧은 = 본주를 고른다. */
+  const kor = (rows || []).filter((r: any) => (r?.nationCode || "KOR") === "KOR" && r?.code);
+  if (!kor.length) return null;
+  kor.sort((a: any, b: any) => String(a.name).length - String(b.name).length);
+  const hit = kor[0];
+  const d = await jget(`https://m.stock.naver.com/api/stock/${hit.code}/basic`);
+  if (!d?.closePrice) return null;
+  const up = String(d.compareToPreviousPrice?.text || "").includes("하락") ? "-" : "+";
+  return {
+    종목: d.stockName || hit.name, 코드: hit.code,
+    현재가: `${d.closePrice}원`,
+    등락: `${up}${d.compareToPreviousClosePrice} (${up}${d.fluctuationsRatio}%)`,
+    기준시각: d.localTradedAt || null,
+  };
+}
+
+async function quoteCoin(name: string): Promise<any> {
+  const all = await jget("https://api.upbit.com/v1/market/all");
+  if (!Array.isArray(all)) return null;
+  const norm = (v: string) => String(v || "").replace(/\s/g, "").toLowerCase();
+  const q = norm(name);
+  const krw = all.filter((m: any) => String(m.market).startsWith("KRW-"));
+  /* ⚠️ 업비트 이름엔 괄호 별칭이 붙는다: XRP = "엑스알피(리플)".
+     괄호를 안 풀면 "리플"이 정확일치에 실패하고, 부분일치가 배열 순서상 앞선
+     '리플유에스디(RLUSD)'를 집는다 — 실측으로 다른 코인 시세가 나갔다. */
+  const aliases = (m: any) => [
+    ...String(m.korean_name).split(/[()]/).map(norm),
+    norm(String(m.market).slice(4)),
+    norm(m.english_name),
+  ].filter(Boolean);
+  const hit = krw.find((m: any) => aliases(m).includes(q))
+    || krw.filter((m: any) => q.length >= 2 && aliases(m).some((a: string) => a.includes(q)))
+          .sort((a: any, b: any) => String(a.korean_name).length - String(b.korean_name).length)[0];
+  if (!hit) return null;
+  const t = await jget(`https://api.upbit.com/v1/ticker?markets=${hit.market}`);
+  const v = Array.isArray(t) ? t[0] : null;
+  if (!v) return null;
+  const sign = v.change === "FALL" ? "-" : v.change === "RISE" ? "+" : "";
+  return {
+    코인: hit.korean_name, 마켓: hit.market,
+    현재가: `${Math.round(v.trade_price).toLocaleString("ko-KR")}원`,
+    등락: `${sign}${Math.abs(Number(v.signed_change_rate || 0) * 100).toFixed(2)}%`,
+  };
+}
+
+async function marketQuote(kind: string, name: string): Promise<any> {
+  const nm = String(name || "").trim();
+  if (!nm) return { error: "종목·코인 이름이 필요하다" };
+  let r: any = null;
+  if (kind === "coin") r = await quoteCoin(nm);
+  else if (kind === "stock") r = await quoteStock(nm);
+  else r = (await quoteStock(nm)) || (await quoteCoin(nm));   // 자동 판별
+  if (!r) return { error: `'${nm}' 시세를 못 찾았다`, 지침: "못 찾았다고 솔직히 말해라. 숫자를 지어내지 마라." };
+  return { ...r, 지침: "여기 적힌 숫자만 말해라. 반올림·환산·추측 금지. 기준 시각이 있으면 '장중/방금 기준'처럼 덧붙여라." };
+}
+
 async function webSearch(query: string, kind: string) {
   const q = (query || "").trim().slice(0, 80);
   if (!q) return { results: [], note: "empty query" };
@@ -761,6 +837,7 @@ const TOOLS = [
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
+  { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인). 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
@@ -900,6 +977,7 @@ async function refundGC(uid: string, amount: number) {
 }
 
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
+  if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
   if (name === "find_user") {
@@ -2445,7 +2523,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
      현실 숫자를 물으면 반드시 검색해서 답한다. */
   if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥|기온|날씨|미세먼지)/.test(m)
       || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
-    return { tool: "web_search", hint: "web_search를 kind:news로 '지금 값'을 찾아 **검색 결과에 실제로 적힌 숫자만** 답해라. 기억·추측으로 숫자 말하기 절대 금지. 결과에 없으면 '실시간 시세까진 못 잡겠다'고 솔직히 말하고 끝내라 — '찾아볼게/잠깐만'만 하고 안 찾는 건 최악이다." };
+    return { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 **도구가 돌려준 숫자만** 말해라. 기억·추측으로 숫자 말하기 절대 금지. 못 찾으면 못 찾았다고 솔직히. 주식·코인이 아닌 것(날씨·환율 등)이면 web_search를 kind:news로 써라." };
   if (/(광장\s*(뭐|무슨|글|재밌|화제|판)|무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
     return { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판·공개댓글·논객만. 없는 썰 지어내기 금지." };
   return null;
