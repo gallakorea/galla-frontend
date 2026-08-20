@@ -70,13 +70,20 @@
      → 저장할 때 자산 버전을 같이 찍고, 다를 때는 버린다. 한 번 손해 보고 다음부터 정상. */
   var VKEY = KEY + ":v";
   var curVer = (function () {
+    /* ⚠️ document.scripts 로 계산하면 안 된다 — snapshot.js 는 문서 '두 번째' 스크립트라
+       그 시점엔 nav.js 등 뒤쪽 스크립트가 아직 DOM 에 없다. 그래서 '현재 버전'이 옛 값으로
+       계산돼 저장값과 같아지고, 바뀐 골격인데도 옛 스냅샷이 그대로 복원됐다(실측 2026-08-20).
+       → <head> 의 배포 도장을 쓴다. 스크립트 순서와 무관하고 배포마다 갱신된다. */
     try {
-      var m = 0, ss = document.scripts, i, v;
+      var m = document.querySelector('meta[name="galla-ver"]');
+      if (m && m.content) return String(m.content);
+      // 도장이 없는 옛 페이지 대비 폴백(그때는 순서 한계를 안고 간다)
+      var mx = 0, ss = document.scripts, i, v;
       for (i = 0; i < ss.length; i++) {
         v = (ss[i].src.match(/[?&]v=(\d{5,9})/) || [])[1];
-        if (v && Number(v) > m) m = Number(v);
+        if (v && Number(v) > mx) mx = Number(v);
       }
-      return String(m || 0);
+      return String(mx || 0);
     } catch (_) { return "0"; }
   })();
 
