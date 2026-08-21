@@ -3374,6 +3374,28 @@ Deno.serve(async (req) => {
     //    2시간 지난 상태는 자연 소멸(옛 제안에 "만들어"가 오발되는 것 방지).
     let craft: any = (rel?.session_meta?.craft && typeof rel.session_meta.craft === "object") ? { ...rel.session_meta.craft } : { state: "idle" };
     if (craft.state !== "idle" && (!craft.at || (Date.now() - Date.parse(craft.at)) > 2 * 3600000)) craft = { state: "idle" };
+    /* 🔁 결정적 재오픈 — 직전에 보여준 카드가 있고(15분) 상대가 '열어라/안 열린다/다시' 류로
+       말하면 LLM 없이 그 카드를 auto 로 다시 연다. 실측 실패 3연속의 근본 수정:
+       "열어봐"에 모델이 이슈 '초안'을 만들어버리는 오발까지 원천 차단(모델이 아예 안 돈다).
+       ⚠️ 문장이 길면(>24자) 새 요청일 수 있어 통과시킨다 — 이건 '짧은 재촉' 전용이다. */
+    {
+      const lv = rel?.session_meta?.last_view;
+      const freshLv = lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000;
+      const m0 = (userMsg || "").trim();
+      const reopenAsk = m0.length > 0 && m0.length <= 24 &&
+        /(열어|열라|띄워|틀어\s*줘|보여\s*줘|들어가\s*(볼|보)|(안|못)\s*(열|보이|나와|떴|들어가)|잘못\s*열|다시\s*(줘|보여|열|틀)|어디\s*(있|갔)|빨리)/.test(m0) &&
+        !/(만들|초안|올리|쓰|검색|찾아|맛집|시세|얼마)/.test(m0);
+      /* ⚠️ work/crisis 변수는 이 지점보다 뒤에 선언된다(tzMin 사고와 같은 함정) —
+         원시값으로 판정한다. 작업 모드는 body.work 로 알 수 있고, 위기 문구는
+         reopenAsk 정규식(짧은 재촉)과 겹칠 수 없다. */
+      if (freshLv && reopenAsk && !body?.work) {
+        let h = 0; for (const ch of m0) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+        const says = ["여기! 바로 열게.", "지금 바로 띄운다!", "오케이 — 바로 연다.", "간다!"];
+        return json({ ok: true, reply: says[h % says.length],
+          actions: [{ kind: "view", ctype: lv.ctype, id: lv.id, label: lv.label || "바로 보기", auto: true }],
+          friendName: rel?.friend_name || "갈비스" });
+      }
+    }
     const friendName = rel?.friend_name || "갈비스";
     // 🎭 캐릭터는 '점진적 구축' — 자동 전체생성 안 함. 대화하며 정해진 것만 rel.persona에 누적(아래 병합).
     // 🎭 내가 전에 한 자기 이야기(일관성 유지) — 항상 로드
@@ -4681,6 +4703,15 @@ ${parts.join("\n")}`;
         if (/map\.naver/.test(source)) source = "네이버 지도"; else if (/\.naver\.com$/.test(source)) source = "네이버";
         actions.push({ kind: "open", url, label: nm ? nm + " 보기" : "바로 열어보기", title: nm, sub, source });
       }
+    }
+
+    /* 📌 마지막으로 보여준 카드를 기억한다 — "열어봐/안 열려/다시" 가 오면
+       모델을 거치지 않고 이 카드를 다시 연다(아래 결정적 재오픈).
+       정규식으로 확정 문구를 쫓는 두더지잡기가 세 번 실패한 뒤의 구조 전환이다. */
+    {
+      const lv0 = actions.find((a) => a.kind === "view" && a.id);
+      if (lv0 && rel) rel.session_meta = { ...(rel.session_meta || {}),
+        last_view: { ctype: lv0.ctype || "issue", id: String(lv0.id), label: lv0.label || "", at: new Date().toISOString() } };
     }
 
     // 🧭 급전환 딜리버 보장 — 라우터가 '명시적으로' 검색시킨 건데(유저가 대놓고 요청) 답이 가게명을 안 언급해
