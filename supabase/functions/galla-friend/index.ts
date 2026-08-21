@@ -2064,16 +2064,41 @@ function tempoCap(o: { longForm?: boolean; heavy?: boolean; light?: boolean }): 
   return 4;
 }
 
+/* ✂️ 글자 예산 캡 — 문장 '개수' 캡(tempoCap)은 문장 하나가 초장문이면 무력하다.
+   실측(Gemini): 소라·크룽지 설교문이 정확히 4문장이라 캡을 통과해 채팅창을 도배했다.
+   예산 = cap×60자. 초과분은 마지막 '완결 문장' 경계에서 자른다(중간 뚝 끊김 방지). */
+/* 🔢 번호 선택지 턴은 캡 면제 — "1. …/2. …"가 문장으로 세져 2번에서 잘리면
+   선택지가 1개만 남아 클라의 번호 버튼(2~5개 필요)이 아예 안 뜬다(실측). */
+function hasChoiceList(t: string): boolean {
+  return (String(t || "").match(/(^|\n)\s*[1-9][.)]\s+\S/g) || []).length >= 2;
+}
+/* 🔢 인라인 번호를 줄로 편다 — 클라 파서는 '줄 시작' 번호만 선택지로 인정한다(^ 앵커).
+   모델이 "… 골라봐. 1. 가 2. 나 3. 다"처럼 한 줄로 뱉으면 버튼이 하나도 안 뜬다(실측). */
+function normalizeChoices(t: string): string {
+  const s = String(t || "");
+  if (hasChoiceList(s)) return s;                       // 이미 줄로 나뉘어 있으면 그대로
+  if ((s.match(/(?:^|\s)[1-9][.)]\s+\S/g) || []).length < 2) return s;
+  return s.replace(/(?:^|\s)([1-9])[.)]\s+/g, (m, n) => (n === "1" ? "\n" : "\n") + n + ". ").replace(/\n{3,}/g, "\n\n").trim();
+}
+function charCap(t: string, cap: number): string {
+  const budget = Math.max(2, cap) * 60;
+  if (t.length <= budget) return t;
+  const cut = t.slice(0, budget);
+  const m = cut.match(/[\s\S]*[.!?…\n](?=[^.!?…\n]*$)/);
+  const kept = (m ? m[0] : cut).trim();
+  return kept.length >= 20 ? kept : cut.trim();   // 첫 문장부터 초장문이면 그냥 예산에서 컷
+}
 function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null; heavy?: boolean; light?: boolean }): string {
-  reply = stripDeflect(reply);
+  reply = normalizeChoices(stripDeflect(reply));
   reply = stripStage(reply);
   // ⚠️ 이 줄은 모델 답변을 '통째로' 아재개그로 덮어쓴다. 그래서 프롬프트로 아무리 막아도
   //    부고 다음 턴에 "가장 비싼 새는? 백조"가 나갔다(실측). 상실·위기 맥락에선 호출부가 humorJoke를 null로 준다.
   if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
-  if (!o.longForm) {
+  if (!o.longForm && !hasChoiceList(reply)) {
     const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
     const cap = tempoCap(o);
     if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
+    reply = charCap(reply, cap);   // 문장 수 캡을 통과하는 초장문(Gemini) 이중 방어 — JSON 경로와 동일
     reply = bubbleize(reply);
   }
   reply = reply
@@ -4067,6 +4092,13 @@ ${parts.join("\n")}`;
       }
       // 🧭 상태 머신 판정 — 정규식이 못 정했는데 창작 흐름이 '진행 중'(제안됨/기획중/확정)이면
       //    초소형 분류콜로 유저 의도를 '진짜로' 판정한다. "만들어 봐"×4에도 헛돌던 근본 원인(무기억 정규식 추측) 제거.
+      /* 🚪 '열어라'는 창작이 아니다 — "열어봐" 단문이 craft FSM 분류기로 흘러가 이슈 '초안'을
+         만들어버린 실사고(사장님 실로그 08-21: "열어봐"→"이슈판 초안 만들었어"→"잘못 열렸대").
+         열기 동사 단문은 분류기 도달 전에 point_to 로 선점한다. '올려봐'는 발행 의미와 겹치니 제외. */
+      if (!route && userMsg && /^(열어|띄워|틀어)[\s봐줘바라!~ㅋ.]*$/.test(userMsg.trim())) {
+        _autoOpen = true;
+        route = { tool: "point_to", hint: "상대가 '열어라'라고 했다 — 직전 대화에서 보여주기로 한 그 콘텐츠를 지금 point_to로 실제로 열어라. draft_* 초안 생성 절대 금지(열라는 말은 만들라는 말이 아니다). 마땅한 대상이 없으면 hot_issues/hot_videos에서 대화 맥락에 맞는 걸 찾아 열어라." };
+      }
       if (!route && !planMode && (craft.state === "proposed" || craft.state === "planning" || craft.state === "confirmed")) {
         // 분류기에 '직전 한 턴'만 주면 잡담이 끼었을 때 제안 맥락을 놓친다 → 최근 6개 발화를 준다.
         const ctxBlob = history.slice(-6).map((m: any) => (m?.role === "user" ? "유저: " : "AI: ") + String(m?.content || "").slice(0, 160)).join("\n");
@@ -4534,7 +4566,7 @@ ${parts.join("\n")}`;
       /* ⚓ 핵심 앵커(Author's Note 패턴) — 생성 지점에 제일 가까운 지시가 제일 세다.
          위 25K 프롬프트에 이미 다 있는 규칙들이지만, 앞쪽 규칙은 recency 에 밀려
          계속 샜다(레드팀·실로그 최다 위반 4종만 압축). 여기 두면 마지막으로 읽힌다. */
-      { role: "system", content: `[항상] ①"찾아볼게/잠깐만/이따" 금지 — 할 수 있으면 지금 하고, 못 하면 못 한다고. ②칩·카드·버튼 조작 안내 금지 — 앱이 알아서 한다. ③상대 심리 진단 금지("~한 건 …라서야"). ④모르는 사실·숫자는 지어내지 말고 모른다고. ⑤사과는 한 번이면 끝 — 지난 실수("말로만 떠들었지" 류)를 다시 꺼내 되새기지 마라, 그냥 지금 물은 것에 답해라. ⑥"이거 봐봐"라고 말할 거면 반드시 그 콘텐츠를 도구로 실제로 붙여라 — 말만 하는 건 최악.` },
+      { role: "system", content: `[항상] ①"찾아볼게/잠깐만/이따" 금지 — 할 수 있으면 지금 하고, 못 하면 못 한다고. ②칩·카드·버튼 조작 안내 금지 — 앱이 알아서 한다. ③상대 심리 진단 금지("~한 건 …라서야"). ④모르는 사실·숫자는 지어내지 말고 모른다고. ⑤사과는 한 번이면 끝 — 지난 실수("말로만 떠들었지" 류)를 다시 꺼내 되새기지 마라, 그냥 지금 물은 것에 답해라. ⑥"이거 봐봐"라고 말할 거면 반드시 그 콘텐츠를 도구로 실제로 붙여라 — 말만 하는 건 최악. ${/(뭐\s*(없|있|할|볼|보지|하지)|없나|추천|골라|고를|뭐가\s*좋|어떤\s*거|심심)/.test(userMsg || "") ? '⑦고를 걸 제시할 땐 줄바꿈으로 한 줄에 하나씩 "1. " "2. " 번호 목록(2~4개, 각 20자 이내). ' : '⑦번호 목록·객관식 금지 — 지금은 그냥 말로 대화해라(선택지를 들이미는 건 친구가 아니라 ARS다). '}${(rel?.tone === "casual") ? '⑧존댓말 절대 금지 — "-세요/-셨-/-십니까/드시-/원하시는" 전부 금지, 문장 중간까지 완전 반말.' : ''}` },
     ];
 
     let reply = "";
@@ -4592,6 +4624,7 @@ ${parts.join("\n")}`;
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
             //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
+            sreply = normalizeChoices(sreply);   // 🔢 스트림도 마지막 관문에서 선택지를 줄로(클라 ^ 앵커 파서)
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
             if (!bubbles.length || !hasText(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
@@ -4829,10 +4862,12 @@ ${parts.join("\n")}`;
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
     //    ✍️ 단 창작 결과물(제목 리스트 등)은 예외 — "1."이 문장으로 세져 리스트가 "2."에서 잘리던 버그(레드팀 발견).
-    if (!longForm) {
+    reply = normalizeChoices(reply);   // 인라인 번호 → 줄 — 클라 선택지 버튼이 뜨게(^ 앵커 파서)
+    if (!longForm && !hasChoiceList(reply)) {
       const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
       const cap = tempoCap({ longForm, heavy: tHeavy, light: tLight });   // 상황별 템포(고정 4 → 2/4/6)
       if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
+      reply = charCap(reply, cap);   // 문장 4개가 각각 초장문이면 문장캡을 통과한다(Gemini 실측: 소라 설교문) — 글자 예산으로 이중 캡
       reply = stripStage(reply);   // 스트리밍 경로에만 걸려 있어 비스트리밍 답변에 지문이 그대로 나갔다(실측)
       reply = bubbleize(reply);
     }
@@ -5002,6 +5037,22 @@ ${parts.join("\n")}`;
       //    거절 문구를 써놓고 링크를 같이 주면 거절이 아니다. 링크성 칩은 통째로 뗀다.
       else if (thirdParty && (a.kind === "open" || a.kind === "view" || a.kind === "share")) actions.splice(i, 1);
     }
+    /* 🚪 auto 는 view 에만 붙던 것 확장 — "보여줘/열어봐"의 결과가 핫튜브(open 칩)면 자동오픈이
+       영영 안 걸렸다(실측: "열었어!" 말만 하고 화면은 그대로). 첫 open 칩 하나만 auto. */
+    /* 🧹 같은 카드 중복 제거 — 도구가 같은 콘텐츠를 두 번 물어오면 똑같은 칩이 나란히 붙는다(실측). */
+    {
+      const seen = new Set<string>();
+      for (let i = 0; i < actions.length; i++) {
+        const a: any = actions[i];
+        const key = String(a.url || "") + "|" + String(a.ctype || "") + "|" + String(a.id || "");
+        if (key === "||") continue;
+        if (seen.has(key)) { actions.splice(i, 1); i--; } else seen.add(key);
+      }
+    }
+    if (_autoOpen && !actions.some((a: any) => a.auto)) {
+      const first = actions.find((a: any) => a.kind === "open" || a.kind === "view");
+      if (first) first.auto = true;
+    }
     const cleanActions = actions;
 
     // 카드도 없고 본문도 비었으면 폴백 — 단, 생성·초안 액션이 있는 턴엔 오발 금지(실사고: "표지 그려줘"에 맛집 폴백 문구 섞임)
@@ -5065,6 +5116,9 @@ ${parts.join("\n")}`;
     const guardCalls = GD.filter((g) => g.startsWith("guard:") && !g.includes(":hit") && !g.includes(":miss")).length;
     turnStat(["path:json", "brain:" + String(brain), "steps:" + steps, ...GD,
               "llm:" + (steps + guardCalls)]);
+    /* 🔢 마지막 관문 — 번호 선택지를 줄로 편다. 중간 단계에 넣었더니 뒤따르는 정리 처리가
+       줄바꿈을 다시 합쳐 버튼이 안 떴다(실측 2회). 응답 직전이 유일하게 안전한 자리. */
+    reply = normalizeChoices(reply);
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin } : {}),
                   ...(isRedteam ? { guards } : {}) });
