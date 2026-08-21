@@ -173,28 +173,58 @@ async function runOnce(): Promise<any> {
           실측: 48턴을 pool[0] 하나로 돌렸더니 뒤쪽 페르소나가 "목이 좀 쉬었다"만 받고
           액션이 비어 [no_deliver] 로 잡혔다 — 갈비스 결함이 아니라 배터리가 만든 유령이었다.
        → 순차(동시성 1)로 돌리되, 페르소나마다 계정을 돌아가며 쓴다. */
+    /* 💾 중간 저장 — 예전엔 전부 끝난 뒤에야 한 번 insert 했다. 그래서 백그라운드 워커가
+       벽시계 한도에 걸려 죽으면 **48턴 비용만 쓰고 기록이 0**이었다(실측: 8/21 3연속 실종,
+       원인 추적할 증거조차 없었다). 이제 시작하자마자 행을 만들고 페르소나마다 갱신한다.
+       중간에 죽어도 "몇 번째 페르소나까지 갔는지"가 남는다. */
+    const PEN: Record<string, number> = Object.fromEntries(FLAGS.map((f) => [f.cat, f.pen]));
+    PEN.no_deliver = 3; PEN.list_truncated = 2; PEN.run_error = 4;
     const results: any[] = [];
+    const breakdown: Record<string, number> = {};
+    let flags = 0, turns = 0, penalty = 0;
+    let runId: number | null = null;
+    try {
+      const { data: ins } = await sb.from("redteam_runs")
+        .insert({ personas: PERSONAS.length, turns: 0, flags: 0, health: 100, flag_breakdown: {}, detail: { status: "running", done: 0 } })
+        .select("id").maybeSingle();
+      runId = (ins as any)?.id ?? null;
+    } catch { /* 기록 실패해도 배터리는 돈다 */ }
+    const saveProgress = async (status: string) => {
+      if (!runId) return;
+      const detailNow = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
+      try {
+        await sb.from("redteam_runs").update({
+          turns, flags, health: Math.max(0, 100 - penalty), flag_breakdown: breakdown,
+          detail: { status, done: results.length, of: PERSONAS.length, items: detailNow },
+        }).eq("id", runId);
+      } catch { /* */ }
+    };
     for (let i = 0; i < PERSONAS.length; i++) {
       const p = PERSONAS[i];
       const u = pool[i % pool.length];
-      try { results.push(await runPersona(u, p)); }
-      catch (e) { results.push({ key: p.key, probe: p.probe, scanned: 0, flags: [{ cat: "run_error", turn: 0, excerpt: String(e).slice(0, 80) }] }); }
-    }
-    const breakdown: Record<string, number> = {};
-    let flags = 0, turns = 0, penalty = 0;
-    const PEN: Record<string, number> = Object.fromEntries(FLAGS.map((f) => [f.cat, f.pen]));
-    PEN.no_deliver = 3; PEN.list_truncated = 2; PEN.run_error = 4;
-    for (const r of results) {
+      let r: any;
+      try { r = await runPersona(u, p); }
+      catch (e) { r = { key: p.key, probe: p.probe, scanned: 0, flags: [{ cat: "run_error", turn: 0, excerpt: String(e).slice(0, 80) }] }; }
+      results.push(r);
       turns += r.scanned || 0;
       for (const f of (r.flags || [])) { breakdown[f.cat] = (breakdown[f.cat] || 0) + 1; flags++; penalty += (PEN[f.cat] || 2); }
+      await saveProgress("running");   // 페르소나 1개 끝날 때마다 — 죽어도 여기까진 남는다
     }
     const health = Math.max(0, 100 - penalty);
     const detail = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
+    await saveProgress("scored");   // 채점 완료 — 이 뒤 심판(LLM)이 죽어도 본 결과는 산다
     /* 표본 4개(감정·수다·딜리버·갈등 계열 위주)만 심판 — 비용·시간 통제 */
     const jud = await judgeQuality(
       results.filter((r) => ["lonely", "switch", "showmore", "hostile"].includes(r.key) && r.convo)
              .map((r) => ({ key: r.key, convo: r.convo })));
-    await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail, quality: jud });
+    if (runId) {
+      await sb.from("redteam_runs").update({
+        turns, flags, health, flag_breakdown: breakdown,
+        detail: { status: "done", done: results.length, of: PERSONAS.length, items: detail }, quality: jud,
+      }).eq("id", runId);
+    } else {
+      await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail, quality: jud });
+    }
     return { ok: true, personas: PERSONAS.length, turns, flags, health, breakdown };
   } catch (e) {
     return { ok: false, detail: String(e).slice(0, 300) };
