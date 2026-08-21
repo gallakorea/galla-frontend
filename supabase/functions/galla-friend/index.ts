@@ -3759,7 +3759,7 @@ ${parts.join("\n")}`;
     let _autoOpen = /(열라|열어|띄워|보여|틀어|보자|빨리\s*(줘|열|보))/.test(userMsg || "");
     if (!route && userMsg && !work && !crisis) {
       const lastA = String(([...history].reverse().find((m: any) => m?.role === "assistant") || {}).content || "");
-      const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(lastA);
+      const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|열어\s*봐|봐\s*봐|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(lastA);
       const confirmed = /^(뭔데|뭔데\?|응|ㅇㅇ|ㅇㅋ|그래|좋아|고|ㄱㄱ|ㄱ|보여줘|봐보자|볼래|열어|틀어|가져와|빨리|해봐|ㅊㅊ)[\s.!?~ㅋㅎ]*$/.test((userMsg || "").trim());
       const angry = /(짱나|짜증|빨리|하세월|졸라\s*걸리|언제\s*(줘|열|보여))/.test(userMsg || "");
       if (proposed && (confirmed || angry)) {
