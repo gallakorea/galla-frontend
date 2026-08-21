@@ -2206,6 +2206,14 @@ function enforceContract(reply: string, o: {
     const sents = x.match(/[^.!?…\n]+[.!?…]*\s*/g) || [x];
     if (sents.length > cap) x = sents.slice(0, cap).join("").trim();
     x = bubbleize(charCap(stripStage(x), cap));
+    /* ✂️ 잘림 흔적 제거 — 캡이 문장 중간에서 끊으면 마지막 조각이 종결 없이 덩그러니 남는다
+       (실측: "…아니면 블랙미스 신작 / \"Black Myth: Zhong Kui\" 게임플레이 트레일러").
+       말풍선이 2개 이상일 때만 그 미완성 꼬리를 버린다(하나뿐이면 버릴 게 없다). */
+    const bs = x.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    if (bs.length >= 2 && !/[.!?…~ㅋㅎ)\]"'』」]$/.test(bs[bs.length - 1])) {
+      const cut = bs.slice(0, -1).join("\n\n");
+      if (hasText(cut)) x = cut;
+    }
   }
   const bare = x.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
   if (!hasText(bare)) {
@@ -3602,6 +3610,12 @@ Deno.serve(async (req) => {
         { name: "번호_카드수_일치하면유지", opts: { linkCount: 3 },
           input: "골라봐.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
           check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
+        { name: "잘림꼬리_제거", opts: {},
+          input: "이거 진짜 웃겨. 침착맨 쇼츠인데 조회수 180만이래. 아니면 블랙미스 신작도 있는데. 그리고 또 다른 게임 트레일러가 하나 더 있는데 이건 제목이 좀 길어서 여기서 잘릴 만한 문장이고 종결부호 없이 끝나는 꼬리",
+          check: (o) => {
+            const bs = o.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+            return /[.!?…~ㅋㅎ)\]"'』」]$/.test(bs[bs.length - 1]) ? null : `잘린 꼬리 잔존: ${JSON.stringify(bs[bs.length - 1])}`;
+          } },
         { name: "문장중간_안끊김", opts: {},
           input: "피곤할 때는 따뜻한 물로 씻고 가만히 누워있는 게 최고인데 밥은 제때 챙겨 먹었는지 모르겠다.",
           check: (o) => {
