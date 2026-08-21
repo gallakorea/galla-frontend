@@ -129,7 +129,18 @@
           return;
         }
 
-        if (baseVer === null) { baseVer = dep; return; }   // 첫 판정 = 기준만 잡는다
+        if (baseVer === null) {
+          baseVer = dep;
+          /* ⚠️ '기준만 잡는다'가 감옥이었다 — 이미 뒤처진 채 오래 상주한 PWA 는
+             version.txt 의 '변화'만 기다리며 자기가 낡았는지 영영 몰랐다
+             (실측: 사장님 PWA 가 8/14 코드로 일주일 — "규칙이 다 깨졌다"의 정체).
+             첫 판정에서 '이 문서의 배포 도장(meta galla-ver, 전 HTML 동일)'과 비교해
+             문서가 낡았으면 즉시 리로드한다. 도장은 페이지별 편차가 없어 오탐도 없다. */
+          const meta = document.querySelector('meta[name="galla-ver"]');
+          const mine = Number(((meta && meta.content) || '').match(/\d{5,9}/) || 0);
+          if (mine && dep > mine) doReload();
+          return;
+        }
         if (dep === baseVer) return;                        // 배포 변화 없음
         baseVer = dep;                                      // 새 배포가 나갔다
         doReload();
