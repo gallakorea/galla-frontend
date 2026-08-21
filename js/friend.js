@@ -1520,8 +1520,12 @@
       if(appA && (appA.op==="goto" || /걸어|전화|톡|디엠|dm|보내|열어/i.test(text))){
         appA._reacted=true;   // 🏆 자동실행은 유저 행동 아님 — 보상신호 스킵(가짜 +3 방지)
         setTimeout(function(){ runAction(appA); }, 700);
-      } else if(/보여|열어|보자|가보자|띄워|틀어/.test(text)){
-        var auto = r.actions.filter(function(a){ return a.kind==="view"; })[0] || r.actions.filter(function(a){ return a.kind==="open"; })[0];
+      } else if(/보여|열어|열라|보자|가보자|띄워|틀어/.test(text) || r.actions.some(function(a){ return a.auto===true; })){
+        // 서버가 auto 를 찍어 보내면(제안→"ㅇㅇ" 확정 등) 유저 문구와 무관하게 바로 연다.
+        // 예전엔 유저 발화 정규식만 봐서 "ㅇㅇ"·"니가 창을 열라고"에 칩만 붙고 안 열렸다(사장님 실로그).
+        var auto = r.actions.filter(function(a){ return a.auto===true && a.kind==="view"; })[0]
+                || r.actions.filter(function(a){ return a.kind==="view"; })[0]
+                || r.actions.filter(function(a){ return a.kind==="open"; })[0];
         if(auto){ auto._reacted=true; setTimeout(function(){ runAction(auto); }, 700); }   // 🏆 동일 — 자동오픈 보상 제외
       }
     }

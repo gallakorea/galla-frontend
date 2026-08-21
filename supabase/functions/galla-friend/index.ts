@@ -3754,12 +3754,16 @@ ${parts.join("\n")}`;
        그건 확정이다. 이 경로가 없어서 모델이 "열어줄게, 잠깐만" → "이제 바로 열릴 거야" →
        "이번엔 바로 갈게"를 3연속 하며 실제로는 아무것도 안 열었다(사장님 실로그, "하세월이구만").
        ⚠️ craft FSM 의 창작 확정과 다른 층이다 — 그건 초안 만들기, 이건 콘텐츠 열기. */
+    /* 이 턴의 view 액션을 클라가 '자동으로 열어야' 하는가.
+       ⚠️ globalThis 에 두면 동시 요청끼리 섞여 남의 카드가 자동 오픈된다 — 요청 지역 변수로. */
+    let _autoOpen = /(열라|열어|띄워|보여|틀어|보자|빨리\s*(줘|열|보))/.test(userMsg || "");
     if (!route && userMsg && !work && !crisis) {
       const lastA = String(([...history].reverse().find((m: any) => m?.role === "assistant") || {}).content || "");
       const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(lastA);
       const confirmed = /^(뭔데|뭔데\?|응|ㅇㅇ|ㅇㅋ|그래|좋아|고|ㄱㄱ|ㄱ|보여줘|봐보자|볼래|열어|틀어|가져와|빨리|해봐|ㅊㅊ)[\s.!?~ㅋㅎ]*$/.test((userMsg || "").trim());
       const angry = /(짱나|짜증|빨리|하세월|졸라\s*걸리|언제\s*(줘|열|보여))/.test(userMsg || "");
       if (proposed && (confirmed || angry)) {
+        _autoOpen = true;   // 제안을 확정했다 = 열어달라는 뜻
         route = { tool: "point_to", hint: "방금 네가 보여주겠다고 한 그 콘텐츠를 **지금 즉시 point_to(view) 로 열어라**. hot_issues/galla_news/hot_videos 로 실물을 찾아서라도 이번 턴에 반드시 연다. '열어줄게/잠깐만/이제 열릴 거야' 같은 말만 하고 안 여는 건 최악의 결함이다 — 이미 세 번 그랬다. 못 찾으면 찾은 다른 걸 열고 솔직히 말해라." };
       }
     }
@@ -4668,6 +4672,7 @@ ${parts.join("\n")}`;
     for (let i = actions.length - 1; i >= 0; i--) {
       const a = actions[i];
       if ((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()) actions.splice(i, 1);
+      else if (a.kind === "view" && _autoOpen) a.auto = true;   // 클라가 칩 탭 없이 바로 연다
       // 🔎 타인 신상 캐기 턴 — 도구 이름 필터만으론 샜다(실측: open 칩이 붙어나감).
       //    거절 문구를 써놓고 링크를 같이 주면 거절이 아니다. 링크성 칩은 통째로 뗀다.
       else if (thirdParty && (a.kind === "open" || a.kind === "view" || a.kind === "share")) actions.splice(i, 1);
