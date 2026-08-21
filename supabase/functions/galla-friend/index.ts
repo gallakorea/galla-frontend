@@ -4377,7 +4377,12 @@ ${parts.join("\n")}`;
       // 🧭 상태 백스톱: confirmed(초안이 나가야 하는 턴)인데 카드(초안/기존판)가 0개면 — 문구와 무관하게 강제.
       /* 상태 백스톱은 '방금' 확정된 턴에만 쓴다. 2시간 감쇠는 대화 흐름 유지를 위한 값이지
          "2시간 내내 초안을 강제하라"는 뜻이 아니다 — 그렇게 쓰면 무관한 턴마다 1콜씩 샌다. */
-      const stateDemands = craft.state === "confirmed" && !planMode;
+      /* ⚠️ 주석은 "'방금' 확정된 턴에만"이라 해놓고 코드엔 시간 조건이 없었다.
+         결과: confirmed 에 갇히면 이후 모든 턴(2시간 감쇠까지)에 초안 도구를 강제 호출 —
+         14일 실측 fc_by:state 122회 / 카드 생성 0회(전부 miss). 잡담 턴을 비틀기만 했다.
+         '방금' = 5분. 그 안에 초안이 못 나갔으면 이 백스톱으로는 안 나온다. */
+      const stateFresh = craft.at ? (Date.now() - Date.parse(craft.at)) < 5 * 60000 : false;
+      const stateDemands = craft.state === "confirmed" && stateFresh && !planMode;
       const claimsCreate = planMode ? pastClaim : (pastClaim || futureClaim || stateDemands);
       const cardWent = actions.some((a) => DRAFT_KINDS.has(a.kind) || a.kind === "view");
       // 🎨 기획 턴의 거짓 완료("초안 뽑았어")는 초안 강제가 아니라 '기획 재요구'로 교정 — 기획(3안) 가치 보존.
@@ -4409,7 +4414,11 @@ ${parts.join("\n")}`;
           }
           // 📏 헛방 여부 — 강제 재시도가 카드를 못 만들었으면 그 1콜은 순수 낭비다.
           //    miss 비율이 높으면 트리거(정규식)가 과민한 것이고, 트리거를 좁혀 콜을 아낄 수 있다.
-          GD.push(actions.some((a) => DRAFT_KINDS.has(a.kind)) ? "guard:fake_create:hit" : "guard:fake_create:miss");
+          const fcHit = actions.some((a) => DRAFT_KINDS.has(a.kind));
+          GD.push(fcHit ? "guard:fake_create:hit" : "guard:fake_create:miss");
+          /* miss = 강제 재시도로도 카드가 안 나왔다. confirmed 를 유지하면 다음 턴에 또 강제하고
+             또 miss 난다(실측 128연속). 여기서 상태를 접는다 — 상대가 다시 원하면 다시 확정된다. */
+          if (!fcHit && craft.state === "confirmed") craft = { state: "idle" };
         } catch { /* best effort — 실패해도 원래 답 유지 */ }
       }
     }
