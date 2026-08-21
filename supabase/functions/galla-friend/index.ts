@@ -2393,6 +2393,30 @@ const HOSTILE_OPENERS = /(^|\n)\s*(뭐\s*어쩌라고|어쩌라고|그래서\s*�
    ⚠️ 좁게 간다: '시스템 산출물 단어 + 실수 단어'가 같은 문장에 있을 때만.
       "내가 왜 그랬지" 같은 일반 자기 얘기까지 걸면 사람맛이 죽는다. */
 const META_SELF_RE = /(카드|칩|링크|검색|도구)[^\n.!?]{0,14}(잘못|헷갈|꼬였|실수|이상하게)|(잘못|헷갈)[^\n.!?]{0,10}(뽑았|보냈|눌렀)[^\n.!?]{0,6}(네|다|어)/;
+/* 🛋 테라피스트 말투 제거 — "공감 능력이 좀", "인정 욕구가", "방어 기제" 류 심리 분석.
+   친구는 상대를 진단하지 않는다. 프롬프트 금지("심리 분석 티내기 금지")가 또 샜다(레드팀 실측)
+   — 문장 단위 코드 제거로 이중 방어. 마커가 든 문장만 지운다. */
+const THERAPIST_RE = /(인정\s*욕구|자존감(이|을)|방어\s*기제|심리적으로|공감\s*능력|내면(의|에)|불안(이|도)\s*(높|많)|애착\s*(유형|성향)|트라우마(가|를)\s*(있|남)|정서적으로\s*(불안|공감|미성숙))/;
+function stripTherapist(t: string): string {
+  const parts = String(t || "").split(/(?<=[.!?…]|ㅋㅋ|ㅠㅠ)\s+|\n+/);
+  const kept = parts.filter((p) => !THERAPIST_RE.test(p));
+  const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
+  return out || t;
+}
+
+/* 🖱 UI 지시 제거 — "밑에 뜨는 거 탭하면 바로 열려" 류. 카드는 앱이 알아서 붙이고
+   명시 요청이면 자동 오픈까지 된다 — 조작법 안내는 전부 군더더기다.
+   프롬프트 금지 규칙이 계속 새서(레드팀 실측 2회) 문장 단위 코드 제거.
+   ⚠️ 이번 턴에 실제 액션(카드)이 나갔을 때만 — 액션 없는 턴의 "탭" 언급은 다른 얘기일 수 있다. */
+const UI_TALK_RE = /((밑|아래|하단|위)에?[^\n.!?]{0,14}(탭|눌러|누르|클릭|터치)|탭하면[^\n.!?]{0,10}(열려|열림|볼|재생|이동|가|나와)|(칩|카드|버튼|링크)[^\n.!?]{0,8}(탭|눌러|누르|클릭))/;
+function stripUiTalk(t: string, hasActions: boolean): string {
+  if (!hasActions) return t;
+  const parts = String(t || "").split(/(?<=[.!?…]|ㅋㅋ|ㅠㅠ)\s+|\n+/);
+  const kept = parts.filter((p) => !UI_TALK_RE.test(p));
+  const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
+  return out || t;
+}
+
 function stripMetaSelf(t: string): string {
   const parts = String(t || "").split(/(?<=[.!?…]|ㅋㅋ|ㅠㅠ)\s+|\n+/);
   const kept = parts.filter((p) => !META_SELF_RE.test(p));
@@ -4456,7 +4480,7 @@ ${parts.join("\n")}`;
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMetaSelf(stripMind(sreply))), _hostileTurn), friendName)));
+            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripTherapist(stripMetaSelf(stripMind(sreply)))), _hostileTurn), friendName)));
             sreply = stripUngroundedMoney(sreply, "", _priceAsk, _statAsk);
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
@@ -4889,7 +4913,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMetaSelf(stripMind(reply))), _hostileTurn), friendName)));
+    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripUiTalk(stripTherapist(stripMetaSelf(stripMind(reply))), actions.length > 0)), _hostileTurn), friendName)));
     reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk, _statAsk);
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
