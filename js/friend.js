@@ -1404,6 +1404,9 @@
     /* 🤫 "지금은 말 걸 때가 아니다"(빈 reply)를 이해하는 클라이언트임을 알린다.
        이 플래그가 없으면 서버는 예전처럼 항상 인사한다(구버전 안전장치). */
     body.quietOk = true;
+    // ⏰ 기기 시간대(분, UTC 동쪽 양수) — 서버가 "새벽이네/불금인데"를 유저 현지 시간으로 말하게.
+    //    없으면 서버는 KST 로 폴백(한국 유저 다수 + 구버전 호환).
+    try{ body.tz = -new Date().getTimezoneOffset(); }catch(e){}
     // 🌍 비로그인 방문자는 서버가 언어를 알 방법이 없다(users.locale이 없으니) → 브라우저 언어를 실어보낸다.
     //    로그인 유저는 서버가 users.locale을 쓰므로 이 값은 무시된다.
     try{ if(window.GALLA_locale) body.locale = GALLA_locale(); }catch(e){}

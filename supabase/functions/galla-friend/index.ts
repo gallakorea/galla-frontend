@@ -256,7 +256,13 @@ async function sha8(s: string): Promise<string> {
 }
 
 // 게이트에 걸렸을 때 유저에게 보일 말 — 등급별로 톤이 다르다(게스트=유혹, 유료=미안).
-function gateReply(g: Gate, guest: boolean, seed = ""): string {
+/* ⏰ 접속 기기 시간대(분, UTC 동쪽 양수). 범위 밖·미전송이면 KST(+540). */
+function tzOf(body: any): number {
+  const v = Number(body?.tz);
+  return Number.isFinite(v) && v >= -720 && v <= 840 ? v : 540;
+}
+
+function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540): string {
   // 🔁 문구 로테이션 — 고정 한 줄이면 계속 말 걸 때 '글자 하나 안 틀리고' 반복돼 봇 티가 확 난다(실측: 3연속 동일).
   //    회원가입 유도가 목적인 순간이라, 여기서 기계처럼 보이는 게 전환율에 제일 나쁘다.
   if (guest) {
@@ -272,13 +278,15 @@ function gateReply(g: Gate, guest: boolean, seed = ""): string {
     for (const ch of (seed || "x")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     return g0[h % g0.length];
   }
-  const t = g.resets_at ? new Date(g.resets_at) : null;
-  const hhmm = t ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(t) : null;
+  /* ⏰ "06:40쯤 다시 올게"는 유저 현지 시간으로 — Asia/Seoul 고정이면 해외 유저에겐 엉뚱한 시각이다. */
+  const t = g.resets_at ? new Date(Date.parse(g.resets_at) + tzMin * 60000) : null;
+  const hhmm = t ? `${String(t.getUTCHours()).padStart(2, "0")}:${String(t.getUTCMinutes()).padStart(2, "0")}` : null;
   if (g.reason === "tier_locked") return "이건 아직 내가 못 해주는 거야 ㅠㅠ 이용권 올리면 바로 열려.";
   // 💰 결제주기 사용량 소진 — 막연히 끊지 않고 '언제 다시 열리는지'를 말해준다.
   if (g.reason === "budget") {
     const d = (g as any).resets_on ? new Date(String((g as any).resets_on)) : null;
-    const md = d && !isNaN(+d) ? new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" }).format(d) : null;
+    const dz = d && !isNaN(+d) ? new Date(+d + tzMin * 60000) : null;
+    const md = dz ? `${dz.getUTCMonth() + 1}월 ${dz.getUTCDate()}일` : null;
     return md ? `이번 주기 대화량을 우리가 다 썼어 ㅋㅋ ${md}에 새로 채워져. 그때 또 실컷 떠들자!`
               : "이번 주기 대화량을 다 썼어 ㅠㅠ 곧 새로 채워지니까 조금만 기다려줘!";
   }
@@ -327,7 +335,7 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   } catch { /* 판정 실패 시엔 평소대로 — 계측 장애로 유입을 막지 않는다 */ }
 
   const g = await aiGate("g:" + hash, AI_FN, 1, capTo);
-  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true, String(body?.message || "")), gate: { ...g, guest: true }, actions: [] });
+  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true, String(body?.message || ""), tzOf(body)), gate: { ...g, guest: true }, actions: [] });
   // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
   // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
   if (ip) {
@@ -347,6 +355,9 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   if (!rtG && !(await aiBudgetOk())) return jres({ ok: true, reply: "나 지금 목이 다 쉬었어 ㅠㅠ 좀 있다 다시 와줘!", actions: [] });
 
   const userMsg = String(body?.message || "").slice(0, 600);
+  /* ⏰ 접속 기기의 시간대(분). 클라가 안 보내면 KST(+540) — 한국 유저 다수 + 구버전 호환.
+     범위 밖 값은 조작·버그로 보고 KST 로 떨어뜨린다. */
+  const tzMin = tzOf(body);
   const history = (Array.isArray(body?.history) ? body.history : []).slice(-8)
     .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 500) }));
@@ -1697,7 +1708,7 @@ function backRefAsk(msg: string): boolean {
       || /(뭐라고\s*했|무슨\s*얘기\s*했|기억\s*(나|해)|까먹었)/.test(m);
 }
 
-function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[], mayAskName = true, backRef = false): string {
+function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[], mayAskName = true, backRef = false, tzMin = 540): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
   // 🪜 관계 깊이를 '행동'으로 번역한다 — 숫자(depth 1/4)만 주면 모델이 못 쓴다.
@@ -1739,8 +1750,9 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
       return `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}${age ? ` (${age})` : ""}`;
     }).join("\n")
     : (tasteMems.length ? "(취향 말고는 아직 아는 게 별로 없음)" : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)");
-  // ⏰ 시간대 인지(KST) — 새벽에 오면 "안 자?", 금요일 밤이면 "불금인데" 같은 진짜 친구의 감각
-  const kst = new Date(Date.now() + 9 * 3600 * 1000);
+  /* ⏰ 시간대 인지 — 접속 기기 시간 기준(클라가 tz 를 보낸다. 없으면 KST 폴백).
+     해외에서 접속한 유저에게 한국 새벽 기준으로 "안 자?" 하던 것 수정. */
+  const kst = new Date(Date.now() + tzMin * 60000);
   const hh = kst.getUTCHours();
   const yo = ["일", "월", "화", "수", "목", "금", "토"][kst.getUTCDay()];
   const slot = hh < 5 ? "새벽" : hh < 11 ? "아침" : hh < 14 ? "점심" : hh < 18 ? "낮" : hh < 22 ? "저녁" : "밤";
@@ -2037,7 +2049,7 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
     }
     if (userMsg && !body?.meta) {
       const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
-      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx);
+      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx, tzOf(body));
       if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
         try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
       }
@@ -3045,7 +3057,7 @@ function personaCard(p: any): string {
 }
 
 // 대화 후 기억 추출 + 기분 판정(가벼운 별도 호출) → friend_memory upsert / friend_relationship.mood
-async function extractMemories(userMsg: string, reply: string, existing: string[], curMood: string, existingPersona: string, context = "") {
+async function extractMemories(userMsg: string, reply: string, existing: string[], curMood: string, existingPersona: string, context = "", tzMin = 540) {
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -3092,7 +3104,7 @@ mood 값 3단계(달달↔삐짐 진폭):
 평범하면 작은 값으로(억지 드라마 금지). 이건 내 진짜 감정선을 이어주는 근거다.
 🔄 supersede(모순 갱신): 이번 대화로 '이미 아는 것' 중 바뀌거나 틀린 게 있으면(이사·이직·헤어짐·취향 변화 등) 그 옛 문장을 supersede 배열에 '거의 그대로' 넣어라(그걸 폐기하고 새 memory로 대체). 없으면 빈 배열.
 각 memory엔 salience(1~5) 넣어라 — 이름·직업·핵심 인간관계·강한 성향=4~5, 사소한 취향·일시적 감정=1~2.
-⏰ 시간: 시점이 있으면 content에 자연어로 꼭 넣어라("작년 여름 제주여행 감", "다음주 화요일 면접"). 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12"). 오늘은 ${new Date().toISOString().slice(0, 10)}(KST 기준 상대날짜 환산).
+⏰ 시간: 시점이 있으면 content에 자연어로 꼭 넣어라("작년 여름 제주여행 감", "다음주 화요일 면접"). 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12"). 오늘은 ${new Date(Date.now() + tzMin * 60000).toISOString().slice(0, 10)}(유저 현지 기준 상대날짜 환산).
 형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3,"happened_at":""}],"mood":"normal|sulky|warm","emotion":{"dValence":0,"dEnergy":0,"feeling":"평온","intensity":15,"cause":""},"persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
 현재 내 캐릭터(정해진 것 — 바꾸지 말고 빈 곳만 채워): ${existingPersona || "(아직 없음)"}
 이미 아는 것: ${existing.slice(0, 40).join(" / ") || "(없음)"}` },
@@ -3209,6 +3221,7 @@ Deno.serve(async (req) => {
     const jwt = auth.replace(/^Bearer\s+/i, "");
     const { data: u } = await supa.auth.getUser(jwt);
     const body = await req.json().catch(() => ({}));
+    const tzMin = tzOf(body);   // ⏰ 접속 기기 시간대 — 게스트 경로(guestTurn)와 별도 스코프라 여기도 선언
 
     // 🎟 게스트 맛보기 — 로그인 전에도 갈비스가 어떤 애인지 5턴 겪어보게 한다(가입 전환의 핵심).
     //    도구·기억·DB 쓰기는 전부 잠근 별도 경량 경로. uid를 전제한 본 경로에 null을 흘리지 않는다.
@@ -3297,7 +3310,7 @@ Deno.serve(async (req) => {
     const gate = await aiGate("u:" + uid, isGreeting ? AI_FN + "-ambient" : AI_FN);
     if (!gate.ok) {
       if (isGreeting) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
-      return json({ ok: true, reply: gateReply(gate, false), gate, actions: [] });
+      return json({ ok: true, reply: gateReply(gate, false, "", tzMin), gate, actions: [] });
     }
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
     //
@@ -4213,7 +4226,7 @@ ${parts.join("\n")}`;
                    그대로 앵커가 돼 매번 같은 화제로 인사했다(사장님: 해변열차 얘기 반복). */
                 .slice((freshStartBlock || !userMsg) ? -2 : undefined)
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
-      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName, backRefAsk(userMsg || "")) },
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes, mayAskName, backRefAsk(userMsg || ""), tzMin) },
       // 🥊 반복 시비일 때만 — 평상시엔 아예 주입하지 않는다(캐시 프리픽스 뒤라 캐시에도 영향 없음)
       ...(_hostileTurn ? [{ role: "system", content: HOSTILE_BLOCK }] : []),
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
