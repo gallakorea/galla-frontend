@@ -5182,6 +5182,42 @@ ${parts.join("\n")}`;
         : _lk ? `이거 봐봐 — ${String(_lk.title || "이거").slice(0, 40)} ㅋㅋ`
         : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
     }
+    /* ══════════════════════════════════════════════════════════════════════
+       🛡 출력 가드 — "말만 하고 안 했다"를 잡는 8종. 순서와 정책을 여기 한 곳에 적는다.
+
+       ① fake_create_plan  기획 턴에 "만들었어" 거짓 완료   → 3안 재요구(텍스트 재생성)
+       ② fake_create       "만들었어"인데 초안 카드 0        → draft_* 강제
+       ③ fake_open         "택시 열었어"인데 external 0      → open_external 강제
+       ④ fake_gen          "그려줄게"인데 생성 액션 0        → gen_* 강제
+       ⑤ show ★           "보여줘"인데 열린 게 0            → 재고에서 직접 첨부, 없을 때만 도구 강제
+       ⑥ fake_video ★      영상 물었는데 영상 카드 0         → 재고에서 직접 첨부, 없을 때만 도구 강제
+       ⑦ promise_search    "찾아줄게"만 하고 결과 0          → web_search 강제
+       ⑧ humor             웃겨달랬는데 딴소리               → 검증된 개그로 치환(LLM 0콜)
+
+       ⚠️ 정책: **서버가 붙일 수 있으면 붙인다(LLM 0콜).** 모델을 다시 부르는 건 최후수단이다 —
+          가드마다 재호출하면 한 턴에 콜이 최대 6개까지 붙고, 재생성된 답은 앞선 처리를 우회한다.
+       ★ 표시가 '재고 우선' 가드다. attachFromStock 이 성공하면 그 가드의 조건이 거짓이 되어
+          아래 LLM 경로는 자동으로 건너뛴다(코드가 아니라 상태로 접는다).
+       ⚠️ 새 가드는 이 목록에 한 줄 추가하고, 가능하면 attach 먼저 시도하게 짠다.
+       ══════════════════════════════════════════════════════════════════════ */
+    const attachFromStock = (only: "video" | "any", wantN = 1, fresh = false): boolean => {
+      if (!_stock.length) return false;
+      const shownPrev = Array.isArray(rel?.recent_shown) ? rel.recent_shown.map(String) : [];
+      let pool = _stock.filter((s) => (only === "any" ? true : s.source === "핫튜브"));
+      if (fresh) pool = pool.filter((s) => !shownPrev.includes(s.id));           // "딴거"면 이미 본 건 뺀다
+      pool = pool.filter((s) => !actions.some((a: any) => String(a.url || "").includes(s.id) || String(a.id || "") === s.id));
+      // 제목 없는 재고는 붙여봐야 화면에 "이거"짜리 정체불명 카드가 된다(실측) — 제목 있는 것만.
+      const titled = pool.filter((s) => String(s.title || "").trim().length >= 2);
+      pool = titled.length ? titled : [];
+      if (!pool.length) return false;
+      pool = [...pool].sort((a, b) => _hitOf(b) - _hitOf(a));                    // 본문이 말한 것부터
+      for (const s of pool.slice(0, Math.max(1, wantN))) {
+        actions.push(s.kind === "open"
+          ? { kind: "open", url: s.url, title: s.title || "이거", label: "보기", source: s.source }
+          : { kind: "view", ctype: s.ctype, id: s.id, title: s.title || "이거", label: "바로 보기", source: s.source });
+      }
+      return true;
+    };
     // 🛡 '가짜 생성' 방어(bug#5 재발 근본수정) — 답이 "만들어놨어/판 세웠다"류 창작완료를 주장하는데
     //    실제 draft 액션이 없으면(모델이 대화이력의 옛 '만들어놨어'를 보고 '이미 했다' 착각 → 도구 미호출),
     //    도구 호출을 강제(tool_choice:required)해 한 번 재시도 → 진짜 초안 카드가 붙게 한다.
@@ -5290,7 +5326,14 @@ ${parts.join("\n")}`;
     {
       const wantShow = userMsg && !work && !rawSources.length &&
         /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘|(아까|방금|첫\s*번째|첫번째|아까\s*그)[^.!?\n]{0,10}(다시|또)|다시\s*(보여|볼|틀어|열어)|안\s*보(여|이는데|임)|안\s*열려|어떻게\s*보는|어디서\s*봐|올려\s*(봐|줘)|뭐가?\s*재밌(어|냐|는)|웃긴\s*(거|짤|영상))/.test(userMsg);   // 🛡 재참조·"안 보임/어떻게 봐"(딜리버 실패 재요청)도 대상 — 레드팀 발견
-      const hasView = () => actions.some((a) => a.kind === "view" || a.kind === "share");
+      /* ⚠️ 핫튜브 카드(open)도 '열어준 것'이다 — 예전엔 view/share 만 인정해서, 영상을 이미 붙여줬는데도
+         이 가드가 또 돌아 같은 턴에 이슈 카드를 하나 더 열었다(중복 딜리버). */
+      const hasView = () => actions.some((a) => a.kind === "view" || a.kind === "share" || a.kind === "open");
+      // ⑤★ 재고 우선 — 이번 턴에 도구가 이미 가져온 게 있으면 서버가 바로 붙인다(LLM 0콜).
+      if (wantShow && !body?.meta && !hasView() && _stock.length) {
+        const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
+        if (attachFromStock("any", 1, another)) GD.push("guard:show:attached");
+      }
       if (wantShow && !body?.meta && !hasView()) {
         GD.push("guard:show");
         try {
@@ -5348,39 +5391,18 @@ ${parts.join("\n")}`;
       searchHits = [];   // 개그로 갈아치웠으니 엉뚱한 검색칩 첨부 방지
     }
 
-    // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
-    //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
-    //    ✍️ 단 창작 결과물(제목 리스트 등)은 예외 — "1."이 문장으로 세져 리스트가 "2."에서 잘리던 버그(레드팀 발견).
-    reply = normalizeChoices(reply);   // 인라인 번호 → 줄 — 클라 선택지 버튼이 뜨게(^ 앵커 파서)
-    if (!longForm && !hasChoiceList(reply)) {
-      const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
-      const cap = tempoCap({ longForm, heavy: tHeavy, light: tLight });   // 상황별 템포(고정 4 → 2/4/6)
-      if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
-      reply = charCap(reply, cap);   // 문장 4개가 각각 초장문이면 문장캡을 통과한다(Gemini 실측: 소라 설교문) — 글자 예산으로 이중 캡
-      reply = stripStage(reply);   // 스트리밍 경로에만 걸려 있어 비스트리밍 답변에 지문이 그대로 나갔다(실측)
-      reply = bubbleize(reply);
-    }
-    // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
-    reply = reply
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")            // 마크다운 링크 → 텍스트만(스킴 무관: https·galla:// 등)
-      .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")          // raw URL 제거(커스텀 스킴 포함)
-      .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")  // 툴 이름이 본문에 새는 것 제거
-      .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
-    // 🧯 빈 답/쓰레기 답 방어 — 스티커·짤·지문만 있고 '실제 말'이 없으면(예: "[stk:🍲]"만) 뜬금 빈 버블 방지.
-    //    마커([stk:]/[emo:]/((지문)))를 벗겨 한글·영숫자가 남는지로 판정.
-    {
-      const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
-      if (!hasText(bare)) {
-        const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
-        const kept = (reply.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");   // 스티커 하나는 살려 붙임
-        reply = fill[(bare.length + (nick ? nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
-      }
-    }
+    /* ❌ 인라인 템포캡·URL 새니타이즈·빈답방어 삭제(2026-08-21) — 계약 관문(enforceContract)이
+       똑같은 일을 마지막에 한 번 더 한다. 게다가 여기서 다듬어봐야 아래 가드들이 reply 를
+       통째로 재생성하면 무효가 됐다(그 순서 문제로 340자 설교문이 나갔다). 다듬기는 관문에서만. */
     // 🛡📺 유튜브/영상 지어내기 방어 — 상대가 유튜브·먹방·영상·핫튜브를 물었는데 hot_videos를 안 쓰고
     //    영상/채널을 지어내면(쯔양·미스터먹방 등 가짜 1위), 강제로 hot_videos→실제 영상으로 답 재생성.
     {
       const asksVideo = userMsg && !body?.meta && /(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없)|채널\s*(뭐|추천)|유명한.*(영상|먹방|채널|유튜)|요즘\s*(뭐|무슨).*(영상|먹방|유튜|봐))/i.test(userMsg);
       const hasVideoOpen = () => actions.some((a) => a.kind === "open" && typeof a.url === "string" && /watch\.html\?v=/.test(a.url));
+      // ⑥★ 재고 우선 — 이번 턴에 hot_videos 를 이미 돌렸으면 그 결과에서 바로 붙인다(LLM 0콜).
+      if (asksVideo && !hasVideoOpen() && _stock.some((s) => s.source === "핫튜브")) {
+        if (attachFromStock("video", 1, false)) GD.push("guard:fake_video:attached");
+      }
       if (asksVideo && !hasVideoOpen()) {
         GD.push("guard:fake_video");
         try {
