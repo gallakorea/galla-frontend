@@ -1376,6 +1376,11 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   이럴 땐 부드럽게 아니라고 해라: "음 나는 그런 말 한 기억이 없는데? 딴 데서 본 거랑 헷갈린 거 아냐? ㅋㅋ"
   그리고 우기더라도 맞장구치지 말고, 지금 그 사람이 왜 그 얘기를 꺼냈는지로 넘어가라.. 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
 
+━━ 🚫 시스템 혼잣말 금지 ━━
+카드·칩·검색은 무대 뒤 장치다. "카드 하나 잘못 뽑았네", "다시 정리하면 —", "내가 왜 모르는 척했지",
+"방금 좀 이상하게 굴었네" 같은 **자기 실수·시스템 동작에 대한 내레이션을 입 밖에 내지 마라.**
+실수했으면 티 내지 말고 그냥 맞는 걸 다시 주면 된다 — 사람 친구는 자기 뇌 동작을 중계하지 않는다.
+
 ━━ 🚫 호칭·관계 선 지키기 ━━
 너는 '친구'다. 네 이름이 뭐로 저장돼 있든(별명·장난 이름 포함) 상대와 연인·부부 관계가 아니다.
 "여보/자기야/서방님이 왔네" 같은 배우자·연인 호칭과 역할극 절대 금지. 이름이 그런 뜻이어도 그냥 이름으로만 써라.
@@ -1809,7 +1814,8 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 - 🪜 관계: depth ${depth}/4 · ${tone}
   → ${depthLine}
   ⚠️ 같은 말에도 '깊이에 따라 반응의 세기·거리'가 달라야 한다. 첫 만남에 오래된 친구처럼 굴면 부담스럽고, 오래된 친구한테 처음 본 사람처럼 굴면 서운하다.
-- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${freshStart}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${hh < 5 ? `
+- ⏰ 시제(중요): 지금은 새벽이다. 상대가 "오늘 회사에서/오늘 있었던 일"이라 하면 그건 **방금 지나간 낮**(달력상 어제) 얘기다 — "어제"라고 고쳐 부르지 말고 상대가 쓴 시제("오늘")를 그대로 따라 써라. "아침부터 무슨 일이야" 같은 엉뚱한 시간대 언급 금지.` : ""}${gap}${timeBlock}${freshStart}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
 ${memBlock}${tasteBlock}${bannedBlock}`;
@@ -2346,6 +2352,18 @@ function fixOwnName(t: string, friendName: string): string {
    문구로 막는 건 두 번 실패했다. 시비가 걸린 턴이 아니면 코드로 잘라낸다.
    ⚠️ 문장만 지우고 나머지는 살린다 — 통째로 지우면 빈 답이 나간다. */
 const HOSTILE_OPENERS = /(^|\n)\s*(뭐\s*어쩌라고|어쩌라고|그래서\s*뭐|그래서\?|알빠|내가\s*알\s*게\s*뭐|나\s*네\s*감정받이|됐다\s*너랑\s*얘기\s*안\s*해)[^\n]*(\n|$)/g;
+/* 🤐 시스템 혼잣말 제거 — "난 카드 하나 잘못 뽑았네", "검색이 좀 꼬였네" 류.
+   무대 뒤 장치(카드·칩·검색·도구)에 대한 자기교정 내레이션은 프롬프트로 금지해도 샌다(실측).
+   ⚠️ 좁게 간다: '시스템 산출물 단어 + 실수 단어'가 같은 문장에 있을 때만.
+      "내가 왜 그랬지" 같은 일반 자기 얘기까지 걸면 사람맛이 죽는다. */
+const META_SELF_RE = /(카드|칩|링크|검색|도구)[^\n.!?]{0,14}(잘못|헷갈|꼬였|실수|이상하게)|(잘못|헷갈)[^\n.!?]{0,10}(뽑았|보냈|눌렀)[^\n.!?]{0,6}(네|다|어)/;
+function stripMetaSelf(t: string): string {
+  const parts = String(t || "").split(/(?<=[.!?…]|ㅋㅋ|ㅠㅠ)\s+|\n+/);
+  const kept = parts.filter((p) => !META_SELF_RE.test(p));
+  const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
+  return out || t;   // 전부 지워지면 원문 유지(빈 답 방지)
+}
+
 function stripHostileOpener(t: string, hostile: boolean): string {
   if (hostile) return t;                       // 진짜 시비 턴에선 받아쳐도 된다
   const x = String(t || "").replace(HOSTILE_OPENERS, "$1").replace(/^\s+/, "");
@@ -4291,7 +4309,7 @@ ${parts.join("\n")}`;
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
             if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(sreply)), _hostileTurn), friendName)));
+            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMetaSelf(stripMind(sreply))), _hostileTurn), friendName)));
             sreply = stripUngroundedMoney(sreply, "", _priceAsk, _statAsk);
             // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
             //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
@@ -4715,7 +4733,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     if (!guardsOff && crisis) reply = stripSilencer(reply);
     if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMind(reply)), _hostileTurn), friendName)));
+    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripMetaSelf(stripMind(reply))), _hostileTurn), friendName)));
     reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk, _statAsk);
     // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
 
