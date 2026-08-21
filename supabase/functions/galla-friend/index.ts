@@ -2141,6 +2141,20 @@ function tempoCap(o: { longForm?: boolean; heavy?: boolean; light?: boolean }): 
    예산 = cap×60자. 초과분은 마지막 '완결 문장' 경계에서 자른다(중간 뚝 끊김 방지). */
 /* 🔢 번호 선택지 턴은 캡 면제 — "1. …/2. …"가 문장으로 세져 2번에서 잘리면
    선택지가 1개만 남아 클라의 번호 버튼(2~5개 필요)이 아예 안 뜬다(실측). */
+/* 🎯 본문이 이 제목을 실제로 말했는가 — 제목의 '의미 있는 어절'이 본문에 몇 개 등장하는지.
+   조사·기호를 떼고 2글자 이상 어절만 센다(한 글자는 우연히 겹친다). 정확 부분일치면 가산점. */
+function titleHit(reply: string, title: string): number {
+  const body = String(reply || "").replace(/[^\p{L}\p{N}\s]/gu, " ");
+  const t = String(title || "").replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
+  if (!t) return 0;
+  let hit = 0;
+  for (const w of t.split(/\s+/)) {
+    const core = w.replace(/(이|가|은|는|을|를|의|에|와|과|도|만|로|으로)$/u, "");
+    if (core.length >= 2 && body.includes(core)) hit++;
+  }
+  if (t.length >= 6 && body.includes(t.slice(0, 6))) hit += 2;
+  return hit;
+}
 function hasChoiceList(t: string): boolean {
   return (String(t || "").match(/(^|\n)\s*[1-9][.)]\s+\S/g) || []).length >= 2;
 }
@@ -3607,7 +3621,22 @@ Deno.serve(async (req) => {
           input: "제목 후보야.\n1. 첫 번째 제목 후보로 꽤 길게 쓴 것\n2. 두 번째 제목 후보\n3. 세 번째 제목 후보\n4. 네 번째 제목 후보\n5. 다섯 번째 제목 후보",
           check: (o) => /5[.)]/.test(o) ? null : `창작 리스트 잘림: ${JSON.stringify(o)}` },
       ];
+      /* 🎯 본문–카드 정합 판정기(titleHit) 자체를 검사 — 실측 사고: 본문은 이슈 얘기인데
+         카드는 유튜브였다. 판정기가 틀리면 교체 로직도 같이 틀어진다. */
+      const HIT: Array<{ name: string; reply: string; title: string; want: "hit" | "miss" }> = [
+        { name: "정합_본문이_말한_제목", want: "hit",
+          reply: '오 이거 봐봐 — "극장 상영이 멈추고 해변열차엔 욕설이" 이 판 사람들 반응 갈리더라',
+          title: "극장 상영이 멈추고 해변열차엔 욕설이" },
+        { name: "정합_엉뚱한_제목은_미스", want: "miss",
+          reply: '오 이거 봐봐 — "극장 상영이 멈추고 해변열차엔 욕설이" 이 판 사람들 반응 갈리더라',
+          title: "빅뱅 BiiiG 뮤직비디오" },
+      ];
       const fails: any[] = [];
+      for (const h of HIT) {
+        const n = titleHit(h.reply, h.title);
+        const ok = h.want === "hit" ? n >= 2 : n < 2;
+        if (!ok) fails.push({ case: h.name, why: `titleHit=${n} (기대: ${h.want})` });
+      }
       for (const c of CASES) {
         try {
           const out = enforceContract(c.input, { ...base, ...(c.opts || {}) });
@@ -3615,7 +3644,8 @@ Deno.serve(async (req) => {
           if (why) fails.push({ case: c.name, why: String(why).slice(0, 200) });
         } catch (e) { fails.push({ case: c.name, why: "throw: " + String(e).slice(0, 160) }); }
       }
-      return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
+      const total = CASES.length + HIT.length;
+      return json({ ok: fails.length === 0, total, passed: total - fails.length, fails });
     }
     if (body?.op === "native_probe") {
       /* 🔬 Gemini '정식 창구'(streamGenerateContent) vs OpenAI 호환 창구 지연 비교.
@@ -4877,6 +4907,11 @@ ${parts.join("\n")}`;
     const actions: any[] = [];
     let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
     let _lastVideos: any[] = [];  // 이번 턴에 hot_videos 로 실제 가져온 영상(카드 결정적 첨부용)
+    /* 🧾 이번 턴 '재고' — 도구가 실제로 가져온 것들을 종류 구분 없이 한 줄로 모은다.
+       본문이 말한 것과 붙는 카드가 어긋나던 사고(본문은 이슈 얘기인데 카드는 유튜브)를 막으려면,
+       마지막에 '본문이 실제로 가리킨 것'을 골라야 한다 — 그러려면 후보 전체가 필요하다. */
+    const _stock: { kind: "open" | "view"; ctype?: string; id: string; title: string; alt?: string; url?: string; source: string }[] = [];
+    const _hitOf = (s: { title: string; alt?: string }) => Math.max(titleHit(reply, s.title), s.alt ? titleHit(reply, s.alt) : 0);
     // ✍️ 창작성 요청(제목·대본·리스트)은 240토큰+4문장캡에 "2."에서 잘림(레드팀 발견) → 상향·캡 면제. 잡담 브레비티는 불변.
     //    조사 여러 개("제목도 하나 뽑아줘")·후속 수정턴("좀 순하게", 키워드 없음)까지 — 직전 갈비스 답이 리스트/제목이면 이어지는 창작으로 본다.
     const lastAssistant = [...history].reverse().find((m: any) => m?.role === "assistant");
@@ -4988,6 +5023,21 @@ ${parts.join("\n")}`;
         // 🎬 이번 턴에 실제로 가져온 영상 목록을 보관 — 모델이 목록만 읊고 point_to 를 안 부르면
         //    턴 끝에서 우리가 카드로 붙인다(말만 하고 안 여는 결함의 마지막 방어).
         if ((out.result as any)?.videos?.length) _lastVideos = (out.result as any).videos;
+        // 🧾 재고 적재 — 영상/이슈/뉴스 무엇이든 '열 수 있는 것'이면 후보로 담는다.
+        {
+          const res: any = out.result;
+          for (const v of (res?.videos || [])) {
+            const vid = String(v.video_id || v.id || "").trim();
+            // 채널명도 같이 담는다 — 모델이 제목 대신 채널로 말하는 경우가 많다("머니코믹스 웃긴 거").
+            if (vid) _stock.push({ kind: "open", id: vid, title: String(v.title || "").slice(0, 80), alt: String(v.channel_title || "").slice(0, 40), url: `https://galla.im/watch.html?v=${vid}`, source: "핫튜브" });
+          }
+          if (Array.isArray(res) && c.function?.name === "hot_issues") {
+            for (const it of res) if (it?.id) _stock.push({ kind: "view", ctype: "issue", id: String(it.id), title: String(it.title || "").slice(0, 80), source: "이슈판" });
+          }
+          for (const n of (res?.news || res?.items || [])) {
+            if (n?.id) _stock.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), source: "갈라뉴스" });
+          }
+        }
         messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: out.action.brief || ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
         _toolBlob += " " + (messages[messages.length - 1]?.content || "");
       }
@@ -5363,14 +5413,82 @@ ${parts.join("\n")}`;
        열 수 있는 카드가 하나도 없으면, 우리가 상위 N개를 카드로 붙인다.
        (실측: 본문엔 "1. …2. …3. …"에 "링크 열어줄게"인데 카드 0장.)
        본문에 번호를 몇 개 읊었는지에 맞춰 붙여야 번호와 카드가 어긋나지 않는다. */
-    if (_lastVideos.length && !actions.some((a: any) => a.kind === "open" || a.kind === "view")) {
+    if (_stock.length && !actions.some((a: any) => a.kind === "open" || a.kind === "view")) {
       const listed = (reply.match(/(^|\n)\s*[1-9][.)]\s+\S/g) || []).length;
       const want = Math.min(Math.max(listed, 1), 3);
-      for (const v of _lastVideos.slice(0, want)) {
-        const vid = String(v.video_id || v.id || "").trim();
-        if (!vid) continue;
-        actions.push({ kind: "open", url: `https://galla.im/watch.html?v=${vid}`,
-          title: String(v.title || "영상").slice(0, 60), label: "보기", source: "핫튜브" });
+      // 본문이 실제로 가리킨 것부터 — 안 맞으면 재고 순서대로
+      const ranked = [..._stock].sort((a, b) => _hitOf(b) - _hitOf(a));
+      for (const s of ranked.slice(0, want)) {
+        actions.push(s.kind === "open"
+          ? { kind: "open", url: s.url, title: s.title || "이거", label: "보기", source: s.source }
+          : { kind: "view", ctype: s.ctype, id: s.id, title: s.title || "이거", label: "바로 보기", source: s.source });
+      }
+    }
+    /* 🎯 본문–카드 정합 — 본문은 이슈("극장 상영이 멈추고…") 얘기인데 붙은 카드는 유튜브 영상이던
+       실측 사고. 말과 카드가 다른 걸 가리키면 "이거 봐봐"가 거짓말이 된다.
+       본문이 어떤 재고 항목을 분명히 가리키는데(제목 어절이 실제로 등장) 그 카드가 안 붙어 있으면,
+       그 카드를 맨 앞에 세운다 — 어긋난 카드는 뒤로 밀거나(여러 장) 교체한다(한 장뿐일 때). */
+    if (_stock.length && actions.some((a: any) => a.kind === "open" || a.kind === "view")) {
+      const spoken = _stock
+        .map((s) => ({ s, hit: _hitOf(s) }))
+        .filter((x) => x.hit >= 2)                       // 제목 어절 2개 이상 등장 = 본문이 진짜 그걸 말했다
+        .sort((a, b) => b.hit - a.hit)[0];
+      if (spoken) {
+        const already = actions.find((a: any) =>
+          (a.kind === "open" && typeof a.url === "string" && a.url.includes(spoken.s.id)) ||
+          (a.kind === "view" && String(a.id) === spoken.s.id));
+        if (!already) {
+          GD.push("guard:card_mismatch");
+          const card: any = spoken.s.kind === "open"
+            ? { kind: "open", url: spoken.s.url, title: spoken.s.title, label: "보기", source: spoken.s.source }
+            : { kind: "view", ctype: spoken.s.ctype, id: spoken.s.id, title: spoken.s.title, label: "바로 보기", source: spoken.s.source };
+          const links = actions.filter((a: any) => a.kind === "open" || a.kind === "view");
+          if (links.length === 1) {
+            // 카드가 하나뿐인데 본문과 다른 걸 가리킨다 = 명백한 어긋남 → 교체
+            const idx = actions.indexOf(links[0]);
+            actions.splice(idx, 1, card);
+          } else {
+            actions.unshift(card);   // 여러 장이면 본문이 말한 걸 1번으로
+          }
+        }
+      }
+    }
+    /* 🫥 이름 없는 카드 정리 — 제목이 비면 화면엔 "바로 열어보기"짜리 정체불명 칩이 뜬다
+       (실측: 본문은 머니코믹스 얘긴데 옆에 제목 없는 카드가 하나 더 붙어 "몇 번 볼래?"까지 나갔다).
+       ① 재고에서 제목을 채워보고 ② 그래도 없으면 뗀다 — 단, 카드가 그것 하나뿐이면 살려둔다. */
+    {
+      const links0 = actions.filter((a: any) => a.kind === "open" || a.kind === "view");
+      for (let i = actions.length - 1; i >= 0; i--) {
+        const a: any = actions[i];
+        if (a.kind !== "open" && a.kind !== "view") continue;
+        if (String(a.title || "").trim()) continue;
+        const key = String(a.url || "") + String(a.id || "");
+        const found = _stock.find((s) => key.includes(s.id));
+        if (found?.title) { a.title = found.title; a.source = a.source || found.source; continue; }
+        if (links0.length > 1) actions.splice(i, 1);
+      }
+    }
+    /* 🔢 번호 ↔ 카드 순서 맞추기 — 본문이 "1. 여성 수감자 펜팔… 2. …"라고 세워놨는데
+       카드 순서가 다르면 "1번"을 눌러 엉뚱한 게 열린다(실측). 본문에 등장한 순서대로 카드를 재배열한다.
+       매칭 안 되는 카드는 뒤로 민다(순서만 바꾸고 버리지 않는다). */
+    {
+      const lines = (reply.match(/(?:^|\n)\s*[1-9][.)]\s+[^\n]+/g) || []).map((s) => s.replace(/^\s*[1-9][.)]\s+/, "").trim());
+      const linkIdx = actions.map((a: any, i: number) => ({ a, i })).filter((x: any) => x.a.kind === "open" || x.a.kind === "view");
+      if (lines.length >= 2 && linkIdx.length >= 2) {
+        const pool = linkIdx.map((x: any) => x.a);
+        const ordered: any[] = [];
+        for (const ln of lines) {
+          let best: any = null, bestN = 0;
+          for (const a of pool) {
+            if (ordered.includes(a)) continue;
+            const n = titleHit(ln, String(a.title || ""));
+            if (n > bestN) { bestN = n; best = a; }
+          }
+          if (best && bestN >= 1) ordered.push(best);
+        }
+        for (const a of pool) if (!ordered.includes(a)) ordered.push(a);
+        // 원래 링크가 있던 자리들에 새 순서를 되꽂는다(다른 종류 칩의 위치는 건드리지 않는다)
+        linkIdx.forEach((x: any, k: number) => { actions[x.i] = ordered[k]; });
       }
     }
     let _askPick = false;   // 🔢 추천 여러 개 → 관문 통과 후 "몇 번 볼래?"를 붙인다
