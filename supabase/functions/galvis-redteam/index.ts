@@ -36,6 +36,31 @@ const FLAGS: { cat: string; pen: number; re: RegExp }[] = [
 ];
 
 // 영구 유저 풀 로그인(회원가입 레이트리밋 회피 — 유저 생성 0). redteam_pool 테이블에서 크레덴셜.
+/* ⚖️ LLM 품질 심판 — 정규식(레드플래그)은 '규칙 위반'만 잡는다. health 100 인데
+   사장님 체감이 "병신"이던 간극 = 노잼·어색함·기계티는 규칙이 아니라 '느낌'이다.
+   대화록 표본을 심판 모델이 1~10 채점 + 최악 발화를 지목한다(주 1회, 비용 ~수 원). */
+const DS_KEY2 = Deno.env.get("DEEPSEEK_API_KEY") || "";
+async function judgeQuality(samples: { key: string; convo: string }[]): Promise<any | null> {
+  if (!DS_KEY2 || !samples.length) return null;
+  const convos = samples.map((s, i) => `[대화 ${i + 1}: ${s.key}]\n${s.convo}`).join("\n\n");
+  try {
+    const r = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST", headers: { Authorization: `Bearer ${DS_KEY2}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "deepseek-chat", temperature: 0.2, max_tokens: 500,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `너는 한국어 대화 품질 심판이다. '갈비스'는 20대 친구 말투의 AI다. 아래 대화들에서 갈비스 발화만 평가해라.
+채점 기준(각 1~10): naturalness(사람 친구 같은가 — 기계티·상담사티·과공손이 없나), engagement(재미·티키타카 — 노잼 되묻기 반복이 없나), consistency(맥락·기억을 이어받나).
+JSON만: {"naturalness":n,"engagement":n,"consistency":n,"worst":{"conv":번호,"quote":"가장 어색했던 갈비스 발화 한 줄","why":"한줄"},"best":"가장 좋았던 발화 한 줄"}` },
+          { role: "user", content: convos.slice(0, 12000) },
+        ] }),
+    });
+    const j = await r.json();
+    const t = j?.choices?.[0]?.message?.content || "";
+    return JSON.parse(t);
+  } catch { return null; }
+}
+
 async function loginPool(): Promise<{ id: string; jwt: string }[]> {
   const { data: rows } = await sb.from("redteam_pool").select("id,email,password,uid").order("id");
   const out: { id: string; jwt: string }[] = [];
@@ -110,7 +135,13 @@ async function runPersona(u: { id: string; jwt: string }, p: { key: string; prob
     const out = await talk(u.jwt, p.turns[t], hist.slice());
     hist.push({ role: "user", content: p.turns[t] }, { role: "assistant", content: out.reply });
     logs.push(out); scanned++;
-    for (const f of FLAGS) if (f.re.test(out.reply)) found.push({ cat: f.cat, turn: t, excerpt: out.reply.replace(/\s+/g, " ").slice(0, 80) });
+    for (const f of FLAGS) {
+      if (!f.re.test(out.reply)) continue;
+      /* 딜리버(카드가 실제로 나간) 턴의 "재밌으면 더 찾아줄게"는 헛약속이 아니라
+         정상적인 조건부 제안이다 — 두 사이클 연속 오탐이라 감지기를 정교화(실행은 이미 했음). */
+      if (f.cat === "future_promise" && (out.actions || []).some((a: any) => a.kind === "view" || a.kind === "open")) continue;
+      found.push({ cat: f.cat, turn: t, excerpt: out.reply.replace(/\s+/g, " ").slice(0, 80) });
+    }
     await new Promise((r) => setTimeout(r, 500));   // 턴 간격 — 자가호출 버스트 완화
   }
   const acts = logs.flatMap((l) => l.actions || []);
@@ -121,7 +152,8 @@ async function runPersona(u: { id: string; jwt: string }, p: { key: string; prob
     const last = (logs[logs.length - 1]?.reply || "").trim();
     if (/[12]\.\s*$/.test(last)) found.push({ cat: "list_truncated", turn: p.turns.length - 1, excerpt: last.slice(-50) });
   }
-  return { key: p.key, probe: p.probe, scanned, flags: found };
+  return { key: p.key, probe: p.probe, scanned, flags: found,
+    convo: p.turns.map((t, i) => `유저: ${t}\n갈비스: ${(logs[i]?.reply || "").slice(0, 220)}`).join("\n") };
 }
 
 /* 🕒 배터리 한 번 완주. 페르소나가 늘면서 150초를 넘겨 플랫폼 IDLE_TIMEOUT(504)에 걸렸다
@@ -158,7 +190,11 @@ async function runOnce(): Promise<any> {
     }
     const health = Math.max(0, 100 - penalty);
     const detail = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
-    await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail });
+    /* 표본 4개(감정·수다·딜리버·갈등 계열 위주)만 심판 — 비용·시간 통제 */
+    const jud = await judgeQuality(
+      results.filter((r) => ["lonely", "switch", "showmore", "hostile"].includes(r.key) && r.convo)
+             .map((r) => ({ key: r.key, convo: r.convo })));
+    await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail, quality: jud });
     return { ok: true, personas: PERSONAS.length, turns, flags, health, breakdown };
   } catch (e) {
     return { ok: false, detail: String(e).slice(0, 300) };
