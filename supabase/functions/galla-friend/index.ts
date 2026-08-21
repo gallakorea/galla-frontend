@@ -4202,8 +4202,20 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
-      ...(mindBlock ? [{ role: "system", content: mindBlock }] : []),
-      ...(goalBlock ? [{ role: "system", content: goalBlock }] : []),
+      /* 🎛 코칭 블록 예산 — 한 턴에 최대 2개만 주입한다.
+         측정: 축 작업 후 턴당 프롬프트 20.7K→25.3K 토큰(+22%). 작은 모델은 지시가
+         많아질수록 흐려진다("진행할수록 병신이 되냐" — 정당한 지적).
+         우선순위: 교정(이탈·브레이크·개방)이 조언(마음읽기·목표)보다 먼저다.
+         상대가 문 닫는 중이면 방향 조언은 소음이라 목표·개방을 아예 버린다. */
+      ...(() => {
+        const closingNow = !!(disengageBlock || noAskBlock);
+        const cand = [
+          openBlock && !closingNow ? { role: "system", content: openBlock } : null,
+          mindBlock ? { role: "system", content: mindBlock } : null,
+          goalBlock && !closingNow ? { role: "system", content: goalBlock } : null,
+        ].filter(Boolean);
+        return cand.slice(0, 2);
+      })(),
       ...(piiBlock ? [{ role: "system", content: piiBlock }] : []),
       ...(emoCarryBlock ? [{ role: "system", content: emoCarryBlock }] : []),
       ...(selfDepBlock ? [{ role: "system", content: selfDepBlock }] : []),
@@ -4219,7 +4231,6 @@ ${parts.join("\n")}`;
       ...(conflictBlock ? [{ role: "system", content: conflictBlock }] : []), // 😠 갈등 중
       ...(disengageBlock ? [{ role: "system", content: disengageBlock }] : []), // 🚪 이탈 — 놓아주기
       ...(noAskBlock ? [{ role: "system", content: noAskBlock }] : []),     // 🙊 되묻기 브레이크
-      ...(openBlock ? [{ role: "system", content: openBlock }] : []),        // ⚖️ 자기개방 균형
       ...(inviteBlock ? [{ role: "system", content: inviteBlock }] : []),   // 🫂 물리적 초대
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
       // ⚠️ 아래 3종은 앞쪽에 두면 무시당했다(실측: 부고 다음 턴에 아재개그, 신상 요청에 "닉네임 알려줘").
