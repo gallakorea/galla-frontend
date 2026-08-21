@@ -190,6 +190,17 @@ async function aiUserQuotaOk(uid: string, n = 1): Promise<boolean> {
   } catch { return true; }
 }
 
+// 👑 운영자(user_profiles.admin_flag) — 사장님·운영 계정이 자기 서비스를 테스트하다 한도에 걸리면 QA가 안 된다.
+//    턴 한도·일일 캡 면제는 DB 쪽(ai_gate·ai_user_take, 20260821180000)에서 처리하고,
+//    여기서는 글로벌 일일 상한(aiBudgetOk)만 우회한다 — 예산이 이미 소진됐을 때만 조회돼 평상시 비용 0.
+async function isAdminUid(uid: string | null): Promise<boolean> {
+  if (!uid) return false;
+  try {
+    const { data } = await supa.from("user_profiles").select("admin_flag").eq("user_id", uid).maybeSingle();
+    return data?.admin_flag === true;
+  } catch { return false; }
+}
+
 // 🎟 등급 게이트 — 5시간 롤링 윈도우. 막히면 '언제 다시 열리는지'까지 돌려준다(막연한 차단이 제일 나쁘다).
 //    장애 시엔 통과 — 게이트가 죽어서 서비스가 멈추는 게 더 나쁘다(글로벌 캡이 최후 방어).
 const jres = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -3484,7 +3495,7 @@ Deno.serve(async (req) => {
     const guardsOff = isRedteam && req.headers.get("x-galla-guards") === "off";
     let paidTier = false;
     try { paidTier = ["lite", "friend", "pro"].includes(String((await modelFor(uid, "chat"))?.tier || "")); } catch { /* */ }
-    if (!isRedteam && !paidTier && !(await aiBudgetOk())) {
+    if (!isRedteam && !paidTier && !(await aiBudgetOk()) && !(await isAdminUid(uid))) {
       const tired = [
         "아 오늘 진짜 너무 많이 떠들었나봐, 목이 다 쉬었어 ㅋㅋ 나 오늘은 여기까지만 할게. 내일 다시 얘기하자!",
         "미안 ㅠㅠ 오늘 수다 에너지를 다 써버렸어. 내일 충전해서 올게, 그때 마저 얘기하자.",
