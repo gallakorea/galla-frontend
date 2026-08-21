@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0820210"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0821150"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -16,13 +16,13 @@
   <!-- ⚠️ 레거시 app-shell 폴백 제거 — MPA/SPA 혼합·부팅 이중로드 방지(사장님 지시). SPA가 유일 경로. -->
   <script>window.GALLA_V = "081707";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
   <!-- 🚀 앱 스플래시 — SPA 부팅/버전리로드의 CSS 미적용 번쩍임(FOUC)을 가리고 galla:ready에 내려감 -->
-  <script src="/js/splash-boot.js?v=0814140&wait=ready"></script>
+  <script src="/js/splash-boot.js?v=0821150&wait=ready"></script>
   <link rel="stylesheet" href="./css/theme.css?v=081807">
   <link rel="stylesheet" href="./css/nav.css?v=0808104">
   <!-- 📞 통화 UI — 엔진이 이 문서(최상위)에서 돌므로 스타일도 여기 -->
   <link rel="stylesheet" href="./css/dm.css?v=080412">
   <link rel="stylesheet" href="./css/dm-quiet.css?v=080412">
-  <link rel="stylesheet" href="./css/friend.css?v=0815100"><!-- 🫂 갈라 친구 — SPA 전용 -->
+  <link rel="stylesheet" href="./css/friend.css?v=0821150"><!-- 🫂 갈라 친구 — SPA 전용 -->
   <style>
     /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -139,7 +139,7 @@
 <!-- 공용 헤더 기능 — ＋ 글쓰기 허브·알림 벨/뱃지(문서 위임이라 어느 판 헤더든 동작) -->
 <script src="./js/write-hub.js?v=080412"></script>
 <!-- 🤖 갈라비스(도구형) 폐기 → 🫂 갈라 친구(관계형)로 재탄생. (구 jarvis.js/css는 미사용) -->
-<script src="./js/friend.js?v=0819120" defer></script><!-- 🫂 갈라 친구 AI -->
+<script src="./js/friend.js?v=0821150" defer></script><!-- 🫂 갈라 친구 AI -->
 
 <script src="./js/notifications.js?v=080412"></script>
 <!-- 웹푸시 발송 트리거(GALLA_pushSend) — 팔로우 등 앱 전역에서 사용 -->
