@@ -396,7 +396,11 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
     { role: "user", content: userMsg || (guestLoc === "en" ? "hi" : guestLoc === "ja" ? "やあ" : "안녕") },
   ];
   const j = await chatOnce(messages, { toolChoice: "none", maxTokens: 320 });
-  const reply = String(j?.choices?.[0]?.message?.content || "").trim() || "오 안녕! 무슨 얘기 하고 싶어?";
+  const raw = String(j?.choices?.[0]?.message?.content || "").trim() || "오 안녕! 무슨 얘기 하고 싶어?";
+  /* 📜 게스트도 같은 관문을 거친다 — 여기만 빠져 있어서 '비로그인 첫인상'에는
+     길이 캡·존댓말 제거·혼잣말 제거가 하나도 안 걸렸다(경로 3개 중 1개 누락).
+     새로 오는 사람이 보는 첫 화면이라 오히려 여기가 제일 중요하다. */
+  const reply = enforceContract(raw, { friendName: "갈비스", hasActions: false });
   return jres({ ok: true, reply, actions: [], gate: { ...g, guest: true } });
 }
 
@@ -2223,33 +2227,8 @@ function enforceContract(reply: string, o: {
   }
   return x;
 }
-function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null; heavy?: boolean; light?: boolean }): string {
-  reply = normalizeChoices(stripDeflect(reply));
-  reply = stripStage(reply);
-  // ⚠️ 이 줄은 모델 답변을 '통째로' 아재개그로 덮어쓴다. 그래서 프롬프트로 아무리 막아도
-  //    부고 다음 턴에 "가장 비싼 새는? 백조"가 나갔다(실측). 상실·위기 맥락에선 호출부가 humorJoke를 null로 준다.
-  if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
-  if (!o.longForm && !hasChoiceList(reply)) {
-    const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
-    const cap = tempoCap(o);
-    if (sents.length > cap) reply = sents.slice(0, cap).join("").trim();
-    reply = charCap(reply, cap);   // 문장 수 캡을 통과하는 초장문(Gemini) 이중 방어 — JSON 경로와 동일
-    reply = bubbleize(reply);
-  }
-  reply = reply
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
-    .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
-    .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1").replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")   // 마크다운 강조 스트립
-    .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
-  const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
-  if (!hasText(bare)) {
-    const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
-    const kept = (reply.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
-    reply = fill[(bare.length + (o.nick ? o.nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
-  }
-  return reply;
-}
+/* ❌ finalizeCompanion 폐기(2026-08-21) — 계약 관문(enforceContract) 통합으로 호출부가 사라졌다.
+   축약판 필터가 따로 남아 있으면 '어느 쪽이 진짜 규칙이냐'가 또 갈린다. 규칙은 관문 하나. */
 
 // 🧠 관계 갱신 + 기억(추출·저장·요약) — 응답을 막지 않게 백그라운드로 실행(스트리밍·비스트림 공용).
 async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: string; history: any[]; memList: any[]; injectedUniq: number[]; prevMemIds: number[]; nick: string; body: any }): Promise<void> {
@@ -3779,6 +3758,13 @@ Deno.serve(async (req) => {
     }
 
     // 📮 선톡 수령 — 밀린 선톡(pending_ping)을 꺼내고 비운다(LLM 비용 0). 챗 열 때 클라가 호출.
+    /* 🔴 선톡 도착 표시(읽지 않음 점) — 소모하지 않고 '있는지'만 본다.
+       consume_ping 은 패널을 열어야 호출되니, 오브의 빨간 점을 켜 줄 코드가 어디에도 없었다
+       (CSS .fr-ping 은 있는데 붙이는 곳이 0 — 선톡이 와도 티가 안 났다). */
+    if (body?.op === "peek_ping") {
+      const { data: pk } = await supa.from("friend_relationship").select("pending_ping").eq("user_id", uid).maybeSingle();
+      return json({ ok: true, has: !!pk?.pending_ping });
+    }
     if (body?.op === "consume_ping") {
       const { data: pr } = await supa.from("friend_relationship").select("pending_ping").eq("user_id", uid).maybeSingle();
       if (pr?.pending_ping) {

@@ -1039,6 +1039,22 @@
   }
 
   // 📮 밀린 선톡 수령 — 갈비스가 먼저 보낸 말(푸시 무시했어도 여기서 보임). LLM 비용 0.
+  /* 🔴 오브에 '선톡 왔음' 점 켜기 — 소모하지 않고 존재만 확인.
+     세션당 한 번만(페이지 이동마다 왕복하지 않게). 패널을 열면 consumePing이 실제로 소모한다. */
+  async function peekPing(){
+    try{
+      if(sessionStorage.getItem("galla:frpeek")==="1") return;
+      sessionStorage.setItem("galla:frpeek","1");
+    }catch(e){}
+    var jwt=await token(); if(!jwt) return;
+    try{
+      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({op:"peek_ping"}) });
+      var d=await res.json();
+      if(d && d.has && orb && !sheet?.classList.contains("fr-open")) orb.classList.add("fr-ping");
+    }catch(e){}
+  }
   async function consumePing(){
     var jwt=await token(); if(!jwt) return null;
     try{
@@ -1611,14 +1627,19 @@
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈
     if(r.actions && r.actions.length){
+      /* ⚠️ app 액션(DM·통화·페이지 이동)이 있으면 else-if 때문에 서버 auto 분기가 통째로 가려졌다.
+         그래서 "카드 열어줘"에 app 액션이 하나 끼면 콘텐츠 자동오픈이 조용히 죽었다.
+         두 분기를 독립시키고, app 자동실행은 서버가 op:"goto"로 지정했을 때만(클라 정규식 폐기 —
+         콘텐츠 쪽에서 이미 폐기한 방식이다). */
       var appA = r.actions.filter(function(a){ return a.kind==="app"; })[0];
-      if(appA && (appA.op==="goto" || /걸어|전화|톡|디엠|dm|보내|열어/i.test(text))){
+      if(appA && (appA.op==="goto" || appA.auto===true)){
         appA._reacted=true;   // 🏆 자동실행은 유저 행동 아님 — 보상신호 스킵(가짜 +3 방지)
         setTimeout(function(){ runAction(appA); }, 700);
-      } else if(r.actions.some(function(a){ return a.auto===true; })){
+      }
+      if(r.actions.some(function(a){ return a.auto===true && a.kind!=="app"; })){
         // 자동오픈은 '서버 판정(auto)'만 따른다 — 클라 정규식으로도 열면
         // "보여줘"(약한 요청)+추천 여러 개에 서버가 선택지를 줘도 클라가 멋대로 첫 카드를 열어버린다.
-        var auto = r.actions.filter(function(a){ return a.auto===true; })[0];
+        var auto = r.actions.filter(function(a){ return a.auto===true && a.kind!=="app"; })[0];
         if(auto){
           auto._reacted=true;
           /* 🚀 자비스식 런치 — 열릴 카드에 0.7초 차오르는 스윕 → 확대되며 발사.
@@ -1820,6 +1841,7 @@
     window.GALLA_IS_APP = IS_APP;
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
+    peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
     window.GALLA_openFriend = open;
     window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
     // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
