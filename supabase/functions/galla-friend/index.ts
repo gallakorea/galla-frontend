@@ -1987,12 +1987,59 @@ function apiFor(model: string): { base: string; key: string } {
   return { base: BASE_URL, key: API_KEY };
 }
 
+/* 🚀 Gemini '정식 창구' 스트리밍 — OpenAI 호환 창구는 첫 글자까지 19~24초가 걸린다(서버 실측).
+   같은 모델·같은 프롬프트인데 정식 창구(streamGenerateContent)는 3초다. 느림의 원인은
+   모델이 아니라 창구였다. 수다 턴(도구 없음)은 전부 이쪽으로 보낸다.
+   ⚠️ 모델명 주의: gemini-3.6-flash 는 정식 창구에서 thinkingConfig 400 → gemini-flash-latest 사용. */
+const GEMINI_NATIVE_MODEL = Deno.env.get("FRIEND_GEMINI_NATIVE") || "gemini-flash-latest";
+async function geminiNativeStream(messages: any[], maxTokens: number, onDelta: (full: string) => void): Promise<string | null> {
+  if (!GEMINI_EMBED_KEY) return null;
+  try {
+    const sys = messages.filter((m) => m?.role === "system").map((m) => String(m?.content || "")).join("\n\n");
+    const contents = messages.filter((m) => (m?.role === "user" || m?.role === "assistant") && String(m?.content || "").trim())
+      .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
+    if (!contents.length) return null;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_NATIVE_MODEL}:streamGenerateContent?alt=sse&key=${GEMINI_EMBED_KEY}`;
+    const r = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(sys ? { systemInstruction: { parts: [{ text: sys }] } } : {}),
+        contents,
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } },
+      }),
+    });
+    if (!r.ok || !r.body) return null;
+    const rd = r.body.getReader(); const dec = new TextDecoder();
+    let buf = "", full = "";
+    for (;;) {
+      const { done, value } = await rd.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        try {
+          const j = JSON.parse(line.slice(5).trim());
+          const t = (j?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("");
+          if (t) { full += t; onDelta(full); }
+        } catch { /* */ }
+      }
+    }
+    return full || null;
+  } catch { return null; }
+}
+
 async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number; prefix?: string }, onDelta: (full: string) => void): Promise<string | null> {
   /* ✍️ 프리필(DeepSeek Chat Prefix Completion 베타) — 답의 '첫 글자들'을 우리가 박고
      모델이 이어 쓰게 한다. 출력 필터(사후 제거)와 달리 출발 자체를 조향한다.
      첫 적용: prefix="<ms>" → 마음읽기 블록을 매 턴 강제(지시만으론 모델이 건너뛸 수 있다).
      ⚠️ deepseek 계열에서만. 베타 경로 실패 시 프리필 없이 일반 경로로 폴백(턴이 죽으면 안 된다). */
   const model = effModel(opts?.model || CHAT_MODEL);
+  // 🚀 gemini 는 정식 창구로(호환 창구 19~24초 → 3초). 실패하면 아래 호환 경로로 그대로 폴백.
+  if (/^gemini/.test(model)) {
+    const nat = await geminiNativeStream(messages, opts?.maxTokens || 340, onDelta);
+    if (nat) return nat;
+  }
   const usePrefix = !!opts?.prefix && /^deepseek/.test(model) && /deepseek\.com/.test(BASE_URL);
   try {
     const msgs = pruneOrphanToolCalls(messages, new Set());
@@ -3561,6 +3608,46 @@ Deno.serve(async (req) => {
         } catch (e) { fails.push({ case: c.name, why: "throw: " + String(e).slice(0, 160) }); }
       }
       return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
+    }
+    if (body?.op === "native_probe") {
+      /* 🔬 Gemini '정식 창구'(streamGenerateContent) vs OpenAI 호환 창구 지연 비교.
+         호환 창구는 첫 글자까지 19~24초가 걸린다(실측). 정식 창구가 빠르면 그쪽으로 옮긴다. */
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const mdl = String(body?.model || "gemini-3.6-flash");
+      const out: any = { model: mdl };
+      try {
+        const t0 = Date.now();
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${mdl}:streamGenerateContent?alt=sse&key=${GEMINI_EMBED_KEY}`;
+        const r = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: "너는 반말 쓰는 친구다. 짧게 답해." }] },
+            contents: [{ role: "user", parts: [{ text: "오늘 좀 지치네" }] }],
+            generationConfig: { maxOutputTokens: 200, temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } },
+          }),
+        });
+        if (!r.ok || !r.body) { out.native = { status: r.status, body: (await r.text()).slice(0, 300) }; }
+        else {
+          const rd = r.body.getReader(); const dec = new TextDecoder();
+          let chunks = 0, firstMs = 0, buf = "", text = "";
+          for (;;) {
+            const { done, value } = await rd.read(); if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+              if (!line.startsWith("data:")) continue;
+              try {
+                const j = JSON.parse(line.slice(5).trim());
+                const t = j?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text || "").join("") || "";
+                if (t) { chunks++; text += t; if (!firstMs) firstMs = Date.now() - t0; }
+              } catch { /* */ }
+            }
+          }
+          out.native = { status: 200, chunks, firstMs, totalMs: Date.now() - t0, sample: text.slice(0, 60) };
+        }
+      } catch (e) { out.native = { err: String(e).slice(0, 200) }; }
+      return json(out);
     }
     if (body?.op === "stream_probe") {
       /* 🔬 스트리밍 진단 — chatStream 이 왜 null 을 뱉는지 원시로 본다.
