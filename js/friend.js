@@ -1093,8 +1093,38 @@
        말풍선도 없이 점만 깜빡였다 사라져 고장난 것처럼 보인다. 400ms 안에 오면 아예 안 띄운다. */
     /* 열자마자 타이핑 도트 즉시 — 400ms 지연은 "눌러도 반응이 없다"는 첫인상을 만들었다. */
     var tShown=true, tT=0; typing(true);
-    var r = await callFriend("", []);
+    /* 🌊 인사 스트리밍 — 첫 글자가 ~1초에 뜬다(예전엔 통짜 JSON 2~4초).
+       서버가 SSE 를 주면 라이브 렌더, 아니면(구서버·게스트·quiet) JSON 그대로. */
+    var r=null, liveEl=null;
+    try{
+      var gb=fbBody("", [], null, true); gb.stream=true; gb.greetStream=true;
+      var res=await friendFetch(gb);
+      if(res.__authFail){ r=null; }
+      else{
+        var ct=(res.headers.get("content-type")||"");
+        if(ct.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
+          r=await consumeStream(res, function(full){
+            if(_greetStale) return;                       // 유저가 먼저 말 걸었으면 라이브 렌더도 중단
+            if(!liveEl){ typing(false); tShown=false; liveEl=addMsg("a",""); }
+            var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
+            logEl.scrollTop=logEl.scrollHeight;
+          });
+        } else { r=await res.json(); }
+      }
+    }catch(e){ r=null; }
     if(tT)clearTimeout(tT); if(tShown) typing(false);
+    /* 스트림으로 이미 그렸으면 아래 addFriendReply 중복 방지 — 라이브 버블을 최종본으로 확정 */
+    if(liveEl && r && r.streamed){
+      if(_greetStale){ liveEl.remove(); }
+      else{
+        var parts=(r._bubbles&&r._bubbles.length)?r._bubbles:[r.reply||""];
+        var bub0=liveEl.querySelector(".fr-bubble"); if(bub0) bub0.innerHTML=fmtStage(parts[0]||"");
+        for(var bi=1; bi<parts.length; bi++) addMsg("a", parts[bi]);
+        history.push({role:"assistant",content:r.reply||""}); saveChat(); scrollBottom();
+        if(r.friendName){ friendName=r.friendName; setTitle(); }
+      }
+      return;
+    }
     if(_greetStale){ if(r&&r.friendName){ friendName=r.friendName; setTitle(); } return; }   // 유저가 이미 용건을 말함 — 인사 폐기
     if(r && r.friendName){ friendName=r.friendName; setTitle(); }
     /* 🤫 서버가 '지금은 말 걸 때가 아니다'라고 판단하면(quiet 또는 빈 reply) 조용히 물러난다.

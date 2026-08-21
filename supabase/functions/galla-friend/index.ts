@@ -4503,7 +4503,12 @@ ${parts.join("\n")}`;
     //    ⚠️ route(도구 강제 힌트)가 선 턴은 절대 스트리밍으로 보내지 마라 — chatStream은 tool_choice:"none"이라
     //       도구가 없는데 "galla_news로 조회해라" 지시만 받아, 모델이 도구 문법을 '텍스트로 흉내 낸다'.
     //       실측 사고: 유저 화면에 [(query:"...", kind:"news")]가 그대로 노출되고 3턴 내내 "찾아볼게"만 반복했다.
-    if (body?.stream === true && brain === "companion" && !route && !planMode && userMsg && !body?.meta && !crisis) {   // 🆘 위기는 상담카드 첨부 위해 JSON 경로로
+    /* 🌊 인사도 스트리밍 — "들어가자마자 나오는 말이 너무 느리다"(사장님).
+       인사 턴은 userMsg 없음+meta=true 라 조건에 막혀 JSON(2~4초 통짜)으로만 갔다.
+       greetStream 플래그를 단 신 클라이언트만 허용(구버전은 예전 그대로 JSON).
+       quiet(3분 문턱)·선톡은 이 지점보다 앞에서 이미 반환된다 — 스트림까지 안 온다. */
+    const greetStream = !userMsg && body?.greetStream === true;
+    if (body?.stream === true && brain === "companion" && !route && !planMode && (userMsg || greetStream) && (!body?.meta || greetStream) && !crisis) {   // 🆘 위기는 상담카드 첨부 위해 JSON 경로로
       turnStat(["path:stream", "brain:companion"]);   // 📏 스트림은 1콜 — 가드 없음
       const enc = new TextEncoder();
       const rstream = new ReadableStream({
@@ -4526,7 +4531,7 @@ ${parts.join("\n")}`;
               full = j?.choices?.[0]?.message?.content || "";
               send("text", { full: stripForPreview(full) });
             }
-            let sreply = full || "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+            let sreply = full || (greetStream ? "왔네 ㅋㅋ 뭐 하다 왔어?" : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?");
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke, heavy: tHeavy, light: tLight });
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
