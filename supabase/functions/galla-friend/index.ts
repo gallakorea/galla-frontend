@@ -3142,6 +3142,230 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   🧭 의도 판정 — 단 하나의 층
+
+   예전엔 7층 폴스루였다: 정규식 라우터 → 제안확정 → 후속백스톱 → 발행라우터 →
+   열기동사 선점 → 창작 FSM(LLM) → 임베딩. 층마다 자기 정규식을 따로 갖고 있어서
+   "열어라"를 판정하는 곳이 4군데, 초안 종류 추론 표가 4벌이었다(커버 범위도 서로 달랐다).
+   한쪽만 고치면 다른 쪽이 남아 사고가 반복됐다("열어봐"에 이슈 초안이 생성된 실사고 등).
+
+   지금은 규칙 표(INTENT_RULES)를 위에서부터 훑고 **처음 맞는 규칙이 이긴다**.
+   ⚠️ 새 의도는 표에 한 줄 추가한다. 핸들러 본문에 if 를 심으면 그 순간 다시 7층이 된다.
+   ⚠️ 표의 순서가 곧 우선순위다 — 순서를 바꾸면 동작이 바뀐다.
+   ⚠️ 이 표의 회귀는 op:"intent_test" 가 LLM 없이 검사한다.
+   ══════════════════════════════════════════════════════════════════════════ */
+const OPEN_STRONG_RE = /(열라|열어|올려\s*봐|올려\s*줘|띄워|빨리\s*(줘|열|보))/;   // 강한 열기 = 바로 연다
+const OPEN_WEAK_RE = /(보여|틀어|보자)/;                                          // 약한 요청 = 여러 개면 선택지
+const OPEN_ONLY_RE = /^(열어|띄워|틀어)[\s봐줘바라!~ㅋ.]*$/;                        // 열기 동사 단문
+
+/* 초안 종류 추론 — 예전엔 네 곳에 복붙돼 있었고 표가 미묘하게 달랐다
+   ("판돈|배당"은 두 곳에만, "브이로그"는 다른 두 곳에만). 합집합으로 한 곳에 모은다. */
+function draftToolStrict(s: string): string | null {
+  if (/예측|베팅|마켓|판돈|배당|얼마\s*걸/.test(s)) return "draft_predict";
+  if (/숏판|갈라리|릴스|숏폼|브이로그|영상\s*올|사진\s*올/.test(s)) return "draft_gallari";
+  if (/광장|자유\s*글|에세이|후기|일상\s*글|썰\s*(올|풀|써)/.test(s) && !/이슈|찬반|진영/.test(s)) return "draft_plaza";
+  if (/이슈|찬반|진영|논쟁/.test(s)) return "draft_issue";
+  return null;
+}
+function draftToolFor(blob: string): string { return draftToolStrict(blob) || "draft_issue"; }
+
+type IntentCtx = {
+  userMsg: string; history: any[]; rel: any;
+  work: boolean; handoff: boolean; crisis: boolean; thirdParty: boolean;
+  lastA: string; recentBlob: string;
+};
+type IntentState = { route: any; planMode: boolean; craft: any; autoOpen: boolean; autoStrong: boolean; reopen: any; stat: string[] };
+type IntentRule = { name: string; run: (c: IntentCtx, st: IntentState) => any };
+
+const INTENT_RULES: IntentRule[] = [
+  /* 1. 정규식 사전 라우터 — 가장 싸고 확실한 신호(뉴스·시세·핫튜브 등) */
+  { name: "regex_router", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      /* ⚠️ 창작 요청은 여기서 가로채면 안 된다 — "이슈 하나 만들어줘"의 '이슈'가 hot_issues 로 걸려
+         기획(3안 제시)이 통째로 건너뛰어졌다(intent_test 가 잡은 실제 오작동). 창작 동사가 있으면 넘긴다. */
+      if (MAKE_RE.test(c.userMsg) || /(만들|기획|앵글|프레임|초안)/.test(c.userMsg)) return;
+      const r = routeIntent(c.userMsg);
+      if (r) { st.route = r; st.stat.push("intent:regex"); }
+    } },
+
+  /* 2. 제안→확정 딜리버 — 갈비스가 "볼래?/열어줄게" 하고 상대가 "뭔데/ㄱㄱ" 하면 그건 확정이다.
+     이 경로가 없어서 "열어줄게, 잠깐만"만 3연속 하고 실제론 아무것도 안 열었다(실로그 "하세월이구만"). */
+  { name: "deliver_confirm", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.crisis) return;
+      const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|열어\s*봐|봐\s*봐|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(c.lastA);
+      const confirmed = /^(뭔데|뭔데\?|응|ㅇㅇ|ㅇㅋ|그래|좋아|고|ㄱㄱ|ㄱ|보여줘|봐보자|볼래|열어|올려\s*봐?|틀어|가져와|빨리|해봐|ㅊㅊ)[\s.!?~ㅋㅎ]*$/.test(c.userMsg.trim());
+      const angry = /(짱나|짜증|빨리|하세월|졸라\s*걸리|언제\s*(줘|열|보여))/.test(c.userMsg);
+      /* ⚠️ 직전이 '창작 제안'이면 "올려봐/ㄱㄱ"는 열라는 게 아니라 **만들라는 뜻**이다.
+         예전엔 이 구분이 없어 "이슈로 만들어볼래?" → "올려봐" 가 point_to 로 새어
+         초안이 안 나가고 엉뚱한 카드가 열렸다(사장님이 겪은 '올려봐' 모호성의 정체). */
+      if (/(만들어\s*볼래|만들\s*까|만들어볼까|이슈로\s*만들|예측으로\s*만들|숏판으로\s*만들|판\s*깔아|콘텐츠로\s*만들)/.test(c.lastA)) return;
+      if (!(proposed && (confirmed || angry))) return;
+      st.autoOpen = true; st.autoStrong = true;   // 확정 딜리버는 여러 개여도 첫 번째를 바로 연다
+      st.stat.push("intent:deliver");
+      st.route = { tool: "point_to", hint: "방금 네가 보여주겠다고 한 그 콘텐츠를 **지금 즉시 point_to(view) 로 열어라**. hot_issues/galla_news/hot_videos 로 실물을 찾아서라도 이번 턴에 반드시 연다. '열어줄게/잠깐만/이제 열릴 거야' 같은 말만 하고 안 여는 건 최악의 결함이다 — 이미 세 번 그랬다. 못 찾으면 찾은 다른 걸 열고 솔직히 말해라." };
+    } },
+
+  /* 3. 후속 디테일 백스톱 — "누군데?"에 도구 재호출 없이 실존인물 디테일을 지어낸 실사고. */
+  { name: "detail_backstop", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff) return;
+      if (!/(누군데|누구야|누구냐|누구지|누군지|무슨\s*일인데|뭔\s*일이|자세히|상세|더\s*알려)/.test(c.userMsg)) return;
+      if (!/(이슈|뉴스|사건|기사|의원|정치|논란|판)/.test(c.lastA)) return;
+      st.stat.push("intent:detail");
+      st.route = { tool: "galla_news", hint: "상대가 방금 화제의 '구체 디테일'(누구·무슨 일)을 물었다. galla_news 실데이터에서 그 사건을 찾아 **적힌 내용만** 답해라. 인물의 직업·소속·만남·발언을 데이터에 없는데 이어붙이지 마라(실존인물 디테일 지어내기=명예훼손급 최악 사고). 데이터에 없으면 '기사엔 거기까진 안 나와있네'라고 솔직히." };
+    } },
+
+  /* 4. 중복 안내를 듣고도 "그래도 만들어" — 차별화 재시도 강제. */
+  { name: "publish_insist_new", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      if (!/만들/.test(c.userMsg)) return;
+      if (!/(이미\s*판|판\s*섰|재탕|기존\s*판|이미\s*있|똑같아서|비슷한\s*(판|이슈)|새로\s*파|거기\s*가서|가서\s*붙)/.test(c.lastA)) return;
+      const tool = draftToolFor(c.userMsg + " " + c.recentBlob);
+      st.stat.push("intent:insist_new");
+      st.route = { tool, hint: `상대는 '중복이니 기존 판 가라'는 네 안내를 이미 들었고 **그래도 새로 만들라고 재차 요청**했다. 기존 판 얘기 반복 절대 금지 — 지금 즉시 ${tool}를 differentiated:true로 호출해라. 각도는 네가 골라라(기존 판과 분명히 다른 쟁점·대상·조건으로): 되묻지 말고 초안부터. 차별화 포인트는 초안 낸 뒤 한 줄로만 설명.` };
+    } },
+
+  /* 5. 발행 확정 — "올려/이대로/그걸로/N안" 또는 제안에 대한 승낙. 즉시 초안. */
+  { name: "publish_confirm", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      const m = c.userMsg.trim();
+      const pub = /(올려\s*(봐|줘|보|줄|주라|라|놔)|올려봐|발의(해|하|할|해줘)|발행(해|하)|게시\s*해|이대로\s*(올|가|만들)|이걸로\s*(올|가|발행|해|만들)|그걸로\s*(가|해|만들|올)|그대로\s*(가|만들|올려)|[ABab1-3][안번]?\s*으?로\s*(가|해|만들|올))/.test(c.userMsg)
+        || (/(좋아|ㅇㅋ|오케이|그래|응|고+)\s*(그걸로|그렇게|가자|만들어|해줘)?$/.test(m) && /(안|앵글|각도|프레임|방향|어느|뭐로)/.test(c.lastA))
+        // 갈비스가 소재를 '제안'한 상태에서 "만들어 봐" = 승낙 = 즉시 초안(실사고: 4번 말해도 기획 루프만 돌았다)
+        || (/(만들어(\s*(봐|줘|바))?|만들자|가자|해줘|ㄱ+ㄱ*|고고)[!~ㅋ.\s]*$/.test(m) && /(만들어\s*볼래|만들\s*까|만들어볼까|이슈로\s*만들|어때|볼래\?|가볼래|어떻|이거로)/.test(c.lastA) && /(이슈|숏판|예측|광장|콘텐츠|판)/.test(c.lastA));
+      if (!pub) return;
+      const tool = draftToolFor(c.userMsg + " " + c.recentBlob);
+      st.stat.push("intent:publish");
+      st.route = { tool, hint: `상대가 '확정' 신호를 줬다(올려/이대로/그걸로/N안) — '뭐로 갈래?/주제 확정하고' 같은 되묻기·확인 절대 금지. 즉시 ${tool}를 호출해 초안을 만들어라. 직전 대화에서 상대가 고른 앵글·프레임 그대로. 제목·찬반라벨·본문 모든 인자를 채워라(애매하면 합리적으로 채워 일단 초안 — 상대가 폼에서 고친다). 도구가 '중복주의'를 돌려줘도 "어때?"로 되묻지 마라 — 상대 각도가 기존 판과 다르면 그 자리에서 differentiated:true로 재호출해 초안을 내고, 사실상 같은 주제면 point_to로 기존 판 카드를 붙여라. 어느 쪽이든 이번 턴에 카드(초안 또는 기존 판) 하나는 반드시 나가야 한다.` };
+    } },
+
+  /* 6. "빨리/알아서 만들어" — 기획 생략, 최선 1안으로 즉시. */
+  { name: "publish_fast", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      if (!MAKE_RE.test(c.userMsg) || !/(빨리|그냥|알아서|아무|바로|대충)/.test(c.userMsg)) return;
+      const tool = draftToolFor(c.userMsg + " " + c.recentBlob);
+      st.stat.push("intent:fast");
+      st.route = { tool, hint: `상대가 '빨리/알아서'라고 했다 — 기획 생략, 네가 제일 쎈 앵글 하나로 즉시 ${tool} 호출(모든 인자 채워서).` };
+    } },
+
+  /* 7. 기획 모드 — "만들어줘/프레임 잡아줘"는 바로 박지 말고 앵글 3안부터(일방 제작 금지). */
+  { name: "plan_mode", run: (c, st) => {
+      if (st.route || st.planMode || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      if (!(MAKE_RE.test(c.userMsg) || /(프레임|앵글|각도?)[^\n]{0,6}(제안|잡|뽑|짜|줘|봐)|기획\s*(해|부터|하자)/.test(c.userMsg))) return;
+      st.planMode = true;
+      st.stat.push("intent:plan");
+    } },
+
+  /* 8. 열기 동사 단문 — "열어봐"가 창작 분류기로 흘러가 이슈 초안을 만들어버린 실사고 차단.
+     '올려봐'는 발행 의미와 겹치니 여기 넣지 않는다(위 5번이 먼저 잡는다). */
+  { name: "open_verb", run: (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      if (!OPEN_ONLY_RE.test(c.userMsg.trim())) return;
+      st.autoOpen = true; st.autoStrong = true;
+      st.stat.push("intent:open_verb");
+      st.route = { tool: "point_to", hint: "상대가 '열어라'라고 했다 — 직전 대화에서 보여주기로 한 그 콘텐츠를 지금 point_to로 실제로 열어라. draft_* 초안 생성 절대 금지(열라는 말은 만들라는 말이 아니다). 마땅한 대상이 없으면 hot_issues/hot_videos에서 대화 맥락에 맞는 걸 찾아 열어라." };
+    } },
+
+  /* 9. 창작 상태머신 — 정규식이 못 정했는데 창작 흐름이 진행 중이면 초소형 분류콜로 '진짜' 의도 판정.
+     (무기억 정규식 추측이 "만들어 봐"×4에도 헛돌던 근본 원인) */
+  { name: "craft_fsm", run: async (c, st) => {
+      if (st.route || st.planMode || c.work || c.handoff || c.crisis || !c.userMsg) return;
+      const state = st.craft?.state;
+      if (!(state === "proposed" || state === "planning" || state === "confirmed")) return;
+      const ctxBlob = c.history.slice(-6).map((m: any) => (m?.role === "user" ? "유저: " : "AI: ") + String(m?.content || "").slice(0, 160)).join("\n");
+      const ci = await classifyCraft(state, st.craft.topic || "", ctxBlob, c.userMsg);
+      if (!ci) return;
+      st.stat.push("intent:fsm_" + ci.intent);
+      const toolFor = (ty: string) => {
+        const direct: Record<string, string> = { predict: "draft_predict", gallari: "draft_gallari", plaza: "draft_plaza", issue: "draft_issue" };
+        if (direct[ty]) return direct[ty];
+        // 타입 판정은 '가까운 발화 우선' — 전체 blob 한방 검사는 옛 턴의 "숏폼" 한 단어에 낚인다(실프로브)
+        for (const m of [c.userMsg, ...[...c.history].reverse().map((h: any) => String(h?.content || ""))]) {
+          const t = draftToolStrict(m); if (t) return t;
+        }
+        return "draft_issue";
+      };
+      if (ci.intent === "accept") {
+        const tool = toolFor(ci.type);
+        const topic = ci.topic || st.craft.topic || "";
+        const dupNote = st.craft.dup ? ` 직전 시도가 '중복'에 걸렸었다 — 이번엔 처음부터 differentiated:true로, 기존 판과 분명히 다른 각도로 호출해라.` : "";
+        st.route = { tool, hint: `[상태머신] 상대가 진행 중인 제안${topic ? `("${topic}")` : ""}을 **승낙·확정**했다. 되묻기·재확인·역제안 절대 금지 — 지금 즉시 ${tool}를 호출해 초안을 만들어라(모든 인자 채워서).${dupNote} 중복주의가 나오면 각도 바꿔 differentiated:true 재호출 또는 point_to — 어느 쪽이든 이번 턴에 카드 하나는 반드시 나간다.` };
+        st.craft = { state: "confirmed", at: new Date().toISOString(), topic, dup: st.craft.dup };
+      } else if (ci.intent === "new_topic") {
+        st.planMode = true;
+        st.craft = { state: "planning", at: new Date().toISOString(), topic: ci.topic || "" };
+      } else if (ci.intent === "modify") {
+        st.planMode = state === "planning";   // 기획 중 수정 = 기획 계속. 제안 단계 수정 = 대화로.
+      } else if (ci.intent === "reject") {
+        st.craft = { state: "idle" };
+      }
+      // chat = 상태 유지(잡담 한두 턴 끼어도 흐름 안 잃음 — 2h 감쇠가 정리)
+    } },
+
+  /* 10. 임베딩 폴백 — 위가 전부 놓친 발화만 의미로 분류(+0.001원/턴).
+     reopen 이면 LLM 없이 마지막 카드를 다시 연다(결정적 재오픈과 같은 처리). */
+  { name: "semantic", run: async (c, st) => {
+      if (st.route || !c.userMsg || c.work || c.handoff || c.crisis) return;
+      /* ⚠️ 기획 턴을 덮어쓰지 않는다 — "이슈 하나 만들어줘"가 기획으로 잡혔는데
+         임베딩이 hot_issues 로 다시 라우팅해 3안 제시가 통째로 날아갔다(intent_test 적발). */
+      if (st.planMode || MAKE_RE.test(c.userMsg) || /(만들|기획|앵글|프레임|초안)/.test(c.userMsg)) return;
+      const sem = await semanticIntent(c.userMsg);
+      if (!sem) return;
+      st.stat.push("sem:" + sem.intent);
+      if (sem.intent === "reopen") {
+        const lv = c.rel?.session_meta?.last_view;
+        if (lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000) {
+          st.reopen = { ctype: lv.ctype, id: lv.id, label: lv.label, say: reopenSay(c.userMsg) };
+        }
+        return;
+      }
+      if (INTENT_ROUTE[sem.intent]) {
+        st.route = INTENT_ROUTE[sem.intent];
+        if (/열|띄|보여/.test(c.userMsg)) st.autoOpen = true;
+      }
+    } },
+];
+const MAKE_RE = /(만들어\s*줘|만들자|하자|짜\s*줘|잡아\s*줘|이슈로\s*(만들|해|써|가)|판\s*(만들|세워|짜)|글로\s*써|예측\s*(만들|판)|숏판\s*(만들|하)|콘텐츠\s*(만들|하))/;
+
+/* 🔁 재오픈 멘트 — 예전엔 두 곳(정규식 재오픈·임베딩 재오픈)에 배열이 복붙돼 있었다. */
+function reopenSay(msg: string): string {
+  let h = 0; for (const ch of msg) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const says = ["여기! 바로 열게.", "지금 바로 띄운다!", "오케이 — 바로 연다.", "간다!"];
+  return says[h % says.length];
+}
+
+async function decideIntent(a: {
+  userMsg: string; history: any[]; craft: any; rel: any;
+  work: boolean; handoff: boolean; crisis: boolean; thirdParty: boolean;
+}): Promise<IntentState> {
+  const userMsg = a.userMsg || "";
+  const lastA = String(([...a.history].reverse().find((m: any) => m?.role === "assistant") || {}).content || "");
+  const recentBlob = a.history.slice(-8).map((m: any) => String(m?.content || "")).join(" ");
+  const c: IntentCtx = { userMsg, history: a.history, rel: a.rel, work: a.work, handoff: a.handoff, crisis: a.crisis, thirdParty: a.thirdParty, lastA, recentBlob };
+  const st: IntentState = {
+    route: null, planMode: false, craft: a.craft, reopen: null, stat: [],
+    // 자동오픈 신호는 규칙과 무관하게 발화 자체에서 한 번만 뽑는다(예전엔 4곳에 흩어져 있었다)
+    autoOpen: OPEN_STRONG_RE.test(userMsg) || OPEN_WEAK_RE.test(userMsg),
+    autoStrong: OPEN_STRONG_RE.test(userMsg),
+  };
+  for (const rule of INTENT_RULES) {
+    if (st.reopen) break;                 // 재오픈은 즉시 반환 대상 — 더 볼 것 없다
+    try { await rule.run(c, st); }
+    catch (e) { console.error("intent rule failed", rule.name, String(e).slice(0, 120)); }
+  }
+  /* 상태 동기화 — 초안 계열로 라우팅됐을 때만 confirmed 로 올린다.
+     비창작 도구(galla_news 등)까지 confirmed 로 만들면 '가짜 생성' 가드가 2시간 헛돈다(실측 4회 헛방).
+     ⚠️ 임베딩 폴백(10번)은 이 동기화 대상이 아니다 — 그건 창작 흐름이 아니다. */
+  if (!a.work && !a.handoff && !a.crisis) {
+    const semOnly = st.stat.some((s) => s.startsWith("sem:"));
+    if (st.route && !semOnly) st.craft = { state: "confirmed", at: new Date().toISOString(), topic: st.craft?.topic || null };
+    else if (st.planMode) st.craft = { state: "planning", at: new Date().toISOString(), topic: st.craft?.topic || null };
+  }
+  if (a.thirdParty) st.route = null;   // 신상 캐기 턴은 라우터 전부 무효(tool_choice 400 사고 방지)
+  return st;
+}
+
+
 // 🧹 '선언되지 않은 도구를 호출한 기록'을 메시지에서 걷어낸다(짝이 되는 tool 결과까지).
 //    남아 있으면 API가 400(no function named ...)을 뱉고, 그 턴이 통째로 실패해 **유저에겐 빈 응답**이 나간다.
 //    실측: 갈등 턴에 draft_* 를 숨겼더니 이전 스텝의 draft_issue 호출 기록과 충돌했다.
@@ -3574,6 +3798,45 @@ Deno.serve(async (req) => {
         } catch (e) { out[tag] = { err: String(e).slice(0, 200) }; }
       }
       return json(out);
+    }
+    if (body?.op === "intent_test") {
+      /* 🧭 의도 표 회귀검사 — LLM 0콜(창작 FSM·임베딩 규칙은 상태·발화로 안 걸리게 케이스를 짠다).
+         7층을 접으면서 '어떤 발화가 어디로 가는지'가 표 하나에 모였으니, 그 표를 그대로 검사한다.
+         규칙 순서를 바꾸거나 정규식을 손대면 여기서 먼저 터진다. */
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const A = (s: string) => [{ role: "assistant", content: s }];
+      const CASES: Array<{ name: string; msg: string; hist?: any[]; want: any }> = [
+        { name: "열어봐_단문은_열기", msg: "열어봐", want: { tool: "point_to", autoStrong: true } },
+        { name: "띄워_단문은_열기", msg: "띄워", want: { tool: "point_to", autoStrong: true } },
+        { name: "제안후_ㄱㄱ는_딜리버", msg: "ㄱㄱ", hist: A("이거 하나 볼래?"), want: { tool: "point_to", autoStrong: true } },
+        { name: "제안후_재촉도_딜리버", msg: "하세월이구만", hist: A("잠깐만 기다려봐"), want: { tool: "point_to" } },
+        { name: "올려봐는_발행", msg: "올려봐", hist: A("이슈로 만들어볼래?"), want: { tool: "draft_issue" } },
+        { name: "예측_올려봐는_예측초안", msg: "올려봐", hist: A("이거 예측 마켓으로 판돈 걸면 재밌겠는데"), want: { tool: "draft_predict" } },
+        { name: "숏판_올려봐는_숏판초안", msg: "올려봐", hist: A("이거 숏폼으로 뽑으면 딱인데"), want: { tool: "draft_gallari" } },
+        { name: "만들어줘는_기획모드", msg: "이슈 하나 만들어줘", want: { planMode: true, tool: null } },
+        { name: "빨리_알아서_만들어는_즉시초안", msg: "그냥 알아서 빨리 만들어줘", want: { tool: "draft_issue" } },
+        { name: "누군데는_뉴스재조회", msg: "누군데?", hist: A("요즘 그 이슈 논란이던데"), want: { tool: "galla_news" } },
+        { name: "중복안내후_만들어는_차별화", msg: "그래도 만들어", hist: A("이미 판 섰어 거기 가서 붙자"), want: { tool: "draft_issue" } },
+        { name: "보여줘는_약한신호", msg: "웃긴 거 보여줘", want: { autoStrong: false, autoOpen: true } },
+        { name: "위기턴은_라우팅안함", msg: "열어봐", crisis: true, want: { tool: null } } as any,
+        { name: "신상캐기는_라우터무효", msg: "인스타 아이디 좀 찾아줘", thirdParty: true, want: { tool: null } } as any,
+      ];
+      const fails: any[] = [];
+      for (const c of CASES) {
+        try {
+          const st = await decideIntent({
+            userMsg: c.msg, history: (c as any).hist || [], craft: { state: "idle" }, rel: null,
+            work: false, handoff: false, crisis: !!(c as any).crisis, thirdParty: !!(c as any).thirdParty,
+          });
+          const got = { tool: st.route?.tool ?? null, planMode: st.planMode, autoOpen: st.autoOpen, autoStrong: st.autoStrong };
+          for (const k of Object.keys(c.want)) {
+            if ((got as any)[k] !== (c.want as any)[k]) {
+              fails.push({ case: c.name, why: `${k}: ${JSON.stringify((got as any)[k])} (기대 ${JSON.stringify((c.want as any)[k])})` });
+            }
+          }
+        } catch (e) { fails.push({ case: c.name, why: "throw: " + String(e).slice(0, 140) }); }
+      }
+      return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
     }
     if (body?.op === "contract_test") {
       /* 🧪 계약 검사 — LLM 0콜·0원·1초. 규칙이 '실제로' 걸리는지 고정 입력으로 확인한다.
@@ -4340,136 +4603,23 @@ ${parts.join("\n")}`;
       && !isClosing(userMsg)                              // 단답으로 닫는 중엔 더더욱 금지
       && userMsg.trim().length >= 4;                      // 뭔가 말을 하고 있을 때만
     if (crisis) { try { await supa.rpc("log_crisis", { p_user: uid, p_severity: 2, p_term: crisis.term, p_excerpt: userMsg.slice(0, 120) }); } catch { /* */ } }   // await: 위기 로그는 절대 놓치면 안 됨(관제·후속)
-    let route = (userMsg && !work && !handoff && !crisis) ? routeIntent(userMsg) : null;
-    /* 📦 제안→확정 딜리버 — 갈비스가 "볼래?/보여줄게/열어줄게" 하고 상대가 "뭔데/응/ㄱㄱ" 하면
-       그건 확정이다. 이 경로가 없어서 모델이 "열어줄게, 잠깐만" → "이제 바로 열릴 거야" →
-       "이번엔 바로 갈게"를 3연속 하며 실제로는 아무것도 안 열었다(사장님 실로그, "하세월이구만").
-       ⚠️ craft FSM 의 창작 확정과 다른 층이다 — 그건 초안 만들기, 이건 콘텐츠 열기. */
-    /* 이 턴의 view 액션을 클라가 '자동으로 열어야' 하는가.
-       ⚠️ globalThis 에 두면 동시 요청끼리 섞여 남의 카드가 자동 오픈된다 — 요청 지역 변수로. */
-    let _autoOpen = /(열라|열어|올려\s*봐|올려\s*줘|띄워|보여|틀어|보자|빨리\s*(줘|열|보))/.test(userMsg || "");
-    /* 🎚 강한 열기("열어/띄워/빨리")와 약한 요청("보여줘/보자")을 나눈다 — 추천 결과가 여러 개면
-       약한 요청은 자동으로 열지 않고 번호 선택지로 고르게 한다(사장님: "열어줘 하기 전에 선택지를 줘"). */
-    let _autoStrong = /(열라|열어|올려\s*봐|올려\s*줘|띄워|빨리\s*(줘|열|보))/.test(userMsg || "");
-    if (!route && userMsg && !work && !crisis) {
-      const lastA = String(([...history].reverse().find((m: any) => m?.role === "assistant") || {}).content || "");
-      const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|열어\s*봐|봐\s*봐|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(lastA);
-      const confirmed = /^(뭔데|뭔데\?|응|ㅇㅇ|ㅇㅋ|그래|좋아|고|ㄱㄱ|ㄱ|보여줘|봐보자|볼래|열어|올려\s*봐?|틀어|가져와|빨리|해봐|ㅊㅊ)[\s.!?~ㅋㅎ]*$/.test((userMsg || "").trim());
-      const angry = /(짱나|짜증|빨리|하세월|졸라\s*걸리|언제\s*(줘|열|보여))/.test(userMsg || "");
-      if (proposed && (confirmed || angry)) {
-        _autoOpen = true;   // 제안을 확정했다 = 열어달라는 뜻
-        _autoStrong = true; // 확정 딜리버는 여러 개여도 첫 번째를 바로 연다
-        route = { tool: "point_to", hint: "방금 네가 보여주겠다고 한 그 콘텐츠를 **지금 즉시 point_to(view) 로 열어라**. hot_issues/galla_news/hot_videos 로 실물을 찾아서라도 이번 턴에 반드시 연다. '열어줄게/잠깐만/이제 열릴 거야' 같은 말만 하고 안 여는 건 최악의 결함이다 — 이미 세 번 그랬다. 못 찾으면 찾은 다른 걸 열고 솔직히 말해라." };
-      }
-    }
-    // 🔎 후속 디테일 질문 백스톱(사장님 실사고: "누군데?"에 도구 재호출 없이 '검사 출신 변호사가 사과문 전달' 지어냄) —
-    //    직전 화제가 뉴스·이슈인데 구체 디테일을 물으면 galla_news 강제 재조회로 '적힌 것만' 답하게.
-    if (!route && userMsg && !work && !handoff) {
-      const lastA = String((([...history].reverse().find((m: any) => m?.role === "assistant")) || {}).content || "");
-      if (/(누군데|누구야|누구냐|누구지|누군지|무슨\s*일인데|뭔\s*일이|자세히|상세|더\s*알려)/.test(userMsg) && /(이슈|뉴스|사건|기사|의원|정치|논란|판)/.test(lastA)) {
-        route = { tool: "galla_news", hint: "상대가 방금 화제의 '구체 디테일'(누구·무슨 일)을 물었다. galla_news 실데이터에서 그 사건을 찾아 **적힌 내용만** 답해라. 인물의 직업·소속·만남·발언을 데이터에 없는데 이어붙이지 마라(실존인물 디테일 지어내기=명예훼손급 최악 사고). 데이터에 없으면 '기사엔 거기까진 안 나와있네'라고 솔직히." };
-      }
-    }
-    // 🛠 발행 라우터 + 🎨 기획 모드(사장님 2대 지적의 균형) —
-    //    ①"올려봐/발의/이대로 가/그걸로/B안" 같은 '확정' 신호 = 즉시 draft 강제(무한 확인루프 방지).
-    //    ②"만들어줘/하자" 같은 '제작 요청' = 바로 박지 말고 기획 1턴(앵글 2~3안 제시→상대가 고름). 일방적 제작 금지.
-    let planMode = false;
-    if (userMsg && !work && !handoff && !crisis) {
-      const recentA = String((([...history].reverse().find((m: any) => m?.role === "assistant")) || {}).content || "");
-      // 타입 추론은 '최근 여러 턴'을 봐야(마지막 1턴만 보면 대화 주제[숏판 등]를 놓치고 default 이슈로 오발 — 실앱 재현)
-      const recentBlob = history.slice(-8).map((m: any) => String(m?.content || "")).join(" ");
-      const pub = /(올려\s*(봐|줘|보|줄|주라|라|놔)|올려봐|발의(해|하|할|해줘)|발행(해|하)|게시\s*해|이대로\s*(올|가|만들)|이걸로\s*(올|가|발행|해|만들)|그걸로\s*(가|해|만들|올)|그대로\s*(가|만들|올려)|[ABab1-3][안번]?\s*으?로\s*(가|해|만들|올))/.test(userMsg)
-        || (/(좋아|ㅇㅋ|오케이|그래|응|고+)\s*(그걸로|그렇게|가자|만들어|해줘)?$/.test(userMsg.trim()) && /(안|앵글|각도|프레임|방향|어느|뭐로)/.test(recentA))   // 기획 제안에 대한 승낙
-        // 🔑 갈비스가 소재를 '제안'한 상태("~만들어볼래?/어때?")에서 유저 "만들어/만들어 봐/그걸로 만들어" = 승낙 = 즉시 draft.
-        //    (사장님 실사고: "만들어 봐"를 4번 했는데 기획·확인 루프만 돎 — 승낙이 발행으로 안 이어졌음)
-        || (/(만들어(\s*(봐|줘|바))?|만들자|가자|해줘|ㄱ+ㄱ*|고고)[!~ㅋ.\s]*$/.test(userMsg.trim()) && /(만들어\s*볼래|만들\s*까|만들어볼까|이슈로\s*만들|어때|볼래\?|가볼래|어떻|이거로)/.test(recentA) && /(이슈|숏판|예측|광장|콘텐츠|판)/.test(recentA));
-      const make = /(만들어\s*줘|만들자|하자|짜\s*줘|잡아\s*줘|이슈로\s*(만들|해|써|가)|판\s*(만들|세워|짜)|글로\s*써|예측\s*(만들|판)|숏판\s*(만들|하)|콘텐츠\s*(만들|하))/.test(userMsg);
-      // 🔁 중복 안내("이미 판 섰어/재탕이야")를 받고도 유저가 재차 "만들어/새로 만들어" = 차별화 재시도 강제.
-      //    (사장님 실사고: 지침만으론 모델이 기존 판 안내를 무한 반복 — 코드 라우팅으로 격상)
-      // ⚠️ craft.dup을 여기서 지름길로 쓰면 '새 주제 만들자'까지 하이재킹(기획 스킵 실사고) — dup 처리는 분류기 accept에서만.
-      const insistNew = /만들/.test(userMsg) &&
-        /(이미\s*판|판\s*섰|재탕|기존\s*판|이미\s*있|똑같아서|비슷한\s*(판|이슈)|새로\s*파|거기\s*가서|가서\s*붙)/.test(recentA);
-      if (insistNew) {
-        const blob = (userMsg + " " + recentBlob);
-        let tool = "draft_issue";
-        if (/예측|베팅|마켓/.test(blob)) tool = "draft_predict";
-        else if (/숏판|갈라리|릴스|숏폼/.test(blob)) tool = "draft_gallari";
-        route = { tool, hint: `상대는 '중복이니 기존 판 가라'는 네 안내를 이미 들었고 **그래도 새로 만들라고 재차 요청**했다. 기존 판 얘기 반복 절대 금지 — 지금 즉시 ${tool}를 differentiated:true로 호출해라. 각도는 네가 골라라(기존 판과 분명히 다른 쟁점·대상·조건으로): 되묻지 말고 초안부터. 차별화 포인트는 초안 낸 뒤 한 줄로만 설명.` };
-      } else if (pub) {
-        const blob = (userMsg + " " + recentBlob);
-        let tool = "draft_issue";
-        if (/예측|베팅|마켓|얼마\s*걸|판돈|배당/.test(blob)) tool = "draft_predict";
-        else if (/숏판|갈라리|릴스|숏폼|영상\s*올|사진\s*올|브이로그/.test(blob)) tool = "draft_gallari";
-        else if (/광장|자유\s*글|에세이|후기|일상\s*글|썰\s*(올|풀|써)/.test(blob) && !/이슈|찬반|진영/.test(blob)) tool = "draft_plaza";
-        route = { tool, hint: `상대가 '확정' 신호를 줬다(올려/이대로/그걸로/N안) — '뭐로 갈래?/주제 확정하고' 같은 되묻기·확인 절대 금지. 즉시 ${tool}를 호출해 초안을 만들어라. 직전 대화에서 상대가 고른 앵글·프레임 그대로. 제목·찬반라벨·본문 모든 인자를 채워라(애매하면 합리적으로 채워 일단 초안 — 상대가 폼에서 고친다). 도구가 '중복주의'를 돌려줘도 "어때?"로 되묻지 마라 — 상대 각도가 기존 판과 다르면 그 자리에서 differentiated:true로 재호출해 초안을 내고, 사실상 같은 주제면 point_to로 기존 판 카드를 붙여라. 어느 쪽이든 이번 턴에 카드(초안 또는 기존 판) 하나는 반드시 나가야 한다.` };
-      } else if (make && /(빨리|그냥|알아서|아무|바로|대충)/.test(userMsg)) {
-        // 빨리 신호 = 기획 스킵, 최선 1안으로 즉시
-        const blob = (userMsg + " " + recentBlob);
-        let tool = "draft_issue";
-        if (/예측|베팅|마켓/.test(blob)) tool = "draft_predict";
-        else if (/숏판|갈라리|릴스|숏폼/.test(blob)) tool = "draft_gallari";
-        else if (/광장|에세이|후기/.test(blob) && !/이슈|찬반/.test(blob)) tool = "draft_plaza";
-        route = { tool, hint: `상대가 '빨리/알아서'라고 했다 — 기획 생략, 네가 제일 쎈 앵글 하나로 즉시 ${tool} 호출(모든 인자 채워서).` };
-      } else if (make || /(프레임|앵글|각도?)[^\n]{0,6}(제안|잡|뽑|짜|줘|봐)|기획\s*(해|부터|하자)/.test(userMsg)) {
-        planMode = true;   // 기획 1턴 — planBlock이 지침 주입(아래). 기획 '연장'("프레임 제안해봐")도 여기(컴패니언으로 새면 3안이 4문장캡에 잘림 — 실사고)
-      }
-      // 🧭 상태 머신 판정 — 정규식이 못 정했는데 창작 흐름이 '진행 중'(제안됨/기획중/확정)이면
-      //    초소형 분류콜로 유저 의도를 '진짜로' 판정한다. "만들어 봐"×4에도 헛돌던 근본 원인(무기억 정규식 추측) 제거.
-      /* 🚪 '열어라'는 창작이 아니다 — "열어봐" 단문이 craft FSM 분류기로 흘러가 이슈 '초안'을
-         만들어버린 실사고(사장님 실로그 08-21: "열어봐"→"이슈판 초안 만들었어"→"잘못 열렸대").
-         열기 동사 단문은 분류기 도달 전에 point_to 로 선점한다. '올려봐'는 발행 의미와 겹치니 제외. */
-      if (!route && userMsg && /^(열어|띄워|틀어)[\s봐줘바라!~ㅋ.]*$/.test(userMsg.trim())) {
-        _autoOpen = true; _autoStrong = true;
-        route = { tool: "point_to", hint: "상대가 '열어라'라고 했다 — 직전 대화에서 보여주기로 한 그 콘텐츠를 지금 point_to로 실제로 열어라. draft_* 초안 생성 절대 금지(열라는 말은 만들라는 말이 아니다). 마땅한 대상이 없으면 hot_issues/hot_videos에서 대화 맥락에 맞는 걸 찾아 열어라." };
-      }
-      if (!route && !planMode && (craft.state === "proposed" || craft.state === "planning" || craft.state === "confirmed")) {
-        // 분류기에 '직전 한 턴'만 주면 잡담이 끼었을 때 제안 맥락을 놓친다 → 최근 6개 발화를 준다.
-        const ctxBlob = history.slice(-6).map((m: any) => (m?.role === "user" ? "유저: " : "AI: ") + String(m?.content || "").slice(0, 160)).join("\n");
-        const ci = await classifyCraft(craft.state, craft.topic || "", ctxBlob, userMsg);
-        if (ci) {
-          // 타입 판정은 '가까운 발화 우선' — 전체 blob 한방 검사는 옛 턴의 "숏폼" 한 단어에 이슈 흐름이 낚임(실프로브 재현).
-          const typeOf = (s: string) => {
-            if (/예측|베팅|마켓|판돈|배당/.test(s)) return "draft_predict";
-            if (/숏판|갈라리|릴스|숏폼|브이로그/.test(s)) return "draft_gallari";
-            if (/광장|자유\s*글|에세이|후기|썰\s*(올|풀|써)/.test(s) && !/이슈|찬반/.test(s)) return "draft_plaza";
-            if (/이슈|찬반|진영|논쟁/.test(s)) return "draft_issue";
-            return null;
-          };
-          const toolFor = (ty: string) => {
-            if (ty === "predict") return "draft_predict";
-            if (ty === "gallari") return "draft_gallari";
-            if (ty === "plaza") return "draft_plaza";
-            if (ty === "issue") return "draft_issue";
-            for (const m of [userMsg, ...[...history].reverse().map((h: any) => String(h?.content || ""))]) {
-              const t = typeOf(m); if (t) return t;
-            }
-            return "draft_issue";
-          };
-          if (ci.intent === "accept") {
-            const tool = toolFor(ci.type);
-            const topic = ci.topic || craft.topic || "";
-            const dupNote = craft.dup ? ` 직전 시도가 '중복'에 걸렸었다 — 이번엔 처음부터 differentiated:true로, 기존 판과 분명히 다른 각도로 호출해라.` : "";
-            route = { tool, hint: `[상태머신] 상대가 진행 중인 제안${topic ? `("${topic}")` : ""}을 **승낙·확정**했다. 되묻기·재확인·역제안 절대 금지 — 지금 즉시 ${tool}를 호출해 초안을 만들어라(모든 인자 채워서).${dupNote} 중복주의가 나오면 각도 바꿔 differentiated:true 재호출 또는 point_to — 어느 쪽이든 이번 턴에 카드 하나는 반드시 나간다.` };
-            craft = { state: "confirmed", at: new Date().toISOString(), topic, dup: craft.dup };
-          } else if (ci.intent === "new_topic") {
-            planMode = true;
-            craft = { state: "planning", at: new Date().toISOString(), topic: ci.topic || "" };
-          } else if (ci.intent === "modify") {
-            planMode = craft.state === "planning";   // 기획 중 수정 = 기획 계속. 제안 단계 수정 = 대화로.
-          } else if (ci.intent === "reject") {
-            craft = { state: "idle" };
-          }
-          // chat = 상태 유지(잡담 한두 턴 끼어도 흐름 안 잃음 — 2h 감쇠가 정리)
-        }
-      }
-      /* 정규식 fast-path가 확정/기획을 정했으면 상태도 동기화.
-         ⚠️ 'confirmed'는 "이번 턴에 초안 카드가 나가야 한다"는 뜻이다.
-            라우터는 galla_news·hot_videos 같은 비창작 도구로도 붙는다(2961 등).
-            그때까지 confirmed로 만들면, 초안이 나올 리 없는 턴인데 상태만 남아
-            2시간 감쇠 동안 매 턴 '가짜 생성' 가드가 헛돈다(실측: 4회 발동 4회 헛방).
-            그래서 초안 계열 도구로 라우팅된 경우에만 confirmed로 올린다. */
-      if (route) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null };
-      else if (planMode) craft = { state: "planning", at: new Date().toISOString(), topic: craft.topic || null };
+    /* ══ 🧭 의도 판정 — 규칙 표 한 장(INTENT_RULES)에게 전부 맡긴다 ══
+       예전엔 여기서부터 7층 폴스루가 이어졌다(정규식→제안확정→후속백스톱→발행→열기동사→FSM→임베딩).
+       같은 의도를 층마다 다른 정규식으로 판정해 "열어라"만 4곳, 초안 종류 표가 4벌이었다.
+       ⚠️ 새 의도는 INTENT_RULES 에 한 줄 추가한다 — 여기에 if 를 심으면 그 순간 다시 7층이 된다. */
+    const decided = await decideIntent({ userMsg, history, craft, rel, work: !!work, handoff: !!handoff, crisis: !!crisis, thirdParty });
+    let route = decided.route;
+    let planMode = decided.planMode;
+    let _autoOpen = decided.autoOpen;
+    let _autoStrong = decided.autoStrong;
+    craft = decided.craft;
+    if (decided.stat.length) turnStat(decided.stat);
+    // 🔁 임베딩이 '다시 열어달라'로 읽은 발화 — LLM 없이 마지막 카드를 즉시 연다.
+    if (decided.reopen) {
+      const rp = decided.reopen;
+      return json({ ok: true, reply: rp.say,
+        actions: [{ kind: "view", ctype: rp.ctype, id: rp.id, label: rp.label || "바로 보기", auto: true }],
+        friendName: rel?.friend_name || "갈비스" });
     }
     // 🧭 턴 종료 시 상태 갱신 — 초안이 나갔으면 idle, 갈비스가 새로 '제안'했으면 proposed. rel.session_meta에 실어 persistTurn이 저장.
     const settleCraft = (finalReply: string, acts: any[]) => {
@@ -4494,27 +4644,7 @@ ${parts.join("\n")}`;
     //    "인스타" 같은 단어가 web_search를 '강제'하는데 신상 차단이 그 도구를 '숨겨서'
     //    tool_choice가 없는 도구를 가리키고 400이 난다 → 턴 실패("잠깐 정신이 나갔었다"). 실측 사고.
     //    ⚠️ route는 위에서 선언·갱신된다 — 선언 전에 건드리면 TDZ 참조에러로 턴이 통째로 죽는다(한 번 냈다).
-    /* 🧭 시맨틱 폴백 — 정규식·제안확정이 모두 놓친 발화만 임베딩으로 분류(+0.001원/턴).
-       reopen 이 잡히면 결정적 재오픈과 동일하게 LLM 없이 마지막 카드를 다시 연다. */
-    if (!route && userMsg && !work && !handoff && !crisis) {
-      const sem = await semanticIntent(userMsg);
-      if (sem) {
-        turnStat(["sem:" + sem.intent]);
-        if (sem.intent === "reopen") {
-          const lv = rel?.session_meta?.last_view;
-          if (lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000) {
-            let h = 0; for (const ch of userMsg) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-            const says = ["여기! 바로 열게.", "지금 바로 띄운다!", "오케이 — 바로 연다.", "간다!"];
-            return json({ ok: true, reply: says[h % says.length],
-              actions: [{ kind: "view", ctype: lv.ctype, id: lv.id, label: lv.label || "바로 보기", auto: true }],
-              friendName: rel?.friend_name || "갈비스" });
-          }
-        } else if (INTENT_ROUTE[sem.intent]) {
-          route = INTENT_ROUTE[sem.intent];
-          if (sem.intent === "reopen" || /열|띄|보여/.test(userMsg)) _autoOpen = true;
-        }
-      }
-    }
+    // (임베딩 폴백·신상 차단은 decideIntent 안으로 들어갔다 — 판정은 한 곳에서만)
     if (thirdParty) route = null;
 
     const routeBlock = route
