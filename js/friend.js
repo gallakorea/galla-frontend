@@ -150,8 +150,16 @@
     if(!logEl) return;
     typing(false);
     var p=logEl.querySelector(".fr-prog");
-    if(!p){ p=el('<div class="fr-prog"><span class="fr-prog-spin"></span><span class="fr-prog-t"></span></div>'); logEl.appendChild(p); }
-    p.querySelector(".fr-prog-t").textContent=text;
+    if(!p){ p=el('<div class="fr-prog"><div class="fr-prog-hist"></div><div class="fr-prog-now"><span class="fr-prog-spin"></span><span class="fr-prog-t"></span></div></div>'); logEl.appendChild(p); }
+    var t=p.querySelector(".fr-prog-t");
+    /* 지나간 단계는 위로 흔적으로 — "뭘 하고 있는지"가 자비스 HUD 처럼 쌓인다 */
+    if(t.textContent && t.textContent!==text){
+      var h=el('<div class="fr-prog-done"></div>'); h.textContent=t.textContent;
+      var hist=p.querySelector(".fr-prog-hist"); hist.appendChild(h);
+      while(hist.children.length>3) hist.removeChild(hist.firstChild);
+    }
+    t.textContent=text;
+    var now=p.querySelector(".fr-prog-now"); now.classList.remove("fr-prog-in"); void now.offsetWidth; now.classList.add("fr-prog-in");
     scrollBottom();
   }
   function clearProgress(){ var p=logEl&&logEl.querySelector(".fr-prog"); if(p) p.remove(); }
@@ -1051,6 +1059,12 @@
         if(msg && msg.role==="user"){ addMsg("u", msg.content||""); }
         else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
       });
+      /* 📍 새 대화 경계 — 복원분은 살짝 딤 + 구분선. "어디부터 지금 대화인지 모르겠다"(사장님). */
+      try{
+        logEl.querySelectorAll(".fr-msg").forEach(function(m){ m.classList.add("fr-old"); });
+        var now=new Date(); var hh=("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2);
+        logEl.appendChild(el('<div class="fr-divider"><span>'+hh+' · 새 대화</span></div>'));
+      }catch(e){}
       scrollBottom();
       var ping=await pingP;
       if(ping){ addMsg("a", ping); history.push({role:"assistant",content:ping}); saveChat(); return; }
@@ -1077,9 +1091,10 @@
     _greetStale=false;
     /* ⌨️ 타이핑 표시는 '늦게' 띄운다 — 서버가 "조용히 있어라"(공백 30분 미만)로 즉답하면
        말풍선도 없이 점만 깜빡였다 사라져 고장난 것처럼 보인다. 400ms 안에 오면 아예 안 띄운다. */
-    var tShown=false, tT=setTimeout(function(){ tShown=true; typing(true); }, 400);
+    /* 열자마자 타이핑 도트 즉시 — 400ms 지연은 "눌러도 반응이 없다"는 첫인상을 만들었다. */
+    var tShown=true, tT=0; typing(true);
     var r = await callFriend("", []);
-    clearTimeout(tT); if(tShown) typing(false);
+    if(tT)clearTimeout(tT); if(tShown) typing(false);
     if(_greetStale){ if(r&&r.friendName){ friendName=r.friendName; setTitle(); } return; }   // 유저가 이미 용건을 말함 — 인사 폐기
     if(r && r.friendName){ friendName=r.friendName; setTitle(); }
     /* 🤫 서버가 '지금은 말 걸 때가 아니다'라고 판단하면(quiet 또는 빈 reply) 조용히 물러난다.
@@ -1153,12 +1168,41 @@
       if(i>0 && !instant){ typing(true); await sleep(380+Math.min(parts[i].length*6,420)); typing(false); }
       last=addMsg("a", parts[i]);
     }
+    try{ var ch=parseChoices(text); if(ch) addChoices(last, ch); }catch(e){}
     return last;
   }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  /* 🔢 넘버링 선택지 — 갈비스가 "1. … 2. …" 안을 내면(제목 후보·기획 3안 등)
+     번호 버튼으로 바꿔 탭 한 번에 고르게 한다(사장님: "클로드처럼 넘버링 선택").
+     타이핑 없이 고르는 순간이 '교류하는 느낌'의 핵심이다. */
+  function parseChoices(text){
+    var items=[]; var re=/^\s*([1-9])[.)]\s+(.+)$/gm; var m;
+    while((m=re.exec(String(text||"")))){ items.push({n:+m[1], t:m[2].trim().slice(0,60)}); }
+    // 진짜 선택지만: 2~5개, 번호가 1부터 연속
+    if(items.length<2||items.length>5) return null;
+    for(var i=0;i<items.length;i++){ if(items[i].n!==i+1) return null; }
+    return items;
+  }
+  function addChoices(afterEl, items){
+    var wrap=el('<div class="fr-choices fr-in"></div>');
+    items.forEach(function(it){
+      var b=el('<button class="fr-choice"><span class="fr-choice-n">'+it.n+'</span><span class="fr-choice-t"></span></button>');
+      b.querySelector(".fr-choice-t").textContent=it.t;
+      b.onclick=function(){
+        wrap.querySelectorAll(".fr-choice").forEach(function(x){ x.disabled=true; });
+        b.classList.add("fr-choice-sel");
+        setTimeout(function(){ wrap.remove(); }, 350);
+        sendText(it.n+"번");
+      };
+      wrap.appendChild(b);
+    });
+    if(afterEl&&afterEl.parentNode){ afterEl.parentNode.insertBefore(wrap, afterEl.nextSibling); }
+    else logEl.appendChild(wrap);
+    scrollBottom();
+  }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
-    var wrap=el('<div class="fr-acts"></div>');
+    var wrap=el('<div class="fr-acts fr-in"></div>');
     actions.forEach(function(a){
       // 🎟 가입 유도 — 맛보기가 끝났을 때만 뜬다. 지금까지 나눈 대화가 아까워지는 지점에 딱 하나.
       if(a.kind==="signup"){
@@ -1529,7 +1573,21 @@
         var auto = r.actions.filter(function(a){ return a.auto===true && a.kind==="view"; })[0]
                 || r.actions.filter(function(a){ return a.kind==="view"; })[0]
                 || r.actions.filter(function(a){ return a.kind==="open"; })[0];
-        if(auto){ auto._reacted=true; setTimeout(function(){ runAction(auto); }, 700); }   // 🏆 동일 — 자동오픈 보상 제외
+        if(auto){
+          auto._reacted=true;
+          /* 🚀 자비스식 런치 — 열릴 카드에 0.7초 차오르는 스윕 → 확대되며 발사.
+             "클릭하고 열고 하는 UX 가 후지다"(사장님) — 자동 실행이 '작동하는 느낌'으로 보이게. */
+          var cardEl=null;
+          try{
+            var cards=logEl.querySelectorAll(".fr-acts .fr-card, .fr-acts .fr-chip");
+            cardEl=cards[cards.length-1]||null;
+            if(cardEl){ cardEl.classList.add("fr-arming"); }
+          }catch(e){}
+          setTimeout(function(){
+            try{ if(cardEl){ cardEl.classList.remove("fr-arming"); cardEl.classList.add("fr-launch"); } }catch(e){}
+            setTimeout(function(){ runAction(auto); }, cardEl?220:0);
+          }, 700);
+        }   // 🏆 자동오픈 보상 제외
       }
     }
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }

@@ -478,3 +478,114 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 .fr-nudge button{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); color:#cfe6f2;
   border-radius:7px; padding:3px 10px; font-size:11px; font-family:inherit; cursor:pointer; }
 .fr-nudge button:active{ background:rgba(95,216,255,.18); }
+
+/* ═══ 자비스 UX (2026-08-21) — 경계선·즉시반응·HUD·런치 ═══ */
+
+/* 📍 새 대화 경계 — 지난 대화는 딤, 시안 스캔 라인이 '지금'을 가른다 */
+.fr-msg.fr-old{ opacity:.52; filter:saturate(.75); }
+.fr-divider{
+  display:flex; align-items:center; gap:10px; margin:14px 2px 10px;
+  animation:frDivIn .5s cubic-bezier(.2,.9,.3,1.2);
+}
+.fr-divider::before,.fr-divider::after{
+  content:""; flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, var(--fr-cy-dim), var(--fr-cy));
+}
+.fr-divider::after{ background:linear-gradient(90deg, var(--fr-cy), var(--fr-cy-dim), transparent); }
+.fr-divider span{
+  font-size:10px; font-weight:900; letter-spacing:.12em; color:var(--fr-cy);
+  text-shadow:0 0 10px var(--fr-cy-dim); white-space:nowrap;
+}
+@keyframes frDivIn{ from{ opacity:0; transform:scaleX(.6);} to{ opacity:1; transform:scaleX(1);} }
+
+/* 🛰 HUD 진행 — 지나간 단계가 흔적으로 쌓이고, 현재 단계는 스캔 글로우 */
+.fr-prog{ display:flex; flex-direction:column; gap:3px; margin:6px 2px; }
+.fr-prog-hist{ display:flex; flex-direction:column; gap:2px; }
+.fr-prog-done{
+  font-size:10.5px; color:var(--fr-dim); opacity:.55; padding-left:18px;
+  position:relative; animation:frStepFade .4s ease;
+}
+.fr-prog-done::before{ content:"▸"; position:absolute; left:6px; color:var(--fr-cy); opacity:.5; }
+.fr-prog-now{
+  display:flex; align-items:center; gap:7px;
+  font-size:12px; font-weight:700; color:var(--fr-cy);
+  padding:5px 10px; border-radius:9px;
+  background:linear-gradient(90deg, rgba(95,216,255,.10), rgba(95,216,255,.02));
+  border:1px solid rgba(95,216,255,.18);
+  position:relative; overflow:hidden;
+}
+.fr-prog-now::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(100deg, transparent 30%, rgba(95,216,255,.16) 50%, transparent 70%);
+  transform:translateX(-100%); animation:frScan 1.4s linear infinite;
+}
+.fr-prog-now.fr-prog-in{ animation:frStepIn .3s cubic-bezier(.2,.9,.3,1.3); }
+.fr-prog-t{ color:var(--fr-txt); text-shadow:0 0 8px var(--fr-cy-dim); }
+@keyframes frScan{ to{ transform:translateX(100%);} }
+@keyframes frStepIn{ from{ transform:translateY(4px); opacity:.4;} to{ transform:translateY(0); opacity:1;} }
+@keyframes frStepFade{ from{ opacity:0; transform:translateY(-3px);} to{ opacity:.55; transform:translateY(0);} }
+
+/* ✨ 카드·칩 등장 — 스프링 + 글로우 스윕 1회 */
+.fr-acts.fr-in > *{
+  animation:frCardIn .42s cubic-bezier(.2,.9,.3,1.25) backwards;
+}
+.fr-acts.fr-in > *:nth-child(2){ animation-delay:.08s; }
+.fr-acts.fr-in > *:nth-child(3){ animation-delay:.16s; }
+@keyframes frCardIn{
+  from{ opacity:0; transform:translateY(8px) scale(.94); box-shadow:0 0 0 rgba(95,216,255,0); }
+  60%{ box-shadow:0 0 22px rgba(95,216,255,.35); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* 🚀 자동 오픈 런치 — 0.7초 차오르는 스윕 → 확대 발사 */
+.fr-card.fr-arming, .fr-chip.fr-arming{
+  position:relative; overflow:hidden;
+  border-color:var(--fr-cy) !important;
+  box-shadow:0 0 18px rgba(95,216,255,.30);
+}
+.fr-card.fr-arming::after, .fr-chip.fr-arming::after{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:0;
+  background:linear-gradient(90deg, rgba(95,216,255,.14), rgba(95,216,255,.30));
+  animation:frArm .7s linear forwards;
+}
+@keyframes frArm{ to{ width:100%; } }
+.fr-card.fr-launch, .fr-chip.fr-launch{
+  animation:frLaunch .24s cubic-bezier(.4,0,.9,.4) forwards;
+}
+@keyframes frLaunch{
+  40%{ transform:scale(1.05); box-shadow:0 0 30px rgba(95,216,255,.55); opacity:1; }
+  to{ transform:scale(1.14) translateY(-6px); opacity:0; }
+}
+
+/* ♿ 모션 최소화 존중 */
+@media (prefers-reduced-motion: reduce){
+  .fr-divider,.fr-prog-now.fr-prog-in,.fr-acts.fr-in > *,.fr-card.fr-launch,.fr-chip.fr-launch,.fr-prog-done{ animation:none !important; }
+  .fr-prog-now::after{ animation:none; }
+  .fr-card.fr-arming::after{ animation-duration:.01s; }
+}
+
+/* 🔢 넘버링 선택지 — 탭 한 번에 고르기 */
+.fr-choices{ display:flex; flex-direction:column; gap:7px; margin:4px 0 2px; max-width:320px; }
+.fr-choice{
+  display:flex; align-items:center; gap:10px; text-align:left; cursor:pointer;
+  padding:10px 12px; border-radius:12px;
+  background:rgba(95,216,255,.06); border:1px solid rgba(95,216,255,.22);
+  color:var(--fr-txt); font-size:13px; font-weight:600;
+  transition:transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.fr-choice:active{ transform:scale(.97); }
+.fr-choice:hover{ border-color:var(--fr-cy); box-shadow:0 0 14px rgba(95,216,255,.22); }
+.fr-choice-n{
+  flex:0 0 auto; width:22px; height:22px; border-radius:7px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:900; color:#04070d;
+  background:var(--fr-cy); box-shadow:0 0 10px rgba(95,216,255,.4);
+}
+.fr-choice-t{ flex:1; line-height:1.35; }
+.fr-choice:disabled{ opacity:.4; }
+.fr-choice.fr-choice-sel{
+  opacity:1 !important; border-color:var(--fr-cy);
+  box-shadow:0 0 20px rgba(95,216,255,.45);
+  animation:frChoiceGo .3s ease forwards;
+}
+@keyframes frChoiceGo{ to{ transform:scale(1.03); opacity:0; } }
