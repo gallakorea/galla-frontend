@@ -1214,6 +1214,7 @@
     return items;
   }
   function addChoices(afterEl, items){
+    _cardGroup=null;   // 🔢 텍스트 선택지 턴 — "N번"은 서버로 보낸다(카드 인터셉트와 충돌 방지)
     var wrap=el('<div class="fr-choices fr-in"></div>');
     items.forEach(function(it){
       var b=el('<button class="fr-choice"><span class="fr-choice-n">'+it.n+'</span><span class="fr-choice-t"></span></button>');
@@ -1230,8 +1231,14 @@
     else logEl.appendChild(wrap);
     scrollBottom();
   }
+  /* 🔢 직전 턴의 '고를 수 있는 카드 묶음' — "2번"이라고 치면 서버 왕복 없이 그 카드를 바로 연다.
+     (사장님: 추천이 여러 개면 '열어줘' 하기 전에 선택지를 주는 게 나은 UX) */
+  var _cardGroup=null;
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
+    var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); });
+    var numbered = links.length>=2 && !actions.some(function(a){ return a.auto===true; });
+    _cardGroup = numbered ? links : null;
     var wrap=el('<div class="fr-acts fr-in"></div>');
     actions.forEach(function(a){
       // 🎟 가입 유도 — 맛보기가 끝났을 때만 뜬다. 지금까지 나눈 대화가 아까워지는 지점에 딱 하나.
@@ -1261,9 +1268,10 @@
       // 🔗 링크/콘텐츠 = 세련된 리치 카드(제목·부제·출처). 그 외(공유·앱·관리)는 알약칩.
       if(isLink && (a.title||a.sub)){
         var title = a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
+        var num = numbered ? (links.indexOf(a)+1) : 0;
         var card=el(
           '<button class="fr-card">'+
-            '<span class="fr-card-ic">'+ICON.globe+'</span>'+
+            '<span class="fr-card-ic">'+(num?('<b class="fr-card-n">'+num+'</b>'):ICON.globe)+'</span>'+
             '<span class="fr-card-body">'+
               '<span class="fr-card-t">'+esc(title)+'</span>'+
               (a.sub?'<span class="fr-card-s">'+esc(a.sub)+'</span>':'')+
@@ -1523,6 +1531,16 @@
 
   async function sendText(text, speakReply){
     if(busy || !text) return;
+    /* 🔢 "2번"/"2" = 직전 추천 카드 묶음에서 그 번호를 즉시 오픈(서버 왕복 0, LLM 0). */
+    var pick=String(text).trim().match(/^([1-9])\s*번?[!.~ ]*$/);
+    if(pick && _cardGroup && _cardGroup[+pick[1]-1]){
+      var pa=_cardGroup[+pick[1]-1]; _cardGroup=null;
+      addMsg("u",text); history.push({role:"user",content:text});
+      addMsg("a",(pa.title?('"'+pa.title+'" '):"")+"바로 연다!");
+      history.push({role:"assistant",content:(pa.title||"그거")+" 열었어"}); saveChat();
+      setTimeout(function(){ runAction(pa); },350);
+      return;
+    }
     var jwt=await token();
     var isGuest=!jwt;                    // 🎟 로그인 안 했어도 막지 않는다 — 서버가 맛보기 턴을 센다
     busy=true; sendEl.disabled=true;
@@ -1597,12 +1615,10 @@
       if(appA && (appA.op==="goto" || /걸어|전화|톡|디엠|dm|보내|열어/i.test(text))){
         appA._reacted=true;   // 🏆 자동실행은 유저 행동 아님 — 보상신호 스킵(가짜 +3 방지)
         setTimeout(function(){ runAction(appA); }, 700);
-      } else if(/보여|열어|열라|보자|가보자|띄워|틀어/.test(text) || r.actions.some(function(a){ return a.auto===true; })){
-        // 서버가 auto 를 찍어 보내면(제안→"ㅇㅇ" 확정 등) 유저 문구와 무관하게 바로 연다.
-        // 예전엔 유저 발화 정규식만 봐서 "ㅇㅇ"·"니가 창을 열라고"에 칩만 붙고 안 열렸다(사장님 실로그).
-        var auto = r.actions.filter(function(a){ return a.auto===true && a.kind==="view"; })[0]
-                || r.actions.filter(function(a){ return a.kind==="view"; })[0]
-                || r.actions.filter(function(a){ return a.kind==="open"; })[0];
+      } else if(r.actions.some(function(a){ return a.auto===true; })){
+        // 자동오픈은 '서버 판정(auto)'만 따른다 — 클라 정규식으로도 열면
+        // "보여줘"(약한 요청)+추천 여러 개에 서버가 선택지를 줘도 클라가 멋대로 첫 카드를 열어버린다.
+        var auto = r.actions.filter(function(a){ return a.auto===true; })[0];
         if(auto){
           auto._reacted=true;
           /* 🚀 자비스식 런치 — 열릴 카드에 0.7초 차오르는 스윕 → 확대되며 발사.

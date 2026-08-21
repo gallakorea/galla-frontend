@@ -323,6 +323,8 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 .fr-card-ic{ flex:none; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center;
   background:rgba(95,216,255,.12); color:#5fd8ff; }
 .fr-card-ic svg{ width:19px; height:19px; }
+/* 🔢 추천 여러 개 = 번호 배지 — "2번"이라고 치면 그 카드가 바로 열린다 */
+.fr-card-n{ font-size:17px; font-weight:800; font-style:normal; color:var(--fr-accent, #7c8cff); }
 .fr-card-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .fr-card-t{ font-size:13.5px; font-weight:800; color:#eaf7ff; line-height:1.3;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

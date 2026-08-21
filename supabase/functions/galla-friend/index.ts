@@ -3054,7 +3054,27 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     headers: { "Authorization": `Bearer ${_api.key}`, "Content-Type": "application/json" },
     body: JSON.stringify(reqBody),
   });
-  if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
+  if (!r.ok) {
+    const errTxt = (await r.text()).slice(0, 300);
+    /* 💳 딥시크 잔액 소진(402 Insufficient Balance) 자동 우회 — 이거 하나로 전 유저 갈비스가
+       통째로 죽는다(실측 2026-08-21: 충전 바닥나자 일반 유저 전원 "정신이 나갔었다" 폴백).
+       gemini 키가 있으면 같은 요청을 gemini 로 1회 재시도해 생명유지. 충전되면 자동 복귀. */
+    if (r.status === 402 && GEMINI_EMBED_KEY && !/^gemini/.test(String(reqBody.model))) {
+      const fb: any = { ...reqBody, model: "gemini-3.6-flash", reasoning_effort: "minimal" };
+      delete fb.frequency_penalty;   // gemini OpenAI 호환은 400 거부(실측)
+      const api2 = apiFor(fb.model);
+      const r2 = await fetch(`${api2.base}/chat/completions`, {
+        method: "POST", headers: { "Authorization": `Bearer ${api2.key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(fb),
+      });
+      if (r2.ok) {
+        const out2 = await r2.json();
+        logSpend(AI_FN, fb.model, opts?.uid ?? null, out2?.usage);
+        return out2;
+      }
+    }
+    throw new Error("llm_" + r.status + ":" + errTxt.slice(0, 160));
+  }
   const out = await r.json();
   logSpend(AI_FN, reqBody.model, opts?.uid ?? null, out?.usage);
   return out;
@@ -3603,7 +3623,7 @@ Deno.serve(async (req) => {
       const m0 = (userMsg || "").trim();
       const reopenAsk = m0.length > 0 && m0.length <= 24 &&
         /(열어|열라|올려\s*(봐|줘)?|띄워|틀어\s*줘|보여\s*줘|들어가\s*(볼|보)|(안|못)\s*(열|보이|나와|떴|들어가)|잘못\s*열|다시\s*(줘|보여|열|틀)|어디\s*(있|갔)|빨리)/.test(m0) &&
-        !/(만들|초안|올리|쓰|검색|찾아|맛집|시세|얼마)/.test(m0);
+        !/(만들|초안|올리|쓰|검색|찾아|맛집|시세|얼마|재밌|웃긴|웃기|영상|뉴스|이슈|짤|다른\s*거|새로운?\s*거|새\s*거|하나\s*더)/.test(m0);   // 새 콘텐츠 명사가 있으면 재오픈이 아니라 '새 요청'(실측: "재밌는 거 보여줘"가 직전 카드 재오픈에 낚임)
       /* ⚠️ work/crisis 변수는 이 지점보다 뒤에 선언된다(tzMin 사고와 같은 함정) —
          원시값으로 판정한다. 작업 모드는 body.work 로 알 수 있고, 위기 문구는
          reopenAsk 정규식(짧은 재촉)과 겹칠 수 없다. */
@@ -4029,6 +4049,9 @@ ${parts.join("\n")}`;
     /* 이 턴의 view 액션을 클라가 '자동으로 열어야' 하는가.
        ⚠️ globalThis 에 두면 동시 요청끼리 섞여 남의 카드가 자동 오픈된다 — 요청 지역 변수로. */
     let _autoOpen = /(열라|열어|올려\s*봐|올려\s*줘|띄워|보여|틀어|보자|빨리\s*(줘|열|보))/.test(userMsg || "");
+    /* 🎚 강한 열기("열어/띄워/빨리")와 약한 요청("보여줘/보자")을 나눈다 — 추천 결과가 여러 개면
+       약한 요청은 자동으로 열지 않고 번호 선택지로 고르게 한다(사장님: "열어줘 하기 전에 선택지를 줘"). */
+    let _autoStrong = /(열라|열어|올려\s*봐|올려\s*줘|띄워|빨리\s*(줘|열|보))/.test(userMsg || "");
     if (!route && userMsg && !work && !crisis) {
       const lastA = String(([...history].reverse().find((m: any) => m?.role === "assistant") || {}).content || "");
       const proposed = /(볼래\?|볼래|보여\s*줄게|보여줄까|열어\s*줄게|열어줄까|열어\s*봐|봐\s*봐|가져와\s*볼게|가져올게|틀어\s*줄게|하나\s*볼래|열릴\s*거야|바로\s*갈게|열어\s*놨|해\s*놨어|잠깐만\s*기다)/.test(lastA);
@@ -4036,6 +4059,7 @@ ${parts.join("\n")}`;
       const angry = /(짱나|짜증|빨리|하세월|졸라\s*걸리|언제\s*(줘|열|보여))/.test(userMsg || "");
       if (proposed && (confirmed || angry)) {
         _autoOpen = true;   // 제안을 확정했다 = 열어달라는 뜻
+        _autoStrong = true; // 확정 딜리버는 여러 개여도 첫 번째를 바로 연다
         route = { tool: "point_to", hint: "방금 네가 보여주겠다고 한 그 콘텐츠를 **지금 즉시 point_to(view) 로 열어라**. hot_issues/galla_news/hot_videos 로 실물을 찾아서라도 이번 턴에 반드시 연다. '열어줄게/잠깐만/이제 열릴 거야' 같은 말만 하고 안 여는 건 최악의 결함이다 — 이미 세 번 그랬다. 못 찾으면 찾은 다른 걸 열고 솔직히 말해라." };
       }
     }
@@ -4096,7 +4120,7 @@ ${parts.join("\n")}`;
          만들어버린 실사고(사장님 실로그 08-21: "열어봐"→"이슈판 초안 만들었어"→"잘못 열렸대").
          열기 동사 단문은 분류기 도달 전에 point_to 로 선점한다. '올려봐'는 발행 의미와 겹치니 제외. */
       if (!route && userMsg && /^(열어|띄워|틀어)[\s봐줘바라!~ㅋ.]*$/.test(userMsg.trim())) {
-        _autoOpen = true;
+        _autoOpen = true; _autoStrong = true;
         route = { tool: "point_to", hint: "상대가 '열어라'라고 했다 — 직전 대화에서 보여주기로 한 그 콘텐츠를 지금 point_to로 실제로 열어라. draft_* 초안 생성 절대 금지(열라는 말은 만들라는 말이 아니다). 마땅한 대상이 없으면 hot_issues/hot_videos에서 대화 맥락에 맞는 걸 찾아 열어라." };
       }
       if (!route && !planMode && (craft.state === "proposed" || craft.state === "planning" || craft.state === "confirmed")) {
@@ -5032,7 +5056,7 @@ ${parts.join("\n")}`;
     for (let i = actions.length - 1; i >= 0; i--) {
       const a = actions[i];
       if ((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()) actions.splice(i, 1);
-      else if (a.kind === "view" && _autoOpen) a.auto = true;   // 클라가 칩 탭 없이 바로 연다
+      // (auto 부여는 아래 links 블록에서 일괄 — 여기서 view 마다 찍으면 '약한 보여줘'에도 강제 오픈된다)
       // 🔎 타인 신상 캐기 턴 — 도구 이름 필터만으론 샜다(실측: open 칩이 붙어나감).
       //    거절 문구를 써놓고 링크를 같이 주면 거절이 아니다. 링크성 칩은 통째로 뗀다.
       else if (thirdParty && (a.kind === "open" || a.kind === "view" || a.kind === "share")) actions.splice(i, 1);
@@ -5049,9 +5073,17 @@ ${parts.join("\n")}`;
         if (seen.has(key)) { actions.splice(i, 1); i--; } else seen.add(key);
       }
     }
-    if (_autoOpen && !actions.some((a: any) => a.auto)) {
-      const first = actions.find((a: any) => a.kind === "open" || a.kind === "view");
-      if (first) first.auto = true;
+    {
+      const links = actions.filter((a: any) => a.kind === "open" || a.kind === "view");
+      if (_autoOpen && !actions.some((a: any) => a.auto)) {
+        // 결과 1개 or 강한 열기 신호 = 바로 연다. 약한 "보여줘"에 여러 개 = 선택지로(아래).
+        if (links.length && (links.length === 1 || _autoStrong)) links[0].auto = true;
+      }
+      /* 🔢 추천 카드 2장 이상 & 자동오픈 아님 → 번호로 고르게 유도(클라가 카드에 배지 붙이고
+         "N번" 입력을 서버 왕복 없이 그 카드 오픈으로 처리). */
+      if (links.length >= 2 && !links.some((a: any) => a.auto) && !/몇\s*번|번호|골라/.test(reply)) {
+        reply = reply.replace(/\s+$/, "") + "\n\n몇 번 볼래?";
+      }
     }
     const cleanActions = actions;
 
