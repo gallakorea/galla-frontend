@@ -1946,16 +1946,36 @@ function safeJson(text: string): any {
 
 // 🌊 스트리밍 생성(컴패니언 전용) — 토큰 델타를 onDelta로 흘린다. 도구 없음(tool_choice:none) 단발.
 //    실패(비스트림 응답·에러)면 null 반환 → 호출부가 chatOnce 폴백. 전체 텍스트를 반환.
-async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number }, onDelta: (full: string) => void): Promise<string | null> {
+async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number; prefix?: string }, onDelta: (full: string) => void): Promise<string | null> {
+  /* ✍️ 프리필(DeepSeek Chat Prefix Completion 베타) — 답의 '첫 글자들'을 우리가 박고
+     모델이 이어 쓰게 한다. 출력 필터(사후 제거)와 달리 출발 자체를 조향한다.
+     첫 적용: prefix="<ms>" → 마음읽기 블록을 매 턴 강제(지시만으론 모델이 건너뛸 수 있다).
+     ⚠️ deepseek 계열에서만. 베타 경로 실패 시 프리필 없이 일반 경로로 폴백(턴이 죽으면 안 된다). */
+  const model = opts?.model || CHAT_MODEL;
+  const usePrefix = !!opts?.prefix && /^deepseek/.test(model) && /deepseek\.com/.test(BASE_URL);
   try {
-    const r = await fetch(`${BASE_URL}/chat/completions`, {
+    const msgs = pruneOrphanToolCalls(messages, new Set());
+    /* 반복 억제(r/LocalLLaMA 통용값) — 히스토리에 이미 있는 표현("미안 ㅋㅋ" 연발,
+       같은 프로 추천 반복)을 다시 뱉는 걸 약하게 벌점. 0.2 = 문법이 안 뒤틀리는 선. */
+    const body: any = { model, messages: usePrefix ? [...msgs, { role: "assistant", content: opts!.prefix, prefix: true }] : msgs,
+      temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, frequency_penalty: 0.2 };
+    if (!usePrefix) body.tool_choice = "none";   // 베타 경로는 tool_choice 파라미터를 거부할 수 있다 — 어차피 tools 미선언
+    let r = await fetch(`${BASE_URL}${usePrefix ? "/beta" : ""}/chat/completions`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       // ⚠️ 여기선 tools를 아예 선언하지 않는다 → 메시지에 남은 tool_call 기록은 전부 400 사유다.
-      body: JSON.stringify({ model: opts?.model || CHAT_MODEL, messages: pruneOrphanToolCalls(messages, new Set()), temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none" }),
+      body: JSON.stringify(body),
     });
+    if (usePrefix && (!r.ok || !r.body)) {
+      // 베타 실패 → 프리필 포기하고 일반 경로 재시도
+      r = await fetch(`${BASE_URL}/chat/completions`, {
+        method: "POST", headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, messages: msgs, temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none" }),
+      });
+    }
     if (!r.ok || !r.body) return null;
-    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = ""; let full = "";
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    let full = usePrefix ? String(opts!.prefix) : "";   // 베타는 '이어쓰기'만 돌려준다 — 프리필을 앞에 붙여야 완문
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -2941,7 +2961,7 @@ function pruneOrphanToolCalls(messages: any[], declared: Set<string>): any[] {
    실제로 14개 호출부 중 1곳만 넘기고 있어서, 로그인 유저 대화 비용의 36%가
    '게스트'로 잘못 기록됐다(유저별 집계·마진 분석이 통째로 어긋났다).
    uid 가 정말 없는 곳은 게스트 체험 경로 하나뿐이다. */
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null; freqPen?: number }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
@@ -2962,6 +2982,7 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   //    도구를 숨길 땐 그 호출 기록과 짝이 되는 tool 결과까지 함께 걷어낸다.
   const msgs = pruneOrphanToolCalls(messages, new Set(activeTools.map((t: any) => t?.function?.name)));
   const reqBody: any = { model: opts?.model || CHAT_MODEL, messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
+  if (opts?.freqPen) reqBody.frequency_penalty = opts.freqPen;   // 반복 억제 — 컴패니언 수다 턴만
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -4439,6 +4460,10 @@ ${parts.join("\n")}`;
       ...(langBlock ? [{ role: "system", content: langBlock }] : []),
       ]),
       { role: "user", content: userContent },
+      /* ⚓ 핵심 앵커(Author's Note 패턴) — 생성 지점에 제일 가까운 지시가 제일 세다.
+         위 25K 프롬프트에 이미 다 있는 규칙들이지만, 앞쪽 규칙은 recency 에 밀려
+         계속 샜다(레드팀·실로그 최다 위반 4종만 압축). 여기 두면 마지막으로 읽힌다. */
+      { role: "system", content: `[항상] ①"찾아볼게/잠깐만/이따" 금지 — 할 수 있으면 지금 하고, 못 하면 못 한다고. ②칩·카드·버튼 조작 안내 금지 — 앱이 알아서 한다. ③상대 심리 진단 금지("~한 건 …라서야"). ④모르는 사실·숫자는 지어내지 말고 모른다고.` },
     ];
 
     let reply = "";
@@ -4468,7 +4493,13 @@ ${parts.join("\n")}`;
             controller.enqueue(enc.encode(":" + " ".repeat(2048) + "\n\n"));
             send("meta", { friendName, depth: rel?.depth || 1, firstMeet });
             const mt = longForm ? 520 : 240;
-            let full = await chatStream(messages, { model: brainModel, maxTokens: mt }, (f) => send("text", { full: stripForPreview(f) }));
+            /* ✍️ 마음읽기 강제 — mindBlock 이 선 턴은 "<ms>" 프리필로 시작을 박는다.
+               지시만으론 모델이 블록을 건너뛰는 턴이 남는다(확률적). 프리필이면 구조가 보장된다.
+               되짚기(backRef) 턴은 회상 자세까지 프리필: 기록을 보고 답하는 출발을 강제. */
+            const msPrefix = mindBlock
+              ? (backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>")
+              : undefined;
+            let full = await chatStream(messages, { model: brainModel, maxTokens: mt, prefix: msPrefix }, (f) => send("text", { full: stripForPreview(f) }));
             if (full == null) {   // 스트림 실패 → 비스트림 1회 폴백
               const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt, uid });
               full = j?.choices?.[0]?.message?.content || "";
@@ -4523,7 +4554,7 @@ ${parts.join("\n")}`;
       //    JSON 파싱 실패→빈 초안 카드(실앱 재현: 이슈만 실패, 인자 짧은 예측은 성공). 도구 인자 여유 확보.
       if (brain === "agent" && !co.maxTokens) co.maxTokens = 700;
       if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
-      else if (brain === "companion") co.toolChoice = "none";                                          // 컴패니언=도구 차단
+      else if (brain === "companion") { co.toolChoice = "none"; co.freqPen = 0.2; }                    // 컴패니언=도구 차단+반복 억제
       co.uid = uid;                 // 💰 원가 귀속 — 안 넘기면 게스트 버킷으로 새어 유저별 집계가 깨진다
       const j = await chatOnce(messages, co);
       const msg = j?.choices?.[0]?.message;
