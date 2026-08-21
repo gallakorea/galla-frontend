@@ -17,6 +17,7 @@ const cors = {
 const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || Deno.env.get("JARVIS_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
 const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY") || (_DS || Deno.env.get("OPENAI_API_KEY")!);
+const CRON_KEY = Deno.env.get("CRON_SECRET") || "";   // seed_intents 등 운영자 op 가드
 const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || (_DS ? "deepseek-chat" : "gpt-4o-mini");
 // 💬 대화 답변 전용 모델 — 필요시 FRIEND_CHAT_MODEL로만 상향(기본은 MODEL과 동일 deepseek-chat).
 const CHAT_MODEL = Deno.env.get("FRIEND_CHAT_MODEL") || MODEL;
@@ -78,12 +79,35 @@ async function broadcastStep(uid: string, name: string, text: string) {
   } catch { /* best effort */ }
 }
 
+const GEMINI_EMBED_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+/* ⚠️ OpenAI 임베딩이 2026-08-02 를 끝으로 조용히 전부 실패했다(키 문제).
+   그 뒤 기억 235건이 무임베딩 = 회상 검색이 반쪽으로 돌았는데 아무도 몰랐다 —
+   embed() 가 null 을 조용히 삼키는 구조라 티가 안 났다.
+   릴스 에이전트가 이미 Gemini 임베딩으로 갈아타 성공 중이라 같은 경로로 교체.
+   차원: Gemini 기본 3072 → 테이블이 vector(1536) 라 1536 요청 + L2 정규화
+   (구글 문서: 3072 외 차원은 정규화가 안 돼 있어 직접 해야 코사인이 맞다). */
 async function embed(text: string): Promise<number[] | null> {
+  const t = (text || "").slice(0, 2000);
+  if (!t) return null;
+  if (GEMINI_EMBED_KEY) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_EMBED_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "models/gemini-embedding-001", content: { parts: [{ text: t }] }, outputDimensionality: 1536 }),
+      });
+      const j = await r.json();
+      const v = j?.embedding?.values;
+      if (Array.isArray(v) && v.length === 1536) {
+        const norm = Math.sqrt(v.reduce((a: number, x: number) => a + x * x, 0)) || 1;
+        return v.map((x: number) => x / norm);
+      }
+    } catch { /* 아래 폴백 */ }
+  }
   try {
     const r = await fetch(`${EMBED_URL}/embeddings`, {
       method: "POST",
       headers: { Authorization: `Bearer ${EMBED_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: EMBED_MODEL, input: (text || "").slice(0, 2000) }),
+      body: JSON.stringify({ model: EMBED_MODEL, input: t }),
     });
     const j = await r.json();
     const v = j?.data?.[0]?.embedding;
@@ -2800,6 +2824,46 @@ function detectJailbreak(msg: string): boolean {
 
 // 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
 //    산발 가드는 백스톱으로 유지. 여기선 '지어내기 참사'가 났던 고신뢰 3종(영상·맛집·인스타)만 첫 스텝에서 강제.
+/* 🧭 시맨틱 의도 라우터 — 정규식이 놓친 발화를 임베딩 유사도로 분류.
+   업계 표준(semantic router): 의도별 예문을 미리 임베딩해두고 코사인 top-1.
+   'none'(그냥 수다) 예문을 흡수대로 넣는 게 핵심이다 — 없으면 잡담이 아무 의도에나 붙는다. */
+const INTENT_SEED: Record<string, string[]> = {
+  reopen: ["열어봐", "아 니가 창을 열라고", "잘못 열렸는데", "안 열려", "다시 띄워줘", "빨리 열어", "그거 눌러도 안 돼", "왜 안 열림", "창 좀 열어달라니까"],
+  market_quote: ["하이닉스 지금 얼마야", "비트코인 시세 어때", "삼성전자 주가 알려줘", "코인 얼마나 올랐어", "내 주식 오늘 어때"],
+  hot_videos: ["웃긴 영상 틀어줘", "재밌는 유튜브 없나", "요즘 뜨는 영상 뭐야", "심심한데 영상 하나 줘", "볼만한 거 틀어봐"],
+  hot_issues: ["요즘 뜨거운 이슈 뭐야", "싸울만한 주제 없나", "논쟁거리 하나 줘", "사람들 요즘 뭐로 싸워", "찬반 갈리는 거 뭐 있어"],
+  galla_news: ["오늘 무슨 일 있었어", "뉴스 좀 알려줘", "속보 있어?", "세상 돌아가는 얘기 해줘", "오늘자 사건사고 뭐 있냐"],
+  food_search: ["강남 맛집 알려줘", "저녁 뭐 먹을지 추천해줘", "근처 밥집 어디가 좋아", "회식 장소 추천", "야식 뭐 시킬까"],
+  platform_buzz: ["갈라에서 요즘 뭐가 핫해", "사람들 무슨 얘기해", "재밌는 썰 없나", "요즘 판 도는 얘기 뭐야"],
+  none: ["잤어", "오늘 회사 힘들었어", "뭐해", "심심하다", "기분이 꿀꿀해", "나 왔어", "ㅋㅋㅋ", "배고파", "피곤해",
+         "사랑이 뭘까", "내일 뭐하지", "고마워", "미안", "너 이름 뭐야", "오늘 날씨 좋더라", "운동 갔다 옴", "재밌었어 오늘"],
+};
+const INTENT_ROUTE: Record<string, { tool: string; hint: string }> = {
+  market_quote: { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 도구가 돌려준 숫자만 말해라. 못 찾으면 솔직히." },
+  hot_videos: { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기 금지." },
+  hot_issues: { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 지어내기 금지." },
+  galla_news: { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 지어내기 금지." },
+  food_search: { tool: "web_search", hint: "web_search를 kind:local으로. 지어내기 금지." },
+  platform_buzz: { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판만. 지어내기 금지." },
+};
+async function semanticIntent(msg: string): Promise<{ intent: string; sim: number } | null> {
+  const m = (msg || "").trim();
+  if (m.length < 2 || m.length > 60) return null;   // 긴 문장은 모델이 맥락으로 푸는 게 낫다
+  try {
+    const v = await embed(m);
+    if (!v) return null;
+    const { data } = await supa.rpc("match_galvis_intent", { p_vec: vecLit(v) });
+    const top = Array.isArray(data) ? data[0] : null;
+    if (!top) return null;
+    /* 임계는 '흡수대와의 간격'까지 본다 — none 이 바짝 붙으면 그냥 수다다. */
+    const topNone = (data as any[]).find((d) => d.intent === "none");
+    if (top.intent === "none") return null;
+    if (top.sim < 0.55) return null;
+    if (topNone && top.sim - topNone.sim < 0.04) return null;
+    return { intent: top.intent, sim: top.sim };
+  } catch { return null; }
+}
+
 function routeIntent(msg: string): { tool: string; hint: string } | null {
   const m = (msg || "").trim();
   if (!m) return null;
@@ -3222,6 +3286,33 @@ Deno.serve(async (req) => {
     const { data: u } = await supa.auth.getUser(jwt);
     const body = await req.json().catch(() => ({}));
     const tzMin = tzOf(body);   // ⏰ 접속 기기 시간대 — 게스트 경로(guestTurn)와 별도 스코프라 여기도 선언
+
+    if (body?.op === "backfill_embeds") {
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const { data: rows } = await supa.from("friend_memory").select("id,content")
+        .is("embedding", null).eq("status", "active").limit(40);
+      let n = 0;
+      for (const m of (rows || [])) {
+        const v = await embed(m.content);
+        if (v) { await supa.from("friend_memory").update({ embedding: vecLit(v) }).eq("id", m.id); n++; }
+      }
+      return json({ ok: true, filled: n, remain_hint: (rows || []).length === 40 });
+    }
+    /* 유저 인증보다 앞 — 운영자 op 라 유저 JWT 가 없다. 크론키가 유일한 가드. */
+    if (body?.op === "seed_intents") {
+      // 🧭 의도 예문 임베딩 시드 — 운영자 전용(x-cron-key). 예문을 바꾸면 다시 부른다.
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      let n = 0;
+      for (const [intent, exs] of Object.entries(INTENT_SEED)) {
+        for (const ex of exs) {
+          const v = await embed(ex);
+          if (!v) continue;
+          await supa.from("galvis_intents").upsert({ intent, example: ex, embedding: vecLit(v) }, { onConflict: "example" });
+          n++;
+        }
+      }
+      return json({ ok: true, seeded: n });
+    }
 
     // 🎟 게스트 맛보기 — 로그인 전에도 갈비스가 어떤 애인지 5턴 겪어보게 한다(가입 전환의 핵심).
     //    도구·기억·DB 쓰기는 전부 잠근 별도 경량 경로. uid를 전제한 본 경로에 null을 흘리지 않는다.
@@ -3945,6 +4036,27 @@ ${parts.join("\n")}`;
     //    "인스타" 같은 단어가 web_search를 '강제'하는데 신상 차단이 그 도구를 '숨겨서'
     //    tool_choice가 없는 도구를 가리키고 400이 난다 → 턴 실패("잠깐 정신이 나갔었다"). 실측 사고.
     //    ⚠️ route는 위에서 선언·갱신된다 — 선언 전에 건드리면 TDZ 참조에러로 턴이 통째로 죽는다(한 번 냈다).
+    /* 🧭 시맨틱 폴백 — 정규식·제안확정이 모두 놓친 발화만 임베딩으로 분류(+0.001원/턴).
+       reopen 이 잡히면 결정적 재오픈과 동일하게 LLM 없이 마지막 카드를 다시 연다. */
+    if (!route && userMsg && !work && !handoff && !crisis) {
+      const sem = await semanticIntent(userMsg);
+      if (sem) {
+        turnStat(["sem:" + sem.intent]);
+        if (sem.intent === "reopen") {
+          const lv = rel?.session_meta?.last_view;
+          if (lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000) {
+            let h = 0; for (const ch of userMsg) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+            const says = ["여기! 바로 열게.", "지금 바로 띄운다!", "오케이 — 바로 연다.", "간다!"];
+            return json({ ok: true, reply: says[h % says.length],
+              actions: [{ kind: "view", ctype: lv.ctype, id: lv.id, label: lv.label || "바로 보기", auto: true }],
+              friendName: rel?.friend_name || "갈비스" });
+          }
+        } else if (INTENT_ROUTE[sem.intent]) {
+          route = INTENT_ROUTE[sem.intent];
+          if (sem.intent === "reopen" || /열|띄|보여/.test(userMsg)) _autoOpen = true;
+        }
+      }
+    }
     if (thirdParty) route = null;
 
     const routeBlock = route
