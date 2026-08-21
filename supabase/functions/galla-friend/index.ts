@@ -1929,9 +1929,12 @@ function stripDeflect(reply: string): string {
   return r || reply;
 }
 function bubbleize(t: string): string {
-  // 한 어절 못 자르는 긴 덩이는 공백 기준으로 하드 랩(~46자)
+  /* 한 어절 못 자르는 긴 덩이는 공백 기준으로 하드 랩.
+     ⚠️ 문턱이 46자라 한 문장이 그 이상이면 문장 '중간'에서 뚝 끊겼다
+     ("밥은 제때 / 챙겨 먹었는지" — 사장님 화면 실측). 문장 하나는 웬만하면 통째로 둔다:
+     하드랩은 진짜 긴 덩이(90자↑)에만. 짧은 문장이 두 버블로 쪼개지는 게 더 어색하다. */
   const hardWrap = (s: string): string[] => {
-    if (s.length <= 46) return [s];
+    if (s.length <= 90) return [s];
     const words = s.split(/\s+/); const out: string[] = []; let cur = "";
     for (const w of words) {
       if (cur && (cur + " " + w).length > BUBBLE_MAX) { out.push(cur); cur = w; }
@@ -1970,6 +1973,14 @@ function safeJson(text: string): any {
 /* 🔀 모델별 API 라우팅 — 파운데이션 전략(모델 무관 설계)의 실행부.
    딥시크 한계(지시이행·말맛) 실측 확정 후, 관리자 계정부터 gemini 로 부품 교체 시험.
    gemini 는 OpenAI 호환 엔드포인트를 제공한다 — 코드 대부분 그대로 재사용. */
+/* 💳 딥시크 402(잔액 소진) 기억 — 한 번 402를 보면 10분간 딥시크 시도 자체를 건너뛰고
+   gemini 로 직행한다. 매 콜마다 '딥시크 실패→gemini 재시도' 이중 왕복이면 턴이 배로 느리다
+   (사장님: "실행이 느려"). 충전되면 10분 안에 자동 복귀. */
+let _ds402Until = 0;
+function effModel(m: string): string {
+  if (!/^gemini/.test(m) && GEMINI_EMBED_KEY && Date.now() < _ds402Until) return "gemini-3.6-flash";
+  return m;
+}
 function apiFor(model: string): { base: string; key: string } {
   if (/^gemini/.test(model) && GEMINI_EMBED_KEY)
     return { base: "https://generativelanguage.googleapis.com/v1beta/openai", key: GEMINI_EMBED_KEY };
@@ -1981,7 +1992,7 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
      모델이 이어 쓰게 한다. 출력 필터(사후 제거)와 달리 출발 자체를 조향한다.
      첫 적용: prefix="<ms>" → 마음읽기 블록을 매 턴 강제(지시만으론 모델이 건너뛸 수 있다).
      ⚠️ deepseek 계열에서만. 베타 경로 실패 시 프리필 없이 일반 경로로 폴백(턴이 죽으면 안 된다). */
-  const model = opts?.model || CHAT_MODEL;
+  const model = effModel(opts?.model || CHAT_MODEL);
   const usePrefix = !!opts?.prefix && /^deepseek/.test(model) && /deepseek\.com/.test(BASE_URL);
   try {
     const msgs = pruneOrphanToolCalls(messages, new Set());
@@ -1991,7 +2002,10 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
       temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true };
     if (!/^gemini/.test(model)) body.frequency_penalty = 0.2;   // gemini OpenAI 호환은 이 필드를 400 으로 거부(실측)
     else body.reasoning_effort = "minimal";   // gemini-3.6 은 thinking 기본 ON — 수다엔 사고가 max_tokens 만 먹는다("none"은 400, 실측)
-    if (!usePrefix) body.tool_choice = "none";   // 베타 경로는 tool_choice 파라미터를 거부할 수 있다 — 어차피 tools 미선언
+    // 베타 경로는 tool_choice 파라미터를 거부할 수 있다 — 어차피 tools 미선언.
+    // ⚠️ gemini OpenAI 호환은 tools 없이 tool_choice 를 주면 400(INVALID_ARGUMENT) — 스트림이 통째로 죽어
+    //    비스트림 폴백으로 새고, 유저는 20초를 타이핑 점만 보며 기다린다(사장님 "실행이 느려" 실측).
+    if (!usePrefix && !/^gemini/.test(model)) body.tool_choice = "none";
     const api = apiFor(model);
     let r = await fetch(`${api.base}${usePrefix ? "/beta" : ""}/chat/completions`, {
       method: "POST",
@@ -2006,7 +2020,10 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
         body: JSON.stringify({ model, messages: msgs, temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none" }),
       });
     }
-    if (!r.ok || !r.body) return null;
+    if (!r.ok || !r.body) {
+      if (r.status === 402 && !/^gemini/.test(model)) _ds402Until = Date.now() + 10 * 60000;   // 💳 잔액소진 기억 → 다음부터 gemini 직행
+      return null;
+    }
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
     let full = usePrefix ? String(opts!.prefix) : "";   // 베타는 '이어쓰기'만 돌려준다 — 프리필을 앞에 붙여야 완문
     for (;;) {
@@ -2087,6 +2104,54 @@ function charCap(t: string, cap: number): string {
   const m = cut.match(/[\s\S]*[.!?…\n](?=[^.!?…\n]*$)/);
   const kept = (m ? m[0] : cut).trim();
   return kept.length >= 20 ? kept : cut.trim();   // 첫 문장부터 초장문이면 그냥 예산에서 컷
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   📜 답변 계약(Contract) — 화면에 나가기 직전, 단 하나의 관문.
+
+   왜 함수 하나로 모으는가: 이 파일엔 스트림 경로와 JSON 경로가 따로 있고,
+   각자 자기만의 마무리 체인을 갖고 있었다. 규칙을 한쪽에 고치면 다른 쪽이 뚫리고,
+   가드가 reply 를 재생성하면 이미 지나간 캡이 무효가 됐다. 그래서 고칠수록 무너졌다.
+   (사장님: "규칙 자체가 다 작동을 안 한다") 이제 모든 경로가 **여기 한 곳**을 마지막에 부른다.
+   순서도 계약의 일부다 — 걷어내기 → 선택지 정규화 → 템포 캡 → 빈 답 방어.
+   ⚠️ 새 규칙은 반드시 이 함수 안에. 경로에 직접 붙이면 그 순간 또 반쪽이 된다.
+   ⚠️ 이 함수의 불변식은 op:"contract_test" 가 LLM 없이 검사한다 — 고치면 그 테스트부터 돌린다.
+   ══════════════════════════════════════════════════════════════════════════ */
+function enforceContract(reply: string, o: {
+  friendName: string; nick?: string; longForm?: boolean; heavy?: boolean; light?: boolean;
+  hasActions?: boolean; linkCount?: number; hostileTurn?: boolean; toolBlob?: string; priceAsk?: boolean; statAsk?: boolean;
+  crisis?: boolean; dependency?: boolean; guardsOff?: boolean;
+}): string {
+  let x = String(reply || "");
+  if (!o.guardsOff && o.crisis) x = stripSilencer(x);            // 위기: 입 막는 첫마디 제거
+  if (!o.guardsOff && o.dependency) x = stripDepDelight(x);      // 고립을 반기는 문장만 제거
+  x = joinBrokenBubbles(deHonorific(fixOwnName(
+        stripHostileOpener(
+          stripFakeToolCall(stripUiTalk(stripTherapist(stripMetaSelf(stripMind(x))), !!o.hasActions)),
+          !!o.hostileTurn),
+        o.friendName)));
+  x = stripUngroundedMoney(x, o.toolBlob || "", !!o.priceAsk, !!o.statAsk);
+  x = normalizeChoices(x);                                        // 인라인 번호 → 줄(클라 ^ 앵커 파서)
+  /* 🔢 번호의 출처는 '카드' 하나뿐 — 모델이 본문에 3개를 읊었는데 실제 카드는 2장인 턴이 있다
+     (실측). 그러면 "3번"을 눌러도 열 게 없다. 카드가 2장 이상이면 본문의 번호 목록은 걷어낸다. */
+  const _listN = (x.match(/(^|\n)\s*[1-9][.)]\s+\S/g) || []).length;
+  if ((o.linkCount || 0) >= 1 && _listN >= 2 && _listN !== (o.linkCount || 0)) {
+    x = x.split("\n").filter((ln) => !/^\s*[1-9][.)]\s+\S/.test(ln)).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  /* 📏 템포 — 가드가 reply 를 통째로 재생성해도 여기서 반드시 한 번은 걸린다(멱등).
+     실측 사고: fake_video 가드 재생성분이 캡을 우회해 340자 설교문이 나갔다. */
+  if (!o.longForm && !hasChoiceList(x)) {
+    const cap = tempoCap({ longForm: o.longForm, heavy: o.heavy, light: o.light });
+    const sents = x.match(/[^.!?…\n]+[.!?…]*\s*/g) || [x];
+    if (sents.length > cap) x = sents.slice(0, cap).join("").trim();
+    x = bubbleize(charCap(stripStage(x), cap));
+  }
+  const bare = x.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
+  if (!hasText(bare)) {
+    const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
+    const kept = (x.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
+    x = fill[(bare.length + (o.nick ? o.nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
+  }
+  return x;
 }
 function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null; heavy?: boolean; light?: boolean }): string {
   reply = normalizeChoices(stripDeflect(reply));
@@ -2605,6 +2670,17 @@ function deHonorific(t: string): string {
     [/같습니다/g, "같아"],     [/그렇습니다/g, "그래"],   [/괜찮습니다/g, "괜찮아"],
     [/하겠습니다/g, "할게"],   [/드립니다/g, "줄게"],     [/합니다/g, "해"],
     [/됩니다/g, "돼"],         [/봅니다/g, "봐"],
+    /* 🙅 문장 '중간' 존댓말 — tail 규칙(문장 끝 전용)을 통째로 피해 살아남던 것들.
+       계약 테스트가 잡았다: "오늘 고생 많으셨어요. 푹 쉬시고 내일 봬요." */
+    [/많으셨어요/g, "많았어"], [/하셨어요/g, "했어"], [/되셨어요/g, "됐어"],
+    [/오셨어요/g, "왔어"], [/가셨어요/g, "갔어"], [/보셨어요/g, "봤어"],
+    [/드셨어요/g, "먹었어"], [/주셨어요/g, "줬어"], [/좋으셨어요/g, "좋았어"],
+    [/봬요/g, "보자"], [/드세요/g, "먹어"], [/드시고/g, "먹고"], [/드시면/g, "먹으면"],
+    [/원하시는/g, "원하는"], [/원하시면/g, "원하면"],
+    [/([가-힣])으시고/g, "$1고"], [/([가-힣])시고/g, "$1고"],
+    [/([가-힣])으시면/g, "$1면"], [/([가-힣])시면/g, "$1면"],
+    [/([가-힣])으시는/g, "$1는"], [/([가-힣])시는/g, "$1는"],
+    [/([가-힣])으실/g, "$1을"], [/([가-힣])실\s+수\s+있/g, "$1 수 있"],
   ];
   for (const [re, to] of FIXED) x = x.replace(re, to);
 
@@ -3044,7 +3120,7 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   //    **유저에겐 빈 응답이 나간다** — 실제로 그렇게 터졌다.
   //    도구를 숨길 땐 그 호출 기록과 짝이 되는 tool 결과까지 함께 걷어낸다.
   const msgs = pruneOrphanToolCalls(messages, new Set(activeTools.map((t: any) => t?.function?.name)));
-  const reqBody: any = { model: opts?.model || CHAT_MODEL, messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
+  const reqBody: any = { model: effModel(opts?.model || CHAT_MODEL), messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
   if (opts?.freqPen && !/^gemini/.test(String(reqBody.model))) reqBody.frequency_penalty = opts.freqPen;   // 반복 억제(딥시크만 — gemini 는 400 거부, 실측)
   if (/^gemini/.test(String(reqBody.model))) reqBody.reasoning_effort = "minimal";   // 사고 최소(수다용)
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
@@ -3060,6 +3136,7 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
        통째로 죽는다(실측 2026-08-21: 충전 바닥나자 일반 유저 전원 "정신이 나갔었다" 폴백).
        gemini 키가 있으면 같은 요청을 gemini 로 1회 재시도해 생명유지. 충전되면 자동 복귀. */
     if (r.status === 402 && GEMINI_EMBED_KEY && !/^gemini/.test(String(reqBody.model))) {
+      _ds402Until = Date.now() + 10 * 60000;   // 이후 10분은 딥시크 시도 없이 gemini 직행(이중 왕복 제거)
       const fb: any = { ...reqBody, model: "gemini-3.6-flash", reasoning_effort: "minimal" };
       delete fb.frequency_penalty;   // gemini OpenAI 호환은 400 거부(실측)
       const api2 = apiFor(fb.model);
@@ -3432,6 +3509,96 @@ Deno.serve(async (req) => {
           const t = await r.text();
           out[tag] = { status: r.status, body: t.slice(0, 300) };
         } catch (e) { out[tag] = { err: String(e).slice(0, 200) }; }
+      }
+      return json(out);
+    }
+    if (body?.op === "contract_test") {
+      /* 🧪 계약 검사 — LLM 0콜·0원·1초. 규칙이 '실제로' 걸리는지 고정 입력으로 확인한다.
+         이게 없어서 배포마다 눈으로 한 턴씩 보다가, 고칠 때마다 다른 쪽이 뚫렸다.
+         배포 전 항상 이걸 먼저 돌린다. fails 가 비어야 통과. */
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const base = { friendName: "갈비스", nick: "형" };
+      const CASES: Array<{ name: string; input: string; opts?: any; check: (o: string) => string | null }> = [
+        { name: "길이_초장문4문장", opts: {},
+          input: "요즘 인터넷에서 난리 난 '요아정' 조합 영상들이 진짜 웃겨. 사람들이 요거트 아이스크림 하나 먹겠다고 초코쉘, 벌집꿀, 초코볼, 딸기 같은 토핑을 엄청 올려대다가 결제 금액 3만 원 넘어가는 거 보고 현타 오는 영상들인데 댓글창이 진짜 난리야. 이 정도면 아이스크림이 아니라 국밥에 고기 추가한 수준이라는 댓글이 제일 웃겼어. 자기들끼리 드립 치고 싸우는데 완전 웃김.",
+          check: (o) => o.length <= 260 ? null : `길이 ${o.length}자(>260)` },
+        { name: "존댓말_제거", opts: {}, input: "오늘 고생 많으셨어요. 푹 쉬시고 내일 봬요.",
+          check: (o) => /(세요|셨어요|십니다|봬요|하십)/.test(o) ? `존댓말 잔존: ${o}` : null },
+        { name: "선택지_인라인을_줄로", opts: {}, input: "뭐 볼래? 1. 액션 2. 코미디 3. 다큐",
+          check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s+\S/g) || []).length >= 3 ? null : `줄분리 실패: ${JSON.stringify(o)}` },
+        { name: "선택지_캡에_안잘림", opts: {}, input: "골라봐.\n1. 하나\n2. 둘\n3. 셋\n4. 넷",
+          check: (o) => /4[.)]\s*넷/.test(o) ? null : `4번 유실: ${JSON.stringify(o)}` },
+        { name: "혼잣말_마음읽기_제거", opts: {}, input: "<ms>지금 위로가 필요하다</ms>아 그랬구나 ㅋㅋ",
+          check: (o) => /<ms|위로가 필요/.test(o) ? `마음읽기 노출: ${o}` : null },
+        { name: "가짜도구_제거", opts: {}, input: "잠깐만 [(query:\"웃긴영상\", kind:\"news\")] 찾아볼게",
+          check: (o) => /query:|kind:/.test(o) ? `툴문법 노출: ${o}` : null },
+        { name: "빈답_방어", opts: {}, input: "   ",
+          check: (o) => o.trim().length > 0 ? null : "빈 답이 나감" },
+        { name: "번호_카드수_불일치제거", opts: { linkCount: 1 },
+          input: "영상 몇 개 골라왔어.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
+          check: (o) => /(^|\n)\s*[1-9][.)]\s/.test(o) ? `본문 번호 잔존(카드 1장인데 3개 나열): ${JSON.stringify(o)}` : null },
+        { name: "번호_카드수_일치하면유지", opts: { linkCount: 3 },
+          input: "골라봐.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
+          check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
+        { name: "문장중간_안끊김", opts: {},
+          input: "피곤할 때는 따뜻한 물로 씻고 가만히 누워있는 게 최고인데 밥은 제때 챙겨 먹었는지 모르겠다.",
+          check: (o) => {
+            // 버블 경계가 종결부호가 아닌 곳에서 생기면 실패(문장 중간 절단)
+            const bs = o.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+            for (let i = 0; i < bs.length - 1; i++) if (!/[.!?…~ㅋㅎ)\]"']$/.test(bs[i])) return `중간 절단: ${JSON.stringify(bs[i])}`;
+            return null;
+          } },
+        { name: "창작은_캡면제", opts: { longForm: true },
+          input: "제목 후보야.\n1. 첫 번째 제목 후보로 꽤 길게 쓴 것\n2. 두 번째 제목 후보\n3. 세 번째 제목 후보\n4. 네 번째 제목 후보\n5. 다섯 번째 제목 후보",
+          check: (o) => /5[.)]/.test(o) ? null : `창작 리스트 잘림: ${JSON.stringify(o)}` },
+      ];
+      const fails: any[] = [];
+      for (const c of CASES) {
+        try {
+          const out = enforceContract(c.input, { ...base, ...(c.opts || {}) });
+          const why = c.check(out);
+          if (why) fails.push({ case: c.name, why: String(why).slice(0, 200) });
+        } catch (e) { fails.push({ case: c.name, why: "throw: " + String(e).slice(0, 160) }); }
+      }
+      return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
+    }
+    if (body?.op === "stream_probe") {
+      /* 🔬 스트리밍 진단 — chatStream 이 왜 null 을 뱉는지 원시로 본다.
+         (실측: 첫 글자까지 27초 = 스트림 실패 후 비스트림 폴백. 추측 대신 상태·본문을 본다.) */
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const mdl = String(body?.model || "gemini-3.6-flash");
+      const api = apiFor(mdl);
+      const out: any = { model: mdl, base: api.base, hasKey: !!api.key };
+      const variants: any = {
+        bare: {},
+        with_min: { reasoning_effort: "minimal" },
+        with_tc: { tool_choice: "none" },
+        with_min_tc: { reasoning_effort: "minimal", tool_choice: "none" },
+      };
+      for (const k of Object.keys(variants)) {
+        try {
+          const t0 = Date.now();
+          const r = await fetch(`${api.base}/chat/completions`, {
+            method: "POST", headers: { Authorization: `Bearer ${api.key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: mdl, max_tokens: 120, stream: true, temperature: 0.8,
+              messages: [{ role: "system", content: "반말 친구" }, { role: "user", content: "오늘 좀 지치네" }], ...variants[k] }),
+          });
+          if (!r.ok || !r.body) { out[k] = { status: r.status, body: (await r.text()).slice(0, 220) }; continue; }
+          const rd = r.body.getReader(); const dec = new TextDecoder();
+          let chunks = 0, firstMs = 0, buf = "";
+          for (;;) {
+            const { done, value } = await rd.read(); if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+              if (!line.startsWith("data:")) continue;
+              const d = line.slice(5).trim(); if (!d || d === "[DONE]") continue;
+              try { const j = JSON.parse(d); if (j?.choices?.[0]?.delta?.content) { chunks++; if (!firstMs) firstMs = Date.now() - t0; } } catch { /* */ }
+            }
+          }
+          out[k] = { status: 200, chunks, firstMs, totalMs: Date.now() - t0 };
+        } catch (e) { out[k] = { err: String(e).slice(0, 200) }; }
       }
       return json(out);
     }
@@ -4596,6 +4763,7 @@ ${parts.join("\n")}`;
     let reply = "";
     const actions: any[] = [];
     let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
+    let _lastVideos: any[] = [];  // 이번 턴에 hot_videos 로 실제 가져온 영상(카드 결정적 첨부용)
     // ✍️ 창작성 요청(제목·대본·리스트)은 240토큰+4문장캡에 "2."에서 잘림(레드팀 발견) → 상향·캡 면제. 잡담 브레비티는 불변.
     //    조사 여러 개("제목도 하나 뽑아줘")·후속 수정턴("좀 순하게", 키워드 없음)까지 — 직전 갈비스 답이 리스트/제목이면 이어지는 창작으로 본다.
     const lastAssistant = [...history].reverse().find((m: any) => m?.role === "assistant");
@@ -4638,17 +4806,12 @@ ${parts.join("\n")}`;
               send("text", { full: stripForPreview(full) });
             }
             let sreply = full || (greetStream ? "왔네 ㅋㅋ 뭐 하다 왔어?" : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?");
-            sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke, heavy: tHeavy, light: tLight });
-            // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
-            //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
-            // (위기는 JSON 경로로 간다) 고립을 반기는 문장만 제거
-            if (!guardsOff && dependency) sreply = stripDepDelight(sreply);
-            sreply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripTherapist(stripMetaSelf(stripMind(sreply)))), _hostileTurn), friendName)));
-            sreply = stripUngroundedMoney(sreply, "", _priceAsk, _statAsk);
-            // ❌ 폐기: 꼬리 질문을 코드로 잘라내던 처리. 되묻기 비율(숫자)은 좋아졌지만
-            //    문장이 삭제되면서 답이 앙상해졌고, 블라인드 평가에서 사람이 '끈 쪽'을 5:2로 골랐다.
-            //    되묻기는 이제 블록의 '권유'로만 다룬다 — 잘라내지 않는다.
-            sreply = normalizeChoices(sreply);   // 🔢 스트림도 마지막 관문에서 선택지를 줄로(클라 ^ 앵커 파서)
+            // 🎭 유머 강제 치환만 경로 고유(스트림은 도구가 없다) — 나머지 규칙은 전부 계약 관문에서.
+            if (wantsFunny && humorJoke && !sreply.includes(humorJoke.a)) sreply = `야 이거 앎? ${humorJoke.q}\n\nㅋㅋㅋ ${humorJoke.a}`;
+            // 📜 단 하나의 관문 — JSON 경로와 같은 함수. 규칙이 한쪽만 걸리던 구조를 여기서 끝낸다.
+            sreply = enforceContract(sreply, { friendName, nick, longForm, heavy: tHeavy, light: tLight,
+              hasActions: false, hostileTurn: _hostileTurn, priceAsk: _priceAsk, statAsk: _statAsk,
+              dependency, guardsOff });
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
             if (!bubbles.length || !hasText(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
@@ -4709,14 +4872,23 @@ ${parts.join("\n")}`;
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
         }
+        // 🎬 이번 턴에 실제로 가져온 영상 목록을 보관 — 모델이 목록만 읊고 point_to 를 안 부르면
+        //    턴 끝에서 우리가 카드로 붙인다(말만 하고 안 여는 결함의 마지막 방어).
+        if ((out.result as any)?.videos?.length) _lastVideos = (out.result as any).videos;
         messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: out.action.brief || ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
         _toolBlob += " " + (messages[messages.length - 1]?.content || "");
       }
     }
     // 빈 답 폴백 — 초안 카드가 붙어있으면 "헷갈렸어"가 아니라 라스트마일 안내(모델이 도구만 부르고 텍스트를 안 쓴 케이스).
-    if (!reply) reply = actions.some((a) => ["draft", "draftPredict", "draftPlaza", "draftGallari"].includes(a.kind))
-      ? "초안 나갔어! 밑에 카드 탭해서 편집기로 가자 — 같이 다듬어줄게 ㅋㅋ"
-      : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    if (!reply) {
+      const _dk = actions.some((a) => ["draft", "draftPredict", "draftPlaza", "draftGallari"].includes(a.kind));
+      /* 🎬 카드는 붙었는데 본문만 빈 턴 — "헷갈렸어"가 나가면 화면엔 사과문 + 정체불명 카드가 남는다
+         (사장님 실측: 영상 카드는 왔는데 "다시 말해줄래?"). 카드가 있으면 그 카드를 소개하는 말로. */
+      const _lk = actions.find((a: any) => a.kind === "open" || a.kind === "view");
+      reply = _dk ? "초안 나갔어! 밑에 카드 탭해서 편집기로 가자 — 같이 다듬어줄게 ㅋㅋ"
+        : _lk ? `이거 봐봐 — ${String(_lk.title || "이거").slice(0, 40)} ㅋㅋ`
+        : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    }
     // 🛡 '가짜 생성' 방어(bug#5 재발 근본수정) — 답이 "만들어놨어/판 세웠다"류 창작완료를 주장하는데
     //    실제 draft 액션이 없으면(모델이 대화이력의 옛 '만들어놨어'를 보고 '이미 했다' 착각 → 도구 미호출),
     //    도구 호출을 강제(tool_choice:required)해 한 번 재시도 → 진짜 초안 카드가 붙게 한다.
@@ -4941,6 +5113,17 @@ ${parts.join("\n")}`;
               const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
               if (out.action) actions.push(out.action);
             }
+            /* 🎬 카드 결정적 첨부 — 모델이 목록만 읊고 point_to 를 안 부르는 턴이 있다.
+               그러면 화면엔 '번호만 있고 열 게 없는' 답이 나간다(말만 하는 결함의 재발 형태).
+               도구 호출이 하나도 없으면 우리가 직접 상위 3개를 카드로 붙인다. */
+            if (!actions.some((a: any) => a.kind === "open" || a.kind === "view")) {
+              for (const v of vids.slice(0, 3)) {
+                const vid = String(v.video_id || v.id || "").trim();
+                if (!vid) continue;
+                actions.push({ kind: "open", url: `https://galla.im/watch.html?v=${vid}`,
+                  title: String(v.title || "영상").slice(0, 60), label: "보기", source: "핫튜브" });
+              }
+            }
           }
         } catch { /* best effort */ }
       }
@@ -5063,6 +5246,21 @@ ${parts.join("\n")}`;
     }
     /* 🚪 auto 는 view 에만 붙던 것 확장 — "보여줘/열어봐"의 결과가 핫튜브(open 칩)면 자동오픈이
        영영 안 걸렸다(실측: "열었어!" 말만 하고 화면은 그대로). 첫 open 칩 하나만 auto. */
+    /* 🎬 말만 하고 안 여는 결함의 최종 방어 — 이번 턴에 영상 목록을 실제로 가져왔는데
+       열 수 있는 카드가 하나도 없으면, 우리가 상위 N개를 카드로 붙인다.
+       (실측: 본문엔 "1. …2. …3. …"에 "링크 열어줄게"인데 카드 0장.)
+       본문에 번호를 몇 개 읊었는지에 맞춰 붙여야 번호와 카드가 어긋나지 않는다. */
+    if (_lastVideos.length && !actions.some((a: any) => a.kind === "open" || a.kind === "view")) {
+      const listed = (reply.match(/(^|\n)\s*[1-9][.)]\s+\S/g) || []).length;
+      const want = Math.min(Math.max(listed, 1), 3);
+      for (const v of _lastVideos.slice(0, want)) {
+        const vid = String(v.video_id || v.id || "").trim();
+        if (!vid) continue;
+        actions.push({ kind: "open", url: `https://galla.im/watch.html?v=${vid}`,
+          title: String(v.title || "영상").slice(0, 60), label: "보기", source: "핫튜브" });
+      }
+    }
+    let _askPick = false;   // 🔢 추천 여러 개 → 관문 통과 후 "몇 번 볼래?"를 붙인다
     /* 🧹 같은 카드 중복 제거 — 도구가 같은 콘텐츠를 두 번 물어오면 똑같은 칩이 나란히 붙는다(실측). */
     {
       const seen = new Set<string>();
@@ -5081,9 +5279,9 @@ ${parts.join("\n")}`;
       }
       /* 🔢 추천 카드 2장 이상 & 자동오픈 아님 → 번호로 고르게 유도(클라가 카드에 배지 붙이고
          "N번" 입력을 서버 왕복 없이 그 카드 오픈으로 처리). */
-      if (links.length >= 2 && !links.some((a: any) => a.auto) && !/몇\s*번|번호|골라/.test(reply)) {
-        reply = reply.replace(/\s+$/, "") + "\n\n몇 번 볼래?";
-      }
+      // ⚠️ 여기서 바로 본문에 붙이면 계약 관문의 문장 캡이 이 줄을 잘라먹는다(마지막 문장이라 1순위).
+      //    플래그만 세우고 관문을 통과한 뒤에 붙인다.
+      _askPick = links.length >= 2 && !links.some((a: any) => a.auto) && !/몇\s*번|번호|골라/.test(reply);
     }
     const cleanActions = actions;
 
@@ -5101,11 +5299,14 @@ ${parts.join("\n")}`;
     // 위기뿐 아니라 자기비하·과의존 턴도 같은 처방이 필요하다(속마음을 꺼낸 순간이라는 점에서 같다).
     // ⚠️ 위기 턴에만 적용한다. 자기비하·과의존에서도 지웠더니 "그렇게 말하지 마, 너한테 너무 심한 말이야"
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
-    if (!guardsOff && crisis) reply = stripSilencer(reply);
-    if (!guardsOff && dependency) reply = stripDepDelight(reply);   // 고립을 '반기는' 문장만 제거(안전)
-    reply = joinBrokenBubbles(deHonorific(fixOwnName(stripHostileOpener(stripFakeToolCall(stripUiTalk(stripTherapist(stripMetaSelf(stripMind(reply))), actions.length > 0)), _hostileTurn), friendName)));
-    reply = stripUngroundedMoney(reply, _toolBlob, _priceAsk, _statAsk);
-    // ❌ 폐기(위와 동일 사유): 꼬리 질문 코드 삭제.
+    // 📜 단 하나의 관문 — 스트림 경로와 같은 함수(enforceContract). 가드가 reply 를 재생성했든
+    //    안 했든, 캡·걷어내기·선택지 정규화가 여기서 반드시 한 번 걸린다.
+    reply = enforceContract(reply, { friendName, nick, longForm, heavy: tHeavy, light: tLight,
+      hasActions: actions.length > 0,
+      linkCount: actions.filter((a: any) => a.kind === "open" || a.kind === "view").length,
+      hostileTurn: _hostileTurn, toolBlob: _toolBlob,
+      priceAsk: _priceAsk, statAsk: _statAsk, crisis: !!crisis, dependency, guardsOff });
+    if (_askPick) reply = reply.replace(/\s+$/, "") + "\n\n몇 번 볼래?";
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
     if (crisis) {
