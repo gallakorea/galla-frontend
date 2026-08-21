@@ -159,12 +159,16 @@ async function runPersona(u: { id: string; jwt: string }, p: { key: string; prob
 /* 🕒 배터리 한 번 완주. 페르소나가 늘면서 150초를 넘겨 플랫폼 IDLE_TIMEOUT(504)에 걸렸다
    (이전엔 146초로 아슬아슬하게 통과했다). 그래서 핸들러는 즉시 응답하고 이 함수는
    백그라운드(EdgeRuntime.waitUntil)에서 끝까지 돈다 — 결과는 redteam_runs 로 확인한다. */
-async function runOnce(): Promise<any> {
+const JUDGE_KEYS = ["lonely", "switch", "showmore", "hostile"];
+const CHUNK_MS = 170_000;   // 이 시간이 지나면 다음 구간을 새 호출로 넘긴다(엣지 벽시계 여유)
+async function runOnce(resumeId?: number | null, startAt = 0): Promise<any> {
+  const T0 = Date.now();
   let pool: { id: string; jwt: string }[] = [];
   try {
     pool = await loginPool();
     if (!pool.length) return { ok: false, detail: "pool login failed" };
-    for (const u of pool) { try { await wipeState(u.id); } catch { /* */ } }   // 시작 wipe — 지난 런 백그라운드 잔여 정리
+    // 🧹 시작 wipe는 '첫 구간'에서만 — 이어달리기 구간에서 지우면 앞 구간 맥락이 날아간다.
+    if (!resumeId) for (const u of pool) { try { await wipeState(u.id); } catch { /* */ } }
     // 페르소나를 레인(풀 유저)별로 라운드로빈 → 레인 내 순차(유저 재사용·wipe), 레인 간 동시.
     //    ⚠️ 동시성=2로 제한(3레인은 galla-friend 자가호출 버스트로 엣지 rate limit). 실사용 영향 최소화.
     /* ⚠️ 두 가지를 동시에 만족해야 한다:
@@ -182,24 +186,41 @@ async function runOnce(): Promise<any> {
     const results: any[] = [];
     const breakdown: Record<string, number> = {};
     let flags = 0, turns = 0, penalty = 0;
-    let runId: number | null = null;
-    try {
-      const { data: ins } = await sb.from("redteam_runs")
-        .insert({ personas: PERSONAS.length, turns: 0, flags: 0, health: 100, flag_breakdown: {}, detail: { status: "running", done: 0 } })
-        .select("id").maybeSingle();
-      runId = (ins as any)?.id ?? null;
-    } catch { /* 기록 실패해도 배터리는 돈다 */ }
-    const saveProgress = async (status: string) => {
+    const convos: { key: string; convo: any }[] = [];
+    let runId: number | null = resumeId ?? null;
+    let carried: any[] = [];            // 앞 구간에서 이미 기록된 결함 목록
+    if (runId) {
+      // 🏃 이어달리기 — 앞 구간 누계를 행에서 되살린다(메모리는 호출마다 사라진다).
+      try {
+        const { data: prev } = await sb.from("redteam_runs").select("turns,flags,health,flag_breakdown,detail").eq("id", runId).maybeSingle();
+        if (prev) {
+          turns = (prev as any).turns || 0;
+          flags = (prev as any).flags || 0;
+          penalty = Math.max(0, 100 - ((prev as any).health ?? 100));
+          Object.assign(breakdown, (prev as any).flag_breakdown || {});
+          carried = ((prev as any).detail?.items) || [];
+          for (const c of (((prev as any).detail?.convos) || [])) convos.push(c);
+        }
+      } catch { /* */ }
+    } else {
+      try {
+        const { data: ins } = await sb.from("redteam_runs")
+          .insert({ personas: PERSONAS.length, turns: 0, flags: 0, health: 100, flag_breakdown: {}, detail: { status: "running", done: 0 } })
+          .select("id").maybeSingle();
+        runId = (ins as any)?.id ?? null;
+      } catch { /* 기록 실패해도 배터리는 돈다 */ }
+    }
+    const saveProgress = async (status: string, doneN?: number) => {
       if (!runId) return;
-      const detailNow = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
+      const detailNow = carried.concat(results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags })));
       try {
         await sb.from("redteam_runs").update({
           turns, flags, health: Math.max(0, 100 - penalty), flag_breakdown: breakdown,
-          detail: { status, done: results.length, of: PERSONAS.length, items: detailNow },
+          detail: { status, done: doneN ?? (startAt + results.length), of: PERSONAS.length, items: detailNow, convos },
         }).eq("id", runId);
       } catch { /* */ }
     };
-    for (let i = 0; i < PERSONAS.length; i++) {
+    for (let i = startAt; i < PERSONAS.length; i++) {
       const p = PERSONAS[i];
       const u = pool[i % pool.length];
       let r: any;
@@ -208,19 +229,32 @@ async function runOnce(): Promise<any> {
       results.push(r);
       turns += r.scanned || 0;
       for (const f of (r.flags || [])) { breakdown[f.cat] = (breakdown[f.cat] || 0) + 1; flags++; penalty += (PEN[f.cat] || 2); }
-      await saveProgress("running");   // 페르소나 1개 끝날 때마다 — 죽어도 여기까진 남는다
+      if (JUDGE_KEYS.includes(p.key) && r.convo) convos.push({ key: p.key, convo: r.convo });
+      await saveProgress("running", i + 1);   // 페르소나 1개 끝날 때마다 — 죽어도 여기까진 남는다
+      /* 🏃 이어달리기 — 엣지 워커는 벽시계 한도가 있다. 12개를 한 호출에 다 돌리려다
+         **9번째쯤에서 조용히 죽었다**(중간저장을 넣고서야 보였다). 시간이 차면 다음 구간을
+         새 호출로 넘긴다. 같은 runId 를 이어써서 결과가 한 행에 누적된다. */
+      if (Date.now() - T0 > CHUNK_MS && i + 1 < PERSONAS.length) {
+        await saveProgress("chunking", i + 1);
+        try {
+          await fetch(`${SB}/functions/v1/galvis-redteam`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-cron-key": CRON_KEY, apikey: ANON, Authorization: `Bearer ${ANON}` },
+            body: JSON.stringify({ resume: runId, from: i + 1 }),
+          });
+        } catch (e) { console.error("chunk handoff failed", String(e).slice(0, 120)); }
+        return { ok: true, chunked: true, done: i + 1, of: PERSONAS.length, runId };
+      }
     }
     const health = Math.max(0, 100 - penalty);
-    const detail = results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags }));
-    await saveProgress("scored");   // 채점 완료 — 이 뒤 심판(LLM)이 죽어도 본 결과는 산다
+    const detail = carried.concat(results.filter((r) => (r.flags || []).length).map((r) => ({ probe: r.probe, key: r.key, flags: r.flags })));
+    await saveProgress("scored", PERSONAS.length);   // 채점 완료 — 이 뒤 심판(LLM)이 죽어도 본 결과는 산다
     /* 표본 4개(감정·수다·딜리버·갈등 계열 위주)만 심판 — 비용·시간 통제 */
-    const jud = await judgeQuality(
-      results.filter((r) => ["lonely", "switch", "showmore", "hostile"].includes(r.key) && r.convo)
-             .map((r) => ({ key: r.key, convo: r.convo })));
+    const jud = await judgeQuality(convos);
     if (runId) {
       await sb.from("redteam_runs").update({
         turns, flags, health, flag_breakdown: breakdown,
-        detail: { status: "done", done: results.length, of: PERSONAS.length, items: detail }, quality: jud,
+        detail: { status: "done", done: PERSONAS.length, of: PERSONAS.length, items: detail }, quality: jud,
       }).eq("id", runId);
     } else {
       await sb.from("redteam_runs").insert({ personas: PERSONAS.length, turns, flags, health, flag_breakdown: breakdown, detail, quality: jud });
@@ -239,13 +273,18 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization") || "";
     if (!auth.includes(SVC)) return new Response("forbidden", { status: 403 });
   }
-  let sync = false;
-  try { sync = (await req.json())?.sync === true; } catch { /* 본문 없음 = 백그라운드 */ }
+  let sync = false, resume: number | null = null, from = 0;
+  try {
+    const b = await req.json();
+    sync = b?.sync === true;
+    resume = Number.isFinite(b?.resume) ? Number(b.resume) : null;   // 🏃 이어달리기 구간
+    from = Number.isFinite(b?.from) ? Number(b.from) : 0;
+  } catch { /* 본문 없음 = 백그라운드 첫 구간 */ }
   if (sync) {
-    const r = await runOnce();
+    const r = await runOnce(resume, from);
     return new Response(JSON.stringify(r), { status: r?.ok ? 200 : 500, headers: { "Content-Type": "application/json" } });
   }
-  const job = runOnce().catch((e) => { console.error("redteam bg fail", String(e).slice(0, 200)); });
+  const job = runOnce(resume, from).catch((e) => { console.error("redteam bg fail", String(e).slice(0, 200)); });
   const wu = (globalThis as any).EdgeRuntime?.waitUntil;
   if (typeof wu === "function") wu.call((globalThis as any).EdgeRuntime, job);
   return new Response(JSON.stringify({ ok: true, accepted: true, note: "백그라운드 실행 — 결과는 redteam_runs" }),
