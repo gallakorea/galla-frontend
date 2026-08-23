@@ -27,7 +27,10 @@ const iso = (d) => { try { return new Date(d).toISOString(); } catch { return ne
      밀지는 않는다(단일 출처는 미들웨어가 noindex 를 붙인다).
    ⚠️ Supabase 는 요청당 1000행이 상한이라 offset 으로 나눠 받아야 한다(예전엔 limit=5000 을
       적어놓고 실제로는 1000건만 들어가고 있었다). */
-const NEWS_DAYS = 21, NEWS_MAX = 4000, PAGE = 1000;
+/* 21일·4000건으로 잡았더니 사이트맵의 78%가 다시 뉴스가 됐다(4,000 vs 오리지널 1,115).
+   크롤 예산이 작은 신규 도메인엔 '많이 밀기'가 아니라 '좁게 밀기'가 맞다. 게다가 3주 지난
+   AI 종합 기사는 검색 가치가 거의 없다. → 최근 7일·1,500건. 그 이전 것도 링크 그물로 도달은 된다. */
+const NEWS_DAYS = 7, NEWS_MAX = 1500, PAGE = 1000;
 async function newsForSitemap() {
   const since = new Date(Date.now() - NEWS_DAYS * 864e5).toISOString();
   const base = `galla_news?select=id,published_at&status=eq.published&source_count=gte.2&published_at=gte.${since}&order=published_at.desc`;
