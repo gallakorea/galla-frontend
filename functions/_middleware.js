@@ -90,14 +90,14 @@ async function listLinks(p) {
   if (p === "/" || p === "/index") {
     const [iss, news] = await Promise.all([
       sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=30`),
-      sbMany(`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=15`),
+      sbMany(`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=15`),
     ]);
     return linkSection("최근 이슈", iss.map((r) => ({ href: `/issue?id=${r.id}`, text: r.title }))) +
            linkSection("최근 갈라뉴스", news.map((r) => ({ href: `/news?gn=${r.id}`, text: r.title })));
   }
   if (p === "/search") {
     const [news, iss, plaza] = await Promise.all([
-      sbMany(`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=40`),
+      sbMany(`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=40`),
       sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=15`),
       sbMany(`plaza_posts?select=id,title&order=created_at.desc&limit=15`),
     ]);
@@ -123,7 +123,7 @@ async function listLinks(p) {
 // 상세 페이지 하단 "더 보기" — 같은 섹션 최신 8개(카테고리 무관: 본문 조회와 병렬로 돌리려고)
 const REL = {
   issue:   [`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=9`,        (r) => `/issue?id=${r.id}`,           "다른 이슈 더 보기"],
-  news:    [`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=9`, (r) => `/news?gn=${r.id}`,          "다른 갈라뉴스"],
+  news:    [`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=9`, (r) => `/news?gn=${r.id}`,          "다른 갈라뉴스"],
   plaza:   [`plaza_posts?select=id,title&order=created_at.desc&limit=9`,                     (r) => `/plaza_detail?id=${r.id}`,   "광장 다른 글"],
   predict: [`markets?select=id,question&order=created_at.desc&limit=9`,                      (r) => `/predict-market?id=${r.id}`, "다른 예측 마켓"],
   post:    [`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=9`, (r) => `/gallari-post?id=${r.id}`, "다른 콘텐츠"],
@@ -227,7 +227,11 @@ async function resolveSeo(path, params) {
     const title = clip(row.title, 60), desc = clip(row.summary || row.title, 150);
     const canonical = `${HOST}/news?gn=${row.id}`, image = row.hero_image || DEF_IMG;
     const full = [row.summary, row.body].filter(Boolean).join("\n\n");
-    return { k, title: `${title} · 갈라뉴스`, desc, canonical, image, ogType: "article",
+    /* 출처가 1곳뿐인 기사는 '종합'이 아니라 한 곳을 바꿔 쓴 것이다(전체의 35%).
+       색인시키면 원문 언론사와 중복 경합 + 대량생산 콘텐츠 판정 위험 → noindex,follow.
+       (follow 는 남긴다 — 링크 그물이 여기서 끊기면 안 된다) */
+    const thin = !(Number(row.source_count) >= 2);
+    return { k, thin, title: `${title} · 갈라뉴스`, desc, canonical, image, ogType: "article",
       kicker: `${row.category || "뉴스"} · 갈라뉴스`,
       h1: row.title, body: full, date: row.published_at,
       hero: row.hero_image, category: row.category, sourceCount: row.source_count,
@@ -334,7 +338,7 @@ function rewrite(res, seo, linksHtml) {
   }
   const metaHtml =
     `<meta name="description" content="${esc(seo.desc)}">` +
-    `<meta name="robots" content="index,follow,max-image-preview:large">` +
+    `<meta name="robots" content="${seo.thin ? "noindex,follow" : "index,follow,max-image-preview:large"}">` +
     `<link rel="canonical" href="${esc(seo.canonical)}">` +
     `<meta property="og:type" content="${seo.ogType}">` +
     `<meta property="og:site_name" content="GALLA 갈라">` +

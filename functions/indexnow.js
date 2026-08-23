@@ -61,7 +61,8 @@ export async function onRequestGet(context) {
 
   const [issues, news, plaza, markets, posts] = await Promise.all([
     sb(`issues?select=id&status=eq.normal&created_at=gte.${since}${q}`),
-    sb(`galla_news?select=id&status=eq.published&published_at=gte.${since}&order=published_at.desc&limit=100`),
+    // 출처 1곳짜리는 미들웨어가 noindex 를 붙이므로 통보 대상에서도 뺀다
+    sb(`galla_news?select=id&status=eq.published&source_count=gte.2&published_at=gte.${since}&order=published_at.desc&limit=100`),
     sb(`plaza_posts?select=id&created_at=gte.${since}${q}`),
     sb(`markets?select=id&created_at=gte.${since}${q}`),
     sb(`posts?select=id&is_published=eq.true&created_at=gte.${since}${q}`),
