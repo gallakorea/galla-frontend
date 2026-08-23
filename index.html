@@ -142,16 +142,19 @@
         <img src="assets/brand/wordmark-white.png?v=080412" alt="GALLA 갈라" class="sf-logo" />
         <span class="sf-slogan">무엇을 하든 판이 되는 곳</span>
       </div>
+      <!-- ⚠️ /news.html 은 기사 '상세' 뷰어라 gn 없이 열면 빈 화면이다. 목록은 /search?tab=news.
+           그리고 .html 은 CF Pages가 clean URL로 308하므로 링크는 전부 clean로 건다(리다이렉트 URL은 색인에서 빠진다). -->
       <nav class="sf-links" aria-label="주요 서비스">
-        <a href="/galla-predict.html">갈라예측</a>
-        <a href="/search.html?tab=plaza">갈라 광장</a>
-        <a href="/news.html">갈라뉴스</a>
-        <a href="/search.html">통합검색</a>
+        <a href="/galla-predict">갈라예측</a>
+        <a href="/search?tab=plaza">갈라 광장</a>
+        <a href="/search?tab=news">갈라뉴스</a>
+        <a href="/gallari">숏판 · 롱판</a>
+        <a href="/search">통합검색</a>
       </nav>
       <nav class="sf-links sf-sub" aria-label="정책·지원">
-        <a href="/terms.html">이용약관</a>
-        <a href="/privacy.html">개인정보처리방침</a>
-        <a href="/support.html">고객센터</a>
+        <a href="/terms">이용약관</a>
+        <a href="/privacy">개인정보처리방침</a>
+        <a href="/support">고객센터</a>
       </nav>
       <div class="sf-social" aria-label="공식 채널">
         <a href="https://www.instagram.com/galla.kr" rel="me noopener" target="_blank">인스타그램</a>

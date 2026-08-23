@@ -32,6 +32,111 @@ async function sbOne(query) {
   } catch { return null; }
 }
 
+// 여러 행 (목록용)
+async function sbMany(query) {
+  try {
+    const r = await fetch(`${SB}/rest/v1/${query}`, {
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+      cf: { cacheTtl: 600, cacheEverything: true },
+    });
+    if (!r.ok) return [];
+    const a = await r.json();
+    return Array.isArray(a) ? a : [];
+  } catch { return []; }
+}
+
+/* ── 크롤 가능한 링크 그물 ────────────────────────────────────────────
+   실측(2026-08-23): 홈의 <a href>는 11개(전부 정적·소셜), news/plaza/galla-predict/search
+   목록 페이지는 <a href>가 **0개**였다. 목록이 전부 JS <button>이라 로봇 눈에는
+   콘텐츠로 가는 길이 사이트맵 하나뿐 → 구글 "발견됨-색인 안 됨", JS 미실행인
+   네이버 Yeti·다음 Daumoa는 아예 도달 불가. (네이버 색인 24/2120, 다음 0건)
+   → 목록/상세 페이지 하단에 진짜 <a href> 블록을 엣지에서 깐다. 사람 눈에도 보이게(숨김
+   텍스트는 구글이 가중치를 안 준다). 스타일은 인라인 — 페이지마다 CSS가 달라 의존하지 않는다. */
+// 하단 고정 내비(56px+세이프에어리어)에 마지막 링크가 가리지 않도록 넉넉히 띄운다
+const LINK_WRAP = "margin:26px auto 0;max-width:720px;padding:18px 16px calc(96px + env(safe-area-inset-bottom));border-top:1px solid #1b1f2a";
+const LINK_H = "margin:0 0 10px;font-size:13.5px;color:#aab3c5;font-weight:700;letter-spacing:.2px";
+const LINK_UL = "list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px";
+const LINK_A = "color:#8fa0c0;text-decoration:none;font-size:13px;line-height:1.6";
+
+function linkSection(heading, items) {
+  const list = (items || []).filter((it) => it && it.href && it.text);
+  if (!list.length) return "";
+  return `<h2 style="${LINK_H}">${esc(heading)}</h2><ul style="${LINK_UL}">` +
+    list.map((it) => `<li><a href="${esc(it.href)}" style="${LINK_A}">${esc(clip(it.text, 70))}</a></li>`).join("") +
+    `</ul>`;
+}
+// 섹션 사이를 잇는 상시 링크 — 크롤러가 어디서든 다른 영역으로 건너갈 수 있게
+const HUB_LINKS = [
+  ["/", "갈라 홈 · 실시간 이슈"],
+  ["/search.html?tab=news", "갈라뉴스"],
+  ["/search.html?tab=plaza", "갈라 광장"],
+  ["/galla-predict.html", "갈라예측"],
+  ["/gallari.html", "숏판 · 롱판"],
+  ["/search.html", "통합검색"],
+];
+const hubHtml = () =>
+  `<h2 style="${LINK_H}">갈라 둘러보기</h2><ul style="${LINK_UL}">` +
+  HUB_LINKS.map(([h, t]) => `<li><a href="${h}" style="${LINK_A}">${esc(t)}</a></li>`).join("") + `</ul>`;
+
+const wrapLinks = (inner) =>
+  inner ? `<section class="seo-web" style="${LINK_WRAP}" aria-label="갈라 콘텐츠 바로가기">${inner}${hubHtml()}</section>` : "";
+
+const titleOf = (r) => r.title || r.question || clip(plain(r.caption), 60) || "";
+
+const LIST_PATHS = new Set(["/", "/index", "/search", "/plaza", "/galla-predict", "/gallari"]);
+
+// 목록 페이지별 링크 묶음
+async function listLinks(p) {
+  if (p === "/" || p === "/index") {
+    const [iss, news] = await Promise.all([
+      sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=30`),
+      sbMany(`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=15`),
+    ]);
+    return linkSection("최근 이슈", iss.map((r) => ({ href: `/issue?id=${r.id}`, text: r.title }))) +
+           linkSection("최근 갈라뉴스", news.map((r) => ({ href: `/news?gn=${r.id}`, text: r.title })));
+  }
+  if (p === "/search") {
+    const [news, iss, plaza] = await Promise.all([
+      sbMany(`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=40`),
+      sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=15`),
+      sbMany(`plaza_posts?select=id,title&order=created_at.desc&limit=15`),
+    ]);
+    return linkSection("갈라뉴스 — AI가 여러 보도를 종합한 기사", news.map((r) => ({ href: `/news?gn=${r.id}`, text: r.title }))) +
+           linkSection("최근 이슈", iss.map((r) => ({ href: `/issue?id=${r.id}`, text: r.title }))) +
+           linkSection("광장 최신 글", plaza.map((r) => ({ href: `/plaza_detail?id=${r.id}`, text: r.title })));
+  }
+  if (p === "/plaza") {
+    const rows = await sbMany(`plaza_posts?select=id,title&order=created_at.desc&limit=50`);
+    return linkSection("갈라 광장 최신 글", rows.map((r) => ({ href: `/plaza_detail?id=${r.id}`, text: r.title })));
+  }
+  if (p === "/galla-predict") {
+    const rows = await sbMany(`markets?select=id,question&order=created_at.desc&limit=50`);
+    return linkSection("갈라예측 마켓", rows.map((r) => ({ href: `/predict-market?id=${r.id}`, text: r.question })));
+  }
+  if (p === "/gallari") {
+    const rows = await sbMany(`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=40`);
+    return linkSection("숏판 · 롱판 콘텐츠", rows.map((r) => ({ href: `/gallari-post?id=${r.id}`, text: titleOf(r) })));
+  }
+  return "";
+}
+
+// 상세 페이지 하단 "더 보기" — 같은 섹션 최신 8개(카테고리 무관: 본문 조회와 병렬로 돌리려고)
+const REL = {
+  issue:   [`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=9`,        (r) => `/issue?id=${r.id}`,           "다른 이슈 더 보기"],
+  news:    [`galla_news?status=eq.published&select=id,title&order=published_at.desc&limit=9`, (r) => `/news?gn=${r.id}`,          "다른 갈라뉴스"],
+  plaza:   [`plaza_posts?select=id,title&order=created_at.desc&limit=9`,                     (r) => `/plaza_detail?id=${r.id}`,   "광장 다른 글"],
+  predict: [`markets?select=id,question&order=created_at.desc&limit=9`,                      (r) => `/predict-market?id=${r.id}`, "다른 예측 마켓"],
+  post:    [`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=9`, (r) => `/gallari-post?id=${r.id}`, "다른 콘텐츠"],
+};
+async function relatedLinks(k, selfId) {
+  const spec = REL[k];
+  if (!spec) return "";
+  const rows = await sbMany(spec[0]);
+  const items = rows.filter((r) => String(r.id) !== String(selfId)).slice(0, 8)
+    .map((r) => ({ href: spec[1](r), text: titleOf(r) }));
+  return linkSection(spec[2], items);
+}
+
 // 경로 정규화: CF Pages가 /issue.html → /issue 로 308하므로 clean 경로 기준으로 매칭
 const kind = (path) => {
   const p = path.replace(/\.html$/, "");
@@ -103,34 +208,40 @@ async function resolveInvite(params) {
 async function resolveSeo(path, params) {
   const k = kind(path);
   if (k === "issue" && params.get("id")) {
-    const row = await sbOne(`issues?id=eq.${encodeURIComponent(params.get("id"))}&select=id,title,one_line,category,created_at,thumbnail_url`);
+    // ⚠️ 본문은 description(수백 자). one_line(33자)만 쓰면 로봇이 보는 글이 thin해진다.
+    const row = await sbOne(`issues?id=eq.${encodeURIComponent(params.get("id"))}&select=id,title,one_line,description,category,created_at,thumbnail_url,faction_a,faction_b,tags`);
     if (!row) return null;
-    const title = clip(row.title, 60), desc = clip(row.one_line || row.title, 150);
+    const title = clip(row.title, 60), desc = clip(row.one_line || plain(row.description) || row.title, 150);
     const canonical = `${HOST}/issue?id=${row.id}`, image = row.thumbnail_url || DEF_IMG;
-    return { title: `${title} · 갈라`, desc, canonical, image, ogType: "article",
+    const fac = (row.faction_a && row.faction_b) ? `진영 대결: ${row.faction_a} vs ${row.faction_b}` : "";
+    const full = [row.one_line, plain(row.description), fac].filter(Boolean).join("\n\n");
+    return { k, title: `${title} · 갈라`, desc, canonical, image, ogType: "article",
       kicker: row.category ? `${row.category} · 여론 대결` : "여론 대결",
-      h1: row.title, body: row.one_line || "", date: row.created_at,
-      jsonld: articleLd(row.title, desc, image, canonical, row.created_at) };
+      h1: row.title, body: full, date: row.created_at, tags: row.tags,
+      jsonld: articleLd(row.title, desc, image, canonical, row.created_at, full) };
   }
   if (k === "news" && params.get("gn")) {
-    const row = await sbOne(`galla_news?id=eq.${encodeURIComponent(params.get("gn"))}&select=id,title,summary,category,hero_image,published_at,source_count`);
+    // 갈라뉴스는 AI가 여러 보도를 종합해 새로 쓴 오리지널 기사 → body 전문을 그대로 노출한다.
+    const row = await sbOne(`galla_news?id=eq.${encodeURIComponent(params.get("gn"))}&select=id,title,summary,body,category,hero_image,published_at,source_count`);
     if (!row) return null;
     const title = clip(row.title, 60), desc = clip(row.summary || row.title, 150);
     const canonical = `${HOST}/news?gn=${row.id}`, image = row.hero_image || DEF_IMG;
-    return { title: `${title} · 갈라뉴스`, desc, canonical, image, ogType: "article",
+    const full = [row.summary, row.body].filter(Boolean).join("\n\n");
+    return { k, title: `${title} · 갈라뉴스`, desc, canonical, image, ogType: "article",
       kicker: `${row.category || "뉴스"} · 갈라뉴스`,
-      h1: row.title, body: row.summary || "", date: row.published_at,
-      jsonld: newsLd(row.title, desc, image, canonical, row.published_at) };
+      h1: row.title, body: full, date: row.published_at,
+      hero: row.hero_image, category: row.category, sourceCount: row.source_count,
+      jsonld: newsLd(row.title, desc, image, canonical, row.published_at, full) };
   }
   if (k === "plaza" && params.get("id")) {
     const row = await sbOne(`plaza_posts?id=eq.${encodeURIComponent(params.get("id"))}&select=id,title,body,category,created_at,cover_image,thumbnail,nickname`);
     if (!row) return null;
     const title = clip(row.title, 60), desc = clip(plain(row.body) || row.title, 150);
     const canonical = `${HOST}/plaza_detail?id=${row.id}`, image = row.cover_image || row.thumbnail || DEF_IMG;
-    return { title: `${title} · 갈라 광장`, desc, canonical, image, ogType: "article",
+    return { k, title: `${title} · 갈라 광장`, desc, canonical, image, ogType: "article",
       kicker: `${row.category || "광장"} · 갈라 광장`,
       h1: row.title, body: plain(row.body), date: row.created_at,
-      jsonld: articleLd(row.title, desc, image, canonical, row.created_at) };
+      jsonld: articleLd(row.title, desc, image, canonical, row.created_at, plain(row.body)) };
   }
   if (k === "post" && params.get("id")) {
     const row = await sbOne(`posts?id=eq.${encodeURIComponent(params.get("id"))}&is_published=eq.true&select=id,kind,title,caption,thumbnail_url,images,created_at`);
@@ -140,7 +251,7 @@ async function resolveSeo(path, params) {
     const desc = clip(plain(row.caption) || row.title || "갈라에서 소통하고 후원하는 콘텐츠.", 150);
     const canonical = `${HOST}/gallari-post?id=${row.id}`;
     const image = row.thumbnail_url || (Array.isArray(row.images) && row.images[0]) || DEF_IMG;
-    return { title: `${title} · 갈라리`, desc, canonical, image, ogType: "article",
+    return { k, title: `${title} · 갈라리`, desc, canonical, image, ogType: "article",
       kicker: `갈라리 · ${row.kind === "horizontal" ? "영상" : "콘텐츠"}`,
       h1: heading, body: plain(row.caption) || "", date: row.created_at,
       jsonld: articleLd(heading, desc, image, canonical, row.created_at) };
@@ -151,26 +262,28 @@ async function resolveSeo(path, params) {
     const title = clip(row.question, 60);
     const desc = clip(row.description || `${row.question} — 갈라예측에서 예/아니오에 GP를 걸고 결과를 맞혀보세요.`, 150);
     const canonical = `${HOST}/predict-market?id=${row.id}`, image = row.image_url || DEF_IMG;
-    return { title: `${title} · 갈라예측`, desc, canonical, image, ogType: "article",
+    return { k, title: `${title} · 갈라예측`, desc, canonical, image, ogType: "article",
       kicker: `${row.category || "예측"} · 갈라예측`,
       h1: row.question, body: row.description || "", date: row.created_at,
-      jsonld: articleLd(row.question, desc, image, canonical, row.created_at) };
+      jsonld: articleLd(row.question, desc, image, canonical, row.created_at, row.description) };
   }
   return null;
 }
 
-function articleLd(title, desc, image, url, date) {
+function articleLd(title, desc, image, url, date, body) {
   return JSON.stringify({
     "@context": "https://schema.org", "@type": "Article",
     headline: clip(title, 110), description: desc, image: [image],
+    inLanguage: "ko-KR",
+    ...(body ? { articleBody: clip(body, 5000) } : {}),
     datePublished: safeIso(date), dateModified: safeIso(date),
     mainEntityOfPage: url,
     author: { "@type": "Organization", name: "GALLA 갈라" },
     publisher: { "@type": "Organization", name: "GALLA 갈라", logo: { "@type": "ImageObject", url: `${HOST}/assets/app-icons/icon-512.png` } },
   });
 }
-function newsLd(title, desc, image, url, date) {
-  const o = JSON.parse(articleLd(title, desc, image, url, date));
+function newsLd(title, desc, image, url, date, body) {
+  const o = JSON.parse(articleLd(title, desc, image, url, date, body));
   o["@type"] = "NewsArticle";
   return JSON.stringify(o);
 }
@@ -194,8 +307,31 @@ function breadcrumbLd(seo) {
   return JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items });
 }
 
-// HTMLRewriter로 <head> 메타 교체 + 본문 스냅샷 주입
-function rewrite(res, seo) {
+// 갈라뉴스 서버 렌더 — 로봇이 읽는 글이 곧 사람이 보는 글이 되게(숨김 텍스트는 구글이 안 쳐준다).
+// news-page.js가 #np-reader.innerHTML을 통째로 덮어쓰므로 중복 렌더 걱정이 없고,
+// JS가 붙기 전 화면도 기사 본문이라 체감 속도까지 같이 좋아진다.
+function newsArticleHtml(seo) {
+  const paras = String(seo.body || "").split(/\n{2,}|\n/).map((t) => t.trim()).filter(Boolean);
+  if (!paras.length) return null;
+  const hero = seo.hero && /^https?:\/\//.test(seo.hero)
+    ? `<img class="reader-hero" src="${esc(seo.hero)}" alt="${esc(seo.h1)}" referrerpolicy="no-referrer">` : "";
+  return `<article class="reader">` +
+    `<span class="reader-badge">갈라뉴스 · AI 종합</span>` +
+    `<h1 class="reader-title">${esc(seo.h1)}</h1>` +
+    `<div class="reader-sub">${esc(seo.category || "뉴스")}</div>` + hero +
+    paras.map((t) => `<p>${esc(t)}</p>`).join("") +
+    `<p class="reader-disclaimer">본 기사는 여러 보도를 AI가 종합·재작성한 갈라뉴스 오리지널입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>` +
+    `</article>`;
+}
+
+// HTMLRewriter로 <head> 메타 교체 + 본문 스냅샷 + 크롤 링크 주입
+function rewrite(res, seo, linksHtml) {
+  // 목록 페이지: 메타는 원본 유지하고 링크 그물만 깐다
+  if (!seo) {
+    return new HTMLRewriter()
+      .on("#app", { element(el) { el.append(linksHtml, { html: true }); } })
+      .transform(res);
+  }
   const metaHtml =
     `<meta name="description" content="${esc(seo.desc)}">` +
     `<meta name="robots" content="index,follow,max-image-preview:large">` +
@@ -214,11 +350,16 @@ function rewrite(res, seo) {
     (seo.jsonld ? `<script type="application/ld+json">${seo.jsonld}</script>` : "") +
     (seo.h1 ? `<script type="application/ld+json">${breadcrumbLd(seo)}</script>` : "");
 
-  // 크롤러가 읽을 본문 스냅샷 — 화면엔 숨김(JS 앱이 실제 UI 렌더). aria-hidden으로 접근성 중복 방지.
-  const snapshot = seo.h1
+  /* 크롤러가 읽을 본문 스냅샷 — JS 미실행인 네이버 Yeti·다음 Daumoa에겐 이게 유일한 본문이다.
+     ⚠️ 500자로 자르던 걸 전문(최대 4000자·문단 유지)으로 늘렸다. 133자짜리 뉴스 스냅샷이
+     구글에 thin content로 잡히던 게 색인 실패의 한 축이었다.
+     뉴스는 아래에서 #np-reader에 진짜로 보이게 SSR하므로 스냅샷을 중복으로 넣지 않는다. */
+  const newsHtml = seo.k === "news" ? newsArticleHtml(seo) : null;
+  const snapParas = String(seo.body || "").split(/\n{2,}|\n/).map((t) => t.trim()).filter(Boolean);
+  const snapshot = (seo.h1 && !newsHtml)
     ? `<div id="seo-snapshot" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">` +
       `<p>${esc(seo.kicker)}</p><h1>${esc(seo.h1)}</h1>` +
-      (seo.body ? `<p>${esc(clip(seo.body, 500))}</p>` : "") +
+      snapParas.map((t) => `<p>${esc(clip(t, 1200))}</p>`).join("").slice(0, 8000) +
       `</div>`
     : null;
 
@@ -232,6 +373,11 @@ function rewrite(res, seo) {
     .on('meta[name^="twitter:"]', rm)
     .on("head", { element(el) { el.append(metaHtml, { html: true }); } });
   if (snapshot) rw = rw.on("body", { element(el) { el.prepend(snapshot, { html: true }); } });
+  if (newsHtml) {
+    rw = rw.on("#np-reader", { element(el) { el.setInnerContent(newsHtml, { html: true }); } })
+           .on("#np-title", { element(el) { el.setInnerContent(seo.h1); } });
+  }
+  if (linksHtml) rw = rw.on("#app", { element(el) { el.append(linksHtml, { html: true }); } });
   return rw.transform(res);
 }
 
@@ -274,19 +420,35 @@ export async function onRequest(context) {
     const isShare = url.pathname.startsWith("/share/");
     const hasRef = !isShare && !!url.searchParams.get("ref");
     const isContent = !!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn"));
-    // 초대(?ref=) 또는 콘텐츠 상세일 때만 개입
-    if (!hasRef && !isContent) return next();
+    // 목록 페이지 — 여기에 진짜 <a href>를 깔아야 로봇이 콘텐츠까지 걸어 들어간다
+    const cleanPath = url.pathname.replace(/\.html$/, "") || "/";
+    const isList = !isContent && LIST_PATHS.has(cleanPath);
+    // 초대(?ref=) · 콘텐츠 상세 · 목록 페이지일 때만 개입
+    if (!hasRef && !isContent && !isList) return next();
 
     const res = await next();
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("text/html")) return res;
 
     // ?ref= 는 초대 카드 우선 — 일반 홈 카드와 달라야 초대인 걸 알 수 있다
-    const seo = (hasRef ? await resolveInvite(url.searchParams) : null)
-             || (isContent ? await resolveSeo(url.pathname, url.searchParams) : null);
-    if (!seo) return res;
+    // 메타 조회와 링크 조회는 병렬 — 상세 페이지 TTFB를 한 번 더 늘리지 않는다
+    const [seo, linksHtml] = await Promise.all([
+      (async () => (hasRef ? await resolveInvite(url.searchParams) : null)
+                || (isContent ? await resolveSeo(url.pathname, url.searchParams) : null))(),
+      (async () => {
+        try {
+          if (isList) return wrapLinks(await listLinks(cleanPath));
+          if (isContent) return wrapLinks(await relatedLinks(kind(url.pathname), url.searchParams.get("id") || url.searchParams.get("gn")));
+        } catch {}
+        return "";
+      })(),
+    ]);
+    if (!seo && !linksHtml) return res;
 
-    const out = rewrite(res, seo);
+    const out = rewrite(res, seo, linksHtml);
+    /* 목록 페이지는 원본 캐시 헤더를 건드리지 않는다 — index.html 등에 max-age를 새로 씌우면
+       배포 전파가 늦어진다([[galla-version-propagation]]). 캐시는 콘텐츠/초대 카드에만. */
+    if (!seo) return out;
     // 크롤러 재방문 대비 짧은 엣지 캐시(원본 HTML은 no-cache지만 변형본은 잠깐 캐시)
     const headers = new Headers(out.headers);
     // 초대 카드는 '오늘의 격전'이 바뀌므로 더 짧게(120s), 콘텐츠 카드는 300s
