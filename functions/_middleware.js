@@ -53,86 +53,50 @@ async function sbMany(query) {
    → 목록/상세 페이지 하단에 진짜 <a href> 블록을 엣지에서 깐다. 사람 눈에도 보이게(숨김
    텍스트는 구글이 가중치를 안 준다). 스타일은 인라인 — 페이지마다 CSS가 달라 의존하지 않는다. */
 // 하단 고정 내비(56px+세이프에어리어)에 마지막 링크가 가리지 않도록 넉넉히 띄운다
-const LINK_WRAP = "margin:26px auto 0;max-width:720px;padding:18px 16px calc(96px + env(safe-area-inset-bottom));border-top:1px solid #1b1f2a";
-const LINK_H = "margin:0 0 10px;font-size:13.5px;color:#aab3c5;font-weight:700;letter-spacing:.2px";
-const LINK_UL = "list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px";
-const LINK_A = "color:#8fa0c0;text-decoration:none;font-size:13px;line-height:1.6";
+const LINK_WRAP = "margin:22px auto 0;max-width:720px;padding:20px 16px calc(96px + env(safe-area-inset-bottom));border-top:1px solid #14171f";
+const LINK_HEAD = "display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 4px";
+const LINK_H = "margin:0;font-size:13px;color:#8b94a8;font-weight:700;letter-spacing:.2px";
+const LINK_MORE = "font-size:12px;color:#5f6a80;text-decoration:none;white-space:nowrap";
+const LINK_UL = "list-style:none;margin:0 0 20px;padding:0";
+const LINK_LI = "border-bottom:1px solid #101318";
+const LINK_A = "display:block;padding:10px 0;color:#9aa6bd;text-decoration:none;font-size:13px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+const CHIP_UL = "list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px";
+const CHIP_A = "display:inline-block;padding:6px 12px;border:1px solid #1b1f2a;border-radius:999px;color:#7f8aa3;text-decoration:none;font-size:12px";
 
-function linkSection(heading, items) {
+/* 링크 블록은 '섹션'처럼 보여야 한다. 민짜 링크를 수십 개 세로로 쌓으면
+   사람 눈에 흉하고 구글엔 푸터 링크 스터핑으로 읽힌다. 크롤 효과는 링크가
+   존재하고 도달 가능한 데서 나오지 개수에서 나오지 않으므로 개수는 적게 간다. */
+function linkSection(heading, items, more) {
   const list = (items || []).filter((it) => it && it.href && it.text);
   if (!list.length) return "";
-  return `<h2 style="${LINK_H}">${esc(heading)}</h2><ul style="${LINK_UL}">` +
-    list.map((it) => `<li><a href="${esc(it.href)}" style="${LINK_A}">${esc(clip(it.text, 70))}</a></li>`).join("") +
+  return `<div style="${LINK_HEAD}"><h2 style="${LINK_H}">${esc(heading)}</h2>` +
+    (more ? `<a href="${esc(more[0])}" style="${LINK_MORE}">${esc(more[1])} ›</a>` : "") + `</div>` +
+    `<ul style="${LINK_UL}">` +
+    list.map((it) => `<li style="${LINK_LI}"><a href="${esc(it.href)}" style="${LINK_A}">${esc(clip(it.text, 60))}</a></li>`).join("") +
     `</ul>`;
 }
-// 섹션 사이를 잇는 상시 링크 — 크롤러가 어디서든 다른 영역으로 건너갈 수 있게
-const HUB_LINKS = [
-  ["/", "갈라 홈 · 실시간 이슈"],
-  ["/search.html?tab=news", "갈라뉴스"],
-  ["/search.html?tab=plaza", "갈라 광장"],
-  ["/galla-predict.html", "갈라예측"],
-  ["/gallari.html", "숏판 · 롱판"],
-  ["/search.html", "통합검색"],
-];
+// 섹션 이동은 칩 줄이 아니라 아카이브 링크 한 줄로 — 상세 화면에 군더더기를 안 만든다
 const hubHtml = () =>
-  `<h2 style="${LINK_H}">갈라 둘러보기</h2><ul style="${LINK_UL}">` +
-  HUB_LINKS.map(([h, t]) => `<li><a href="${h}" style="${LINK_A}">${esc(t)}</a></li>`).join("") + `</ul>`;
+  `<a href="/archive" style="${LINK_MORE}">갈라 전체 콘텐츠 보기 ›</a>`;
 
 const wrapLinks = (inner) =>
-  inner ? `<section class="seo-web" style="${LINK_WRAP}" aria-label="갈라 콘텐츠 바로가기">${inner}${hubHtml()}</section>` : "";
+  inner ? `<section class="seo-web" style="${LINK_WRAP}" aria-label="관련 콘텐츠">${inner}${hubHtml()}</section>` : "";
 
 const titleOf = (r) => r.title || r.question || clip(plain(r.caption), 60) || "";
 
-const LIST_PATHS = new Set(["/", "/index", "/search", "/plaza", "/galla-predict", "/gallari"]);
-
-// 목록 페이지별 링크 묶음
-async function listLinks(p) {
-  if (p === "/" || p === "/index") {
-    const [iss, news] = await Promise.all([
-      sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=30`),
-      sbMany(`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=15`),
-    ]);
-    return linkSection("최근 이슈", iss.map((r) => ({ href: `/issue?id=${r.id}`, text: r.title }))) +
-           linkSection("최근 갈라뉴스", news.map((r) => ({ href: `/news?gn=${r.id}`, text: r.title })));
-  }
-  if (p === "/search") {
-    const [news, iss, plaza] = await Promise.all([
-      sbMany(`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=40`),
-      sbMany(`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=15`),
-      sbMany(`plaza_posts?select=id,title&order=created_at.desc&limit=15`),
-    ]);
-    return linkSection("갈라뉴스 — AI가 여러 보도를 종합한 기사", news.map((r) => ({ href: `/news?gn=${r.id}`, text: r.title }))) +
-           linkSection("최근 이슈", iss.map((r) => ({ href: `/issue?id=${r.id}`, text: r.title }))) +
-           linkSection("광장 최신 글", plaza.map((r) => ({ href: `/plaza_detail?id=${r.id}`, text: r.title })));
-  }
-  if (p === "/plaza") {
-    const rows = await sbMany(`plaza_posts?select=id,title&order=created_at.desc&limit=50`);
-    return linkSection("갈라 광장 최신 글", rows.map((r) => ({ href: `/plaza_detail?id=${r.id}`, text: r.title })));
-  }
-  if (p === "/galla-predict") {
-    const rows = await sbMany(`markets?select=id,question&order=created_at.desc&limit=50`);
-    return linkSection("갈라예측 마켓", rows.map((r) => ({ href: `/predict-market?id=${r.id}`, text: r.question })));
-  }
-  if (p === "/gallari") {
-    const rows = await sbMany(`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=40`);
-    return linkSection("숏판 · 롱판 콘텐츠", rows.map((r) => ({ href: `/gallari-post?id=${r.id}`, text: titleOf(r) })));
-  }
-  return "";
-}
-
 // 상세 페이지 하단 "더 보기" — 같은 섹션 최신 8개(카테고리 무관: 본문 조회와 병렬로 돌리려고)
 const REL = {
-  issue:   [`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=9`,        (r) => `/issue?id=${r.id}`,           "다른 이슈 더 보기"],
-  news:    [`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=9`, (r) => `/news?gn=${r.id}`,          "다른 갈라뉴스"],
-  plaza:   [`plaza_posts?select=id,title&order=created_at.desc&limit=9`,                     (r) => `/plaza_detail?id=${r.id}`,   "광장 다른 글"],
-  predict: [`markets?select=id,question&order=created_at.desc&limit=9`,                      (r) => `/predict-market?id=${r.id}`, "다른 예측 마켓"],
-  post:    [`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=9`, (r) => `/gallari-post?id=${r.id}`, "다른 콘텐츠"],
+  issue:   [`issues?status=eq.normal&select=id,title&order=created_at.desc&limit=7`,        (r) => `/issue?id=${r.id}`,           "다른 이슈 더 보기"],
+  news:    [`galla_news?status=eq.published&source_count=gte.2&select=id,title&order=published_at.desc&limit=7`, (r) => `/news?gn=${r.id}`,          "다른 갈라뉴스"],
+  plaza:   [`plaza_posts?select=id,title&order=created_at.desc&limit=7`,                     (r) => `/plaza_detail?id=${r.id}`,   "광장 다른 글"],
+  predict: [`markets?select=id,question&order=created_at.desc&limit=7`,                      (r) => `/predict-market?id=${r.id}`, "다른 예측 마켓"],
+  post:    [`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=7`, (r) => `/gallari-post?id=${r.id}`, "다른 콘텐츠"],
 };
 async function relatedLinks(k, selfId) {
   const spec = REL[k];
   if (!spec) return "";
   const rows = await sbMany(spec[0]);
-  const items = rows.filter((r) => String(r.id) !== String(selfId)).slice(0, 8)
+  const items = rows.filter((r) => String(r.id) !== String(selfId)).slice(0, 6)
     .map((r) => ({ href: spec[1](r), text: titleOf(r) }));
   return linkSection(spec[2], items);
 }
@@ -424,11 +388,11 @@ export async function onRequest(context) {
     const isShare = url.pathname.startsWith("/share/");
     const hasRef = !isShare && !!url.searchParams.get("ref");
     const isContent = !!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn"));
-    // 목록 페이지 — 여기에 진짜 <a href>를 깔아야 로봇이 콘텐츠까지 걸어 들어간다
-    const cleanPath = url.pathname.replace(/\.html$/, "") || "/";
-    const isList = !isContent && LIST_PATHS.has(cleanPath);
-    // 초대(?ref=) · 콘텐츠 상세 · 목록 페이지일 때만 개입
-    if (!hasRef && !isContent && !isList) return next();
+    /* 초대(?ref=) 또는 콘텐츠 상세일 때만 개입.
+       ⚠️ 한때 목록 페이지(홈·검색·광장·예측)에도 링크 블록을 주입했는데, 앱 화면 끝에
+          민짜 링크 수십 개가 쌓여 UI 를 망쳤다. 크롤러용 링크 그물은 앱 화면이 아니라
+          전용 아카이브 페이지(/archive, functions/archive.js)가 맡는다. */
+    if (!hasRef && !isContent) return next();
 
     const res = await next();
     const ct = res.headers.get("content-type") || "";
@@ -441,7 +405,6 @@ export async function onRequest(context) {
                 || (isContent ? await resolveSeo(url.pathname, url.searchParams) : null))(),
       (async () => {
         try {
-          if (isList) return wrapLinks(await listLinks(cleanPath));
           if (isContent) return wrapLinks(await relatedLinks(kind(url.pathname), url.searchParams.get("id") || url.searchParams.get("gn")));
         } catch {}
         return "";

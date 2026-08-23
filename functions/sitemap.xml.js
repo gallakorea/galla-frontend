@@ -62,6 +62,10 @@ export async function onRequest() {
   parts.push(u(`${HOST}/plaza`, now, "hourly", "0.8"));
   parts.push(u(`${HOST}/gallari`, now, "hourly", "0.8"));
   parts.push(u(`${HOST}/match`, now, "weekly", "0.8")); // 갈라 궁합 — 비로그인 유입 랜딩
+  // 아카이브 — 로봇이 콘텐츠까지 걸어 들어가는 유일한 링크 경로(앱 목록은 전부 JS 버튼이라 <a>가 0개)
+  parts.push(u(`${HOST}/archive`, now, "hourly", "0.9"));
+  ["issue", "news", "plaza", "predict", "gallari"].forEach(t =>
+    parts.push(u(`${HOST}/archive?t=${t}`, now, "hourly", "0.7")));
 
   const [issues, plaza, markets, news, posts] = await Promise.all([
     sb("issues?select=id,created_at&order=created_at.desc&limit=2000"),
