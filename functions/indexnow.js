@@ -20,15 +20,30 @@ const json = (b, s = 200) => new Response(JSON.stringify(b), {
   status: s, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
+/* ⚠️ api.indexnow.org 는 Cloudflare 워커 egress IP 를 429(Too Many Requests)로 막는다.
+   같은 페이로드를 내 노트북에서 쏘면 200, 워커에서 쏘면 429 — 우리 제출 빈도 문제가 아니라
+   공유 IP 문제다. IndexNow 는 어느 참여 엔진에 넣든 서로 전파하는 프로토콜이라
+   막히면 빙 → 얀덱스로 넘어간다. 하나라도 2xx 면 성공. */
+const ENDPOINTS = [
+  "https://api.indexnow.org/indexnow",
+  "https://www.bing.com/indexnow",
+  "https://yandex.com/indexnow",
+];
 async function submit(urls) {
   urls = [...new Set(urls.filter((u) => typeof u === "string" && u.includes(HOST)))].slice(0, 500);
   if (!urls.length) return { ok: false, reason: "no_urls", submitted: 0 };
-  const r = await fetch("https://api.indexnow.org/indexnow", {
-    method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ host: HOST, key: KEY, keyLocation: `https://${HOST}/${KEY}.txt`, urlList: urls }),
-  });
-  return { ok: r.ok, status: r.status, submitted: urls.length, sample: urls.slice(0, 3) };
+  const body = JSON.stringify({ host: HOST, key: KEY, keyLocation: `https://${HOST}/${KEY}.txt`, urlList: urls });
+  const tried = [];
+  for (const ep of ENDPOINTS) {
+    let status = 0;
+    try {
+      const r = await fetch(ep, { method: "POST", headers: { "Content-Type": "application/json; charset=utf-8" }, body });
+      status = r.status;
+      if (r.ok) return { ok: true, status, via: ep, submitted: urls.length, sample: urls.slice(0, 3), tried };
+    } catch (e) { status = String(e).slice(0, 60); }
+    tried.push({ ep, status });
+  }
+  return { ok: false, submitted: urls.length, sample: urls.slice(0, 3), tried };
 }
 
 export async function onRequestPost(context) {
