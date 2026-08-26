@@ -17,12 +17,16 @@
     return false;
   }
 
-  var ORDER = ["free", "lite", "friend", "pro"];
+  /* ⚠️ 이용권 키는 서버(app_settings.ai_tiers)가 진실이다. 여기 목록은 '보여줄 순서'일 뿐인데,
+     2026-08-26 개명(라이트/프렌드/프로 → 컴패니언) 때 이걸 안 고쳐서 카드가 통째로 안 나왔다.
+     서버에서 온 plans 에만 있고 여기 없는 키도 뒤에 붙여 렌더한다 — 다시는 통째로 사라지지 않게. */
+  var ORDER = ["free", "companion_sometimes", "companion_daily", "companion_plus", "companion_always"];
   var PITCH = {
-    free:   "가볍게 써보기",
-    lite:   "매일 수다 떨기",
-    friend: "만들기 시작하는 사람",
-    pro:    "본격적으로 만드는 사람"
+    free:                "가볍게 써보기",
+    companion_sometimes: "가끔 말 걸기",
+    companion_daily:     "매일 수다 떨기",
+    companion_plus:      "앱을 대신 조작해 주는 친구",
+    companion_always:    "종일 붙어 있기"
   };
   var FEAT_LABEL = {
     memory: "나를 기억함",
@@ -32,6 +36,7 @@
     craft_titles: "제목 뽑기",
     craft_script: "대본 작성",
     craft_video: "숏폼 자동편집",
+    app_control: "앱 대신 조작",
     priority: "우선 처리"
   };
 
@@ -63,7 +68,13 @@
       if (!s || !s.data || !s.data.session) return { tier: "guest" };   // 비로그인
       var r = await sb.rpc("my_entitlement", { p_fn: "galla-friend" });
       if (r.error) return null;
-      _cache = r.data; _cacheAt = Date.now();
+      /* 🗓 5시간 창은 '지금 몇 번 남았나'고, 사람이 궁금한 건 '이번 달 얼마나 썼나'다.
+         대화와 앱 조작은 원가가 23배 차이라 따로 센다(2026-08-26 실측) — 두 줄로 보여준다.
+         ⚠️ 실패해도 시트는 열려야 한다. 월 현황은 없으면 그 줄만 빠진다. */
+      var m = null;
+      try { var mr = await sb.rpc("companion_usage"); if (!mr.error) m = mr.data; } catch (e) { /* 없으면 생략 */ }
+      _cache = Object.assign({}, r.data, { month: (m && m.ok) ? m : null });
+      _cacheAt = Date.now();
       return _cache;
     } catch (e) { return null; }
   }
@@ -76,6 +87,11 @@
       ".gpl-scrim{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);",
       "z-index:10090;display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s}",
       ".gpl-scrim.on{opacity:1}",
+      ".gpl-mrow{display:flex;gap:10px;margin-top:10px}",
+      ".gpl-m{flex:1;min-width:0}",
+      ".gpl-m>span{display:block;font-size:11.5px;color:#7d8798}",
+      ".gpl-m>b{display:block;font-size:15px;font-weight:800;color:#f3f4f6;margin-top:1px}",
+      ".gpl-m>b>i{font-style:normal;font-size:11.5px;color:#7d8798;font-weight:600}",
       "@media(min-width:821px){.gpl-scrim{align-items:center}}",
       ".gpl{width:100%;max-width:440px;max-height:88vh;overflow:auto;background:#0f1116;color:#fff;border:1px solid #232733;",
       "border-radius:22px 22px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));position:relative;",
@@ -115,8 +131,12 @@
     var feats = (plan.features || []).map(function (f) {
       return FEAT_LABEL[f] ? '<span class="gpl-f">' + esc(FEAT_LABEL[f]) + "</span>" : "";
     }).join("");
-    var chat = (plan.windows && plan.windows["galla-friend"]) || {};
-    var chatLine = chat.n ? ('<span class="gpl-f">' + chat.n + "턴 / " + chat.hours + "시간</span>") : "";
+    /* ⚠️ 5시간 창(windows)을 카드에 쓰면 안 된다. 그건 봇 폭주 방어라 유료 단이 전부 같은 값이고,
+       화면에선 세 단이 똑같아 보인다(실측: '200턴 / 5시간'이 셋 다 동일).
+       값을 가르는 건 월 포함량이다 — 대화와 앱 조작을 나눠 보여준다. */
+    var chatLine =
+      (plan.monthly_turns ? '<span class="gpl-f">대화 월 ' + plan.monthly_turns + "턴</span>" : "") +
+      (plan.tool_turns    ? '<span class="gpl-f">조작 월 ' + plan.tool_turns + "턴</span>" : "");
     // 🍎 네이티브: 가격도 결제 버튼도 노출하지 않는다(앱스토어 anti-steering)
     var price = native ? "" : '<span class="gpl-price">' + (plan.price ? won(plan.price) + "/월" : "무료") + "</span>";
     var cta = (!native && !cur && plan.price)
@@ -145,7 +165,11 @@
       var pct = unlimited ? 0 : Math.min(100, Math.round(used / Math.max(lim, 1) * 100));
       var low = !unlimited && remain <= Math.max(1, Math.round(lim * 0.2));
       var plans = ent.plans || {};
-      var cards = ORDER.filter(function (k) { return plans[k]; })
+      var known = ORDER.filter(function (k) { return plans[k]; });
+      var extra = Object.keys(plans).filter(function (k) {
+        return k !== "guest" && ORDER.indexOf(k) < 0;
+      });
+      var cards = known.concat(extra)
         .map(function (k) { return planCard(k, plans[k], ent.tier, native); }).join("");
 
       body =
@@ -156,6 +180,22 @@
               '<div class="gpl-bar' + (low ? " low" : "") + '"><i style="width:' + pct + '%"></i></div>' +
               '<div class="gpl-sub">' + esc(ent.hours ? (ent.hours + "시간마다 새로 채워져요") : "") +
               (ent.resets_at && remain === 0 ? " · " + esc(resetText(ent.resets_at)) : "") + "</div>") +
+          (function () {
+            var m = ent.month; if (!m) return "";
+            var rows = [
+              { t: "이번 달 대화", u: m.used, n: m.included },
+              { t: "앱 조작",     u: m.tool_used, n: m.tool_included }
+            ].filter(function (x) { return Number(x.n) > 0; });
+            if (!rows.length) return "";
+            return '<div class="gpl-mrow">' + rows.map(function (x) {
+              var left = Math.max(Number(x.n) - Number(x.u || 0), 0);
+              var w = Math.min(100, Math.round(Number(x.u || 0) / Math.max(Number(x.n), 1) * 100));
+              return '<div class="gpl-m"><span>' + esc(x.t) + "</span>" +
+                     '<b>' + left + '<i> / ' + x.n + "</i></b>" +
+                     '<div class="gpl-bar"><i style="width:' + w + '%"></i></div></div>';
+            }).join("") + "</div>" +
+            (m.resets_on ? '<div class="gpl-sub">' + esc(String(m.resets_on).slice(5).replace("-", "월 ")) + "일에 새로 채워져요</div>" : "");
+          })() +
           (ent.expires_at ? '<div class="gpl-sub">이용권 만료 ' +
             esc(new Date(ent.expires_at).toLocaleDateString("ko-KR")) + "</div>" : "") +
         "</div>" + cards +
