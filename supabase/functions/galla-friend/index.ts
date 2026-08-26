@@ -190,6 +190,12 @@ async function aiUserQuotaOk(uid: string, n = 1): Promise<boolean> {
   } catch { return true; }
 }
 
+/** 이 응답이 도구를 부르려 했나 — 원장에서 '대화'와 '앱 조작'을 가르는 유일한 표시. */
+function toolish(out: any): boolean {
+  const tc = out?.choices?.[0]?.message?.tool_calls;
+  return Array.isArray(tc) && tc.length > 0;
+}
+
 // 🎟 등급 게이트 — 5시간 롤링 윈도우. 막히면 '언제 다시 열리는지'까지 돌려준다(막연한 차단이 제일 나쁘다).
 //    장애 시엔 통과 — 게이트가 죽어서 서비스가 멈추는 게 더 나쁘다(글로벌 캡이 최후 방어).
 const jres = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -205,6 +211,16 @@ async function aiGate(subject: string, fn = AI_FN, n = 1, limitOverride: number 
     if (!r.ok) return { ok: true };
     return (await r.json()) as Gate;
   } catch { return { ok: true }; }
+}
+
+/* 🔧 조작 턴 계량 — 앱을 대신 조작한 턴은 대화 턴의 23배 비싸다(실측 ₩6.13 vs ₩0.27).
+   같은 창에 뭉쳐 세면 컴패니언+ 의 경계를 그을 수 없다. 별도 fn 으로 센다.
+   ⚠️ await 하지 않는다 — 계량이 응답을 늦추면 안 된다.
+   ⚠️ 지금은 '세기'만 한다. 막는 건 실제 분포를 보고 켠다(friend_tool_left 가 이미 남은 수를 안다) —
+      추측한 한도로 먼저 막으면 오늘 되던 게 내일 안 된다. */
+function countToolTurn(uid: string | null | undefined) {
+  if (!uid) return;
+  aiGate("u:" + uid, AI_FN + ":tool").catch(() => { /* best effort */ });
 }
 
 // 💰 원가 계측 — 모든 LLM 응답의 usage를 원장에 적는다. 마진 가드(model_for)가 이 숫자로 판단한다.
@@ -3433,14 +3449,20 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
       });
       if (r2.ok) {
         const out2 = await r2.json();
-        logSpend(AI_FN, fb.model, opts?.uid ?? null, out2?.usage);
+        if (toolish(out2)) countToolTurn(opts?.uid);
+        logSpend(toolish(out2) ? AI_FN + ":tool" : AI_FN, fb.model, opts?.uid ?? null, out2?.usage);
         return out2;
       }
     }
     throw new Error("llm_" + r.status + ":" + errTxt.slice(0, 160));
   }
   const out = await r.json();
-  logSpend(AI_FN, reqBody.model, opts?.uid ?? null, out?.usage);
+  /* 🔬 원가를 '대화'와 '앱 조작'으로 갈라 찍는다.
+     조작 턴은 한 턴에 콜이 여러 개 나가서 원가가 배수로 다른데, 같은 fn 으로 뭉쳐 찍으면
+     그 배수를 알 길이 없다 — 컴패니언+ 값을 정할 근거가 안 생긴다.
+     ⚠️ fn 을 정확히(=) 매칭하는 곳이 없어 안전하다. 읽는 쪽은 전부 like 'galla-friend%'. */
+  if (toolish(out)) countToolTurn(opts?.uid);
+  logSpend(toolish(out) ? AI_FN + ":tool" : AI_FN, reqBody.model, opts?.uid ?? null, out?.usage);
   return out;
 }
 
