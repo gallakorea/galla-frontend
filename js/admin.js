@@ -538,11 +538,13 @@
       if (a === "warn+") await rpc("admin_adjust_warning", { p_user: uid, p_delta: 1 });
       else if (a === "warn-") await rpc("admin_adjust_warning", { p_user: uid, p_delta: -1 });
       else if (a === "gp") { const amt = parseInt(prompt("지급할 GP (음수=차감)", "1000") || "0"); if (amt) await rpc("admin_grant_gp", { p_user: uid, p_amount: amt, p_reason: "admin_grant" }); }
-      // 🎟 이용권 수동 부여 — 체험판·보상·환불 대응·내부 테스트. 결제 웹훅과 별개 경로.
+      // 🎟 컴패니언 구독 수동 부여 — 체험·보상·환불 대응·내부 테스트. 결제 웹훅과 별개 경로.
+      //    제작(에이전트)은 구독이 아니라 GC 종량이므로 여기서 주지 않는다.
       else if (a === "plan") {
-        const t = (prompt("부여할 이용권: lite / friend / pro\n(비우면 회수)", "pro") || "").trim();
+        const OK = ["companion_sometimes", "companion_daily", "companion_always"];
+        const t = (prompt("컴패니언 구독 부여\n" + OK.join(" / ") + "\n(비우면 회수)", "companion_daily") || "").trim();
         if (t === null) return;
-        if (t && !["lite", "friend", "pro"].includes(t)) { alert("lite / friend / pro 중에서 입력해주세요."); return; }
+        if (t && !OK.includes(t)) { alert(OK.join(" / ") + " 중에서 입력해주세요.\n제작(에이전트)은 구독이 아니라 GC 종량입니다."); return; }
         const days = t ? parseInt(prompt("며칠간?", "30") || "30", 10) : 0;
         const r = await rpc("admin_grant_subscription", { p_uid: uid, p_tier: t || null, p_days: days || 30 });
         if (!r || r.ok === false) { alert("실패: " + ((r && r.reason) || "unknown")); return; }
