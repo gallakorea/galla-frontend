@@ -959,6 +959,116 @@ async function textMatchTimeline(subs: any[], info: ClipInfo[], clips: any[], vo
   return out;
 }
 
+/* 🅰🅱→🏅 A/B 순위 — 규칙이 후보 2개로 좁힌 자리에서만 LLM 이 고른다.
+   왜 이 순서인가: LLM 에게 클립 12개를 통째로 주고 배치하라 하면 앞 클립부터 순서대로 깔고 끝낸다(실측).
+   규칙이 "이 자리는 A 아니면 B"까지 좁혀 놓으면 LLM 은 판단만 하면 되고, 틀려도 후보 안이라 크게 안 어긋난다.
+   비용: 텍스트 한 번(문항 6개 묶음). 비전·TTS 에 비하면 반올림 오차다.
+
+   ⚠️ 첫 컷은 건드리지 않는다 — 훅 규칙이 일부러 고른 자리다.
+   ⚠️ 애매하면 A 를 유지한다. A 는 이미 규칙이 근거를 갖고 고른 답이지, 아무 값이 아니다.
+   ⚠️ 바꾼 결과가 옆 컷과 같은 클립이 되면 되돌린다 — 같은 화면 두 번 연속은 오답보다 더 눈에 띈다.
+   ⚠️ 마지막 컷이 첫 컷과 같아지는 것도 막는다(수미상관 금지). */
+async function rankUnsure(segs: any[], subs: any[], info: ClipInfo[], clips: any[]) {
+  const MAX = 6;   // 한 번에 물을 자리 수 — 비용·지연을 여기서 묶는다
+  const pend = segs.map((s: any, k: number) => ({ k, s }))
+    .filter((x) => x.k > 0 && x.s.unsure && Array.isArray(x.s.alts) && x.s.alts.length);
+  if (!pend.length) return { asked: 0, changed: 0, skipped: 0 };
+  const asked = pend.slice(0, MAX);
+  const skipped = pend.length - asked.length;
+
+  const textAt = (s: any) => subs
+    .filter((x: any) => x.start >= s.start - 0.05 && x.start < s.end - 0.05)
+    .map((x: any) => x.text).join(" ").trim();
+  const desc = (i: number) => `[${info[i]?.role ?? "?"}] ${(info[i]?.cap || "").slice(0, 80)}`;
+
+  const opts = asked.map(({ s }) => [s.clip, ...s.alts].slice(0, 3));
+  const body = asked.map(({ s }, n) =>
+    `${n}. 문장: "${textAt(s) || "(자막 없음)"}"\n` +
+    opts[n].map((i: number, oi: number) => `   ${"ABC"[oi]}. ${desc(i)}`).join("\n")
+  ).join("\n\n");
+
+  const sys = `너는 맛집 릴스 편집 PD다. 문항마다 그 문장에 화면으로 붙였을 때 가장 어울리는 후보를 하나 고른다.
+기준 ①문장이 말하는 대상과 화면 속 대상이 같은가(냉면 얘기=냉면 화면, 계단 얘기=계단 화면) ②둘 다 맞으면 음식 쪽이 낫다 ③확신이 없으면 A를 골라라 — A는 이미 규칙이 근거를 갖고 정한 답이다.
+JSON만 출력: {"picks":[{"n":문항번호,"pick":"A"|"B"|"C","conf":0~1}]}`;
+  const user = `문항 ${asked.length}개:\n\n${body}`;
+
+  /* ⏱ 시간 제한 — 순위는 '있으면 좋은 것'이지 없으면 안 되는 게 아니다.
+     ⚠️ 실사고: 제한 없이 붙였더니 공급자가 늘어진 두 잡이 매칭 단계에서 통째로 멈췄다
+        (updated_at 이 얼어붙음). 여기서 늦어지면 완성이 아예 안 나온다. */
+  const RANK_MS = 12000;
+  const withTimeout = async (f: (sig: AbortSignal) => Promise<Response>) => {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), RANK_MS);
+    try { return await f(ac.signal); } finally { clearTimeout(t); }
+  };
+
+  let txt = "";
+  if (GEMINI_KEY) {
+    try {
+      const M = "gemini-flash-latest";
+      const r = await withTimeout((signal) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${M}:generateContent?key=${GEMINI_KEY}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal,
+        body: JSON.stringify({ contents: [{ parts: [{ text: sys + "\n\n" + user }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 600, thinkingConfig: { thinkingBudget: 0 } } }),
+      }));
+      const d = await r.json().catch(() => null);
+      logGemini("reel:rank", M, d);
+      txt = d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+    } catch { /* 폴백 */ }
+  }
+  if (!/\{[\s\S]*\}/.test(txt)) {
+    try {
+      const r = await withTimeout((signal) => fetch(`${LLM_URL}/chat/completions`, {
+        method: "POST", headers: { Authorization: `Bearer ${LLM_KEY}`, "Content-Type": "application/json" }, signal,
+        body: JSON.stringify({ model: LLM_MODEL, temperature: 0.1, max_tokens: 500,
+          messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+      }));
+      const d = await r.json();
+      const u = d?.usage;
+      if (u) logSpend("reel:rank", LLM_MODEL, Number(u.prompt_tokens || 0), Number(u.completion_tokens || 0));
+      txt = d?.choices?.[0]?.message?.content || "";
+    } catch { /* 못 물어봤으면 규칙 그대로 간다 — 실패가 화면을 망치면 안 된다 */ }
+  }
+  const m = /\{[\s\S]*\}/.exec(txt);
+  if (!m) return { asked: asked.length, changed: 0, skipped };
+
+  let picks: any[] = [];
+  try { picks = JSON.parse(m[0])?.picks || []; } catch { return { asked: asked.length, changed: 0, skipped }; }
+
+  let changed = 0;
+  // 같은 클립을 두 자리가 원할 수 있다. 먼저 온 순서가 아니라 **확신이 높은 자리**가 가져간다.
+  picks.sort((a: any, b: any) => (Number(b?.conf ?? 0) - Number(a?.conf ?? 0)));
+  for (const p of picks) {
+    const n = Number(p?.n);
+    if (!Number.isInteger(n) || n < 0 || n >= asked.length) continue;
+    const oi = "ABC".indexOf(String(p?.pick || "A").trim().toUpperCase());
+    if (oi <= 0) continue;                                   // A(유지) 또는 알 수 없는 값
+    if (Number(p?.conf ?? 0) < 0.7) continue;                // 자신 없으면 규칙을 이긴 걸로 치지 않는다
+    const want = opts[n][oi];
+    if (!Number.isInteger(want)) continue;
+
+    const { k, s } = asked[n];
+    if (want === s.clip) continue;
+    // 옆 컷과 같아지면 무효 — 같은 화면 두 번 연속
+    if (segs[k - 1]?.clip === want || segs[k + 1]?.clip === want) continue;
+    /* 자리마다 따로 판단하다 보니 두 자리가 **같은 클립**을 고를 수 있다.
+       ⚠️ 실측(부원면옥): 상한을 2로 걸었더니 먼저 온 자리가 외관을 가져가고,
+          정작 더 틀렸던 자리("입구가 좁아서 지나칩니다" ← 비빔냉면)가 거부됐다.
+          내용이 맞는 반복이 틀린 다양성보다 낫다 — 재사용 컷은 어차피 확대(zoom)로 다른 그림이 된다.
+          그래서 상한은 3으로 두고, 아래에서 확신 높은 자리부터 처리해 순서 운을 없앤다. */
+    if (segs.filter((x: any) => x.clip === want).length >= 3) continue;
+    // 마지막 컷이 첫 컷과 같아지는 것도 무효(수미상관 금지)
+    if (k === segs.length - 1 && want === segs[0]?.clip) continue;
+
+    const was = s.clip;
+    s.clip = want;
+    s.alts = [was, ...s.alts.filter((i: number) => i !== want && i !== was)].slice(0, 2);  // 되돌릴 길을 남긴다
+    s.ranked = true;
+    changed++;
+  }
+  return { asked: asked.length, changed, skipped };
+}
+
 // ── AI 내용 매칭(2순위 폴백): 자막 타임라인 × 클립 장면 → 세그먼트 배치 ──
 async function matchTimeline(subs: any[], info: ClipInfo[], clips: any[], voiceDur: number): Promise<{ clip: number; start: number; end: number }[] | null> {
   try {
@@ -1212,6 +1322,15 @@ async function runCreate(uid: string, body: any): Promise<Response> {
     let segs = await textMatchTimeline(subs, matchInfo, matchClips, voiceDur, script, isSpare);
     if (!segs) segs = await matchTimeline(subs, matchInfo, matchClips, voiceDur);
     if (!segs) segs = orderTimeline(matchClips, voiceDur);
+    /* 🅰🅱→🏅 규칙이 '자신 없다'고 표시한 자리만 LLM 이 다시 고른다(A/B 순위).
+       전체를 LLM 에 맡기지 않는 이유는 rankUnsure 주석 참고 — 좁혀 준 뒤에만 도움이 된다. */
+    try {
+      const rk = await rankUnsure(segs, subs, matchInfo, matchClips);
+      if (rk.asked) {
+        console.log("rank", JSON.stringify(rk));
+        if (rk.changed) await pushProgress(id, uid, `애매한 컷 ${rk.asked}자리 다시 고름 — ${rk.changed}개 교체`);
+      }
+    } catch (e) { console.warn("rank_failed", String(e)); }
     /* 타임라인 무결성:
        - 컷 최소 2.2초(깜빡임 방지) — 짧으면 앞 컷에 흡수
        - 큐레이션을 통과한 클립은 각각 한 번씩만(소재 중복은 이미 제거됨)
