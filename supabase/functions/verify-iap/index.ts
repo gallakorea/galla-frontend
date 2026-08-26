@@ -6,6 +6,7 @@
    ⚠️ 절대 클라의 금액을 믿지 않는다. 상품ID→GC는 서버 gc_products가 결정.
    ⚠️ GP 가 아니라 GC 다 — GP 는 판매하지 않는다(예측 판돈이라 규제 대상). */
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { googleGetPurchase, googleConsume } from "../_shared/store.ts";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -80,9 +81,35 @@ Deno.serve(async (req) => {
     return j(data);
   }
 
-  // Google Play: purchaseToken을 Play Developer API로 검증 (키 준비 후 활성)
+  /* Google Play — purchaseToken 을 Play Developer API 로 검증.
+     ⚠️ 클라이언트가 보낸 상품ID·금액을 믿지 않는다. 구글이 돌려준 purchaseState 가 진실이다.
+     ⚠️ 거래ID는 orderId 를 쓴다 — 환불 알림(voidedPurchaseNotification)이 orderId 로 오기 때문에
+        여기서 purchaseToken 을 저장해 두면 나중에 환불을 우리 결제와 못 맞춘다. */
   if (store === "google") {
-    return j({ ok: false, reason: "google_not_configured" }, 501);
+    const pid = payload.productId, tok = payload.purchaseToken;
+    if (!pid || !tok) return j({ ok: false, reason: "no_token" }, 400);
+
+    const real = await googleGetPurchase(pid, tok);
+    if (!real) return j({ ok: false, reason: "verify_failed" }, 400);
+    if (real.purchaseState !== 0) return j({ ok: false, reason: "not_purchased", state: real.purchaseState }, 400);
+
+    const pkey = await pkgByStoreProduct("android", pid);
+    if (!pkey) return j({ ok: false, reason: "unknown_product" }, 400);
+
+    const txid = real.orderId || tok;
+    const { data, error } = await sb.rpc("grant_gc_topup", {
+      p_user: uid, p_store: "google", p_txid: txid, p_product: pkey, p_raw: real as any,
+    });
+    if (error) return j({ ok: false, reason: "grant_error", detail: error.message }, 500);
+
+    /* 소비 처리는 지급이 끝난 뒤에. 순서를 바꾸면 소비는 됐는데 지급이 실패한
+       '돈만 내고 아무것도 못 받은' 상태가 만들어진다. 실패해도 지급은 유효하다 —
+       멱등(txid)이라 재시도해도 두 번 주지 않는다. */
+    if (real.consumptionState !== 1) {
+      const consumed = await googleConsume(pid, tok);
+      if (!consumed) console.warn("google_consume_failed", txid);
+    }
+    return j(data);
   }
 
   return j({ ok: false, reason: "unknown_store" }, 400);
