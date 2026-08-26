@@ -45,6 +45,9 @@
     <p class="cr-sub">유형을 고르면 그에 맞는 작성 화면으로 이동합니다.</p>
 
     <div class="cr-list" id="crList">
+      <!-- 🎬 만들던 작업대 — 컷 확인이 남은 숏판이 있으면 맨 위에 꽂는다(스크립트가 채움).
+           ⚠️ 만들다 만 걸 못 찾으면 사람은 처음부터 다시 만든다. 그게 제일 비싼 실패다. -->
+      <div id="crWorkbench"></div>
       <!-- 갈라 발제 -->
       <button class="cr-card" data-type="galla" style="--cr:#ff4d67">
         <span class="cr-ico">
@@ -187,5 +190,7 @@
 <script src="/js/pwa.js?v=0821140"></script>
 <!-- ✍️ 쓰기 선택 안내(상단 배너 + 첫 진입 코치마크) -->
 <script src="js/create-guide.js?v=080412"></script>
+
+
 </body>
 </html>

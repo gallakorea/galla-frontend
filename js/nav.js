@@ -50,6 +50,7 @@
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
     load("/js/signals.js");                         // 📊 공통 신호 층(노출·시청·행동) — 추천 랭킹의 연료
     load("/js/plans.js");                           // 이용권(등급·잔여 대화) — GALLA_openPlans / GALLA_planPill
+    load("/js/workbench.js");                       // 🎬 숏판 작업대 — GALLA_openWorkbench / ?wb=<jobId>
     if (!skipOrb) {
       load("/css/friend.css", true);
       load("/js/friend.js");                        // 상주 오브 → 갈비스 대화
