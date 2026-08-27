@@ -872,6 +872,22 @@
     unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤 '내 릴스 어떻게 됐어?' 하고 물어봐줘");
   }
 
+  /* 🎬 미리보기 = 작업대. 컷 배치는 눈으로 보고 고치는 일이라 말풍선 안에서 할 일이 아니다.
+     작업대가 열리면 GALLA_WORKFORM 이 노출되고 → 도킹 미니챗이 저절로 붙는다.
+     즉 "대화 → 작업대 → (옆에서 계속 대화) → 완성"이 한 고리로 이어진다.
+     ⚠️ 작업대가 없으면(옛 번들·웹 구버전) 예전처럼 말풍선 카드로 떨어진다 — 끊기지는 않는다. */
+  function openBench(jobId, fallback){
+    if(window.GALLA_openWorkbench){
+      try{
+        window.GALLA_openWorkbench(jobId);
+        addMsg("a","컷 짜놨어! 작업대 열었으니까 어색한 데만 눌러서 바꿔줘 🎬");
+        return true;
+      }catch(e){}
+    }
+    if(typeof fallback==="function") fallback();
+    return false;
+  }
+
   async function makeReel(blob, script, wrap, status){
     var makeBtn=wrap.querySelector(".fr-reel-make"), aiBtn=wrap.querySelector(".fr-reel-ai");
     makeBtn.disabled=true; if(aiBtn) aiBtn.disabled=true;
@@ -909,8 +925,10 @@
       }
       // 4) 미리보기 — 컷을 카드로 보여주고 2탭으로 교체(완성도는 여기서 사람이 채운다)
       if(res.state==="preview" && res.cuts && res.cuts.length){
-        status("");
-        renderCutPreview(res.id, res.cuts, res.clips||[], jwt, clips, wrap, status, unlock, res.voice||voiceUrl, res.subtitles||[]);
+        status(""); unlock();
+        openBench(res.id, function(){
+          renderCutPreview(res.id, res.cuts, res.clips||[], jwt, clips, wrap, status, unlock, res.voice||voiceUrl, res.subtitles||[]);
+        });
         return;
       }
       // 4') 잡 status 폴링 — 진행 로그를 카드에 흘리고, 완성되면 편집기 자동 첨부
@@ -934,7 +952,10 @@
             headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
             body:JSON.stringify({ op:"cuts", id:jobId }) })).json(); }catch(e){}
           if(cu && cu.cuts && cu.cuts.length){
-            renderCutPreview(jobId, cu.cuts, cu.clips||[], jwt, clips, wrap, status, unlock, cu.voice, cu.subtitles||[]);
+            unlock();
+            openBench(jobId, function(){
+              renderCutPreview(jobId, cu.cuts, cu.clips||[], jwt, clips, wrap, status, unlock, cu.voice, cu.subtitles||[]);
+            });
             return;
           }
         }
@@ -1843,6 +1864,67 @@
     build();
     peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
     window.GALLA_openFriend = open;
+    /* 🛠 도킹 미니챗을 밖에서 연다 — 작업 화면 아래에 갈비스가 붙어 같이 상의하는 형태.
+       화면은 위에 그대로 두고 대화만 반쪽으로 올라온다(스크림 pass-through). */
+    window.GALLA_openDock = function (work) { try { openDock(work || { type: "agent" }); } catch (e) {} };
+    window.GALLA_closeDock = function () { try { exitDock(); } catch (e) {} };
+    /* 🧩 대화 안에서 고르게 한다 — "갈비스랑 만들기"인데 선택은 딴 화면에서 하면 그건 갈비스가 아니다.
+       판을 고르는 것도, 그다음을 고르는 것도 같은 대화에 남아야 맥락이 이어진다.
+       ⚠️ 메뉴 단계(local=true)는 서버로 보내지 않는다 — 고르는 중에 LLM 을 부르면 돈만 나가고 느려진다.
+          진짜로 시킬 때만 서버로 간다. */
+    window.GALLA_friendOffer = function (text, opts, onPick) {
+      try {
+        open();
+        /* ⚠️ 고정 지연으로는 못 맞춘다 — 열자마자 갈비스가 먼저 인사를 던지는 턴이 있어서,
+           380ms 뒤에 넣으면 그 인사에 밀려 안 붙거나 위로 올라가 안 보인다(실측).
+           대화창이 실제로 준비될 때까지 기다렸다가, 진행 중인 턴이 끝난 뒤 붙인다. */
+        var waited = 0;
+        var put = function () {
+          if ((!logEl || !sheet) && waited < 4000) { waited += 150; return setTimeout(put, 150); }
+          if (text) addMsg("a", String(text));
+          var wrap = el('<div class="fr-choices fr-in"></div>');
+          (opts || []).forEach(function (o, i) {
+            var b = el('<button class="fr-choice"><span class="fr-choice-n">' + (i + 1) +
+              '</span><span class="fr-choice-t"></span></button>');
+            b.querySelector(".fr-choice-t").textContent = o.t;
+            b.onclick = function () {
+              wrap.querySelectorAll(".fr-choice").forEach(function (x) { x.disabled = true; });
+              b.classList.add("fr-choice-sel");
+              setTimeout(function () { wrap.remove(); }, 300);
+              var handled = false;
+              try { handled = !!(onPick && onPick(o, i)); } catch (e) {}
+              if (!handled && o.say) sendText(String(o.say), false);
+            };
+            wrap.appendChild(b);
+          });
+          if (logEl) { logEl.appendChild(wrap); scrollBottom(); }
+        };
+        setTimeout(put, 700);
+      } catch (e) {}
+    };
+    /* 🎯 갈비스를 '무슨 얘기'로 시작해서 연다 — 사용자가 이미 고른 걸 또 묻지 않게.
+       고른 걸 다시 타이핑하게 만들면 선택지를 준 의미가 없다. */
+    window.GALLA_friendAsk = function (text) {
+      try {
+        open();
+        if (!text) return;
+        setTimeout(function () { try { sendText(String(text), false); } catch (e) {} }, 420);
+      } catch (e) {}
+    };
+    /* 🔁 고리를 닫는다 — 작업대가 혼자 끝내면 갈비스는 자기가 만든 게 어떻게 됐는지 모른다.
+       완성·실패를 여기로 알려주면 대화가 이어지고, 다음 기획의 근거도 여기 쌓인다.
+       ⚠️ 대화창이 닫혀 있어도 로그에는 남긴다 — 다음에 열었을 때 "그거 다 됐어" 가 보여야 한다. */
+    window.GALLA_friendSay = function (text, videoUrl) {
+      try {
+        if (!text) return;
+        addMsg("a", String(text));
+        if (videoUrl && typeof logEl !== "undefined" && logEl) {
+          var m = el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline></video></div></div>');
+          m.querySelector("video").src = videoUrl;
+          logEl.appendChild(m); scrollBottom();
+        }
+      } catch (e) { /* 알림 하나 때문에 대화가 죽으면 안 된다 */ }
+    };
     window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
     // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
     tryOpenDockForWork();

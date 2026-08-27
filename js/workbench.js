@@ -40,7 +40,8 @@
     if (document.getElementById("wb-style")) return;
     var s = document.createElement("style"); s.id = "wb-style";
     s.textContent = [
-      ".wb{position:fixed;inset:0;z-index:9500;background:#000;color:#f3f4f6;display:flex;flex-direction:column;",
+      /* ⚠️ 하단 네비가 z-index 9999 다. 9500 이면 '만들기' 버튼이 탭바에 덮여 못 누른다(실측). */
+      ".wb{position:fixed;inset:0;z-index:10050;background:#000;color:#f3f4f6;display:flex;flex-direction:column;",
       "  font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif}",
       ".wb-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}",
       ".wb-h b{font-size:15px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
@@ -66,7 +67,17 @@
       ".wb-btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.18);color:#cfd6e0}",
       ".wb-btn.go{background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff}",
       ".wb-btn[disabled]{opacity:.5}",
-      ".wb-empty{padding:40px 20px;text-align:center;color:#6b7280;font-size:13px;line-height:1.7}"
+      ".wb-empty{padding:40px 20px;text-align:center;color:#6b7280;font-size:13px;line-height:1.7}",
+      /* ⏳ 만드는 중 / ✅ 다 됐어 — 만들고 나서 아무 화면도 없으면 사람은 자기 영상이 어디 갔는지 모른다. */
+      ".wb-stage{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;text-align:center}",
+      ".wb-spin{width:46px;height:46px;border-radius:99px;border:3px solid rgba(95,216,255,.18);border-top-color:#5fd8ff;animation:wbspin 1s linear infinite}",
+      "@keyframes wbspin{to{transform:rotate(360deg)}}",
+      "@media (prefers-reduced-motion:reduce){.wb-spin{animation-duration:3s}}",
+      ".wb-stage h4{font-size:17px;font-weight:800;margin:16px 0 0}",
+      ".wb-stage p{font-size:12.5px;color:#7f97a8;margin:8px 0 0;line-height:1.6}",
+      ".wb-vid{width:100%;max-width:300px;border-radius:14px;background:#14151a;margin-top:14px}",
+      ".wb-meta{font-size:11.5px;color:#5b6470;margin-top:10px;font-variant-numeric:tabular-nums}",
+      ".wb-acts{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;margin-top:18px}"
     ].join("");
     document.head.appendChild(s);
   }
@@ -136,17 +147,84 @@
     if (r && r.cuts) { _data.cuts = r.cuts; render(); window.BattleFX && window.BattleFX.haptic && window.BattleFX.haptic("tap"); }
   }
 
+  /* ⏳ 만드는 중 — 승인하고 화면을 닫아버리면 자기 영상이 어디로 갔는지 알 길이 없다.
+     여기서 끝까지 지켜보고 결과물을 손에 쥐여준다. */
+  function stage(html) {
+    var l = _root.querySelector(".wb-list") || _root.querySelector(".wb-stage");
+    if (l) l.outerHTML = '<div class="wb-stage">' + html + "</div>";
+    var f = _root.querySelector(".wb-foot"); if (f) f.remove();
+  }
+  function fmt(sec) { var m = Math.floor(sec / 60), s2 = Math.round(sec % 60); return m ? m + "분 " + s2 + "초" : s2 + "초"; }
+
+  function watchRender() {
+    var t0 = Date.now(), last = "";
+    stage('<div class="wb-spin"></div><h4>만드는 중</h4><p id="wb-msg">시작하는 중…</p><p class="wb-meta" id="wb-el"></p>');
+    var iv = setInterval(async function () {
+      if (!_root) { clearInterval(iv); return; }
+      var el = _root.querySelector("#wb-el");
+      if (el) el.textContent = fmt((Date.now() - t0) / 1000) + " 지남";
+      var r = await api("status", {}).catch(function () { return null; });
+      var jb = r && r.job; if (!jb) return;
+      var ps = jb.progress || [];
+      var msg = ps.length ? (ps[ps.length - 1] || {}).msg : "";
+      if (msg && msg !== last) { last = msg; var m = _root.querySelector("#wb-msg"); if (m) m.textContent = msg; }
+      if (jb.state === "done") { clearInterval(iv); doneView(jb, (Date.now() - t0) / 1000); }
+      else if (jb.state === "failed") {
+        clearInterval(iv);
+        try { window.GALLA_friendSay && window.GALLA_friendSay("만들다 막혔어 ㅜ 다시 해볼까?"); } catch (e) {}
+        stage("<h4>만들다 막혔어요</h4><p>" + esc(jb.error || "잠시 뒤 다시 해볼까요?") + "</p>" +
+          '<div class="wb-acts"><button class="wb-btn ghost" data-again>다시 해보기</button></div>');
+        var a = _root.querySelector("[data-again]");
+        if (a) a.addEventListener("click", function () { window.GALLA_openWorkbench(_job); });
+      }
+    }, 3000);
+  }
+
+  /* ✅ 다 됐어 — 바로 재생해 보여주고, 그 자리에서 갈라에 올리거나 내려받게 한다. */
+  function doneView(jb, secs) {
+    var url = (jb.artifacts || {}).video_url || "";
+    stage(
+      "<h4>다 됐어요</h4><p>" + fmt(secs) + " 걸렸어요</p>" +
+      (url ? '<video class="wb-vid" src="' + esc(url) + '" controls playsinline preload="metadata"></video>' : "") +
+      '<div class="wb-acts">' +
+        '<button class="wb-btn go" data-post>갈라에 올리기</button>' +
+        (url ? '<button class="wb-btn ghost" data-save>내려받기</button>' : "") +
+        '<button class="wb-btn ghost" data-edit>컷 더 고치기</button>' +
+      "</div>"
+    );
+    var v = _root.querySelector(".wb-vid");
+    if (v) v.play().catch(function () { /* 자동재생이 막히면 그냥 둔다 */ });
+    /* 🔁 갈비스에게 알린다 — 자기가 짠 컷으로 만들어진 결과다. 모르면 대화가 끊긴다.
+       다음에 "그거 어떻게 됐어?" 하고 물었을 때 답이 있어야 한다. */
+    try { window.GALLA_friendSay && window.GALLA_friendSay("다 만들었어! 어때? 마음에 안 들면 컷 다시 골라줘 🎬", url); } catch (e) {}
+
+    var p = _root.querySelector("[data-post]");
+    if (p) p.addEventListener("click", function () {
+      /* 숏판 편집기로 넘긴다 — 거기 제목·태그·올리기가 이미 다 있다. 두 번 만들지 않는다. */
+      close();
+      try {
+        if (window.GALLA_SPA) window.GALLA_SPA.push("gallari-write", { kind: "vertical" });
+        else location.href = "gallari-write.html?kind=vertical";
+      } catch (e) { location.href = "gallari-write.html?kind=vertical"; }
+      var tries = 0;
+      var t = setInterval(function () {
+        var wf = window.GALLA_WORKFORM;
+        if (wf && wf.setVideo) { clearInterval(t); try { wf.setVideo(url, null, "vertical"); } catch (e) {} }
+        else if (++tries > 40) clearInterval(t);   // 편집기가 안 뜨면 조용히 포기 — 영상은 목록에 남아 있다
+      }, 200);
+    });
+    var sv = _root.querySelector("[data-save]");
+    if (sv) sv.addEventListener("click", function () { window.open(url, "_blank"); });
+    var ed = _root.querySelector("[data-edit]");
+    if (ed) ed.addEventListener("click", function () { window.GALLA_openWorkbench(_job); });
+  }
+
   async function approve(btn) {
-    btn.disabled = true; btn.textContent = "만드는 중…";
+    btn.disabled = true; btn.textContent = "시작하는 중…";
     var r = await api("approve", {});
-    if (r && r.ok) {
-      btn.textContent = "만들기 시작했어요";
-      // 진행 상황은 기존 진행 알림이 받는다 — 여기서 폴링을 또 돌리지 않는다.
-      setTimeout(close, 900);
-    } else {
-      btn.disabled = false; btn.textContent = "이대로 만들기";
-      alert((r && r.error) === "not_preview" ? "이미 만드는 중이에요." : "지금은 시작할 수 없어요.");
-    }
+    if (r && r.ok) { stopPreview(); watchRender(); return; }
+    btn.disabled = false; btn.textContent = "이대로 만들기";
+    alert((r && r.error) === "not_preview" ? "이미 만드는 중이에요." : "지금은 시작할 수 없어요.");
   }
 
   function close() {
@@ -211,48 +289,9 @@
     };
   };
 
-  /* 🎬 '새로 만들기' 화면에 작업대 줄을 꽂는다.
-     ⚠️ create.html 안에 인라인 <script> 로 넣으면 안 된다 — SPA 뷰 로더가 인라인 자산을 버려서
-        웹에선 되고 앱에선 조용히 사라진다(실측). 그래서 전역에서 마운트 지점을 지켜본다.
-     ⚠️ 만들다 만 걸 못 찾으면 사람은 처음부터 다시 만든다. 그게 제일 비싼 실패다. */
-  var _mounting = false;
-  async function mountEntry(el) {
-    if (!el || el.dataset.wbDone || _mounting) return;
-    _mounting = true; el.dataset.wbDone = "1";
-    try {
-      var c = sb(); if (!c) return;
-      var ss = await c.auth.getSession(); if (!ss || !ss.data || !ss.data.session) return;
-      var r = await fetch(c.supabaseUrl + FN, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer " + ss.data.session.access_token, apikey: c.supabaseKey },
-        body: JSON.stringify({ op: "list" })
-      });
-      var d = await r.json();
-      var pend = ((d && d.jobs) || []).filter(function (x) { return x.state === "preview"; });
-      if (!pend.length || !document.body.contains(el)) return;
-      var b = document.createElement("button");
-      b.className = "cr-card";
-      b.style.setProperty("--cr", "#5fd8ff");
-      /* 클래스는 옆 카드와 똑같이 — 하나만 달라도 이 줄만 모양이 깨진다. */
-      b.innerHTML =
-        '<span class="cr-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
-          '<path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm6 3.5v7l6-3.5-6-3.5z"/></svg></span>' +
-        '<span class="cr-tx"><span class="cr-t">작업대 — 만들던 숏판 ' + pend.length + '개</span>' +
-        '<span class="cr-d">컷만 확인하면 바로 만들어져요</span></span>' +
-        '<span class="cr-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
-          'stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
-      b.addEventListener("click", function () { window.GALLA_openWorkbench(pend[0].id); });
-      el.appendChild(b);
-    } catch (e) { /* 이 줄 하나 때문에 '새로 만들기'가 죽으면 안 된다 */ }
-    finally { _mounting = false; }
-  }
-  function scan() { mountEntry(document.getElementById("crWorkbench")); }
-  if (document.readyState !== "loading") setTimeout(scan, 300);
-  else document.addEventListener("DOMContentLoaded", function () { setTimeout(scan, 300); });
-  try {
-    var mo = new MutationObserver(function () { scan(); });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) { /* 감시 못 하면 최초 1회만 */ }
+  /* ⚠️ '새로 만들기' 목록에는 작업대 줄을 넣지 않는다.
+     거긴 **내가 직접 쓰는** 곳이고, 갈비스 제작은 다른 세계다(agent-hub.js).
+     한 줄로 끼워 넣으면 "글쓰기 종류 하나"로 읽힌다 — 사장님 지적. 이어서 하기는 그 세계 안에 있다. */
 
   /* 🔗 ?wb=<jobId> 로 바로 연다. 만들던 걸 이어서 열 때도, 남한테 보여줄 때도 같은 길을 쓴다. */
   (function deepLink() {
