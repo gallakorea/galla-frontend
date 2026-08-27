@@ -235,6 +235,9 @@
   }
 
   window.GALLA_openWorkbench = async function (jobId) {
+    /* 🔒 창작 에이전트는 런칭 뒤에 연다(agent-hub.js 의 ENABLED 하나로 켜진다).
+       잠금 중엔 작업대도 안 뜬다 — 갈비스는 예전처럼 말풍선 카드로 컷을 보여준다(회귀 없음). */
+    if (window.GALLA_AGENT_READY === false) return;
     if (!jobId) return;
     injectStyle();
     close();

@@ -877,7 +877,9 @@
      즉 "대화 → 작업대 → (옆에서 계속 대화) → 완성"이 한 고리로 이어진다.
      ⚠️ 작업대가 없으면(옛 번들·웹 구버전) 예전처럼 말풍선 카드로 떨어진다 — 끊기지는 않는다. */
   function openBench(jobId, fallback){
-    if(window.GALLA_openWorkbench){
+    /* 🔒 잠금 중이면 작업대를 안 쓴다 — 예전처럼 말풍선 카드로 떨어진다.
+       새 기능을 막는 것이지 되던 걸 막는 게 아니다. */
+    if(window.GALLA_AGENT_READY !== false && window.GALLA_openWorkbench){
       try{
         window.GALLA_openWorkbench(jobId);
         addMsg("a","컷 짜놨어! 작업대 열었으니까 어색한 데만 눌러서 바꿔줘 🎬");
@@ -1318,6 +1320,17 @@
           '</button>');
         card.addEventListener("click", function(){ runAction(a); });
         wrap.appendChild(card);
+        return;
+      }
+      /* 🎟 한도에 걸렸을 때만 나오는 칩 — 기다릴지 올릴지 사람이 정한다.
+         값은 여기 안 적는다(앱스토어 anti-steering). 시트가 알아서 보여준다. */
+      if (a.kind === "plans") {
+        var pc = el('<button class="fr-chip"><span></span></button>');
+        pc.querySelector("span").textContent = a.label || "이용권 보기";
+        pc.addEventListener("click", function(){
+          if (window.GALLA_openPlans) window.GALLA_openPlans();
+        });
+        wrap.appendChild(pc);
         return;
       }
       var chip=el('<button class="fr-chip"></button>');

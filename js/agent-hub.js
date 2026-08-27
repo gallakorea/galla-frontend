@@ -13,6 +13,13 @@
   "use strict";
   if (window.GALLA_openAgent) return;
 
+  /* 🔒 창작 에이전트 — 앱 런칭 뒤 제1 개발 과제(사장님 결정 2026-08-27).
+     그때까지 진입을 막는다. **코드는 지우지 않는다** — 지우면 다시 지어야 하고,
+     반쯤 된 걸 열어두면 "되다 마는 기능"으로 기억된다. 스위치 하나만 내린다.
+     열 때: 아래 ENABLED 를 true 로. 그 한 줄이면 문·작업대·기획이 전부 살아난다. */
+  var ENABLED = false;
+  window.GALLA_AGENT_READY = ENABLED;
+
   var FN = "/functions/v1/reel-agent";
 
 
@@ -70,10 +77,29 @@
       ".ag-portal .t{display:block;font-size:14.5px;font-weight:800;line-height:1.35}",
       ".ag-portal .s{display:block;font-size:11.5px;color:#7f97a8;margin-top:3px;line-height:1.45}",
       ".ag-portal .k{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#5fd8ff;font-size:16px}",
+      ".ag-portal.ag-soon{border-color:rgba(95,216,255,.16);opacity:.62}",
+      ".ag-portal.ag-soon .o{filter:grayscale(.5);box-shadow:none}",
+      ".ag-badge{font-style:normal;font-size:10.5px;font-weight:800;color:#04070d;background:#5fd8ff;",
+      "  border-radius:99px;padding:2px 7px;margin-left:6px;vertical-align:middle}",
       /* ⚠️ 갈비스 시트는 z-index 950 이라 이 화면(10040) 뒤에 깔린다 — 도킹이 안 보인다(실측).
          작업 화면이 떠 있는 동안만 갈비스를 위로 올린다. 아래 절반이 그 위에 얹혀야 '같이 상의'가 된다. */
       "body.ag-on #frSheet{z-index:10060}",
-      "body.ag-on #frOrb,body.ag-on #frMini{z-index:10061}"
+      "body.ag-on #frOrb,body.ag-on #frMini{z-index:10061}",
+      /* ⚠️ #frSheet 은 inset:0 컨테이너라, 스크림만 통과시켜도 **컨테이너 자신이** 위쪽 탭을 먹는다.
+         그 바람에 판 선택이 아예 안 눌렸다(실측). 도킹 중엔 컨테이너를 통과시키고 패널만 받게 한다. */
+      "body.ag-on #frSheet.fr-dock{pointer-events:none}",
+      "body.ag-on #frSheet.fr-dock .fr-panel{pointer-events:auto}",
+      /* 🧭 각도 카드 — 근거와 '불리한 점'을 같이 보여준다. 좋은 말만 적힌 제안은 판단이 아니라 영업이다. */
+      ".ag-ang{border:1px solid rgba(95,216,255,.24);background:rgba(10,16,26,.72);border-radius:15px;",
+      "  padding:14px 15px;margin-bottom:9px;width:100%;text-align:left;color:inherit;display:block}",
+      ".ag-ang:active{border-color:#5fd8ff;background:rgba(95,216,255,.10)}",
+      ".ag-ang .t{display:block;font-size:14.5px;font-weight:800;color:#eaf6ff;line-height:1.4}",
+      ".ag-ang .w{display:flex;gap:7px;margin-top:7px;font-size:11.5px;color:#8fb0c2;line-height:1.5}",
+      ".ag-ang .r{display:flex;gap:7px;margin-top:5px;font-size:11.5px;color:#c99a5e;line-height:1.5}",
+      ".ag-ang .k{flex:0 0 auto;font-weight:800;font-size:10px;letter-spacing:.4px;padding-top:1px}",
+      ".ag-ang .w .k{color:#5fd8ff}",
+      ".ag-ang .r .k{color:#ffb45c}",
+      ".ag-load{font-size:12.5px;color:#7f97a8;padding:14px 2px}"
     ].join("");
     document.head.appendChild(s);
   }
@@ -181,10 +207,68 @@
     body.querySelectorAll("[data-ask]").forEach(function (b) {
       b.addEventListener("click", function () {
         var r = rows[Number(this.dataset.ask)];
-        /* 화면은 그대로 두고, 아래 갈비스한테 시킨다 — 여기서부터 갈비스가 도구를 들고 움직인다. */
-        if (window.GALLA_friendAsk) window.GALLA_friendAsk(r[2]);
+        /* '찍어온 걸로'는 재료가 이미 있으니 기획을 건너뛴다 — 있는 걸 두고 각도부터 고르라면 헛걸음이다.
+           나머지는 기획으로 간다: 각도 셋을 근거·불리한 점과 함께 놓고 고르게 한다. */
+        if (/찍어온|영상으로/.test(r[0])) {
+          if (window.GALLA_friendAsk) window.GALLA_friendAsk(r[2]);
+          var f = _el && _el.querySelector(".ag-foot");
+          if (f) f.textContent = "갈비스한테 넘겼어요. 아래에서 이어서 얘기하면 돼요.";
+          return;
+        }
+        step3(sf, r);
+      });
+    });
+  }
+
+  /* 3단계 · 기획 — 각도 셋을 근거와 함께. 그리고 불리한 점도 같이.
+     ⚠️ 초안을 하나만 내밀면 사람은 그게 최선인지 알 수 없어 그냥 받거나 그냥 버린다.
+        셋을 놓고 고르게 하면 "왜 이걸 골랐는지"가 남고, 그 선택이 다음 기획의 근거가 된다. */
+  async function step3(sf, how) {
+    var body = _el.querySelector("#ag-body");
+    body.innerHTML =
+      '<button class="ag-back" data-back>← 시작 방법 다시</button>' +
+      '<div class="ag-say" style="margin-top:10px">어떤 각도로 갈까?</div>' +
+      '<div class="ag-sub">' + esc(sf.n) + " · " + esc(how[0]) + "</div>" +
+      '<div class="ag-sec">각도 세 개</div>' +
+      '<div id="ag-angles"><div class="ag-load">갈비스가 생각하는 중…</div></div>' +
+      '<div class="ag-foot">마음에 드는 게 없으면 아래 갈비스한테 그냥 말해도 돼요.</div>';
+    body.querySelector("[data-back]").addEventListener("click", function () { step2(sf); });
+
+    var angles = [];
+    try {
+      var c = sb(); var ss = await c.auth.getSession();
+      var r = await fetch(c.supabaseUrl + "/functions/v1/galla-friend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + ss.data.session.access_token, apikey: c.supabaseKey },
+        body: JSON.stringify({ op: "plan", surface: sf.k })
+      });
+      var d = await r.json();
+      angles = (d && d.angles) || [];
+    } catch (e) { /* 실패해도 화면은 산다 */ }
+
+    var box = _el && _el.querySelector("#ag-angles");
+    if (!box) return;
+    if (!angles.length) {
+      box.innerHTML = '<div class="ag-load">각도를 못 뽑았어요. 아래 갈비스한테 하고 싶은 얘기를 그냥 말해주세요.</div>';
+      if (window.GALLA_friendAsk) window.GALLA_friendAsk(how[2]);
+      return;
+    }
+    box.innerHTML = angles.map(function (a, n) {
+      return '<button class="ag-ang" data-ang="' + n + '">' +
+        '<span class="t">' + esc(a.title) + "</span>" +
+        (a.why ? '<span class="w"><span class="k">될 것 같은 이유</span><span>' + esc(a.why) + "</span></span>" : "") +
+        (a.risk ? '<span class="r"><span class="k">불리한 점</span><span>' + esc(a.risk) + "</span></span>" : "") +
+        "</button>";
+    }).join("");
+    box.querySelectorAll("[data-ang]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var a = angles[Number(this.dataset.ang)];
+        /* 고른 각도를 그대로 들고 간다 — 갈비스가 처음부터 다시 묻지 않게. */
+        if (window.GALLA_friendAsk) {
+          window.GALLA_friendAsk(how[2] + " 각도는 이걸로 가자: \"" + a.title + "\" (" + (a.why || "") + ")");
+        }
         var f = _el && _el.querySelector(".ag-foot");
-        if (f) f.textContent = "갈비스한테 넘겼어요. 아래에서 이어서 얘기하면 돼요.";
+        if (f) f.textContent = "이 각도로 갈비스한테 넘겼어요. 아래에서 이어서 얘기하면 돼요.";
       });
     });
   }
@@ -225,6 +309,7 @@
   }
 
   window.GALLA_openAgent = function () {
+    if (!ENABLED) return;                    // 잠금 중엔 어떤 경로로도 안 열린다
     injectStyle();
     close();
     _el = document.createElement("div");
@@ -253,11 +338,18 @@
     if (!host || host.querySelector(".ag-portal")) return;
     injectStyle();
     var b = document.createElement("button");
-    b.className = "ag-portal";
+    b.className = "ag-portal" + (ENABLED ? "" : " ag-soon");
     b.innerHTML = '<span class="r"><span class="o"></span><span>' +
-      '<span class="t">갈비스랑 만들기</span>' +
-      '<span class="s">재료만 주면 대본·목소리까지 만들어 줘요</span></span></span><span class="k">›</span>';
-    b.addEventListener("click", function () { window.GALLA_openAgent(); });
+      '<span class="t">갈비스랑 만들기' + (ENABLED ? "" : ' <i class="ag-badge">곧 열려요</i>') + "</span>" +
+      '<span class="s">' + (ENABLED
+        ? "재료만 주면 대본·목소리까지 만들어 줘요"
+        : "재료만 주면 대본·목소리까지 — 준비 중이에요") + "</span></span></span>" +
+      '<span class="k">' + (ENABLED ? "›" : "") + "</span>";
+    b.addEventListener("click", function () {
+      if (ENABLED) { window.GALLA_openAgent(); return; }
+      /* 막을 땐 이유를 말한다. 아무 반응 없는 버튼이 제일 나쁘다. */
+      alert("갈비스랑 만들기는 아직 준비 중이에요.\n앱 정식 출시 뒤 바로 열립니다 🙂");
+    });
     host.insertBefore(b, host.firstChild);
   }
   function scan() { portal(); }
