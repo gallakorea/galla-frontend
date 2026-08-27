@@ -330,8 +330,11 @@ function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540): string {
     return md ? `이번 주기 대화량을 우리가 다 썼어 ㅋㅋ ${md}에 새로 채워져. 그때 또 실컷 떠들자!`
               : "이번 주기 대화량을 다 썼어 ㅠㅠ 곧 새로 채워지니까 조금만 기다려줘!";
   }
+  /* ⏳ 기다리라고만 하고 끝내지 않는다 — 지금 계속하고 싶은 사람에게는 길이 있어야 한다.
+     ⚠️ 다만 '사라' 고 조르지 않는다. 기다리는 게 기본이고 올리는 건 선택이다.
+        앱스토어 규정상 여기 원화·충전 유도를 쓰면 안 되므로 문구엔 값을 넣지 않는다(칩이 시트를 연다). */
   return hhmm
-    ? `아 목이 좀 쉬었다 ㅋㅋ ${hhmm}쯤이면 다시 쌩쌩해져서 올게. 그때 마저 얘기하자!`
+    ? `아 목이 좀 쉬었다 ㅋㅋ ${hhmm}쯤이면 다시 쌩쌩해져서 올게. 그때 마저 얘기하자 — 지금 더 하고 싶으면 아래에서 늘릴 수도 있고.`
     : "오늘 수다 에너지를 다 써버렸어 ㅋㅋ 좀 있다 다시 오면 또 떠들자!";
 }
 
@@ -2005,9 +2008,14 @@ function effModel(m: string): string {
   if (!/^gemini/.test(m) && GEMINI_EMBED_KEY && Date.now() < _ds402Until) return "gemini-3.6-flash";
   return m;
 }
+const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY") || "";
 function apiFor(model: string): { base: string; key: string } {
   if (/^gemini/.test(model) && GEMINI_EMBED_KEY)
     return { base: "https://generativelanguage.googleapis.com/v1beta/openai", key: GEMINI_EMBED_KEY };
+  /* 🎫 gpt 계열은 OpenAI 창구다. 이게 없으면 유료 등급에 상위 모델을 배정해도 요청이
+     딥시크 창구로 날아가 400 으로 죽는다(모델명은 맞는데 창구가 틀린 실패라 원인 찾기 어렵다). */
+  if (/^(gpt-|o[1-9])/.test(model) && OPENAI_KEY)
+    return { base: "https://api.openai.com/v1", key: OPENAI_KEY };
   return { base: BASE_URL, key: API_KEY };
 }
 
@@ -3403,6 +3411,39 @@ function pruneOrphanToolCalls(messages: any[], declared: Set<string>): any[] {
    실제로 14개 호출부 중 1곳만 넘기고 있어서, 로그인 유저 대화 비용의 36%가
    '게스트'로 잘못 기록됐다(유저별 집계·마진 분석이 통째로 어긋났다).
    uid 가 정말 없는 곳은 게스트 체험 경로 하나뿐이다. */
+/* 💬 이 유저의 '대화' 모델 — 등급이 높으면 상위 모델, 예산을 넘겼으면 자동 강등.
+   ⚠️ 여태 대화 경로는 model_for 를 한 번도 묻지 않았다. 그래서
+      (1) ai_margin.models.chat 은 죽은 설정이었고
+      (2) 대화에는 예산 가드가 전혀 걸려 있지 않았다.
+      딥시크(₩1.5/턴)일 땐 티가 안 났지만, 프리미엄 모델을 물리는 순간 이게 곧 무제한 적자다.
+   ⚠️ 이 창구는 OpenAI 호환 전용이다. claude 는 요청/응답 형식이 달라(system 별도 필드,
+      content 블록 배열) 여기로 보내면 죽는다 → 배정돼도 기본 모델로 돌린다. */
+const _chatModelCache = new Map<string, { m: string; t: number }>();
+/* 🅰️🅱️ 모델 블라인드 A/B 전용 오버라이드 — 레드팀 키가 있을 때만 채워진다.
+   "모델을 올리면 대화가 좋아지나"는 계산으로 답이 안 나온다. 같은 페르소나·같은 턴을
+   두 모델로 나란히 돌려 사람이 눈 가리고 고르는 수밖에 없는데, 그러려면 요청 단위로
+   모델을 강제할 손잡이가 필요하다. 테스트 계정 uid 로만 키가 잡히므로 실유저와 안 섞인다. */
+const _modelOverride = new Map<string, { m: string; t: number }>();
+function setModelOverride(uid: string | null, m: string) {
+  const now = Date.now();
+  for (const [k, v] of _modelOverride) if (now - v.t > 600_000) _modelOverride.delete(k);   // 10분 지난 건 버린다
+  _modelOverride.set(uid || "-", { m, t: now });
+}
+async function chatModel(uid: string | null): Promise<string> {
+  const key = uid || "-";
+  const ov = _modelOverride.get(key);
+  if (ov && Date.now() - ov.t < 600_000) return ov.m;
+  const hit = _chatModelCache.get(key);
+  if (hit && Date.now() - hit.t < 30_000) return hit.m;   // 한 턴에 콜이 여러 번 나간다(도구 루프)
+  let m = CHAT_MODEL;
+  try {
+    const got = String((await modelFor(uid, "chat"))?.model || "");
+    if (got && !/^claude-/.test(got)) m = got;
+  } catch { /* 장애 시 기본 모델 — 턴이 죽는 것보다 낫다 */ }
+  _chatModelCache.set(key, { m, t: Date.now() });
+  return m;
+}
+
 async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null; freqPen?: number }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
@@ -3423,9 +3464,19 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   //    **유저에겐 빈 응답이 나간다** — 실제로 그렇게 터졌다.
   //    도구를 숨길 땐 그 호출 기록과 짝이 되는 tool 결과까지 함께 걷어낸다.
   const msgs = pruneOrphanToolCalls(messages, new Set(activeTools.map((t: any) => t?.function?.name)));
-  const reqBody: any = { model: effModel(opts?.model || CHAT_MODEL), messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
+  const reqBody: any = { model: effModel(opts?.model || await chatModel(opts?.uid ?? null)), messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
   if (opts?.freqPen && !/^gemini/.test(String(reqBody.model))) reqBody.frequency_penalty = opts.freqPen;   // 반복 억제(딥시크만 — gemini 는 400 거부, 실측)
   if (/^gemini/.test(String(reqBody.model))) reqBody.reasoning_effort = "minimal";   // 사고 최소(수다용)
+  /* 🧠 gpt-5 계열은 추론 모델이다. 기본값 그대로 보내면 세 가지가 한꺼번에 어긋난다:
+       ① temperature 를 거부(400) ② max_tokens 대신 max_completion_tokens ③ 사고가 답변 토큰을 먹어치워 빈 답.
+     하나라도 틀리면 400 → 폴백으로 조용히 딥시크로 떨어져서 "유료인데 그대로네"가 된다. */
+  if (/^gpt-5/.test(String(reqBody.model))) {
+    delete reqBody.temperature;
+    delete reqBody.frequency_penalty;
+    reqBody.reasoning_effort = "minimal";
+    reqBody.max_completion_tokens = reqBody.max_tokens;
+    delete reqBody.max_tokens;
+  }
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const _api = apiFor(String(reqBody.model || CHAT_MODEL));
   const r = await fetch(`${_api.base}/chat/completions`, {
@@ -3452,6 +3503,23 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
         if (toolish(out2)) countToolTurn(opts?.uid);
         logSpend(toolish(out2) ? AI_FN + ":tool" : AI_FN, fb.model, opts?.uid ?? null, out2?.usage);
         return out2;
+      }
+    }
+    /* 🩹 모델명/권한이 틀린 400·404 는 그 유저의 턴을 통째로 죽인다. 프리미엄 모델을 새로 물릴 때
+       가장 흔한 사고라, 기본 모델로 딱 한 번 되돌려 살린다(원인은 로그로 남는다). */
+    if ((r.status === 400 || r.status === 404) && String(reqBody.model) !== CHAT_MODEL) {
+      console.error("chat_model_fallback", reqBody.model, errTxt.slice(0, 120));
+      const fb2: any = { ...reqBody, model: CHAT_MODEL };
+      const api3 = apiFor(CHAT_MODEL);
+      const r3 = await fetch(`${api3.base}/chat/completions`, {
+        method: "POST", headers: { "Authorization": `Bearer ${api3.key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(fb2),
+      });
+      if (r3.ok) {
+        const out3 = await r3.json();
+        if (toolish(out3)) countToolTurn(opts?.uid);
+        logSpend(toolish(out3) ? AI_FN + ":tool" : AI_FN, CHAT_MODEL, opts?.uid ?? null, out3?.usage);
+        return out3;
       }
     }
     throw new Error("llm_" + r.status + ":" + errTxt.slice(0, 160));
@@ -4080,6 +4148,51 @@ Deno.serve(async (req) => {
       const { data: pk } = await supa.from("friend_relationship").select("pending_ping").eq("user_id", uid).maybeSingle();
       return json({ ok: true, has: !!pk?.pending_ping });
     }
+    /* 🧭 기획 — 각도 셋을 근거와 함께 낸다. 그리고 **불리한 점도 같이 적는다.**
+       왜 한 개가 아니라 셋인가: 초안을 하나만 내밀면 사람은 그게 최선인지 알 수 없어 그냥 받거나
+       그냥 버린다. 셋을 놓고 고르게 하면 "왜 이걸 골랐는지"가 남고, 그 선택이 다음 기획의 근거가 된다.
+       왜 불리한 점을 적나: 좋은 말만 적힌 제안은 판단이 아니라 영업이다. 우리가 파는 건 판단이다.
+       ⚠️ 도구 루프를 타지 않는 단발 호출이다 — 기획은 대화가 아니라 '한 번 잘 생각하는' 일이라
+          왕복이 필요 없다. 원장에는 galla-friend:plan 으로 따로 찍는다(기획 원가를 따로 보려고).
+       ⚠️ 실패해도 화면이 죽으면 안 된다 — 빈 배열을 돌려주면 화면이 "직접 말해줘"로 떨어진다. */
+    if (body?.op === "plan") {
+      if (!uid) return json({ ok: false, reason: "no_auth" }, 401);
+      const SURF: Record<string, string> = {
+        vertical: "숏판(세로 릴스, 20~40초)", horizontal: "롱판(가로 영상, 3분 안팎)",
+        issue: "이슈(찬반이 갈리는 발제)", predict: "예측(결과가 나올 일에 거는 마켓)",
+        plaza: "광장(자유 게시글)",
+      };
+      const surface = SURF[String(body?.surface || "")] || "콘텐츠";
+      const topic = String(body?.topic || "").slice(0, 300);
+      const sys = `너는 갈라의 콘텐츠 기획자다. ${surface} 를 만들려는 사람에게 **각도 3개**를 제안한다.
+규칙 ①각도는 서로 '다른 축'이어야 한다(같은 얘기를 말만 바꾼 셋은 실패다) ②각각 왜 될 것 같은지 근거를 한 줄로 —
+막연한 말("요즘 핫함") 말고 구체적으로 ③각각 **불리한 점**을 한 줄로 반드시 적는다(좋은 말만 적힌 제안은 영업이지 판단이 아니다)
+④제목은 20자 안팎, 사람이 바로 이해할 것.
+JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
+      const user = topic ? `주제: ${topic}` : "주제는 아직 안 정했다. 지금 갈라에서 반응이 나올 만한 걸로 제안해라.";
+      try {
+        const api = apiFor(AGENT_MODEL);
+        const r = await fetch(`${api.base}/chat/completions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${api.key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: AGENT_MODEL, temperature: 0.7, max_tokens: 700,
+            messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+        });
+        const d = await r.json().catch(() => null);
+        logSpend(AI_FN + ":plan", AGENT_MODEL, uid, d?.usage);
+        const txt = d?.choices?.[0]?.message?.content || "";
+        const m = /\{[\s\S]*\}/.exec(txt);
+        const angles = m ? (JSON.parse(m[0])?.angles || []) : [];
+        return json({ ok: true, angles: (angles as any[]).slice(0, 3).map((a) => ({
+          title: String(a?.title || "").slice(0, 60),
+          why: String(a?.why || "").slice(0, 160),
+          risk: String(a?.risk || "").slice(0, 160),
+        })).filter((a) => a.title) });
+      } catch (e) {
+        return json({ ok: true, angles: [] });   // 화면은 "직접 말해줘"로 떨어진다
+      }
+    }
+
     if (body?.op === "consume_ping") {
       const { data: pr } = await supa.from("friend_relationship").select("pending_ping").eq("user_id", uid).maybeSingle();
       if (pr?.pending_ping) {
@@ -4133,7 +4246,9 @@ Deno.serve(async (req) => {
     const gate = await aiGate("u:" + uid, isGreeting ? AI_FN + "-ambient" : AI_FN);
     if (!gate.ok) {
       if (isGreeting) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
-      return json({ ok: true, reply: gateReply(gate, false, "", tzMin), gate, actions: [] });
+      return json({ ok: true, reply: gateReply(gate, false, "", tzMin), gate,
+        // 기다릴지 올릴지는 사람이 정한다. 칩 하나로 이용권 시트를 연다(값은 그 안에서 본다).
+        actions: [{ kind: "plans", label: "지금 더 얘기하기" }] });
     }
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
     //
@@ -4148,8 +4263,13 @@ Deno.serve(async (req) => {
     //    "정말 좋아진 게 맞나"를 사람이 직접 판단하려면 비교 대상이 있어야 한다.
     //    ⚠️ 레드팀 키가 있을 때만 동작한다(일반 유저는 절대 이 경로로 못 온다).
     const guardsOff = isRedteam && req.headers.get("x-galla-guards") === "off";
+    // 🅰️🅱️ 모델 블라인드 A/B — 레드팀 키가 있을 때만. 일반 유저는 절대 이 경로로 못 온다.
+    if (isRedteam) {
+      const mo = String(req.headers.get("x-galla-model") || "").trim();
+      if (mo && /^[a-z0-9._-]{2,48}$/i.test(mo)) setModelOverride(uid, mo);
+    }
     let paidTier = false;
-    try { paidTier = ["lite", "friend", "pro"].includes(String((await modelFor(uid, "chat"))?.tier || "")); } catch { /* */ }
+    try { paidTier = !["guest", "free"].includes(String((await modelFor(uid, "chat"))?.tier || "guest")); } catch { /* */ }
     if (!isRedteam && !paidTier && !(await aiBudgetOk())) {
       const tired = [
         "아 오늘 진짜 너무 많이 떠들었나봐, 목이 다 쉬었어 ㅋㅋ 나 오늘은 여기까지만 할게. 내일 다시 얘기하자!",

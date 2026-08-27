@@ -131,12 +131,13 @@
     var feats = (plan.features || []).map(function (f) {
       return FEAT_LABEL[f] ? '<span class="gpl-f">' + esc(FEAT_LABEL[f]) + "</span>" : "";
     }).join("");
-    /* ⚠️ 5시간 창(windows)을 카드에 쓰면 안 된다. 그건 봇 폭주 방어라 유료 단이 전부 같은 값이고,
-       화면에선 세 단이 똑같아 보인다(실측: '200턴 / 5시간'이 셋 다 동일).
-       값을 가르는 건 월 포함량이다 — 대화와 앱 조작을 나눠 보여준다. */
+    /* ⚠️ 화면에 보이는 숫자와 실제로 막는 숫자가 같아야 한다.
+       실제로 막는 건 5시간 창이다(ai_gate). 월 한도는 아무도 안 막으므로 보여주지 않는다 —
+       보이는 것과 겪는 것이 다른 게 제일 나쁘다. 조작만 월 한도가 진짜다(대화보다 23배 비싸서). */
+    var w = (plan.windows && plan.windows["galla-friend"]) || {};
     var chatLine =
-      (plan.monthly_turns ? '<span class="gpl-f">대화 월 ' + plan.monthly_turns + "턴</span>" : "") +
-      (plan.tool_turns    ? '<span class="gpl-f">조작 월 ' + plan.tool_turns + "턴</span>" : "");
+      (w.n ? '<span class="gpl-f">대화 ' + w.n + "턴 / " + (w.hours || 5) + "시간</span>" : "") +
+      (plan.tool_turns ? '<span class="gpl-f">앱 조작 월 ' + plan.tool_turns + "턴</span>" : "");
     // 🍎 네이티브: 가격도 결제 버튼도 노출하지 않는다(앱스토어 anti-steering)
     var price = native ? "" : '<span class="gpl-price">' + (plan.price ? won(plan.price) + "/월" : "무료") + "</span>";
     var cta = (!native && !cur && plan.price)
@@ -182,9 +183,10 @@
               (ent.resets_at && remain === 0 ? " · " + esc(resetText(ent.resets_at)) : "") + "</div>") +
           (function () {
             var m = ent.month; if (!m) return "";
+            /* 대화는 위의 '남은 대화 N/N턴'(5시간 창)이 이미 진실을 보여준다 — 월로 또 쓰면 중복이고,
+               그 월 숫자는 아무도 안 막는다. 여기 남기는 건 조작뿐이다. */
             var rows = [
-              { t: "이번 달 대화", u: m.used, n: m.included },
-              { t: "앱 조작",     u: m.tool_used, n: m.tool_included }
+              { t: "앱 조작", u: m.tool_used, n: m.tool_included }
             ].filter(function (x) { return Number(x.n) > 0; });
             if (!rows.length) return "";
             return '<div class="gpl-mrow">' + rows.map(function (x) {
