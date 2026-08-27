@@ -1139,12 +1139,22 @@ function plazaExcerpt(body) {
 }
 
 /* 홈 피드용 광장 카드 (톤 유지, '광장'으로 명확히 구분) */
+/* 🌐 프록시 절대주소 — 앱 웹뷰의 origin 은 capacitor://localhost(iOS)·http://localhost(안드)라
+   "/imgproxy?..." 같은 뿌리 경로가 로컬 번들로 떨어져 404 가 된다(= 커뮤 썸네일 전멸).
+   엣지 함수는 galla.im 에만 있으므로, 운영 도메인이 아닐 때만 절대주소를 붙인다. */
+function gallaEdgeBase() {
+  try {
+    if (!/^https?:/.test(location.protocol)) return "https://galla.im";          // capacitor://
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return "https://galla.im";
+    return "";
+  } catch (e) { return "https://galla.im"; }
+}
 // 외부 커뮤 썸네일은 핫링크 차단 많아 galla.im 자체 프록시 경유(원본은 그대로)
 function plazaProxify(u) {
     if (!u || typeof u !== 'string') return u;
     if (u.startsWith('/') || u.includes('/imgproxy?') || u.includes('supabase.co/storage')) return u;
     if (!/^https?:\/\//i.test(u)) return u;
-    return '/imgproxy?u=' + encodeURIComponent(u);
+    return gallaEdgeBase() + '/imgproxy?u=' + encodeURIComponent(u);
 }
 function renderPlazaCard(p) {
     const cover = plazaProxify(p.cover_image || p.thumbnail || '');

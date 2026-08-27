@@ -787,7 +787,7 @@ function curVideoAndSection() {
 // 슬라이드 컨트롤 직접 바인딩 — 문서 위임/iOS click 디스패치 이슈에 안전.
 function shareShort(item) {
   if (!item) return;
-  const url = location.origin + "/share/issue/" + item.id;
+  const url = window.GALLA_SITE + "/share/issue/" + item.id;
   const title = (item.title || "GALLA").trim();
   if (window.GALLA_share) window.GALLA_share({ url, title, text: title });
   else if (navigator.share) navigator.share({ url, title }).catch(() => {});

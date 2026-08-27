@@ -173,7 +173,7 @@
     // 프로필
     el.querySelectorAll('[data-prof]').forEach(a => a.addEventListener('click', () => { const u = a.dataset.prof; if (u) nav('mypage.html?user=' + u); }));
     // 공유
-    const shareUrl = () => x._type === 'issue' ? location.origin + '/share/issue/' + x.id : location.origin + '/share/post/' + x.id;
+    const shareUrl = () => x._type === 'issue' ? window.GALLA_SITE + '/share/issue/' + x.id : window.GALLA_SITE + '/share/post/' + x.id;
     el.querySelector('.grl-share')?.addEventListener('click', () => {
       const url = shareUrl(), text = x.title || x.caption || 'GALLA';
       if (window.GALLA_share) window.GALLA_share({ url, title: 'GALLA', text });

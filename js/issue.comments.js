@@ -1488,7 +1488,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   sheet.querySelector(".share")?.addEventListener("click", () => {
     close();
     const raw = allRows.find(r => String(r.id) === String(cid))?.content || "";
-    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("issue", cid) : (location.origin + "/share/comment/issue/" + cid);
+    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("issue", cid) : (window.GALLA_SITE + "/share/comment/issue/" + cid);
     const title = "🗯️ " + (raw ? `“${String(raw).replace(/\s+/g, " ").trim().slice(0, 40)}”` : "이 댓글");
     const text = `${nick || "누군가"}의 한마디 — 갈라에서 받아쳐봐`;
     if (window.GALLA_share) window.GALLA_share({ url, title, text });

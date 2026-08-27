@@ -653,13 +653,23 @@ let PLAZA_ME = null;
 let MY_PLAZA_SAVED = {};
 let MY_PLAZA_VOTES = {};
 
+/* 🌐 프록시 절대주소 — 앱 웹뷰의 origin 은 capacitor://localhost(iOS)·http://localhost(안드)라
+   "/imgproxy?..." 같은 뿌리 경로가 로컬 번들로 떨어져 404 가 된다(= 커뮤 썸네일 전멸).
+   엣지 함수는 galla.im 에만 있으므로, 운영 도메인이 아닐 때만 절대주소를 붙인다. */
+function gallaEdgeBase() {
+  try {
+    if (!/^https?:/.test(location.protocol)) return "https://galla.im";          // capacitor://
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return "https://galla.im";
+    return "";
+  } catch (e) { return "https://galla.im"; }
+}
 // 외부 커뮤 썸네일은 핫링크 차단이 많아 galla.im 자체 프록시(/imgproxy)로 경유시킨다.
 // 로컬(/...)·Supabase 스토리지·이미 프록시된 URL은 그대로 둔다.
 function proxifyThumb(u) {
   if (!u || typeof u !== "string") return u;
   if (u.startsWith("/") || u.includes("/imgproxy?") || u.includes("supabase.co/storage")) return u;
   if (!/^https?:\/\//i.test(u)) return u;
-  return "/imgproxy?u=" + encodeURIComponent(u);
+  return gallaEdgeBase() + "/imgproxy?u=" + encodeURIComponent(u);
 }
 
 function renderPlazaPosts(posts) {

@@ -391,20 +391,33 @@
     setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 260); }, ms || 1900);
   };
 
+  /* 🌐 정본 사이트 주소 — 공유 링크의 뿌리.
+     ⚠️ 앱 웹뷰의 location.origin 은 capacitor://localhost(iOS)·http://localhost(안드)다.
+        여기에 /share/... 를 붙이면 "capacitor://localhost/share/issue/123" 같은 죽은 링크가
+        카톡으로 나간다 — 공유·초대가 성장 루프인데 앱에서만 통째로 끊긴다.
+        운영 도메인일 때만 그 origin 을 쓰고, 그 외(앱·로컬)는 galla.im 으로 못박는다. */
+  window.GALLA_SITE = (function () {
+    try {
+      if (!/^https?:$/.test(location.protocol)) return "https://galla.im";
+      if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return "https://galla.im";
+      return location.origin;
+    } catch (e) { return "https://galla.im"; }
+  })();
+
   // 공유 URL: /share/<type>/<id> (엣지에서 OG 카드 렌더). type: issue|predict|plaza|post|video|news
   window.GALLA_shareUrl = function (type, id) {
-    return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;
+    return `${window.GALLA_SITE}/share/${type}/${encodeURIComponent(id)}`;
   };
   // 댓글·대댓글 인용 카드. scope: issue|news|market|plaza|post|video
   window.GALLA_shareCommentUrl = function (scope, id) {
-    return `${location.origin}/share/comment/${encodeURIComponent(scope)}/${encodeURIComponent(id)}`;
+    return `${window.GALLA_SITE}/share/comment/${encodeURIComponent(scope)}/${encodeURIComponent(id)}`;
   };
   // 실시간 트렌드 순위 랜딩
-  window.GALLA_shareTrendUrl = function () { return `${location.origin}/share/trend`; };
+  window.GALLA_shareTrendUrl = function () { return `${window.GALLA_SITE}/share/trend`; };
   // 육성 난장 입장 초대(방 딥링크)
-  window.GALLA_shareRoomUrl = function (id) { return `${location.origin}/share/room/${encodeURIComponent(id)}`; };
+  window.GALLA_shareRoomUrl = function (id) { return `${window.GALLA_SITE}/share/room/${encodeURIComponent(id)}`; };
   // 말 걸기(오픈프로필) — 1:1 DM 초대
-  window.GALLA_shareUserUrl = function (id) { return `${location.origin}/share/u/${encodeURIComponent(id)}`; };
+  window.GALLA_shareUserUrl = function (id) { return `${window.GALLA_SITE}/share/u/${encodeURIComponent(id)}`; };
 
   /* ═══ 📳 전역 햅틱 — 네이티브(iOS) Capacitor Haptics 우선, 없으면 웹 vibrate(안드로이드).
      kind: light | medium | heavy | rigid | soft | success | warning | error | selection ═══ */

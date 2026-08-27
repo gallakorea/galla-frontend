@@ -702,7 +702,7 @@
       const s = e.target.closest("[data-cshare]");
       if (s) {
         const cid = s.dataset.cshare;
-        const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("video", cid) : (location.origin + "/share/comment/video/" + cid);
+        const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("video", cid) : (window.GALLA_SITE + "/share/comment/video/" + cid);
         const raw = String(s.dataset.body || "").replace(/\s+/g, " ").trim();
         const title = "🗯️ " + (raw ? `“${raw.slice(0, 40)}”` : "이 댓글");
         const text = "갈라에서 이 댓글에 받아쳐봐";

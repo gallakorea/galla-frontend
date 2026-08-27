@@ -119,7 +119,7 @@
   const CMT_SCOPE = { comments: "issue", galla_news_comments: "news", market_comments: "market", plaza_comments: "plaza", post_comments: "post", video_comments: "video" };
   function cmtShare(opts) {
     const scope = CMT_SCOPE[opts.table] || "issue";
-    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl(scope, opts.id) : (location.origin + "/share/comment/" + scope + "/" + opts.id);
+    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl(scope, opts.id) : (window.GALLA_SITE + "/share/comment/" + scope + "/" + opts.id);
     const raw = String(opts.current || "").replace(/\s+/g, " ").trim();
     const title = "🗯️ " + (raw ? `“${raw.slice(0, 40)}”` : "이 댓글");
     const text = "갈라에서 이 댓글에 받아쳐봐";

@@ -256,7 +256,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const escT = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
         const open = () => {
             const big = window.GALLA_avatarSrc(avatarUrl, 720);
-            const profileUrl = location.origin + "/mypage.html?user=" + encodeURIComponent(uid);
+            const profileUrl = window.GALLA_SITE + "/mypage.html?user=" + encodeURIComponent(uid);
             // 말 걸기(오픈프로필) 공유 링크 — 받는 사람이 이 사람에게 1:1 DM으로 바로 연결(+ 미가입이면 가입 유도)
             const talkUrl = window.GALLA_shareUserUrl ? window.GALLA_shareUserUrl(uid) : profileUrl;
             const talkTitle = "💬 " + (nick || "갈라 친구") + "에게 말 걸기";

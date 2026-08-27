@@ -189,7 +189,7 @@
 
     // 공유 — /share/post/<id> OG 엣지 렌더 링크로
     document.getElementById('glp-share').addEventListener('click', () => {
-      const shareUrl = location.origin + '/share/post/' + id;
+      const shareUrl = window.GALLA_SITE + '/share/post/' + id;
       const text = post.title || post.caption || '콘텐츠';
       if (window.GALLA_share) window.GALLA_share({ url: shareUrl, title: 'GALLA', text });
       else if (navigator.share) navigator.share({ title: 'GALLA', text, url: shareUrl }).catch(() => {});
@@ -313,7 +313,7 @@
     // 🔗 댓글 공유 — 인용 카드(/share/comment/post/<cid>)
     list.querySelectorAll('.glp-cshare').forEach(b => b.addEventListener('click', () => {
       const cid = b.dataset.cid;
-      const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl('post', cid) : (location.origin + '/share/comment/post/' + cid);
+      const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl('post', cid) : (window.GALLA_SITE + '/share/comment/post/' + cid);
       const raw = String(b.dataset.body || '').replace(/\s+/g, ' ').trim();
       const title = '🗯️ ' + (raw ? `“${raw.slice(0, 40)}”` : '이 댓글');
       const text = '갈라에서 이 댓글에 받아쳐봐';

@@ -801,7 +801,7 @@ async function initTrendPage() {
     hotWrap.onclick = e => {
       // 🔗 실시간 트렌드 순위 공유 — /share/trend 랜딩(TOP 순위 + 가입 유도)
       if (e.target.closest(".tm-share")) {
-        const url = window.GALLA_shareTrendUrl ? window.GALLA_shareTrendUrl() : (location.origin + "/share/trend");
+        const url = window.GALLA_shareTrendUrl ? window.GALLA_shareTrendUrl() : (window.GALLA_SITE + "/share/trend");
         const title = "🔥 지금 갈라 실시간 트렌드";
         const text = "지금 갈라에서 제일 뜨거운 이슈 TOP — 넌 어느 편?";
         if (window.GALLA_share) window.GALLA_share({ url, title, text });

@@ -25,6 +25,9 @@ const CHAT_MODEL = Deno.env.get("FRIEND_CHAT_MODEL") || MODEL;
 //    미래: FRIEND_COMPANION_MODEL을 자체 컴팩트 SFT 모델로 갈아끼우면 '대화'만 저비용 전환(에이전트는 검증모델 유지).
 const COMPANION_MODEL = Deno.env.get("FRIEND_COMPANION_MODEL") || CHAT_MODEL;
 const AGENT_MODEL     = Deno.env.get("FRIEND_AGENT_MODEL")     || CHAT_MODEL;
+// env 로 '명시'된 값만 담는다 — 비어 있으면 등급별 모델(chatModel)이 쓰인다.
+const _COMPANION_ENV  = Deno.env.get("FRIEND_COMPANION_MODEL") || "";
+const _AGENT_ENV      = Deno.env.get("FRIEND_AGENT_MODEL")     || "";
 // 임베딩(기억 검색용) — 대화 모델과 별개로 OpenAI 임베딩 사용(싸고 안정적). env로 교체 가능.
 const EMBED_URL   = Deno.env.get("EMBED_BASE_URL") || "https://api.openai.com/v1";
 const EMBED_KEY   = Deno.env.get("EMBED_API_KEY")  || Deno.env.get("OPENAI_API_KEY")!;
@@ -2079,6 +2082,15 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
        같은 프로 추천 반복)을 다시 뱉는 걸 약하게 벌점. 0.2 = 문법이 안 뒤틀리는 선. */
     const body: any = { model, messages: usePrefix ? [...msgs, { role: "assistant", content: opts!.prefix, prefix: true }] : msgs,
       temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true };
+    /* 🧠 gpt-5 계열 보정 — chatOnce 와 같은 이유. 여기가 주 대화 경로라 놓치면 전부 샌다.
+       ⚠️ 사고 토큰이 max_completion_tokens 를 먹는다. 240 을 그대로 주면 사고가 다 쓰고
+          답이 빈 채로 끝난다 → 사고 몫을 따로 얹는다. */
+    if (/^gpt-5/.test(model)) {
+      delete body.temperature; delete body.frequency_penalty;
+      body.reasoning_effort = "minimal";
+      body.max_completion_tokens = (opts?.maxTokens || 340) + 512;
+      delete body.max_tokens;
+    }
     if (!/^gemini/.test(model)) body.frequency_penalty = 0.2;   // gemini OpenAI 호환은 이 필드를 400 으로 거부(실측)
     else body.reasoning_effort = "minimal";   // gemini-3.6 은 thinking 기본 ON — 수다엔 사고가 max_tokens 만 먹는다("none"은 400, 실측)
     // 베타 경로는 tool_choice 파라미터를 거부할 수 있다 — 어차피 tools 미선언.
@@ -3474,7 +3486,7 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     delete reqBody.temperature;
     delete reqBody.frequency_penalty;
     reqBody.reasoning_effort = "minimal";
-    reqBody.max_completion_tokens = reqBody.max_tokens;
+    reqBody.max_completion_tokens = (reqBody.max_tokens || 240) + 512;   // 사고가 답변 몫을 먹지 않게
     delete reqBody.max_tokens;
   }
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
@@ -4815,7 +4827,10 @@ ${parts.join("\n")}`;
        딥시크 한계 실측(카드 붙이면서 "찾아볼게", 내부 분기 로직 발화) 후의 부품 교체.
        에이전트(도구) 턴은 그대로 딥시크 — 도구 호출은 딥시크가 문제없고 검증돼 있다.
        끄기: FRIEND_ADMIN_CHAT_MODEL 을 "off" 로. 전체 적용 판단은 1~2주 체감 후. */
-    let brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
+    /* ⚠️ 여기가 진짜 대화 경로다. env 상수(COMPANION_MODEL)를 그대로 쓰고 있어서
+       chatOnce 만 배선해봐야 유료 등급 모델이 실제 대화엔 닿지 않았다.
+       env 를 명시로 박아둔 경우엔 그게 이긴다(긴급 고정용). */
+    let brainModel = (brain === "companion" ? _COMPANION_ENV : _AGENT_ENV) || await chatModel(uid);
     if (brain === "companion") {
       try {
         const adminModel = Deno.env.get("FRIEND_ADMIN_CHAT_MODEL") || "gemini-3.6-flash";
