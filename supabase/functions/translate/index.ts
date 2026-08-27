@@ -8,6 +8,8 @@
 //  ⚠️ 남용 방지: 유저별 일일 글자수 한도(translate_gate). 없으면 우리 API가 남의 번역기가 된다.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const API_KEY = Deno.env.get("DEEPSEEK_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
 const BASE_URL = Deno.env.get("AI_BASE_URL") || "https://api.deepseek.com/v1";
@@ -94,6 +96,7 @@ Rules:
     });
     if (!r.ok) return json({ ok: false, reason: "llm", detail: (await r.text()).slice(0, 200) }, 502);
     const j = await r.json();
+    logSpend("translate", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
     let out = String(j?.choices?.[0]?.message?.content || "").trim();
     if (!out) return json({ ok: false, reason: "empty" }, 502);
 
@@ -126,6 +129,7 @@ Rules:
       });
       if (r2.ok) {
         const j2 = await r2.json();
+        logSpend("translate", MODEL, null, j2?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
         const o2 = String(j2?.choices?.[0]?.message?.content || "").trim();
         if (o2 && looksLike(o2, dst)) out = o2;
       }

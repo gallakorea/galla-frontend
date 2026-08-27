@@ -5,6 +5,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
+import { logSpendUnits } from "../_shared/spend.ts";
+
 // 🎟 등급 게이트 — app_settings.ai_tiers 의 롤링 윈도우. 장애 시 통과(게이트가 서비스를 죽이면 안 된다).
 async function aiGate(subject: string, fn: string, n = 1): Promise<any> {
   try {
@@ -125,6 +127,9 @@ async function genCloudflareFlux(prompt: string, ratio: string): Promise<Uint8Ar
     let r = await call({ width: sz.w, height: sz.h });
     if (r.status === 400) r = await call({});   // 일부 버전은 width/height 미지원 → 정사각 폴백
     const d = await r.json().catch(() => null);
+    /* 💰 CF FLUX — 기존 인프라라 한계원가가 낮지만 0 은 아니다. 단가 미측정이라
+       0 으로 두고 '몇 장 뽑았나'만 남긴다(청구서 오면 여기만 고친다). */
+    if (r.ok && d?.result?.image) logSpendUnits("generate-thumbnail", "cf-flux-1-schnell", null, 1, 0);
     const b64 = d?.result?.image;
     if (!r.ok || !b64) { console.error("[thumb] cf-flux", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
     return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -158,6 +163,7 @@ async function genGeminiEdit(prompt: string, refs: { bytes: Uint8Array; mime: st
       { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: GEMINI_AR[ratio] || "3:4" } } }) });
     const d = await r.json().catch(() => null);
+    if (r.ok) logSpendUnits("generate-thumbnail", GEMINI_IMG_MODEL, null, 1, 0);   // 💰 건수(단가 미측정)
     const outParts = d?.candidates?.[0]?.content?.parts || [];
     const img = outParts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
     const b64 = img?.inlineData?.data || img?.inline_data?.data;
@@ -290,6 +296,9 @@ Deno.serve(async (req) => {
       });
     }
     const d = await r.json();
+    /* 💰 여기가 비싼 폴백이다(gc_prices.thumbnail 주석: "얼굴·제품 편집 경로만 OpenAI 폴백 → 훨씬 비쌈").
+       스티커와 같은 실측 기준 $0.04/장. */
+    if (r.ok && d?.data?.length) logSpendUnits("generate-thumbnail", "gpt-image-1", null, d.data.length, 0.04);
     if (!r.ok || !d?.data?.length) {
       console.error("[thumb] openai", useEdit ? "edit" : "gen", r.status, JSON.stringify(d?.error || d).slice(0, 300));
       return null;

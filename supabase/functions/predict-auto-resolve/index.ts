@@ -5,6 +5,8 @@
 //  predict_resolve(p_outcome_id null) = 환불 정산. 수동(관리자/생성자) 정산은 오버라이드로 유지.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
 // 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
 const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
@@ -76,6 +78,7 @@ ${evidence.length ? evidence.map((e) => "- " + e).join("\n") : "(관련 뉴스 �
     }),
   });
   const j = await r.json();
+  logSpend("predict-auto-resolve", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
   try {
     const v = JSON.parse(j.choices[0].message.content)?.verdict;
     return ["예", "아니오"].includes(v) ? v : "모름";

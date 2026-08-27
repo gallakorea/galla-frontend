@@ -2,6 +2,8 @@
 // ⚠️ 리포에 소스가 없던 레거시 배포 함수(2026-08-08 QA에서 500 발견) — DeepSeek 우선/OpenAI 폴백으로 재작성.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const API_KEY = Deno.env.get("DEEPSEEK_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
@@ -42,7 +44,9 @@ Deno.serve(async (req) => {
       }),
     });
     if (!r.ok) return json({ error: "llm_" + r.status }, 502);
-    const m = /\{[\s\S]*\}/.exec((await r.json())?.choices?.[0]?.message?.content || "");
+    const _j = await r.json();
+    logSpend("generate-ai-arguments", MODEL, null, _j?.usage);   // 💰 원가 장부
+    const m = /\{[\s\S]*\}/.exec(_j?.choices?.[0]?.message?.content || "");
     const o = m ? JSON.parse(m[0]) : null;
     if (!o?.pro || !o?.con) return json({ error: "parse" }, 502);
 

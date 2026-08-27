@@ -1,5 +1,7 @@
 // 🎙 갈라 친구 음성 — 받아쓰기(STT). 녹음 오디오 → Whisper → 텍스트. 로그인 유저만(비용통제).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logSpendUnits } from "../_shared/spend.ts";
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -32,6 +34,9 @@ async function cfWhisper(bytes: Uint8Array): Promise<{ text: string; words: SttW
       body: JSON.stringify({ audio: toB64(bytes), task: "transcribe", language: "ko" }),
     });
     const d = await r.json().catch(() => null);
+    /* 💰 CF 음성인식 — 단가를 아직 안 재봐서 0 으로 두고 '몇 번 돌았나'만 남긴다.
+       청구서가 오면 이 0 을 초당·건당 단가로 바꾸면 과거 건수에 곱해 소급 계산된다. */
+    if (r.ok) logSpendUnits("galla-stt", CF_STT_MODEL, null, 1, 0);
     const text = d?.result?.text;
     if (!r.ok || text == null) { console.error("[stt] cf", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
     // 🎬 릴스 자막 정렬용 — 모델에 따라 result.words 또는 segments[].words에 단어 타임스탬프가 있다.

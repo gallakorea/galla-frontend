@@ -3,6 +3,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { DOMParser, type Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -49,6 +51,7 @@ async function chat(messages: unknown[], maxTokens = 900): Promise<any> {
     }),
   });
   const j = await r.json();
+  logSpend("generate-galla-news", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
   const txt = j?.choices?.[0]?.message?.content || "{}";
   try { return JSON.parse(txt); } catch { return {}; }
 }

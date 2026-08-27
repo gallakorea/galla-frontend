@@ -5,6 +5,8 @@
         (푸시를 무시해도 다음에 챗 열면 그 말로 시작 — friend.js consume_ping). */
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
@@ -38,6 +40,7 @@ async function genPing(nick: string, name: string, mems: { kind: string; content
       }),
     });
     const j = await r.json();
+    logSpend("galla-friend-ping", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
     const t = (j?.choices?.[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "");
     return t ? t.slice(0, 120) : null;
   } catch { return null; }

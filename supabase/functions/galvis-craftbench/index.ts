@@ -2,6 +2,8 @@
 // 파이프라인 개악(프롬프트 수정으로 점수 하락)을 감으로 안 보고 수치로 잡는다. 크론(주1회, x-cron-key) 전용.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CRON_KEY = Deno.env.get("CRON_SECRET") || "";
@@ -25,7 +27,9 @@ async function llm(system: string, user: string, temp: number, maxTok: number): 
       body: JSON.stringify({ model: MODEL, temperature: temp, max_tokens: maxTok, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
     });
     if (!r.ok) return null;
-    const m = /\{[\s\S]*\}/.exec((await r.json())?.choices?.[0]?.message?.content || "");
+    const _j = await r.json();
+    logSpend("galvis-craftbench", MODEL, null, _j?.usage);   // 💰 원가 장부
+    const m = /\{[\s\S]*\}/.exec(_j?.choices?.[0]?.message?.content || "");
     return m ? JSON.parse(m[0]) : null;
   } catch { return null; }
 }

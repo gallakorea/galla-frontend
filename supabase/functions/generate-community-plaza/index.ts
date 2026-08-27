@@ -3,6 +3,8 @@
 // 강력 안전필터: 혐오·불법·명예훼손·개인정보·정치극단·성인 → 스킵.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
 // 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
 const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
@@ -65,6 +67,7 @@ async function rewrite(title: string, source?: string) {
     }),
   });
   const j = await r.json();
+  logSpend("generate-community-plaza", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
   try { return JSON.parse(j.choices[0].message.content); } catch { return { ok: false, reason: "parse_fail" }; }
 }
 

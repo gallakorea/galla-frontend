@@ -6,6 +6,8 @@
 // 갈아끼우려면 env만: JARVIS_BASE_URL / JARVIS_API_KEY / JARVIS_MODEL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { logSpend } from "../_shared/spend.ts";
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -176,7 +178,9 @@ async function chatOnce(messages: any[]) {
     body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.5, max_tokens: 700 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 200));
-  return await r.json();
+  const out = await r.json();
+  logSpend(AI_FN, MODEL, null, out?.usage);   // 💰 원가 장부
+  return out;
 }
 
 Deno.serve(async (req) => {

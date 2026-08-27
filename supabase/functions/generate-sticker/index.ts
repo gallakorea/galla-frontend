@@ -10,6 +10,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
+import { logSpendUnits } from "../_shared/spend.ts";
+
 // 🎟 등급 게이트 — app_settings.ai_tiers 의 롤링 윈도우. 장애 시 통과(게이트가 서비스를 죽이면 안 된다).
 async function aiGate(subject: string, fn: string, n = 1): Promise<any> {
   try {
@@ -164,6 +166,9 @@ Deno.serve(async (req) => {
       }),
     });
     const d = await r.json();
+    /* 💰 토큰이 아니라 '장수'가 원가다. 단가는 gc_prices.sticker 의 실측 기준(₩55/장 ≈ $0.04)을
+       그대로 쓴다 — 청구서가 오면 여기 한 곳만 고치면 된다. */
+    if (r.ok && d?.data?.length) logSpendUnits("generate-sticker", "gpt-image-1", me ?? null, d.data.length, 0.04);
     if (!r.ok || !d?.data?.length) {
       console.error("[sticker] openai", r.status, JSON.stringify(d?.error || d).slice(0, 300));
       await refund();
