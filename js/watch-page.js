@@ -264,7 +264,7 @@
 
   /* ---------- 공유 ---------- */
   function share() {
-    const url = `${location.origin}/share/video/${encodeURIComponent(vid)}`;
+    const url = `${window.GALLA_SITE}/share/video/${encodeURIComponent(vid)}`;
     if (window.GALLA_share) { window.GALLA_share({ url, title: `🎬 ${vtitle}`, text: `지금 갈라에서 가장 뜨거운 영상 — ${vtitle}` }); return; }
     try {
       if (navigator.share) { navigator.share({ title: `🎬 ${vtitle}`, url }); return; }

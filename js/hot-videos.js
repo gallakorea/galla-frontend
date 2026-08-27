@@ -458,7 +458,7 @@
   /* ---------- 공유 — 갈라 랜딩으로 ---------- */
   async function share() {
     // 유튜브 링크가 아니라 우리 공유 카드/랜딩을 보낸다
-    const url = `${location.origin}/share/video/${encodeURIComponent(vid)}`;
+    const url = `${window.GALLA_SITE}/share/video/${encodeURIComponent(vid)}`;
     const payload = {
       title: `🎬 ${vtitle}`,
       text: `지금 갈라에서 가장 뜨거운 영상 — ${vtitle}`,

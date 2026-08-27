@@ -3,6 +3,7 @@
    패스키: passkey 엣지함수 + verifyOtp(magiclink)로 세션. login/signup/auth-callback/설정 공용. */
 (function () {
   const sb = () => window.supabaseClient;
+  // app-url-ok: 웹 전용 — 앱은 아래 NATIVE_REDIRECT(im.galla.app://) 로 딥링크 복귀한다
   const CALLBACK = location.origin + "/auth-callback.html";
 
   /* ══════════ 구글 OAuth ══════════ */
