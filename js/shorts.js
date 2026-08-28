@@ -1134,20 +1134,27 @@ function openCommentModal() {
   if (window.__COMMENT_OPEN__) return;
 
   window.__COMMENT_OPEN__ = true;
-  window.__COMMENT_STATE__ = "half";
+  window.__COMMENT_STATE__ = "full";
 
   modal.classList.add("visible");
   document.body.classList.add("comment-open");
 
-  const HALF_Y = Math.round(window.innerHeight * 0.45);
+  /* ⚠️ 시트는 height:92dvh 에 bottom:0 이라, 아래로 밀면 밀어낸 만큼이 화면 밖으로 나간다.
+     예전엔 열 때 45%(=365px)를 밀어서 **시트 맨 아래 65px 인 댓글 입력창이 화면 밖**에 있었다.
+     "첫 포문을 여세요!" 라고 해놓고 쓸 곳이 없는 상태 — 드래그로 끝까지 올려야만 보였고
+     그걸 알려주는 것도 없었다(실측 2026-08-28 에뮬).
+     열 때는 끝까지 올린다. 반만 보고 싶으면 드래그로 내리면 된다 — 그건 그대로 살아 있다. */
+  const OPEN_Y = 0;
 
   sheet.style.transition = "none";
   sheet.style.transform = `translateX(-50%) translateY(${window.innerHeight}px)`;
 
-  requestAnimationFrame(() => {
+  /* ⚠️ rAF 로 하면 백그라운드·비활성 상태에서 콜백이 안 돌아 시트가 숨김 위치(translateY(100vh))에
+     그대로 갇힌다 — 열었는데 아무것도 안 뜨는 상태다. plans.js 가 같은 이유로 이미 setTimeout 을 쓴다. */
+  setTimeout(() => {
     sheet.style.transition = "transform 0.28s cubic-bezier(.4,0,.2,1)";
-    sheet.style.transform = `translateX(-50%) translateY(${HALF_Y}px)`;
-  });
+    sheet.style.transform = `translateX(-50%) translateY(${OPEN_Y}px)`;
+  }, 16);
 
   bindCommentDrag();
 }
