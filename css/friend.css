@@ -21,6 +21,15 @@
   -webkit-tap-highlight-color:transparent;
 }
 #frOrb:active{ transform:scale(.9); }
+
+/* 🔴 하단 고정 컴포저가 있는 화면에서는 오브를 위로 올린다.
+   광장 상세의 .comment-write 는 bottom 78px~146px 에 떠 있고 오브는 74px~130px —
+   오브가 정확히 '등록' 버튼 자리를 덮어 **댓글을 올릴 방법이 없었다**(실측 2026-08-28 iOS 앱).
+   입력 중에는 friend.js 가 오브를 숨기지만, 키보드를 내린 뒤에도 가려선 안 된다. */
+body:has(.comment-write) #frOrb,
+body:has(#shortsCommentModal.visible) #frOrb{
+  bottom: calc(env(safe-area-inset-bottom,0px) + 156px);
+}
 #frOrb.fr-hidden{ opacity:0; pointer-events:none; transform:scale(.6); }
 
 /* 🌐 웹 전용 — 헤더 '앱 받기'(다운로드 트리거). 앱(=fr-web 아님)에선 숨김. */

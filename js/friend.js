@@ -199,6 +199,28 @@
     document.body.appendChild(orb);
     orb.addEventListener("click", open);
 
+    /* 🔴 오브가 화면 하단 고정 입력바의 '등록' 버튼을 덮고 있었다(실측 2026-08-28 iOS 앱).
+       광장 상세: 컴포저는 bottom 78px~146px, 오브는 74px~130px 에 right:14px —
+       정확히 등록 버튼 자리다. z-index 는 컴포저(1000)가 높지만 SPA 에선 판 트랙이
+       transform 을 걸어 별도 쌓임 맥락을 만들기 때문에, body 직속인 오브가 위에 그려진다.
+       그래서 **광장 댓글을 쓸 수는 있어도 올릴 방법이 없었다**(엔터는 textarea 라 줄바꿈).
+       글을 쓰는 중이면 갈비스를 부를 일이 없다 — 입력 중에는 비켜선다. */
+    var _orbFocusHide = function (on) {
+      if (!orb) return;
+      if (on) orb.classList.add("fr-hidden");
+      else if (!_dock && !(sheet && sheet.classList.contains("fr-open"))) orb.classList.remove("fr-hidden");
+    };
+    function _isTextEntry(t) {
+      if (!t || !t.tagName) return false;
+      var tag = t.tagName.toLowerCase();
+      return tag === "textarea" || t.isContentEditable ||
+             (tag === "input" && !/^(button|submit|checkbox|radio|file|range|reset|image)$/i.test(t.type || "text"));
+    }
+    document.addEventListener("focusin", function (e) { if (_isTextEntry(e.target)) _orbFocusHide(true); }, true);
+    document.addEventListener("focusout", function () { setTimeout(function () {
+      if (!_isTextEntry(document.activeElement)) _orbFocusHide(false);
+    }, 60); }, true);
+
     sheet = el('<div id="frSheet" role="dialog" aria-label="G.A.L.V.I.S.">'+
       '<div class="fr-scrim"></div>'+
       '<div class="fr-panel">'+
