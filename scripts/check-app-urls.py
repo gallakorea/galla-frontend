@@ -18,7 +18,7 @@
 
 사용: python3 scripts/check-app-urls.py      (문제 있으면 exit 1)
 """
-import os, re, sys, time
+import os, re, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
@@ -56,8 +56,30 @@ for name in sorted(os.listdir("js")):
 REF = re.compile(r'(?:src|href)="\.?/?((?:js|css|vendor)/[\w./-]+\.(?:js|css))\?v=(\d+)"')
 STAMP = re.compile(r'name="galla-ver" content="(\d+)"')
 
+_dirty = set(
+    l[3:].strip().strip('"')
+    for l in subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout.splitlines()
+)
+
+_mmdd_cache = {}
+
 def mmdd(p):
-    return time.strftime("%m%d", time.localtime(os.path.getmtime(p)))
+    """파일이 '실제로' 바뀐 날. (파일당 git 호출은 한 번만 — 참조가 1,200건이라 캐시가 없으면 분 단위로 걸린다)
+
+    ⚠️ 파일시스템 mtime 만 보면 안 된다 — git checkout·merge 가 내용은 그대로 두고 mtime 만
+       오늘로 바꿔서, 멀쩡한 스탬프가 전부 낡은 것으로 잡힌다(실측: main 머지 직후 3건 오탐).
+       작업 트리에서 수정 중인 파일만 mtime 을 믿고, 나머지는 마지막 커밋 날짜를 쓴다.
+    """
+    if p in _mmdd_cache:
+        return _mmdd_cache[p]
+    if p in _dirty:
+        r = time.strftime("%m%d", time.localtime(os.path.getmtime(p)))
+    else:
+        r = subprocess.run(["git", "log", "-1", "--format=%ad", "--date=format:%m%d", p],
+                           capture_output=True, text=True).stdout.strip() \
+            or time.strftime("%m%d", time.localtime(os.path.getmtime(p)))
+    _mmdd_cache[p] = r
+    return r
 
 htmls = [f for f in os.listdir(".") if f.endswith(".html")]
 stale = []
