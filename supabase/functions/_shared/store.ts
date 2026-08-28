@@ -140,6 +140,39 @@ export async function googleGetPurchase(productId: string, token: string): Promi
   return d as GoogleTx;
 }
 
+export type GoogleSub = {
+  startTimeMillis?: string; expiryTimeMillis?: string;
+  autoRenewing?: boolean; orderId?: string;
+  paymentState?: number;      // 0 결제대기 · 1 결제완료 · 2 무료체험 · 3 유예중
+  cancelReason?: number;      // 0 유저해지 · 1 결제실패 · 2 시스템 · 3 개발자
+  acknowledgementState?: number;
+};
+
+/** 구독 1건 조회.
+ *  ⚠️ 소모성 상품과 **다른 엔드포인트**다(purchases/subscriptions). products 로 부르면 404 가 난다.
+ *  진실은 expiryTimeMillis 다 — 클라가 보낸 만료일은 믿지 않는다. */
+export async function googleGetSubscription(productId: string, token: string): Promise<GoogleSub | null> {
+  const tok = await googleToken();
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  if (!tok) return null;
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${tok}` } });
+  if (!r.ok) return null;
+  return await r.json().catch(() => null) as GoogleSub | null;
+}
+
+/** 구독 확인(acknowledge) — 3일 안에 안 하면 구글이 자동 환불한다. */
+export async function googleAckSubscription(productId: string, token: string): Promise<boolean> {
+  const tok = await googleToken();
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  if (!tok) return false;
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
+  const r = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" }, body: "{}" });
+  return r.ok;
+}
+
 /** 지급 후 소비 처리 — 안 하면 같은 상품을 다시 못 산다. */
 export async function googleConsume(productId: string, token: string): Promise<boolean> {
   const tok = await googleToken();

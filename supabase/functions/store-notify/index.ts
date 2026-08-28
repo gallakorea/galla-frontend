@@ -12,7 +12,7 @@
    ⚠️ 처리 못 한 알림에도 200 을 돌려준다 — 4xx/5xx 를 주면 스토어가 며칠간
       같은 알림을 계속 재시도한다. '해당 없음'은 실패가 아니다. */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { jwsPayload, appleGetTransaction, googleGetPurchase, b64urlToBytes } from "../_shared/store.ts";
+import { jwsPayload, appleGetTransaction, googleGetPurchase, b64urlToBytes, googleGetSubscription } from "../_shared/store.ts";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -30,12 +30,49 @@ async function revoke(store: "apple" | "google", txid: string, reason: string) {
   return data;
 }
 
+/* 🎟 구독 생애주기 반영.
+   결제는 한 번이지만 구독은 계속 변한다 — 갱신·해지예약·결제실패 유예·만료·환불.
+   이걸 안 받으면 우리 장부가 결제 첫날에서 멈춘 채, 해지한 사람에게 계속 등급을 주거나
+   갱신된 사람을 끊어버린다. ext_id(원거래ID)로 우리 구독과 이어 붙인다. */
+async function subEvent(extId: string, event: string, expiresIso?: string | null) {
+  const { data, error } = await sb.rpc("apply_sub_event", {
+    p_ext_id: extId, p_event: event, p_expires: expiresIso || null,
+  });
+  if (error) { console.error("sub_event", event, extId, error.message); return { ok: false }; }
+  return data;
+}
+
+/* 애플 알림 종류 → 우리 사건. 모르는 종류는 건드리지 않는다(조용히 통과). */
+function appleSubEvent(type: string, subtype: string): string | null {
+  if (type === "DID_RENEW") return "renew";
+  if (type === "SUBSCRIBED") return subtype === "RESUBSCRIBE" ? "resubscribe" : "renew";
+  if (type === "DID_CHANGE_RENEWAL_STATUS") return subtype === "AUTO_RENEW_DISABLED" ? "cancel" : "renew";
+  if (type === "DID_FAIL_TO_RENEW") return subtype === "GRACE_PERIOD" ? "grace" : "expire";
+  if (type === "EXPIRED") return "expire";
+  if (type === "GRACE_PERIOD_EXPIRED") return "expire";
+  if (type === "REFUND") return "refund";
+  return null;
+}
+
 /* ── 애플 ── */
 async function handleApple(signedPayload: string) {
   const p = jwsPayload<any>(signedPayload);
   if (!p) return j({ ok: true, skipped: "unparsable" });
 
   const type = String(p.notificationType || "");
+  const subtype = String(p.subtype || "");
+
+  /* 🎟 구독 알림 먼저. 원거래ID(originalTransactionId)는 갱신돼도 안 바뀌어서
+     이걸로 우리 구독을 찾는다 — transactionId 는 갱신마다 바뀌어 못 쓴다. */
+  const subEv = appleSubEvent(type, subtype);
+  if (subEv) {
+    const tx0 = p.data?.signedTransactionInfo ? jwsPayload<any>(p.data.signedTransactionInfo) : null;
+    const orig = tx0?.originalTransactionId;
+    if (!orig) return j({ ok: true, skipped: "no_original_txid" });
+    const expMs = Number(tx0?.expiresDate || 0);
+    return j(await subEvent(String(orig), subEv, expMs ? new Date(expMs).toISOString() : null));
+  }
+
   // REFUND = 환불 승인, REVOKE = 가족 공유 회수. 나머지는 소모성 상품과 무관.
   if (type !== "REFUND" && type !== "REVOKE") {
     return j({ ok: true, skipped: type || "unknown_type" });
@@ -65,6 +102,26 @@ async function handleGoogle(body: any) {
   let n: any = null;
   try { n = JSON.parse(new TextDecoder().decode(b64urlToBytes(String(raw)))); }
   catch { return j({ ok: true, skipped: "unparsable" }); }
+
+  /* 🎟 구독 알림 — subscriptionNotification.notificationType
+       1 회복 · 2 갱신 · 3 해지(예약) · 4 신규구매 · 5 유예 · 6 유예종료(보류)
+       7 재구독 · 12 취소철회 · 13 만료 · termination 은 아래 voided 로 온다.
+     ⚠️ 알림 본문의 상태를 믿지 않고 구글에 되물어 만료일을 받아온다 —
+        알림은 순서가 뒤바뀌어 도착할 수 있어서 그 값을 그대로 쓰면 과거로 되돌린다. */
+  const sn = n?.subscriptionNotification;
+  if (sn?.purchaseToken && sn?.subscriptionId) {
+    const MAP: Record<number, string> = {
+      1: "renew", 2: "renew", 3: "cancel", 4: "renew", 5: "grace",
+      6: "expire", 7: "resubscribe", 12: "renew", 13: "expire",
+    };
+    const ev = MAP[Number(sn.notificationType)];
+    if (!ev) return j({ ok: true, skipped: `sub_type_${sn.notificationType}` });
+    const real = await googleGetSubscription(String(sn.subscriptionId), String(sn.purchaseToken));
+    if (!real) { console.warn("google_sub_confirm_unavailable", sn.subscriptionId); return j({ ok: true, skipped: "unconfirmed" }); }
+    const expMs = Number(real.expiryTimeMillis || 0);
+    const extId = String(real.orderId || sn.purchaseToken);
+    return j(await subEvent(extId, ev, expMs ? new Date(expMs).toISOString() : null));
+  }
 
   // 소모성 상품의 환불은 voidedPurchaseNotification 으로 온다
   const v = n?.voidedPurchaseNotification;
