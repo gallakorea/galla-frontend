@@ -1,9 +1,17 @@
-/* 📱 native-push.js — 네이티브 iOS 표준 알림 토큰(APNs) 등록 → native_push_tokens 저장.
+/* 📱 native-push.js — 네이티브 알림 토큰 등록 → native_push_tokens 저장(iOS=APNs · 안드로이드=FCM).
    웹은 web-push(VAPID)를 쓰지만 네이티브 WKWebView는 웹푸시를 못 받으므로 여기서 APNs 토큰을 받는다.
    window.GALLA_registerNativePush() 로 권한요청+등록. 이미 허용돼 있으면 조용히 토큰만 갱신. */
 (function () {
   const Cap = window.Capacitor;
   const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+  /* 🏷 어느 스토어의 토큰인지 — 발송 쪽이 이걸로 APNs / FCM 을 가른다.
+     ⚠️ "ios" 로 박혀 있었다. 안드로이드에서 등록해도 iOS 행으로 저장되니
+        APNs 는 남의 토큰을 받아 실패하고, FCM 은 자기 행을 못 찾아 0 이 된다.
+        FCM 을 붙여도 영영 안 갔을 자리다. */
+  const PLATFORM = (function () {
+    try { return (Cap && Cap.getPlatform && Cap.getPlatform()) === "android" ? "android" : "ios"; }
+    catch (_) { return /Android/i.test(navigator.userAgent) ? "android" : "ios"; }
+  })();
   const PN = () => Cap && Cap.Plugins && Cap.Plugins.PushNotifications;
 
   let _bound = false;
@@ -17,7 +25,7 @@
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         await sb.from("native_push_tokens").upsert(
-          { user_id: user.id, platform: "ios", token, updated_at: new Date().toISOString() },
+          { user_id: user.id, platform: PLATFORM, token, updated_at: new Date().toISOString() },
           { onConflict: "user_id,platform" },
         );
       } catch (_) { /* 저장 실패 무시 */ }

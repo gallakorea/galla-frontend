@@ -197,16 +197,32 @@
     }
     // 애플 로고 SVG(흰색) — Sign in with Apple 가이드라인(검정 버튼 + 흰 로고)
     const APPLE_SVG = '<svg class="soc-ic soc-a" viewBox="0 0 17 20" fill="currentColor" aria-hidden="true"><path d="M14.06 15.53c-.26.6-.57 1.16-.93 1.67-.5.71-.9 1.2-1.22 1.47-.49.45-1.02.68-1.59.7-.41 0-.9-.12-1.48-.35-.58-.24-1.11-.35-1.6-.35-.51 0-1.06.11-1.65.35-.59.24-1.06.36-1.42.38-.55.02-1.09-.22-1.62-.72-.34-.29-.76-.79-1.26-1.51-.53-.76-.97-1.65-1.31-2.66C.44 13.86.25 12.8.25 11.78c0-1.17.25-2.18.76-3.02a4.5 4.5 0 0 1 1.6-1.61c.66-.39 1.38-.59 2.15-.6.44 0 1.01.14 1.72.4.71.27 1.16.4 1.36.4.15 0 .65-.16 1.5-.47.8-.29 1.48-.41 2.03-.36 1.5.12 2.62.71 3.37 1.77-1.34.81-2 1.95-1.99 3.41.01 1.14.42 2.09 1.24 2.84.37.35.79.62 1.25.81-.1.29-.21.57-.33.83zM11.6.4c0 .87-.32 1.69-.95 2.44-.77.9-1.7 1.42-2.7 1.34a2.7 2.7 0 0 1-.02-.33c0-.84.36-1.73 1-2.47.32-.37.73-.68 1.22-.93.49-.24.96-.38 1.4-.4.02.12.05.24.05.35z"/></svg>';
+    /* 🍎 애플 로그인은 애플 쪽에서만 띄운다.
+       iOS 앱은 심사 지침 4.8 이 요구하니 반드시 있어야 하고, 안드로이드 앱에는 요구가 없다.
+       그런데 안드로이드에서도 그려지고 있었다(실측 2026-08-28 에뮬) — 딥링크 복귀가
+       애플 쪽으로 잡혀 있지 않아 눌러도 돌아오지 못할 가능성이 크다.
+       로그인 화면에서 '눌러도 안 되는 버튼'은 그냥 이탈이다. 안 되는 곳에선 안 보이게 한다. */
+    const androidApp = (function () {
+      try {
+        const C = window.Capacitor;
+        const native = !!(C && C.isNativePlatform && C.isNativePlatform());
+        const plat = C && C.getPlatform && C.getPlatform();
+        return native && plat === "android";
+      } catch (_) { return /Android/i.test(navigator.userAgent) && /GallaApp/i.test(navigator.userAgent); }
+    })();
+
     let html = '<div class="social-div"><span>간편 로그인</span></div>' +
       '<button type="button" class="soc-btn soc-google" data-act="google"><span class="soc-ic soc-g">G</span> 구글로 계속하기</button>' +
-      '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>' +
+      (androidApp ? '' :
+      '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
       '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
     if (hasPasskey())
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);
     box.querySelector('[data-act="google"]').onclick = () => signInSocial("google");
-    box.querySelector('[data-act="apple"]').onclick = () => signInSocial("apple");
+    const ap = box.querySelector('[data-act="apple"]');
+    if (ap) ap.onclick = () => signInSocial("apple");
     const nv = box.querySelector('[data-act="naver"]');
     if (nv) nv.onclick = () => signInNaver();
     const pk = box.querySelector('[data-act="passkey"]');

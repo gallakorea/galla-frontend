@@ -82,6 +82,77 @@ const CORS = {
 const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
+/* 🤖 FCM v1 — 안드로이드 알림 푸시.
+   ⚠️ 안드로이드는 여태 푸시가 '0' 이었다. APNs 분기만 있었고 FCM 분기가 아예 없어서
+      native_push_tokens 에 platform='android' 행이 쌓여도 아무 데도 안 갔다.
+   서비스 계정 JSON(FIREBASE_SERVICE_ACCOUNT) 하나만 시크릿에 넣으면 켜진다.
+   없으면 조용히 0 을 돌려준다 — 키가 없다고 iOS·웹 발송까지 죽이면 안 된다. */
+const FCM_SA = (function () {
+  try { return JSON.parse(Deno.env.get("FIREBASE_SERVICE_ACCOUNT") || "null"); } catch (_) { return null; }
+})();
+let _fcmTok = { token: "", at: 0 };
+
+async function fcmAuth(): Promise<string | null> {
+  if (!FCM_SA?.client_email || !FCM_SA?.private_key) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (_fcmTok.token && now - _fcmTok.at < 3000) return _fcmTok.token;   // 1시간 만료 → 50분 캐시
+  try {
+    const key = await importPKCS8(String(FCM_SA.private_key).replace(/\\n/g, "\n"), "RS256");
+    const assertion = await new SignJWT({ scope: "https://www.googleapis.com/auth/firebase.messaging" })
+      .setProtectedHeader({ alg: "RS256" })
+      .setIssuer(FCM_SA.client_email).setAudience("https://oauth2.googleapis.com/token")
+      .setIssuedAt(now).setExpirationTime(now + 3600).sign(key);
+    const r = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
+    });
+    if (!r.ok) { console.error("[fcm] token", r.status, (await r.text()).slice(0, 200)); return null; }
+    const j = await r.json();
+    _fcmTok = { token: j.access_token, at: now };
+    return _fcmTok.token;
+  } catch (e) { console.error("[fcm] auth", String(e).slice(0, 200)); return null; }
+}
+
+async function pushFcm(userIds: string[], payload: Record<string, unknown>): Promise<number> {
+  const tok = await fcmAuth();
+  if (!tok) return 0;                                   // 미설정 — 조용히 건너뛴다
+  const { data: toks } = await sb.from("native_push_tokens")
+    .select("user_id,token").in("user_id", userIds).eq("platform", "android").limit(200);
+  if (!toks?.length) return 0;
+  const project = FCM_SA.project_id;
+  let sent = 0;
+  await Promise.all(toks.map(async (t: { user_id: string; token: string }) => {
+    try {
+      const r = await fetch(`https://fcm.googleapis.com/v1/projects/${project}/messages:send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: {
+            token: t.token,
+            notification: {
+              title: String(payload.title || "GALLA"),
+              body: String(payload.body || ""),
+              ...(payload.image ? { image: String(payload.image) } : {}),
+            },
+            /* 탭했을 때 어디로 갈지 — 앱은 data.url 을 읽는다(iOS 의 aps.url 과 같은 규약) */
+            data: { url: String(payload.url || "/"), tag: String(payload.tag || "galla") },
+            android: { priority: "high", notification: { channel_id: "galla", sound: "default" } },
+          },
+        }),
+      });
+      if (r.ok) { sent++; return; }
+      const txt = await r.text();
+      /* 지워진 앱·갱신된 토큰은 청소한다 — 죽은 토큰에 계속 쏘면 발송 전체가 느려진다 */
+      if (r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(txt)) {
+        await sb.from("native_push_tokens").delete().eq("user_id", t.user_id).eq("platform", "android");
+      } else {
+        console.error("[fcm] send", r.status, txt.slice(0, 160));
+      }
+    } catch (_) { /* 한 기기 실패가 나머지를 막지 않는다 */ }
+  }));
+  return sent;
+}
+
 function callerUid(req: Request): string | null {
   try {
     const tok = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -147,9 +218,11 @@ async function pushTo(userIds: string[], payload: Record<string, unknown>, cat =
   if (!userIds.length) return 0;
   // 📱 네이티브 iOS(APNs) — 웹푸시와 병행 발송(같은 유저가 앱·웹 둘 다 구독 가능). 실패해도 웹푸시엔 영향 없음.
   const apnsSent = await pushApns(userIds, payload).catch(() => 0);
+  // 🤖 안드로이드(FCM) — iOS·웹과 병행. 미설정이면 0 이라 아무 영향 없다.
+  const fcmSent = await pushFcm(userIds, payload).catch(() => 0);
   const { data: subs } = await sb.from("push_subscriptions")
     .select("endpoint,p256dh,auth,user_id").in("user_id", userIds).limit(200);
-  let sent = apnsSent;
+  let sent = apnsSent + fcmSent;
   await Promise.all((subs || []).map(async (s) => {
     try {
       await webpush.sendNotification(
