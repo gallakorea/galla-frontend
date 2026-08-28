@@ -74,6 +74,10 @@
     try { return !!localStorage.getItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) { return true; }
   }
 
+  /* 스플래시가 내려갔는가. 내려간 뒤의 탭 첫 진입은 FOUC 를 가려 줄 게 아무것도 없다. */
+  let booted = false;
+  try { document.addEventListener("galla:ready", () => { booted = true; }, { once: true }); } catch (_) {}
+
   /* ── 탭 콘텐츠 로드(1회, keep-alive) ───────────────────────── */
   const tabReady = {};
   const tabMountP = {};   // tab → mount 완료 프로미스(compose가 '진짜 마운트 끝'까지 기다리게)
@@ -88,8 +92,14 @@
     tabMountP[tab] = (async () => {
       try {
         const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
-        L.injectStyles(v.styles);   // 탭은 await 안 함 — 첫 탭은 스플래시가 FOUC를 가리고, await하면
-                                    // 네이티브에서 link.onload 지연으로 콜드스타트가 느려진다(부팅 크리티컬 패스).
+        /* 🔴 예전엔 탭이면 무조건 await 을 건너뛰었다. 전제가 "첫 탭은 스플래시가 가린다"였는데,
+           예측·DM·트렌드·프로필은 **스플래시가 내려간 뒤 유저가 처음 누를 때** 마운트된다.
+           그때는 가려 줄 게 없어서 스타일 없는 날 HTML 이 몇 초간 그대로 보인다
+           (실측 2026-08-28 안드로이드 에뮬: 프로필 탭 첫 진입 — 아바타·버튼 없이 맨 텍스트).
+           그래서 부팅 중(스플래시가 덮고 있는 동안)만 건너뛰고, 그 뒤로는 기다린다.
+           기다리는 동안 화면은 이미 .pane-wait 스피너라 빈 화면이 아니다. 상한은 300ms(injectStyles). */
+        const cssP = L.injectStyles(v.styles);
+        if (booted) { try { await cssP; } catch (_) {} }
         const host = document.createElement("div");
         host.className = "view-host";
         host.dataset.page = v.dataPage || tab;
