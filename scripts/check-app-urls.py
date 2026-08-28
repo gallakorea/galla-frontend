@@ -101,6 +101,19 @@ try:
 except FileNotFoundError:
     problems.append(("version.txt", "없음 — 버전 프로브가 폴백 경로로 샌다"))
 
+# ── GALLA_V 가 도장에서 오는가 ─────────────────────────────────────
+# 🔴 앱(SPA)은 각 페이지의 <script ?v=> 를 읽지 않는다. js/spa/views/*.js 가
+#    "/js/xxx.js?v=" + GALLA_V 로 직접 주입한다. 그래서 GALLA_V 를 손으로 박아두면
+#    배포 도장만 올라가고 **앱만 옛 js 에 갇힌다** — 8/17~8/28 실제로 그랬다.
+if os.path.exists("app.html"):
+    shell = open("app.html", encoding="utf-8", errors="ignore").read()
+    m = re.search(r'window\.GALLA_V\s*=\s*(.+?);', shell)
+    if not m:
+        problems.append(("app.html GALLA_V", "정의가 없다 — 뷰 스크립트가 캐시버스터 없이 주입된다"))
+    elif not re.search(r'galla-ver', m.group(1)):
+        problems.append(("app.html GALLA_V",
+                         f"도장이 아니라 상수를 박았다({m.group(1).strip()[:40]}) — 웹만 갱신되고 앱은 옛 js 를 쓴다"))
+
 # ── 결과 ───────────────────────────────────────────────────────────
 if not problems:
     print("✅ 앱 origin·버전 스탬프 이상 없음")

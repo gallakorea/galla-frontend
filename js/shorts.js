@@ -13,8 +13,14 @@ window.currentCommentSort = "latest"; // latest | popular
 window.__COMMENT_OPEN__ = false;
 window.__COMMENT_STATE__ = "closed"; // closed | half | full
 
+/* 시트를 잡아끌면 안 되는 자리.
+   ⚠️ 예전엔 .comment-list 만 뺐다. 그래서 **댓글 입력창을 누르면 시트 드래그가 시작**되고,
+      touchend 에서 시트가 transform 으로 다시 자리를 잡으면서 그 탭이 클릭으로 이어지지 못했다
+      = 입력창에 포커스가 안 잡힌다(실측 2026-08-28: 좌표를 세 번 바꿔 눌러도 타이핑이 안 들어감).
+      입력·버튼 같은 조작 요소에서는 드래그를 시작하지 않는다. */
 function isScrollableTarget(el) {
-  return el && el.closest && el.closest(".comment-list");
+  if (!el || !el.closest) return false;
+  return !!el.closest(".comment-list, .comment-input, input, textarea, button, [contenteditable]");
 }
 
 let shortsList = [];
@@ -1157,6 +1163,7 @@ function openCommentModal() {
   }, 16);
 
   bindCommentDrag();
+
 }
 
 function closeCommentModal() {
@@ -1194,6 +1201,8 @@ function bindCommentDrag() {
   const CLOSE_Y = Math.round(window.innerHeight * 0.85);
 
   sheet.ontouchstart = e => {
+    // 조작 요소(입력·버튼)는 스크롤 위치와 무관하게 항상 드래그에서 뺀다
+    if (e.target?.closest?.(".comment-input, input, textarea, button, [contenteditable]")) return;
     if (isScrollableTarget(e.target) && list.scrollTop > 0) return;
     dragging = true;
     startY = e.touches[0].clientY;
@@ -1231,6 +1240,13 @@ function bindCommentDrag() {
   let mouseDragging = false;
 
   sheet.onmousedown = e => {
+    /* 🔴 여기서 e.preventDefault() 가 **입력창 포커스를 죽이고 있었다**(실측 2026-08-28 시뮬).
+       iOS 는 탭 뒤에 mousedown 을 합성해 보내고, 포커스는 그 기본동작으로 잡힌다.
+       시트 전체에 preventDefault 를 걸면 탭은 먹는데(다른 버튼은 click 으로 동작) 텍스트 필드만
+       영영 커서가 안 잡힌다 — "눌러도 아무 반응 없는 댓글창"의 진짜 원인.
+       기존 예외(list.scrollTop > 0)는 댓글이 하나도 없으면 절대 성립하지 않아 무용지물이었다.
+       조작 요소 위에서는 드래그를 아예 시작하지 않는다 — 터치 쪽(ontouchstart)과 같은 규칙. */
+    if (e.target?.closest?.(".comment-input, input, textarea, button, select, a, [contenteditable]")) return;
     // 댓글 리스트 스크롤 중이면 모달 드래그 막음
     if (isScrollableTarget(e.target) && list.scrollTop > 0) return;
 

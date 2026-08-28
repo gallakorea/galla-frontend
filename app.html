@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0828034"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0828160"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -14,7 +14,12 @@
   <!-- 📞 콜드스타트 대비 — CallKit '받기'가 통화엔진 로드 전에 와도 유실 없게 아주 일찍 stash -->
   <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
   <!-- ⚠️ 레거시 app-shell 폴백 제거 — MPA/SPA 혼합·부팅 이중로드 방지(사장님 지시). SPA가 유일 경로. -->
-  <script>window.GALLA_V = "081707";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <!-- 🔴 뷰 모듈·클래식 스크립트 캐시버스터. **여기가 손으로 박혀 있어서 8/17 이후 js/*.js 수정이
+       앱에 하나도 전달되지 않았다**(실측 2026-08-28: 릴스 댓글 고친 게 전부 무시됨).
+       SPA 셸은 각 페이지의 <script ?v=> 태그를 읽지 않고 views/*.js 가 GALLA_V 로 직접 주입한다 —
+       그래서 배포 도장(galla-ver)만 올리면 웹은 갱신되고 앱만 옛 코드에 갇힌다.
+       이제 도장에서 읽는다. 둘이 어긋날 수 없다. -->
+  <script>window.GALLA_V = (document.querySelector('meta[name="galla-ver"]') || {}).content || "0828035";</script>
   <!-- 🚀 앱 스플래시 — SPA 부팅/버전리로드의 CSS 미적용 번쩍임(FOUC)을 가리고 galla:ready에 내려감 -->
   <script src="/js/splash-boot.js?v=0821150&wait=ready"></script>
   <link rel="stylesheet" href="./css/theme.css?v=081807">
