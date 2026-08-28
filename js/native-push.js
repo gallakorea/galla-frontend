@@ -79,6 +79,18 @@
 
   if (isNative) bindTap();   // ⬅️ 로그인 여부와 무관하게 즉시(콜드 스타트 대비)
 
+  /* 현재 알림 권한 상태 — push.js 가 네이티브/웹을 갈라 쓰려면 필요하다. */
+  window.GALLA_nativePushStatus = async function () {
+    if (!isNative) return "unsupported";
+    const pn = PN(); if (!pn) return "unsupported";
+    try {
+      const perm = await pn.checkPermissions();
+      if (perm.receive === "granted") return "on";
+      if (perm.receive === "denied") return "denied";
+      return "off";
+    } catch (_) { return "off"; }
+  };
+
   // 이미 권한 허용된 유저는 앱 켤 때(로그인 상태) 조용히 토큰 갱신 — 토큰은 주기적으로 바뀔 수 있다.
   async function silentRefresh() {
     if (!isNative) return;
