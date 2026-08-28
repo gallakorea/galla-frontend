@@ -37,9 +37,11 @@
   /* 떠 있는 오버레이 하나 닫기. 앱 전반이 '스크림 + 시트' 패턴이라 그 규칙으로 찾는다.
      닫기 버튼을 누르는 게 각 화면의 정리 로직(스크롤 복구·상태 저장)까지 태우는 길이다. */
   const CLOSERS = [
+    ".dmt-skip", ".gt-skip",                        // 온보딩·트렌드 투어 건너뛰기
     ".gpl-scrim .gpl-x", ".gdl-scrim .gdl-x", ".chg-sheet .chg-x",
     ".ns-scrim .ns-x", ".sh-scrim .sh-x", ".cmt-sheet .cmt-x",
     "[data-sheet-close]", ".sheet-close", ".modal-close",
+    ".fr-x", ".ag-x", ".wb-x",                      // 갈비스·에이전트·작업대
   ];
   const SCRIMS = ".gpl-scrim,.gdl-scrim,.av-scrim,.fr-scrim,.dmt-scrim,.sh-scrim,.ns-scrim";
 
