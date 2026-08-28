@@ -69,6 +69,10 @@
   let armed = 0;
   onNative("App", "backButton", function () {
     try {
+      // ⓪ 릴스(그리고 그 위의 댓글 시트) — 전용 창구가 있으면 그게 먼저다.
+      //    닫기 버튼을 누르는 방식은 여기선 못 쓴다: 피드에서 들어오면 그 버튼이 '만들기'다.
+      if (window.GALLA_shortsBack && window.GALLA_shortsBack()) return;
+
       if (closeTop()) return;                                   // ①
 
       if (window.GALLA_isWriting && window.GALLA_isWriting()) {  // ②

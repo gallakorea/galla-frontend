@@ -1166,6 +1166,20 @@ function openCommentModal() {
 
 }
 
+/* 🔙 하드웨어 뒤로가기가 부를 수 있는 단일 창구.
+   안드로이드 뒤로가기가 릴스를 못 닫고 있었다(실측 2026-08-28 에뮬) — android-back.js 의
+   닫기 목록에 릴스가 아예 없었다. 닫기 버튼을 눌러서 해결할 수도 없다:
+   피드에서 들어온 경우 #shortsCloseBtn 은 '만들기'로 동작해서 글쓰기 허브가 열려 버린다.
+   처리했으면 true 를 준다 — 안 그러면 뒤로가기가 앱을 꺼뜨리는 쪽으로 흘러간다. */
+window.GALLA_shortsBack = function () {
+  try {
+    if (window.__COMMENT_OPEN__) { closeCommentModal(); return true; }   // ① 댓글 시트 먼저
+    const ov = document.getElementById("shortsOverlay");
+    if (ov && ov.isConnected) { closeShorts(); return true; }            // ② 그다음 릴스
+  } catch (_) {}
+  return false;
+};
+
 function closeCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   const sheet = modal?.querySelector(".comment-sheet");

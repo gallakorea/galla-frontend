@@ -33,6 +33,7 @@ for dp, _, fs in os.walk("js"):
 JS = "\n".join(js_blob)
 
 BTN = re.compile(r"<button\b([^>]*)>", re.I)
+INLINE_JS = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.I | re.S)
 ATTR = re.compile(r'(\w[\w-]*)\s*=\s*"([^"]*)"')
 
 def idents(attrs: str):
@@ -56,6 +57,10 @@ for page in sorted(f for f in os.listdir(".") if f.endswith(".html")):
     if SKIP_PAGE.search(page):
         continue
     src = open(page, encoding="utf-8", errors="ignore").read()
+    # 🔴 이 페이지의 인라인 <script> 도 봐야 한다. js/ 만 보면 자기 파일 안에서 처리하는
+    #    버튼(help-permissions #open-ext, yt #snd)을 죽었다고 오판한다(실측 2026-08-28).
+    page_js = "\n".join(INLINE_JS.findall(src))
+    hay = JS + "\n" + page_js
     for m in BTN.finditer(src):
         attrs = m.group(1)
         total += 1
@@ -64,6 +69,9 @@ for page in sorted(f for f in os.listdir(".") if f.endswith(".html")):
             continue                                   # 인라인 핸들러 — 살아 있다
         if (d.get("type") or "").lower() in ("submit", "reset"):
             continue                                   # 폼이 받는다
+        # 자리만 잡는 숨긴 버튼(레이아웃 균형용)은 눌릴 일이 없다 — wallet.html ⋯ 처럼
+        if d.get("aria-hidden") == "true" or "visibility:hidden" in (d.get("style") or "").replace(" ", ""):
+            continue
         label = re.sub(r"\s+", " ", src[m.end():src.find("</button>", m.end())])[:40].strip()
         label = re.sub(r"<[^>]+>", "", label) or "(빈 라벨)"
         if not hooks:
@@ -71,14 +79,14 @@ for page in sorted(f for f in os.listdir(".") if f.endswith(".html")):
             # 자기 손잡이가 없어도 조상 클래스가 JS 에 있으면 잡힌다.
             before = src[:m.start()]
             anc = re.findall(r'<(?:div|section|nav|ul)[^>]*class="([^"]+)"', before)[-4:]
-            if any(re.search(r"[\"'`\.\[#]" + re.escape(c) + r"[\"'`\]\s\),.:]", JS)
+            if any(re.search(r"[\"'`\.\[#]" + re.escape(c) + r"[\"'`\]\s\),.:]", hay)
                    for grp in anc for c in grp.split() if len(c) > 2):
                 continue                               # 부모가 받는다
             dead.append((page, label, "자기도 부모도 JS 에 없음"))
             continue
         hit = None
         for kind, name in hooks:
-            if re.search(r"[\"'`\.\[#]" + re.escape(name) + r"[\"'`\]\s\),.:]", JS):
+            if re.search(r"[\"'`\.\[#]" + re.escape(name) + r"[\"'`\]\s\),.:]", hay):
                 hit = name
                 break
         if not hit:

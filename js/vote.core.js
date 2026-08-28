@@ -79,6 +79,8 @@ async function vote(issueId, type) {
   const already = await getMyVote(issueId);
   if (already === "pro" || already === "con") {
     votingInProgress = false;
+    // 안내는 여기서 하지 않는다 — 호출부(index·issue·shorts) 셋 다 GALLA_VoteBar.guardLocked 로
+    // "이미 진영을 선택했어요 · 변경할 수 없어요" 를 먼저 띄우고 중단한다. 여기서 또 띄우면 두 번 뜬다.
     return already;
   }
 
@@ -230,13 +232,17 @@ window.GALLA_CHECK_VOTE = async function(issueId, opts = {}) {
     return result;
   }
 
-  const proBtn = container.querySelector(".vote-btn.pro");
-  const conBtn = container.querySelector(".vote-btn.con");
+  /* 🔴 셀렉터가 현실과 안 맞아 **한 번도 매칭된 적이 없었다**(실측 2026-08-28 안드로이드 로그).
+     통합 진영바(GALLA_VoteBar)는 `gv-btn gv-pro` + `data-type="pro"` 로 그리는데
+     여기서는 `.vote-btn.pro` 를 찾고 있었다 — index.js 는 proClass 로 `vote-btn` 만 얹는다.
+     그래서 매 카드마다 경고가 찍혀 콘솔이 묻혔다(한 화면에 10회 이상).
+     화면이 멀쩡했던 건 호출부(index.js applyVoteUI 등)가 각자 하이라이트를 다시 하기 때문. */
+  const proBtn = container.querySelector('.gv-btn.gv-pro, .vote-btn[data-type="pro"], .vote-btn.pro');
+  const conBtn = container.querySelector('.gv-btn.gv-con, .vote-btn[data-type="con"], .vote-btn.con');
 
-  if (!proBtn || !conBtn) {
-    console.warn("[VOTE][UI] vote buttons missing in container");
-    return result;
-  }
+  // 버튼이 없는 건 정상이다 — 값만 필요해서 부르는 호출부가 많다(issue.js·index.js).
+  // 경고로 시끄럽게 하면 진짜 오류가 묻힌다.
+  if (!proBtn || !conBtn) return result;
 
   // 🔥 UI 초기화
   proBtn.classList.remove("active-vote");
