@@ -126,6 +126,8 @@
     document.head.appendChild(s);
   }
 
+  var OFFERS = {};
+
   function planCard(key, plan, curTier, native) {
     var cur = key === curTier;
     var feats = (plan.features || []).map(function (f) {
@@ -138,10 +140,21 @@
     var chatLine =
       (w.n ? '<span class="gpl-f">대화 ' + w.n + "턴 / " + (w.hours || 5) + "시간</span>" : "") +
       (plan.tool_turns ? '<span class="gpl-f">앱 조작 월 ' + plan.tool_turns + "턴</span>" : "");
-    // 🍎 네이티브: 가격도 결제 버튼도 노출하지 않는다(앱스토어 anti-steering)
-    var price = native ? "" : '<span class="gpl-price">' + (plan.price ? won(plan.price) + "/월" : "무료") + "</span>";
-    var cta = (!native && !cur && plan.price)
-      ? '<button class="gpl-go" data-plan="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "";
+    /* 💳 가격·결제 버튼
+       · 웹: 우리 원화 정가.
+       · 앱: **스토어가 준 표시가만** 쓴다. 우리가 ₩ 를 적으면 통화·세율·지역이 어긋나고
+         심사에서도 걸린다. 상품이 스토어에 아직 없으면 가격이 안 오는데, 그때는
+         버튼도 안 띄운다 — 눌러도 안 되는 결제 버튼은 그냥 이탈이다.
+       · 앱에서 스토어 가격을 보여주는 건 anti-steering 위반이 아니다. 걸리는 건
+         '앱 밖에서 더 싸게 사라'는 유도다. 우리는 인앱 결제로 보낸다. */
+    var offer = native ? OFFERS[key] : null;
+    var price = native
+      ? (offer ? '<span class="gpl-price">' + esc(offer.price) + "/월</span>" : "")
+      : '<span class="gpl-price">' + (plan.price ? won(plan.price) + "/월" : "무료") + "</span>";
+    var cta = cur ? ""
+      : native
+        ? (offer ? '<button class="gpl-go" data-buy="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "")
+        : (plan.price ? '<button class="gpl-go" data-plan="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "");
     return '<div class="gpl-card' + (cur ? " cur" : "") + '">' +
       '<div class="gpl-card-h"><span class="gpl-name">' + esc(plan.label || key) + "</span>" +
       (cur ? '<span class="gpl-badge">이용 중</span>' : "") + price + "</div>" +
@@ -152,6 +165,10 @@
   window.GALLA_openPlans = async function () {
     injectStyle();
     var native = isNativeApp();
+    // 스토어가 준 상품·표시가를 tier 로 색인. 비어 있으면 결제 버튼을 안 띄운다.
+    OFFERS = {};
+    try { (window.GALLA_subOffers ? window.GALLA_subOffers() : []).forEach(function (o) { OFFERS[o.tier] = o; }); }
+    catch (_) {}
     var ent = await fetchEnt(true);
 
     var body;
@@ -202,7 +219,10 @@
             esc(new Date(ent.expires_at).toLocaleDateString("ko-KR")) + "</div>" : "") +
         "</div>" + cards +
         (native
-          ? '<div class="gpl-note">이용권 변경은 준비 중이에요.</div>'
+          ? (Object.keys(OFFERS).length
+              ? '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.'
+                + ' <button class="gpl-restore" type="button">구매 복원</button></div>'
+              : '<div class="gpl-note">이용권 변경은 준비 중이에요.</div>')
           : '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.</div>');
     }
 
@@ -225,6 +245,23 @@
     var lg = scrim.querySelector("[data-login]");
     if (lg) lg.addEventListener("click", function () {
       location.href = "login.html?next=" + encodeURIComponent(location.pathname + location.search);
+    });
+    /* 💳 인앱 구매 — 실제 지급은 서버 검증(verify-iap) 뒤에 일어난다.
+       여기서 등급을 켜지 않는다. 클라가 켜는 등급은 공짜 구독과 같은 말이다. */
+    scrim.querySelectorAll("[data-buy]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        b.disabled = true; var old = b.textContent; b.textContent = "스토어 여는 중…";
+        var r = await (window.GALLA_buySub ? window.GALLA_buySub(b.dataset.buy) : { ok: false, reason: "no_module" });
+        if (r && r.ok) { b.textContent = "확인 중…"; return; }          // approved 에서 이어진다
+        b.disabled = false; b.textContent = old;
+        if (r && r.reason !== "canceled" && window.GALLA_toast) window.GALLA_toast("결제를 시작하지 못했어요.");
+      });
+    });
+    var rs = scrim.querySelector(".gpl-restore");
+    if (rs) rs.addEventListener("click", async function () {
+      rs.disabled = true; rs.textContent = "복원 중…";
+      var r = await (window.GALLA_restorePurchases ? window.GALLA_restorePurchases() : { ok: false });
+      rs.textContent = r && r.ok ? "복원 요청함" : "복원 실패";
     });
     scrim.querySelectorAll("[data-plan]").forEach(function (b) {
       b.addEventListener("click", function () {

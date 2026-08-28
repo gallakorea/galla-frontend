@@ -15,29 +15,72 @@
 
   // 딥링크 복귀 리스너 — OAuth 끝나고 im.galla.app://auth-callback?code=... 로 앱이 열리면 세션 확립
   let _nativeAuthListener = false;
+  /* Capacitor 브릿지는 top 문서에만 주입된다. SPA 뷰는 iframe 안에서 돌아 그 프레임의
+     window.Capacitor 는 비어 있다 — 그래서 이 리스너가 조용히 등록조차 안 됐다
+     (실측 2026-08-28: "No listeners found for event appUrlOpen"). 햅틱·뒤로가기와 같은 함정. */
+  function capBridge() {
+    let C = window.Capacitor;
+    try { if (!(C && C.Plugins && C.Plugins.App) && window.top !== window && window.top.Capacitor) C = window.top.Capacitor; } catch (_) {}
+    try { if (!(C && C.Plugins && C.Plugins.App) && window.parent !== window && window.parent.Capacitor) C = window.parent.Capacitor; } catch (_) {}
+    return C || null;
+  }
+
   function setupNativeAuthListener() {
     if (_nativeAuthListener || !isNativeApp()) return;
-    const App = window.Capacitor?.Plugins?.App;
+    const C = capBridge();
+    const App = C && C.Plugins && C.Plugins.App;
     if (!App) return;
     _nativeAuthListener = true;
-    App.addListener("appUrlOpen", async (event) => {
-      const url = (event && event.url) || "";
-      if (url.indexOf("auth-callback") < 0) return;
+
+    /* 🧊 콜드 스타트 — 앱이 꺼져 있을 때 링크로 열리면 appUrlOpen 이 오지 않는다.
+       그 경우 실행 URL 을 직접 물어봐야 한다. 안 물어보면 '링크로 열었는데 로그인이 안 되는'
+       상태가 된다 — 메일의 로그인 링크를 누른 사람이 정확히 이 경우다. */
+    try {
+      App.getLaunchUrl && App.getLaunchUrl().then((r) => {
+        if (r && r.url) handleAuthUrl(r.url);
+      }).catch(() => {});
+    } catch (_) {}
+    App.addListener("appUrlOpen", (event) => handleAuthUrl((event && event.url) || ""));
+  }
+
+  async function handleAuthUrl(url) {
+    {
+      const pick = (k) => {
+        // 값은 ? 뒤에도 # 뒤에도 올 수 있다 — 둘 다 뒤진다
+        const m = url.match(new RegExp("[?&#]" + k + "=([^&#]+)"));
+        return m ? decodeURIComponent(m[1]) : null;
+      };
+      const code = pick("code");
+      const at = pick("access_token"), rt = pick("refresh_token");
+      /* ⚠️ 예전엔 주소에 'auth-callback' 이 들어 있을 때만 처리했다. 그런데 Supabase 는
+         redirect_to 를 못 쓰는 상황이면 SITE_URL(https://galla.im/#access_token=...)로 되돌린다.
+         그러면 이 리스너가 조용히 무시해서 **로그인이 아무 말 없이 실패**했다(실측 2026-08-28).
+         이제는 '토큰이나 코드가 들어 있으면' 처리한다 — 어디로 떨어지든 받는다.
+         매직링크·이메일 인증처럼 코드 대신 토큰이 바로 오는 경로도 같이 살아난다. */
+      if (!code && !at) { if (url.indexOf("auth-callback") < 0) return; }
       try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
       try {
         const c = sb();
-        let code = null;
-        try { code = new URL(url).searchParams.get("code"); } catch (_) {}
-        if (!code) { const m = url.match(/[?&]code=([^&#]+)/); if (m) code = decodeURIComponent(m[1]); }
-        if (!code) throw new Error("no_auth_code");
-        const { error } = await c.auth.exchangeCodeForSession(code);
-        if (error) throw error;
+        if (code) {
+          const { error } = await c.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } else if (at && rt) {
+          const { error } = await c.auth.setSession({ access_token: at, refresh_token: rt });
+          if (error) throw error;
+        } else {
+          throw new Error("no_auth_code");
+        }
         try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
+        /* ⚠️ 앱(SPA 셸)에서 location.replace 를 하면 셸 자체가 index.html 로 바뀌어
+           라우터·네비가 통째로 죽는다(실측: 로그인은 됐는데 화면이 스켈레톤에서 멈췄다).
+           셸이면 라우터로 홈에 보내고, 아니면 예전처럼 이동한다. */
+        if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
+        if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
         location.replace("index.html");
       } catch (e) {
         alert("로그인 처리 실패 — " + (e?.message || "다시 시도해 주세요."));
       }
-    });
+    }
   }
 
   async function signInSocial(provider) {
