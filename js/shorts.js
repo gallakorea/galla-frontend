@@ -1519,6 +1519,16 @@ document.addEventListener("click", async e => {
   }
 });
 
+/* ⌨️ 엔터로도 보낸다. 버튼 하나에만 매달려 있으면 그 버튼이 숨는 순간(실제로 그랬다)
+   기능이 통째로 죽는다. 모바일 키보드의 '전송' 키가 이 경로를 탄다. */
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || e.isComposing) return;          // 한글 조합 중 엔터는 확정용이다
+  const t = e.target;
+  if (!t || t.id !== "shortsCommentInput") return;
+  e.preventDefault();
+  document.getElementById("shortsCommentSend")?.click();
+});
+
 // ===== 댓글 등록 (로그인 필수, 현재 진영 탭으로 등록) =====
 document.addEventListener("click", async e => {
   if (!e.target.closest("#shortsCommentSend")) return;

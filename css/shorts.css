@@ -470,10 +470,17 @@ body[data-page="shorts"] .nav {
   padding:10px 12px calc(10px + env(safe-area-inset-bottom));
   background:#0d0e12;
   border-top:1px solid rgba(255,255,255,.08);
+  /* 🔴 입력칸만 있고 보낼 방법이 없었다 — 아래 button{display:none} 때문에 등록 버튼이 숨겨져 있었고
+     엔터 처리도 없어서 릴스에서는 **아무도 댓글을 달 수 없었다**(실측 2026-08-28).
+     행을 flex 로 되돌려 버튼을 옆에 세운다. */
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 
 .comment-input input{
-  width:100%;
+  flex:1;
+  min-width:0;
   height:44px;
   border-radius:12px;
   background:rgba(255,255,255,.05);
@@ -485,8 +492,18 @@ body[data-page="shorts"] .nav {
 .comment-input input:focus{ border-color:#c9d1e0; outline:none; }
 
 .comment-input button{
-  display:none;
+  flex:0 0 auto;
+  height:44px;
+  min-width:60px;
+  padding:0 14px;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(180deg,#ff9b2f,#ff6a00);
+  color:#111;
+  font-weight:800;
+  font-size:13.5px;
 }
+.comment-input button:disabled{ opacity:.45; }
 
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{
