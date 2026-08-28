@@ -16,7 +16,32 @@ const CRON_KEY = Deno.env.get("CRON_SECRET") || "";   // 있으면 헤더 검증
 
 const MAX_PER_RUN = 40;   // 런당 상한(비용·스팸 통제)
 
-async function genPing(nick: string, name: string, mems: { kind: string; content: string }[]): Promise<string | null> {
+/* 🎟 등급 게이트 — 선톡은 유료 전용이고 등급마다 하루 몫이 다르다(app_settings.ai_tiers 의
+   windows['galla-friend-ambient']: 무료·게스트 0, 가끔 6/일 … 종일 20/일).
+   ⚠️ 여태 이 함수는 ai_gate 를 한 번도 안 불렀다 = 그 설정이 통째로 죽은 값이었고,
+      무료 유저에게도 선톡이 나갔다. 20h 쿨다운만 있었지 '유료 전용'은 코드에 없었다.
+   장애로 게이트 판정이 실패하면 '안 보낸다'로 닫는다 — 선톡은 안 가도 아무도 안 다치지만
+   잘못 나가면 돈이 나가고 무료 유저가 유료 기능을 받는다. */
+async function ambientGate(uid: string): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_gate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: "galla-friend-ambient", p_subject: "u:" + uid, p_n: 1 }),
+    });
+    if (!r.ok) return false;
+    const g = await r.json();
+    return !(g && g.ok === false);
+  } catch { return false; }
+}
+
+/* ⚠️ uid 를 받는 이유 — 선톡 원가는 '그 유저 몫'이다.
+   크론이라고 uid=null 로 적으면 게스트 지갑(ai_guest_uid)에 쌓여, model_for 가 그 유저 예산을
+   계산할 때 선톡이 통째로 빠진다. 선톡을 유료 전용으로 만들고 등급마다 하루 6~20개를 줬는데
+   그 원가가 예산 밖에서 나가면 브레이크가 없는 것과 같다.
+   유저에 귀속시켜야 많이 받는 사람일수록 자기 예산을 먼저 쓰고 모델이 내려간다. */
+async function genPing(uid: string, nick: string, name: string, mems: { kind: string; content: string }[]): Promise<string | null> {
   try {
     const memTxt = mems.map((m) => `- (${m.kind}) ${m.content}`).join("\n") || "(기억 없음)";
     const r = await fetch(`${BASE_URL}/chat/completions`, {
@@ -40,7 +65,7 @@ async function genPing(nick: string, name: string, mems: { kind: string; content
       }),
     });
     const j = await r.json();
-    logSpend("galla-friend-ping", MODEL, null, j?.usage);   // 💰 원가 장부 — 크론은 주인이 없어 uid=null
+    logSpend("galla-friend-ping", MODEL, uid, j?.usage);   // 💰 이 유저 예산에서 나간다
     const t = (j?.choices?.[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "");
     return t ? t.slice(0, 120) : null;
   } catch { return null; }
@@ -85,7 +110,9 @@ Deno.serve(async (req) => {
           .in("kind", ["interest", "preference", "profile", "person", "job", "fact"])
           .order("salience", { ascending: false }).limit(3),
       ]);
-      const ping = await genPing(u?.nickname || "", rel.friend_name || "갈비스", [...(fu || []), ...(core || [])]);
+      // 🎟 등급 몫을 먼저 깎는다 — 생성(=돈)보다 앞이어야 한다
+      if (!(await ambientGate(uid))) continue;
+      const ping = await genPing(uid, u?.nickname || "", rel.friend_name || "갈비스", [...(fu || []), ...(core || [])]);
       if (!ping) continue;
       // pending 저장(푸시 무시해도 다음 챗 오픈 때 이 말로 시작) + 상한 기록
       await sb.from("friend_relationship").update({
