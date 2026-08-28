@@ -565,9 +565,13 @@ async function loadLeaderboard(kind){
   const badge=window.GALLA_tierBadge;
   if(kind==='galla'){
     const {data}=await supa.from('galla_rank').select('*').order('rank',{ascending:true}).limit(50);
+    /* ⚠️ galla_rank 는 '누적 획득(lifetime)'으로 등수를 매기는데 여기서 '보유 잔액(points)'을
+       찍고 있었다. 포인트를 쓴 사람일수록 어긋나서 4등이 3등보다 높아 보였다(실측 2026-08-28).
+       등수 기준을 그대로 보여준다 — 잔액 기준으로 바꾸면 아이템 사거나 베팅할 때마다
+       등수가 급락해서, GP 를 쓰는 걸 벌주는 랭킹이 된다. */
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name" data-nick-uid="${esc(r.user_id||'')}">${esc(r.nickname||'익명')}<br>${badge(r.points)}</span>
-      <span class="lb-stat">${fmt(r.points)}P</span></div>`).join('')||emptyLB();
+      <span class="lb-name" data-nick-uid="${esc(r.user_id||'')}">${esc(r.nickname||'익명')}<br>${badge(r.lifetime)}</span>
+      <span class="lb-stat">${fmt(r.lifetime)}P</span></div>`).join('')||emptyLB();
   } else if(kind==='king'){
     // 시즌 랭킹 우선(없으면 전체) — 시즌명 캡션 표시
     let {data}=await supa.from('predict_king_season').select('*').order('profit',{ascending:false}).limit(50);

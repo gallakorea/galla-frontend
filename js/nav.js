@@ -47,6 +47,7 @@
       else { var s = document.createElement("script"); s.src = src + q; s.async = false; document.body.appendChild(s); }
     }
     load("/js/i18n.js");                            // 🌍 국제화 기반 — GALLA_t / GALLA_money / GALLA_when
+    load("/js/android-back.js");                    // 🔙 안드로이드 하드웨어 뒤로가기(없으면 한 번에 앱 종료)
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
     load("/js/signals.js");                         // 📊 공통 신호 층(노출·시청·행동) — 추천 랭킹의 연료
     load("/js/plans.js");                           // 이용권(등급·잔여 대화) — GALLA_openPlans / GALLA_planPill
