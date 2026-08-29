@@ -10,6 +10,10 @@ const SCRIPTS = [
   "/js/share-sheet.js",   // GALLA_share
   "/js/ghost.js",         // 유령 댓글
   "/js/user-sheet.js",    // 닉네임 프로필 시트
+  "/js/items.js",         // openShop — 다른 뷰를 먼저 안 열면 없다(순서 의존 제거)
+  "/js/fx.js",            // GALLA_FX
+  "/js/follow.js",        // GALLA_bindFollow
+  "/js/dm.js",            // DM 배지·GALLA_openDM — MPA 는 이 페이지에서도 싣는다(웹/앱 동작 일치)
   "/js/watch-page.js",    // 본체 — GALLA_PAGE_WATCH 노출
 ];
 

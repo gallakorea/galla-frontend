@@ -23,6 +23,11 @@ const SCRIPTS = [
   { src: "/js/report-block.js" },       // 광장 신고·차단
   { src: "/js/draft.js" },              // GALLA_draft(광장 임시저장 — plaza.js보다 먼저)
   { src: "/js/plaza-render.js" },       // 광장 본문 렌더러
+  { src: "/js/weather.js" },            // 🔴 날씨 탭 — 없으면 "불러오는 중…"에서 영영 멈춘다(실측 2026-08-29)
+  { src: "/js/comment-actions.js" },    // GALLA_cmtEdit/cmtDelete — 없으면 광장 댓글 수정·삭제 불가
+  { src: "/js/items.js" },              // GALLA_myItems/openShop — 다른 뷰를 먼저 안 열면 없다(순서 의존 제거)
+  { src: "/js/noti-icons.js" },         // 알림 아이콘 세트
+  { src: "/js/dm.js" },                 // DM 배지·GALLA_openDM (MPA 도 여기서 싣는다)
   { src: "/js/search.js" },             // 코어 — GALLA_PAGE_TREND 노출
   { src: "/js/hot-videos.js" },         // 핫튜브(즉시 bind — 이중 모드 처리됨)
   { src: "/js/plaza.js", module: true },// 광장 피드·글쓰기 엔진(원본도 module)

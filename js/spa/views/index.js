@@ -25,6 +25,11 @@ const CLASSIC = [
   "/js/user-sheet.js",      // 프로필 팝오버(data-user-id 위임)
   "/js/report-block.js",    // GALLA_openReportMenu/blockedIds
   "/js/fx.js",              // GALLA_FX(파티클 — ghost 등에서 사용)
+  "/js/welcome.js",         // 첫 진입 환영
+  "/js/onboard.js",         // 온보딩
+  "/js/tour.js",            // 병맛 10슬라이드 투어(+500GP) — 네이티브에서 통째로 안 떴다
+  "/js/noti-icons.js",      // 알림 아이콘 세트
+  "/js/index-guide.js",     // 피드 상단 오리엔테이션 배너
   "/js/index.js",           // 홈 피드 본체(GALLA_PAGE_INDEX 노출)
 ];
 /* ES 모듈 의존 — dynamic import. 실패해도 피드 자체는 뜨게 fail-soft */

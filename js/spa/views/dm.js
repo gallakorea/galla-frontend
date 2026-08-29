@@ -28,6 +28,8 @@ const SCRIPTS = [
   "/js/items.js",         // 상점·아이템(무전기 사용권 게이팅 등)
   "/js/dm.js",            // 페이지 본체 — GALLA_PAGE_DM 노출(이중 모드)
   "/js/dm-live.js",       // 🎙 라이브 난장(난장 탭 LIVE 섹션) — dm.js 뒤
+  "/js/dm-guide.js",      // 첫 진입 안내(MPA 에만 있었다)
+  "/js/dm-tour.js",       // 코치마크
 ];
 
 const loadedOnce = new Set();

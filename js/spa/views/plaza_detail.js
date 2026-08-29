@@ -25,6 +25,8 @@ const SCRIPTS = [
   "/js/ghost.js",           // GALLA_ghost / GALLA_ghostBind (유령 댓글)
   "/js/items.js",           // openShop (유령권 구매 유도)
   "/js/donate.js",          // openDonatePlaza (💝 응원)
+  "/js/dm.js",              // DM 배지·GALLA_openDM (MPA 도 여기서 싣는다)
+  "/js/dm-live.js",         // 라이브 난장 진입 — dm.js 뒤
 ];
 
 const loadedOnce = new Set();
