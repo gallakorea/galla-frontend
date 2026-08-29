@@ -101,7 +101,10 @@
       sec.querySelector("#lv-open").onclick = createLive;
     }
     let rows = [];
-    try { const { data } = await sb().rpc("list_live_rooms"); rows = data || []; } catch (e) {}
+    /* Array.isArray 로 확정한다 — `data || []` 는 배열을 보장하지 않는다.
+       RPC 가 배열이 아닌 걸 돌려주면 LOBBY_ROWS.slice() 에서 터져 난장 탭이 통째로 비었다
+       (2026-08-29 클릭 감사에서 드러남). 한 줄이면 막힌다. */
+    try { const { data } = await sb().rpc("list_live_rooms"); rows = Array.isArray(data) ? data : []; } catch (e) {}
     LOBBY_ROWS = rows;
     paintLobbyCards();
   }
