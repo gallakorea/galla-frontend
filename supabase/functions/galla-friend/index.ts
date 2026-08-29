@@ -2027,7 +2027,7 @@ function apiFor(model: string): { base: string; key: string } {
    모델이 아니라 창구였다. 수다 턴(도구 없음)은 전부 이쪽으로 보낸다.
    ⚠️ 모델명 주의: gemini-3.6-flash 는 정식 창구에서 thinkingConfig 400 → gemini-flash-latest 사용. */
 const GEMINI_NATIVE_MODEL = Deno.env.get("FRIEND_GEMINI_NATIVE") || "gemini-flash-latest";
-async function geminiNativeStream(messages: any[], maxTokens: number, onDelta: (full: string) => void): Promise<string | null> {
+async function geminiNativeStream(messages: any[], maxTokens: number, onDelta: (full: string) => void, uid?: string | null): Promise<string | null> {
   if (!GEMINI_EMBED_KEY) return null;
   try {
     const sys = messages.filter((m) => m?.role === "system").map((m) => String(m?.content || "")).join("\n\n");
@@ -2046,6 +2046,7 @@ async function geminiNativeStream(messages: any[], maxTokens: number, onDelta: (
     if (!r.ok || !r.body) return null;
     const rd = r.body.getReader(); const dec = new TextDecoder();
     let buf = "", full = "";
+    let um: any = null;   // gemini 는 usageMetadata 로 준다(청크마다 누적값이 실린다)
     for (;;) {
       const { done, value } = await rd.read(); if (done) break;
       buf += dec.decode(value, { stream: true });
@@ -2055,16 +2056,24 @@ async function geminiNativeStream(messages: any[], maxTokens: number, onDelta: (
         if (!line.startsWith("data:")) continue;
         try {
           const j = JSON.parse(line.slice(5).trim());
+          if (j?.usageMetadata) um = j.usageMetadata;
           const t = (j?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("");
           if (t) { full += t; onDelta(full); }
         } catch { /* */ }
       }
     }
+    /* gemini usageMetadata → 공통 형태로 환산해 원장에 기록.
+       이 경로도 원가를 한 줄도 안 적고 있었다(호환 경로와 같은 구멍). */
+    if (um) logSpend(AI_FN, GEMINI_NATIVE_MODEL, uid ?? null, {
+      prompt_tokens: um.promptTokenCount || 0,
+      prompt_cache_hit_tokens: um.cachedContentTokenCount || 0,
+      completion_tokens: um.candidatesTokenCount || 0,
+    });
     return full || null;
   } catch { return null; }
 }
 
-async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number; prefix?: string }, onDelta: (full: string) => void): Promise<string | null> {
+async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number; prefix?: string; uid?: string | null }, onDelta: (full: string) => void): Promise<string | null> {
   /* ✍️ 프리필(DeepSeek Chat Prefix Completion 베타) — 답의 '첫 글자들'을 우리가 박고
      모델이 이어 쓰게 한다. 출력 필터(사후 제거)와 달리 출발 자체를 조향한다.
      첫 적용: prefix="<ms>" → 마음읽기 블록을 매 턴 강제(지시만으론 모델이 건너뛸 수 있다).
@@ -2072,7 +2081,7 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
   const model = effModel(opts?.model || CHAT_MODEL);
   // 🚀 gemini 는 정식 창구로(호환 창구 19~24초 → 3초). 실패하면 아래 호환 경로로 그대로 폴백.
   if (/^gemini/.test(model)) {
-    const nat = await geminiNativeStream(messages, opts?.maxTokens || 340, onDelta);
+    const nat = await geminiNativeStream(messages, opts?.maxTokens || 340, onDelta, opts?.uid ?? null);
     if (nat) return nat;
   }
   const usePrefix = !!opts?.prefix && /^deepseek/.test(model) && /deepseek\.com/.test(BASE_URL);
@@ -2097,6 +2106,11 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
     // ⚠️ gemini OpenAI 호환은 tools 없이 tool_choice 를 주면 400(INVALID_ARGUMENT) — 스트림이 통째로 죽어
     //    비스트림 폴백으로 새고, 유저는 20초를 타이핑 점만 보며 기다린다(사장님 "실행이 느려" 실측).
     if (!usePrefix && !/^gemini/.test(model)) body.tool_choice = "none";
+    /* 🔴 스트리밍은 이 옵션 없이는 usage 를 안 준다. 그래서 **주 대화 경로가 원가를 한 줄도 안 적고 있었다**
+       (실측 2026-08-29: ai_spend 의 galla-friend 기록이 8/27 에서 멈춤. 대화는 계속됐는데 장부만 비었다).
+       요금제·마진 계산의 근거가 이 표라서, 여기가 비면 원가를 모르는 채로 가격을 정하게 된다.
+       ⚠️ gemini OpenAI 호환층은 모르는 필드를 400 으로 거부한다(tool_choice 도 같은 이유로 뺀다) — 제외. */
+    if (!/^gemini/.test(model)) body.stream_options = { include_usage: true };
     const api = apiFor(model);
     let r = await fetch(`${api.base}${usePrefix ? "/beta" : ""}/chat/completions`, {
       method: "POST",
@@ -2108,7 +2122,8 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
       // 베타 실패 → 프리필 포기하고 일반 경로 재시도
       r = await fetch(`${api.base}/chat/completions`, {
         method: "POST", headers: { "Authorization": `Bearer ${api.key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: msgs, temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none" }),
+        body: JSON.stringify({ model, messages: msgs, temperature: 0.8, max_tokens: opts?.maxTokens || 340, stream: true, tool_choice: "none",
+          ...(/^gemini/.test(model) ? {} : { stream_options: { include_usage: true } }) }),   // 폴백도 원가를 적어야 한다
       });
     }
     if (!r.ok || !r.body) {
@@ -2117,6 +2132,7 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
     }
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
     let full = usePrefix ? String(opts!.prefix) : "";   // 베타는 '이어쓰기'만 돌려준다 — 프리필을 앞에 붙여야 완문
+    let usage: any = null;   // 마지막 청크에 실려 온다(stream_options.include_usage)
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -2127,9 +2143,15 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
         if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trim();
         if (!data || data === "[DONE]") continue;
-        try { const j = JSON.parse(data); const d = j?.choices?.[0]?.delta?.content || ""; if (d) { full += d; onDelta(full); } } catch { /* */ }
+        try {
+          const j = JSON.parse(data);
+          if (j?.usage) usage = j.usage;                 // 사용량 청크(choices 가 빈 경우가 많다)
+          const d = j?.choices?.[0]?.delta?.content || "";
+          if (d) { full += d; onDelta(full); }
+        } catch { /* */ }
       }
     }
+    logSpend(AI_FN, model, opts?.uid ?? null, usage);    // usage 가 없으면 logSpend 가 알아서 빠진다
     return full;
   } catch { return null; }
 }
@@ -5234,7 +5256,7 @@ ${parts.join("\n")}`;
             const msPrefix = mindBlock
               ? (backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>")
               : undefined;
-            let full = await chatStream(messages, { model: brainModel, maxTokens: mt, prefix: msPrefix }, (f) => send("text", { full: stripForPreview(f) }));
+            let full = await chatStream(messages, { model: brainModel, maxTokens: mt, prefix: msPrefix, uid }, (f) => send("text", { full: stripForPreview(f) }));
             if (full == null) {   // 스트림 실패 → 비스트림 1회 폴백
               const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt, uid });
               full = j?.choices?.[0]?.message?.content || "";
