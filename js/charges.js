@@ -11,6 +11,10 @@
      결제내역 조회 제공 · 청약철회(7일) · 미사용분 환불 · 환불 창구.
    환불 가능액 계산과 중복/이중환불 차단은 전부 서버(gc_refund_request)에서 한다.
    ========================================================= */
+(function () {   // 전역 오염·충돌 방지 — SPA 는 페이지 스크립트를 한 문서에 다 싣는다.
+// galla-predict.js 등이 이미 최상위 let supa·$ 를 선언해 두어, 감싸지 않으면
+// "Identifier 'supa' has already been declared" 로 이 파일이 통째로 실행되지 않는다
+// (에러는 콘솔에만 남고 화면은 그냥 빈 채로 있다 — 실측 2026-08-29 GP 지갑 잔액 '–').
 let supa = null, ME = null;
 const $ = id => document.getElementById(id);
 const fmt = n => Math.round(Number(n) || 0).toLocaleString("ko-KR");
@@ -333,3 +337,5 @@ function refreshAll() {
   loadAll(); loadCharges();
   if (!$("cgRefund").hidden) loadRefunds();
 }
+
+})();
