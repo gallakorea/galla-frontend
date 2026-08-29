@@ -384,10 +384,14 @@ export async function onRequest(context) {
        (Pages 의 _redirects 는 호스트 조건을 못 걸고, 정적 파일이 있으면 아예 적용되지 않는다.)
        ⚠️ CSP: 전역 _headers 는 style-src/font-src 가 'self' 라 구글 폰트가 막힌다.
           이 호스트에만 폰트 두 곳을 열어 준다 — galla.im 본 사이트 정책은 건드리지 않는다. */
-    if (url0.hostname === "company.galla.im") {
+    {
       const p = url0.pathname;
-      const target = (p === "/" || p === "/index.html" || p === "/company" || p === "/company.html")
-        ? "/company.html" : null;
+      /* 호스트로 오면 루트가 회사 소개, 그 외 호스트에서는 /company 경로로도 열어 둔다
+         (도메인 전파 전·프리뷰 배포에서도 같은 화면을 확인할 수 있어야 한다). */
+      const target =
+        (url0.hostname === "company.galla.im" && (p === "/" || p === "/index.html")) ||
+        p === "/company" || p === "/company.html"
+          ? "/company.html" : null;
       if (target) {
         const res = await next(new Request(new URL(target, url0), request));
         const h = new Headers(res.headers);
