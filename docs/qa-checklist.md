@@ -4,7 +4,7 @@
 표면(페이지 68 · 엣지함수 47 · JS 154 · 데이터 테이블)을 기준으로 만들었다.
 
 상태 표기: `✅` 확인함(DB까지) · `🔶` 부분 · `❌` 미확인 · `⛔` 막힘(사유 명시)
-마지막 갱신: 2026-08-29 (3차 — 크론 46 · RPC 631 · 스토리지 · 네이티브 권한 층 추가)
+마지막 갱신: 2026-08-29 (4차 — 환경변수 83 · 외부 서비스 14 층 추가. 미설정 키 39개 발견)
 
 ---
 
@@ -347,6 +347,57 @@
 | 권한 거부 후 재요청 동선(help-permissions) | ❌ | ❌ |
 
 
+## 10-F. 환경변수·외부 의존 (⚠️ 4차 대조에서 발견 — 가장 조용히 죽는 층)
+
+엣지 함수가 읽는 환경변수 **83종**, 외부 서비스 **14곳**. 키가 없으면 대개 **에러 없이 폴백하거나 그냥 안 한다.**
+화면도 로그도 멀쩡한데 기능만 빠져 있다 — QA 에서 제일 놓치기 쉽다.
+
+확인:
+```bash
+# 코드가 쓰는 것
+grep -rho 'Deno\.env\.get("[A-Z_0-9]*")' supabase/functions/ | sed 's/.*("\(.*\)")/\1/' | sort -u > /tmp/used
+# 실제 설정된 것
+npx supabase secrets list --project-ref bidqauputnhkqepvdzrr \
+  | python3 -c "import sys,json;print('\n'.join(sorted(x['name'].strip() for x in json.load(sys.stdin)['secrets'])))" > /tmp/set
+comm -23 /tmp/used /tmp/set   # 코드는 쓰는데 설정 없음
+comm -13 /tmp/used /tmp/set   # 설정만 있고 안 쓰는 죽은 키
+```
+
+현재(2026-08-29): 설정 52 · 코드사용 83 · **미설정 39** · 죽은 키 4
+
+| 미설정 키 | 결과 | 상태 |
+|---|---|---|
+| **KMA_SERVICE_KEY** | 날씨가 기상청 실황이 아니라 **Open-Meteo 모델 예측 폴백**으로 돈다. '지금 우리 동네'의 근거가 달라진다 | ❌ 확인 필요 |
+| FIREBASE_SERVICE_ACCOUNT | 안드로이드 푸시 전무 | ⛔ 알려진 미설정 |
+| APPLE_* (5종) · GOOGLE_SA_* | IAP 영수증 검증 불가 | ⛔ 스토어 등록 전 |
+| STORE_NOTIFY_KEY | 구독 생명주기 웹훅 인증 없음 | ❌ |
+| RESEND_API_KEY · BUG_ALERT_EMAIL | **버그 제보가 와도 메일 알림이 안 간다** | ❌ |
+| EMBED_API_KEY | OPENAI_API_KEY 로 폴백 — 임베딩 공간이 의도와 다를 수 있다(라우터 정확도) | ❌ |
+| ANTHROPIC_API_KEY | 클로드 경로 사용 불가(폴백은 있음) | 🔶 |
+| STT_* · CF_STT_MODEL · CF_WORKERS_AI_TOKEN | 음성 인식 경로 | ❌ |
+| FRIEND_* (7종) · JARVIS_* · *_MODEL | 전부 기본값 폴백 — 의도한 모델이 아닐 수 있다 | 🔶 |
+| TRANSLATE_MODEL | 다국어 번역 | ❌ |
+| 죽은 키: CF_IMAGES_TOKEN · GNEWS_API_KEY · NEWS_API_KEY · TENOR_API_KEY | 코드가 안 씀 — 정리 대상 | 🔶 |
+
+### 외부 서비스 14곳 — 하나 죽으면 어디가 멈추나
+| 서비스 | 쓰는 곳 | 죽으면 |
+|---|---|---|
+| DeepSeek | 갈비스·뉴스·예측 생성 | 대화·자동생성 전부 | ❌ |
+| Gemini / OpenAI / Anthropic | 폴백·임베딩·이미지 | 품질 저하·라우터 | ❌ |
+| Cloudflare R2 | 모든 미디어 | 업로드·재생 | 🔶 |
+| Cloudflare Pages Functions | OG카드·sitemap·imgproxy·IndexNow | 공유 미리보기·색인 | ❌ |
+| Capgo(OTA) | 앱 웹자산 배포 | 앱이 옛 코드에 갇힘 | 🔶 |
+| YouTube API | 핫튜브 수집 | 급상승 목록 | ❌ |
+| 기상청 / Open-Meteo | 날씨 | 폴백 중 | ❌ |
+| GIPHY | DM GIF | GIF 검색 | ❌ |
+| Shotstack | 영상 생성 | 창작 대행 | ⛔ |
+| Agora / CF Calls / TURN | 통화·라이브 | 음성 기능 | ⛔ |
+| Resend | 메일 발송 | 알림 메일 | ❌ |
+| GA | 통계 | 지표 | ❌ |
+| Apple / Google 스토어 | IAP·구독 | 결제 | ⛔ |
+| 뉴스 RSS(연합·조선·동아 등) | 뉴스 수집 | 기사 유입 | ❌ |
+
+
 ## 12. 품질 축 (기능 아님 — 놓치기 쉬움)
 
 | 항목 | 상태 |
@@ -416,7 +467,8 @@ for f in js/*.js; do b=$(basename $f .js); grep -qi "$b" $D || echo "모듈 미�
 #   select jobname from cron.job order by 1;   → 10-D 와 대조
 # ⑤ 행이 쌓이는 테이블 (SQL Editor)
 #   select relname, n_live_tup from pg_stat_user_tables where n_live_tup>0 order by 2 desc;
-# ⑥ 네이티브 플러그인
+# ⑥ 환경변수 (10-F 참고) — 코드가 쓰는데 설정 없는 키
+# ⑦ 네이티브 플러그인
 #   cd ../galla-app && python3 -c "import json;d=json.load(open('package.json'));print([k for k in d['dependencies'] if 'capacitor' in k or 'cordova' in k])"
 ```
 
