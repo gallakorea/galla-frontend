@@ -1,0 +1,15 @@
+# 크론(cron.job)이 호출하는 엣지 함수 목록 — scripts/orphan-functions.py 가 대조한다.
+# 갱신: select distinct m[1] from cron.job, lateral regexp_matches(command,'functions/v1/([A-Za-z0-9_-]+)','g') m order by 1;
+categorize-raw-news
+collect-external-trends
+collect-raw-news
+collect-rss-news
+collect-youtube-hot
+fetch_article_thumbnail
+fetch_missing_thumbnails
+generate-community-plaza
+generate-galla-news
+generate-predict-markets
+group-related-news
+heal-news-thumbs
+predict-auto-resolve
