@@ -4,7 +4,7 @@
 표면(페이지 68 · 엣지함수 47 · JS 154 · 데이터 테이블)을 기준으로 만들었다.
 
 상태 표기: `✅` 확인함(DB까지) · `🔶` 부분 · `❌` 미확인 · `⛔` 막힘(사유 명시)
-마지막 갱신: 2026-08-29
+마지막 갱신: 2026-08-29 (2차 — 코드 대조로 15개 표면 누락 발견해 3-B·6-B·10-B·12장 추가)
 
 ---
 
@@ -231,6 +231,112 @@
 | 약관·개인정보·청소년보호 링크 | ❌ |
 | 신고·차단 동선(앱스토어 필수) | 🔶 신고만 |
 | 계정 삭제 동선(앱스토어 필수) | ❌ |
+
+---
+
+## 3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)
+
+| 항목 | 웹 | iOS | AOS |
+|---|---|---|---|
+| **일기토(1:1 논쟁) 신청·수락** | ❌ | ❌ | ❌ |
+| 일기토 진행·메시지(duel_messages) | ❌ | ❌ | ❌ |
+| 일기토 AI 판정(duel-ai-judge) | ❌ | ❌ | ❌ |
+| 일기토 관전·투표 | ❌ | ❌ | ❌ |
+| **나만의 이모티콘(AI 생성·GP 차감·환불)** | ❌ | ❌ | ❌ |
+| DM 스티커 사용 | ❌ | ❌ | ❌ |
+| **알림 목록·읽음 처리(notifications)** | ❌ | ❌ | ❌ |
+| 갈라 성향 테스트(/match) 공유 | ❌ | ❌ | ❌ |
+
+## 6-B. 공개·유입 (검색·공유·SEO)
+
+| 항목 | 상태 |
+|---|---|
+| **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ❌ |
+| 기본 OG 이미지 폴백 | ❌ |
+| **robots.txt · sitemap.xml.js 동적 생성** | ❌ |
+| **IndexNow 색인 제출**(`functions/indexnow.js`) | ❌ |
+| 엣지 메타 주입(`_middleware.js`) | ❌ |
+| imgproxy 외부 이미지 프록시 | 🔶 앱에서만 확인 |
+| PWA 설치 유도·오프라인 페이지 | ❌ |
+
+## 10-B. 데이터 파이프라인·추천
+
+| 항목 | 상태 |
+|---|---|
+| **추천 신호 층(feed_signals) 15분 집계** | ❌ |
+| 조회수 집계(content_daily_views) | ❌ |
+| **릴스 실행 에이전트(agent_jobs · reel-agent)** | ❌ |
+| 미디어 R2 이관·고아 정리(purge-orphan-media·video-migrate-worker) | ❌ |
+| 뉴스 썸네일 치유(heal-news-thumbs) | ❌ |
+| 링크 미리보기·본문 추출(link-preview·article-reader) | ❌ |
+| **갈비스 시맨틱 라우터(galvis_intents)** | ❌ |
+| **학습데이터 축적(sft_samples·distill-failures)** | ❌ |
+| 창작 레퍼런스 DB(creator_patterns) | ❌ |
+| GA 동기화(ga-sync) | ❌ |
+
+## 10-C. 엣지 함수 47종 — 역할별 헬스 (전수)
+
+⚠️ 여기 없는 함수가 생기면 이 표를 갱신한다. 함수 목록은 `ls supabase/functions/`.
+
+| 묶음 | 함수 | 확인할 것 | 상태 |
+|---|---|---|---|
+| 수집(크론) | collect-raw-news · collect-rss-news · collect-community-hot · collect-external-trends · collect-youtube-hot | 스케줄 실행 · **Authorization 헤더**(없으면 401인데 이력엔 succeeded) · 수집량 | ❌ |
+| 생성(크론) | generate-galla-news · generate-community-plaza · generate-predict-markets · generate-ai-arguments | 산출물 품질 · 중복 · 원가 기록 | ❌ |
+| 정산(크론) | predict-auto-resolve · weather-sync · heal-news-thumbs · purge-orphan-media | 오판정 · 누락 | ❌ |
+| 갈비스 | galla-friend · galla-friend-ping · galla-jarvis · galvis-craftbench · galvis-redteam · distill-failures | 응답 · 선톡 · 원가 · 레드팀 회귀 | 🔶 galla-friend만 |
+| 창작 | generate-thumbnail · generate-video · generate-sticker · reel-agent | GP 선차감·환불·검열 | ❌ |
+| 미디어 | upload-media · stream-upload · stream-ingest · stream-to-r2 · video-migrate-worker · imgproxy | 업로드·변환·R2·프록시 | 🔶 이미지만 |
+| 통화·라이브 | agora-token · rtc-sfu · turn-cred · call-push | 토큰 발급 · SFU 연결 | ⛔ 보류 기능 |
+| 인증 | naver-auth · passkey · delete-account | 소셜복귀 · 패스키 · 탈퇴 | ⛔/❌ |
+| 결제 | verify-iap · store-notify | 영수증 검증 · 구독 생명주기 | 🔶 시뮬만 |
+| 알림 | send-push · bug-alert | APNs·FCM 발송 · 관리자 알림 | ❌ |
+| 부가 | translate · gif-search · link-preview · article-reader · check-issue · galla-stt · ga-sync · yt | 각 기능 동작 | ❌ |
+
+
+## 12. 품질 축 (기능 아님 — 놓치기 쉬움)
+
+| 항목 | 상태 |
+|---|---|
+| **다국어(i18n · GALLA_t · locale 컬럼)** — 번역 누락·깨짐 | ❌ |
+| translate 엣지 함수 | ❌ |
+| **성능** — 콜드스타트·LCP·이미지 용량 | ❌ |
+| **접근성** — 대비·포커스 링·스크린리더·큰 글씨 | ❌ |
+| **반응형** — 태블릿·좁은 PC창(481~1099px) | ❌ |
+| 빈 상태(콘텐츠 0개) 화면 | 🔶 난장·숏판 비운 뒤 미확인 |
+| 에러 상태(네트워크 실패·403·404) | ❌ |
+| 긴 텍스트·이모지·RTL 깨짐 | ❌ |
+| 동시성(같은 계정 2기기) | ❌ |
+
+## 13. 페이지 대조표 (68개 — 고아 없는지 확인용)
+
+기능명으로만 적으면 페이지가 조용히 빠진다. 새 페이지가 생기면 여기에 줄을 추가한다.
+확인: `for f in *.html; do grep -q "$f" docs/qa-checklist.md || echo "$f"; done`
+
+| 장 | 페이지 |
+|---|---|
+| 1 인증 | login · signup · reset · change-password · login-history · auth-callback · auth/confirm · confirm |
+| 2 생성 | write · write-remix · **confirm.remix** · create · gallari-write · report · plaza(작성) |
+| 3 상호작용 | index · issue · plaza · plaza_detail · gallari · gallari-post · gallari-reels · watch |
+| 3-B 대결 | duel · random · match · galla-type |
+| 4 소통 | dm |
+| 6 트렌드 | search · news · yt |
+| 7 예측 | galla-predict · predict-market |
+| 7 경제 | wallet · charges · gp-history · quest · grade · season · **donation** · **donation-usage** · settlement · revenue-settlement · withdraw · withdraw-done · creator |
+| 8 설정 | settings · account-edit · mypage · saved · **support** · help-permissions · privacy · terms |
+| 10 운영 | admin · admin-login |
+| — 제외 | nav-test* · agora-test · mic-test · preview · offline · app-shell · naver인증 · **shorts(고아 프로토타입)** |
+
+### 이번 대조로 추가된 미커버 항목
+
+| 항목 | 상태 |
+|---|---|
+| **고객지원·문의(support)** 문의 등록·답변 | ❌ |
+| **리믹스 작성 흐름(write-remix → confirm.remix)** | ❌ |
+| **사회적 환원 내역(donation-usage)** 표시 | ❌ |
+| **GP 사용 이력(gp-history)** 정확성 | ❌ |
+| **관리자 로그인(admin-login)** 권한 게이트 | ❌ |
+| **shorts.html** — 아무 데서도 링크 안 되는 고아 페이지(삭제 검토) | 🔶 |
+
 
 ---
 
