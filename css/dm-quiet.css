@@ -1099,8 +1099,12 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
   position: fixed; inset: 0; z-index: 14800; display: flex; align-items: center; justify-content: center;
   background: radial-gradient(120% 90% at 50% 20%, #0b2416 0%, #050608 70%);
   opacity: 0; transition: opacity .26s ease; padding: 20px;
+  /* 🔴 opacity 만으로 숨기면 **안 보이는 채로 화면 전체의 클릭을 먹는다.**
+     inset:0 · z-index 14800 짜리가 body 에 붙어 있어서, 투명해도 그 아래는 아무것도 못 누른다.
+     보일 때만 이벤트를 받게 한다 — 열고 닫는 로직이 어긋나도 화면이 잠기지 않는다. */
+  pointer-events: none;
 }
-#pager-guide.on { opacity: 1; }
+#pager-guide.on { opacity: 1; pointer-events: auto; }
 .pgr-gd-body {
   width: 100%; max-width: 420px; box-sizing: border-box;
   padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));

@@ -377,10 +377,30 @@
     host.querySelector('[data-a="actrand"]').onclick = () => activateRandom(host);
     host.querySelector('[data-a="actpick"]').onclick = () => pickNumber(host);
     host.querySelector('[data-a="guide"]').onclick = () => openGuide();
-    // 처음 온 사람에겐 설명서를 먼저 — '이게 뭐지?'로 이탈하지 않게
+    /* 처음 온 사람에겐 설명서를 먼저 — '이게 뭐지?'로 이탈하지 않게.
+       🔴 단, **삐삐 창이 실제로 보일 때만.**
+       #dm-pager 는 평소 hidden 인데 mount() 는 그래도 돈다. 그런데 openGuide() 는
+       안내를 document.body 에 position:fixed; inset:0; z-index:14800 으로 붙인다 —
+       숨은 창을 탈출해 **채팅 탭 위를 통째로 덮는다.** 삐삐를 눌러본 적도 없는 사람이
+       DM 을 열자마자 삐삐 설명서에 갇히고, 그 밑의 메시지 입력창은 눌리지도 않는다
+       (실측 2026-08-29 웹: DM 입력창 자리의 elementFromPoint 가 #pager-guide 였다).
+       보일 때 띄우고, 지금 숨어 있으면 보이는 순간 한 번만 띄운다. */
+    const visible = () => !host.hidden && host.offsetParent !== null;
+    let armed = false;
+    const fire = () => { if (armed) return; armed = true; openGuide(); };
     let seen = false;
     try { seen = localStorage.getItem(GUIDE_KEY) === '1'; } catch (_) {}
-    if (!seen) setTimeout(() => openGuide(), 500);
+    if (!seen) {
+      setTimeout(() => {
+        if (visible()) return fire();
+        try {
+          const mo = new MutationObserver(() => {
+            if (visible()) { mo.disconnect(); fire(); }
+          });
+          mo.observe(host, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+        } catch (_) {}
+      }, 500);
+    }
   }
 
   /* 랜덤 개통 — 액정 숫자 스크램블 → 번호 확정 연출 */
