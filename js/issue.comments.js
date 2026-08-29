@@ -220,7 +220,15 @@ export async function initCommentSystem(issueId) {
   SHIELDS = {};
   COMBO = { n: 0, t: 0 };
 
-  await new Promise(r => requestAnimationFrame(r));
+  /* 🔴 rAF 는 탭이 숨겨져 있으면 **영영 안 돈다.** 여기서 그냥 await 하면
+     백그라운드 탭에서 연 이슈는 댓글이 한 줄도 안 그려진 채 멈춘다
+     (실측 2026-08-29: visibilityState=hidden 일 때 3초 넘게 미발화 → loadComments 이전에서 정지).
+     탭을 보면 그때 풀리긴 하지만, 한 프레임 기다리자고 렌더 전체를 인질로 잡을 이유가 없다.
+     shorts.js·plans.js 가 같은 이유로 이미 setTimeout 을 쓴다. 둘 중 먼저 오는 쪽으로 간다. */
+  await Promise.race([
+    new Promise(r => requestAnimationFrame(r)),
+    new Promise(r => setTimeout(r, 60)),
+  ]);
 
   const zone = document.getElementById("battle-zone");
   if (!zone) {
