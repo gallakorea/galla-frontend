@@ -114,7 +114,17 @@
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
   // 🔬 통화 흐름 추적(간헐 실패 규명용) — 통화당 몇 줄만 남긴다.
-  function wb(m) { try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  /* 🔇 진단은 **통화 중일 때만** 남긴다.
+     주석엔 "통화당 몇 줄"이라 적혀 있었지만 실제로는 부팅·셀프테스트에서도 찍혀
+     주당 890줄이 client_errors 에 쌓였다. 진짜 에러는 같은 기간 16줄뿐 —
+     **진단이 에러를 99:1 로 묻어** 버그헌터가 "클라이언트 에러 급증" 경보 212건을 띄웠고
+     그 안에서 진짜 에러(supa 중복선언·saveBtn null)가 안 보였다(실측 2026-08-30).
+     통화 중(CUR)이거나 localStorage 로 강제 켠 경우에만 기록한다. */
+  function DIAG_ON() {
+    if (CUR) return true;                                  // 통화 진행 중 — 원래 목적
+    try { return localStorage.getItem('galla_call_diag') === '1'; } catch (_) { return false; }
+  }
+  function wb(m) { if (!DIAG_ON()) return; try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   function statusBeacon(tag) {
     try {
       const la = localStream && localStream.getAudioTracks()[0];
