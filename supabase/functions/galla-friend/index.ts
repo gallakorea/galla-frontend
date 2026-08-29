@@ -44,7 +44,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  market_quote: "💹 시세 확인하는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -926,6 +926,27 @@ async function searchContent(query: string) {
   return { results: (data || []).map((x) => ({ type: "issue", id: x.id, title: x.title, 한줄: x.one_line })) };
 }
 
+/* 🌦 날씨: weather_now RPC(기상청 관측 + 유저 제보)에서 지역을 골라 돌려준다.
+   지역명을 안 주거나 못 찾으면 전국 요약을 준다 — 지어내지 말라고 값만 넘긴다. */
+async function weatherNow(region?: string) {
+  const { data, error } = await supa.rpc("weather_now");
+  if (error || !data?.ok) return { error: "날씨를 못 가져왔어" };
+  const regions = (data.regions || []) as any[];
+  const wmo: Record<number, string> = { 0: "맑음", 1: "대체로 맑음", 2: "구름 조금", 3: "구름", 45: "안개", 51: "이슬비", 61: "비", 63: "비", 65: "폭우", 71: "눈", 73: "눈", 75: "폭설", 80: "소나기", 95: "천둥번개" };
+  const one = (r: any) => ({
+    지역: r.name, 기온: r.temp == null ? null : Math.round(r.temp * 10) / 10,
+    하늘: wmo[r.code_wmo] ?? "정보없음", 강수mm: r.precip ?? 0,
+    유저제보: { 비: r.rain ?? 0, 눈: r.snow ?? 0, 안옴: r.none ?? 0 },
+    관측시각: r.obs_at,
+  });
+  if (region) {
+    const q = String(region).replace(/\s/g, "");
+    const hit = regions.find((r) => q.includes(r.name) || r.name.includes(q));
+    if (hit) return { 기준: "기상청 관측 + 갈라 유저 제보", 날씨: one(hit) };
+  }
+  return { 기준: "기상청 관측 + 갈라 유저 제보", 전국: regions.slice(0, 17).map(one) };
+}
+
 const TOOLS = [
   { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 인스타 계정·게시물(kind:instagram — '○○ 인스타/인스타 찾아줘/인플루언서'), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집 / 인스타는 핸들이나 브랜드명·주제)" }, kind: { type: "string", enum: ["local", "news", "blog", "web", "instagram"] } }, required: ["query"] } } },
   // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
@@ -933,6 +954,10 @@ const TOOLS = [
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
   { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인). 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
+  /* 🌦 날씨는 **우리 데이터**로 답한다 — web_search 로 답하면 틀린다(실측 2026-08-29:
+     앱 데이터가 서울 23.8도·구름인데 검색으로 "비 오고 28도"라고 답했다).
+     weather_now RPC 는 기상청 관측 + 유저 제보를 합친 값이라 앱 화면과도 일치한다. */
+  { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" } } } } },
   { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
@@ -1075,6 +1100,7 @@ async function refundGC(uid: string, amount: number) {
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
+  if (name === "weather_now") return { result: await weatherNow(args?.region) };
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
   if (name === "find_user") {
@@ -2602,7 +2628,7 @@ function stripFakeToolCall(t: string): string {
     /* [hot_videos 호출해서 인기 영상 확인 중] — 괄호 없이 '도구 이름 + 한국어'만 든 형태(실측 누출).
        위 규칙들은 전부 '[(' 를 요구해서 이건 그대로 화면에 나갔다. 대괄호 안에 선언된 도구
        이름이 들어 있으면 정상 문장일 수가 없다 — 통째로 지운다. */
-    .replace(/\[[^\]\n]{0,140}\b(point_to|hot_issues|hot_videos|web_search|galla_news|platform_buzz|search_content|market_quote|open_link|open_external|app_action|remember|forget_memory|draft_(?:issue|gallari|predict|plaza)|gen_(?:thumbnail|video|reel_script))\b[^\]\n]{0,140}\]/gi, "")
+    .replace(/\[[^\]\n]{0,140}\b(point_to|hot_issues|hot_videos|web_search|galla_news|platform_buzz|search_content|market_quote|weather_now|open_link|open_external|app_action|remember|forget_memory|draft_(?:issue|gallari|predict|plaza)|gen_(?:thumbnail|video|reel_script))\b[^\]\n]{0,140}\]/gi, "")
     /* 앞부분만 지워지면 꼬리 조각이 통째로 남는다("… 확인 중] — 핫튜브 화면 열어주기]").
        대시로 이어붙인 뒤 ']' 로 끝나는 토막은 도구 내레이션의 잔해다 — 조각째 지운다. */
     .replace(/\s*[—–-]\s*[^\[\]\n]{0,60}\]/g, "")
@@ -3133,6 +3159,7 @@ function detectJailbreak(msg: string): boolean {
    'none'(그냥 수다) 예문을 흡수대로 넣는 게 핵심이다 — 없으면 잡담이 아무 의도에나 붙는다. */
 const INTENT_SEED: Record<string, string[]> = {
   reopen: ["열어봐", "올려봐", "올려 봐 그거", "아 니가 창을 열라고", "잘못 열렸는데", "안 열려", "다시 띄워줘", "빨리 열어", "그거 눌러도 안 돼", "왜 안 열림", "창 좀 열어달라니까"],
+  weather_now: ["오늘 날씨 어때", "비 와?", "우산 챙겨야 해?", "서울 지금 추워?", "내일 뭐 입지"],
   market_quote: ["하이닉스 지금 얼마야", "비트코인 시세 어때", "삼성전자 주가 알려줘", "코인 얼마나 올랐어", "내 주식 오늘 어때"],
   hot_videos: ["웃긴 영상 틀어줘", "재밌는 유튜브 없나", "요즘 뜨는 영상 뭐야", "심심한데 영상 하나 줘", "볼만한 거 틀어봐"],
   hot_issues: ["요즘 뜨거운 이슈 뭐야", "싸울만한 주제 없나", "논쟁거리 하나 줘", "사람들 요즘 뭐로 싸워", "찬반 갈리는 거 뭐 있어"],
