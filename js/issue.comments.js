@@ -1829,10 +1829,15 @@ function renderWarDashboard() {
     if (typeof v === "number" && window.GALLA_countUp) window.GALLA_countUp(el, v, "");
     else el.textContent = v;
   };
+  /* 🔴 전선 라벨과 전황판이 같은 id 를 쓰고 있었다 — getElementById 는 하나만 돌려주므로
+     둘 중 하나(대개 전선 라벨)가 옛 숫자에 멈춘다(실측: 전황판 "총 댓글 2" 옆에 "1개 의견").
+     라벨은 al-*-count 로 분리하고 여기서 같이 갱신한다. */
   set("stat-pro-total", w.pro.total);
+  set("al-pro-count", w.pro.total);
   set("stat-pro-same", w.pro.same);
   set("stat-pro-oppo", w.pro.oppo);
   set("stat-con-total", w.con.total);
+  set("al-con-count", w.con.total);
   set("stat-con-same", w.con.same);
   set("stat-con-oppo", w.con.oppo);
   set("stat-total", w.atk + w.def + w.sup);

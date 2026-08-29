@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0829063"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0829071"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>GALLA - 이슈 상세</title>
   <!-- OG / 공유 카드 기본값 (콘텐츠별은 /share/<type>/<id> 엣지 렌더) -->
@@ -314,14 +314,14 @@
       </section>
 
       <!-- 👍 전선 (진영 구역 분리 — 침투로만 넘나든다. 진영 이름은 글쓴이가 정한 것을 JS가 채움) -->
-      <div class="army-label pro"><span id="al-pro">👍 진영</span> 전선 <span class="al-count"><b id="stat-pro-total">0</b>개 의견</span></div>
+      <div class="army-label pro"><span id="al-pro">👍 진영</span> 전선 <span class="al-count"><b id="al-pro-count">0</b>개 의견</span></div>
       <div id="pro-list" class="zone-list pro"></div>
       <div class="pager-wrap"><div class="pager" id="pro-pager"></div></div>
 
       <div class="battle-divider"><span class="bd-label">⚔️ 여기부터 <b id="bd-con-name">반대</b> 진영</span></div>
 
       <!-- 👎 전선 -->
-      <div class="army-label con"><span id="al-con">👎 진영</span> 전선 <span class="al-count"><b id="stat-con-total">0</b>개 의견</span></div>
+      <div class="army-label con"><span id="al-con">👎 진영</span> 전선 <span class="al-count"><b id="al-con-count">0</b>개 의견</span></div>
       <div id="con-list" class="zone-list con"></div>
       <div class="pager-wrap"><div class="pager" id="con-pager"></div></div>
 
@@ -402,7 +402,7 @@
 
 <!-- Issue Page Logic (단 한 번!) -->
 <script src="js/media-sound.js?v=080412"></script>
-<script type="module" src="js/issue.js?v=0829063"></script>
+<script type="module" src="js/issue.js?v=0829071"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
 <script type="module" src="js/shorts.js?v=202608281555"></script>
