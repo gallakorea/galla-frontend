@@ -13,6 +13,10 @@
 무해한 것은 제외한다: onclick 속성이 있는 것, href 가 있는 것, form 안의 submit/reset,
 그리고 닫기·토글처럼 CSS 만으로 동작할 수 있는 것은 사람이 확인하도록 '주의'로만 분류.
 
+⚠️ 이 검사기는 **HTML 에 적힌 정적 버튼만** 본다(562개). JS 가 만드는 버튼(템플릿 870곳,
+   렌더 인스턴스는 2,000개 이상)은 소스에 없어서 여기서는 보이지 않는다.
+   그쪽은 scripts/audit-buttons.js 를 브라우저에서 돌려야 잡힌다 — 로그인한 상태로.
+
 사용: python3 scripts/dead-buttons.py            (요약)
       python3 scripts/dead-buttons.py --all      (전체 목록)
 """
