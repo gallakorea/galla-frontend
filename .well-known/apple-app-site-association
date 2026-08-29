@@ -1,4 +1,23 @@
 {
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["494K4C92G6.im.galla.app"],
+        "components": [
+          { "/": "/share/*",  "comment": "공유 카드 링크 — 앱으로 연다" },
+          { "/": "/issue*",   "comment": "이슈" },
+          { "/": "/plaza*",   "comment": "광장" },
+          { "/": "/news*",    "comment": "갈라뉴스" },
+          { "/": "/watch*",   "comment": "핫튜브" },
+          { "/": "/predict*", "comment": "예측" },
+          { "/": "/match*",   "comment": "궁합 테스트" },
+          { "/": "/auth-callback*", "exclude": true, "comment": "소셜 로그인 콜백은 브라우저가 처리해야 한다" },
+          { "/": "/reset*",         "exclude": true, "comment": "비밀번호 재설정 링크도 브라우저" },
+          { "/": "/confirm*",       "exclude": true, "comment": "이메일 인증도 브라우저" }
+        ]
+      }
+    ]
+  },
   "webcredentials": {
     "apps": ["494K4C92G6.im.galla.app"]
   }
