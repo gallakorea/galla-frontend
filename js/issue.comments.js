@@ -13,13 +13,16 @@ window.CURRENT_ISSUE_ID = null;
       통째로 안 붙는다 — 라벨이 '👍 진영' 기본값 그대로 남고 목록이 빈 채로 멈춘다
       (실측 2026-08-29 iOS 네이티브. issue.js 는 이미 qs()로 스코프를 잡고 있어
        제목·요약·투표바만 새 뷰에 제대로 그려져 원인이 가려져 있었다).
-      그래서 mount 된 루트 안에서 먼저 찾고, 없을 때만 문서로 폴백한다
-      (cmm-css 처럼 head/body 에 붙는 것 때문에 폴백이 필요하다).
-      querySelectorAll 은 폴백하지 않는다 — 폴백하면 옛 뷰의 댓글을 건드린다. */
+      그래서 모든 조회를 mount 된 루트 안으로 가둔다 — 뷰 밖(body/head)에 붙는 것만 예외. */
 let ROOT = document;
 const scoped = () => (ROOT !== document && ROOT && ROOT.querySelector) ? ROOT : null;
-const $id = id => { const r = scoped(); return (r && r.querySelector("#" + id)) || document.getElementById(id); };
-const $q  = sel => { const r = scoped(); return (r && r.querySelector(sel)) || document.querySelector(sel); };
+/* 뷰 밖(body/head)에 붙는 것들 — 이것만 문서에서 찾는다.
+   ⚠️ 나머지를 문서로 폴백시키면 안 된다: 새 뷰에 아직 없는 요소를 찾다가
+   **옛 뷰의 것을 집어** 거기에 그린다(전황판·전장속보·명예의전당이 새 뷰에
+   통째로 안 붙던 원인. 실측 2026-08-29 AOS: zones=2 인데 .bm-war 는 옛 뷰에만). */
+const OUT_OF_VIEW = new Set(["cmm-css", "cmm-sheet", "faction-chat", "fc-list", "fc-input", "fc-send", "fc-nanjang"]);
+const $id = id => { const r = scoped(); return (r && !OUT_OF_VIEW.has(id)) ? r.querySelector("#" + id) : document.getElementById(id); };
+const $q  = sel => { const r = scoped(); return r ? r.querySelector(sel) : document.querySelector(sel); };
 const $qa = sel => { const r = scoped(); return r ? r.querySelectorAll(sel) : document.querySelectorAll(sel); };
 
 let BATTLE_MODE = null;

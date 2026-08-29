@@ -1,7 +1,7 @@
 import { loadAiArguments } from "./issue-argument.js?v=080325";
 import { loadAiNews } from "./issue-news.js?v=080325";
 import { loadStats } from "./issue.stats.js?v=080325";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0829071";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0829078";
 
 
 console.log("[issue.js] loaded");
@@ -73,10 +73,12 @@ async function waitForSessionReady(timeout = 2500) {
 ========================================================================== */
 function qs(id) {
   // SPA(단일문서): 홈 탭(keep-alive)·다른 스택 뷰가 같은 문서에 공존하므로
-  // 이 뷰(PAGE_ROOT) 안에서 먼저 찾는다. MPA는 PAGE_ROOT === document라 기존과 동일.
+  // 이 뷰(PAGE_ROOT) 안에서만 찾는다. MPA는 PAGE_ROOT === document라 기존과 동일.
+  // ⚠️ 못 찾았다고 document 로 폴백하면 안 된다 — 이슈 상세를 두 번 열었을 때
+  //    **옛 뷰의 요소**를 집어 거기에 그리거나 거기 것을 지운다(실측 2026-08-29).
+  //    이 페이지가 찾는 id 는 전부 issue.html 안에 있거나 이 뷰에 주입된 것들이다.
   if (PAGE_ROOT !== document && PAGE_ROOT && PAGE_ROOT.querySelector) {
-    const el = PAGE_ROOT.querySelector("#" + id);
-    if (el) return el;
+    return PAGE_ROOT.querySelector("#" + id);
   }
   return document.getElementById(id);
 }
