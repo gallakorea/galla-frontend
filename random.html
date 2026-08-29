@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0829010"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0829020"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>랜덤 갈라 뽑기 - GALLA</title>
 
@@ -113,10 +113,16 @@
 <script src="js/supabase.js?v=0828020"></script>
 <script src="js/random.js?v=080412"></script>
 
-<!-- ⭐ LOGIN 상태 UI 반영 -->
+<!-- ⭐ LOGIN 상태 UI 반영
+     🔴 이 페이지만 `supabase.auth` 를 쓰고 있었다. `supabase` 는 UMD 라이브러리(createClient 만 있다)이고
+     클라이언트 인스턴스는 `supabaseClient` 다. 그래서 세 곳 전부 즉시 TypeError 를 던졌고,
+     그 결과 **로그인해도 헤더가 '로그인/회원가입'으로 보이고 🎲 뽑기 버튼이 아무에게도 동작하지 않았다**
+     (실측 2026-08-29 웹: random:119, :143 getSession of undefined).
+     핸들러는 붙어 있어서 정적 검사기도, 도달성 감사기도 못 잡았다 — 실제로 눌러야 나온다.
+     클라이언트는 비동기로 준비되므로 공용 헬퍼 waitForSupabaseClient() 로 기다린다. -->
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await (await window.waitForSupabaseClient()).auth.getSession();
     const session = data.session;
 
     const loginBtn = document.getElementById("loginBtn");
@@ -140,7 +146,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 <!-- ⭐ RANDOM 버튼 클릭 시 로그인 필수 -->
 <script>
 document.getElementById("randomBtn").addEventListener("click", async () => {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await (await window.waitForSupabaseClient()).auth.getSession();
 
     if (!data.session?.user) {
         alert("랜덤 뽑기는 로그인 후 이용 가능합니다.");
@@ -163,7 +169,7 @@ document.getElementById("randomBtn").addEventListener("click", async () => {
             const needLogin = ["write.html", "random.html", "mypage.html"];
 
             if (needLogin.includes(target)) {
-                const { data } = await supabase.auth.getSession();
+                const { data } = await (await window.waitForSupabaseClient()).auth.getSession();
 
                 if (!data.session?.user) {
                     alert("로그인이 필요한 페이지입니다.");
