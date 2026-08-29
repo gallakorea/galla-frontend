@@ -264,7 +264,9 @@ async function fetchComments(commentCountEl) {
     return;
   }
 
-  comments = data.map(c => ({
+  // 🚫 차단한 사람 댓글 제거 — 차단 안내가 '댓글도 안 보인다'고 약속한다(홈 피드만 걸러졌었다).
+  const data2 = window.GALLA_filterBlocked ? await window.GALLA_filterBlocked(data || [], "user_id") : (data || []);
+  comments = data2.map(c => ({
     id: c.id,
     parent_id: c.parent_id,
     nickname: c.anon_name,

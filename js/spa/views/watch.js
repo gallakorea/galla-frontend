@@ -14,6 +14,7 @@ const SCRIPTS = [
   "/js/fx.js",            // GALLA_FX
   "/js/follow.js",        // GALLA_bindFollow
   "/js/dm.js",            // DM 배지·GALLA_openDM — MPA 는 이 페이지에서도 싣는다(웹/앱 동작 일치)
+  "/js/report-block.js",  // GALLA_filterBlocked·신고차단 — 없으면 차단 필터가 무동작
   "/js/watch-page.js",    // 본체 — GALLA_PAGE_WATCH 노출
 ];
 

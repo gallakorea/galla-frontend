@@ -1324,7 +1324,8 @@ async function loadComments(issueId) {
     console.error("[comments] load failed", error);
     return;
   }
-  allRows = rows || [];
+  // 🚫 차단한 사람 댓글 제거 — 차단 안내가 '댓글도 안 보인다'고 약속한다(홈 피드만 걸러졌었다).
+  allRows = window.GALLA_filterBlocked ? await window.GALLA_filterBlocked(rows || [], "user_id") : (rows || []);
 
   // 🚀 하이라이트 부스트(24h) 적용 대상
   hlSet = new Set();

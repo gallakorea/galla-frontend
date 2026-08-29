@@ -16,6 +16,7 @@ const SCRIPTS = [
   "/js/items.js",           // 상점(필요 시)
   "/js/dm.js",              // GALLA_openDM + 배지
   "/js/fx.js",              // 파티클
+  "/js/report-block.js",   // GALLA_filterBlocked·신고차단 — 없으면 차단 필터가 무동작
   "/js/news-page.js",       // 본체 — GALLA_PAGE_NEWS 노출
 ];
 

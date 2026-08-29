@@ -540,9 +540,12 @@ async function loadComments(body){
     CMT_SIDE=MY_POS_SIDE;
   } else CMT_SIDE=null;
 
-  const { data: rows } = await supa.from('market_comments')
+  let { data: rows } = await supa.from('market_comments')
     .select('id,user_id:author_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed,locale').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
+  // 🚫 차단한 사람 의견 제거 — 차단 안내가 '댓글도 안 보인다'고 약속한다(홈 피드만 걸러졌었다).
+  //    내 입장 고정은 아래에서 '내 댓글'을 찾는데, 나를 차단할 일은 없으니 영향 없다.
+  if (window.GALLA_filterBlocked) rows = await window.GALLA_filterBlocked(rows || [], 'user_id');
   // 베팅을 안 했어도, 이미 이 예측에 댓글을 남겼다면 '그때 입장'으로 고정한다(한 예측=한 입장, 사장님 요청).
   if(!isMulti() && !MY_POS_SIDE && ME){
     const mineC=(rows||[]).find(c=>c.user_id===ME.id && (c.side==='yes'||c.side==='no'));

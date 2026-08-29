@@ -216,9 +216,12 @@
       const cn = q("#hvCommentN"); if (cn) cn.textContent = "0";
       return;
     }
-    if (window.GALLA_userMap) await window.GALLA_userMap(data.map((m) => m.user_id));
-    box.innerHTML = data.map((m) => cmtHTML(m, !!m.parent_id)).join("");
-    const cn = q("#hvCommentN"); if (cn) cn.textContent = shortNum(data.length);
+  // 🚫 차단한 사람 댓글 제거 — 차단 안내가 '댓글도 안 보인다'고 약속한다(홈 피드만 걸러졌었다).
+    const data2 = window.GALLA_filterBlocked ? await window.GALLA_filterBlocked(data, "user_id") : data;
+    if (!data2.length) { box.innerHTML = `<div class="hv-cmt-empty">첫 댓글을 남겨보세요.</div>`; const cn0 = q("#hvCommentN"); if (cn0) cn0.textContent = "0"; return; }
+    if (window.GALLA_userMap) await window.GALLA_userMap(data2.map((m) => m.user_id));
+    box.innerHTML = data2.map((m) => cmtHTML(m, !!m.parent_id)).join("");
+    const cn = q("#hvCommentN"); if (cn) cn.textContent = shortNum(data2.length);
   }
   function setReply(id, nick) {
     replyTo = id;

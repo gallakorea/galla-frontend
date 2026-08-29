@@ -130,6 +130,14 @@
       try {
         const { error } = await sb().from("user_blocks").upsert({ blocker_id: uid, blocked_id: cfg.authorId }, { onConflict: "blocker_id,blocked_id" });
         if (error) throw error;
+        /* 🔴 캐시를 여기서 안 채우면 **차단이 이번 세션 내내 안 먹는다.**
+           GALLA_blockedIds()는 window.__GALLA_BLOCKED__를 한 번만 채우고 무효화 지점이 없었다
+           → 피드는 앱을 껐다 켜기 전까지 차단한 사람 글을 계속 보여준다(실측 2026-08-29 AOS).
+           차단은 "지금 안 보이게 해달라"는 요청이다 — 다음 실행까지 미룰 수 없다. */
+        try {
+          if (!(window.__GALLA_BLOCKED__ instanceof Set)) window.__GALLA_BLOCKED__ = new Set();
+          window.__GALLA_BLOCKED__.add(cfg.authorId);
+        } catch (_) {}
         close();
         toast("차단했어요.");
         if (cfg.onBlocked) cfg.onBlocked();
@@ -150,6 +158,27 @@
     const { data: rows } = await client.from("user_blocks").select("blocked_id").eq("blocker_id", uid);
     window.__GALLA_BLOCKED__ = new Set((rows || []).map(r => r.blocked_id));
     return window.__GALLA_BLOCKED__;
+  };
+
+  /* 캐시를 버리고 다음 호출 때 서버에서 다시 읽게 한다.
+     차단 해제·계정 전환처럼 목록이 바뀌는 지점에서 부르면 된다. */
+  window.GALLA_blockedRefresh = function () { window.__GALLA_BLOCKED__ = null; };
+
+  /* 🚫 차단한 사람 것 걸러내기 — 목록을 받아 그 사람 행만 뺀다.
+     차단 안내는 "이 사용자의 갈라·**댓글**이 더 이상 보이지 않습니다"라고 약속하는데,
+     실제로는 홈 피드에서만 걸렀다(실측 2026-08-29: 차단 후에도 이슈 댓글 12개 중 10개가 그대로 보였다).
+     rows 는 그대로 두고 새 배열을 돌려준다. 차단이 없으면 원본을 그대로 반환(무동작). */
+  window.GALLA_filterBlocked = async function (rows, key) {
+    if (!Array.isArray(rows) || !rows.length) return rows;
+    try {
+      const blocked = await window.GALLA_blockedIds();
+      if (!blocked || !blocked.size) return rows;
+      const k = key || "author_id";
+      return rows.filter((r) => {
+        const id = r && (r[k] ?? r.author_id ?? r.user_id);
+        return !id || !blocked.has(id);
+      });
+    } catch (_) { return rows; }
   };
 
   window.GALLA_openReportMenu = openMenu;

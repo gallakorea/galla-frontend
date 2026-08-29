@@ -226,7 +226,9 @@
     const { data: rows } = await supabase.from("galla_news_comments")
       .select("id,user_id:author_id,content,created_at,parent_id,is_anonymous,ghost_seed,locale").eq("news_id", newsId)
       .order("created_at", { ascending: true }).limit(500);
-    const profs = await fetchProfiles((rows || []).map((c) => c.user_id));
+  // 🚫 차단한 사람 댓글 제거 — 차단 안내가 '댓글도 안 보인다'고 약속한다(홈 피드만 걸러졌었다).
+    const rows2 = window.GALLA_filterBlocked ? await window.GALLA_filterBlocked(rows || [], "user_id") : (rows || []);
+    const profs = await fetchProfiles(rows2.map((c) => c.user_id));
     const ids = (rows || []).map((c) => c.id);
     const likeAgg = {}; const myLikes = new Set();
     if (ids.length) {
