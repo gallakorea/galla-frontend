@@ -4,7 +4,7 @@
 표면(페이지 68 · 엣지함수 47 · JS 154 · 데이터 테이블)을 기준으로 만들었다.
 
 상태 표기: `✅` 확인함(DB까지) · `🔶` 부분 · `❌` 미확인 · `⛔` 막힘(사유 명시)
-마지막 갱신: 2026-08-29 (2차 — 코드 대조로 15개 표면 누락 발견해 3-B·6-B·10-B·12장 추가)
+마지막 갱신: 2026-08-29 (3차 — 크론 46 · RPC 631 · 스토리지 · 네이티브 권한 층 추가)
 
 ---
 
@@ -293,6 +293,60 @@
 | 부가 | translate · gif-search · link-preview · article-reader · check-issue · galla-stt · ga-sync · yt | 각 기능 동작 | ❌ |
 
 
+## 10-D. 크론 46개 — 스케줄 층 (⚠️ 3차 대조에서 발견)
+
+페이지·엣지함수·테이블 어디에도 안 걸리는 층이다. **화면이 멀쩡해도 여기가 죽으면 앱이 서서히 빈다.**
+확인: `select jobname, schedule, active from cron.job;` · 실패: `cron.job_run_details where status<>'succeeded'`
+
+| 묶음 | 잡 | 확인할 것 | 상태 |
+|---|---|---|---|
+| 뉴스 수집 | collect_raw_news(5분) · collect_rss_news(10분) · categorize_raw_news(10분) · group_related_news(15분) · fetch_article_thumbnail · fetch_missing_thumbnails · heal_news_thumbs | 수집량 · 썸네일 결손 | ❌ |
+| 뉴스 생성·정리 | generate_galla_news(30분) · purge_galla_news_daily · purge_old_news_daily | 품질 · 보존기간 | ❌ |
+| 트렌드 | collect_external_trends(20분) · collect_youtube_hot(30분) · community_hot_collect/generate · hot_scores(10분) | 급상승 델타 · 중복 | ❌ |
+| 예측 | predict_markets_generate · predict_issue_market · predict_auto_resolve(매시) · predict_season_rollover · season_rollover | 자동생성 5개 · 오판정 | ❌ |
+| 이슈 | settle-due-issues(매시) | 마감·정산 | ❌ |
+| 갈비스 | galvis_ping_daily · friend_memory_maintain · curate-sft-daily · distill-failures-daily · craft-exemplars · galvis-craftbench/redteam(주간) | 선톡·기억정리·학습데이터 | ❌ |
+| 추천·통계 | feed_signals_rollup(15분) · snapshot_daily_views · gallian_cache_refresh · pattern_perf_score · ga_sync(10분) | 집계 정확성 | ❌ |
+| 미디어 | video_migrate(5분) · purge_orphan_media · media_ref_refresh | 이관·고아정리 | ❌ |
+| 운영 | bug_hunt(30분) · client_errors_purge · ai_user_usage_purge · ai_window_sweep · dm-expire-sweep(5분) · secret-mailbox-sweep · weather_sync(10분) · indexnow_ping | 자동스캔·정리 | ❌ |
+
+⚠️ **크론 인증 함정**: Authorization 헤더 없이 부르면 401 인데 `job_run_details` 에는 `succeeded` 로 남는다.
+   "돌고 있다"가 아니라 **산출물이 늘었는지**로 확인해야 한다.
+   현재(2026-08-29): 46개 전부 active · 최근 3일 실패 0건 — 다만 위 이유로 이것만으로는 부족하다.
+
+## 10-E. RPC 631개 · 스토리지 · 실시간
+
+| 항목 | 확인할 것 | 상태 |
+|---|---|---|
+| **RPC 631개** — SECURITY DEFINER 권한 가드 | `current_user` 로 권한 판정하면 구멍(소유자로 평가됨) | ❌ |
+| 핵심 RPC 회귀 | place_bet · battle_action · submit_bug · get_my_account · gp_wallet · predict_state · open_room_create · log_share · claim_tour_bonus | ❌ |
+| **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ❌ |
+| R2 버킷(galla-media) | CORS · 공개 URL · 고아 파일 | ❌ |
+| **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ❌ |
+| DB 트리거 | 알림 발생(notify 브릿지) · 카운터 갱신 | ❌ |
+| RLS 정책 회귀 | 남의 글 수정·삭제 차단 · PII 컬럼권한 | ❌ |
+
+## 9-B. 네이티브 플러그인·권한 (실기기 필요)
+
+| 항목 | iOS | AOS |
+|---|---|---|
+| @capacitor/app — 딥링크·백그라운드 복귀 | ✅ | ✅ |
+| @capacitor/push-notifications | ❌ | ⛔ Firebase 미설정 |
+| @capacitor/keyboard — resize:native | 🔶 | ❌ |
+| @capacitor/haptics | ❌ | ❌ |
+| @capacitor/browser — 외부링크 | ❌ | ❌ |
+| @capacitor/app-launcher — 택시·배달 딥링크 | ❌ | ❌ |
+| cordova-plugin-purchase — IAP | ⛔ 상품 미등록 | ⛔ |
+| cordova-plugin-iosrtc — 통화 | ⛔ 보류 | — |
+| **권한: 카메라** | ❌ | ❌ |
+| **권한: 마이크** | ❌ | ❌ |
+| **권한: 사진 라이브러리(읽기·쓰기)** | ❌ | ❌ |
+| **권한: 위치**(날씨) | ❌ | ❌ |
+| **권한: 알림** | ❌ | ❌ |
+| 권한: 음성인식(iOS)·블루투스 | ❌ | — |
+| 권한 거부 후 재요청 동선(help-permissions) | ❌ | ❌ |
+
+
 ## 12. 품질 축 (기능 아님 — 놓치기 쉬움)
 
 | 항목 | 상태 |
@@ -310,7 +364,7 @@
 ## 13. 페이지 대조표 (68개 — 고아 없는지 확인용)
 
 기능명으로만 적으면 페이지가 조용히 빠진다. 새 페이지가 생기면 여기에 줄을 추가한다.
-확인: `for f in *.html; do grep -q "$f" docs/qa-checklist.md || echo "$f"; done`
+확인: `for f in *.html; do grep -q "$(basename $f .html)" docs/qa-checklist.md || echo "$f"; done`
 
 | 장 | 페이지 |
 |---|---|
@@ -324,6 +378,7 @@
 | 7 경제 | wallet · charges · gp-history · quest · grade · season · **donation** · **donation-usage** · settlement · revenue-settlement · withdraw · withdraw-done · creator |
 | 8 설정 | settings · account-edit · mypage · saved · **support** · help-permissions · privacy · terms |
 | 10 운영 | admin · admin-login |
+| 셸 | app(SPA 셸) · index(피드) · shorts.html(고아) |
 | — 제외 | nav-test* · agora-test · mic-test · preview · offline · app-shell · naver인증 · **shorts(고아 프로토타입)** |
 
 ### 이번 대조로 추가된 미커버 항목
@@ -337,6 +392,40 @@
 | **관리자 로그인(admin-login)** 권한 게이트 | ❌ |
 | **shorts.html** — 아무 데서도 링크 안 되는 고아 페이지(삭제 검토) | 🔶 |
 
+
+## 14. 이 목록이 완전한지 검사하는 법 (⚠️ 제일 중요)
+
+이 문서는 **세 번 다시 썼다.** 매번 "다 넣었다"고 생각했고 매번 빠졌다:
+  1차(기억으로) → 2차에서 51개 누락 발견 → 3차에서 크론·RPC·권한 층 또 발견.
+**기억으로 점검하면 반드시 빠진다.** 아래를 돌려서 고아를 찾는다.
+
+```bash
+cd ~/Developer/GitHub/galla-frontend
+D=docs/qa-checklist.md
+
+# ① 페이지
+for f in *.html; do grep -q "$(basename $f .html)" $D || echo "페이지 누락: $f"; done
+
+# ② 엣지 함수
+for f in $(ls supabase/functions | grep -v _shared); do grep -q "$f" $D || echo "함수 누락: $f"; done
+
+# ③ JS 모듈(기능 단위 — 새 기능은 대개 새 파일로 온다)
+for f in js/*.js; do b=$(basename $f .js); grep -qi "$b" $D || echo "모듈 미언급: $b"; done
+
+# ④ 크론 (SQL Editor)
+#   select jobname from cron.job order by 1;   → 10-D 와 대조
+# ⑤ 행이 쌓이는 테이블 (SQL Editor)
+#   select relname, n_live_tup from pg_stat_user_tables where n_live_tup>0 order by 2 desc;
+# ⑥ 네이티브 플러그인
+#   cd ../galla-app && python3 -c "import json;d=json.load(open('package.json'));print([k for k in d['dependencies'] if 'capacitor' in k or 'cordova' in k])"
+```
+
+③은 노이즈가 많다(공용 유틸도 잡힌다). 그래도 **새 기능 파일이 목록에 없으면 눈에 띈다.**
+
+### 갱신 규칙
+- 새 페이지·엣지함수·크론·플러그인을 추가하면 **같은 커밋에서** 이 문서에 줄을 추가한다.
+- 칸은 ✅🔶❌⛔ 넷 중 하나만. "아마 될 것"은 ❌ 다.
+- ✅ 는 **DB 행 또는 실제 산출물**을 본 것만. 화면 토스트는 근거가 아니다.
 
 ---
 
