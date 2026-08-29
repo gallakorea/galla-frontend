@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0830001"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0830002"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>정산 내역 - GALLA</title>
 
@@ -41,54 +41,24 @@
         출금 가능 금액은 매월 5일 이후 업데이트됩니다.
     </div>
 
-    <!-- SUMMARY -->
+    <!-- 🔴 여기 있던 ₩1,240,000 · ₩840,000 · 월별 내역(₩980,000 등)은 **디자인 목업 숫자**였다.
+         수익이 0인 계정에도 그대로 보였고, 바로 아래 '출금 요청하기'가 주민등록증을 받는
+         withdraw.html 로 이어졌다 — 가짜 금액을 보고 실명·주민번호를 넣게 되는 흐름이다.
+         (실측 2026-08-30: 테스트 계정 수익 0, 화면엔 124만원)
+         실제 정산 화면은 settlement.html(데이터 연동, ₩0 로 정확히 표시)이다.
+         결제(PG) 연동 전까지는 크리에이터 센터와 같은 문구로 통일한다. -->
     <section class="section">
         <div class="summary-card">
-            <div class="sum-row">
-                <span>이번 달 총 수익</span>
-                <span class="num">₩ 1,240,000</span>
+            <div class="sum-row" style="justify-content:center;padding:18px 0">
+                <span style="font-size:15px;font-weight:800">🚧 아직 준비 중입니다</span>
             </div>
-            <div class="sum-row">
-                <span>출금 가능 금액</span>
-                <span class="num">₩ 840,000</span>
+            <div style="padding:0 4px 16px;font-size:13.5px;line-height:1.6;color:#8b8b93;text-align:center">
+                후원 결제와 출금은 <b>결제(PG) 연동 전</b>이라 실제 송금이 이뤄지지 않습니다.<br>
+                지금까지의 정산 기록은 <b>정산 내역</b>에서 볼 수 있어요.
             </div>
-
-            <button class="withdraw-btn" onclick="(window.GALLA_nav||function(u){location.href=u})('withdraw.html')">
-                출금 요청하기
+            <button class="withdraw-btn" onclick="(window.GALLA_nav||function(u){location.href=u})('settlement.html')">
+                정산 내역 보기
             </button>
-        </div>
-    </section>
-
-    <!-- DETAIL LIST -->
-    <section class="section">
-        <div class="section-title">📄 월별 정산 내역</div>
-
-        <div class="settle-list">
-
-            <div class="settle-item">
-                <div class="left">
-                    <div class="month">2025년 12월</div>
-                    <div class="desc">후원 금액 + 광고 보상</div>
-                </div>
-                <div class="amount">₩ 1,240,000</div>
-            </div>
-
-            <div class="settle-item">
-                <div class="left">
-                    <div class="month">2025년 11월</div>
-                    <div class="desc">후원 금액 + 광고 보상</div>
-                </div>
-                <div class="amount">₩ 980,000</div>
-            </div>
-
-            <div class="settle-item">
-                <div class="left">
-                    <div class="month">2025년 10월</div>
-                    <div class="desc">후원 금액 + 광고 보상</div>
-                </div>
-                <div class="amount">₩ 1,120,000</div>
-            </div>
-
         </div>
     </section>
 
