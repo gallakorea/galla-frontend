@@ -6,6 +6,22 @@
 
 window.CURRENT_ISSUE_ID = null;
 
+/* ── 뷰 스코프 조회 ────────────────────────────────────────────────
+   🔴 SPA 스택에는 이슈 상세 뷰가 여러 장 겹쳐 쌓인다(#battle-zone 이 문서에 2개가 된다).
+      document.getElementById 는 **문서 순서상 먼저 쌓인 옛 뷰**를 돌려주므로,
+      두 번째로 연 이슈(릴스 → 게시물, 관련 이슈 타고 들어가기 등)는 댓글 대전이
+      통째로 안 붙는다 — 라벨이 '👍 진영' 기본값 그대로 남고 목록이 빈 채로 멈춘다
+      (실측 2026-08-29 iOS 네이티브. issue.js 는 이미 qs()로 스코프를 잡고 있어
+       제목·요약·투표바만 새 뷰에 제대로 그려져 원인이 가려져 있었다).
+      그래서 mount 된 루트 안에서 먼저 찾고, 없을 때만 문서로 폴백한다
+      (cmm-css 처럼 head/body 에 붙는 것 때문에 폴백이 필요하다).
+      querySelectorAll 은 폴백하지 않는다 — 폴백하면 옛 뷰의 댓글을 건드린다. */
+let ROOT = document;
+const scoped = () => (ROOT !== document && ROOT && ROOT.querySelector) ? ROOT : null;
+const $id = id => { const r = scoped(); return (r && r.querySelector("#" + id)) || document.getElementById(id); };
+const $q  = sel => { const r = scoped(); return (r && r.querySelector(sel)) || document.querySelector(sel); };
+const $qa = sel => { const r = scoped(); return r ? r.querySelectorAll(sel) : document.querySelectorAll(sel); };
+
 let BATTLE_MODE = null;
 // BATTLE_MODE = { type: "attack"|"defend", targetId, targetUser } — 인라인 컴포저가 소유
 
@@ -115,7 +131,7 @@ async function refreshShields() {
 }
 /* 보호막 상태를 유닛에 표시 — 공격자가 '왜 반만 들어가지?'를 바로 알게 */
 function paintShields() {
-  document.querySelectorAll(".comment, .reply").forEach(el => {
+  $qa(".comment, .reply").forEach(el => {
     const on = isShielded(el);
     el.classList.toggle("shielded", on);
     let b = el.querySelector(":scope > .head .shield-badge");
@@ -205,7 +221,8 @@ function renderCommentText(text) {
   return html;
 }
 
-export async function initCommentSystem(issueId) {
+export async function initCommentSystem(issueId, root) {
+  ROOT = root || document;
   window.CURRENT_ISSUE_ID = issueId;
   console.log("💬 initCommentSystem:", issueId);
 
@@ -230,18 +247,18 @@ export async function initCommentSystem(issueId) {
     new Promise(r => setTimeout(r, 60)),
   ]);
 
-  const zone = document.getElementById("battle-zone");
+  const zone = $id("battle-zone");
   if (!zone) {
     console.warn("[comments] battle-zone not found");
     return;
   }
 
   // 전선 라벨 = 글쓴이가 정한 진영 이름
-  const alPro = document.getElementById("al-pro");
-  const alCon = document.getElementById("al-con");
+  const alPro = $id("al-pro");
+  const alCon = $id("al-con");
   if (alPro) alPro.textContent = fLabel("pro");
   if (alCon) alCon.textContent = fLabel("con");
-  const bdCon = document.getElementById("bd-con-name");
+  const bdCon = $id("bd-con-name");
   if (bdCon) bdCon.textContent = fName("con");   // 구분선 '여기부터 OO 진영'
   initZoneIndicator();                            // 🧭 스크롤 추적 현재구역 표시
 
@@ -318,8 +335,8 @@ async function ensureReplyQuota() {
 }
 
 async function initComposerUI() {
-  const bottom = document.querySelector(".battle-input-bottom");
-  const input = document.getElementById("battle-comment-input");
+  const bottom = $q(".battle-input-bottom");
+  const input = $id("battle-comment-input");
   if (!bottom) return;
 
   // 미투표: 잠금 안내 — 진영은 투표로만 정해진다
@@ -354,7 +371,7 @@ async function initComposerUI() {
 
   // 👻 유령 토글 — 공용 바인더(ghost.js: 상태 라벨·페르소나 토스트·구매 유도 내장)
   if (window.GALLA_ghostBind) {
-    window.GALLA_ghostBind(document.getElementById("ghost-toggle"), {
+    window.GALLA_ghostBind($id("ghost-toggle"), {
       onChange: (on) => {
         GHOST_ON = on;
         if (input) input.placeholder = on ? "👻 유령으로 참전 중…" : (INFILTRATE ? input.placeholder : "아군 전선에 새 의견 쓰기…");
@@ -363,7 +380,7 @@ async function initComposerUI() {
     });
   }
 
-  document.getElementById("infiltrate-btn").addEventListener("click", async () => {
+  $id("infiltrate-btn").addEventListener("click", async () => {
     if (!INFILTRATE && INFIL_LEFT <= 0) {
       // 🕵️ 침투권 보유 시 한도 +1 제안
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
@@ -376,12 +393,12 @@ async function initComposerUI() {
       const { data: ur } = await window.supabaseClient.rpc("use_infiltrate_pass");
       if (!ur?.ok) { alert("침투권 사용에 실패했어요."); return; }
       INFIL_LEFT += 1;
-      const cntEl = document.getElementById("infil-left");
+      const cntEl = $id("infil-left");
       if (cntEl) cntEl.textContent = INFIL_LEFT;
       window.BattleFX?.banner?.("🕵️ 침투권 사용! 한도 +1", "cheer");
     }
     INFILTRATE = !INFILTRATE;
-    const box = document.getElementById("composer-side");
+    const box = $id("composer-side");
     box.classList.toggle("infiltrating", INFILTRATE);
     box.querySelector(".cs-flag").innerHTML = INFILTRATE
       ? `🕵️ <b>${enemyLabel} 진영 침투 모드</b> — 적진에 글이 올라갑니다`
@@ -395,16 +412,16 @@ async function initComposerUI() {
 
 function consumeInfiltration() {
   INFIL_LEFT = Math.max(0, (INFIL_LEFT ?? 3) - 1);
-  const el = document.getElementById("infil-left");
+  const el = $id("infil-left");
   if (el) el.textContent = INFIL_LEFT;
   // 모드 해제 (1회 소모 후 복귀)
   INFILTRATE = false;
-  const box = document.getElementById("composer-side");
+  const box = $id("composer-side");
   if (box) {
     box.classList.remove("infiltrating");
     box.querySelector(".cs-flag").innerHTML = `🎖 ${fLabel(ME.faction)} 진영으로 참전 중`;
   }
-  const input = document.getElementById("battle-comment-input");
+  const input = $id("battle-comment-input");
   if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
 }
 
@@ -419,7 +436,7 @@ function chatRoomLabel() {
 }
 
 function ensureChatUI() {
-  let sheet = document.getElementById("faction-chat");
+  let sheet = $id("faction-chat");
   if (sheet) return sheet;
   sheet = document.createElement("div");
   sheet.id = "faction-chat";
@@ -482,7 +499,7 @@ async function openFactionChat() {
   refreshNanjangBadge();   // 🔥 이미 열린 진영 난장이 있으면 '재입장 · N명' 배지
 
   // 최근 50개 로드 (RLS가 내 진영만 반환)
-  const list = document.getElementById("fc-list");
+  const list = $id("fc-list");
   list.innerHTML = `<div class="fc-loading">불러오는 중…</div>`;
   const { data: msgs, error } = await supabase
     .from("faction_chats")
@@ -512,7 +529,7 @@ async function openFactionChat() {
       if (m.faction !== ME.faction) return;            // 안전망 (RLS가 1차 차단)
       if (m.user_id === ME.userId) return;             // 내 메시지는 전송 시 이미 그림
       await fetchFeedNicks([m.user_id]);
-      const l = document.getElementById("fc-list");
+      const l = $id("fc-list");
       if (!l) return;
       l.querySelector(".fc-loading")?.remove();
       l.insertAdjacentHTML("beforeend", chatMsgHTML(m));
@@ -523,7 +540,7 @@ async function openFactionChat() {
 }
 
 function closeFactionChat() {
-  const sheet = document.getElementById("faction-chat");
+  const sheet = $id("faction-chat");
   sheet?.classList.remove("open");
   CHAT_OPEN = false;
   if (CHAT_CHANNEL) { window.supabaseClient.removeChannel(CHAT_CHANNEL); CHAT_CHANNEL = null; }
@@ -534,7 +551,7 @@ function closeFactionChat() {
    (반대 진영을 한 방에 몰아넣는 유도는 없음 — 그건 개싸움이 되니까. 각 진영은 각자의 난장.) */
 /* 이미 열린 우리 진영 난장이 있으면 버튼을 '재입장 · N명 참전 중'으로 — issue_faction_room_peek */
 async function refreshNanjangBadge() {
-  const btn = document.getElementById("fc-nanjang");
+  const btn = $id("fc-nanjang");
   if (!btn) return;
   try {
     const { data } = await window.supabaseClient.rpc("issue_faction_room_peek", { p_issue: window.CURRENT_ISSUE_ID });
@@ -551,7 +568,7 @@ async function escalateToNanjang() {
   if (NANJANG_BUSY) return;
   const supabase = window.supabaseClient;
   if (!ME.faction) { alert("난장은 투표한 사람만 — 먼저 진영을 정해 주세요!"); return; }
-  const btn = document.getElementById("fc-nanjang");
+  const btn = $id("fc-nanjang");
   NANJANG_BUSY = true;
   if (btn) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.innerHTML = "🔥 난장 판 까는 중…"; }
   try {
@@ -593,7 +610,7 @@ async function sendFactionChat(input) {
     alert("전송에 실패했어요. 진영 투표 상태를 확인해 주세요.");
     return;
   }
-  const l = document.getElementById("fc-list");
+  const l = $id("fc-list");
   l.querySelector(".fc-loading")?.remove();
   l.insertAdjacentHTML("beforeend", chatMsgHTML(data));
   l.scrollTop = l.scrollHeight;
@@ -790,9 +807,9 @@ function applyHpToUnit(unit, hp) {
 
 /* 진영 사기 게이지 (전투력 tug-of-war) */
 function renderMorale() {
-  const host = document.querySelector(".comment-war-header");
+  const host = $q(".comment-war-header");
   if (!host) return;
-  let bar = document.getElementById("battle-morale");
+  let bar = $id("battle-morale");
   if (!bar) {
     bar = document.createElement("div");
     bar.id = "battle-morale";
@@ -880,19 +897,19 @@ function renderMorale() {
 /* 🏆 명예의 전당(빌보드) — 영향력 최상위 댓글 TOP3(진영색). 클릭 시 그 댓글로 스크롤.
    b1ebefb 단일리스트 개편 때 사라졌던 빌보드 복원(사장님 요청). allRows만 써서 추가쿼리 0. */
 function renderBillboard() {
-  const host = document.querySelector(".comment-war-header");
+  const host = $q(".comment-war-header");
   if (!host) return;
   const ranked = allRows
     .filter(c => (c.faction === "pro" || c.faction === "con") && influence(c) > 0)
     .sort((a, b) => influence(b) - influence(a))
     .slice(0, 3);
-  let box = document.getElementById("battle-billboard");
+  let box = $id("battle-billboard");
   if (!ranked.length) { if (box) box.remove(); return; }
   if (!box) {
     box = document.createElement("div");
     box.id = "battle-billboard";
     box.className = "billboard-board";
-    (document.getElementById("battle-morale") || host).after(box);
+    ($id("battle-morale") || host).after(box);
   }
   const medals = ["🥇", "🥈", "🥉"];
   const nameOf = (c) => c.is_anonymous ? "익명 전사" : (profileMap[c.user_id]?.nickname || actorName(c.user_id));
@@ -911,7 +928,7 @@ function renderBillboard() {
   });
 }
 function scrollToComment(id) {
-  const el = document.querySelector(`.comment[data-id="${id}"], .reply[data-id="${id}"]`);
+  const el = $q(`.comment[data-id="${id}"], .reply[data-id="${id}"]`);
   if (!el) return;
   el.scrollIntoView({ behavior: "smooth", block: "center" });
   el.classList.add("hl");
@@ -928,17 +945,17 @@ function unbindZoneIndicator() {
   ZONE_LST = null;
 }
 function initZoneIndicator() {
-  const ind = document.getElementById("zone-indicator");
+  const ind = $id("zone-indicator");
   if (!ind) return;
   const hide = () => { if (!ind.hidden) { ind.hidden = true; ind.setAttribute("aria-hidden", "true"); } };
   const update = () => {
-    const pro = document.getElementById("pro-list");
-    const con = document.getElementById("con-list");
+    const pro = $id("pro-list");
+    const con = $id("con-list");
     if (!pro || !con) return hide();
     const refY = 96;                       // 헤더(64) 아래 기준선
     const pr = pro.getBoundingClientRect();
     const cr = con.getBoundingClientRect();
-    const div = document.querySelector(".battle-divider");
+    const div = $q(".battle-divider");
     let side = null;
     if (cr.top <= refY && cr.bottom >= refY) side = "con";
     else if (pr.top <= refY && pr.bottom >= refY) side = "pro";
@@ -963,7 +980,7 @@ function initZoneIndicator() {
   };
   // 스크롤 컨테이너: SPA 스택 뷰는 .view-host가 자체 스크롤(window 스크롤 이벤트가 안 옴).
   // MPA에선 .view-host가 없어 기존처럼 window.
-  const target = document.getElementById("battle-zone")?.closest(".view-host") || window;
+  const target = $id("battle-zone")?.closest(".view-host") || window;
   target.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
   ZONE_LST = { target, onScroll };
@@ -1019,9 +1036,9 @@ function feedLineHTML(a, isNew) {
 }
 
 function ensureFeedBox() {
-  let box = document.getElementById("battle-feed");
+  let box = $id("battle-feed");
   if (box) return box;
-  const anchor = document.getElementById("battle-morale") || document.querySelector(".comment-war-header");
+  const anchor = $id("battle-morale") || $q(".comment-war-header");
   if (!anchor) return null;
   box = document.createElement("div");
   box.id = "battle-feed";
@@ -1047,7 +1064,7 @@ async function initBattleFeed(issueId) {
       .limit(8);
     if (logs?.length) {
       await fetchFeedNicks(logs.map(l => l.user_id));
-      document.getElementById("bf-list").innerHTML = logs.map(l => feedLineHTML(l, false)).join("");
+      $id("bf-list").innerHTML = logs.map(l => feedLineHTML(l, false)).join("");
     }
   }
 
@@ -1098,7 +1115,7 @@ async function initBattleFeed(issueId) {
       if (c.parent_id) {
         const rootId = rootIdOf(c.id);
         (replyMap[rootId] ||= []).push(c);
-        const rootUnit = document.querySelector(`.comment[data-id="${rootId}"]`);
+        const rootUnit = $q(`.comment[data-id="${rootId}"]`);
         const repliesBox = rootUnit?.querySelector(":scope > .replies");
         if (repliesBox) {
           repliesBox.insertAdjacentHTML("beforeend", makeReply(c));
@@ -1109,7 +1126,7 @@ async function initBattleFeed(issueId) {
         }
       } else if (c.faction === "pro" || c.faction === "con") {
         state[c.faction].data.unshift(c);
-        const list = document.getElementById(c.faction + "-list");
+        const list = $id(c.faction + "-list");
         if (list && state[c.faction].page === 1) {
           list.querySelector(".empty-zone")?.remove();
           list.insertAdjacentHTML("afterbegin", makeComment(c));
@@ -1125,7 +1142,7 @@ async function initBattleFeed(issueId) {
 }
 
 function pushFeedLine(a) {
-  const list = document.getElementById("bf-list");
+  const list = $id("bf-list");
   if (!list) return;
   list.querySelector(".bf-empty")?.remove();
   list.insertAdjacentHTML("afterbegin", feedLineHTML(a, true));
@@ -1134,7 +1151,7 @@ function pushFeedLine(a) {
 
 /* 남이 때린/살린 HP 변동을 내 화면에도 반영 (본인 조작분은 로컬 연출과 중복돼도 무해) */
 function syncUnitHp(commentId, oldHp, newHp) {
-  const unit = document.querySelector(`.comment[data-id="${commentId}"], .reply[data-id="${commentId}"]`);
+  const unit = $q(`.comment[data-id="${commentId}"], .reply[data-id="${commentId}"]`);
   if (!unit) return;
   const shown = Number(unit.dataset.hp);
   if (shown === newHp) return; // 이미 로컬 연출로 반영됨
@@ -1227,12 +1244,12 @@ async function renderHonors() {
 
   await fetchFeedNicks(picks.map(p => p.e[0]));
 
-  let box = document.getElementById("battle-honors");
+  let box = $id("battle-honors");
   if (!box) {
     box = document.createElement("div");
     box.id = "battle-honors";
     box.className = "battle-honors";
-    (document.getElementById("battle-feed") || document.getElementById("battle-morale") || document.querySelector(".comment-war-header"))?.after(box);
+    ($id("battle-feed") || $id("battle-morale") || $q(".comment-war-header"))?.after(box);
   }
   box.innerHTML = `<div class="bh-title">🎖 전공 훈장</div><div class="bh-row">` +
     picks.map(p => `
@@ -1456,7 +1473,7 @@ function avatarHTML(c, size) {
 function openCommentMoreMenu({ uid, nick, cid }) {
   const meId = ME?.userId || null;
   const isOther = uid && uid !== meId;
-  document.getElementById("cmm-sheet")?.remove();
+  $id("cmm-sheet")?.remove();
   const sheet = document.createElement("div");
   sheet.id = "cmm-sheet";
   sheet.style.cssText = "position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-end;justify-content:center";
@@ -1472,7 +1489,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       ${opt("🔗", "이 댓글 공유", "share")}
       <button class="cmm-opt cancel" style="width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer">닫기</button>
     </div>`;
-  if (!document.getElementById("cmm-css")) {
+  if (!$id("cmm-css")) {
     const s = document.createElement("style"); s.id = "cmm-css";
     s.textContent = "@keyframes cmmUp{from{transform:translateY(100%)}}.cmm-opt:active{background:rgba(255,255,255,.06)!important}";
     document.head.appendChild(s);
@@ -1511,7 +1528,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       table: "comments", id: cid, bodyCol: "content", current: raw,
       onSaved: (txt) => {
         const row = allRows.find(r => String(r.id) === String(cid)); if (row) row.content = txt;
-        const unit = document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`);
+        const unit = $q(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`);
         const body = unit?.querySelector(":scope > .body");
         if (body) body.innerHTML = renderCommentText(txt);
       },
@@ -1521,7 +1538,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
     close();
     window.GALLA_cmtDelete?.({
       table: "comments", id: cid, soft: true,
-      onDone: () => { document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.remove(); },
+      onDone: () => { $q(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.remove(); },
     });
   });
   sheet.querySelector(".hl")?.addEventListener("click", async () => {
@@ -1534,7 +1551,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       return;
     }
     hlSet.add(Number(cid));
-    document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.classList.add("hl");
+    $q(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.classList.add("hl");
     window.BattleFX?.banner?.("✨ 하이라이트 적용! (24h)", "cheer");
   });
 }
@@ -1607,7 +1624,7 @@ let CD_TICKER = null;
 function startCooldownTicker() {
   if (CD_TICKER) return;
   CD_TICKER = setInterval(() => {
-    document.querySelectorAll("[data-cd]").forEach(el => {
+    $qa("[data-cd]").forEach(el => {
       const until = Number(el.dataset.until);
       const left = Math.ceil((until - Date.now()) / 1000);
       const action = el.dataset.cd;
@@ -1748,7 +1765,7 @@ function makeComment(c) {
 
 function renderSide(side) {
   const s = state[side];
-  const list = document.getElementById(side + "-list");
+  const list = $id(side + "-list");
   if (!list) {
     console.warn("renderSide target missing:", side);
     return;
@@ -1771,7 +1788,7 @@ function renderSide(side) {
 }
 
 function buildPager(side, total) {
-  const pager = document.getElementById(`${side}-pager`);
+  const pager = $id(`${side}-pager`);
   if (!pager) return;
   const s = state[side];
   pager.innerHTML = "";
@@ -1807,7 +1824,7 @@ function renderWarDashboard() {
   });
 
   const set = (id, v) => {
-    const el = document.getElementById(id);
+    const el = $id(id);
     if (!el) return;
     if (typeof v === "number" && window.GALLA_countUp) window.GALLA_countUp(el, v, "");
     else el.textContent = v;
@@ -1824,8 +1841,8 @@ function renderWarDashboard() {
   set("stat-def", w.def);
 
   // 승세 진영 강조 (왕관 + 글로우 펄스)
-  const proBox = document.querySelector(".bmw-box.pro");
-  const conBox = document.querySelector(".bmw-box.con");
+  const proBox = $q(".bmw-box.pro");
+  const conBox = $q(".bmw-box.con");
   proBox?.classList.toggle("win", w.pro.total > w.con.total);
   conBox?.classList.toggle("win", w.con.total > w.pro.total);
 }
@@ -1913,7 +1930,7 @@ function bindEvents() {
     const rm = e.target.closest(".rm-replies");
     if (rm) {
       e.stopPropagation();
-      const box = document.querySelector(`.replies[data-id="${rm.dataset.id}"]`);
+      const box = $q(`.replies[data-id="${rm.dataset.id}"]`);
       if (box) {
         box.scrollIntoView({ behavior: "smooth", block: "center" });
         box.classList.add("replies-flash");
@@ -2073,11 +2090,11 @@ function bindEvents() {
       }
 
       // 같은 댓글의 표시들 갱신 (빌보드/스레드에 중복 표시될 수 있음)
-      document.querySelectorAll(`.like[data-id="${id}"]`).forEach(el => {
+      $qa(`.like[data-id="${id}"]`).forEach(el => {
         el.textContent = "👍" + agg.up;
         el.classList.toggle("active-like", ME.likes.get(id) === 1);
       });
-      document.querySelectorAll(`.dislike[data-id="${id}"]`).forEach(el => {
+      $qa(`.dislike[data-id="${id}"]`).forEach(el => {
         el.textContent = "👎" + agg.down;
         el.classList.toggle("active-dislike", ME.likes.get(id) === -1);
       });
@@ -2114,7 +2131,7 @@ function bindEvents() {
    MPA에선 1회, SPA에선 mount마다 새 요소에 다시 걸린다. */
 function bindComposerEls() {
   // 입력창 자체도 로그인 게이트 — 미로그인이 탭/포커스하면 바로 로그인 유도(키보드 안 뜸)
-  const battleInput = document.getElementById("battle-comment-input");
+  const battleInput = $id("battle-comment-input");
   if (battleInput && !battleInput.__gateBound) {
     battleInput.__gateBound = true;
     const inputGate = (e) => {
@@ -2128,7 +2145,7 @@ function bindComposerEls() {
   }
 
   // 전송 — 하단 바는 '새 최상위 의견(참전/침투)' 전용. 전투 답글은 인라인 컴포저가 처리.
-  const submitBtn = document.getElementById("battle-comment-submit");
+  const submitBtn = $id("battle-comment-submit");
   if (submitBtn && !submitBtn.__bound) {
     submitBtn.__bound = true;
     submitBtn.addEventListener("click", async () => {
@@ -2140,7 +2157,7 @@ function bindComposerEls() {
       const unlock = () => { submitBtn.__busy = false; submitBtn.disabled = false; };
       try {
 
-      const input = document.getElementById("battle-comment-input");
+      const input = $id("battle-comment-input");
       if (!input) return;
 
       const supabase = window.supabaseClient;
@@ -2174,7 +2191,7 @@ function bindComposerEls() {
       if (error) {
         if (String(error.message || "").includes("no_ghost_pass")) {
           askShop("👻 유령권이 만료됐어요.");
-          GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on");
+          GHOST_ON = false; $id("ghost-toggle")?.classList.remove("on");
           return;
         }
         if (String(error.message || "").includes("infiltration_limit")) {
@@ -2227,7 +2244,7 @@ function bindComposerEls() {
       authorVoteMap[ME.userId] = ME.faction; // 침투 노출 판정에 내 실제 진영 반영
       allRows.unshift(newRow);
       state[side]?.data.unshift(newRow);
-      const list = document.getElementById(side + "-list");
+      const list = $id(side + "-list");
       if (list) {
         list.querySelector(".empty-zone")?.remove();
         list.insertAdjacentHTML("afterbegin", makeComment(newRow));
@@ -2246,7 +2263,7 @@ function bindComposerEls() {
    인라인 전투 컴포저 — 공격/방어를 '그 자리에서' 쓰고 결과도 그 자리에 남긴다
 ====================== */
 function ensureInlineComposer() {
-  let box = document.getElementById("inline-composer");
+  let box = $id("inline-composer");
   if (box) return box;
   box = document.createElement("div");
   box.id = "inline-composer";
@@ -2308,14 +2325,14 @@ function openInlineComposer(type, targetId, targetUser, unit) {
 }
 
 function closeInlineComposer() {
-  document.getElementById("inline-composer")?.remove();
+  $id("inline-composer")?.remove();
   BATTLE_MODE = null;
   document.body.classList.remove("kb-open");
 }
 
 async function submitInline() {
   if (!BATTLE_MODE) return;
-  const input = document.getElementById("ic-input");
+  const input = $id("ic-input");
   const text = (input?.value || "").trim();
   if (!text) { alert("의견을 입력하세요."); return; }
   const { type, targetId, targetUser } = BATTLE_MODE;
@@ -2345,7 +2362,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   if (insertErr) {
     if (String(insertErr.message || "").includes("no_ghost_pass")) {
       askShop("👻 유령권이 만료됐어요.");
-      GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on"); return;
+      GHOST_ON = false; $id("ghost-toggle")?.classList.remove("on"); return;
     }
     if (String(insertErr.message || "").includes("reply_limit")) {
       REPLY_LEFT = 0;
@@ -2366,7 +2383,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   });
   RESET_ARMED.delete(`${targetId}:${type}`);
   BREAK_ARMED.delete(String(targetId));
-  if (bd?.ok && bd.broke) breakerFx(document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`));
+  if (bd?.ok && bd.broke) breakerFx($q(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`));
   if (bd?.ok && (bd.broke || bd.shielded)) refreshShields();   // 방패 상태가 바뀌었으니 서버 기준으로 다시
 
   closeInlineComposer();
@@ -2376,7 +2393,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   allRows.unshift(newRow);
   (replyMap[rootId] ||= []).push(newRow);
 
-  const rootUnit = document.querySelector(`.comment[data-id="${rootId}"]`);
+  const rootUnit = $q(`.comment[data-id="${rootId}"]`);
   const repliesBox = rootUnit?.querySelector(":scope > .replies");
   if (repliesBox) {
     repliesBox.insertAdjacentHTML("beforeend", makeReply(newRow));
@@ -2385,11 +2402,11 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   }
 
   // FX + 대상 HP 반영
-  const targetUnit = document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
+  const targetUnit = $q(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
   if (bd?.ok && targetUnit) {
     // 쿨다운 로컬 시작 (서버 comment_actions와 동기)
     markAction(targetId, type);
-    document.querySelectorAll(`.action-${type}[data-id="${targetId}"]`).forEach(el => {
+    $qa(`.action-${type}[data-id="${targetId}"]`).forEach(el => {
       el.classList.add("cooldown");
       el.dataset.cd = type;
       el.dataset.until = String(Date.now() + BATTLE_COOLDOWN_MS);
@@ -2450,7 +2467,7 @@ function finishComposing(input) {
 /* 중립 플랫폼: 내 진영 기준(아군/적군)이 아니라 진영 자체로 색을 칠한다.
    찬성(pro) = 파랑 👍 / 반대(con) = 빨강 👎 */
 function applySideColoring() {
-  document.querySelectorAll(".comment, .reply").forEach(unit => {
+  $qa(".comment, .reply").forEach(unit => {
     let side =
       unit.dataset.side ||
       unit.querySelector(".reply-actions")?.dataset.side;
@@ -2509,7 +2526,7 @@ function applySideColoring() {
      (containing block이 뷰포트가 아님). visualViewport로 키보드 높이를 직접 계산해 올린다. */
   function kbLift() {
     if (!SPA()) return;
-    const bar = document.querySelector(".battle-input-bar");
+    const bar = $q(".battle-input-bar");
     if (!bar) return;
     const vv = window.visualViewport;
     const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
@@ -2525,7 +2542,7 @@ function applySideColoring() {
   const open = () => { document.body.classList.add("kb-open"); if (SPA()) { armVV(); setTimeout(kbLift, 80); setTimeout(kbLift, 350); } };
   const close = () => {
     document.body.classList.remove("kb-open");
-    const bar = document.querySelector(".battle-input-bar"); if (bar) bar.style.bottom = "";
+    const bar = $q(".battle-input-bar"); if (bar) bar.style.bottom = "";
   };
 
   document.addEventListener("focusin", (e) => { if (isInput(e.target)) open(); });
@@ -2547,8 +2564,8 @@ export function destroyCommentSystem() {
   try { if (FEED_CHANNEL) { window.supabaseClient.removeChannel(FEED_CHANNEL); FEED_CHANNEL = null; } } catch (_) {}
   try { closeFactionChat(); } catch (_) {}                 // CHAT_CHANNEL 해제 포함
   // body에 부착돼 뷰 제거로 안 사라지는 오버레이들
-  document.getElementById("faction-chat")?.remove();
-  document.getElementById("cmm-sheet")?.remove();
+  $id("faction-chat")?.remove();
+  $id("cmm-sheet")?.remove();
   try { closeInlineComposer(); } catch (_) {}
   // 전역 리스너(구역 표시 스크롤 추적)
   unbindZoneIndicator();
@@ -2561,4 +2578,5 @@ export function destroyCommentSystem() {
   BATTLE_MODE = null;
   ME.userId = null; ME.faction = null;
   ME.likes = new Map(); ME.actions = new Map();
+  ROOT = document;   // 떼어낸 뷰를 붙잡고 있지 않게 — 다음 mount 가 자기 루트를 넣는다
 }

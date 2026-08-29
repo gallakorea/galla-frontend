@@ -1,7 +1,7 @@
 import { loadAiArguments } from "./issue-argument.js?v=080325";
 import { loadAiNews } from "./issue-news.js?v=080325";
 import { loadStats } from "./issue.stats.js?v=080325";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0829050";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0829063";
 
 
 console.log("[issue.js] loaded");
@@ -34,8 +34,8 @@ function relLinkType(url) {
   return { icon: "🔗", label: "링크" };
 }
 function renderRelatedLinks(links) {
-  const sec = document.getElementById("related-links-sec");
-  const root = document.getElementById("related-links-list");
+  const sec = qs("related-links-sec");
+  const root = qs("related-links-list");
   if (!sec || !root) return;
   const list = Array.isArray(links) ? links : [];
   if (!list.length) { sec.hidden = true; return; }
@@ -214,10 +214,10 @@ if (typeof loadAiNews === "function") {
   whenNear(PAGE_ROOT.querySelector(".ai-news"), () => loadAiNews(issue));
 }
 /* 🔥 통계 — 스크롤 접근 시(또는 폴백) 로드 */
-whenNear(document.getElementById("stats-section"), () => loadStats(issue.id));
+whenNear(qs("stats-section"), () => loadStats(issue.id));
 
 /* 댓글 — 세션을 기다릴 수 있어(느림/실패 가능) 독립 로더들 뒤로 뺀다(차단 방지) */
-await initCommentSystem(issue.id);
+await initCommentSystem(issue.id, PAGE_ROOT);
 forceBattleScrollWithRetry();
 
   /* ===============================
@@ -258,7 +258,7 @@ async function checkLiveDuel(issueId) {
       .eq("issue_id", issueId).in("status", ["live", "voting"])
       .order("live_started_at", { ascending: false }).limit(1).maybeSingle();
     if (!data) return;
-    document.getElementById("duel-live-banner")?.remove();
+    qs("duel-live-banner")?.remove();
     const a = document.createElement("a");
     a.id = "duel-live-banner";
     a.className = "duel-live-banner";
@@ -274,7 +274,7 @@ async function checkLiveDuel(issueId) {
 }
 
 function renderIssueMedia(issue) {
-    const wrap = document.getElementById('issue-media-wrap');
+    const wrap = qs('issue-media-wrap');
     if (!wrap) return;
 
     // 🎠 혼합 캐러셀 — 사진·영상을 순서대로 한 캐러셀에(정규화기: 새 media[] / 레거시 자동승격)
@@ -419,8 +419,8 @@ function renderIssueMedia(issue) {
 }
 
 window.issueTogglePlay = function() {
-    const v = document.getElementById('issue-vid');
-    const o = document.getElementById('issue-play-ov');
+    const v = qs('issue-vid');
+    const o = qs('issue-play-ov');
     if (!v) return;
     if (v.paused) { v.play().catch(()=>{}); o?.classList.add('hidden'); }
     else { v.pause(); o?.classList.remove('hidden'); }
@@ -435,7 +435,7 @@ async function loadIssueMarket(issueId) {
       .eq('issue_id', issueId).eq('resolved', false)
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!m) return;
-    const anchor = document.getElementById('faction-section');
+    const anchor = qs('faction-section');
     if (!anchor) return;
     const prize = Math.round((m.total_pool || 0) + (m.jackpot_bonus || 0)).toLocaleString('ko-KR');
     const el = document.createElement('a');
@@ -453,7 +453,7 @@ async function loadIssueMarket(issueId) {
 }
 
 window.issueToggleMute = function() {
-    const v = document.getElementById('issue-vid');
+    const v = qs('issue-vid');
     if (!v) return;
     // 전역 선호를 뒤집어 인덱스·릴스와 통일(현재 재생 영상의 실제 음소거 기준)
     window.GALLA_setSound(v.muted);
@@ -470,7 +470,7 @@ window.issueOpenReels = function() {
         category: i.category || "", user_id: i.user_id || "",
         faction_a: i.faction_a || "", faction_b: i.faction_b || ""
     };
-    const v = document.getElementById('issue-vid');
+    const v = qs('issue-vid');
     const startTime = v && !isNaN(v.currentTime) ? v.currentTime : 0;   // 보던 위치 이어보기
     if (v) v.pause();
     if (typeof window.openShorts === 'function') {
@@ -480,7 +480,7 @@ window.issueOpenReels = function() {
 
 function sizeIssueCarousel() {
     const carousel = PAGE_ROOT.querySelector('.issue-carousel');
-    const slides = document.getElementById('issue-slides');
+    const slides = qs('issue-slides');
     if (!carousel || !slides) return;
     const w = carousel.clientWidth;
     if (!w) return;
@@ -497,9 +497,9 @@ window.issueCarouselGo = function(dir) {
     // clamp(끝에서 루프 안 함)
     issueCarouselIdx = Math.max(0, Math.min(issueCarouselTotal - 1, issueCarouselIdx + dir));
     const i = issueCarouselIdx;
-    const slides = document.getElementById('issue-slides');
-    const cnt = document.getElementById('issue-c-cnt');
-    const dots = document.getElementById('issue-c-dots');
+    const slides = qs('issue-slides');
+    const cnt = qs('issue-c-cnt');
+    const dots = qs('issue-c-dots');
     if (slides) {
         const W = slides.parentElement.offsetWidth;  // px 기반 정확 스냅
         slides.style.transition = 'transform .28s ease';
@@ -528,7 +528,7 @@ window.issueOpenReelsAt = function(i) {
         category: issue.category || "", user_id: issue.user_id || "",
         faction_a: issue.faction_a || "", faction_b: issue.faction_b || ""
     };
-    const v = document.querySelector(`.issue-slide[data-i="${i}"] .issue-cvid`);
+    const v = (PAGE_ROOT !== document ? PAGE_ROOT : document).querySelector(`.issue-slide[data-i="${i}"] .issue-cvid`);
     const startTime = v && !isNaN(v.currentTime) ? v.currentTime : 0;
     if (v) v.pause();
     if (typeof window.openShorts === 'function') window.openShorts([item], issue.id, startTime, 'detail');
@@ -536,10 +536,10 @@ window.issueOpenReelsAt = function(i) {
 
 async function wireIssueActions(issue) {
   const supabase = window.supabaseClient;
-  const likeBtn = document.getElementById("issue-like-btn");
-  const likeCount = document.getElementById("issue-like-count");
-  const saveBtn = document.getElementById("issue-save-btn");
-  const shareBtn = document.getElementById("issue-share-btn");
+  const likeBtn = qs("issue-like-btn");
+  const likeCount = qs("issue-like-count");
+  const saveBtn = qs("issue-save-btn");
+  const shareBtn = qs("issue-share-btn");
 
   if (shareBtn) shareBtn.onclick = () => {
     // 공유는 로그인 불필요 — 미로그인도 자유롭게 공유(바이럴 성장, 초대코드는 로그인 시 자동 부착)
@@ -549,7 +549,7 @@ async function wireIssueActions(issue) {
     else if (navigator.share) navigator.share({ title, url }).catch(() => {});
   };
   // 🤖 갈비스 진입 — 이 이슈 맥락으로 대화(버튼은 issue.html 정적, 여기서 id·제목 채움)
-  const gvBtn = document.getElementById("issue-galvis-btn");
+  const gvBtn = qs("issue-galvis-btn");
   if (gvBtn) { gvBtn.setAttribute("data-gv-id", issue.id || ""); gvBtn.setAttribute("data-gv-title", issue.title || ""); }
   if (!supabase) return;
 
@@ -590,7 +590,7 @@ function renderIssue(issue) {
 
   /* 팔로우 버튼: 정적 마크업이라 배선이 없었다(내 글에도 떠 있던 원인).
      공용 모듈(follow.js .js-follow)에 연결 — 상태 페인트·토글·내 글 숨김을 전부 위임 */
-  const fb = document.getElementById("follow-btn");
+  const fb = qs("follow-btn");
   if (fb) {
     if (issue.user_id && !issue.is_anonymous) {
       fb.classList.add("js-follow");
@@ -602,7 +602,7 @@ function renderIssue(issue) {
   }
 
   // 헤더 ⋯ : 소유자·관리자 → 수정/삭제, 아니면 → 신고/차단
-  const moreBtn = document.getElementById("header-more-btn");
+  const moreBtn = qs("header-more-btn");
   if (moreBtn) {
     moreBtn.onclick = async () => {
       const canManage = window.GALLA_canManage ? await window.GALLA_canManage(issue.user_id) : false;
@@ -975,8 +975,8 @@ async function loadRemixCounts(issueId) {
   const pro = data?.filter(r => r.remix_stance === "pro").length || 0;
   const con = data?.filter(r => r.remix_stance === "con").length || 0;
 
-  const proEl = document.getElementById("remix-pro-count");
-  const conEl = document.getElementById("remix-con-count");
+  const proEl = qs("remix-pro-count");
+  const conEl = qs("remix-con-count");
 
   if (!proEl || !conEl) return;
 
@@ -1047,16 +1047,16 @@ async function checkAuthorSupport(issueId) {
 }
 
 function initSupportModal() {
-  const supportModal = document.getElementById("support-modal");
+  const supportModal = qs("support-modal");
   if (!supportModal || supportModal.__bound) return;
   supportModal.__bound = true;
 
   /* 열기 */
-  document.getElementById("support-pro-btn")?.addEventListener("click", () => {
+  qs("support-pro-btn")?.addEventListener("click", () => {
     supportModal.removeAttribute("hidden");
   });
 
-  document.getElementById("support-con-btn")?.addEventListener("click", () => {
+  qs("support-con-btn")?.addEventListener("click", () => {
     supportModal.removeAttribute("hidden");
   });
 
@@ -1088,7 +1088,7 @@ function initSupportModal() {
 function forceBattleScroll() {
   if (location.hash !== "#battle-zone") return;
 
-  const el = document.getElementById("battle-zone");
+  const el = qs("battle-zone");
   if (!el) return;
 
   const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
@@ -1102,7 +1102,7 @@ function forceBattleScrollWithRetry() {
   const timer = setInterval(() => {
     tries++;
 
-    const el = document.getElementById("battle-zone");
+    const el = qs("battle-zone");
     if (el) {
       clearInterval(timer);
       setTimeout(forceBattleScroll, 120);
