@@ -4,7 +4,16 @@
    - 현재 페이지·기기·뷰포트·앱버전 자동 첨부
    ========================================================= */
 (function () {
+  /* 🔴 예전엔 '문서에서 처음 발견되는 ?v= 스크립트' 의 스탬프를 썼다. 그건 배포 도장이 아니라
+     아무 자산의 값이라, 도장이 0829030 인데 제보에는 0814140 이 찍혔다(실측 2026-08-29).
+     제보의 버전으로 빌드를 특정할 수 없으면 "안 보인다" 류 제보를 추적할 방법이 사라진다 —
+     이 필드가 그러라고 있는 것이다. 배포 도장을 1순위로 읽는다. */
   const APPV = (function () {
+    try {
+      const m = document.querySelector('meta[name="galla-ver"]');
+      if (m && m.content) return m.content;
+    } catch (e) {}
+    if (window.GALLA_V) return String(window.GALLA_V);
     const s = [...document.scripts].map((x) => x.src).find((u) => /[?&]v=/.test(u));
     return s ? ((s.match(/[?&]v=([^&]+)/) || [])[1] || "") : "";
   })();
