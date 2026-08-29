@@ -13,6 +13,16 @@ Disallow: /admin-login.html
 Disallow: /auth/
 Disallow: /withdraw.html
 Disallow: /withdraw-done.html
+# 💰 개인 금융·계정 화면 — 공개 콘텐츠가 없고 색인될 이유가 없다(2026-08-30 추가)
+Disallow: /revenue-settlement.html
+Disallow: /settlement.html
+Disallow: /gp-history.html
+Disallow: /wallet.html
+Disallow: /charges.html
+Disallow: /saved.html
+Disallow: /dm.html
+Disallow: /quest.html
+Disallow: /login-history.html
 Disallow: /confirm.html
 Disallow: /confirm.remix.html
 Disallow: /notifications.html
