@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0829155"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0829171"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>계정 정보 수정 - GALLA</title>
 
@@ -88,12 +88,16 @@
 
     </main>
 
+    <!-- 🔴 STICKY SAVE — 반드시 #app **안**에 있어야 한다.
+         SPA 뷰 로더는 #app 안만 추출한다 → 밖에 두면 네이티브 앱에서 저장 버튼이
+         통째로 사라진다(실측 2026-08-29 AOS: 프로필을 고쳐도 저장할 수가 없었다).
+         position:fixed 라 안으로 옮겨도 화면상 위치는 그대로다. -->
+    <div class="ae-save-bar">
+        <button class="ae-save" id="saveBtn">변경사항 저장</button>
+    </div>
+
 </div>
 
-<!-- STICKY SAVE -->
-<div class="ae-save-bar">
-    <button class="ae-save" id="saveBtn">변경사항 저장</button>
-</div>
 
 <nav class="nav">
   <div class="nav-inner">
