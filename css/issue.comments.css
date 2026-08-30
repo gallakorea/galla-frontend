@@ -979,7 +979,11 @@ body.kb-open .battle-input-bar {
   /* ⚠️ 예전엔 white-space:nowrap 에 max-width 가 없었다. 짧은 배너("🛡 방어 성공!")만
      쓰다가 긴 문구를 넣는 순간 폭이 화면을 넘어 좌우가 잘렸다(실측: 412px 화면에 535px,
      양쪽 62px 씩 잘림). 폭을 화면 안으로 묶고, 넘치면 줄바꿈한다. */
-  max-width: min(92vw, 520px); text-align: center; line-height: 1.35;
+  /* ⚠️ left:50% 만 주면 가용폭이 화면의 절반(206px)으로 잡혀 max-width 가 무의미해진다
+     — 긴 문구가 218px 박스에서 4줄로 접혔다(실측). width:max-content 로 내용 폭을
+     먼저 잡고 max-width 로 화면 안에 묶는다. */
+  width: max-content; max-width: min(92vw, 520px);
+  text-align: center; line-height: 1.35;
   animation: fxBanner 2.1s cubic-bezier(.2,.9,.3,1) forwards;
 }
 .fx-banner.warn {

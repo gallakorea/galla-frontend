@@ -2445,7 +2445,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
       spawnCombatText(targetUnit, "회복 한계", "heal");
       if (FX) {
         FX.shockwave(targetUnit, "rgba(150,160,180,.7)");
-        FX.banner(`${meta.icon} 이미 회복 한계 — 회복은 받은 피해의 30%까지예요`, "info");
+        FX.banner(`${meta.icon} 회복 한계 — 받은 피해의 30%까지만 살아나요`, "info");
         FX.haptic("tap");
       }
     } else {
