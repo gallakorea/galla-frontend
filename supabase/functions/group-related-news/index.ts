@@ -13,6 +13,14 @@ serve(async () => {
       .select("id, sid, title")
       .not("sid", "is", null)
       .is("related_group_id", null)
+      /* ⚠️ order by id 는 정렬이 목적이 아니라 '인덱스를 타게 하는' 것이다.
+         빼면 플래너가 Seq Scan 을 고른다 — related_group_id is null 인 행이 34만 중 13만이라
+         (대부분 sid 도 null) 추정이 8만으로 부풀고, LIMIT 100 이면 싸 보이기 때문이다.
+         실제로는 대기 행이 테이블 뒤쪽으로 밀리면 34만 행을 다 훑어 statement timeout(57014)이 난다
+         — 15분마다 도는 이 잡이 12시간에 6번 500 으로 죽고 있었다(2026-08-30 실측).
+         부분 인덱스 idx_news_raw_ungrouped 는 대기 행만 담고 있고, id 정렬이 그 인덱스 순서와
+         같아 Index Scan 으로 확정된다(372ms Seq → 66ms Index, 위치와 무관하게 일정). */
+      .order("id")
       .limit(100);
 
     if (!fetchResult || fetchResult.error) {
