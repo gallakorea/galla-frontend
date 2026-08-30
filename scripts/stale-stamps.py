@@ -15,15 +15,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 base = sys.argv[1] if len(sys.argv) > 1 else None
 
 if base:
-    out = subprocess.run(["git", "diff", "--name-only", base, "--", "js/"],
+    out = subprocess.run(["git", "diff", "--name-only", base, "--", "js/", "css/"],
                          cwd=ROOT, capture_output=True, text=True).stdout
 else:
-    out = subprocess.run(["git", "status", "--porcelain", "--", "js/"],
+    out = subprocess.run(["git", "status", "--porcelain", "--", "js/", "css/"],
                          cwd=ROOT, capture_output=True, text=True).stdout
     out = "\n".join(l[3:] for l in out.splitlines())
 
 changed = sorted({l.strip() for l in out.splitlines()
-                  if l.strip().startswith("js/") and l.strip().endswith(".js")})
+                  if (l.strip().startswith("js/") or l.strip().startswith("css/"))
+                  and l.strip().endswith((".js", ".css"))})
 if not changed:
     print("바뀐 JS 없음 — 검사할 것이 없다"); sys.exit(0)
 
@@ -50,7 +51,7 @@ nostamp = [h for h in sorted(ROOT.glob("**/*.html"))
            and re.search(r'(js|vendor)/[A-Za-z0-9_./-]+\.js\?v=', h.read_text(encoding="utf-8", errors="ignore"))
            and 'name="galla-ver"' not in h.read_text(encoding="utf-8", errors="ignore")]
 
-print(f"현재 배포 도장: {cur} · 바뀐 JS {len(changed)}개")
+print(f"현재 배포 도장: {cur} · 바뀐 JS·CSS {len(changed)}개")
 if nostamp:
     print(f"\n⚠️ 배포 도장(galla-ver)이 없는데 ?v= 를 쓰는 HTML {len(nostamp)}개 — 전수 범프가 건너뛴다")
     for h in nostamp[:10]:
