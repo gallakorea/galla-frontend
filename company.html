@@ -249,6 +249,77 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 .pillar.wide .ptitle{font-size:1.1rem}
 .pillar.wide p{max-width:56ch}
 
+
+/* ── 사업 축 카드: 움직이는 SVG 심볼 + 클릭 상세 ────────
+   여섯 축이 글자만으로 늘어서면 표처럼 읽힌다. 축마다 형태를 주고,
+   눌렀을 때 그 축이 무엇을 하는지 한 겹 더 열리게 한다. */
+.pillar{cursor:pointer}
+.pillar:focus-visible{outline:2px solid var(--c);outline-offset:-2px}
+.pviz{position:absolute;right:clamp(18px,2.4vw,26px);top:clamp(18px,2.4vw,26px);width:58px;height:58px;opacity:.85;pointer-events:none}
+.pillar:hover .pviz,.pillar[aria-expanded="true"] .pviz{opacity:1}
+.pviz .st{stroke:var(--c);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.pviz .fl{fill:var(--c)}
+.pviz .dim{opacity:.42}
+.pillar[aria-expanded="true"]{background:var(--surface)}
+.pillar[aria-expanded="true"]::after{opacity:1;height:2px}
+.pmore{
+  margin-top:auto;padding-top:12px;display:flex;align-items:center;gap:8px;
+  font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--c);
+  opacity:.65;transition:opacity .25s;
+}
+.pillar:hover .pmore{opacity:1}
+.pmore i{display:block;width:9px;height:9px;border-left:1.6px solid var(--c);border-bottom:1.6px solid var(--c);transform:rotate(-45deg) translate(1px,-1px);transition:transform .3s}
+.pillar[aria-expanded="true"] .pmore i{transform:rotate(135deg) translate(-1px,1px)}
+
+/* 펼쳐지는 상세 서랍 */
+.pdrawer{
+  display:grid;grid-template-rows:0fr;overflow:hidden;
+  border:1px solid transparent;background:var(--surface);
+  transition:grid-template-rows .5s cubic-bezier(.2,.7,.3,1),border-color .3s,margin .4s;
+  margin-top:0;
+}
+.pdrawer.on{grid-template-rows:1fr;border-color:var(--rule-soft);margin-top:16px}
+.pdrawer > div{min-height:0}
+.pdin{
+  display:grid;grid-template-columns:1fr;gap:clamp(24px,3.4vw,44px);
+  padding:clamp(26px,3.6vw,40px);opacity:0;transform:translateY(10px);
+  transition:opacity .45s .12s,transform .45s .12s;
+}
+.pdrawer.on .pdin{opacity:1;transform:none}
+@media(min-width:900px){.pdin{grid-template-columns:minmax(0,300px) 1fr;align-items:center}}
+.pdscene{width:100%;height:auto;aspect-ratio:1/1;max-width:300px;justify-self:center}
+.pdscene .st{stroke:var(--c);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.pdscene .fl{fill:var(--c)}
+.pdscene .ink{stroke:var(--ink-low)}
+.pd-k{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c)}
+.pd-t{font-family:"Archivo","Noto Sans KR",sans-serif;font-weight:900;font-size:1.5rem;letter-spacing:-.03em;color:var(--ink);margin:10px 0 14px}
+.pd-b{color:var(--ink-mid);font-size:1rem;line-height:1.8;max-width:56ch}
+.pd-l{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+.pd-l li{
+  display:flex;align-items:center;gap:9px;font-size:.88rem;color:var(--ink);
+  border:1px solid var(--rule);padding:9px 14px;border-radius:2px;
+}
+.pd-l li::before{content:"";width:5px;height:5px;background:var(--c);transform:rotate(45deg)}
+
+/* 움직임 — 축마다 다른 리듬 */
+@keyframes gflow{to{stroke-dashoffset:-52}}
+@keyframes gpulse{0%,100%{opacity:.35;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes gspin{to{transform:rotate(360deg)}}
+@keyframes grise{0%,100%{transform:translateY(2px)}50%{transform:translateY(-3px)}}
+@keyframes gsplit{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+.pviz .flow,.pdscene .flow{stroke-dasharray:5 7;animation:gflow 3.4s linear infinite}
+.pviz .pulse,.pdscene .pulse{transform-box:fill-box;transform-origin:center;animation:gpulse 2.6s ease-in-out infinite}
+.pviz .spin,.pdscene .spin{transform-box:fill-box;transform-origin:center;animation:gspin 14s linear infinite}
+.pviz .rise,.pdscene .rise{transform-box:fill-box;transform-origin:center;animation:grise 3s ease-in-out infinite}
+.pviz .splitL,.pdscene .splitL{transform-box:fill-box;transform-origin:center;animation:gsplit 3.6s ease-in-out infinite}
+.pviz .splitR,.pdscene .splitR{transform-box:fill-box;transform-origin:center;animation:gsplit 3.6s ease-in-out infinite reverse}
+.pillar:hover .pviz .flow{animation-duration:1.5s}
+.pillar:hover .pviz .spin{animation-duration:5s}
+@media (prefers-reduced-motion: reduce){
+  .pviz *,.pdscene *{animation:none!important}
+  .pdrawer,.pdin{transition:none}
+}
+
 /* ── 플라이휠 ──────────────────────────────────────── */
 .wheel{display:flex;flex-wrap:wrap;gap:10px;margin-top:40px;align-items:stretch}
 .step{
@@ -645,7 +716,8 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <p class="body"><span class="ko">여섯 축은 결국 <strong>AI와 콘텐츠</strong> 두 기둥 위에 섭니다. 각각이 따로 도는 사업부가 아니라, 앞의 축이 만든 것을 뒤의 축이 받고 마지막 축이 다시 처음에 붓습니다.</span><span class="en">All six lines stand on two pillars — <strong>AI and content</strong>. They are not separate divisions: each line feeds the next, and the last pours back into the first.</span></p>
 
         <div class="pillars">
-          <div class="pillar" style="--c:var(--red)">
+          <div class="pillar" style="--c:var(--red)" role="button" tabindex="0" aria-expanded="false" data-axis="01">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="st"><path class="flow" d="M10 20 L30 32 L10 44"/><path class="flow" d="M54 20 L34 32 L54 44"/></g><g class="fl"><circle class="pulse" cx="32" cy="32" r="6"/><circle cx="10" cy="20" r="3"/><circle cx="10" cy="44" r="3"/><circle cx="54" cy="20" r="3"/><circle cx="54" cy="44" r="3"/></g></svg>
             <div class="pnum">01</div>
             <div>
               <div class="pname">AI &amp; Solution</div>
@@ -653,9 +725,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">기억하고, 감정을 읽고, 대신 일하는 자체 AI 엔진을 개발합니다. 같은 엔진 위에서 외부 기업의 문제를 푸는 솔루션을 만듭니다. 외부 공급은 2027년부터입니다.</span><span class="en">We develop our own AI engine — one that remembers, reads emotion, and acts on your behalf — and build solutions on it for other companies — supply begins in 2027.</span></p>
             <div class="ptags"><span><span class="ko">AI 엔진</span><span class="en">AI engine</span></span><span><span class="ko">솔루션 개발</span><span class="en">Solution dev</span></span><span><span class="ko">자동화</span><span class="en">Automation</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
-          <div class="pillar" style="--c:var(--ember)">
+          <div class="pillar" style="--c:var(--ember)" role="button" tabindex="0" aria-expanded="false" data-axis="02">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="st"><path class="rise" d="M10 42 L32 52 L54 42"/><path d="M10 32 L32 42 L54 32" class="dim"/><path d="M10 22 L32 32 L54 22" class="dim"/></g><circle class="fl pulse" cx="32" cy="16" r="5"/></svg>
             <div class="pnum">02</div>
             <div>
               <div class="pname">Platform</div>
@@ -663,9 +737,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">콘텐츠 플랫폼 <strong>갈라(GALLA)</strong>를 직접 만들고 운영합니다. 이슈·광장·숏판·롱판·예측 다섯 개 콘텐츠 판 위에 결제·정산·관제까지 자체 구축했습니다.</span><span class="en">We build and operate <strong>GALLA</strong>, our own content platform — five content surfaces with payments, settlement and operations built in-house.</span></p>
             <div class="ptags"><span><span class="ko">서비스 운영</span><span class="en">Service ops</span></span><span><span class="ko">결제·정산</span><span class="en">Payments</span></span><span><span class="ko">커뮤니티</span><span class="en">Community</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
-          <div class="pillar" style="--c:var(--hot)">
+          <div class="pillar" style="--c:var(--hot)" role="button" tabindex="0" aria-expanded="false" data-axis="03">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="st"><rect x="10" y="20" width="44" height="24" rx="2"/><path class="flow" d="M4 32 L60 32"/></g><g class="fl"><rect class="pulse" x="16" y="14" width="4" height="6" rx="1"/><rect x="30" y="14" width="4" height="6" rx="1" class="dim"/><rect x="44" y="14" width="4" height="6" rx="1" class="dim"/><rect x="16" y="44" width="4" height="6" rx="1" class="dim"/><rect x="30" y="44" width="4" height="6" rx="1" class="dim"/><rect class="pulse" x="44" y="44" width="4" height="6" rx="1"/></g></svg>
             <div class="pnum">03</div>
             <div>
               <div class="pname">Media</div>
@@ -673,9 +749,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">숏폼과 롱폼 콘텐츠를 직접 기획·제작하고, 자체 미디어 채널 네트워크로 유통합니다. 브랜드 캠페인 제작도 같은 팀이 맡습니다.</span><span class="en">We plan and produce short- and long-form content, then distribute it through our own channel network. The same team handles brand campaigns.</span></p>
             <div class="ptags"><span><span class="ko">콘텐츠 제작</span><span class="en">Production</span></span><span><span class="ko">채널 운영</span><span class="en">Channel ops</span></span><span><span class="ko">브랜드 캠페인</span><span class="en">Brand campaigns</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
-          <div class="pillar" style="--c:var(--frost)">
+          <div class="pillar" style="--c:var(--frost)" role="button" tabindex="0" aria-expanded="false" data-axis="04">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="fl"><g class="splitL"><circle cx="14" cy="24" r="3"/><circle cx="20" cy="34" r="3"/><circle cx="13" cy="42" r="3"/></g><g class="splitR"><circle cx="50" cy="24" r="3"/><circle cx="44" cy="34" r="3"/><circle cx="51" cy="42" r="3"/></g></g><path class="st flow" d="M32 10 L32 54"/><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
             <div class="pnum">04</div>
             <div>
               <div class="pname">Data</div>
@@ -683,9 +761,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">여론이 지금 <strong>어디서 갈리는지</strong> 정확히 아는 곳은 많지 않습니다. 갈라에서는 이슈마다 사람들이 어느 편에 서고 무엇에 설득되는지가 지표로 남습니다. 이 지표는 먼저 갈비스를 더 정확하게 만들고, 언론·브랜드·연구기관을 위한 여론 지표로도 제공됩니다. <strong>개인이 아니라 흐름을 다룹니다.</strong></span><span class="en">Few places know where opinion is actually splitting right now. On GALLA, every issue leaves a record of <strong>which side people take and what changes their mind</strong>. That signal makes Galvis more accurate first, and is offered as an opinion index for newsrooms, brands and researchers. <strong>We work with currents, not individuals.</strong></span></p>
             <div class="ptags"><span><span class="ko">여론 지표</span><span class="en">Opinion index</span></span><span><span class="ko">지표 API</span><span class="en">Index API</span></span><span><span class="ko">AI 그라운딩</span><span class="en">AI grounding</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
-          <div class="pillar" style="--c:var(--ice)">
+          <div class="pillar" style="--c:var(--ice)" role="button" tabindex="0" aria-expanded="false" data-axis="05">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="st"><rect x="8" y="16" width="24" height="18" rx="2"/><path class="flow" d="M34 25 L52 25"/><circle cx="46" cy="42" r="10" class="spin" stroke-dasharray="10 6"/></g><circle class="fl pulse" cx="46" cy="42" r="4"/></svg>
             <div class="pnum">05</div>
             <div>
               <div class="pname">Commerce</div>
@@ -693,9 +773,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">본 자리에서 바로 살 수 있게 만듭니다. 콘텐츠와 상품을 한 화면에 붙이고, 창작자 후원과 판매 정산까지 플랫폼 안에서 끝냅니다.</span><span class="en">People buy where they watch. Content and product share one screen, and creator support and payouts settle inside the platform.</span></p>
             <div class="ptags"><span><span class="ko">콘텐츠 커머스</span><span class="en">Commerce</span></span><span><span class="ko">창작자 정산</span><span class="en">Creator payouts</span></span><span><span class="ko">구독</span><span class="en">Subscription</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
-          <div class="pillar" style="--c:var(--blue)">
+          <div class="pillar" style="--c:var(--blue)" role="button" tabindex="0" aria-expanded="false" data-axis="06">
+            <svg class="pviz" viewBox="0 0 64 64" aria-hidden="true"><g class="st"><ellipse class="spin" cx="32" cy="32" rx="24" ry="10"/><ellipse cx="32" cy="32" rx="10" ry="24" class="dim"/></g><circle class="fl pulse" cx="32" cy="32" r="6"/></svg>
             <div class="pnum">06</div>
             <div>
               <div class="pname">Capital</div>
@@ -703,6 +785,7 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             </div>
             <p><span class="ko">저평가된 콘텐츠 자산 — 채널·IP·팀 — 을 발굴해 취득하고, 위의 다섯 축을 얹어 함께 키웁니다. 돈만 넣는 투자가 아니라 운영으로 값을 올리는 투자입니다.</span><span class="en">We source and acquire undervalued content assets — channels, IP, teams — and grow them by layering the five lines above onto them. Value created by operating, not by capital alone.</span></p>
             <div class="ptags"><span><span class="ko">자산 발굴</span><span class="en">Sourcing</span></span><span><span class="ko">인수·투자</span><span class="en">Acquisition</span></span><span><span class="ko">가치 제고</span><span class="en">Value-add</span></span></div>
+            <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
           <div class="pillar wide">
@@ -710,6 +793,8 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             <p><span class="ko">콘텐츠를 <strong>만들고 · 태우고 · 묶고 · 읽고 · 팔고 · 심는다</strong> — 이 여섯 동작을 한 회사가 전부 합니다.</span><span class="en"><strong>Build it, ignite it, bind it, read it, sell it, plant it</strong> — one company doing all six.</span></p>
           </div>
         </div>
+
+        <div class="pdrawer" id="pdrawer" aria-live="polite"><div><div class="pdin" id="pdin"></div></div></div>
 
         <div class="wheel">
           <div class="step" style="--c:var(--red)"><span class="s-k">01 AI</span><span class="s-t"><span class="ko">만드는 힘을 키운다</span><span class="en">Builds capability</span></span><span class="s-d"><span class="ko">기획·편집·썸네일을 엔진이 함께 한다</span><span class="en">The engine plans, edits and designs alongside us</span></span></div>
@@ -1132,6 +1217,108 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     };
     requestAnimationFrame(loop);
   }
+
+
+  /* ── 사업 축 카드: 눌러서 펼치는 상세 ──
+     여섯 축을 글자로만 늘어놓으면 표가 된다. 축마다 움직이는 장면을 주고,
+     누르면 그 축이 실제로 무엇을 하는지 한 겹 더 연다. */
+  var AXES = {
+    '01': { c:'var(--red)', k:'AI & Solution',
+      t:{ko:'인텔리전스',en:'Intelligence'},
+      b:{ko:'갈비스는 세 층으로 되어 있습니다. <b>기억층</b>은 대화를 요약하고 필요할 때 꺼내 오고, <b>감정층</b>은 관성과 감쇠로 태도를 유지해 한 마디에 뒤집히지 않게 하며, <b>에이전트층</b>은 도구를 불러 실제로 일을 합니다. 모델 공급자는 갈아 끼울 수 있게 떼어 놨습니다 — 바뀌어도 관계와 기억은 남습니다.',
+          en:'Galvis is built in three layers. <b>Memory</b> summarizes conversation and retrieves it when needed. <b>Emotion</b> holds a stance with inertia and decay, so it never flips on one line. <b>Agency</b> calls tools and does the work. The model provider is kept swappable — change it and the relationship and memory stay.'},
+      l:{ko:['기억 엔진','감정선 엔진','창작·조작 에이전트','모델 무관 설계'],
+         en:['Memory engine','Emotional-arc engine','Creation & operation agent','Model-agnostic']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="st flow"><path d="M28 52 L92 100"/><path d="M22 100 L92 100"/><path d="M28 148 L92 100"/><path d="M172 52 L108 100"/><path d="M178 100 L108 100"/><path d="M172 148 L108 100"/></g><g class="fl"><circle cx="28" cy="52" r="7"/><circle cx="22" cy="100" r="7"/><circle cx="28" cy="148" r="7"/><circle cx="172" cy="52" r="7"/><circle cx="178" cy="100" r="7"/><circle cx="172" cy="148" r="7"/></g><circle class="st spin" cx="100" cy="100" r="30" stroke-dasharray="14 10"/><circle class="fl pulse" cx="100" cy="100" r="14"/></svg>' },
+
+    '02': { c:'var(--ember)', k:'Platform',
+      t:{ko:'플랫폼 운영',en:'Platform operations'},
+      b:{ko:'이슈·광장·숏판·롱판·예측 다섯 판과 뉴스·영상·채팅이 <b>한 앱</b> 안에 있습니다. 각각을 따로 파는 기능이 아니라 갈비스가 서 있는 무대입니다. 결제와 창작자 정산, 관리자 관제까지 직접 만들어 남의 인프라에 얹혀 있지 않습니다.',
+          en:'Five surfaces — issues, plaza, short-form, long-form, prediction — plus news, video and chat, all in <b>one app</b>. Not features sold separately, but the stage Galvis stands on. Payments, creator payouts and the ops console are ours, not rented.'},
+      l:{ko:['다섯 콘텐츠 판','결제 · 정산','관리자 관제','iOS · 안드로이드 · 웹'],
+         en:['Five content surfaces','Payments & payouts','Ops console','iOS · Android · Web']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="st"><path class="rise" d="M40 148 L100 176 L160 148"/><path d="M40 126 L100 154 L160 126" class="dim"/><path d="M40 104 L100 132 L160 104" class="dim"/><path d="M40 82 L100 110 L160 82" class="dim"/><path d="M40 60 L100 88 L160 60"/></g><path class="st flow" d="M100 24 L100 176"/><circle class="fl pulse" cx="100" cy="40" r="12"/></svg>' },
+
+    '03': { c:'var(--hot)', k:'Media',
+      t:{ko:'제작 · 채널',en:'Production & channels'},
+      b:{ko:'앱보다 채널을 <b>먼저</b> 만들었습니다. 제작과 유통을 몸으로 익히려는 이유였고, 그 채널이 출시 첫날의 유입로가 됩니다. 숏폼과 롱폼을 직접 기획·제작하고, 브랜드 캠페인도 같은 팀이 맡습니다. AI가 제작 원가를 낮추는 곳이 바로 여기입니다.',
+          en:'We built the channels <b>before</b> the app — to learn production and distribution by doing it, and so day one has an inflow. We plan and produce short- and long-form ourselves, and the same team handles brand campaigns. This is where AI drives the cost down.'},
+      l:{ko:['숏폼 · 롱폼 제작','자체 채널 네트워크','브랜드 캠페인','AI 자동 편집'],
+         en:['Short & long-form','Owned channel network','Brand campaigns','AI-assisted editing']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="st"><rect x="30" y="66" width="140" height="68" rx="4"/><path class="flow" d="M14 100 L186 100"/></g><g class="fl"><rect class="pulse" x="42" y="50" width="10" height="14" rx="2"/><rect x="72" y="50" width="10" height="14" rx="2" class="dim"/><rect x="102" y="50" width="10" height="14" rx="2" class="dim"/><rect x="132" y="50" width="10" height="14" rx="2" class="dim"/><rect x="42" y="136" width="10" height="14" rx="2" class="dim"/><rect x="72" y="136" width="10" height="14" rx="2" class="dim"/><rect x="102" y="136" width="10" height="14" rx="2" class="dim"/><rect class="pulse" x="132" y="136" width="10" height="14" rx="2"/></g><circle class="st pulse" cx="100" cy="100" r="26" class="st"/></svg>' },
+
+    '04': { c:'var(--frost)', k:'Data',
+      t:{ko:'데이터 사업',en:'Data business'},
+      b:{ko:'이슈마다 사람들이 <b>어느 편에 서고 무엇에 설득되는지</b>가 지표로 남습니다. AI 학습에서 가장 구하기 어려운 것이 사람의 판단인데, 갈라에서는 그것이 논쟁의 부산물로 쌓입니다. 먼저 갈비스를 정확하게 만들고, 언론·브랜드·연구기관을 위한 여론 지표로도 제공됩니다. 개인이 아니라 흐름입니다.',
+          en:'Every issue leaves a record of <b>which side people take and what changes their mind</b>. Human judgment is the hardest thing to buy for AI training, and here it accumulates as a by-product of argument. It sharpens Galvis first, and is offered as an opinion index for newsrooms, brands and researchers. Currents, not individuals.'},
+      l:{ko:['여론 지표','지표 API','AI 그라운딩','개인 비식별'],
+         en:['Opinion index','Index API','AI grounding','Non-identifying']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="fl"><g class="splitL"><circle cx="34" cy="60" r="7"/><circle cx="54" cy="92" r="7"/><circle cx="30" cy="122" r="7"/><circle cx="58" cy="146" r="6"/></g><g class="splitR"><circle cx="166" cy="60" r="7"/><circle cx="146" cy="92" r="7"/><circle cx="170" cy="122" r="7"/><circle cx="142" cy="146" r="6"/></g></g><path class="st flow" d="M100 22 L100 178"/><circle class="fl pulse" cx="100" cy="100" r="13"/><path class="st ink" d="M46 176 C70 130 130 130 154 176" stroke-dasharray="4 8"/></svg>' },
+
+    '05': { c:'var(--ice)', k:'Commerce',
+      t:{ko:'콘텐츠 커머스',en:'Content commerce'},
+      b:{ko:'본 자리에서 바로 삽니다. 콘텐츠와 상품이 한 화면에 있고, 후원·구독·판매 정산이 플랫폼 안에서 끝나 트래픽을 남에게 넘기지 않습니다. 후원 수익은 <b>창작자 75 · 플랫폼 20 · 자선 5</b>로 나뉘고, 이 요율은 영구 고정입니다.',
+          en:'People buy where they watch. Content and product share one screen, and support, subscription and payouts settle inside the platform — traffic never leaves. Support revenue splits <b>75 creator · 20 platform · 5 charity</b>, fixed permanently.'},
+      l:{ko:['콘텐츠 커머스','창작자 정산 75%','구독','인앱 결제'],
+         en:['Content commerce','75% to creators','Subscription','In-app purchase']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="st"><rect x="22" y="46" width="76" height="56" rx="4"/><path class="flow" d="M104 74 L150 74 L150 108"/><circle class="spin" cx="140" cy="140" r="34" stroke-dasharray="64 22"/></g><circle class="st ink" cx="140" cy="140" r="34" stroke-dasharray="17 107" stroke-dashoffset="-64"/><circle class="fl pulse" cx="140" cy="140" r="13"/><g class="fl dim"><rect x="34" y="60" width="34" height="5" rx="2"/><rect x="34" y="74" width="52" height="5" rx="2"/><rect x="34" y="88" width="24" height="5" rx="2"/></g></svg>' },
+
+    '06': { c:'var(--blue)', k:'Capital',
+      t:{ko:'전략 자산 투자',en:'Strategic assets'},
+      b:{ko:'저평가된 콘텐츠 자산 — 채널·IP·팀 — 을 발굴해 취득하고, <b>위의 다섯 축을 얹어</b> 함께 키웁니다. 돈만 넣는 투자가 아니라 운영으로 값을 올리는 투자입니다. 여기서 키운 자산이 다시 01로 돌아가 바퀴를 한 바퀴 더 돌립니다.',
+          en:'We source and acquire undervalued content assets — channels, IP, teams — and grow them by <b>layering the five lines above</b> onto them. Value created by operating, not by capital alone. What grows here feeds back into 01 and turns the wheel again.'},
+      l:{ko:['자산 발굴','인수 · 투자','운영 가치 제고','바퀴로 재투입'],
+         en:['Sourcing','Acquisition','Operational value-add','Fed back into the wheel']},
+      svg:'<svg class="pdscene" viewBox="0 0 200 200" aria-hidden="true"><g class="st"><ellipse class="spin" cx="100" cy="100" rx="76" ry="30"/><ellipse cx="100" cy="100" rx="30" ry="76" class="dim"/><ellipse cx="100" cy="100" rx="56" ry="56" class="dim" stroke-dasharray="6 10"/></g><circle class="fl pulse" cx="100" cy="100" r="16"/><circle class="fl" cx="176" cy="100" r="7"/><circle class="fl dim" cx="24" cy="100" r="5"/></svg>' }
+  };
+
+  var drawer = document.getElementById('pdrawer'),
+      pdin   = document.getElementById('pdin'),
+      curAxis = null;
+
+  function axLang(){ return document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'ko'; }
+
+  function axRender(id){
+    var a = AXES[id], L = axLang();
+    pdin.style.setProperty('--c', a.c);
+    pdin.innerHTML =
+      a.svg +
+      '<div><div class="pd-k">' + a.k + '</div>' +
+      '<div class="pd-t">' + a.t[L] + '</div>' +
+      '<p class="pd-b">' + a.b[L] + '</p>' +
+      '<ul class="pd-l">' + a.l[L].map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul></div>';
+  }
+
+  function axClose(){
+    drawer.classList.remove('on');
+    var open = document.querySelector('.pillar[aria-expanded="true"]');
+    if (open) open.setAttribute('aria-expanded','false');
+    curAxis = null;
+  }
+
+  function axOpen(card){
+    var id = card.getAttribute('data-axis');
+    if (curAxis === id) { axClose(); return; }
+    var prev = document.querySelector('.pillar[aria-expanded="true"]');
+    if (prev) prev.setAttribute('aria-expanded','false');
+    card.setAttribute('aria-expanded','true');
+    curAxis = id;
+    axRender(id);
+    drawer.classList.add('on');
+  }
+
+  var axCards = document.querySelectorAll('.pillar[data-axis]');
+  for (var ai = 0; ai < axCards.length; ai++) {
+    (function(card){
+      card.addEventListener('click', function(){ axOpen(card); });
+      card.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); axOpen(card); }
+        if (e.key === 'Escape') axClose();
+      });
+    })(axCards[ai]);
+  }
+  /* 언어를 바꾸면 열려 있던 축을 그 언어로 다시 그린다 */
+  if (btn) btn.addEventListener('click', function(){ if (curAxis) axRender(curAxis); });
 
   /* ── 진입 연출 ── 연출이 실패해도 글은 반드시 보여야 한다 ── */
   if(!reduce && window.IntersectionObserver){
