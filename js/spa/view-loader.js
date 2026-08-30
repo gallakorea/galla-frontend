@@ -73,27 +73,49 @@
   /* 전용 뷰 모듈이 없는 페이지(설정 하위 페이지 등)를 SPA 스택 뷰로 띄우기 위한 범용 폴백.
      페이지 스크립트를 1회 로드하되, SPA에선 DOMContentLoaded가 이미 지나 자동초기화가 안 붙으므로
      '이 스크립트들이 등록하는 DCL 핸들러만' 가로채 직접 호출한다(기존에 붙은 핸들러는 재실행 안 됨). */
+  /* 스크립트가 잡아둔 DOMContentLoaded 초기화 함수를 파일별로 보관한다.
+     ⚠️ 예전엔 '이미 로드했으면 continue' 하고 끝냈다. 그런데 브라우저는 같은 src 를 두 번
+     실행하지 않으므로, 두 번째 방문 때 초기화가 아예 안 돌아 화면이 "불러오는 중…"에서
+     멈췄다(실측 2026-08-30: 로그인 기록 페이지 재방문 시 재현). 전용 어댑터가 없는
+     모든 페이지가 같은 증상이다. → 핸들러를 기억해 두고 방문할 때마다 다시 부른다. */
+  const pageScriptInit = new Map();   // base 파일명 → [DCL 핸들러]
+
   async function loadPageScripts(scripts) {
     if (!scripts || !scripts.length) return;
-    const captured = [];
+    const replay = [];
     const origAdd = document.addEventListener;
+    let current = null;
     document.addEventListener = function (type, fn, opts) {
-      if (type === "DOMContentLoaded") { if (typeof fn === "function") captured.push(fn); return; }
+      if (type === "DOMContentLoaded") {
+        if (typeof fn === "function" && current) {
+          if (!pageScriptInit.has(current)) pageScriptInit.set(current, []);
+          pageScriptInit.get(current).push(fn);
+        }
+        return;
+      }
       return origAdd.call(this, type, fn, opts);
     };
     try {
       for (const src of scripts) {
         const base = src.split("?")[0].split("/").pop();
-        if (loadedPageScripts.has(base)) continue;
+        if (loadedPageScripts.has(base)) { replay.push(base); continue; }
         loadedPageScripts.add(base);
+        current = base;
         await new Promise(res => {
           const s = document.createElement("script");
           s.src = src; s.onload = res; s.onerror = res;
           document.head.appendChild(s);
         });
+        current = null;
+        replay.push(base);
       }
-    } finally { document.addEventListener = origAdd; }
-    for (const fn of captured) { try { fn(new Event("DOMContentLoaded")); } catch (_) {} }
+    } finally { document.addEventListener = origAdd; current = null; }
+    /* 처음 로드든 재방문이든 같은 순서로 초기화한다 — MPA 에서 페이지를 다시 여는 것과 같아야 한다. */
+    for (const base of replay) {
+      for (const fn of (pageScriptInit.get(base) || [])) {
+        try { fn(new Event("DOMContentLoaded")); } catch (_) {}
+      }
+    }
   }
 
   /* CSS 주입 — 새로 붙는 <link>의 onload까지 '기다리는' Promise를 돌려준다.

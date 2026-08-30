@@ -1010,6 +1010,19 @@
         }
       );
       console.log("[supabase] client ready");
+      /* 🔐 로그인 기록 — auth.sessions 에 트리거를 달 수 없어(auth 스키마 보호) 여기서 남긴다.
+         모든 로그인 경로(비번·매직링크·소셜·패스키)가 결국 SIGNED_IN 으로 여기를 지난다.
+         ⚠️ login_logs 는 authenticated 에게 SELECT 만 있다. 쓰기는 log_login RPC 뿐이고
+         UPDATE/DELETE 는 아무에게도 없다 — 침입자가 흔적을 지울 수 없다는 게 이 기능의 전부다.
+         세션 복원·토큰 갱신에도 SIGNED_IN 이 튀므로 서버가 10분 중복을 접는다. */
+      try {
+        window.supabaseClient.auth.onAuthStateChange(function (ev, sess) {
+          if (ev !== "SIGNED_IN" || !sess) return;
+          try {
+            window.supabaseClient.rpc("log_login", { p_ua: navigator.userAgent });
+          } catch (e) {}
+        });
+      } catch (e) {}
       // 🧟 좀비 세션 정리 — 계정이 삭제(탈퇴·관리자 삭제)됐는데 기기에 토큰이 남으면
       //    JWT는 만료 전까지 유효해 보여 '로그인된 척'하지만 모든 조회가 실패한다.
       //    → 페이지들이 로그인/게이트로 서로 튕겨 무한 새로고침(2026-08-08 관제센터 사고). 한 번에 정리.
