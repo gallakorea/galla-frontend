@@ -504,6 +504,7 @@ textarea.tf-f{resize:vertical;min-height:104px;line-height:1.7;font-size:1.02rem
 .tf-back{background:none;border:0;cursor:pointer;color:var(--ink-low);font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.12em}
 .tf-back:hover{color:var(--ink)}
 .tf-key{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.1em;color:var(--ink-low)}
+.tf-pot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .tf-bar{height:2px;background:var(--rule-soft);position:relative}
 .tf-bar i{display:block;height:100%;width:20%;background:linear-gradient(90deg,var(--red),var(--blue));transition:width .45s cubic-bezier(.2,.7,.3,1)}
 .tf-sum{display:flex;flex-direction:column;gap:9px;margin:2px 0 4px}
@@ -1182,10 +1183,19 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
               <div class="tf-q"><span class="ko">이대로 보낼까요?</span><span class="en">Send it like this?</span></div>
               <div class="tf-sum" id="tfSum"></div>
               <div class="tf-row">
-                <a class="tf-go" id="tfSend" href="#"><span class="ko">메일 보내기</span><span class="en">Send email</span> ↗</a>
+                <button type="button" class="tf-go" id="tfSend"><span class="ko">보내기</span><span class="en">Send</span></button>
                 <button type="button" class="tf-back" data-back>← <span class="ko">고치기</span><span class="en">Edit</span></button>
               </div>
-              <p class="tf-fb"><span class="ko">누르면 메일 앱이 내용이 채워진 채로 열립니다. 열리지 않으면 <a href="mailto:gallakorea@gmail.com">gallakorea@gmail.com</a> 으로 보내 주세요.</span><span class="en">This opens your mail app with everything filled in. If it does not open, write to <a href="mailto:gallakorea@gmail.com">gallakorea@gmail.com</a>.</span></p>
+              <div class="tf-err" data-err id="tfSendErr"></div>
+              <p class="tf-fb" id="tfFallback" hidden><span class="ko">지금 접수가 되지 않습니다. <a href="mailto:gallakorea@gmail.com" id="tfMailto">메일로 보내기</a>를 눌러 주세요.</span><span class="en">Submission is not going through. Please <a href="mailto:gallakorea@gmail.com" id="tfMailto2">send it by email</a>.</span></p>
+              <input class="tf-pot" type="text" id="tfPot" tabindex="-1" autocomplete="off" aria-hidden="true">
+            </div>
+
+            <div class="tf-s" data-done>
+              <div class="tf-n"><span class="ko">접수 완료</span><span class="en">Received</span></div>
+              <div class="tf-q"><span class="ko">잘 받았습니다.</span><span class="en">We have it.</span></div>
+              <p class="tf-h" id="tfDoneMsg"></p>
+              <div class="tf-row"><button type="button" class="tf-back" id="tfAgain"><span class="ko">다시 쓰기</span><span class="en">Write another</span></button></div>
             </div>
           </div>
           <div class="tf-bar"><i id="tfBar"></i></div>
@@ -1498,7 +1508,8 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     function show(i, focus){
       cur = Math.max(0, Math.min(steps.length - 1, i));
       steps.forEach(function(el, n){ el.classList.toggle('on', n === cur); });
-      bar.style.width = Math.round(((cur + 1) / steps.length) * 100) + '%';
+      var qn = steps.length - 1;   /* 완료 화면은 진행률에서 뺀다 */
+      bar.style.width = Math.round((Math.min(cur + 1, qn) / qn) * 100) + '%';
       var f = steps[cur].querySelector('.tf-f, .tf-chip');
       if (f && focus !== false) setTimeout(function(){ try { f.focus({preventScroll:true}); } catch(e){} }, 60);
     }
@@ -1526,6 +1537,18 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       return true;
     }
 
+    var SB = 'https://bidqauputnhkqepvdzrr.supabase.co',
+        SBK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM';
+
+    function mailtoHref(){
+      var subject = '[갈라랩스 문의 · ' + data.kind + '] ' + data.name;
+      var body = say('유형','Type') + ': ' + data.kind + '\n' +
+                 say('성함','Name') + ': ' + data.name + '\n' +
+                 say('회신','Reply to') + ': ' + data.mail + '\n\n' +
+                 data.body + '\n\n— company.galla.im';
+      return 'mailto:gallakorea@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    }
+
     function summary(){
       var box = document.getElementById('tfSum');
       var rows = [
@@ -1539,14 +1562,46 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       }).join('');
       [].slice.call(box.querySelectorAll('span')).forEach(function(sp, i){ sp.textContent = rows[i][1]; });
 
-      var subject = '[갈라랩스 문의 · ' + data.kind + '] ' + data.name;
-      var body =
-        say('유형','Type') + ': ' + data.kind + '\n' +
-        say('성함','Name') + ': ' + data.name + '\n' +
-        say('회신','Reply to') + ': ' + data.mail + '\n\n' +
-        data.body + '\n\n— company.galla.im';
-      document.getElementById('tfSend').setAttribute('href',
-        'mailto:gallakorea@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
+    }
+
+    /* 접수는 Supabase 로 바로 넣는다. RLS 상 익명은 INSERT 만 되고 조회는 관리자만이라
+       남의 문의가 읽히지 않는다. 실패하면 메일 폴백을 연다. */
+    function send(){
+      var btnEl = document.getElementById('tfSend'),
+          errEl = document.getElementById('tfSendErr'),
+          fb    = document.getElementById('tfFallback');
+      if (document.getElementById('tfPot').value) return;   /* 벌집 — 봇이 채우면 조용히 무시 */
+      btnEl.disabled = true;
+      btnEl.textContent = say('보내는 중…','Sending…');
+      errEl.textContent = '';
+
+      fetch(SB + '/rest/v1/company_inquiries', {
+        method: 'POST',
+        headers: { 'apikey': SBK, 'Authorization': 'Bearer ' + SBK,
+                   'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          kind: data.kind, name: data.name, email: data.mail, body: data.body,
+          lang: tfEn() ? 'en' : 'ko',
+          referrer: (document.referrer || '').slice(0, 300) || null
+        })
+      }).then(function(r){
+        if (!r.ok) throw new Error(String(r.status));
+        document.getElementById('tfDoneMsg').textContent =
+          say('영업일 기준 이틀 안에 ' + data.mail + ' 로 답 드리겠습니다.',
+              'We will reply to ' + data.mail + ' within two business days.');
+        show(steps.length - 1);
+        bar.style.width = '100%';
+      }).catch(function(){
+        errEl.textContent = say('접수에 실패했습니다.','Could not submit.');
+        var h = mailtoHref();
+        ['tfMailto','tfMailto2'].forEach(function(id){
+          var a = document.getElementById(id); if (a) a.setAttribute('href', h);
+        });
+        fb.hidden = false;
+      }).then(function(){
+        btnEl.disabled = false;
+        btnEl.textContent = say('보내기','Send');
+      });
     }
 
     tf.addEventListener('click', function(e){
@@ -1559,6 +1614,11 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         setTimeout(function(){ show(1); }, 180);   /* 고르면 바로 넘어간다 */
         return;
       }
+      if (e.target.closest('#tfSend')) { send(); return; }
+      if (e.target.closest('#tfAgain')) { data={kind:'',name:'',mail:'',body:''};
+        [].slice.call(tf.querySelectorAll('.tf-chip')).forEach(function(c){ c.setAttribute('aria-pressed','false'); });
+        ['tfName','tfMail','tfBody'].forEach(function(id){ document.getElementById(id).value=''; });
+        document.getElementById('tfFallback').hidden = true; show(0); return; }
       if (e.target.closest('[data-next]')) { if (valid()) { if (cur === 3) summary(); show(cur + 1); } }
       if (e.target.closest('[data-back]')) { err(''); show(cur - 1); }
     });

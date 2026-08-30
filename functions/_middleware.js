@@ -401,7 +401,9 @@ export async function onRequest(context) {
           "frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline'; " +
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
           "font-src 'self' data: https://fonts.gstatic.com; " +
-          "img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self'");
+          "img-src 'self' data: blob: https:; media-src 'self' blob:; " +
+          /* 문의 폼이 Supabase 로 바로 접수한다 — 여기가 막히면 조용히 실패한다 */
+          "connect-src 'self' https://bidqauputnhkqepvdzrr.supabase.co");
         return new Response(res.body, { status: res.status, headers: h });
       }
     }
