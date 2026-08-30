@@ -353,13 +353,7 @@
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
     // 🎟 남은 대화 pill — 열 때마다 갱신(쓴 만큼 줄어드는 게 보여야 업그레이드가 설득된다)
-    try{
-      var hd=sheet.querySelector(".fr-head");
-      if(hd && window.GALLA_planPill){
-        var old=hd.querySelector(".gpl-pill"); if(old) old.remove();
-        window.GALLA_planPill(hd);
-      }
-    }catch(e){}
+    refreshPill();
     /* 🗣 열 때마다 인사를 '시도'한다. 실제로 말을 걸지 말지는 서버가 정한다(공백 30분 미만이면 조용).
        예전엔 __frDidIntro 로 '세션 1회'만 허용했는데, 앱(SPA)은 페이지가 안 바뀌어 그 세션 내내
        침묵이었다. 닫았다 다시 열어도 반응이 없다는 제보가 이것이다(실측: 2차 열기 때 서버 호출 0).
@@ -371,6 +365,21 @@
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
   }
+  /* 🎟 남은 대화 pill 다시 그리기.
+     ⚠️ 예전엔 '열 때'만 그렸다. 한 턴 쓰고 나서도 숫자가 그대로라, 5턴 남았다고 믿다가
+     갑자기 막히는 화면을 봤다(실측: used 는 서버에서 올라가는데 pill 은 5로 고정).
+     서버 캐시를 무시하고(force) 매 턴 끝에 다시 센다. */
+  function refreshPill(){
+    try{
+      if(!sheet) return;
+      var hd=sheet.querySelector(".fr-head");
+      if(!hd || !window.GALLA_planPill) return;
+      if(window.GALLA_entitlementBust) { try{ window.GALLA_entitlementBust(); }catch(e){} }
+      var old=hd.querySelector(".gpl-pill"); if(old) old.remove();
+      window.GALLA_planPill(hd);
+    }catch(e){}
+  }
+
   function close(){
     if(sheet) sheet.classList.remove("fr-open");
     if(mini) mini.classList.remove("on");
@@ -1646,9 +1655,9 @@
       if(liveEl){ try{ liveEl.remove(); }catch(e){} }
       var am=addMsg("a","어 로그인이 풀렸나봐 ㅠㅠ 새로고침하면 바로 돌아올게!");
       try{ addActions(am, [{ kind:"reload", label:"새로고침하고 이어가기" }]); }catch(e){}
-      busy=false; sendEl.disabled=false; return;
+      busy=false; sendEl.disabled=false; refreshPill(); return;
     }
-    if(!r||!r.ok){ if(liveEl){ try{ liveEl.remove(); }catch(e){} } addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
+    if(!r||!r.ok){ if(liveEl){ try{ liveEl.remove(); }catch(e){} } addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; refreshPill(); return; }
     // 렌더: 스트리밍이면 라이브 버블을 최종 버블로 정리(1버블이면 제자리 확정, 여러 버블이면 재렌더).
     var m;
     if(streamed){
@@ -1666,7 +1675,7 @@
     // 🎟 게스트 맛보기 소진 — 여기가 가입 전환의 순간이다. 문구는 서버가 이미 말했고, 버튼만 붙인다.
     if(r.gate && r.gate.guest && r.gate.ok===false){
       try{ addActions(m, [{ kind:"signup", label:"30초 가입하고 계속 얘기하기" }]); }catch(e){}
-      busy=false; sendEl.disabled=false; return;
+      busy=false; sendEl.disabled=false; refreshPill(); return;
     }
     if(history.length>30) history=history.slice(-30);
     // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
@@ -1719,7 +1728,7 @@
     // 🌐 웹 앱 넛지 — 단 '창작 흐름'(초안·썸네일 등 액션 나온 턴)엔 끼어들지 않는다(몰입 깨짐, 실사용 마찰).
     var creating = acts.some(function(a){ return /^draft|^gen|^editdraft|^plan|^titles|^script/.test(a.kind); });
     if(!window.GALLA_IS_APP && !creating && !_dock) maybeWebNudge();
-    busy=false; sendEl.disabled=false;
+    busy=false; sendEl.disabled=false; refreshPill();
   }
 
   /* 🌐 웹 전용 — 몇 번 대화가 오가면 갈비스가 슬쩍 앱 설치를 권한다(세션당 몇 번, 단계적).

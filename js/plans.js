@@ -79,6 +79,9 @@
     } catch (e) { return null; }
   }
   window.GALLA_entitlement = fetchEnt;
+  /* 20초 캐시를 즉시 버린다. 한 턴 끝난 직후 pill 을 다시 그릴 때 쓴다 —
+     fetchEnt(true) 를 await 없이 부르면 pill 이 옛 캐시를 먼저 읽어 숫자가 안 바뀐다. */
+  window.GALLA_entitlementBust = function () { _cache = null; _cacheAt = 0; };
 
   function injectStyle() {
     if (document.getElementById("gpl-style")) return;
