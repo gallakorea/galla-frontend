@@ -43,7 +43,18 @@ for html in sorted(ROOT.glob("**/*.html")):
             if ver != cur:
                 stale[js].append(f"{html.relative_to(ROOT)} (?v={ver})")
 
+# 도장 자체가 없는 HTML — 전수 범프(sed 로 옛 도장 치환)가 통째로 건너뛴다.
+# auth/confirm.html 이 이 상태였고, 가입 인증 첫 착지점인데 pwa.js 가 18일 묵어 있었다.
+nostamp = [h for h in sorted(ROOT.glob("**/*.html"))
+           if "node_modules" not in h.parts
+           and re.search(r'(js|vendor)/[A-Za-z0-9_./-]+\.js\?v=', h.read_text(encoding="utf-8", errors="ignore"))
+           and 'name="galla-ver"' not in h.read_text(encoding="utf-8", errors="ignore")]
+
 print(f"현재 배포 도장: {cur} · 바뀐 JS {len(changed)}개")
+if nostamp:
+    print(f"\n⚠️ 배포 도장(galla-ver)이 없는데 ?v= 를 쓰는 HTML {len(nostamp)}개 — 전수 범프가 건너뛴다")
+    for h in nostamp[:10]:
+        print(f"     {h.relative_to(ROOT)}")
 if not stale:
     print("✅ 스탬프 누락 없음"); sys.exit(0)
 
