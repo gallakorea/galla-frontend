@@ -272,13 +272,15 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 .pillar[aria-expanded="true"] .pmore i{transform:rotate(135deg) translate(-1px,1px)}
 
 /* 펼쳐지는 상세 서랍 */
+/* ⚠️ 서랍이 그리드 '아래'에 있으면 01번을 눌러도 변화가 화면 밖에서 일어난다.
+   그리드 안에 넣고, 누른 카드가 속한 행 바로 다음 자리로 옮겨 붙인다. */
+.pillars > .pdrawer{grid-column:1/-1}
 .pdrawer{
   display:grid;grid-template-rows:0fr;overflow:hidden;
-  border:1px solid transparent;background:var(--surface);
-  transition:grid-template-rows .5s cubic-bezier(.2,.7,.3,1),border-color .3s,margin .4s;
-  margin-top:0;
+  background:var(--surface);
+  transition:grid-template-rows .5s cubic-bezier(.2,.7,.3,1);
 }
-.pdrawer.on{grid-template-rows:1fr;border-color:var(--rule-soft);margin-top:16px}
+.pdrawer.on{grid-template-rows:1fr}
 .pdrawer > div{min-height:0}
 .pdin{
   display:grid;grid-template-columns:1fr;gap:clamp(24px,3.4vw,44px);
@@ -318,6 +320,74 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 @media (prefers-reduced-motion: reduce){
   .pviz *,.pdscene *{animation:none!important}
   .pdrawer,.pdin{transition:none}
+}
+
+
+/* ── 설명 섹션 SVG — 모든 카드에 형태와 움직임을 준다 ── */
+.viz{position:absolute;pointer-events:none;opacity:.8}
+.p2 .viz,.prod .viz{right:clamp(20px,2.6vw,30px);top:clamp(20px,2.6vw,30px);width:70px;height:70px}
+.card{position:relative}
+.card .viz{right:22px;top:22px;width:48px;height:48px;opacity:.65}
+.card:hover .viz{opacity:1}
+.pr{position:relative}
+.pr .viz{right:24px;top:26px;width:42px;height:42px;opacity:.55}
+.pr:hover .viz{opacity:.95}
+.viz .st{fill:none;stroke:var(--c,var(--ice));stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.viz .fl{fill:var(--c,var(--ice))}
+.viz .dim{opacity:.4}
+.p2 .viz{--c:var(--c)}
+@keyframes gwave{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes gdraw{0%{stroke-dashoffset:120}60%,100%{stroke-dashoffset:0}}
+@keyframes gsweep{0%{opacity:0;transform:translateX(-6px)}40%{opacity:1}100%{opacity:0;transform:translateX(6px)}}
+.viz .flow{stroke-dasharray:5 7;animation:gflow 3.4s linear infinite}
+.viz .pulse{transform-box:fill-box;transform-origin:center;animation:gpulse 2.6s ease-in-out infinite}
+.viz .spin{transform-box:fill-box;transform-origin:center;animation:gspin 16s linear infinite}
+.viz .rise{transform-box:fill-box;transform-origin:center;animation:grise 3s ease-in-out infinite}
+.viz .wave{transform-box:fill-box;transform-origin:center;animation:gwave 3.2s ease-in-out infinite}
+.viz .draw{stroke-dasharray:120;animation:gdraw 4s ease-in-out infinite}
+.viz .sweep{animation:gsweep 3.4s ease-in-out infinite}
+
+/* ── 갈비스: 실제 앱 화면으로 ────────────────────────── */
+.gvphone{
+  position:relative;border-radius:26px;padding:7px;background:linear-gradient(168deg,#2b303a,#14161c 46%,#0c0e13);
+  box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.gvscreen{
+  border-radius:20px;overflow:hidden;background:#0a0b0f;display:flex;flex-direction:column;
+  min-height:clamp(300px,40vw,380px);
+}
+.gvbar{
+  display:flex;align-items:center;gap:11px;padding:13px 15px;
+  border-bottom:1px solid var(--rule-soft);background:rgba(255,255,255,.02);
+}
+.gvorb{width:30px;height:30px;flex:0 0 auto}
+.gvorb .ring{fill:none;stroke:var(--c);stroke-width:2.6;transform-box:fill-box;transform-origin:center;animation:gspin 9s linear infinite}
+.gvorb .core{fill:var(--c);transform-box:fill-box;transform-origin:center;animation:gpulse 2.6s ease-in-out infinite}
+.gvphone.busy .gvorb .ring{animation-duration:2.2s}
+.gvphone.busy .gvorb .core{animation-duration:.9s}
+.gvwho{display:flex;flex-direction:column;line-height:1.25}
+.gvwho b{font-size:.92rem;font-weight:500;color:var(--ink)}
+.gvwho span{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.1em;color:var(--ink-low)}
+.gvlive{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:.6rem;letter-spacing:.12em;color:var(--ink-low)}
+.gvlive i{width:6px;height:6px;border-radius:50%;background:var(--ok,#2fd07a);animation:gpulse 2s ease-in-out infinite}
+.gvbody{flex:1;display:flex;flex-direction:column;gap:12px;padding:18px 15px;overflow:hidden}
+.gvinput{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--rule-soft);
+  font-size:.85rem;color:var(--ink-low);background:rgba(255,255,255,.02);
+}
+.gvinput i{
+  margin-left:auto;width:26px;height:26px;border-radius:50%;background:var(--c);flex:0 0 auto;
+  display:block;opacity:.9;
+}
+@keyframes gtype{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+.typing{display:flex;gap:5px;align-self:flex-start;padding:14px 16px;background:var(--surface-2);border-radius:3px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--ink-mid);animation:gtype 1.2s ease-in-out infinite}
+.typing i:nth-child(2){animation-delay:.15s}
+.typing i:nth-child(3){animation-delay:.3s}
+@keyframes gmsg{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg{animation:gmsg .4s cubic-bezier(.2,.7,.3,1) both}
+@media (prefers-reduced-motion: reduce){
+  .viz *,.gvorb *,.typing i,.msg{animation:none!important}
 }
 
 /* ── 플라이휠 ──────────────────────────────────────── */
@@ -680,11 +750,13 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
 
         <div class="pillars2">
           <div class="p2" style="--c:var(--red)">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><g class="st"><circle class="spin" cx="32" cy="32" r="24" stroke-dasharray="16 12"/><circle class="spin" cx="32" cy="32" r="16" stroke-dasharray="9 8" style="animation-direction:reverse"/></g><circle class="fl pulse" cx="32" cy="32" r="7"/></svg>
             <div class="p2-k">AI</div>
             <div class="p2-t"><span class="ko">엔진을 직접 만듭니다</span><span class="en">We build the engine</span></div>
             <p><span class="ko">기억·감정·에이전트를 갖춘 자체 AI 엔진을 개발합니다. 특정 모델에 묶이지 않게 설계해, 공급자가 바뀌어도 관계와 기억은 우리 쪽에 남습니다. 같은 엔진을 외부 기업용 솔루션으로도 공급할 수 있게 설계했습니다.</span><span class="en">We develop our own AI engine — memory, emotion, agency. Model-agnostic by design, so the relationship and the memory stay with us even when the provider changes. The same engine is built to ship to outside clients as a solution.</span></p>
           </div>
           <div class="p2" style="--c:var(--ice)">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><g class="st"><rect class="rise" x="12" y="34" width="40" height="18" rx="3"/><rect x="16" y="24" width="32" height="14" rx="3" class="dim"/><rect x="20" y="14" width="24" height="12" rx="3" class="dim"/></g><path class="st flow" d="M6 58 L58 58"/></svg>
             <div class="p2-k">Content</div>
             <div class="p2-t"><span class="ko">무대를 직접 운영합니다</span><span class="en">We run the stage</span></div>
             <p><span class="ko">콘텐츠를 직접 기획·제작하고, 자체 채널로 유통하고, 플랫폼에 묶고, 그 위에서 판매까지 합니다. AI가 제작 원가를 낮추고, 콘텐츠가 AI를 쓸 이유를 만듭니다.</span><span class="en">We plan and produce content, distribute it on our own channels, bind it into the platform and sell on top of it. AI drives the cost down; content gives the AI a reason to exist.</span></p>
@@ -788,13 +860,13 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             <span class="pmore"><span class="ko">자세히</span><span class="en">Detail</span><i></i></span>
           </div>
 
+          <div class="pdrawer" id="pdrawer" aria-live="polite"><div><div class="pdin" id="pdin"></div></div></div>
+
           <div class="pillar wide">
             <div class="ptitle"><span class="ko">한 문장으로</span><span class="en">In one line</span></div>
             <p><span class="ko">콘텐츠를 <strong>만들고 · 태우고 · 묶고 · 읽고 · 팔고 · 심는다</strong> — 이 여섯 동작을 한 회사가 전부 합니다.</span><span class="en"><strong>Build it, ignite it, bind it, read it, sell it, plant it</strong> — one company doing all six.</span></p>
           </div>
         </div>
-
-        <div class="pdrawer" id="pdrawer" aria-live="polite"><div><div class="pdin" id="pdin"></div></div></div>
 
         <div class="wheel">
           <div class="step" style="--c:var(--red)"><span class="s-k">01 AI</span><span class="s-t"><span class="ko">만드는 힘을 키운다</span><span class="en">Builds capability</span></span><span class="s-d"><span class="ko">기획·편집·썸네일을 엔진이 함께 한다</span><span class="en">The engine plans, edits and designs alongside us</span></span></div>
@@ -823,6 +895,7 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <h2 class="dsp"><span class="ko">우리가 만드는 것.</span><span class="en">What we make.</span></h2>
         <div class="duo">
           <div class="prod" style="--c:var(--red)">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><g class="st"><path class="rise" d="M8 40 L32 52 L56 40"/><path d="M8 30 L32 42 L56 30" class="dim"/><path d="M8 20 L32 32 L56 20" class="dim"/></g><g class="fl"><rect x="12" y="8" width="18" height="5" rx="2.5"/><rect x="34" y="8" width="18" height="5" rx="2.5" class="dim"/></g></svg>
             <div class="pk">Platform</div>
             <div class="pn">
               <img class="lg-ko" src="/assets/company/logo-ko.webp" alt="갈라">
@@ -831,6 +904,7 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
             <p><span class="ko">이슈·광장·숏판·롱판·예측 다섯 개의 판에 뉴스와 영상, 채팅이 함께 있는 콘텐츠 앱입니다. 보는 것에서 끝나지 않고 편을 들고, 떠들고, 만들고, 후원까지 한자리에서 일어납니다. iOS·안드로이드 앱과 웹으로 2026년 9월 출시합니다.</span><span class="en">A content app with five surfaces — issues, plaza, short-form, long-form and prediction — alongside news, video and chat. You don't just watch: you take a side, talk, create and support, all in one place. Launching on iOS, Android and the web in September 2026.</span></p>
           </div>
           <div class="prod" style="--c:var(--blue)">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><circle class="st spin" cx="32" cy="32" r="18" stroke-dasharray="12 9"/><circle class="fl pulse" cx="32" cy="32" r="8"/><g class="st dim"><path class="pulse" d="M50 22 A22 22 0 0 1 50 42"/><path class="pulse" d="M14 22 A22 22 0 0 0 14 42"/></g></svg>
             <div class="pk">AI</div>
             <div class="pn dsp"><span class="ko">갈비스</span><span class="en">Galvis</span></div>
             <p><span class="ko">갈라 안에서 함께 지내는 AI입니다. 나눈 이야기를 기억하고, 감정을 따라 반응하고, 필요하면 썸네일과 영상을 대신 만들고 발행까지 합니다. 도구라기보다 옆자리에 가깝습니다.</span><span class="en">The AI that lives inside GALLA. It remembers what you've talked about, responds to how you feel, and when asked, makes thumbnails and video for you and publishes them. Less a tool than a seat beside you.</span></p>
@@ -892,7 +966,20 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
           </div>
           <div class="gv-stage" id="gvStage" style="--c:var(--red)">
             <div class="gv-note"><span class="ko">동작 예시</span><span class="en">Example exchange</span></div>
-            <div id="gvBody" style="display:flex;flex-direction:column;gap:14px;position:relative"></div>
+            <div class="gvphone" id="gvPhone">
+              <div class="gvscreen">
+                <div class="gvbar">
+                  <svg class="gvorb" viewBox="0 0 40 40" aria-hidden="true">
+                    <circle class="ring" cx="20" cy="20" r="16" stroke-dasharray="12 8"/>
+                    <circle class="core" cx="20" cy="20" r="7"/>
+                  </svg>
+                  <span class="gvwho"><b><span class="ko">갈비스</span><span class="en">Galvis</span></b><span class="ko">지금 옆에 있어요</span><span class="en">right beside you</span></span>
+                  <span class="gvlive"><i></i>LIVE</span>
+                </div>
+                <div class="gvbody" id="gvBody"></div>
+                <div class="gvinput"><span class="ko">메시지 보내기</span><span class="en">Send a message</span><i></i></div>
+              </div>
+            </div>
             <button class="gv-replay" id="gvReplay" type="button"><span class="ko">다시 보기</span><span class="en">Replay</span></button>
           </div>
         </div>
@@ -931,21 +1018,25 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <p class="body"><span class="ko">엔진은 특정 AI 모델에 묶이지 않게 설계했습니다. 아래 기술은 갈라에서 먼저 쓰이고, 같은 형태로 외부 솔루션 사업에 공급할 수 있습니다.</span><span class="en">Our engine is designed not to be tied to any single AI model. The technology below runs in GALLA first, and can ship in the same form to solution clients.</span></p>
         <div class="cards">
           <div class="card">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><g class="st"><path class="spin" d="M32 10 A22 22 0 1 1 14 42" stroke-dasharray="10 7"/><path d="M32 20 A12 12 0 1 0 44 32" class="dim"/></g><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
             <div class="k">Memory</div>
             <h3><span class="ko">기억 엔진</span><span class="en">Memory engine</span></h3>
             <p><span class="ko">프로필 요약, 하이브리드 검색, 회상 강화, 리플렉션, 인물 기억, 자동 정리. 대화가 쌓일수록 무거워지지 않고 정리됩니다.</span><span class="en">Profile summarization, hybrid retrieval, recall reinforcement, reflection, per-person memory and automatic consolidation. It gets tidier as it grows, not heavier.</span></p>
           </div>
           <div class="card">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><path class="st wave" d="M6 38 C16 18 26 18 32 32 C38 46 48 46 58 26"/><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
             <div class="k">Emotion</div>
             <h3><span class="ko">감정선 엔진</span><span class="en">Emotional-arc engine</span></h3>
             <p><span class="ko">관성과 감쇠로 감정이 천천히 움직입니다. 한 마디에 태도가 뒤집히는 가벼움을 구조로 막았습니다.</span><span class="en">Inertia and decay make feeling move slowly. Flipping stance on a single line is blocked structurally.</span></p>
           </div>
           <div class="card">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><rect class="st draw" x="10" y="16" width="44" height="32" rx="3"/><path class="fl" d="M28 26 L40 32 L28 38 Z"/><path class="st flow dim" d="M10 54 L54 54"/></svg>
             <div class="k">Creation</div>
             <h3><span class="ko">창작 에이전트</span><span class="en">Creation agent</span></h3>
             <p><span class="ko">썸네일·영상·글을 기획부터 발행까지 대신 수행합니다. 우리 미디어 제작에도 같은 엔진을 씁니다.</span><span class="en">Plans, produces and publishes thumbnails, video and copy. We use the same engine for our own media production.</span></p>
           </div>
           <div class="card">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><path class="st" d="M32 8 L52 16 V32 C52 44 42 52 32 56 C22 52 12 44 12 32 V16 Z"/><path class="st sweep" d="M23 32 L29 38 L42 25"/></svg>
             <div class="k">Safety</div>
             <h3><span class="ko">위기 안전망</span><span class="en">Crisis safety net</span></h3>
             <p><span class="ko">자해·자살 신호를 감지하면 대화를 멈추고 전문 상담 창구로 연결합니다. 자체 레드팀 검사로 응답을 상시 점검합니다.</span><span class="en">On a self-harm signal the conversation stops and routes to professional help. An in-house red-team suite checks responses continuously.</span></p>
@@ -962,21 +1053,25 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <h2 class="dsp"><span class="ko">우리가 일하는 방식.</span><span class="en">How we work.</span></h2>
         <div class="principles">
           <div class="pr">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><circle class="st dim" cx="32" cy="32" r="20"/><path class="st spin" d="M32 12 A20 20 0 1 1 15 42" stroke-dasharray="47 16"/><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
             <div class="pri">01</div>
             <h3><span class="ko">창작자 몫이 먼저다</span><span class="en">The creator's share comes first</span></h3>
             <p><span class="ko">후원 수익의 <strong>75%는 창작자에게</strong> 갑니다. 이 요율은 영구 고정입니다 — 서비스가 커졌다고 나중에 창작자 몫을 깎지 않겠다는 약속입니다.</span><span class="en"><strong>75% of support revenue goes to the creator</strong>, and that rate is fixed permanently — a promise that we will not cut the creator's share once the service grows.</span></p>
           </div>
           <div class="pr">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><circle class="st" cx="32" cy="32" r="19"/><path class="st sweep" d="M19 19 L45 45"/><circle class="fl pulse" cx="32" cy="32" r="4"/></svg>
             <div class="pri">02</div>
             <h3><span class="ko">이용자를 상품으로 팔지 않는다</span><span class="en">People are not the product</span></h3>
             <p><span class="ko">광고를 매출의 축으로 삼지 않습니다. 이용자가 낸 돈으로 운영하는 쪽을 택했고, 그래야 알고리즘이 광고주가 아니라 사람을 향합니다. 여론 지표 역시 개인이 아니라 흐름만 다룹니다.</span><span class="en">Advertising is not a pillar of our revenue. We chose to run on what people pay us, so the algorithm answers to people rather than to advertisers. Our opinion index likewise deals in currents, never individuals.</span></p>
           </div>
           <div class="pr">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><path class="st" d="M32 10 L50 17 V33 C50 43 41 50 32 54 C23 50 14 43 14 33 V17 Z"/><path class="fl pulse" d="M30 24 h4 v12 h-4 Z M30 40 h4 v4 h-4 Z"/></svg>
             <div class="pri">03</div>
             <h3><span class="ko">안전이 기능보다 앞선다</span><span class="en">Safety before features</span></h3>
             <p><span class="ko">AI가 사람의 위기 신호를 만나면 대화를 멈추고 전문 창구로 연결합니다. 이 동작은 어떤 기능보다 먼저 검증하고, 배포 때마다 다시 검사합니다.</span><span class="en">When our AI meets a crisis signal, it stops and routes to professional help. That behaviour is verified before any feature, and re-tested on every release.</span></p>
           </div>
           <div class="pr">
+            <svg class="viz " viewBox="0 0 64 64" aria-hidden="true"><rect class="st" x="14" y="14" width="36" height="36" rx="4"/><path class="st flow" d="M14 32 L50 32"/><circle class="fl pulse" cx="32" cy="32" r="4"/></svg>
             <div class="pri">04</div>
             <h3><span class="ko">작게 만들고 끝까지 운영한다</span><span class="en">Build small, operate to the end</span></h3>
             <p><span class="ko">앱과 서버, AI, 결제와 정산, 관제까지 직접 만들고 직접 운영합니다. 만든 사람이 계속 붙어 있어야 서비스가 망가지지 않습니다.</span><span class="en">We build and run the app, servers, AI, payments, settlement and operations ourselves. A service stays healthy when the people who made it stay with it.</span></p>
@@ -1296,6 +1391,17 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     curAxis = null;
   }
 
+  /* 누른 카드가 속한 '행'의 마지막 카드 뒤로 서랍을 옮긴다.
+     열 수는 화면 폭에 따라 1·2·3 으로 바뀌므로 실제 계산된 값을 읽는다. */
+  function axPlace(card){
+    var grid = card.parentNode;
+    var list = [].slice.call(grid.querySelectorAll('.pillar[data-axis]'));
+    var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+    var i = list.indexOf(card);
+    var last = list[Math.min(list.length - 1, Math.floor(i / cols) * cols + (cols - 1))];
+    if (last && last.nextSibling !== drawer) grid.insertBefore(drawer, last.nextSibling);
+  }
+
   function axOpen(card){
     var id = card.getAttribute('data-axis');
     if (curAxis === id) { axClose(); return; }
@@ -1304,7 +1410,15 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     card.setAttribute('aria-expanded','true');
     curAxis = id;
     axRender(id);
+    axPlace(card);
     drawer.classList.add('on');
+    /* 그래도 서랍이 화면 밖으로 밀리면 살짝 따라간다 */
+    setTimeout(function(){
+      var r = drawer.getBoundingClientRect();
+      if (r.bottom > window.innerHeight) {
+        drawer.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      }
+    }, 520);
   }
 
   var axCards = document.querySelectorAll('.pillar[data-axis]');
@@ -1409,7 +1523,9 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       gvReplay=document.getElementById('gvReplay'),
       gvTimers=[], gvCur=-1;
 
-  function gvClear(){ for(var i=0;i<gvTimers.length;i++) clearTimeout(gvTimers[i]); gvTimers=[]; if(gvBody) gvBody.innerHTML=''; }
+  var gvPhone = document.getElementById('gvPhone');
+  function gvBusy(on){ if(gvPhone) gvPhone.classList.toggle('busy', !!on); }
+  function gvClear(){ for(var i=0;i<gvTimers.length;i++) clearTimeout(gvTimers[i]); gvTimers=[]; if(gvBody) gvBody.innerHTML=''; gvBusy(false); }
   function isEn(){ return document.documentElement.getAttribute('data-lang')==='en'; }
 
   function gvPlay(idx){
@@ -1421,24 +1537,47 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
 
     var delay=0;
     sc.turns.forEach(function(turn, ti){
+      var text = function(){ return isEn() ? turn.en : turn.ko; };
+
+      if(turn.who==='me'){
+        gvTimers.push(setTimeout(function(){
+          var el=document.createElement('div');
+          el.className='msg me';
+          el.textContent=text();
+          gvBody.appendChild(el);
+        }, delay));
+        delay += 520;
+        return;
+      }
+
+      /* 갈비스 차례: 먼저 '입력 중' 점 세 개를 띄우고(오브도 빨라진다),
+         그다음 그 자리를 답으로 바꿔 한 글자씩 친다. 답이 만들어지는 시간을 보여 준다. */
       gvTimers.push(setTimeout(function(){
-        var el=document.createElement('div');
-        el.className='msg '+(turn.who==='me'?'me':'gv');
-        gvBody.appendChild(el);
-        var text = isEn() ? turn.en : turn.ko;
-        if(turn.who==='me' || reduce){ el.textContent=text; return; }
-        /* 갈비스 말은 타이핑으로 — 답이 만들어지는 순간을 보여 준다 */
-        var n=0, caret=document.createElement('span'); caret.className='caret';
-        el.appendChild(document.createTextNode('')); el.appendChild(caret);
-        var tick=function(){
-          n++;
-          el.firstChild.nodeValue = text.slice(0,n);
-          if(n<text.length) gvTimers.push(setTimeout(tick, 22));
-          else caret.remove();
-        };
-        gvTimers.push(setTimeout(tick, 260));
+        var dots=document.createElement('div');
+        dots.className='typing';
+        dots.innerHTML='<i></i><i></i><i></i>';
+        gvBody.appendChild(dots);
+        gvBusy(true);
+
+        gvTimers.push(setTimeout(function(){
+          dots.remove();
+          var el=document.createElement('div');
+          el.className='msg gv';
+          gvBody.appendChild(el);
+          var t=text();
+          if(reduce){ el.textContent=t; gvBusy(false); return; }
+          var n=0, caret=document.createElement('span'); caret.className='caret';
+          el.appendChild(document.createTextNode('')); el.appendChild(caret);
+          var tick=function(){
+            n++;
+            el.firstChild.nodeValue = t.slice(0,n);
+            if(n<t.length) gvTimers.push(setTimeout(tick, 22));
+            else { caret.remove(); gvBusy(false); }
+          };
+          gvTimers.push(setTimeout(tick, 120));
+        }, reduce ? 0 : 1000));
       }, delay));
-      delay += ti===0 ? 380 : 900;
+      delay += 1400;
     });
   }
 
