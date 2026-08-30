@@ -117,9 +117,10 @@
   /* SPA(앱)에서는 DOMContentLoaded 가 이미 지나 있다 — 어댑터가 mount 로 부른다. */
   window.GALLA_PAGE_LOGIN_HISTORY = { mount: function (root) { render(root); } };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () { render(document); });
-  } else {
-    render(document);
-  }
+  /* ⚠️ 반드시 DOMContentLoaded 로 '등록'한다. SPA 로더가 이 등록을 가로채 보관했다가
+     방문할 때마다 다시 부르는 구조다(view-loader.loadPageScripts). 즉시 render() 를
+     부르면 1차 방문만 되고 재방문 때 아무것도 안 돈다 — 실측으로 확인했다. */
+  document.addEventListener("DOMContentLoaded", function () { render(document); });
+  /* MPA 에서 스크립트가 DCL 이후에 실행된 경우의 보험. SPA 는 로더가 책임지므로 건너뛴다. */
+  if (!window.GALLA_SPA_LOADER && document.readyState !== "loading") render(document);
 })();
