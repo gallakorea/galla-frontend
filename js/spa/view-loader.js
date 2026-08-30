@@ -48,6 +48,19 @@
       if (href) styles.push(href);
     });
 
+    /* 인라인 <style> 도 가져온다.
+       ⚠️ 예전엔 <link> 만 수집했다. 페이지 레이아웃을 <style> 안에 둔 화면(루트 HTML 23개)은
+       네이티브에서 스타일이 통째로 빠져, 여백 없이 화면 끝에 붙은 날 HTML 로 떴다
+       (2026-08-30 실측: 로그인 기록 — .section{padding:24px 16px} 이 안 먹었다).
+       ⚠️ <link> 와 마찬가지로 문서 전역에 한 번만 주입한다(중복·제거 없음). 즉 스타일이
+       다른 뷰로 샐 수 있는데, 이건 <link> 가 이미 그런 구조라 위험이 새로 생기는 게 아니다.
+       페이지 CSS 는 그 페이지 클래스에 걸려 있는 게 원칙이다. */
+    const inlineCss = [];
+    doc.querySelectorAll("style").forEach(el => {
+      const css = (el.textContent || "").trim();
+      if (css) inlineCss.push(css);
+    });
+
     // 페이지 자체 스크립트 목록(셸 싱글턴·MPA 크롬 제외) — 전용 뷰 모듈이 없을 때 범용 폴백으로 로드.
     const scripts = [];
     doc.querySelectorAll("script[src]").forEach(s => {
@@ -58,7 +71,7 @@
       scripts.push(src);
     });
 
-    const out = { app: app.innerHTML, styles, scripts, title: (doc.title || "").trim(), bodyClass: doc.body ? doc.body.className : "", dataPage: doc.body ? (doc.body.dataset.page || "") : "" };
+    const out = { app: app.innerHTML, styles, inlineCss, scripts, title: (doc.title || "").trim(), bodyClass: doc.body ? doc.body.className : "", dataPage: doc.body ? (doc.body.dataset.page || "") : "" };
     htmlCache.set(url, out);
     return out;
   }
@@ -121,7 +134,78 @@
   /* CSS 주입 — 새로 붙는 <link>의 onload까지 '기다리는' Promise를 돌려준다.
      라우터가 이걸 await한 뒤 콘텐츠를 노출해야 FOUC(스타일 미적용 날 HTML 번쩍)가 안 난다.
      이미 주입된 CSS는 즉시 통과. 느리거나 실패한 CSS가 노출을 영영 막지 않게 안전 타임아웃(1.5s). */
-  function injectStyles(styles) {
+  /* ── 인라인 CSS 를 뷰 범위로 가둔다 ──────────────────────────────────
+     그냥 문서에 붙이면 안 된다. login-history 의 body{max-width:480px} 같은 규칙이
+     앱 전체를 480px 로 묶어버린다(주입한 <style> 은 제거되지 않으므로 영구적이다).
+     실측: SPA 도달 가능한 16개 페이지 중 9개가 body/html/:root 를 건드린다.
+
+     규칙: 최상위 규칙마다 선택자 앞에 스코프를 붙인다.
+       .card         →  [data-page="x"] .card
+       body / html   →  [data-page="x"]          (그 페이지의 '루트'가 곧 뷰다)
+     @media·@supports 는 안쪽 규칙을 재귀로 처리하고, @keyframes·@font-face 처럼
+     선택자가 없는 블록은 손대지 않는다(이름이 겹치면 그건 원래 전역이다). */
+  function scopeCss(css, scope) {
+    const out = [];
+    let i = 0;
+    while (i < css.length) {
+      // 주석 건너뛰기
+      if (css.startsWith("/*", i)) { const e = css.indexOf("*/", i + 2); i = e < 0 ? css.length : e + 2; continue; }
+      // 선택자(또는 @규칙 프렐류드) 읽기 — 다음 '{' 또는 ';' 까지
+      let j = i, depth = 0;
+      while (j < css.length && css[j] !== "{" && css[j] !== "}") {
+        if (css[j] === ";" ) break;
+        j++;
+      }
+      if (j >= css.length) { break; }
+      if (css[j] === ";") {                     // @import · @charset 같은 문장 — 그대로
+        out.push(css.slice(i, j + 1)); i = j + 1; continue;
+      }
+      if (css[j] === "}") { i = j + 1; continue; }   // 짝 안 맞는 닫기 — 버린다
+      const prelude = css.slice(i, j).trim();
+      // 블록 본문 찾기(중첩 괄호 세기)
+      let k = j, body = "";
+      depth = 0;
+      for (; k < css.length; k++) {
+        if (css[k] === "{") depth++;
+        else if (css[k] === "}") { depth--; if (depth === 0) break; }
+      }
+      body = css.slice(j + 1, k);
+      i = k + 1;
+
+      const at = prelude.startsWith("@") ? prelude.slice(1).split(/[\s(]/)[0].toLowerCase() : "";
+      if (at === "media" || at === "supports" || at === "layer" || at === "container") {
+        out.push(prelude + "{" + scopeCss(body, scope) + "}");        // 안쪽을 재귀로
+      } else if (at) {
+        out.push(prelude + "{" + body + "}");                          // keyframes·font-face 등 — 그대로
+      } else {
+        const sel = prelude.split(",").map(one => {
+          const t = one.trim();
+          if (!t) return "";
+          // body / html / :root 는 '이 뷰' 자체로 바꾼다. body.foo 같은 건 뒤를 살린다.
+          const m = t.match(/^(?:html|body|:root)\b(.*)$/);
+          if (m) { const rest = m[1].trim(); return rest ? scope + rest : scope; }
+          return scope + " " + t;
+        }).filter(Boolean).join(",");
+        if (sel) out.push(sel + "{" + body + "}");
+      }
+    }
+    return out.join("\n");
+  }
+
+  const injectedInline = new Set();
+  function injectStyles(styles, inlineCss, pageName) {
+    /* 인라인은 기다릴 게 없다(네트워크 없음) — 먼저 붙여 FOUC 를 줄인다. */
+    const scope = pageName ? '[data-spa-view="' + pageName + '"]' : null;
+    (inlineCss || []).forEach(css => {
+      const key = (pageName || "") + ":" + css.length + ":" + css.slice(0, 120);
+      if (injectedInline.has(key)) return;
+      injectedInline.add(key);
+      const st = document.createElement("style");
+      st.setAttribute("data-spa-inline", pageName || "1");
+      try { st.textContent = scope ? scopeCss(css, scope) : css; }
+      catch (_) { return; }        // 못 파싱하면 아예 넣지 않는다 — 전역 오염보다 낫다
+      document.head.appendChild(st);
+    });
     const pending = [];
     (styles || []).forEach(href => {
       const key = stripV(href);

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0830009"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0830010"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -138,19 +138,19 @@
 <script src="js/social-auth.js?v=0828031"></script><!-- 🔑 소셜 로그인 딥링크 복귀 — 셸(top 문서)에 있어야 Capacitor 리스너가 붙는다.
      빠져 있어서 안드로이드에서 "No listeners found for event appUrlOpen" 이 났다(실측). -->
 <script src="js/iap.js?v=0828028"></script><!-- 💳 인앱 결제(구독) — plans 보다 먼저 붙어야 가격이 준비된다 -->
-<script src="js/plans.js?v=0830009"></script><!-- 🎟 이용권 시트(GALLA_openPlans) — 같은 이유로 직접 등록. 빠져 있어서 프로필 '이용권' 버튼이 죽어 있었다(실측). -->
+<script src="js/plans.js?v=0830010"></script><!-- 🎟 이용권 시트(GALLA_openPlans) — 같은 이유로 직접 등록. 빠져 있어서 프로필 '이용권' 버튼이 죽어 있었다(실측). -->
 <script src="js/workbench.js?v=0827010"></script><!-- 🎬 숏판 작업대 — SPA 셸은 nav.js를 안 실으므로 직접 등록 -->
 <script src="js/agent-hub.js?v=0827020"></script><!-- 🛸 갈비스 제작 입구 — 기존 허브와 다른 세계 -->
-<script src="./js/supabase.js?v=0830009"></script>
+<script src="./js/supabase.js?v=0830010"></script>
 <script src="./js/dm-sound.js?v=080412" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc(네이티브). Agora 웹SDK는 CallKit 잠금답변 오디오세션 충돌로 미사용(로드 제거 → GALLA_agora 없음 → dm-call.js가 iosrtc 경로). -->
 <!-- <script src="./js/agora-media.js?v=080412"></script> -->
-<script src="./js/dm-call.js?v=0830009"></script>
+<script src="./js/dm-call.js?v=0830010"></script>
 
 <!-- 공용 헤더 기능 — ＋ 글쓰기 허브·알림 벨/뱃지(문서 위임이라 어느 판 헤더든 동작) -->
 <script src="./js/write-hub.js?v=0828020"></script>
 <!-- 🤖 갈라비스(도구형) 폐기 → 🫂 갈라 친구(관계형)로 재탄생. (구 jarvis.js/css는 미사용) -->
-<script src="./js/friend.js?v=0830009" defer></script><!-- 🫂 갈라 친구 AI -->
+<script src="./js/friend.js?v=0830010" defer></script><!-- 🫂 갈라 친구 AI -->
 
 <script src="./js/notifications.js?v=080412"></script>
 <!-- 웹푸시 발송 트리거(GALLA_pushSend) — 팔로우 등 앱 전역에서 사용 -->
@@ -162,8 +162,8 @@
 <script src="./js/invite.js?v=0819130"></script><!-- 🎁 초대 허브(갈라/갈비스/갈라톡 전역) -->
 
 <!-- SPA 코어 -->
-<script src="./js/spa/view-loader.js?v=0830009"></script>
-<script src="./js/spa/router.js?v=0828178"></script>
+<script src="./js/spa/view-loader.js?v=0830010"></script>
+<script src="./js/spa/router.js?v=0830010"></script>
 <!-- 🎛 네비 조그셔틀(DM·트렌드 꾹눌러 부채꼴 선택) — SPA에 빠져 있어 조그가 안 먹던 것 추가. GALLA_shellGo(router) 정의 후 로드 -->
 <script src="./js/nav-jog.js?v=0828020"></script>
 <!-- ⬇️ 당겨서 새로고침 — SPA 전역(그동안 DM 등 일부 뷰만 로드돼 메인 탭에선 안 됐음). 싱글턴 가드 있음 -->

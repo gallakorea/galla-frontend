@@ -98,11 +98,14 @@
            (실측 2026-08-28 안드로이드 에뮬: 프로필 탭 첫 진입 — 아바타·버튼 없이 맨 텍스트).
            그래서 부팅 중(스플래시가 덮고 있는 동안)만 건너뛰고, 그 뒤로는 기다린다.
            기다리는 동안 화면은 이미 .pane-wait 스피너라 빈 화면이 아니다. 상한은 300ms(injectStyles). */
-        const cssP = L.injectStyles(v.styles);
+        const cssP = L.injectStyles(v.styles, v.inlineCss, tab);
         if (booted) { try { await cssP; } catch (_) {} }
         const host = document.createElement("div");
         host.className = "view-host";
         host.dataset.page = v.dataPage || tab;
+        /* 인라인 CSS 스코프 키. data-page 는 여러 화면이 공유해서(로그인기록·설정 모두 "mypage")
+           스코프로 쓰면 남의 페이지 스타일이 섞인다. 라우트 이름은 뷰마다 유일하다. */
+        host.dataset.spaView = tab;
         host.innerHTML = v.app;
         pane.innerHTML = "";
         pane.appendChild(host);
@@ -215,10 +218,11 @@
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
     try {
       const v = await L.fetchView(url.indexOf("?") === -1 ? url + "?spa=1" : url + "&spa=1");
-      await L.injectStyles(v.styles);   // ⏳ CSS 적용까지 기다린 뒤 노출 — FOUC(날 HTML 번쩍) 방지
+      await L.injectStyles(v.styles, v.inlineCss, name);   // ⏳ CSS 적용까지 기다린 뒤 노출 — FOUC(날 HTML 번쩍) 방지
       const host = document.createElement("div");
       host.className = "view-host";
       host.dataset.page = v.dataPage || name;
+      host.dataset.spaView = name;          // 인라인 CSS 스코프 키 — 위 주석 참고
       host.innerHTML = v.app;
       layer.innerHTML = "";
       layer.appendChild(host);
