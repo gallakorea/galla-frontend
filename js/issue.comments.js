@@ -2434,13 +2434,29 @@ async function submitBattleReply(type, targetId, targetUser, text) {
         if (crit) FX.flash("rgba(255,40,40,.18)", 240);
       }
       if (crit) showKoBanner(targetId);
-    } else {
+    } else if (bd.heal_capped) {
+      /* 🩹 회복 상한(_hp_of: 받은 피해의 30%까지)에 걸려 HP 가 한 톨도 안 올랐다.
+         예전엔 이때도 "+6 방어 / 🛡 방어 성공! / 폭죽"을 그대로 띄웠다 — 아무 일도
+         안 일어났는데 축하만 하니, 유저는 버튼이 먹통인 줄 알거나 헛되이 계속 눌렀다.
+         카운터(방어 수)는 올라가므로 '기록은 됐지만 HP 는 못 올린다'고 정확히 말해준다.
+         상한 여부는 서버(battle_action.heal_capped)가 알려준다 — 여기서 다시 계산하지 않는다. */
+      const meta = ACTION_META[type] || ACTION_META.defend;
       hitFx(targetUnit, "heal");
-      spawnCombatText(targetUnit, `+${BATTLE_DMG.defend} 방어`, "heal");
+      spawnCombatText(targetUnit, "회복 한계", "heal");
+      if (FX) {
+        FX.shockwave(targetUnit, "rgba(150,160,180,.7)");
+        FX.banner(`${meta.icon} ${meta.verb}는 기록됐지만 HP 는 그대로 — 회복은 받은 피해의 30%까지예요`, "info");
+        FX.haptic("tap");
+      }
+    } else {
+      const meta = ACTION_META[type] || ACTION_META.defend;
+      hitFx(targetUnit, "heal");
+      // ⚠️ 예전엔 지원을 눌러도 "+6 방어"로 떴다(지원은 +8) — 행동별 메타를 쓴다
+      spawnCombatText(targetUnit, `${meta.delta} ${meta.verb}`, "heal");
       if (FX) {
         FX.burstAt(targetUnit, "defend");
         FX.shockwave(targetUnit, "rgba(120,190,255,.9)");
-        FX.banner("🛡 방어 성공!", "cheer");
+        FX.banner(`${meta.icon} ${meta.verb} 성공!`, "cheer");
         FX.confetti(46);
         FX.haptic("cheer");
       }
