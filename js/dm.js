@@ -1427,7 +1427,11 @@
     //    방 나가도 계속 녹음되던 버그 방지(사장님 제보).
     if (name !== CUR_VIEW) { try { stopVoiceRec(true); PTT = null; if (typeof paintRec === 'function') paintRec(false); } catch (_) {} }
     // 🔬 임시 진단(입력바 잘림) — 실기기 레이아웃 수치를 client_errors로 보고. 원인 확정 후 제거.
-    if ((name === 'thread' || name === 'room') && !window.__barDiagSent) {
+    /* 🔬 입력바 레이아웃 진단 — 기본 꺼짐. 상시 기록하면 DM 을 열 때마다 쌓여
+       진짜 오류가 묻힌다(2026-08-30: client_errors 소음 정리하며 발견).
+       켜는 법: localStorage.setItem('galla_bar_diag','1') */
+    const _barDiagOn = (() => { try { return localStorage.getItem('galla_bar_diag') === '1'; } catch (_) { return false; } })();
+    if (_barDiagOn && (name === 'thread' || name === 'room') && !window.__barDiagSent) {
       window.__barDiagSent = 1;
       setTimeout(() => {
         try {

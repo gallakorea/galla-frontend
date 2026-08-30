@@ -280,9 +280,18 @@
   }
   /* 🔬 네이티브가 실제 오디오 세션 상태를 돌려준다 → client_errors에 남긴다.
      실기기에서만 재현되는 문제라, 남겨두지 않으면 매번 사장님께 물어봐야 한다.
-     ⚠️ 같은 값이 반복해서 쌓이지 않게 바뀔 때만 기록한다. */
+
+     ⚠️ 기본은 꺼 둔다. 상시 기록했더니 7일치 client_errors 152건 중 113건(74%)이
+     이 로그였다 — 진짜 오류 23건이 소음에 묻혔다(2026-08-30 실측). 중복 차단이
+     '연속 같은 줄'만 막아서, 영상 재생/정지가 번갈아 나는 피드에선 매번 쌓인다.
+     켜는 법:  localStorage.setItem('galla_audio_diag','1')  → 앱 재시작
+     (dm-call.js 통화 진단도 같은 방식으로 게이팅돼 있다) */
+  function audioDiagOn() {
+    try { return localStorage.getItem("galla_audio_diag") === "1"; } catch (_) { return false; }
+  }
   let _lastAudioDiag = "";
   window.__gallaAudioLog = function (op, diag) {
+    if (!audioDiagOn()) return;
     try {
       const line = op + " " + diag;
       if (line === _lastAudioDiag) return;
@@ -290,8 +299,8 @@
       window.GALLA_logError && window.GALLA_logError(new Error("[audio] " + line), "audio-session");
     } catch (_) {}
   };
-  // 앱 진입 시 한 번 현재 세션을 찍어둔다(기준값)
-  setTimeout(() => nativeAudio("probe"), 3000);
+  // 앱 진입 시 한 번 현재 세션을 찍어둔다(기준값) — 진단 켰을 때만
+  if (audioDiagOn()) setTimeout(() => nativeAudio("probe"), 3000);
   /* 🔉 소리는 언제나 '한 영상만'.
      피드는 화면 밖 영상을 pause로만 정리하는데, 정지된 영상도 muted=false를 그대로 들고 있다.
      그래서 스크롤하다 보면 위/아래 영상이 겹쳐 울리거나, 어느 게 소리 내는지 알 수 없게 된다
