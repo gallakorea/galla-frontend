@@ -221,7 +221,8 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 }
 .alone::after{
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,var(--void) 0%,transparent 9%,transparent 91%,var(--void) 100%);
+  background:linear-gradient(90deg,var(--void) 0%,transparent 9%,transparent 91%,var(--void) 100%),
+             linear-gradient(0deg,rgba(7,8,11,.92) 0%,rgba(7,8,11,.45) 9%,transparent 22%);
 }
 .alone canvas{display:block;width:100%;height:clamp(210px,25vw,320px)}
 .alone-cap{
@@ -461,7 +462,7 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 /* ── HUD 리액터 ───────────────────────────────────────
    납작한 아이콘 대신 겹친 링이 서로 다른 속도·방향으로 돈다.
    카드에 올리면 회전이 빨라지고 코어가 밝아진다 — 켜졌다는 감각. */
-.hud{overflow:visible;color:var(--ice)}
+.hud{color:var(--ice)}
 .hud .hring,.hud .hgl,.hud .hsw{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
 .hud .hr{transform-box:fill-box;transform-origin:center;animation:hudspin var(--d,16s) linear infinite}
 .hud .r1{opacity:.45;--d:26s}
@@ -502,6 +503,72 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 .card:nth-child(4) .viz{color:var(--red)}
 @media (prefers-reduced-motion: reduce){
   .hud .hr,.hud .hsw,.hud .hcore,.hud .hcore2,.hud .hwave{animation:none}
+}
+
+/* ── 연혁: 마디가 하나씩 켜진다 ───────────────────────
+   척추를 통짜로 그리면 열 너비가 화면마다 달라 위치를 못 맞춘다.
+   줄마다 자기 몫의 선분을 그리게 하면 쌓여서 저절로 이어진다. */
+/* 날짜 칸을 좁히면 2026.07.23 이 두 줄로 깨진다. 폭은 두고 간격을 줄여 마디 칸을 만든다. */
+.tl{grid-template-columns:92px 16px 1fr!important;gap:10px!important}
+@media(min-width:720px){.tl{grid-template-columns:154px 22px 1fr!important;gap:22px!important}}
+.tl .when{white-space:nowrap}
+
+/* 좁은 화면에서 8px 가로 스크롤이 있었다(릴스 벽에서 새어 나온다).
+   clip 은 hidden 과 달리 스크롤 컨테이너를 만들지 않아 헤더 sticky 를 건드리지 않는다. */
+main{overflow-x:clip}
+.tl{align-items:start!important;position:relative}
+.tl .when{padding-top:2px}
+.tl-n{position:relative;display:block;width:100%;height:1px;margin-top:9px}
+.tl-n::before{                                  /* 이 줄이 맡은 척추 조각 */
+  content:"";position:absolute;left:50%;top:-21px;bottom:auto;height:calc(100% + 62px);
+  width:1px;margin-left:-.5px;background:var(--rule);
+  transform:scaleY(0);transform-origin:top;
+  transition:transform .6s cubic-bezier(.3,.8,.3,1);
+}
+.tl:last-child .tl-n::before{height:26px}
+.tl-n::after{                                   /* 마디 */
+  content:"";position:absolute;left:50%;top:-4px;width:9px;height:9px;margin-left:-4.5px;
+  border-radius:50%;background:var(--ground);border:1.5px solid var(--rule);
+  transform:scale(.4);opacity:0;
+  transition:transform .5s cubic-bezier(.3,1.6,.4,1) .18s,opacity .4s ease .18s,
+             border-color .5s,background .5s,box-shadow .5s;
+}
+.tl.on .tl-n::before{transform:scaleY(1)}
+.tl.on .tl-n::after{transform:scale(1);opacity:1;border-color:var(--red);box-shadow:0 0 12px var(--red-glow)}
+.tl.future.on .tl-n::after{border-color:var(--ice);box-shadow:0 0 12px var(--blue-glow);background:transparent}
+.tl.future .tl-n::before{background:repeating-linear-gradient(180deg,var(--rule) 0 4px,transparent 4px 9px)}
+/* 아직 오지 않은 해는 숨을 쉰다 */
+@media (prefers-reduced-motion: no-preference){
+  .tl.future.on .tl-n::after{animation:tlbreath 2.8s ease-in-out infinite 1s}
+  @keyframes tlbreath{0%,100%{box-shadow:0 0 8px var(--blue-glow)}50%{box-shadow:0 0 18px var(--ice)}}
+  .tl .when,.tl .what{opacity:0;transform:translateY(8px);transition:opacity .55s ease .1s,transform .55s cubic-bezier(.2,.8,.3,1) .1s}
+  .tl.on .when,.tl.on .what{opacity:1;transform:none}
+}
+[dir="rtl"] .tl-n::before,[dir="rtl"] .tl-n::after{left:auto;right:50%;margin-left:0;margin-right:-.5px}
+[dir="rtl"] .tl-n::after{margin-right:-4.5px}
+
+/* ── 채용·등기: 줄이 차례로 선다 ──────────────────── */
+@media (prefers-reduced-motion: no-preference){
+  .roles li{opacity:0;transform:translateX(-10px);transition:opacity .6s ease var(--sd,0s),transform .6s cubic-bezier(.2,.8,.3,1) var(--sd,0s)}
+  .hire.on .roles li{opacity:1;transform:none}
+  [dir="rtl"] .roles li{transform:translateX(10px)}
+  .roles li:nth-child(2){--sd:.12s}
+  .roles li:nth-child(3){--sd:.24s}
+  .roles li svg{stroke-dasharray:80;stroke-dashoffset:80;transition:stroke-dashoffset 1.1s ease var(--sd,0s)}
+  .hire.on .roles li svg{stroke-dashoffset:0}
+  .registry tr{opacity:0;transform:translateY(8px);transition:opacity .5s ease var(--sd,0s),transform .5s cubic-bezier(.2,.8,.3,1) var(--sd,0s)}
+  .registry.on tr{opacity:1;transform:none}
+}
+/* 지원 버튼에 맥이 뛴다 */
+.hire-go{position:relative;overflow:hidden}
+.hire-go::after{
+  content:"";position:absolute;top:0;bottom:0;width:44%;left:-50%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);
+  transform:skewX(-18deg);
+}
+@media (prefers-reduced-motion: no-preference){
+  .hire-go::after{animation:hireshine 3.4s ease-in-out infinite 1.2s}
+  @keyframes hireshine{0%{left:-50%}55%,100%{left:120%}}
 }
 
 /* ── 사업 축 5 ─────────────────────────────────────── */
@@ -837,7 +904,7 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 .hire{display:grid;grid-template-columns:1fr;gap:clamp(22px,3vw,40px);align-items:start;margin-top:clamp(24px,3vw,36px)}
 @media(min-width:900px){.hire{grid-template-columns:1.25fr 1fr}}
 .hire-b{margin:0;color:var(--ink-mid);font-size:1rem;line-height:1.85;max-width:56ch}
-.roles{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;gap:1px;background:var(--rule-soft)}
+.roles{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;gap:1px;background:var(--rule-soft);overflow:hidden}
 .roles li{display:flex;align-items:center;gap:14px;background:var(--surface);padding:16px 18px;color:var(--ink);font-size:.95rem}
 .roles li svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--ice);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .hire-card{border:1px solid var(--rule-soft);background:var(--surface);padding:clamp(24px,3vw,32px);display:flex;flex-direction:column;gap:14px}
@@ -1709,13 +1776,13 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       <div>
         <h2 class="dsp"><span data-i="t146"></span></h2>
         <div class="timeline">
-          <div class="tl"><div class="when">2026.01</div><div class="what"><span data-i="t147"></span><small><span data-i="t148"></span></small></div></div>
-          <div class="tl"><div class="when">2026.H1</div><div class="what"><span data-i="t149"></span><small><span data-i="t150"></span></small></div></div>
-          <div class="tl"><div class="when">2026.07.23</div><div class="what"><span data-i="t151"></span><small><span data-i="t152"></span></small></div></div>
-          <div class="tl"><div class="when">2026.08</div><div class="what"><span data-i="t153"></span><small><span data-i="t154"></span></small></div></div>
-          <div class="tl future"><div class="when">2026.09</div><div class="what"><span data-i="t155"></span></div></div>
-          <div class="tl future"><div class="when">2027</div><div class="what"><span data-i="t156"></span></div></div>
-          <div class="tl future"><div class="when">2028</div><div class="what"><span data-i="t157"></span></div></div>
+          <div class="tl"><div class="when">2026.01</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t147"></span><small><span data-i="t148"></span></small></div></div>
+          <div class="tl"><div class="when">2026.H1</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t149"></span><small><span data-i="t150"></span></small></div></div>
+          <div class="tl"><div class="when">2026.07.23</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t151"></span><small><span data-i="t152"></span></small></div></div>
+          <div class="tl"><div class="when">2026.08</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t153"></span><small><span data-i="t154"></span></small></div></div>
+          <div class="tl future"><div class="when">2026.09</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t155"></span></div></div>
+          <div class="tl future"><div class="when">2027</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t156"></span></div></div>
+          <div class="tl future"><div class="when">2028</div><i class="tl-n" aria-hidden="true"></i><div class="what"><span data-i="t157"></span></div></div>
         </div>
       </div>
     </div>
@@ -2522,20 +2589,31 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     var cv = document.getElementById('aloneKV');
     if(!cv || !cv.getContext) return;
     var fig = cv.parentNode, capEl = document.getElementById('aloneCap');
-    var ctx = cv.getContext('2d'), W=0, H=0, DPR=1, alive=false, N=[], orb=null, px=-1, py=-1;
+    var ctx = cv.getContext('2d'), W=0, H=0, DPR=1, alive=false, N=[], Q=[], MAX=4, orb=null, px=-1, py=-1;
 
     function seed(){
-      N=[];
-      var cols = W<560 ? 5 : (W<860 ? 7 : 9), rows = W<560 ? 3 : 4;
+      N=[]; Q=[];
+      var cols = W<420 ? 4 : (W<560 ? 5 : (W<860 ? 7 : 9)), rows = W<560 ? 3 : 4;
+      /* 캡션이 앉을 아래쪽을 비워 둔다 — 글자 위에 점이 겹치면 둘 다 안 읽힌다 */
+      var y0 = 0.13, y1 = W<560 ? 0.70 : 0.80;
       for(var r=0;r<rows;r++) for(var c=0;c<cols;c++){
         var jx=(Math.sin((r*13+c*7)*1.7)*0.5), jy=(Math.cos((r*5+c*11)*2.3)*0.5);
         N.push({
-          x:(c+0.5)/cols + jx*0.055, y:(r+0.5)/rows + jy*0.13,
-          on:0, want:0, ph:(c*3+r*7)%10 / 10 * 6.28, dwell:0
+          x:(c+0.5)/cols + jx*0.05,
+          y:y0 + (r+0.5)/rows*(y1-y0) + jy*0.06*(y1-y0),
+          on:0, want:0, ph:(c*3+r*7)%10 / 10 * 6.28
         });
       }
+      /* 동시에 붙어 있는 수를 묶어 둔다. 전부 켜지면 그냥 반짝이는 벽이 되고,
+         "혼자"라는 말이 화면에서 사라진다. */
+      MAX = Math.max(2, Math.round(N.length*0.22));
       orb = { x:0.5, y:0.5, i:-1, hold:0 };
       pick();
+    }
+    function bind(i){
+      if(N[i].want) return;
+      N[i].want=1; Q.push(i);
+      while(Q.length > MAX) N[Q.shift()].want=0;   /* 가장 오래된 쌍부터 풀린다 */
     }
     /* 다음 목표는 오브에서 가장 가까운 미결합 점. 커서가 필드 안이면 커서 쪽을 우선한다. */
     function pick(){
@@ -2545,10 +2623,7 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         var d=(N[i].x-ax)*(N[i].x-ax)+(N[i].y-ay)*(N[i].y-ay)*0.5;
         if(d<bd){bd=d;bi=i;}
       }
-      if(bi<0){ /* 전부 붙었다 — 두엇 풀어서 계속 돌린다 */
-        for(var k=0;k<3;k++){ var j=(Math.random()*N.length)|0; N[j].want=0; }
-        bi=0; for(var m=0;m<N.length;m++) if(!N[m].want){bi=m;break;}
-      }
+      if(bi<0){ bi=(Math.random()*N.length)|0; }
       orb.i=bi;
     }
     function resize(){
@@ -2567,10 +2642,10 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       if(!reduce && tgt){
         orb.x += (tgt.x-orb.x)*0.055; orb.y += (tgt.y-orb.y)*0.055;
         var near = Math.abs(orb.x-tgt.x)<0.012 && Math.abs(orb.y-tgt.y)<0.02;
-        if(near){ tgt.want=1; orb.hold++; if(orb.hold>16){ orb.hold=0; pick(); } }
+        if(near){ bind(orb.i); orb.hold++; if(orb.hold>16){ orb.hold=0; pick(); } }
       }
 
-      var paired=0;
+      var paired=0, SC = Math.min(1, W/560);
       ctx.globalCompositeOperation='lighter';
       for(var i=0;i<N.length;i++){
         var n=N[i];
@@ -2595,10 +2670,10 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
           var cx=x+13, cy=y+2;
           ctx.strokeStyle='rgba(255,255,255,'+(lit*0.42)+')'; ctx.lineWidth=1;
           ctx.beginPath(); ctx.moveTo(x+3.4,y+2); ctx.lineTo(cx-3.2,cy); ctx.stroke();
-          var g=ctx.createRadialGradient(cx,cy,0,cx,cy,16*lit);
-          g.addColorStop(0,'rgba(255,122,89,'+(lit*0.55)+')');
+          var g=ctx.createRadialGradient(cx,cy,0,cx,cy,16*lit*SC);
+          g.addColorStop(0,'rgba(255,122,89,'+(lit*0.5)+')');
           g.addColorStop(1,'rgba(255,122,89,0)');
-          ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,16*lit,0,6.2832); ctx.fill();
+          ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,16*lit*SC,0,6.2832); ctx.fill();
           ctx.fillStyle='rgba(255,150,120,'+(lit*0.95)+')';
           ctx.beginPath(); ctx.arc(cx,cy,2.4*lit,0,6.2832); ctx.fill();
         }
@@ -2607,17 +2682,17 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       /* 찾아다니는 오브 */
       if(tgt){
         var ox=orb.x*W, oy=orb.y*H, pl=(Math.sin(t*0.006)+1)/2;
-        var og=ctx.createRadialGradient(ox,oy,0,ox,oy,22+pl*6);
+        var og=ctx.createRadialGradient(ox,oy,0,ox,oy,(22+pl*6)*SC);
         og.addColorStop(0,'rgba(255,255,255,.55)');
         og.addColorStop(.3,'rgba(255,122,89,.30)');
         og.addColorStop(1,'rgba(255,122,89,0)');
-        ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,22+pl*6,0,6.2832); ctx.fill();
+        ctx.fillStyle=og; ctx.beginPath(); ctx.arc(ox,oy,(22+pl*6)*SC,0,6.2832); ctx.fill();
         ctx.fillStyle='rgba(255,255,255,.92)';
         ctx.beginPath(); ctx.arc(ox,oy,3,0,6.2832); ctx.fill();
       }
       ctx.globalCompositeOperation='source-over';
 
-      var half = paired > N.length*0.45;
+      var half = paired >= 2;
       if(half !== fig.classList.contains('paired')){
         fig.classList.toggle('paired', half);
         cap();
@@ -2790,6 +2865,33 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
       })(cols[c], c*900);
     }
   })();
+
+
+  /* ── 연혁·채용·등기: 화면에 들어온 줄부터 켠다 ── */
+  if(window.IntersectionObserver){
+    var rows=document.querySelectorAll('.tl');
+    var tio=new IntersectionObserver(function(es){
+      for(var i=0;i<es.length;i++) if(es[i].isIntersecting){
+        es[i].target.classList.add('on'); tio.unobserve(es[i].target);
+      }
+    },{threshold:.5, rootMargin:'0px 0px -8% 0px'});
+    for(var ti=0;ti<rows.length;ti++) tio.observe(rows[ti]);
+
+    var blocks=document.querySelectorAll('.hire, .registry');
+    var hio=new IntersectionObserver(function(es){
+      for(var j=0;j<es.length;j++) if(es[j].isIntersecting){
+        var el=es[j].target;
+        el.classList.add('on');
+        var trs=el.querySelectorAll('tr');
+        for(var r=0;r<trs.length;r++) trs[r].style.setProperty('--sd',(r*0.06).toFixed(2)+'s');
+        hio.unobserve(el);
+      }
+    },{threshold:.2});
+    for(var hi=0;hi<blocks.length;hi++) hio.observe(blocks[hi]);
+  } else {
+    var f1=document.querySelectorAll('.tl, .hire, .registry');
+    for(var f=0;f<f1.length;f++) f1[f].classList.add('on');
+  }
 
   /* ── 스크롤 진행선 ── */
   (function(){
