@@ -195,6 +195,12 @@ function rootIdOf(id) {
 }
 
 let allRows = [];     // 이 이슈의 모든 댓글 행
+/* 방금 내가 만든 댓글 id — realtime 이 같은 행을 되돌려줄 때 걸러낸다.
+   ⚠️ 왜 allRows 만으로 부족한가: insert 직후 allRows 에 넣기까지 사이에 await 가 있다
+   (전투 답글은 battle_action RPC, 일반 댓글은 아이템 조회). 그 틈에 realtime 이 먼저
+   도착하면 중복 검사를 통과해 같은 글이 두 번 그려진다 — 실측으로 재현했다.
+   insert 가 반환되는 즉시(어떤 await 보다 먼저) 여기에 넣는다. */
+const MY_FRESH = new Set();
 let hlSet = new Set(); // 🚀 하이라이트 부스트된 댓글 id
 let replyMap = {};    // parent_id -> [reply rows]
 let likeAgg = {};     // comment_id -> { up, down }
@@ -1096,7 +1102,15 @@ async function initBattleFeed(issueId) {
     // 새 댓글/답글 실시간 부분 삽입 — 남의 참전·전투 답글이 그 자리에 바로 나타난다
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: "issue_id=eq." + issueId }, async payload => {
       const c = payload.new;
-      if (!c || c.user_id === ME.userId) return;          // 내 것은 로컬에서 이미 처리
+      if (!c) return;
+      /* ⚠️ realtime 페이로드에는 user_id 가 없다. comments.user_id 는 authenticated 에게
+         SELECT 권한이 없고(익명 보호), 대신 author_id 만 내려온다 —
+         author_id = CASE WHEN is_anonymous THEN NULL ELSE user_id END.
+         예전 가드 `c.user_id === ME.userId` 는 undefined 비교라 한 번도 맞은 적이 없다.
+         그래서 내가 쓴 글이 realtime 으로 되돌아와 로컬 삽입분과 겹쳐 두 번 그려졌고,
+         되돌아온 쪽은 작성자 정보가 없어 '익명'으로 떴다(실측: 페이로드 키에 user_id 없음). */
+      if ((c.author_id || null) === ME.userId) return;    // 내 것(비익명)은 로컬에서 처리
+      if (MY_FRESH.has(c.id)) return;                     // 내 것(익명 포함) — 경합 대비
       if (allRows.some(r => r.id === c.id)) return;
       if (c.status === "deleted") return;
 
@@ -2197,6 +2211,7 @@ function bindComposerEls() {
         content: text,
         is_anonymous: GHOST_ON     // 👻 유령 참전 (seed는 서버 트리거가 강제 주입)
       }).select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
+      if (newRow?.id) MY_FRESH.add(newRow.id);   // ⚠️ 아래 await 들보다 먼저 — realtime 이 먼저 도착해도 걸린다
       if (error) {
         if (String(error.message || "").includes("no_ghost_pass")) {
           askShop("👻 유령권이 만료됐어요.");
@@ -2368,6 +2383,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     battle_action: type,
     is_anonymous: GHOST_ON     // 👻 유령 답글
   }).select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
+  if (newRow?.id) MY_FRESH.add(newRow.id);   // ⚠️ battle_action RPC await 보다 먼저
   if (insertErr) {
     if (String(insertErr.message || "").includes("no_ghost_pass")) {
       askShop("👻 유령권이 만료됐어요.");
@@ -2595,6 +2611,7 @@ export function destroyCommentSystem() {
   // 전역 리스너(구역 표시 스크롤 추적)
   unbindZoneIndicator();
   // 이슈 종속 상태 — 다음 mount의 initCommentSystem/loadComments가 새로 채운다
+  MY_FRESH.clear();                 // 이 이슈에서 내가 쓴 글 id 캐시(realtime 중복 방지용)
   window.CURRENT_ISSUE_ID = null;
   window.MY_VOTE_TYPE = null;
   allRows = []; replyMap = {}; likeAgg = {}; profileMap = {}; authorVoteMap = {};
