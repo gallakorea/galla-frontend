@@ -99,6 +99,9 @@ body::after{
 .rise{opacity:0;transform:translateY(10px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
 .rise.in{opacity:1;transform:none}
 @media (prefers-reduced-motion: reduce){.rise{opacity:1;transform:none}}
+/* 'rise' 는 스크롤 등장 클래스이면서 SVG 도형 애니메이션 클래스로도 쓰인다.
+   이름이 겹쳐 아이콘 안의 도형까지 opacity:0 으로 숨어 있었다. SVG 안은 제외한다. */
+svg .rise{opacity:1;transform:none}
 
 /* ── 상단 바 ───────────────────────────────────────── */
 .topbar{
@@ -117,7 +120,7 @@ body::after{
 }
 .nav a:hover{color:var(--ink);border-bottom-color:var(--ice)}
 section,.band{scroll-margin-top:64px}
-.langbtn{
+.langbtn{min-height:38px;
   font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;
   background:transparent;color:var(--ink-mid);border:1px solid var(--rule);
   padding:7px 13px;border-radius:2px;cursor:pointer;transition:border-color .2s,color .2s;
@@ -179,7 +182,9 @@ h1.dsp{font-size:clamp(2.6rem,7.6vw,5.8rem);max-width:15em;letter-spacing:-.035e
 
 /* ── 섹션 골격 ─────────────────────────────────────── */
 section{border-top:1px solid var(--rule-soft);position:relative}
-.sec{display:grid;grid-template-columns:1fr;gap:16px;padding:clamp(72px,11vw,146px) 0}
+/* padding 단축형은 .wrap 의 좌우 여백까지 0으로 덮어쓴다(.sec 가 뒤에 온다).
+   위아래만 지정해야 글이 화면 끝에 붙지 않는다. */
+.sec{display:grid;grid-template-columns:1fr;gap:16px;padding-top:clamp(72px,11vw,146px);padding-bottom:clamp(72px,11vw,146px)}
 @media(min-width:1080px){
   .sec{grid-template-columns:170px 1fr;gap:0}
   .rail{position:sticky;top:100px;align-self:start;height:230px}
@@ -986,6 +991,7 @@ textarea.tf-f{resize:vertical;min-height:104px;line-height:1.7;font-size:1.02rem
 .tf-go:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,255,255,.14)}
 .tf-back{background:none;border:0;cursor:pointer;color:var(--ink-low);font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.12em}
 .tf-back:hover{color:var(--ink)}
+@media (hover:none),(pointer:coarse){.tf-key{display:none}}
 .tf-key{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.1em;color:var(--ink-low)}
 .tf-pot{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .tf-bar{height:2px;background:var(--rule-soft);position:relative}
@@ -2421,7 +2427,7 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
      대상과 쓰임만 구체적으로 적는다. 없는 파트너를 적으면 나중에 거짓이 된다. */
   var GIVE = {
     welfare:{
-      fig:'<svg class="gd-fig" viewBox="0 0 200 150"><g class="st"><path d="M40 96 L84 62 L128 96 V128 H40 Z"/><path d="M60 128 v-24 h20 v24"/></g><circle class="fl rip" cx="150" cy="70" r="8"/><path class="fl float" d="M150 58c-9 8-13 12-13 18a13 13 0 0 0 26 0c0-6-4-10-13-18Z"/><path class="st ink flow" d="M20 136 H180"/></svg>',
+      fig:'<svg class="gd-fig" viewBox="0 0 200 150"><g class="st"><path d="M40 96 L84 62 L128 96 V128 H40 Z"/><path d="M60 128 v-24 h20 v24"/></g><circle class="fl rip" cx="150" cy="70" r="8"/><path class="fl float" d="M150 80c-14-9-20-15-20-22a9 9 0 0 1 20-4 9 9 0 0 1 20 4c0 7-6 13-20 22Z"/><path class="st ink flow" d="M20 136 H180"/></svg>',
       ko:{d:'끼니와 난방이 가장 먼저 끊기는 사람들입니다. 혼자 사는 어르신, 저소득 1인 가구, 돌봄이 비어 버린 가정에 갑니다.',l:['밑반찬·식료품','겨울 난방비','주거 환경 개선']},
       en:{d:'The people whose meals and heating are cut first: older adults living alone, low-income single households, families left without care.',l:['Meals & groceries','Winter heating','Home repairs']},
       ja:{d:'食事と暖房が最初に途切れる人たちへ。ひとり暮らしの高齢者、低所得の単身世帯、ケアが空いた家庭に届きます。',l:['食事・食料品','冬の暖房費','住環境の改善']},
@@ -2892,6 +2898,42 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     var f1=document.querySelectorAll('.tl, .hire, .registry');
     for(var f=0;f<f1.length;f++) f1[f].classList.add('on');
   }
+
+
+  /* ── 지나친 것은 반드시 켠다 ─────────────────────────
+     앵커 점프나 빠른 플링으로 구간을 건너뛰면 IntersectionObserver 는
+     교차하는 프레임을 한 번도 못 본다. 그러면 그 구간은 영원히 opacity:0 인
+     채로 남는다 — 법인 등기표가 통째로 사라지는 식이다.
+     스크롤이 움직일 때마다 "이미 화면에 들어왔거나 지나간" 것을 전부 켠다. */
+  (function(){
+    var pend=[].slice.call(document.querySelectorAll('.rise, .tl, .hire, .registry'));
+    var queued=false;
+    function light(e){
+      if(e.classList.contains('rise')) e.classList.add('in');
+      if(e.matches('.tl, .hire, .registry')){
+        e.classList.add('on');
+        var trs=e.querySelectorAll('tr');
+        for(var r=0;r<trs.length;r++) trs[r].style.setProperty('--sd',(r*0.06).toFixed(2)+'s');
+      }
+    }
+    function run(){
+      queued=false;
+      var vh=window.innerHeight, keep=[];
+      for(var i=0;i<pend.length;i++){
+        if(pend[i].getBoundingClientRect().top < vh) light(pend[i]);
+        else keep.push(pend[i]);
+      }
+      pend=keep;
+      if(!pend.length){
+        window.removeEventListener('scroll', hit);
+        window.removeEventListener('resize', hit);
+      }
+    }
+    function hit(){ if(!queued){ queued=true; requestAnimationFrame(run); } }
+    window.addEventListener('scroll', hit, {passive:true});
+    window.addEventListener('resize', hit);
+    hit();
+  })();
 
   /* ── 스크롤 진행선 ── */
   (function(){
