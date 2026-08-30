@@ -47,7 +47,7 @@
 
   function card(title, sub, meta, live) {
     return '<div class="log-card">' +
-      '<div class="log-date">' + esc(meta) + (live ? ' · <span style="color:#7dd87d">지금 접속 중</span>' : "") + "</div>" +
+      '<div class="log-date">' + esc(meta) + (live ? ' · <span style="color:#7dd87d">로그인 유지 중</span>' : "") + "</div>" +
       '<div class="log-agent">' + esc(title) + "</div>" +
       (sub ? '<div class="log-date" style="margin:4px 0 0">' + esc(sub) + "</div>" : "") +
       "</div>";
@@ -94,7 +94,7 @@
     } catch (e) {}
 
     var html = "";
-    html += '<div class="log-date" style="margin:0 0 10px">지금 로그인된 기기 ' + live.length + "대</div>";
+    html += '<div class="log-date" style="margin:0 0 10px">로그인된 기기 ' + live.length + '대 <span style="opacity:.7">· 로그아웃하지 않은 기기예요</span></div>';
     if (!live.length) {
       html += '<div style="color:#777;margin-bottom:20px">표시할 기기가 없어요.</div>';
     } else {
@@ -109,7 +109,8 @@
     }
 
     html += '<div class="log-date" style="margin:22px 0 0;line-height:1.6">' +
-      '모르는 기기가 보이면 비밀번호를 바꿔주세요. 이 기록은 지우거나 고칠 수 없어요.</div>';
+      '모르는 기기가 보이면 비밀번호를 바꿔주세요. 이 기록은 지우거나 고칠 수 없어요.</div>' +
+      '<div style="height:96px"></div>';   /* 하단 플로팅 내비가 마지막 카드를 덮는다 */
 
     listEl.innerHTML = html;
   }
