@@ -549,3 +549,78 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 .fd-sec-head { margin-bottom: 14px; }
 .fd-chips { padding-bottom: 14px; }
 .fd-sort { margin-bottom: 12px; }
+
+/* ═══════════════════════════════════════════════════════════
+   전면 개편 (2026-08-31) — 사장님: "별로다 다시 다 엎어"
+   문제는 칩 색이 아니라 **정보구조**였다. 표면이 7개인데 전부 같은 높이의
+   이모지 칩으로 평평하게 나열돼 본문 전에 200px 을 먹었다.
+   → 2층으로 접는다: 상단바(동네·지도·필터) / 상위 탭 3개 / 하위 세그먼트.
+     이모지는 크롬에서 걷어냈다 — 타이포와 여백으로 가른다.
+   ⚠️ 이 블록이 위쪽 옛 규칙들을 덮는다(순서로 이긴다).
+   ═══════════════════════════════════════════════════════════ */
+
+/* 헤더 마케팅 카피 제거 — 재방문자에겐 매번 읽히는 소음이다 */
+.tab-panel[data-panel="food"] .fd-head { display: none; }
+.fd-sec { margin-top: 0; }
+
+/* ── 상단바 ────────────────────────────────────────────── */
+.fd-bar { display: flex; align-items: center; gap: 8px; padding: 4px 0 2px; }
+.fd-loc {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+  padding: 7px 10px 7px 8px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 0;
+  color: var(--text-hi); font-size: 16px; font-weight: 800; letter-spacing: -.02em;
+}
+.fd-loc:active { background: var(--surface-2); }
+.fd-loc svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--accent-2); }
+.fd-loc .fd-cv { width: 14px; height: 14px; color: var(--text-low); }
+.fd-loc.unset { color: var(--text-mid); }
+.fd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.fd-ib {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+  height: 34px; padding: 0 11px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 700;
+}
+.fd-ib svg { width: 16px; height: 16px; }
+.fd-ib.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── 상위 탭 — 밑줄형(칩이 아니라 탭으로 읽히게) ────────── */
+.fd-tabs { display: flex; gap: 18px; margin-top: 6px;
+  border-bottom: 1px solid var(--line-1); }
+.fd-tb {
+  position: relative; padding: 11px 0 12px; cursor: pointer;
+  background: none; border: 0; color: var(--text-low);
+  font-size: 14.5px; font-weight: 700; letter-spacing: -.02em;
+}
+.fd-tb.on { color: var(--text-hi); }
+.fd-tb.on::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--text-hi); border-radius: 2px;
+}
+
+/* ── 하위 세그먼트 — 작고 가볍게 ─────────────────────────── */
+.fd-seg { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 12px -14px 14px; padding: 0 14px; }
+.fd-seg::-webkit-scrollbar { display: none; }
+.fd-sg {
+  flex: 0 0 auto; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-1);
+  color: var(--text-low); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.fd-sg.on { background: var(--text-hi); border-color: var(--text-hi); color: #000; }
+
+/* 옛 모드 칩·정렬바·채널칩 행은 쓰지 않는다 */
+.fd-modes, .fd-sort, #fd-chips { display: none !important; }
+
+/* ── 카테고리 타일 — 같은 영상에서 나온 집들이 사진을 공유하는 걸 막는다 ── */
+.fd-tile { display: grid; place-items: center; width: 100%; height: 100%; font-size: 26px; }
+
+/* ── 더 보기 / 끝 ────────────────────────────────────────── */
+.fd-more-btn {
+  width: 100%; margin-top: 12px; padding: 13px 0; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--line-1); border-radius: 12px;
+  color: var(--text-mid); font-size: 13px; font-weight: 700;
+}
+.fd-more-btn:active { background: var(--surface-2); }
+.fd-end { padding: 18px 0 4px; text-align: center; color: var(--text-low); font-size: 12px; }

@@ -131,7 +131,16 @@
   var sortBy = "new";               // new | near | heat
   var myRegion = null, myRegionName = "";
   var SEC, CHIPS, LIST, PROG, MODES;
-  var mode = "near";   // near | controversial | loved | overrated
+  /* 표면이 7개인데 전부 같은 높이의 칩으로 나열돼 본문 전에 200px 을 먹었다(사장님: 다 엎어).
+     → 2층으로 접는다. 상위 탭 3개 × 하위 세그먼트. 이모지는 쓰지 않는다 — 타이포와 여백으로 가른다. */
+  var TABS = [
+    { t: "browse", name: "둘러보기", segs: [["new","최신"],["near","가까운"],["heat","화제"]] },
+    { t: "rank",   name: "랭킹",     segs: [["controversial","논란"],["loved","인정"],["overrated","과대평가"],["shows","방송별"]] },
+    { t: "me",     name: "기록",     segs: [["badges","업적"],["leaders","순위"]] }
+  ];
+  var tab = "browse", seg = "new";
+  var listLimit = 40;   // '더 보기'로 늘린다 — 예전엔 40에서 끊기고 더 볼 방법이 없었다
+  var mode = "near";   // 하위 로직 호환(내부에서만 씀)
   var MAP, mapEl, L = null, leafletLoading = null, markers = [], moveTimer = 0, lastPlaces = [];
   var SHEET, curPlace = null;
 
@@ -174,34 +183,32 @@
     SEC = document.createElement("div");
     SEC.className = "fd-sec";
     SEC.innerHTML =
-      '<div class="fd-sec-head">' +
-        '<div><div class="fd-sec-t">방송에 나온 집</div>' +
-        '<button type="button" class="fd-sec-sub" id="fd-sub">동네 고르기 ›</button></div>' +
-        '<button type="button" class="fd-open-map" id="fd-open">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-          '<path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>지도로 보기</button>' +
+      '<div class="fd-bar">' +
+        '<button type="button" class="fd-loc" id="fd-sub">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+          '<span id="fd-locn">전국</span>' +
+          '<svg class="fd-cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<div class="fd-bar-r">' +
+          '<button type="button" class="fd-ib" id="fd-filt2" aria-label="필터">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M7 12h10M11 18h2"/></svg></button>' +
+          '<button type="button" class="fd-ib primary" id="fd-open" aria-label="지도">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>' +
+            '<span>지도</span></button>' +
+        '</div>' +
       '</div>' +
+      '<nav class="fd-tabs" id="fd-tabs"></nav>' +
+      '<div class="fd-seg" id="fd-seg"></div>' +
       '<div class="fd-prog" id="fd-prog" hidden>' +
         '<div class="fd-prog-bar"><i style="width:0%"></i></div><div class="fd-prog-n"></div></div>' +
-      /* 랭킹 표면 — 맛집여지도가 못 하는 화면이다. 저쪽은 '방송에 나온 집' 목록에서 끝나고,
-         갈라는 "그래서 진짜 맛있냐"로 싸운 결과를 보여준다. */
-      '<div class="fd-modes chip-scroll" id="fd-modes">' +
-        '<button type="button" class="fd-mode on" data-m="near">내 동네</button>' +
-        '<button type="button" class="fd-mode" data-m="controversial">🔥 논란의 집</button>' +
-        '<button type="button" class="fd-mode" data-m="loved">👑 인정받은 집</button>' +
-        '<button type="button" class="fd-mode" data-m="overrated">💀 과대평가</button>' +
-        '<button type="button" class="fd-mode" data-m="browse">📺 방송별</button>' +
-        '<button type="button" class="fd-mode" data-m="leaders">🏆 랭킹</button>' +
-        '<button type="button" class="fd-mode" data-m="badges">🏅 업적</button>' +
-      '</div>' +
-      '<div class="fd-chips chip-scroll" id="fd-chips"></div>' +
+      '<div class="fd-chips chip-scroll" id="fd-chips" hidden></div>' +
       '<div class="fd-list" id="fd-list"><div class="fd-empty">불러오는 중…</div></div>';
     panel.appendChild(SEC);
 
     CHIPS = SEC.querySelector("#fd-chips");
     LIST  = SEC.querySelector("#fd-list");
     PROG  = SEC.querySelector("#fd-prog");
-    MODES = SEC.querySelector("#fd-modes");
+    paintTabs();
     return true;
   }
 
@@ -213,12 +220,20 @@
     var t = e.target;
     if (t.closest && t.closest("#fd-open")) { openMap(); return; }
     if (t.closest && t.closest("#fd-sub")) { openRegionPicker(); return; }
-    var m = t.closest && t.closest("#fd-modes .fd-mode");
-    if (m) {
-      mode = m.dataset.m;
-      SEC.querySelectorAll(".fd-mode").forEach(function (b) { b.classList.toggle("on", b === m); });
-      loadList(); return;
+    var tb = t.closest && t.closest("#fd-tabs .fd-tb");
+    if (tb) {
+      tab = tb.dataset.t;
+      seg = (TABS.filter(function (x) { return x.t === tab; })[0].segs[0] || [])[0];
+      listLimit = 40; paintTabs(); loadList(); return;
     }
+    var sg = t.closest && t.closest("#fd-seg .fd-sg");
+    if (sg) {
+      seg = sg.dataset.g;
+      listLimit = 40;
+      if (seg === "near" && !myPos) { paintSeg(); askPos(); return; }
+      paintSeg(); loadList(); return;
+    }
+    if (t.closest && t.closest("#fd-filt2")) { openFilter(); return; }
     var chip = t.closest && t.closest("#fd-chips .fd-chip");
     if (chip) {
       chFilter = (chFilter === chip.dataset.slug) ? null : chip.dataset.slug;
@@ -230,6 +245,8 @@
       if (sortBy === "near" && !myPos) { askPos(); return; }
       loadList(); return;
     }
+    var mo = t.closest && t.closest("[data-more]");
+    if (mo) { listLimit += 60; mo.textContent = "불러오는 중…"; loadList(); return; }
     var rc = t.closest && t.closest("#fd-list .fd-rc");
     if (rc) { openMap(null, rc.dataset.id); return; }
     var card = t.closest && t.closest("#fd-list .fd-card");
@@ -247,6 +264,23 @@
       return;
     }
   });
+
+  function paintTabs() {
+    var tn = SEC && SEC.querySelector("#fd-tabs"); if (!tn) return;
+    tn.innerHTML = TABS.map(function (x) {
+      return '<button type="button" class="fd-tb' + (tab === x.t ? " on" : "") + '" data-t="' + x.t + '">' +
+        x.name + '</button>';
+    }).join("");
+    paintSeg();
+  }
+  function paintSeg() {
+    var el = SEC && SEC.querySelector("#fd-seg"); if (!el) return;
+    var cur = TABS.filter(function (x) { return x.t === tab; })[0];
+    el.innerHTML = (cur.segs || []).map(function (g) {
+      return '<button type="button" class="fd-sg' + (seg === g[0] ? " on" : "") + '" data-g="' + g[0] + '">' +
+        g[1] + '</button>';
+    }).join("");
+  }
 
   function paintChips() {
     if (!CHIPS) return;
@@ -325,14 +359,31 @@
     var t = String(ad || "").split(/\s+/);
     return t.length > 2 ? t.slice(1, 3).join(" ") : t.join(" ");
   }
+  /* 카테고리 타일 — 영상 썸네일이 없거나 이미 쓴 경우의 대체 그림.
+     ⚠️ 영상 하나에 식당이 여러 곳 나오면 그 집들이 같은 video_id 를 공유한다.
+        그대로 두면 같은 사진이 5번 반복되고(사장님 지적), 게다가 그건 '가게 사진'이
+        아니라 '영상 썸네일'이라 오해까지 준다 → 목록 안에서 한 번만 쓴다. */
+  var CATTILE = {
+    "한식": ["#3a2a1e", "🍚"], "중식": ["#33201f", "🥢"], "일식": ["#1e2c33", "🍣"],
+    "양식": ["#2b2438", "🍝"], "분식": ["#33261a", "🌭"], "카페": ["#26301f", "☕"],
+    "술집": ["#301f2a", "🍶"], "기타": ["#242730", "🍽"]
+  };
+  var usedThumb = null;
+  function tileHtml(p) {
+    var t = CATTILE[p.category] || CATTILE["기타"];
+    return '<span class="fd-tile" style="background:' + t[0] + '">' + t[1] + '</span>';
+  }
   function card(p) {
-    var th = ytThumb(p.video_id);
+    var vid = p.video_id;
+    var dup = vid && usedThumb && usedThumb.has(vid);
+    if (vid && usedThumb) usedThumb.add(vid);
+    var th = dup ? "" : ytThumb(vid);
     var tot = (p.good || 0) + (p.bad || 0);
     var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
     var ch = (p.channels && p.channels.length) ? p.channels[0] : "";
     return '<article class="fd-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
       '<div class="fd-th">' +
-        (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : '<span class="fd-th-e">🍜</span>') +
+        (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) +
         (p.visited ? '<i class="fd-th-chk">✓</i>' : '') +
       '</div>' +
       '<div class="fd-b">' +
@@ -445,17 +496,19 @@
 
   async function loadList() {
     if (!LIST) return;
-    if (mode === "badges") { await loadBadges(); return; }
-    if (mode === "leaders") { await loadLeaders(); return; }
-    if (mode === "browse") { await loadBrowse(); return; }
+    if (tab === "me")   { return seg === "leaders" ? loadLeaders() : loadBadges(); }
+    if (tab === "rank" && seg === "shows") { return loadBrowse(); }
+    /* 둘러보기는 정렬(seg)만 바뀌고, 랭킹은 서버 랭킹 종류(seg)가 바뀐다 */
+    mode = (tab === "rank") ? seg : "near";
+    sortBy = (tab === "browse") ? seg : "new";
     var ps, d;
     if (mode === "near") {
-      d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: 40,
+      d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: listLimit,
                                   p_category: catFilter, p_min_shows: minShows });
       ps = (d && d.places) || [];
     } else {
       // 랭킹은 전국 기준. 최소 표수를 넘긴 집만 올라온다(표본이 적으면 우연이니까).
-      d = await rpc("food_rank", { p_kind: mode, p_min_votes: 3, p_limit: 40 });
+      d = await rpc("food_rank", { p_kind: mode, p_min_votes: 3, p_limit: listLimit });
       ps = (d && d.places) || [];
     }
     ps = sortPlaces(ps);
@@ -465,12 +518,11 @@
         '</div>';
       return;
     }
-    LIST.innerHTML = recentHtml() +
-      '<div class="fd-sort">' +
-        '<button type="button" class="fd-sb' + (sortBy === "new" ? " on" : "") + '" data-sort="new">최신순</button>' +
-        '<button type="button" class="fd-sb' + (sortBy === "near" ? " on" : "") + '" data-sort="near">가까운순</button>' +
-        '<button type="button" class="fd-sb' + (sortBy === "heat" ? " on" : "") + '" data-sort="heat">화제순</button>' +
-      '</div>' + ps.map(card).join("");
+    usedThumb = new Set();
+    LIST.innerHTML = recentHtml() + ps.map(card).join("") +
+      (ps.length >= listLimit
+        ? '<button type="button" class="fd-more-btn" data-more="1">더 보기</button>'
+        : (ps.length > 12 ? '<div class="fd-end">' + ps.length + '곳을 다 봤어요</div>' : ''));
   }
 
   /* ── 지도 (지연 로딩) ─────────────────────────────── */
@@ -994,15 +1046,11 @@
   }
 
   function paintRegion() {
-    var sub = SEC && SEC.querySelector("#fd-sub");
-    if (!sub) return;
+    var n = SEC && SEC.querySelector("#fd-locn");
     // 동네가 없으면 '전국'이라고 정직하게 말한다. '내 동네부터'라고 거짓말하지 않는다.
-    sub.textContent = (myRegionName ? "📍 " + myRegionName : "전국 전체") + " ›";
-    sub.classList.toggle("unset", !myRegionName);
-    var lead = SEC.parentElement && SEC.parentElement.querySelector(".fd-lead");
-    if (lead) lead.textContent = myRegionName
-      ? myRegionName + "에서 방송에 나온 집 — 다녀온 곳은 도장으로 채운다."
-      : "화면 속 그 집, 지도에 다 있다 — 동네를 고르면 내 주변만 볼 수 있어요.";
+    if (n) n.textContent = myRegionName || "전국";
+    var loc = SEC && SEC.querySelector("#fd-sub");
+    if (loc) loc.classList.toggle("unset", !myRegionName);
   }
 
   /* 동네 고르기 — 날씨의 지역 검색(weather_search)을 그대로 쓴다. 지역 축이 같으니까.
