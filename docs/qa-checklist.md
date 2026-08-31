@@ -213,7 +213,7 @@
 
 | 항목 | 상태 |
 |---|---|
-| 크론 인증(Authorization 헤더) | ❌ 재점검 필요 — 없으면 401인데 이력엔 'succeeded' |
+| 크론 인증(Authorization 헤더) | ✅ 5개는 x-cron-secret(Vault) 자체인증, indexnow 는 대상이 우리 워커 — 오탐이었다 (§22) 재점검 필요 — 없으면 401인데 이력엔 'succeeded' |
 | 엣지 함수 47종 헬스 | ❌ |
 | AI 원가 장부(ai_spend) 누락 함수 | 🔶 galla-friend 수정 완료, 나머지 재확인 필요 |
 | 클라 에러 수집(client_errors) | ❌ |
@@ -258,7 +258,7 @@
 | **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ✅ |
 | 기본 OG 이미지 폴백 | ❌ |
 | **robots.txt · sitemap.xml.js 동적 생성** | ❌ |
-| **IndexNow 색인 제출**(`functions/indexnow.js`) | ❌ |
+| **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
 | 엣지 메타 주입(`_middleware.js`) | ❌ |
 | imgproxy 외부 이미지 프록시 | 🔶 앱에서만 확인 |
 | PWA 설치 유도·오프라인 페이지 | ❌ |
@@ -526,7 +526,7 @@ for f in js/*.js; do b=$(basename $f .js); grep -qi "$b" $D || echo "모듈 미�
 | 배포 전 자동 검사(0장 5종) 강제 | ❌ 수동 |
 | **DB 마이그레이션 351개** — 적용 상태 대조 | ❌ |
 | 롤백 절차(웹·OTA·앱스토어) | ❌ |
-| **DB 백업·복구 리허설** | ❌ |
+| **DB 백업·복구 리허설** | ✅ 복원 리허설 완료 — 생성컬럼·트리거 두 곳에서 막혔던 것까지 해소 |
 | 엣지 함수 배포 이력·롤백 | ❌ |
 | 장애 감지(무엇이 알려주나) | 🔶 bug-alert 있으나 **RESEND 키 없어 메일 안 감**(10-F) |
 | 상태 페이지·다운타임 공지 | ❌ |
@@ -583,7 +583,7 @@ api.anthropic.com                      (미국)
 | PII 컬럼권한(users·user_profiles) | 잠금 이력 있음 — 회귀 미확인 | 🔶 |
 | 의존성 취약점(`npm audit`) | 웹은 `package.json` 없음(정적). 엣지 함수 56개가 `supabase-js@2` 범위지정 — eszip 로 배포시 고정되나 재배포 때 조용히 최신으로 갈아탄다. 2.112.4 로 고정 | ✅ |
 | 오픈 리다이렉트 · 클릭재킹 | `frame-ancestors 'self'` 설정됨. **`login.html?next=` 가드가 정규식 블랙리스트라 5가지로 샜다** — `\\evil.com`·`/\\evil.com`(역슬래시→슬래시), ` javascript:`·`\tjavascript:`·`java\tscript:`(공백·탭을 파서가 지움). 브라우저 파서로 실측 확인 후 오리진 비교로 교체, 12케이스 검증 | ✅ |
-| 파일 업로드 검증(용량·타입·악성) | ❌ |
+| 파일 업로드 검증(용량·타입·악성) | ✅ upload-media 서버측 MIME 판정 + 종류별 MAX_BYTES |
 | 딥링크 파라미터 검증 | `?next`·`?to`·`?ref`·`?url` 소비처 전수. `to`·`ref` 는 화이트리스트라 안전. **`news?url=` 이 href 3곳에 그대로 들어가 `javascript:` XSS 가능** → `safeUrl`(URL 파서, http/https만) 추가·링크 숨김 | ✅ |
 
 ## 21. 데이터 정합성·비용
@@ -638,8 +638,8 @@ api.anthropic.com                      (미국)
 |---|---|
 | 대화 원본을 탈퇴 시 파기 | ✅ `friend_relationship` CASCADE 확인 |
 | 갈라뉴스 AI 표시 | ✅ 리더에 '갈라뉴스 · AI 종합' 배지 + 고지문 |
-| 예측 문항 AI 표시 | ❌ → 신설(`ai_generated`) |
-| 자체 활용 시 식별정보 제거 | ❌ → `profile_summary` 제거·소급 정리 |
+| 예측 문항 AI 표시 | 신설(`ai_generated`) — 라이브 245/285 확인 ✅ |
+| 자체 활용 시 식별정보 제거 | `profile_summary` 제거·소급 정리 ✅ |
 | **외부 사업자 학습에 제공 안 함** | ❌ **DeepSeek 방침이 정반대를 명시** — 아래 |
 
 **DeepSeek** 개인정보 처리방침(우리가 §6 에 링크한 바로 그 문서):
