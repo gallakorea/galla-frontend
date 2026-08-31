@@ -47,6 +47,23 @@ Deno.serve(async (req) => {
   }
   if (!/^https?:\/\//i.test(url)) return json({ ok: false, error: "invalid url" }, 400);
 
+  /* 🔒 SSRF 방어 — 이 함수는 '아무 URL 이나 서버가 대신 가져와서' 돌려준다.
+     verify_jwt 가 꺼져 있어 비로그인도 부를 수 있으므로, 내부망을 겨냥한 요청을 막는다.
+     실측(2026-08-31): Deno Deploy 샌드박스가 169.254/127.0.0.1/10.x 를 이미 거부하지만,
+     그건 런타임의 우연한 방어지 우리 코드의 보증이 아니다. 여기서 명시적으로 끊는다. */
+  {
+    let h = "";
+    try { h = new URL(url).hostname.toLowerCase(); } catch { return json({ ok: false, error: "invalid url" }, 400); }
+    const isBlocked =
+      h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local") ||
+      /^\[?::1\]?$/.test(h) ||
+      /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) ||
+      /^169\.254\./.test(h) || /^0\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      /^\[?f[cd][0-9a-f]{2}:/i.test(h);          // IPv6 unique-local
+    if (isBlocked) return json({ ok: false, error: "blocked host" }, 400);
+  }
+
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 12000);
