@@ -371,9 +371,16 @@ Deno.serve(async (req) => {
   /* 해소 예산 — search.list 100유닛 × N. 기본 3개(300유닛)면 하루 쿼터를 해치지 않는다. */
   const budget = { left: Number(url.searchParams.get("resolve") || "3") };
 
+  /* 🔴 엣지 함수는 유휴 150초에서 끊긴다(실측 2026-08-31: 57채널 한 바퀴 → IDLE_TIMEOUT 504).
+     끊기면 그 실행이 통째로 날아가는데 pg_cron 이력엔 아무 표시가 안 남는다 —
+     하루 두 번 도는 수집 크론이 계속 반쯤 잘리고 있었다.
+     → 한 실행에 도는 채널 수를 묶고, 가장 오래 안 훑은 것부터 회전시킨다. */
+  const rotN = Number(url.searchParams.get("n") || "8");
   const { data: chans } = await supa.from("food_channels")
     .select("slug,name,kind,yt_channel_id,yt_query,yt_title_re,thumb,last_video_at")
-    .eq("active", true).order("sort");
+    .eq("active", true)
+    .order("last_synced_at", { ascending: true, nullsFirst: true })
+    .limit(only ? 200 : rotN);
   /* 미해소 채널은 '오래 안 해본 것' 순으로 돌린다 — sort 순으로 두면 앞쪽만 계속 시도한다. */
   const { data: pend } = await supa.from("food_channels")
     .select("slug").eq("active", true).is("yt_channel_id", null)
@@ -386,6 +393,11 @@ Deno.serve(async (req) => {
 
   for (const c of (chans || []) as Chan[]) {
     if (only && c.slug !== only) continue;
+    /* ⚠️ 슬롯을 쓴 채널은 결과와 무관하게 도장을 찍는다.
+       예전엔 영상을 찾았을 때만 last_synced_at 을 갱신해서, 실패하는 채널이
+       **큐 맨 앞에 영원히 남아** 매 실행 슬롯을 다 먹었다(디스커버리에서 겪은 것과 같은 함정). */
+    await supa.from("food_channels")
+      .update({ last_synced_at: new Date().toISOString() }).eq("slug", c.slug);
     try {
       if (!c.yt_channel_id && !only && !resolveSet.has(c.slug)) {
         report.push({ ch: c.slug, err: "resolve_queued" }); continue;   // 다음 실행 차례

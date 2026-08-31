@@ -860,7 +860,11 @@
       p_sw_lat: b.swLat, p_sw_lon: b.swLon,
       p_ne_lat: b.neLat, p_ne_lon: b.neLon,
       p_channel: chFilter, p_only_unvisited: onlyUnvisited, p_limit: 400,
-      p_category: catFilter, p_min_shows: minShows
+      p_category: catFilter, p_min_shows: minShows,
+      /* 지도는 '최신 400개'가 아니라 '고르게 400개'여야 한다.
+         수집이 늘자 전국 화면이 마지막에 훑은 채널 쪽으로 쏠렸다 — 나머지 지역은 텅 빈다.
+         목록(둘러보기)은 최신순이 맞으므로 거기엔 안 켠다. */
+      p_spread: true
     });
     lastPlaces = (d && d.places) || [];
     var c = MAP.querySelector("#fd-count");
