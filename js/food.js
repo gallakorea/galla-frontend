@@ -176,7 +176,9 @@
      "누가 다녀갔나"는 이 서비스의 정체성이지 랭킹의 한 종류가 아니다 — 1급 탭이다. */
   var TABS = [
     { t: "browse", name: "둘러보기",   segs: [["new","최신"],["near","가까운"],["heat","화제"]] },
-    { t: "who",    name: "누가 갔나",  segs: [["all","전체"],["yt","유튜버"],["tv","방송"]] },
+    /* '인증'은 유튜버도 방송도 아니다 — 백년가게(정부 지정)·미쉐린·블루리본처럼
+       기관이 인정한 집이다. 백년가게만 800곳대라 전체에 묻어두면 안 보인다. */
+    { t: "who",    name: "누가 갔나",  segs: [["all","전체"],["yt","유튜버"],["tv","방송"],["guide","인증"]] },
     { t: "rank",   name: "랭킹",       segs: [["controversial","논란"],["loved","인정"],["overrated","과대평가"]] },
     { t: "me",     name: "기록",       segs: [["badges","업적"],["leaders","순위"]] }
   ];
@@ -557,7 +559,9 @@
   async function loadBrowse(kind) {
     var d = await rpc("food_browse", { p_per: 10, p_channels: 20 });
     var secs = (d && d.sections) || [];
-    if (kind === "yt" || kind === "tv") secs = secs.filter(function (x) { return x.kind === kind; });
+    if (kind === "yt" || kind === "tv" || kind === "guide") {
+      secs = secs.filter(function (x) { return x.kind === kind; });
+    }
     LIST.innerHTML = secs.length
       ? '<div class="fb-wrap">' + secs.map(sectionHtml).join("") + '</div>'
       : '<div class="fd-empty">아직 방송별로 모을 만큼 쌓이지 않았어요.<br>수집이 하루 두 번 돕니다.</div>';

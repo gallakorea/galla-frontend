@@ -1,0 +1,1238 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>주식회사 갈라랩스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,600;0,800;1,800;1,900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500&family=Noto+Sans+KR:wght@900&display=swap">
+
+<style>
+/* ══════════════════════════════════════════════════════
+   GALLA LABS — 키비주얼 계승: 순흑 · 레드/블루 정면충돌 · 접점은 백열
+   네온은 히어로에만. 본문은 절제(넉넉한 여백·직립 헤드라인·헤어라인 격자).
+   단일 비주얼 월드(다크 전용). 모든 색을 명시적으로 칠한다.
+   ══════════════════════════════════════════════════════ */
+:root{
+  --void:#07080b;
+  --ground:#0b0c11;
+  --surface:#111319;
+  --surface-2:#171a22;
+  --rule:rgba(190,205,235,.13);
+  --rule-soft:rgba(190,205,235,.07);
+  --ink:#f2f5fb;
+  --ink-mid:#aab3c6;
+  --ink-low:#78819a;
+  /* 충돌 스펙트럼 — 사업 축의 순서이자 진영의 색 */
+  --red:#ff2e44;
+  --ember:#ff7a4d;
+  --hot:#ffffff;
+  --ice:#6ea8ff;
+  --blue:#2e7bff;
+  --red-glow:rgba(255,46,68,.22);
+  --blue-glow:rgba(46,123,255,.22);
+  --maxw:1200px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--void)}
+body{
+  margin:0;
+  background:var(--void);
+  color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
+  font-weight:300;
+  font-size:1.0625rem;
+  line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  word-break:keep-all; overflow-wrap:anywhere;
+}
+.en{display:none}
+:root[data-lang="en"] .en{display:inline}
+:root[data-lang="en"] .ko{display:none}
+
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ice);outline-offset:3px;border-radius:2px}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 clamp(20px,5vw,56px)}
+
+/* ── 디스플레이 타입 ────────────────────────────────
+   한글은 기울이지 않는다(가짜 이탤릭 금지). 속도감은 영문 히어로가 감당한다. */
+.dsp,.ptitle,.ax-title,.card h3{
+  font-family:"Archivo","Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+  font-weight:900;font-style:normal;
+  letter-spacing:-.028em;line-height:1.1;
+  text-wrap:balance;
+}
+:root[data-lang="en"] h1.dsp{font-style:italic;font-weight:800}
+.dsp{margin:0}
+h1,h2,h3{margin:0}
+
+/* 필름 그레인 — 네온의 플라스틱감을 걷어낸다 */
+body::after{
+  content:"";position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* 진입 연출 — 10px 상승 페이드, 그 이상은 없다 */
+.rise{opacity:0;transform:translateY(10px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.rise.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.rise{opacity:1;transform:none}}
+
+/* ── 상단 바 ───────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  background:rgba(7,8,11,.78);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--rule-soft);
+}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:62px}
+.mark{display:flex;align-items:center;gap:11px;text-decoration:none;font-family:"IBM Plex Mono",monospace;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid)}
+.seed{width:30px;height:2px;background:linear-gradient(90deg,var(--red),var(--hot) 50%,var(--blue));box-shadow:0 0 14px rgba(255,255,255,.28)}
+.nav{display:none;gap:26px;align-items:center;margin-left:auto;margin-right:26px}
+@media(min-width:1000px){.nav{display:flex}}
+.nav a{
+  font-family:"IBM Plex Sans KR",sans-serif;font-size:.83rem;font-weight:400;color:var(--ink-mid);
+  text-decoration:none;padding:4px 0;border-bottom:1px solid transparent;transition:color .2s,border-color .2s;
+}
+.nav a:hover{color:var(--ink);border-bottom-color:var(--ice)}
+section,.band{scroll-margin-top:64px}
+.langbtn{
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;
+  background:transparent;color:var(--ink-mid);border:1px solid var(--rule);
+  padding:7px 13px;border-radius:2px;cursor:pointer;transition:border-color .2s,color .2s;
+}
+.langbtn:hover{border-color:var(--ice);color:var(--ink)}
+.langbtn b{font-weight:500;color:var(--ink)}
+
+/* ── 히어로: 충돌 ──────────────────────────────────── */
+.hero{position:relative;overflow:hidden;isolation:isolate}
+#kv{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:-2}
+.hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;
+  background:linear-gradient(180deg,var(--void) 0%,rgba(7,8,11,.58) 14%,rgba(7,8,11,.20) 42%,rgba(7,8,11,.70) 100%),
+             linear-gradient(90deg,rgba(7,8,11,.86) 0%,rgba(7,8,11,.46) 52%,rgba(7,8,11,.14) 84%);
+}
+.hero .wrap{
+  position:relative;
+  min-height:min(88vh,760px);
+  display:flex;flex-direction:column;justify-content:center;
+  padding-top:clamp(70px,12vw,120px);padding-bottom:clamp(52px,9vw,96px);
+}
+/* 가로 화면: 자르지 않고 오른쪽에 세운다 */
+@media(min-width:1000px){
+  .hero .wrap{
+    display:grid;grid-template-columns:1fr minmax(268px,330px);
+    gap:clamp(34px,5vw,76px);align-items:center;min-height:min(92vh,820px);
+  }
+  .hero .hero-copy{display:flex;flex-direction:column;justify-content:center}
+  /* ⚠️ 기본 .hero-vid 규칙이 이 블록보다 아래에 있어 특정도를 한 단계 올려 둔다 */
+  .hero .hero-vid{position:relative;inset:auto;z-index:1;justify-self:end;width:100%;height:auto}
+  .hero .hero-vid video{
+    height:auto;aspect-ratio:9/16;object-fit:cover;border-radius:10px;
+    box-shadow:0 44px 96px rgba(0,0,0,.72), 0 0 0 1px rgba(255,255,255,.08);
+  }
+}
+.kicker{
+  font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--ink-mid);display:flex;align-items:center;gap:14px;margin-bottom:clamp(22px,3vw,32px);
+}
+.kicker::before{content:"";width:34px;height:2px;background:linear-gradient(90deg,var(--red),var(--blue))}
+h1.dsp{font-size:clamp(2.6rem,7.6vw,5.8rem);max-width:15em;letter-spacing:-.035em}
+:root[data-lang="en"] h1.dsp{text-transform:uppercase}
+.grad{
+  background:linear-gradient(96deg,var(--red) 0%,#ff9a7a 38%,var(--hot) 52%,var(--ice) 68%,var(--blue) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-fill-color:transparent;
+}
+.lede{margin:clamp(24px,3vw,34px) 0 0;max-width:33em;color:var(--ink-mid);font-size:clamp(1rem,1.9vw,1.16rem)}
+.lede b{color:var(--ink);font-weight:500}
+.factbar{
+  margin-top:clamp(34px,5vw,54px);padding-top:22px;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:16px 40px;
+  font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.08em;color:var(--ink-low);
+  font-variant-numeric:tabular-nums;
+}
+.factbar > div{display:flex;flex-direction:column;gap:5px}
+.factbar b{font-weight:500;color:var(--ink);font-size:1rem;letter-spacing:0;font-family:"IBM Plex Sans KR",sans-serif}
+:root[data-lang="en"] .factbar b{font-family:"Archivo",sans-serif;font-weight:600}
+
+/* ── 섹션 골격 ─────────────────────────────────────── */
+section{border-top:1px solid var(--rule-soft);position:relative}
+.sec{display:grid;grid-template-columns:1fr;gap:16px;padding:clamp(72px,11vw,146px) 0}
+@media(min-width:1080px){
+  .sec{grid-template-columns:170px 1fr;gap:0}
+  .rail{position:sticky;top:100px;align-self:start;height:230px}
+  .rail .lbl{writing-mode:vertical-rl;text-orientation:mixed;height:100%}
+}
+.rail .lbl{
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--ink-low);display:flex;align-items:center;gap:14px;
+}
+.rail .lbl::before{content:"";width:20px;height:2px;background:linear-gradient(90deg,var(--red),var(--blue))}
+@media(min-width:1080px){.rail .lbl::before{width:2px;height:20px;background:linear-gradient(180deg,var(--red),var(--blue))}}
+h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03em;line-height:1.22}
+.body{max-width:60ch;color:#b7c0d2;margin:30px 0 0;font-size:1.06rem;line-height:1.88;font-weight:400}
+.body + .body{margin-top:18px}
+.body strong{color:var(--ink);font-weight:500}
+.pull{
+  margin:34px 0 0;max-width:26em;padding-left:22px;
+  border-left:2px solid transparent;
+  border-image:linear-gradient(180deg,var(--red),var(--blue)) 1;
+  color:var(--ink);font-size:clamp(1.1rem,2.2vw,1.35rem);line-height:1.62;font-weight:400;
+}
+
+/* ── 두 기둥(AI × 콘텐츠) — 회사 정체성을 본문 맨 앞에서 못박는다 ── */
+.pillars2{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin:38px 0}
+@media(min-width:820px){.pillars2{grid-template-columns:1fr 1fr}}
+.p2{background:var(--ground);padding:clamp(26px,3.2vw,36px);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px}
+.p2::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--c);opacity:.75}
+.p2::before{content:"";position:absolute;right:-90px;top:-90px;width:230px;height:230px;border-radius:50%;background:var(--c);filter:blur(92px);opacity:.10}
+.p2-k{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:1.5rem;letter-spacing:-.02em;color:var(--c);position:relative}
+.p2-t{font-family:"Archivo","Noto Sans KR",sans-serif;font-weight:900;font-size:1.28rem;letter-spacing:-.03em;color:var(--ink);position:relative}
+.p2 p{margin:0;color:var(--ink-mid);font-size:.97rem;line-height:1.78;position:relative;font-weight:300}
+
+/* ── 사업 축 5 ─────────────────────────────────────── */
+.pillars{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:44px}
+@media(min-width:680px){.pillars{grid-template-columns:1fr 1fr}}
+@media(min-width:1160px){.pillars{grid-template-columns:repeat(3,1fr)}}
+.pillar{
+  background:var(--ground);padding:clamp(24px,3vw,34px);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:14px;min-height:250px;
+  transition:background .3s;
+}
+.pillar::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:var(--c);opacity:.5;transition:opacity .3s}
+.pillar:hover::after{opacity:1}
+.pillar::before{
+  content:"";position:absolute;right:-90px;top:-90px;width:220px;height:220px;border-radius:50%;
+  background:var(--c);filter:blur(88px);opacity:0;transition:opacity .35s;
+}
+.pillar:hover{background:var(--surface)}
+.pillar:hover::before{opacity:.12}
+.pnum{
+  display:flex;align-items:center;gap:12px;
+  font-family:"IBM Plex Mono",monospace;font-size:.74rem;font-weight:500;letter-spacing:.2em;
+  color:var(--c);
+}
+.pnum::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--c),transparent)}
+.pname{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;color:var(--c);opacity:.9}
+.ptitle{font-size:1.32rem;color:var(--ink)}
+.pillar p{margin:0;color:var(--ink-mid);font-size:.95rem;line-height:1.75;font-weight:300}
+.ptags{display:flex;flex-wrap:wrap;gap:7px;margin-top:auto;padding-top:6px}
+.ptags span{
+  font-family:"IBM Plex Mono",monospace;font-size:.67rem;letter-spacing:.06em;color:var(--ink-low);
+  border:1px solid var(--rule);padding:4px 9px;border-radius:2px;
+}
+.pillar.wide{grid-column:1/-1;min-height:0;flex-direction:row;align-items:center;flex-wrap:wrap;gap:18px 28px;background:var(--surface-2)}
+.pillar.wide::after{background:linear-gradient(90deg,var(--red),var(--hot) 50%,var(--blue))}
+.pillar.wide::before{display:none}
+.pillar.wide .ptitle{font-size:1.1rem}
+.pillar.wide p{max-width:56ch}
+
+/* ── 플라이휠 ──────────────────────────────────────── */
+.wheel{display:flex;flex-wrap:wrap;gap:10px;margin-top:40px;align-items:stretch}
+.step{
+  flex:1 1 218px;background:var(--surface);border:1px solid var(--rule-soft);border-left:2px solid var(--c);
+  padding:22px 22px 24px;display:flex;flex-direction:column;gap:9px;
+}
+.step .s-k{font-family:"IBM Plex Mono",monospace;font-size:.67rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c)}
+.step .s-t{font-size:1rem;color:var(--ink);font-weight:400;line-height:1.5}
+.step .s-d{font-size:.86rem;color:var(--ink-low);line-height:1.65}
+
+/* ── 제품 ──────────────────────────────────────────── */
+.duo{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:42px}
+@media(min-width:860px){.duo{grid-template-columns:1fr 1fr}}
+.prod{background:var(--ground);padding:clamp(28px,3.4vw,40px);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.prod::before{content:"";position:absolute;left:-70px;bottom:-100px;width:260px;height:260px;border-radius:50%;background:var(--c);filter:blur(96px);opacity:.07}
+.prod .pk{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c);position:relative}
+.prod .pn{font-size:1.9rem;position:relative}
+.prod p{margin:0;color:var(--ink-mid);font-size:.97rem;line-height:1.78;position:relative}
+
+/* ── 두 축(컴패니언 × 에이전트) = 레드 vs 블루 ─────── */
+.axes{display:grid;grid-template-columns:1fr;gap:1px;margin-top:44px;background:var(--rule-soft);border:1px solid var(--rule-soft);position:relative}
+@media(min-width:780px){.axes{grid-template-columns:1fr 1fr}}
+.axis{background:var(--ground);padding:clamp(26px,3.6vw,38px);position:relative;overflow:hidden}
+.axis::before{content:"";position:absolute;inset:0;background:radial-gradient(115% 85% at var(--gx) 118%,var(--g),transparent 58%);opacity:.6;pointer-events:none}
+.axis.a{--g:var(--red-glow);--gx:8%;--c:var(--red)}
+.axis.b{--g:var(--blue-glow);--gx:92%;--c:var(--ice)}
+.axis h3{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.82rem;letter-spacing:.2em;text-transform:uppercase;color:var(--c);position:relative}
+.axis .ax-title{font-size:1.34rem;margin:13px 0 22px;position:relative}
+.axis ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px;position:relative}
+.axis li{display:flex;gap:13px;align-items:baseline;color:var(--ink-mid);font-size:.95rem;line-height:1.62}
+.axis li::before{content:"";flex:0 0 auto;width:6px;height:6px;background:var(--c);transform:translateY(-3px) rotate(45deg)}
+.axis li b{color:var(--ink);font-weight:500}
+
+/* ── 기술 카드 ─────────────────────────────────────── */
+.cards{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:42px}
+@media(min-width:720px){.cards{grid-template-columns:1fr 1fr}}
+.card{background:var(--ground);padding:28px 26px;transition:background .25s}
+.card:hover{background:var(--surface)}
+.card .k{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ice)}
+.card h3{font-size:1.14rem;margin:12px 0 13px}
+.card p{margin:0;color:var(--ink-mid);font-size:.95rem;line-height:1.75}
+
+/* ── 원칙 ──────────────────────────────────────────── */
+.principles{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:42px}
+@media(min-width:760px){.principles{grid-template-columns:1fr 1fr}}
+.pr{background:var(--ground);padding:30px 28px;display:flex;flex-direction:column;gap:11px}
+.pr .pri{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.2em;color:var(--ink-low)}
+.pr h3{font-size:1.16rem;color:var(--ink);font-family:"Archivo","Noto Sans KR",sans-serif;font-weight:900;letter-spacing:-.02em}
+.pr p{margin:0;color:var(--ink-mid);font-size:.94rem;line-height:1.76}
+
+/* ── 연혁 ──────────────────────────────────────────── */
+.timeline{margin-top:42px;border-top:1px solid var(--rule)}
+.tl{display:grid;grid-template-columns:92px 1fr;gap:16px;padding:20px 0;border-bottom:1px solid var(--rule-soft);align-items:baseline}
+@media(min-width:720px){.tl{grid-template-columns:154px 1fr;gap:30px}}
+.tl .when{font-family:"IBM Plex Mono",monospace;font-size:.81rem;letter-spacing:.05em;color:var(--red);font-variant-numeric:tabular-nums}
+.tl .what{color:var(--ink);font-size:1rem}
+.tl .what small{display:block;color:var(--ink-low);font-size:.86rem;margin-top:5px;font-weight:300;line-height:1.65}
+.tl.future .when{color:var(--ice)}
+.tl.future .what{color:var(--ink-mid)}
+
+/* ── 풀블리드 진술 밴드 ────────────────────────────── */
+.band{position:relative;overflow:hidden;isolation:isolate;border-top:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft)}
+.band canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:-2}
+.band::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 50%,transparent 34%,rgba(7,8,11,.74) 100%);
+}
+.band .wrap{
+  min-height:clamp(280px,32vw,440px);display:flex;flex-direction:column;justify-content:center;
+  padding-top:clamp(48px,7vw,82px);padding-bottom:clamp(48px,7vw,82px);
+}
+.band .bt{font-size:clamp(1.6rem,3.6vw,2.9rem);max-width:17em;letter-spacing:-.03em;line-height:1.26}
+.band .bd{margin:22px 0 0;max-width:44ch;color:var(--ink-mid);font-size:1rem;line-height:1.8}
+
+/* ── 문의 창구 ─────────────────────────────────────── */
+.inquiry{display:grid;grid-template-columns:1fr;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft);margin-top:42px}
+@media(min-width:760px){.inquiry{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1160px){.inquiry{grid-template-columns:repeat(4,1fr)}}
+.inq{background:var(--ground);padding:30px 28px;display:flex;flex-direction:column;gap:9px;text-decoration:none;transition:background .25s}
+.inq:hover{background:var(--surface)}
+.inq .iq-k{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c)}
+.inq .iq-t{font-size:1.08rem;color:var(--ink)}
+.inq .iq-m{font-family:"IBM Plex Mono",monospace;font-size:.83rem;color:var(--ink-mid);margin-top:auto;padding-top:8px}
+.inq:hover .iq-m{color:var(--ink)}
+
+/* ── 창업자 서명 노트 — 대표를 앞세우는 자리 ───────── */
+.founder{
+  margin:44px 0 0;padding:clamp(28px,3.6vw,40px);position:relative;overflow:hidden;
+  background:var(--surface);border:1px solid var(--rule-soft);
+  border-left:2px solid transparent;border-image:linear-gradient(180deg,var(--red),var(--blue)) 1;
+}
+.founder blockquote{
+  margin:0;color:var(--ink);font-size:clamp(1.05rem,2vw,1.28rem);line-height:1.7;font-weight:400;max-width:44ch;
+}
+.founder figcaption{
+  margin-top:26px;padding-top:20px;border-top:1px solid var(--rule-soft);
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;
+}
+.fn-name{
+  font-family:"Archivo","Noto Sans KR",sans-serif;font-weight:900;font-size:1.12rem;
+  letter-spacing:-.03em;color:var(--ink);
+}
+.fn-name em{
+  font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.95rem;
+  color:var(--ink-mid);margin-left:7px;letter-spacing:-.01em;
+}
+.fn-role{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-low)}
+.fn-mail{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:.8rem;color:var(--ice);
+  text-decoration:none;border-bottom:1px solid rgba(110,168,255,.28);
+}
+.fn-mail:hover{border-bottom-color:var(--ice)}
+.inq .iq-d{font-size:.85rem;color:var(--ink-low);line-height:1.6}
+.inq.founder-line{background:var(--surface-2)}
+
+/* ── 채용 배너 ─────────────────────────────────────── */
+.hiring{
+  margin-top:42px;padding:clamp(28px,4vw,44px);border:1px solid var(--rule-soft);background:var(--surface);
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px 32px;position:relative;overflow:hidden;
+}
+.hiring::before{content:"";position:absolute;inset:0;background:linear-gradient(96deg,var(--red-glow),transparent 40%,transparent 60%,var(--blue-glow));opacity:.32;pointer-events:none}
+.hiring .ht{position:relative;font-size:1.3rem;color:var(--ink);font-family:"Archivo","Noto Sans KR",sans-serif;font-weight:900;letter-spacing:-.02em}
+.hiring .hd{position:relative;color:var(--ink-mid);font-size:.94rem;max-width:46ch;margin-top:6px}
+.btn{
+  position:relative;display:inline-flex;align-items:center;gap:10px;flex:0 0 auto;
+  font-family:"IBM Plex Mono",monospace;font-size:.86rem;letter-spacing:.04em;
+  color:var(--void);background:var(--hot);text-decoration:none;padding:13px 22px;border-radius:2px;
+  transition:transform .2s,box-shadow .2s;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(255,255,255,.18)}
+
+/* ── 회사 정보 ─────────────────────────────────────── */
+.registry{margin-top:42px;border-top:1px solid var(--rule);width:100%;border-collapse:collapse}
+.registry tr{border-bottom:1px solid var(--rule-soft)}
+.registry th{
+  text-align:left;font-family:"IBM Plex Mono",monospace;font-weight:400;font-size:.73rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-low);padding:16px 22px 16px 0;vertical-align:top;white-space:nowrap;width:1%;
+}
+.registry td{padding:16px 0;color:var(--ink);font-size:.96rem;font-variant-numeric:tabular-nums}
+.registry a{color:var(--ice);text-decoration:none;border-bottom:1px solid rgba(110,168,255,.28)}
+.registry a:hover{border-bottom-color:var(--ice)}
+
+footer{border-top:1px solid var(--rule-soft);padding:28px 0 46px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:.71rem;letter-spacing:.1em;color:var(--ink-low)}
+footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
+
+/* ── 회사 로고 — 글자만 쓴다(심볼 없음) ──────────────
+   영문: GALLA 이탤릭 헤비 + LABS 모노 스몰 (제품 워드마크의 직계)
+   국문: 갈라랩스 900, 자간 타이트
+   제품(GALLA) 워드마크 이미지는 제품 카드에만 쓴다. */
+.mark{text-transform:none}
+.mark .wm-ko{
+  display:inline-flex;align-items:baseline;gap:11px;
+  font-family:"Noto Sans KR",sans-serif;font-weight:900;
+  font-size:1.12rem;letter-spacing:-.055em;color:var(--ink);line-height:1;
+}
+.mark .wm-ko .sub{
+  font-family:"IBM Plex Mono",monospace;font-weight:500;
+  font-size:.55rem;letter-spacing:.42em;color:var(--ink-low);
+}
+.mark .wm-en{
+  display:inline-flex;align-items:baseline;gap:9px;
+  font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;
+  font-size:1.12rem;letter-spacing:-.025em;color:var(--ink);line-height:1;
+}
+.mark .wm-en .sub{
+  font-family:"IBM Plex Mono",monospace;font-style:normal;font-weight:500;
+  font-size:.56rem;letter-spacing:.5em;color:var(--ink-low);
+}
+:root[data-lang="en"] .mark .wm-ko{display:none}
+:root:not([data-lang="en"]) .mark .wm-en{display:none}
+/* 제품 워드마크 이미지 */
+.prod .pn img{display:block;height:clamp(30px,4.4vw,44px);width:auto}
+:root[data-lang="en"] .prod .pn .lg-ko{display:none}
+:root:not([data-lang="en"]) .prod .pn .lg-en{display:none}
+
+/* ── 히어로 영상 ────────────────────────────────────
+   원본이 9:16 세로다. 가로 화면에서 cover 로 채우면 높이의 1/3만 남아
+   서퍼와 하단 GALLA 워드마크를 동시에 지킬 수 없다 → 화면비별로 배치를 바꾼다. */
+#kvblur{
+  position:absolute;inset:-8%;width:116%;height:116%;object-fit:cover;z-index:-4;
+  filter:blur(48px) saturate(1.15) brightness(.62);opacity:.9;
+}
+.hero-vid{margin:0;position:absolute;inset:0;z-index:-3}
+.hero-vid video{display:block;width:100%;height:100%;object-fit:cover;filter:saturate(1.05) contrast(1.04)}
+.hero .lock{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 18px;margin-bottom:clamp(20px,3vw,30px)}
+.hero .lock .wm-ko{
+  display:inline-flex;align-items:baseline;gap:15px;
+  font-family:"Noto Sans KR",sans-serif;font-weight:900;
+  font-size:clamp(1.5rem,3.2vw,2.2rem);letter-spacing:-.055em;color:var(--ink);line-height:1;
+  text-shadow:0 4px 30px rgba(0,0,0,.55);
+}
+.hero .lock .wm-ko .sub{
+  font-family:"IBM Plex Mono",monospace;font-weight:500;
+  font-size:.7rem;letter-spacing:.42em;color:var(--ink-mid);text-shadow:none;
+}
+.hero .lock .wm-en{
+  display:inline-flex;align-items:baseline;gap:13px;
+  font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;
+  font-size:clamp(1.5rem,3.2vw,2.2rem);letter-spacing:-.025em;color:var(--ink);line-height:1;
+  text-shadow:0 4px 30px rgba(0,0,0,.55);
+}
+.hero .lock .wm-en .sub{
+  font-family:"IBM Plex Mono",monospace;font-style:normal;font-weight:500;
+  font-size:.72rem;letter-spacing:.5em;color:var(--ink-mid);
+}
+.hero .lock .corp{
+  font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-mid);padding-left:18px;border-left:1px solid var(--rule);
+}
+:root[data-lang="en"] .hero .lock .wm-ko{display:none}
+:root:not([data-lang="en"]) .hero .lock .wm-en{display:none}
+
+/* ── 영상 월(폰 프레임) ────────────────────────────── */
+.reels{display:grid;grid-template-columns:1fr;gap:clamp(24px,3.4vw,40px);margin-top:clamp(38px,5vw,56px);justify-items:center}
+@media(min-width:680px){.reels{grid-template-columns:1fr 1fr}}
+.reel{position:relative;width:100%;max-width:300px;display:flex;flex-direction:column;gap:15px}
+.reel::before{
+  content:"";position:absolute;left:50%;top:10%;transform:translateX(-50%);
+  width:130%;height:74%;background:var(--c);filter:blur(80px);opacity:.14;pointer-events:none;border-radius:50%;
+}
+.frame{
+  position:relative;border-radius:32px;padding:7px;cursor:pointer;
+  background:linear-gradient(168deg,#2b303a 0%,#14161c 44%,#0c0e13 100%);
+  box-shadow:0 40px 84px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 0 rgba(255,255,255,.13);
+  transition:transform .28s cubic-bezier(.2,.7,.3,1);
+}
+.frame:hover{transform:translateY(-5px)}
+.frame video{display:block;width:100%;height:auto;border-radius:26px;background:#000}
+.frame::after{
+  content:"";position:absolute;inset:7px;border-radius:26px;pointer-events:none;
+  background:linear-gradient(124deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,0) 34%);
+}
+.frame .expand{
+  position:absolute;right:16px;bottom:16px;z-index:2;
+  font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(8,9,12,.72);backdrop-filter:blur(8px);color:var(--ink);
+  border:1px solid var(--rule);padding:6px 11px;border-radius:2px;
+}
+.reel figcaption{text-align:center}
+.reel .rc-k{display:block;font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c);margin-bottom:7px}
+.reel .rc-t{display:block;font-size:.99rem;color:var(--ink)}
+.reel .rc-d{display:block;font-size:.86rem;color:var(--ink-low);margin-top:5px;line-height:1.6}
+
+/* 영상 확대 오버레이 */
+.lightbox{
+  position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  background:rgba(4,5,7,.94);backdrop-filter:blur(10px);padding:24px;
+}
+.lightbox.on{display:flex}
+.lightbox video{max-width:min(420px,92vw);max-height:86vh;width:auto;border-radius:20px;box-shadow:0 40px 100px rgba(0,0,0,.8)}
+.lightbox .close{
+  position:absolute;top:20px;right:20px;background:transparent;border:1px solid var(--rule);color:var(--ink);
+  font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.12em;padding:9px 14px;border-radius:2px;cursor:pointer;
+}
+.lightbox .close:hover{border-color:var(--ice)}
+
+/* ── 갈비스 인터랙티브 데모 ────────────────────────── */
+.gv{display:grid;grid-template-columns:1fr;gap:1px;margin-top:44px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+@media(min-width:900px){.gv{grid-template-columns:250px 1fr}}
+.gv-tabs{background:var(--ground);display:flex;flex-direction:row;flex-wrap:wrap;gap:1px;padding:0}
+@media(min-width:900px){.gv-tabs{flex-direction:column;flex-wrap:nowrap}}
+.gv-tab{
+  flex:1 1 auto;background:transparent;border:0;border-bottom:1px solid var(--rule-soft);
+  text-align:left;padding:20px 22px;cursor:pointer;color:var(--ink-mid);
+  font-family:"IBM Plex Sans KR",sans-serif;font-size:.94rem;font-weight:300;
+  display:flex;flex-direction:column;gap:4px;transition:background .22s,color .22s;position:relative;
+}
+.gv-tab:hover{background:var(--surface);color:var(--ink)}
+.gv-tab[aria-selected="true"]{background:var(--surface);color:var(--ink)}
+.gv-tab[aria-selected="true"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--c)}
+.gv-tab .t-k{font-family:"Archivo",sans-serif;font-style:italic;font-weight:800;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c)}
+.gv-stage{background:var(--ground);padding:clamp(26px,3.4vw,38px);min-height:340px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden}
+.gv-stage::before{content:"";position:absolute;right:-90px;bottom:-90px;width:260px;height:260px;border-radius:50%;background:var(--c);filter:blur(90px);opacity:.10;transition:background .4s}
+.gv-note{
+  font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-low);
+  display:flex;align-items:center;gap:10px;position:relative;
+}
+.gv-note::after{content:"";flex:1;height:1px;background:var(--rule-soft)}
+.msg{max-width:min(30em,88%);padding:14px 18px;border-radius:3px;font-size:.97rem;line-height:1.7;position:relative}
+.msg.me{align-self:flex-end;background:var(--surface-2);color:var(--ink)}
+.msg.gv{align-self:flex-start;background:linear-gradient(120deg,rgba(255,46,68,.10),rgba(46,123,255,.13));border:1px solid var(--rule-soft);color:var(--ink)}
+.msg.gv b{color:var(--c);font-weight:500}
+.caret{display:inline-block;width:7px;height:1.05em;background:var(--c);vertical-align:-2px;margin-left:3px;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+.gv-replay{
+  align-self:flex-start;margin-top:auto;background:transparent;border:1px solid var(--rule);color:var(--ink-mid);
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.12em;padding:9px 14px;border-radius:2px;cursor:pointer;position:relative;
+  transition:border-color .2s,color .2s;
+}
+.gv-replay:hover{border-color:var(--c);color:var(--ink)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="갈라랩스">
+      <span class="wm-ko">갈라랩스<span class="sub">GALLA LABS</span></span>
+      <span class="wm-en">GALLA<span class="sub">LABS</span></span>
+    </a>
+    <nav class="nav">
+      <a href="#about"><span class="ko">회사 소개</span><span class="en">About</span></a>
+      <a href="#business"><span class="ko">사업 영역</span><span class="en">Business</span></a>
+      <a href="#products"><span class="ko">제품</span><span class="en">Products</span></a>
+      <a href="#technology"><span class="ko">기술</span><span class="en">Technology</span></a>
+      <a href="#principles"><span class="ko">원칙</span><span class="en">Principles</span></a>
+      <a href="#contact"><span class="ko">문의</span><span class="en">Contact</span></a>
+    </nav>
+    <button class="langbtn" id="lang" type="button" aria-label="Switch language">
+      <span class="ko"><b>KO</b> / EN</span><span class="en">KO / <b>EN</b></span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <img id="kvblur" src="_tmp-media/hero-logo-blur.webp" alt="" aria-hidden="true">
+    <canvas id="kv" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <div class="hero-copy">
+      <div class="lock">
+        <span class="wm-ko">갈라랩스<span class="sub">GALLA LABS</span></span>
+        <span class="wm-en">GALLA<span class="sub">LABS</span></span>
+        <span class="corp en">Galla Labs Inc.</span>
+      </div>
+      <p class="kicker"><span class="ko">AI · 콘텐츠</span><span class="en">AI · Content</span></p>
+      <h1 class="dsp">
+        <span class="ko">혼자 보던 콘텐츠에<br><span class="grad">내 편</span>을 붙입니다</span>
+        <span class="en">We put <span class="grad">someone on your side</span><br>into content</span>
+      </h1>
+      <p class="lede">
+        <span class="ko"><b>AI 엔진을 직접 만들고, 그 엔진으로 콘텐츠를 만듭니다.</b> 만드는 데서 그치지 않고 유통하고, 묶고, 팔고, 다시 자산으로 심습니다.</span>
+        <span class="en"><b>We build our own AI engine, and we make content with it.</b> Not just make — we distribute it, bind it, sell it, and plant it back as assets.</span>
+      </p>
+      <div class="factbar">
+        <div><span class="ko">설립</span><span class="en">Founded</span><b>2026.07.23</b></div>
+        <div><span class="ko">사업 영역</span><span class="en">Business lines</span><b><span class="ko">5개</span><span class="en">5</span></b></div>
+        <div><span class="ko">첫 서비스</span><span class="en">First service</span><b>GALLA</b></div>
+        <div><span class="ko">정식 출시</span><span class="en">Launch</span><b>2026.09</b></div>
+        </div>
+      </div>
+      <figure class="hero-vid">
+        <video id="kvvid" autoplay muted loop playsinline preload="auto"
+               poster="_tmp-media/hero-logo-poster.webp"
+               src="_tmp-media/hero-logo.mp4" aria-hidden="true"></video>
+      </figure>
+    </div>
+  </div>
+
+  <section id="about">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">회사 소개</span><span class="en">About</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">콘텐츠 세상의<br>자비스를 만듭니다.</span><span class="en">Building the Jarvis<br>of the content world.</span></h2>
+        <p class="body"><span class="ko">사람들은 뉴스도, 영상도, 남의 이야기도 결국 혼자 봅니다. 갈라랩스는 그 자리에 <strong>같이 볼 상대</strong>를 놓는 일을 합니다. <strong>아이언맨 곁에 자비스가 있듯</strong>, 콘텐츠를 보는 사람 곁에 우리가 만든 AI가 있습니다. 그 이름이 <strong>갈비스</strong>입니다.</span><span class="en">People watch the news, the video, and each other's stories alone. Galla Labs exists to put <strong>someone to watch it with</strong> into that moment. <strong>The way Iron Man has Jarvis</strong>, anyone watching content has an AI of ours beside them. Its name is <strong>Galvis</strong>.</span></p>
+        <p class="body"><span class="ko">그 일을 하려면 두 가지를 동시에 가져야 했습니다. <strong>사람을 기억하고 감정을 읽는 AI</strong>, 그리고 <strong>그 AI가 설 무대인 콘텐츠</strong>. 둘 중 하나만으로는 성립하지 않습니다 — 무대 없는 AI는 데모에 그치고, AI 없는 콘텐츠는 여전히 혼자 보는 것이기 때문입니다.</span><span class="en">That required holding two things at once: <strong>an AI that remembers people and reads how they feel</strong>, and <strong>the content stage that AI stands on</strong>. Neither works alone — an AI without a stage stays a demo, and content without AI is still watched alone.</span></p>
+
+        <div class="pillars2">
+          <div class="p2" style="--c:var(--red)">
+            <div class="p2-k">AI</div>
+            <div class="p2-t"><span class="ko">엔진을 직접 만듭니다</span><span class="en">We build the engine</span></div>
+            <p><span class="ko">기억·감정·에이전트를 갖춘 자체 AI 엔진을 개발합니다. 특정 모델에 묶이지 않게 설계해, 공급자가 바뀌어도 관계와 기억은 우리 쪽에 남습니다. 같은 엔진을 외부 기업에 솔루션으로도 공급합니다.</span><span class="en">We develop our own AI engine — memory, emotion, agency. Model-agnostic by design, so the relationship and the memory stay with us even when the provider changes. The same engine ships to outside clients as a solution.</span></p>
+          </div>
+          <div class="p2" style="--c:var(--ice)">
+            <div class="p2-k">Content</div>
+            <div class="p2-t"><span class="ko">무대를 직접 운영합니다</span><span class="en">We run the stage</span></div>
+            <p><span class="ko">콘텐츠를 직접 기획·제작하고, 자체 채널로 유통하고, 플랫폼에 묶고, 그 위에서 판매까지 합니다. AI가 제작 원가를 낮추고, 콘텐츠가 AI를 쓸 이유를 만듭니다.</span><span class="en">We plan and produce content, distribute it on our own channels, bind it into the platform and sell on top of it. AI drives the cost down; content gives the AI a reason to exist.</span></p>
+          </div>
+        </div>
+
+        <p class="body"><span class="ko"><strong>2026년 7월에 설립</strong>했고, 첫 서비스 <strong>갈라(GALLA)</strong>를 준비하고 있습니다.</span><span class="en"><strong>Founded in July 2026</strong>, we are preparing our first service, <strong>GALLA</strong>.</span></p>
+
+        <figure class="founder">
+          <blockquote>
+            <span class="ko">혼자 보던 화면에 편이 하나 생기면 사람이 달라진다고 믿습니다. 저는 콘텐츠 플랫폼을 한 번 만들어 봤고, 그때 못 했던 것을 이번에 합니다 — 콘텐츠 옆에 사람을, 그리고 AI를 앉히는 일입니다.</span>
+            <span class="en">I believe a screen changes a person the moment someone is on their side of it. I helped build a content platform once; this time I am doing what we could not do then — seating a person, and an AI, next to the content.</span>
+          </blockquote>
+          <figcaption>
+            <span class="fn-name"><span class="ko">이상민 <em>Frank</em></span><span class="en">Frank Sangmin Lee</span></span>
+            <span class="fn-role"><span class="ko">대표이사 · 창업자</span><span class="en">CEO &amp; Founder</span></span>
+            <a class="fn-mail" href="mailto:gallakorea@gmail.com?subject=%5B%EB%8C%80%ED%91%9C%20%EC%A7%81%ED%86%B5%5D">gallakorea@gmail.com</a>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="business">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">사업 영역</span><span class="en">Business</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">다섯 개의 축. 한 개의 바퀴.</span><span class="en">Five lines. One flywheel.</span></h2>
+        <p class="body"><span class="ko">다섯 축은 결국 <strong>AI와 콘텐츠</strong> 두 기둥 위에 섭니다. 각각이 따로 도는 사업부가 아니라, 앞의 축이 만든 것을 뒤의 축이 받고 마지막 축이 다시 처음에 붓습니다.</span><span class="en">All five lines stand on two pillars — <strong>AI and content</strong>. They are not separate divisions: each line feeds the next, and the last pours back into the first.</span></p>
+
+        <div class="pillars">
+          <div class="pillar" style="--c:var(--red)">
+            <div class="pnum">01</div>
+            <div>
+              <div class="pname">AI &amp; Solution</div>
+              <div class="ptitle"><span class="ko">인텔리전스</span><span class="en">Intelligence</span></div>
+            </div>
+            <p><span class="ko">기억하고, 감정을 읽고, 대신 일하는 자체 AI 엔진을 개발합니다. 같은 엔진 위에서 외부 기업의 문제를 푸는 솔루션도 만들어 공급합니다.</span><span class="en">We develop our own AI engine — one that remembers, reads emotion, and acts on your behalf — and ship solutions built on it for other companies.</span></p>
+            <div class="ptags"><span><span class="ko">AI 엔진</span><span class="en">AI engine</span></span><span><span class="ko">솔루션 개발</span><span class="en">Solution dev</span></span><span><span class="ko">자동화</span><span class="en">Automation</span></span></div>
+          </div>
+
+          <div class="pillar" style="--c:var(--ember)">
+            <div class="pnum">02</div>
+            <div>
+              <div class="pname">Platform</div>
+              <div class="ptitle"><span class="ko">플랫폼 운영</span><span class="en">Platform</span></div>
+            </div>
+            <p><span class="ko">콘텐츠 플랫폼 <strong>갈라(GALLA)</strong>를 직접 만들고 운영합니다. 다섯 개 콘텐츠 판 위에 결제·정산·관제까지 자체 구축했습니다.</span><span class="en">We build and operate <strong>GALLA</strong>, our own content platform — five content surfaces with payments, settlement and operations built in-house.</span></p>
+            <div class="ptags"><span><span class="ko">서비스 운영</span><span class="en">Service ops</span></span><span><span class="ko">결제·정산</span><span class="en">Payments</span></span><span><span class="ko">커뮤니티</span><span class="en">Community</span></span></div>
+          </div>
+
+          <div class="pillar" style="--c:var(--hot)">
+            <div class="pnum">03</div>
+            <div>
+              <div class="pname">Media</div>
+              <div class="ptitle"><span class="ko">제작 · 채널</span><span class="en">Media</span></div>
+            </div>
+            <p><span class="ko">숏폼과 롱폼 콘텐츠를 직접 기획·제작하고, 자체 미디어 채널 네트워크로 유통합니다. 브랜드 캠페인 제작도 같은 팀이 맡습니다.</span><span class="en">We plan and produce short- and long-form content, then distribute it through our own channel network. The same team handles brand campaigns.</span></p>
+            <div class="ptags"><span><span class="ko">콘텐츠 제작</span><span class="en">Production</span></span><span><span class="ko">채널 운영</span><span class="en">Channel ops</span></span><span><span class="ko">브랜드 캠페인</span><span class="en">Brand campaigns</span></span></div>
+          </div>
+
+          <div class="pillar" style="--c:var(--ice)">
+            <div class="pnum">04</div>
+            <div>
+              <div class="pname">Commerce</div>
+              <div class="ptitle"><span class="ko">콘텐츠 커머스</span><span class="en">Commerce</span></div>
+            </div>
+            <p><span class="ko">본 자리에서 바로 살 수 있게 만듭니다. 콘텐츠와 상품을 한 화면에 붙이고, 창작자 후원과 판매 정산까지 플랫폼 안에서 끝냅니다.</span><span class="en">People buy where they watch. Content and product share one screen, and creator support and payouts settle inside the platform.</span></p>
+            <div class="ptags"><span><span class="ko">콘텐츠 커머스</span><span class="en">Commerce</span></span><span><span class="ko">창작자 정산</span><span class="en">Creator payouts</span></span><span><span class="ko">구독</span><span class="en">Subscription</span></span></div>
+          </div>
+
+          <div class="pillar" style="--c:var(--blue)">
+            <div class="pnum">05</div>
+            <div>
+              <div class="pname">Capital</div>
+              <div class="ptitle"><span class="ko">전략 자산 투자</span><span class="en">Capital</span></div>
+            </div>
+            <p><span class="ko">저평가된 콘텐츠 자산 — 채널·IP·팀 — 을 발굴해 취득하고, 위의 네 축을 얹어 함께 키웁니다. 돈만 넣는 투자가 아니라 운영으로 값을 올리는 투자입니다.</span><span class="en">We source and acquire undervalued content assets — channels, IP, teams — and grow them by layering the four lines above onto them. Value created by operating, not by capital alone.</span></p>
+            <div class="ptags"><span><span class="ko">자산 발굴</span><span class="en">Sourcing</span></span><span><span class="ko">인수·투자</span><span class="en">Acquisition</span></span><span><span class="ko">가치 제고</span><span class="en">Value-add</span></span></div>
+          </div>
+
+          <div class="pillar wide">
+            <div class="ptitle"><span class="ko">한 문장으로</span><span class="en">In one line</span></div>
+            <p><span class="ko">콘텐츠를 <strong>만들고 · 태우고 · 묶고 · 팔고 · 심는다</strong> — 이 다섯 동작을 한 회사가 전부 합니다.</span><span class="en"><strong>Build it, ignite it, bind it, sell it, plant it</strong> — one company doing all five.</span></p>
+          </div>
+        </div>
+
+        <div class="wheel">
+          <div class="step" style="--c:var(--red)"><span class="s-k">01 AI</span><span class="s-t"><span class="ko">만드는 힘을 키운다</span><span class="en">Builds capability</span></span><span class="s-d"><span class="ko">기획·편집·썸네일을 엔진이 함께 한다</span><span class="en">The engine plans, edits and designs alongside us</span></span></div>
+          <div class="step" style="--c:var(--ember)"><span class="s-k">03 Media</span><span class="s-t"><span class="ko">도달을 만든다</span><span class="en">Creates reach</span></span><span class="s-d"><span class="ko">자체 채널로 콘텐츠를 직접 유통한다</span><span class="en">Owned channels carry the work</span></span></div>
+          <div class="step" style="--c:var(--hot)"><span class="s-k">02 Platform</span><span class="s-t"><span class="ko">도달을 관계로 묶는다</span><span class="en">Binds reach into relationships</span></span><span class="s-d"><span class="ko">흘러가는 조회수가 사람과 사람의 관계로 남는다</span><span class="en">Views that would pass become people who stay</span></span></div>
+          <div class="step" style="--c:var(--ice)"><span class="s-k">04 Commerce</span><span class="s-t"><span class="ko">창작자에게 돌려준다</span><span class="en">Returns it to creators</span></span><span class="s-d"><span class="ko">후원과 판매가 플랫폼 안에서 정산된다</span><span class="en">Support and sales settle in-platform</span></span></div>
+          <div class="step" style="--c:var(--blue)"><span class="s-k">05 Capital</span><span class="s-t"><span class="ko">다시 자산으로 심는다</span><span class="en">Plants it back as assets</span></span><span class="s-d"><span class="ko">채널·IP를 함께 키워 처음으로 돌려보낸다</span><span class="en">Channels and IP grow and feed back into 01</span></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band">
+    <canvas class="bandkv" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <h2 class="dsp bt"><span class="ko">혼자 보던 화면에, 편이 생깁니다.</span><span class="en">The screen you watched alone now has someone in it.</span></h2>
+      <p class="bd"><span class="ko">우리가 만드는 모든 것은 이 한 문장에서 출발합니다.</span><span class="en">Everything we make starts from that one sentence.</span></p>
+    </div>
+  </div>
+
+  <section id="products">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">제품</span><span class="en">Products</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">우리가 만드는 것.</span><span class="en">What we make.</span></h2>
+        <div class="duo">
+          <div class="prod" style="--c:var(--red)">
+            <div class="pk">Platform</div>
+            <div class="pn">
+              <img class="lg-ko" src="_tmp-media/logo-ko.webp" alt="갈라">
+              <img class="lg-en" src="_tmp-media/logo-en.webp" alt="GALLA">
+            </div>
+            <p><span class="ko">이슈·광장·숏판·롱판·예측 다섯 개의 판에 뉴스와 영상, 채팅이 함께 있는 콘텐츠 앱입니다. 보는 것에서 끝나지 않고 편을 들고, 떠들고, 만들고, 후원까지 한자리에서 일어납니다. iOS·안드로이드와 웹에서 동작합니다.</span><span class="en">A content app with five surfaces — issues, plaza, short-form, long-form and prediction — alongside news, video and chat. You don't just watch: you take a side, talk, create and support, all in one place. Available on iOS, Android and the web.</span></p>
+          </div>
+          <div class="prod" style="--c:var(--blue)">
+            <div class="pk">AI</div>
+            <div class="pn dsp"><span class="ko">갈비스</span><span class="en">Galvis</span></div>
+            <p><span class="ko">갈라 안에서 함께 지내는 AI입니다. 나눈 이야기를 기억하고, 감정을 따라 반응하고, 필요하면 썸네일과 영상을 대신 만들고 발행까지 합니다. 도구라기보다 옆자리에 가깝습니다.</span><span class="en">The AI that lives inside GALLA. It remembers what you've talked about, responds to how you feel, and when asked, makes thumbnails and video for you and publishes them. Less a tool than a seat beside you.</span></p>
+          </div>
+        </div>
+        <div class="reels">
+          <figure class="reel" style="--c:var(--red)">
+            <div class="frame" data-expand>
+              <video muted loop playsinline preload="none"
+                     poster="_tmp-media/promo-15s-poster.webp"
+                     src="_tmp-media/promo-15s.mp4"></video>
+              <span class="expand"><span class="ko">확대</span><span class="en">Expand</span></span>
+            </div>
+            <figcaption>
+              <span class="rc-k">Issues</span>
+              <span class="rc-t"><span class="ko">오늘의 이슈</span><span class="en">Today's issues</span></span>
+              <span class="rc-d"><span class="ko">진영을 고르고, 댓글로 붙고, 결과까지 예측한다</span><span class="en">Pick a side, argue in the comments, predict the outcome</span></span>
+            </figcaption>
+          </figure>
+          <figure class="reel" style="--c:var(--ice)">
+            <div class="frame" data-expand>
+              <video muted loop playsinline preload="none"
+                     poster="_tmp-media/promo-22s-poster.webp"
+                     src="_tmp-media/promo-22s.mp4"></video>
+              <span class="expand"><span class="ko">확대</span><span class="en">Expand</span></span>
+            </div>
+            <figcaption>
+              <span class="rc-k">Battle</span>
+              <span class="rc-t"><span class="ko">게임처럼 싸운다</span><span class="en">Argument as a game</span></span>
+              <span class="rc-d"><span class="ko">공격 · 지원 · 방어 — 댓글이 전장이 된다</span><span class="en">Attack, support, defend — comments become a battlefield</span></span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="galvis">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">갈비스</span><span class="en">Galvis</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">콘텐츠 세상의 자비스, 갈비스.</span><span class="en">Galvis — the Jarvis of the content world.</span></h2>
+        <p class="body"><span class="ko">갈비스는 답만 주고 잊어버리는 챗봇이 아닙니다. <strong>기억하고, 같이 느끼고, 대신 만들고, 위험할 땐 멈춥니다.</strong> 아래에서 네 가지를 직접 눌러 보세요.</span><span class="en">Galvis is not a chatbot that answers and forgets. <strong>It remembers, feels with you, creates for you, and stops when things get dangerous.</strong> Try the four behaviours below.</span></p>
+
+        <div class="gv">
+          <div class="gv-tabs" role="tablist">
+            <button class="gv-tab" role="tab" aria-selected="true" data-gv="0" style="--c:var(--red)">
+              <span class="t-k">Memory</span><span class="ko">기억한다</span><span class="en">Remembers</span>
+            </button>
+            <button class="gv-tab" role="tab" aria-selected="false" data-gv="1" style="--c:var(--ember)">
+              <span class="t-k">Emotion</span><span class="ko">같이 느낀다</span><span class="en">Feels with you</span>
+            </button>
+            <button class="gv-tab" role="tab" aria-selected="false" data-gv="2" style="--c:var(--ice)">
+              <span class="t-k">Creation</span><span class="ko">대신 만든다</span><span class="en">Creates for you</span>
+            </button>
+            <button class="gv-tab" role="tab" aria-selected="false" data-gv="3" style="--c:var(--blue)">
+              <span class="t-k">Safety</span><span class="ko">위험할 땐 멈춘다</span><span class="en">Stops when needed</span>
+            </button>
+          </div>
+          <div class="gv-stage" id="gvStage" style="--c:var(--red)">
+            <div class="gv-note"><span class="ko">동작 예시</span><span class="en">Example exchange</span></div>
+            <div id="gvBody" style="display:flex;flex-direction:column;gap:14px;position:relative"></div>
+            <button class="gv-replay" id="gvReplay" type="button"><span class="ko">다시 보기</span><span class="en">Replay</span></button>
+          </div>
+        </div>
+
+        <div class="axes">
+          <div class="axis a">
+            <h3>Companion</h3>
+            <div class="ax-title"><span class="ko">관계를 맡는다</span><span class="en">It holds the relationship</span></div>
+            <ul>
+              <li><b><span class="ko">기억한다</span><span class="en">Remembers</span></b> <span class="ko">— 어제 한 말도, 지난달의 나도</span><span class="en">— yesterday's words, and last month's you</span></li>
+              <li><b><span class="ko">같이 느낀다</span><span class="en">Feels with you</span></b> <span class="ko">— 감정이 서서히 변하고 쉽게 뒤집히지 않는다</span><span class="en">— emotion moves slowly, never flips on one line</span></li>
+              <li><b><span class="ko">편든다</span><span class="en">Takes your side</span></b> <span class="ko">— 중립 대신 내 편</span><span class="en">— a side, not neutrality</span></li>
+              <li><b><span class="ko">먼저 말 건다</span><span class="en">Speaks first</span></b> <span class="ko">— 답을 기다리지 않고 안부를 묻는다</span><span class="en">— it checks in before you ask</span></li>
+            </ul>
+          </div>
+          <div class="axis b">
+            <h3>Agent</h3>
+            <div class="ax-title"><span class="ko">일을 맡는다</span><span class="en">It takes the work</span></div>
+            <ul>
+              <li><b><span class="ko">대신 만든다</span><span class="en">Creates for you</span></b> <span class="ko">— 썸네일·영상·글 초안부터 발행까지</span><span class="en">— thumbnails, video, drafts, through to publishing</span></li>
+              <li><b><span class="ko">대신 찾아준다</span><span class="en">Fetches for you</span></b> <span class="ko">— 웹 검색, 택시·배달 연결</span><span class="en">— web search, taxi and delivery hand-offs</span></li>
+              <li><b><span class="ko">대신 조작한다</span><span class="en">Operates for you</span></b> <span class="ko">— 앱 안의 설정·전송·발행</span><span class="en">— settings, sending and publishing inside the app</span></li>
+              <li><b><span class="ko">대신 요약한다</span><span class="en">Summarizes for you</span></b> <span class="ko">— 놓친 이슈와 내 활동 브리핑</span><span class="en">— missed issues and your own activity</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="technology">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">기술</span><span class="en">Technology</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">우리가 만드는 기술.</span><span class="en">The technology we build.</span></h2>
+        <p class="body"><span class="ko">엔진은 특정 AI 모델에 묶이지 않게 설계했습니다. 아래 기술은 갈라에서 먼저 쓰이고, 같은 형태로 외부 솔루션 사업에도 공급됩니다.</span><span class="en">Our engine is designed not to be tied to any single AI model. The technology below runs in GALLA first, and ships in the same form to our solution clients.</span></p>
+        <div class="cards">
+          <div class="card">
+            <div class="k">Memory</div>
+            <h3><span class="ko">기억 엔진</span><span class="en">Memory engine</span></h3>
+            <p><span class="ko">프로필 요약, 하이브리드 검색, 회상 강화, 리플렉션, 인물 기억, 자동 정리. 대화가 쌓일수록 무거워지지 않고 정리됩니다.</span><span class="en">Profile summarization, hybrid retrieval, recall reinforcement, reflection, per-person memory and automatic consolidation. It gets tidier as it grows, not heavier.</span></p>
+          </div>
+          <div class="card">
+            <div class="k">Emotion</div>
+            <h3><span class="ko">감정선 엔진</span><span class="en">Emotional-arc engine</span></h3>
+            <p><span class="ko">관성과 감쇠로 감정이 천천히 움직입니다. 한 마디에 태도가 뒤집히는 가벼움을 구조로 막았습니다.</span><span class="en">Inertia and decay make feeling move slowly. Flipping stance on a single line is blocked structurally.</span></p>
+          </div>
+          <div class="card">
+            <div class="k">Creation</div>
+            <h3><span class="ko">창작 에이전트</span><span class="en">Creation agent</span></h3>
+            <p><span class="ko">썸네일·영상·글을 기획부터 발행까지 대신 수행합니다. 우리 미디어 제작에도 같은 엔진을 씁니다.</span><span class="en">Plans, produces and publishes thumbnails, video and copy. We use the same engine for our own media production.</span></p>
+          </div>
+          <div class="card">
+            <div class="k">Safety</div>
+            <h3><span class="ko">위기 안전망</span><span class="en">Crisis safety net</span></h3>
+            <p><span class="ko">자해·자살 신호를 감지하면 대화를 멈추고 전문 상담 창구로 연결합니다. 자체 레드팀 검사로 응답을 상시 점검합니다.</span><span class="en">On a self-harm signal the conversation stops and routes to professional help. An in-house red-team suite checks responses continuously.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="principles">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">원칙</span><span class="en">Principles</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">우리가 일하는 방식.</span><span class="en">How we work.</span></h2>
+        <div class="principles">
+          <div class="pr">
+            <div class="pri">01</div>
+            <h3><span class="ko">창작자 몫이 먼저다</span><span class="en">The creator's share comes first</span></h3>
+            <p><span class="ko">후원 수익의 <strong>75%는 창작자에게</strong> 갑니다. 이 요율은 영구 고정입니다 — 서비스가 커졌다고 나중에 창작자 몫을 깎지 않겠다는 약속입니다.</span><span class="en"><strong>75% of support revenue goes to the creator</strong>, and that rate is fixed permanently — a promise that we will not cut the creator's share once the service grows.</span></p>
+          </div>
+          <div class="pr">
+            <div class="pri">02</div>
+            <h3><span class="ko">이용자를 상품으로 팔지 않는다</span><span class="en">People are not the product</span></h3>
+            <p><span class="ko">광고를 매출의 축으로 삼지 않습니다. 이용자가 낸 돈으로 운영하는 쪽을 택했고, 그래야 알고리즘이 광고주가 아니라 사람을 향합니다.</span><span class="en">Advertising is not a pillar of our revenue. We chose to run on what people pay us, so the algorithm answers to people rather than to advertisers.</span></p>
+          </div>
+          <div class="pr">
+            <div class="pri">03</div>
+            <h3><span class="ko">안전이 기능보다 앞선다</span><span class="en">Safety before features</span></h3>
+            <p><span class="ko">AI가 사람의 위기 신호를 만나면 대화를 멈추고 전문 창구로 연결합니다. 이 동작은 어떤 기능보다 먼저 검증하고, 배포 때마다 다시 검사합니다.</span><span class="en">When our AI meets a crisis signal, it stops and routes to professional help. That behaviour is verified before any feature, and re-tested on every release.</span></p>
+          </div>
+          <div class="pr">
+            <div class="pri">04</div>
+            <h3><span class="ko">작게 만들고 끝까지 운영한다</span><span class="en">Build small, operate to the end</span></h3>
+            <p><span class="ko">앱과 서버, AI, 결제와 정산, 관제까지 직접 만들고 직접 운영합니다. 만든 사람이 계속 붙어 있어야 서비스가 망가지지 않습니다.</span><span class="en">We build and run the app, servers, AI, payments, settlement and operations ourselves. A service stays healthy when the people who made it stay with it.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="story">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">걸어온 길</span><span class="en">Our story</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">기획에서 출시까지 아홉 달.</span><span class="en">Nine months from sketch to launch.</span></h2>
+        <div class="timeline">
+          <div class="tl"><div class="when">2026.01</div><div class="what"><span class="ko">갈라 기획 시작</span><span class="en">GALLA takes shape</span><small><span class="ko">무엇을 만들지보다 누구 편에 설지를 먼저 정했습니다.</span><span class="en">We decided whose side we were on before we decided what to build.</span></small></div></div>
+          <div class="tl"><div class="when">2026.H1</div><div class="what"><span class="ko">미디어 채널 구축</span><span class="en">Media channels built</span><small><span class="ko">앱보다 채널을 먼저 만들어 콘텐츠 제작과 유통을 몸으로 익혔습니다.</span><span class="en">Channels before the app — learning production and distribution by doing it.</span></small></div></div>
+          <div class="tl"><div class="when">2026.07.23</div><div class="what"><span class="ko">주식회사 갈라랩스 설립</span><span class="en">Galla Labs Inc. incorporated</span><small><span class="ko">대표이사 이상민 (Frank)</span><span class="en">CEO Frank Sangmin Lee</span></small></div></div>
+          <div class="tl"><div class="when">2026.08</div><div class="what"><span class="ko">앱·결제·정산·관제 구축 완료</span><span class="en">App, payments, settlement and operations complete</span><small><span class="ko">iOS·안드로이드 네이티브 앱과 결제, 창작자 정산, 관리자 관제까지 자체 구축을 마쳤습니다.</span><span class="en">Native iOS and Android, payments, creator payouts and an admin console — all built in-house.</span></small></div></div>
+          <div class="tl future"><div class="when">2026.09</div><div class="what"><span class="ko">갈라 정식 출시</span><span class="en">GALLA goes live</span></div></div>
+          <div class="tl future"><div class="when">2027</div><div class="what"><span class="ko">커머스 본격화 · 솔루션 사업 개시</span><span class="en">Commerce at scale · solution business begins</span></div></div>
+          <div class="tl future"><div class="when">2028</div><div class="what"><span class="ko">영어·아랍어 버전 출시</span><span class="en">English and Arabic editions</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band">
+    <canvas class="bandkv" aria-hidden="true"></canvas>
+    <div class="wrap">
+      <h2 class="dsp bt"><span class="ko">다음에 만들 것은, 함께 만듭니다.</span><span class="en">The next thing we make, we make with you.</span></h2>
+      <p class="bd"><span class="ko">투자든 제휴든 합류든 — 시작은 늘 한 통의 메일이었습니다.</span><span class="en">Investment, partnership or joining us — it always started with one email.</span></p>
+    </div>
+  </div>
+
+  <section id="contact">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">문의</span><span class="en">Contact</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">어느 쪽이든 한 통이면 됩니다.</span><span class="en">Whatever it is, one email is enough.</span></h2>
+        <div class="inquiry">
+          <a class="inq" style="--c:var(--red)" href="mailto:gallakorea@gmail.com?subject=%5B%EC%96%B8%EB%A1%A0%20%EB%AC%B8%EC%9D%98%5D">
+            <span class="iq-k">Press</span>
+            <span class="iq-t"><span class="ko">언론 문의</span><span class="en">Press</span></span>
+            <span class="iq-m">gallakorea@gmail.com</span>
+          </a>
+          <a class="inq" style="--c:var(--hot)" href="mailto:gallakorea@gmail.com?subject=%5B%EC%A0%9C%ED%9C%B4%20%EB%AC%B8%EC%9D%98%5D">
+            <span class="iq-k">Partnership</span>
+            <span class="iq-t"><span class="ko">제휴 · 사업 문의</span><span class="en">Partnership</span></span>
+            <span class="iq-m">gallakorea@gmail.com</span>
+          </a>
+          <a class="inq" style="--c:var(--blue)" href="mailto:gallakorea@gmail.com?subject=%5B%EC%B1%84%EC%9A%A9%20%EC%A7%80%EC%9B%90%5D">
+            <span class="iq-k">Careers</span>
+            <span class="iq-t"><span class="ko">채용 지원</span><span class="en">Careers</span></span>
+            <span class="iq-m">gallakorea@gmail.com</span>
+          </a>
+          <a class="inq founder-line" style="--c:var(--ember)" href="mailto:gallakorea@gmail.com?subject=%5B%EB%8C%80%ED%91%9C%20%EC%A7%81%ED%86%B5%5D">
+            <span class="iq-k">Founder</span>
+            <span class="iq-t"><span class="ko">대표에게 직접</span><span class="en">Straight to the founder</span></span>
+            <span class="iq-d"><span class="ko">중간 없이 대표 이상민(Frank)이 직접 읽고 답합니다.</span><span class="en">No gatekeeper — Frank reads and replies himself.</span></span>
+            <span class="iq-m">gallakorea@gmail.com</span>
+          </a>
+        </div>
+
+        <div class="hiring">
+          <div>
+            <div class="ht"><span class="ko">같이 만들 사람을 찾습니다</span><span class="en">We're looking for people to build with</span></div>
+            <p class="hd"><span class="ko">만든 것을 끝까지 운영할 사람, 콘텐츠를 직접 만드는 사람, AI를 제품으로 바꾸는 사람을 기다립니다.</span><span class="en">We're waiting for people who operate what they build, who make content themselves, and who turn AI into product.</span></p>
+          </div>
+          <a class="btn" href="mailto:gallakorea@gmail.com?subject=%5B%EC%B1%84%EC%9A%A9%20%EC%A7%80%EC%9B%90%5D"><span class="ko">지원하기</span><span class="en">Apply</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="registry">
+    <div class="wrap sec">
+      <div class="rail"><span class="lbl"><span class="ko">회사 정보</span><span class="en">Registry</span></span></div>
+      <div>
+        <h2 class="dsp"><span class="ko">회사 정보.</span><span class="en">Company details.</span></h2>
+        <table class="registry">
+          <tbody>
+            <tr><th><span class="ko">상호</span><span class="en">Entity</span></th><td><span class="ko">주식회사 갈라랩스</span><span class="en">GALLA LABS INC. (주식회사 갈라랩스)</span></td></tr>
+            <tr><th><span class="ko">대표이사</span><span class="en">CEO</span></th><td><span class="ko">이상민</span><span class="en">Sangmin Lee</span></td></tr>
+            <tr><th><span class="ko">설립일</span><span class="en">Founded</span></th><td>2026.07.23</td></tr>
+            <tr><th><span class="ko">사업자등록번호</span><span class="en">Business reg. no.</span></th><td>162-86-03935</td></tr>
+            <tr><th><span class="ko">법인등록번호</span><span class="en">Corporate reg. no.</span></th><td>131211-0008106</td></tr>
+            <tr><th><span class="ko">업종</span><span class="en">Business</span></th><td><span class="ko">포털 및 기타 인터넷 정보 매개 서비스업 · 응용 소프트웨어 개발 및 공급업 · 컴퓨터 프로그래밍 서비스업 · 전자상거래 소매업 · 광고 대행업 · 영화·비디오물 및 방송프로그램 제작 관련 서비스업</span><span class="en">Internet information services · Application software development · Computer programming services · E-commerce retail · Advertising agency · Film, video and broadcast production services</span></td></tr>
+            <tr><th><span class="ko">서비스</span><span class="en">Service</span></th><td><a href="https://galla.im">galla.im</a></td></tr>
+            <tr><th><span class="ko">문의</span><span class="en">Contact</span></th><td><a href="mailto:gallakorea@gmail.com">gallakorea@gmail.com</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; 2026 GALLA LABS INC.</span>
+    <span class="fine"><span class="ko">주식회사 갈라랩스 · 대표이사 이상민 · 사업자등록번호 162-86-03935 · 경기도 여주시 연양길 159-34</span><span class="en">Galla Labs Inc. · CEO Sangmin Lee · Business reg. 162-86-03935 · 159-34 Yeonyang-gil, Yeoju-si, Gyeonggi-do, Korea</span></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  /* ── 언어 토글 ─────────────────────────────── */
+  var root=document.documentElement, btn=document.getElementById('lang'), stored=null;
+  try{ stored=localStorage.getItem('gl-lang'); }catch(e){}
+  setLang(stored==='en'?'en':'ko');
+  function setLang(l){
+    root.setAttribute('data-lang',l);
+    root.setAttribute('lang', l==='en'?'en':'ko');
+    if(btn) btn.setAttribute('aria-label', l==='en'?'한국어로 보기':'View in English');
+  }
+  if(btn) btn.addEventListener('click',function(){
+    var n = root.getAttribute('data-lang')==='en' ? 'ko' : 'en';
+    setLang(n);
+    try{ localStorage.setItem('gl-lang',n); }catch(e){}
+  });
+
+  /* ── 키비주얼: 레드 진영 × 블루 진영, 접점은 백열 ──
+     히어로(#kv)와 진술 밴드(.bandkv)가 같은 렌더러를 공유한다 — 밴드는 절제 모드. */
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function mountKV(cv, opt){
+    if(!cv || !cv.getContext) return null;
+    var ctx=cv.getContext('2d'), W=0, H=0, DPR=1, P=[], alive=false;
+    var dens=opt.density, glow=opt.glow, seamY=opt.seamY, sx=0.5;
+
+    function spawn(side, anywhere){
+      var t = anywhere ? Math.random() : 0;
+      return {
+        s: side,
+        x: side<0 ? -0.06 + t*0.56 : 1.06 - t*0.56,
+        y: 0.14 + Math.random()*0.82,
+        v: (0.00011 + Math.random()*0.00030),
+        len: 30 + Math.random()*150,
+        a: (0.10 + Math.random()*0.34) * glow,
+        w: Math.random()<0.14 ? 1.6 : 1
+      };
+    }
+    function seed(){
+      P=[];
+      var n = Math.round((W<700 ? 34 : 68) * dens);
+      for(var i=0;i<n;i++) P.push(spawn(i%2===0?-1:1, true));
+    }
+    function resize(){
+      var r=cv.getBoundingClientRect();
+      if(!r.width || !r.height) return;
+      DPR=Math.min(window.devicePixelRatio||1, 2);
+      W=Math.max(1, r.width); H=Math.max(1, r.height);
+      cv.width=W*DPR; cv.height=H*DPR;
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      seed(); frame(0);
+    }
+    function frame(t){
+      if(!W || !H) return;
+      ctx.clearRect(0,0,W,H);
+
+      /* 바닥에 깔린 두 진영의 열 */
+      var g1=ctx.createRadialGradient(W*0.13,H*1.02,0,W*0.13,H*1.02,W*0.60);
+      g1.addColorStop(0,'rgba(255,46,68,'+(.24*glow)+')'); g1.addColorStop(.45,'rgba(255,46,68,'+(.055*glow)+')'); g1.addColorStop(1,'rgba(255,46,68,0)');
+      var g2=ctx.createRadialGradient(W*0.87,H*1.02,0,W*0.87,H*1.02,W*0.60);
+      g2.addColorStop(0,'rgba(46,123,255,'+(.26*glow)+')'); g2.addColorStop(.45,'rgba(46,123,255,'+(.065*glow)+')'); g2.addColorStop(1,'rgba(46,123,255,0)');
+      ctx.fillStyle=g1; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+
+      ctx.globalCompositeOperation='lighter';
+
+      /* 접점: 백열 (눕혀서 지면을 따라 흐르게) */
+      var pulse = reduce ? .5 : (Math.sin(t*0.0013)+1)/2;
+      ctx.save();
+      ctx.translate(W*sx,H*seamY); ctx.scale(1,0.13);
+      var hot=ctx.createRadialGradient(0,0,0,0,0,W*0.30+pulse*W*0.02);
+      hot.addColorStop(0,'rgba(255,255,255,'+((.46+pulse*.14)*glow)+')');
+      hot.addColorStop(.22,'rgba(255,240,232,'+(.14*glow)+')');
+      hot.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=hot; ctx.beginPath(); ctx.arc(0,0,W*0.30+pulse*W*0.02,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      /* 접선 */
+      var seam=ctx.createLinearGradient(0,0,W,0);
+      var lo=Math.max(.02, sx-.24), hi=Math.min(.98, sx+.24);
+      seam.addColorStop(0,'rgba(255,46,68,0)');
+      seam.addColorStop(lo,'rgba(255,46,68,'+(.42*glow)+')');
+      seam.addColorStop(sx,'rgba(255,255,255,'+((.72+pulse*.2)*glow)+')');
+      seam.addColorStop(hi,'rgba(46,123,255,'+(.42*glow)+')');
+      seam.addColorStop(1,'rgba(46,123,255,0)');
+      ctx.strokeStyle=seam; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(0,H*seamY); ctx.lineTo(W,H*seamY); ctx.stroke();
+
+      /* 달려드는 입자 */
+      for(var i=0;i<P.length;i++){
+        var p=P[i];
+        if(!reduce) p.x += p.v * -p.s * 1000 / Math.max(W,1) * 1.6;
+        var px=p.x*W, py=p.y*H;
+        var col = p.s<0 ? '255,86,86' : '110,168,255';
+        var heat = Math.max(0, 1 - Math.abs(p.x-0.5)*3.2);
+        var lg=ctx.createLinearGradient(px,py,px+p.len*p.s,py);
+        lg.addColorStop(0,'rgba('+(heat>.6?'255,255,255':col)+','+p.a+')');
+        lg.addColorStop(1,'rgba('+col+',0)');
+        ctx.strokeStyle=lg; ctx.lineWidth=p.w;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+p.len*p.s,py); ctx.stroke();
+        if((p.s<0 && p.x>0.52) || (p.s>0 && p.x<0.48)) P[i]=spawn(p.s,false);
+      }
+      ctx.globalCompositeOperation='source-over';
+    }
+
+    var ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
+    if(ro) ro.observe(cv); else window.addEventListener('resize',resize);
+    resize();
+    return { frame:frame, setAlive:function(v){alive=v;}, isAlive:function(){return alive;},
+             setSX:function(v){ sx = Math.max(.18, Math.min(.82, v)); } };
+  }
+
+  /* 히어로는 항상, 밴드는 화면에 들어와 있을 때만 그린다 (배터리) */
+  var stages=[];
+  var heroKV = mountKV(document.getElementById('kv'), {density:0.6, glow:0.62, seamY:0.9});
+  if(heroKV){ heroKV.setAlive(true); stages.push(heroKV); }
+
+  var bands=document.querySelectorAll('.bandkv');
+  for(var b=0;b<bands.length;b++){
+    var st=mountKV(bands[b], {density:0.55, glow:0.72, seamY:0.72});
+    if(!st) continue;
+    stages.push(st);
+    if(window.IntersectionObserver){
+      (function(stage, el){
+        new IntersectionObserver(function(es){ stage.setAlive(es[0].isIntersecting); },{rootMargin:'120px'}).observe(el);
+      })(st, bands[b]);
+    } else { st.setAlive(true); }
+  }
+
+  if(!reduce && stages.length){
+    var loop=function(t){
+      for(var i=0;i<stages.length;i++) if(stages[i].isAlive()) stages[i].frame(t);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  /* ── 진입 연출 ── 연출이 실패해도 글은 반드시 보여야 한다 ── */
+  if(!reduce && window.IntersectionObserver){
+    var all=document.querySelectorAll('.sec > div > h2, .sec .body, .pillars, .pillars2, .founder, .wheel, .axes, .cards, .principles, .timeline, .inquiry, .hiring, .duo, .reels, .gv, .registry, .pull, .band .bt, .band .bd');
+    var targets=[];
+    for(var i=0;i<all.length;i++){
+      if(all[i].getBoundingClientRect().top > window.innerHeight*0.88){ all[i].classList.add('rise'); targets.push(all[i]); }
+    }
+    var io=new IntersectionObserver(function(es){
+      for(var j=0;j<es.length;j++){
+        if(es[j].isIntersecting){ es[j].target.classList.add('in'); io.unobserve(es[j].target); }
+      }
+    },{rootMargin:'0px 0px -6% 0px',threshold:.04});
+    for(var k=0;k<targets.length;k++) io.observe(targets[k]);
+    setTimeout(function(){ for(var m=0;m<targets.length;m++){ if(targets[m].getBoundingClientRect().top < window.innerHeight) targets[m].classList.add('in'); } },1200);
+  }
+
+  /* ── 접선이 커서를 따라간다 — 진영이 밀리는 감각 ── */
+  var heroEl=document.querySelector('.hero');
+  if(heroEl && heroKV && !reduce){
+    heroEl.addEventListener('pointermove', function(e){
+      var r=heroEl.getBoundingClientRect();
+      heroKV.setSX((e.clientX - r.left) / Math.max(r.width,1));
+    });
+    heroEl.addEventListener('pointerleave', function(){ heroKV.setSX(0.5); });
+  }
+
+  /* ── 영상 월: 화면에 들어오면 재생, 벗어나면 정지 ── */
+  var reelVids=document.querySelectorAll('.frame video');
+  if(window.IntersectionObserver){
+    var vio=new IntersectionObserver(function(es){
+      for(var i=0;i<es.length;i++){
+        var v=es[i].target;
+        if(es[i].isIntersecting){ if(v.preload==='none') v.preload='auto'; var pr=v.play(); if(pr&&pr.catch) pr.catch(function(){}); }
+        else { v.pause(); }
+      }
+    },{threshold:.35});
+    for(var rv=0;rv<reelVids.length;rv++) vio.observe(reelVids[rv]);
+  } else {
+    for(var rv2=0;rv2<reelVids.length;rv2++){ var pr2=reelVids[rv2].play(); if(pr2&&pr2.catch) pr2.catch(function(){}); }
+  }
+
+  /* ── 확대 보기 ── */
+  var lb=document.createElement('div');
+  lb.className='lightbox';
+  lb.innerHTML='<button class="close" type="button">CLOSE ✕</button>';
+  var lbVid=document.createElement('video');
+  lbVid.setAttribute('playsinline',''); lbVid.setAttribute('controls',''); lbVid.loop=true;
+  lb.appendChild(lbVid);
+  document.body.appendChild(lb);
+  function closeLB(){ lb.classList.remove('on'); lbVid.pause(); lbVid.removeAttribute('src'); lbVid.load(); }
+  lb.addEventListener('click', function(e){ if(e.target===lb || e.target.className==='close') closeLB(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && lb.classList.contains('on')) closeLB(); });
+  var frames=document.querySelectorAll('.frame[data-expand]');
+  for(var fi=0; fi<frames.length; fi++){
+    (function(fr){
+      fr.addEventListener('click', function(){
+        var src=fr.querySelector('video').getAttribute('src');
+        lbVid.src=src; lbVid.muted=false; lb.classList.add('on');
+        var p3=lbVid.play(); if(p3&&p3.catch) p3.catch(function(){ lbVid.muted=true; lbVid.play(); });
+      });
+    })(frames[fi]);
+  }
+
+  /* ── 갈비스 데모: 눌러 보는 네 가지 동작 ──
+     실제 대화가 아니라 동작을 보여 주는 예시 스크립트다(화면에도 '동작 예시'로 표기). */
+  var SCENES=[
+    {c:'var(--red)', turns:[
+      {who:'me', ko:'저번에 말한 그 회사, 결과 나왔대?', en:'Any news from that company I mentioned?'},
+      {who:'gv', ko:'지난주에 2차 면접 본 데 말이지. 오늘까지 연락 준다고 했잖아. 아직 조용하면 내일 아침에 한 번 찔러보는 것도 방법이야.', en:"The one you had your second interview with last week. They said they'd reply by today — if it's still quiet, nudging them tomorrow morning is fair game."}
+    ]},
+    {c:'var(--ember)', turns:[
+      {who:'me', ko:'오늘 좀 별로였어.', en:"Today wasn't great."},
+      {who:'gv', ko:'그럴 만한 일이 있었구나. 위로부터 하지는 않을게 — 무슨 일이었는지부터 들을래?', en:"Something happened, then. I won't jump straight to comfort — do you want to tell me what it was first?"}
+    ]},
+    {c:'var(--ice)', turns:[
+      {who:'me', ko:'이 뉴스로 숏폼 하나 만들어줘.', en:'Make a short-form video out of this news.'},
+      {who:'gv', ko:'썸네일 3안이랑 32초 컷 뽑았어. 첫 자막은 “3억이 3천이 된 이유”로 갈까? 좋다고만 하면 바로 올릴게.', en:'Three thumbnail options and a 32-second cut are ready. Opening caption — “How 300M became 30M”? Say the word and I\'ll publish it.'}
+    ]},
+    {c:'var(--blue)', turns:[
+      {who:'me', ko:'요즘은 그냥 다 그만두고 싶어.', en:'Lately I just want to stop everything.'},
+      {who:'gv', ko:'많이 지쳐 있구나. 이건 나 혼자 받아내면 안 되는 이야기야. 24시간 상담(109)으로 연결할게 — 지금 같이 걸어볼래?', en:"You're carrying a lot right now. This isn't something I should hold on my own. Let me connect you to a 24-hour counselling line — can we call together?"}
+    ]}
+  ];
+  var gvTabs=document.querySelectorAll('.gv-tab'),
+      gvBody=document.getElementById('gvBody'),
+      gvStage=document.getElementById('gvStage'),
+      gvReplay=document.getElementById('gvReplay'),
+      gvTimers=[], gvCur=-1;
+
+  function gvClear(){ for(var i=0;i<gvTimers.length;i++) clearTimeout(gvTimers[i]); gvTimers=[]; if(gvBody) gvBody.innerHTML=''; }
+  function isEn(){ return document.documentElement.getAttribute('data-lang')==='en'; }
+
+  function gvPlay(idx){
+    if(!gvBody) return;
+    gvClear(); gvCur=idx;
+    var sc=SCENES[idx];
+    gvStage.style.setProperty('--c', sc.c);
+    for(var i=0;i<gvTabs.length;i++) gvTabs[i].setAttribute('aria-selected', i===idx ? 'true' : 'false');
+
+    var delay=0;
+    sc.turns.forEach(function(turn, ti){
+      gvTimers.push(setTimeout(function(){
+        var el=document.createElement('div');
+        el.className='msg '+(turn.who==='me'?'me':'gv');
+        gvBody.appendChild(el);
+        var text = isEn() ? turn.en : turn.ko;
+        if(turn.who==='me' || reduce){ el.textContent=text; return; }
+        /* 갈비스 말은 타이핑으로 — 답이 만들어지는 순간을 보여 준다 */
+        var n=0, caret=document.createElement('span'); caret.className='caret';
+        el.appendChild(document.createTextNode('')); el.appendChild(caret);
+        var tick=function(){
+          n++;
+          el.firstChild.nodeValue = text.slice(0,n);
+          if(n<text.length) gvTimers.push(setTimeout(tick, 22));
+          else caret.remove();
+        };
+        gvTimers.push(setTimeout(tick, 260));
+      }, delay));
+      delay += ti===0 ? 380 : 900;
+    });
+  }
+
+  for(var gi=0; gi<gvTabs.length; gi++){
+    (function(i){ gvTabs[i].addEventListener('click', function(){ gvPlay(i); }); })(gi);
+  }
+  if(gvReplay) gvReplay.addEventListener('click', function(){ gvPlay(gvCur<0?0:gvCur); });
+  /* 언어를 바꾸면 보고 있던 장면을 그 언어로 다시 재생한다 */
+  if(btn) btn.addEventListener('click', function(){ if(gvCur>=0) gvPlay(gvCur); });
+  /* 화면에 들어올 때 첫 장면 자동 재생 */
+  if(gvBody && window.IntersectionObserver){
+    var gio=new IntersectionObserver(function(es){
+      if(es[0].isIntersecting){ gvPlay(0); gio.disconnect(); }
+    },{threshold:.3});
+    gio.observe(gvBody);
+  } else { gvPlay(0); }
+
+})();
+</script>
+</html>
