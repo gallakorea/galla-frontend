@@ -12,7 +12,9 @@
      v4: '놀거리' 탭을 넣었다가 설정 화면으로 뺐다(사장님: 트렌드 탭이 빡빡함).
          저장 순서에 남아 있는 'fun'은 restore()가 실제 요소를 못 찾아 그냥 무시하므로 무해.
          ORDER_V는 되돌리지 않는다 — 낮추면 이미 4를 받은 유저의 마이그레이션 상태가 꼬인다. */
-  const ORDER_V = 4;
+  /* v5: '맛집' 탭 신설. 저장 순서가 있는 유저는 restore()가 새 탭을 맨 뒤(광장 뒤)에
+         붙여버리므로, 여기서 '날씨' 바로 뒤로 옮겨준다. 둘 다 지역 기반이라 붙어 있어야 한다. */
+  const ORDER_V = 5;
   const header = () => document.querySelector('.tabs-header');
 
   function label(el) {
@@ -32,6 +34,12 @@
       if (ov < ORDER_V) {
         if (Array.isArray(saved) && saved.length) {
           saved = saved.filter(k => k !== 'plaza'); saved.push('plaza');
+          // v5 — 맛집을 날씨 바로 뒤에 꽂는다(이미 있으면 건드리지 않는다)
+          if (!saved.includes('food')) {
+            const wi = saved.indexOf('weather');
+            if (wi >= 0) saved.splice(wi + 1, 0, 'food');
+            else saved.unshift('food');
+          }
           localStorage.setItem(KEY, JSON.stringify(saved));
         }
         localStorage.setItem(OV_KEY, String(ORDER_V));

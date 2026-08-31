@@ -1,0 +1,305 @@
+/* =========================================================
+   food.css — 우리 동네 맛집
+   날씨와 같은 탭에 산다. 지역 축(weather_regions)을 공유하니까.
+   ⚠️ 지도는 탭 패널 안에 인라인으로 박지 않는다 — 전체화면 오버레이다.
+      패널 안에 넣으면 지도 드래그가 셸 탭 스와이프로 새어나가 탭이 멋대로 넘어간다
+      (카테고리 칩 행에서 이미 겪은 사고의 더 나쁜 버전 — 칩은 좌우만, 지도는 사방).
+   ========================================================= */
+
+/* ── 맛집 탭 패널 ─────────────────────────────────────
+   2026-08-31: 날씨와 분리해 독립 탭이 됐다(사장님). 지역 축은 계속 공유하지만
+   지도가 주인공인 화면이라 날씨 카드 사이에 끼워 넣으면 둘 다 어중간해졌다. */
+/* ⚠️ .tabs-body 의 좌우 패딩은 0 이다(12px 0 0). 날씨 패널은 자체 클래스로 여백을
+   갖고 있어서 몰랐는데, 맛집 패널은 그대로 두면 글자가 화면 가장자리에 딱 붙는다
+   (320px 실측: 제목 left=0, '지도로 보기' 버튼 right=320 — 화면 밖으로 넘쳤다). */
+.tab-panel[data-panel="food"] { padding: 0 14px 28px; }
+
+.fd-head { padding: 4px 0 2px; }
+.fd-title { font-size: 19px; font-weight: 800; color: var(--text-hi); letter-spacing: -.03em; }
+.fd-lead { font-size: 12.5px; color: var(--text-low); margin: 5px 0 0; line-height: 1.55; }
+
+.fd-sec { margin-top: 18px; }
+.fd-sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fd-sec-head > div:first-child { min-width: 0; flex: 1 1 auto; }
+.fd-sec-t { font-size: 15px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em; }
+.fd-sec-sub { font-size: 12px; color: var(--text-low); }
+.fd-open-map {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 13px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--accent-grad); color: #fff; font-size: 12.5px; font-weight: 700;
+  box-shadow: var(--accent-glow);
+}
+.fd-open-map svg { width: 14px; height: 14px; }
+
+/* 채널 칩 — .chip-scroll 이어야 nav.js 가 셸 스와이프에서 제외한다 */
+.fd-chips {
+  display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -14px; padding: 2px 14px 9px;   /* 패널 패딩을 상쇄해 가장자리까지 흐르게 */
+}
+.fd-chips::-webkit-scrollbar { display: none; }
+.fd-chip {
+  flex: 0 0 auto; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.fd-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fd-chip .n { opacity: .6; margin-left: 4px; font-size: 11px; }
+
+/* 맛집 카드 */
+.fd-list { display: flex; flex-direction: column; gap: 8px; }
+.fd-card {
+  display: flex; align-items: center; gap: 11px; padding: 12px 13px; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--line-1); border-radius: var(--r-md);
+}
+.fd-card:active { background: var(--surface-2); }
+.fd-card.visited { opacity: .55; }
+.fd-card-b { flex: 1; min-width: 0; }
+.fd-name { font-size: 14px; font-weight: 700; color: var(--text-hi); }
+.fd-name .stamp { margin-left: 5px; font-size: 11px; color: var(--ok); }
+.fd-addr { font-size: 11.5px; color: var(--text-low); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.fd-tag { font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(67,97,255,.14); color: var(--accent-2); font-weight: 600; }
+.fd-empty { padding: 26px 10px; text-align: center; color: var(--text-low); font-size: 13px; }
+
+/* 정복률 */
+.fd-prog { display: flex; align-items: center; gap: 9px; margin: 4px 0 12px; }
+.fd-prog-bar { flex: 1; height: 6px; border-radius: 999px; background: #191a20; overflow: hidden; }
+.fd-prog-bar i { display: block; height: 100%; background: var(--accent-grad); border-radius: 999px;
+  transition: width .5s cubic-bezier(.22,.9,.3,1); }
+.fd-prog-n { font-size: 11.5px; color: var(--text-mid); font-variant-numeric: tabular-nums; }
+
+/* ── 전체화면 지도 오버레이 ──────────────────────────── */
+/* ⚠️ z-index 는 하단 내비(nav.nav = 9999) 보다 위여야 한다. 4000 으로 뒀더니
+   내비가 지도를 덮고, 하단 상세 시트가 그 뒤에 숨었다(실측).
+   지도는 자체 닫기(✕)와 뒤로가기를 갖춘 모달 표면이고 overlayOpen() 에도 등록돼 있다. */
+.fd-map {
+  position: fixed; inset: 0; z-index: 10000; display: none;
+  background: var(--bg); flex-direction: column;
+}
+.fd-map.open { display: flex; }
+.fd-map-canvas { flex: 1; min-height: 0; }
+
+/* OSM 타일은 흰 지도다. 순흑 배경 앱에 그대로 얹으면 눈이 아프다 →
+   반전 후 색상만 되돌려 다크맵으로 만든다. 마커는 필터 밖(전용 pane)이라 색이 안 상한다.
+   ⚠️ 이건 **Leaflet 폴백 전용**이다. 네이버 지도에는 절대 같은 짓을 하지 말 것 —
+      DOM 에 클래스가 없어 타일만 못 고르고, 통째로 걸면 NAVER 로고까지 반전돼
+      브랜드 규정 위반이 된다. 네이버는 Style Editor(customStyleId)로 다크를 만든다. */
+.fd-map-canvas .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(.78) contrast(1.05) saturate(.7);
+}
+.fd-map-canvas { background: #0a0a0c; }
+.leaflet-container { background: #0a0a0c; font: inherit; }
+.leaflet-control-attribution {
+  background: rgba(0,0,0,.55) !important; color: var(--text-low) !important; font-size: 9.5px !important;
+}
+.leaflet-control-attribution a { color: var(--text-mid) !important; }
+
+/* 상단 바 */
+.fd-map-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 500;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+  background: linear-gradient(#000 12%, rgba(0,0,0,.72) 62%, transparent);
+  pointer-events: none;
+}
+.fd-map-top > * { pointer-events: auto; }
+.fd-map-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.fd-map-close {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; cursor: pointer;
+  background: var(--surface-3); border: 1px solid var(--line-2); color: var(--text-hi);
+  font-size: 17px; line-height: 1; display: grid; place-items: center;
+}
+.fd-map-title { font-size: 14.5px; font-weight: 800; color: var(--text-hi); }
+.fd-map-count { font-size: 11.5px; color: var(--text-low); margin-left: auto;
+  font-variant-numeric: tabular-nums; }
+.fd-unvisited {
+  padding: 6px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 12px; font-weight: 600;
+}
+.fd-unvisited.on { background: var(--ok); border-color: var(--ok); color: #04120a; }
+
+/* 마커 */
+.fd-pin {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.6);
+  font-size: 14px; line-height: 1;
+}
+.fd-pin.visited { background: var(--ok); }
+.fd-cluster {
+  display: grid; place-items: center; border-radius: 50%; color: #fff; font-weight: 800;
+  background: rgba(67,97,255,.9); border: 2px solid rgba(255,255,255,.85);
+  box-shadow: 0 4px 14px rgba(0,0,0,.55); font-variant-numeric: tabular-nums;
+}
+
+/* 하단 상세 시트 */
+.fd-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
+  transform: translateY(110%); transition: transform .28s cubic-bezier(.22,.9,.3,1);
+  background: var(--surface-1); border-top: 1px solid var(--line-2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  max-height: 62%; overflow-y: auto;
+}
+.fd-sheet.open { transform: translateY(0); }
+.fd-sheet-grip { width: 36px; height: 4px; border-radius: 999px; background: var(--line-2);
+  margin: -4px auto 12px; }
+.fd-sheet h3 { font-size: 17px; font-weight: 800; color: var(--text-hi); margin: 0 0 4px; }
+.fd-sheet .addr { font-size: 12.5px; color: var(--text-mid); line-height: 1.5; }
+.fd-src { display: flex; flex-direction: column; gap: 6px; margin: 12px 0 4px; }
+.fd-src-i { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-mid); }
+.fd-src-i b { color: var(--accent-2); font-weight: 700; }
+.fd-acts { display: flex; gap: 8px; margin-top: 14px; }
+.fd-act {
+  flex: 1; padding: 12px 0; border-radius: var(--r-sm); cursor: pointer; border: 1px solid var(--line-2);
+  background: var(--surface-2); color: var(--text-hi); font-size: 13.5px; font-weight: 700;
+}
+.fd-act.on { background: var(--ok); border-color: var(--ok); color: #04120a; }
+.fd-act.save.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 설치 유도 배너(.a2hs-bar)는 z-index 가 2147483300 이라 지도(4000)를 압도한다.
+   하단 상세 시트를 그대로 덮어버려서, 지도가 열려 있는 동안은 숨긴다. */
+body.fd-map-on .a2hs-bar,
+body.fd-map-on #frOrb { display: none !important; }
+/* :has() 대신 body 클래스를 쓴다 — 구형 WKWebView 에서 :has() 가 통째로 무시된다. */
+.fd-chip.empty { opacity: .42; }
+
+/* ═══ 대결 — 맛있다 vs 맛없다 (2026-08-31) ══════════════════
+   맛집여지도는 '방송에 나온 집'을 보여주고 끝난다. 갈라는 거기서 싸움이 시작된다. */
+
+/* 랭킹 표면 전환 */
+.fd-modes { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -14px 10px; padding: 0 14px; }
+.fd-modes::-webkit-scrollbar { display: none; }
+.fd-mode { flex: 0 0 auto; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.fd-mode.on { background: var(--surface-3); border-color: var(--line-2); color: var(--text-hi); }
+
+/* 카드의 판정 점수 */
+.fd-score { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px;
+  font-variant-numeric: tabular-nums; }
+.fd-score .good { color: var(--pro); font-weight: 700; }
+.fd-score .bad  { color: var(--con); font-weight: 700; }
+.fd-score .sep  { color: var(--text-low); font-size: 10.5px; }
+.fd-heat { margin-left: auto; color: #ff9f43; font-weight: 700; }
+
+/* 판정바 */
+.fd-judge { margin: 14px 0 4px; }
+.fd-judge-fb { display: flex; gap: 8px; }
+.fd-j { flex: 1; padding: 12px 0; border-radius: var(--r-sm); cursor: pointer;
+  border: 1px solid var(--line-2); background: var(--surface-2);
+  color: var(--text-hi); font-size: 13.5px; font-weight: 700; }
+.fd-j.good.on { background: var(--pro); border-color: var(--pro); color: #fff; }
+.fd-j.bad.on  { background: var(--con); border-color: var(--con); color: #fff; }
+
+/* 한마디 */
+.fd-talk { margin-top: 16px; border-top: 1px solid var(--line-1); padding-top: 13px; }
+.fd-talk-h { font-size: 13px; font-weight: 700; color: var(--text-hi); margin-bottom: 9px; }
+.fd-talk-h span { color: var(--text-low); font-weight: 600; }
+.fd-talk-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 11px; }
+.fd-c { padding: 9px 11px; border-radius: var(--r-sm); background: var(--surface-2);
+  border-left: 3px solid var(--line-2); }
+.fd-c.good { border-left-color: var(--pro); }
+.fd-c.bad  { border-left-color: var(--con); }
+.fd-c-h { display: flex; align-items: center; gap: 6px; font-size: 11.5px; margin-bottom: 3px; }
+.fd-c-h b { color: var(--text-mid); font-weight: 700; }
+.fd-c-fac { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; font-weight: 700; }
+.fd-c.good .fd-c-fac { background: rgba(77,141,255,.16); color: var(--pro); }
+.fd-c.bad  .fd-c-fac { background: rgba(255,90,110,.16); color: var(--con); }
+.fd-c-b { font-size: 13px; color: var(--text-hi); line-height: 1.5; word-break: break-word; }
+.fd-c-like { margin-top: 5px; padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-1);
+  color: var(--text-low); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fd-c-like.on { border-color: var(--accent); color: var(--accent-2); }
+.fd-c-empty { padding: 16px 4px; text-align: center; color: var(--text-low); font-size: 12.5px; }
+
+/* 입력 — 진영을 안 고르면 잠긴다 */
+.fd-say { display: flex; gap: 7px; }
+.fd-say input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-hi); font-size: 16px; outline: none; }   /* 16px — iOS 확대 방지 */
+.fd-say input:disabled { opacity: .5; }
+.fd-say button { flex: 0 0 auto; padding: 0 15px; border-radius: var(--r-sm); border: 0; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; }
+.fd-say button:disabled { background: var(--surface-3); color: var(--text-low); cursor: default; }
+
+/* ── 마커에 방송 로고 ────────────────────────────────────
+   지도만 봐도 또간집인지 쯔양인지 알게 한다.
+   ⚠️ 로고 이미지는 YouTube CDN 을 그대로 참조한다 — 우리 서버에 복제 저장하지 않는다
+      (방송사·유튜버 로고 재호스팅은 상표·저작권 문제가 된다). */
+.fd-pin.has-logo {
+  width: 38px; height: 38px; padding: 0; overflow: visible;
+  background: #fff; border: 2.5px solid var(--accent);
+  box-shadow: 0 3px 12px rgba(0,0,0,.55);
+}
+.fd-pin.has-logo img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+.fd-pin.has-logo.visited { border-color: var(--ok); }
+.fd-pin.has-logo.visited img { opacity: .55; }
+.fd-pin-e { font-size: 15px; line-height: 1; }
+/* 다녀온 곳 도장 */
+.fd-pin-chk {
+  position: absolute; right: -3px; bottom: -3px; width: 16px; height: 16px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--ok); color: #04120a; font-size: 10px; font-weight: 800;
+  font-style: normal; border: 1.5px solid #000;
+}
+/* 여러 방송에 나온 집 = 검증된 집 */
+.fd-pin-n {
+  position: absolute; right: -5px; top: -5px; min-width: 17px; height: 17px; padding: 0 3px;
+  display: grid; place-items: center; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 10px; font-weight: 800;
+  font-style: normal; border: 1.5px solid #000; font-variant-numeric: tabular-nums;
+}
+.fd-pin { position: relative; }
+
+/* ── 방송별 모아보기 ─────────────────────────────────────
+   저쪽은 방송별 나열로 끝나는 읽기 전용 목록이다.
+   우리는 같은 화면에 정복률(도장깨기)과 맛있다/맛없다 전적을 얹는다. */
+.fb-wrap { display: flex; flex-direction: column; gap: 26px; }
+.fb-sec { margin: 0 -14px; }                 /* 가로 행이 화면 끝까지 흐르게 */
+.fb-head { display: flex; align-items: center; gap: 9px; padding: 0 14px 7px; }
+.fb-logo { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex: 0 0 auto;
+  background: var(--surface-3); }
+.fb-h-t { font-size: 14.5px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-h-t b { color: var(--accent-2); font-weight: 800; margin-left: 3px; }
+.fb-all { margin-left: auto; flex: 0 0 auto; padding: 5px 9px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--text-low); font-size: 12px; cursor: pointer; }
+.fb-all:active { background: var(--surface-2); }
+
+/* 정복률 — 이게 저쪽엔 없는 줄이다 */
+.fb-prog { display: flex; align-items: center; gap: 8px; padding: 0 14px 9px; }
+.fb-prog-bar { flex: 1; height: 4px; border-radius: 999px; background: #191a20; overflow: hidden; }
+.fb-prog-bar i { display: block; height: 100%; background: var(--accent-grad); border-radius: 999px;
+  transition: width .5s cubic-bezier(.22,.9,.3,1); }
+.fb-prog-n { font-size: 11px; color: var(--text-low); font-variant-numeric: tabular-nums; }
+
+.fb-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 0 14px 2px; }
+.fb-row::-webkit-scrollbar { display: none; }
+.fb-card { flex: 0 0 auto; width: 132px; cursor: pointer; }
+.fb-card:active { opacity: .75; }
+.fb-thumb {
+  position: relative; width: 132px; height: 88px; border-radius: 10px; overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  display: grid; place-items: center;
+}
+.fb-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fb-noimg { font-size: 22px; opacity: .45; }
+.fb-card.visited .fb-thumb img { opacity: .45; }
+.fb-stamp {
+  position: absolute; left: 5px; bottom: 5px; padding: 2px 6px; border-radius: 999px;
+  background: var(--ok); color: #04120a; font-size: 10px; font-weight: 800; font-style: normal;
+}
+.fb-name { font-size: 13px; font-weight: 700; color: var(--text-hi); margin-top: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-addr { font-size: 11px; color: var(--text-low); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-score { margin-top: 4px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.fb-score .good { color: var(--pro); font-weight: 700; }
+.fb-score .bad { color: var(--con); font-weight: 700; }
+.fb-score .sep { color: var(--text-low); margin: 0 3px; }
+.fb-score.empty { color: var(--text-low); }
