@@ -237,7 +237,10 @@
   /* ⚠️ 금액은 반드시 축약한다. 원본 그대로 찍으면 '15,207,000원'이 되어
      요약 칸에서 줄바꿈이 나고 표가 무너진다(실측). 단위는 여기서만 붙인다 —
      호출부에서 '원'을 또 붙이면 '238,000원원'이 된다. */
-  function won(n) {
+  /* ⚠️ 이름을 won 으로 두면 안 된다 — 아래(메뉴 가격)에 이미 won() 이 있어서
+     **나중 선언이 이걸 덮어쓴다**. 함수 선언 호이스팅이라 에러도 안 난다.
+     화면엔 축약이 안 먹은 '1,668,000원'이 그대로 찍혀 표가 두 줄로 깨졌다(실측). */
+  function wonShort(n) {
     n = Number(n) || 0;
     if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
     if (n >= 10000) return Math.round(n / 10000).toLocaleString() + "만";
@@ -259,8 +262,8 @@
       '<div class="fa-stat">' +
         '<div><b>' + st.mps + '</b><i>의원</i></div>' +
         '<div><b>' + st.visits + '</b><i>결제</i></div>' +
-        '<div><b>' + won(st.amount) + '</b><i>총액</i></div>' +
-        '<div><b>' + won(per) + '</b><i>건당</i></div>' +
+        '<div><b>' + wonShort(st.amount) + '</b><i>총액</i></div>' +
+        '<div><b>' + wonShort(per) + '</b><i>건당</i></div>' +
       '</div>' +
       (parties.length
         ? '<div class="fa-party">' + parties.map(function (x) {
@@ -274,7 +277,7 @@
               '<b class="fa-mp">' + esc(r.mp) + '</b>' +
               '<span class="fa-pty">' + esc(r.party || "") + '</span>' +
               '<span class="fa-dt">' + esc(String(r.date || "").slice(0, 10)) + '</span>' +
-              '<span class="fa-amt">' + won(r.amount) + '</span>' +
+              '<span class="fa-amt">' + wonShort(r.amount) + '</span>' +
             '</div>'; }).join("") +
           (d.total > rows.length
             ? '<div class="fa-more">전체 ' + d.total + '건 중 최근 ' + rows.length + '건</div>' : "") +
@@ -418,10 +421,7 @@
     var gt = t.closest && t.closest("[data-gotab]");
     if (gt) { tab = gt.dataset.gotab; seg = "all"; listLimit = 40; paintTabs(); loadList(); return; }
     var h2 = t.closest && t.closest("[data-ch2]");
-    if (h2) {
-      chFilter = (chFilter === h2.dataset.ch2) ? null : h2.dataset.ch2;
-      listLimit = 40; loadList(); paintMapChips(); return;
-    }
+    if (h2) { openChPage(h2.dataset.ch2); return; }
     var hc = t.closest && t.closest("[data-cat2]");
     if (hc) { catFilter = hc.dataset.cat2 || null; listLimit = 40; loadList(); return; }
     if (t.closest && t.closest("#fd-list [data-near]")) { askPos(); return; }
@@ -1103,6 +1103,90 @@
     return MB.marker(+p.lat, +p.lon, html, 38, function () { openDetail(p.id); });
   }
 
+  /* ── 채널 페이지 ──────────────────────────────────────
+     "그 사람을 누르면 식당 리스트와 영상이 떠야 한다"(사장님).
+     ⚠️ 장소에 붙은 영상은 3%뿐이다 — 채널들이 제목·설명에 상호를 안 쓴다
+        (또간집 700편 → 매칭 9건). 그래서 여기선 **그 채널의 최근 영상**을 보여준다.
+        "이 집이 나온 영상"이라고 속이지 않는다. 섹션 제목으로 구분한다. */
+  var CHPAGE = null;
+  function chPageHtml(d) {
+    var c = d.channel || {}, vs = d.videos || [], ps = d.places || [];
+    var k = KINDCHIP[c.kind] || null;
+    var pct = c.total ? Math.round((c.visited || 0) * 100 / c.total) : 0;
+    return '<div class="fd-sheet-grip"></div>' +
+      '<div class="cg-top">' +
+        '<span class="cg-av' + (c.thumb ? "" : " none") + '">' +
+          (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">' : esc(initials(c.name || ""))) +
+        '</span>' +
+        '<div class="cg-id"><div class="cg-n">' + esc(c.name || "") +
+          (k ? '<span class="fs-k" style="--kc:' + k[1] + '">' + k[0] + '</span>' : '') + '</div>' +
+          '<div class="cg-c">' + (c.total || 0) + '곳 · 도장 ' + (c.visited || 0) + '</div>' +
+        '</div>' +
+        '<button type="button" class="cp-x" data-cgclose="1">✕</button>' +
+      '</div>' +
+      '<div class="cg-bar"><i style="width:' + pct + '%"></i></div>' +
+      (vs.length
+        ? '<div class="cg-sec">최근 영상<span class="fs-n">' + vs.length + '</span></div>' +
+          '<div class="cg-vids chip-scroll">' + vs.map(function (v) {
+            return '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
+              '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
+              '<i class="fs-play">▶</i>' +
+              '<span class="cg-vt">' + esc(v.title || "") + '</span></button>';
+          }).join("") + '</div>'
+        : '') +
+      '<div class="cg-sec">다녀간 집<span class="fs-n">' + (c.total || 0) + '</span></div>' +
+      (ps.length
+        ? '<div class="cg-list">' + ps.map(function (p) {
+            var th = p.cover || ytThumb(p.video_id) || "";
+            return '<button type="button" class="cg-p" data-cgplace="' + esc(p.id) + '">' +
+              '<span class="cg-pth">' +
+                (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) +
+              '</span>' +
+              '<span class="cg-pb"><b>' + esc(p.name) + '</b>' +
+                '<i>' + esc([p.category, shortAddr(p.address)].filter(Boolean).join(" · ")) + '</i></span>' +
+              (p.visited ? '<span class="cg-ok">✓</span>' : '') +
+            '</button>';
+          }).join("") +
+          (ps.length < (c.total || 0)
+            ? '<div class="fa-more">' + ps.length + ' / ' + c.total + '곳 · 목록에서 더 보기</div>' : '') +
+          '</div>'
+        : '<div class="cp-none">아직 등록된 집이 없어요</div>');
+  }
+  async function openChPage(slug) {
+    if (!CHPAGE) {
+      CHPAGE = document.createElement("div");
+      CHPAGE.className = "fd-cpick fd-cgpage";
+      document.body.appendChild(CHPAGE);
+      /* ⚠️ 전파를 끊는다 — 패널 클릭 처리기가 document 위임이라 안 끊으면 두 번 처리된다
+         (누구 고르기 시트에서 이미 밟은 함정: chFilter 가 두 번 토글돼 null 이 됐다). */
+      CHPAGE.addEventListener("click", function (e) {
+        if (e.target === CHPAGE || e.target.closest("[data-cgclose]")) {
+          e.stopPropagation(); closeChPage(); return;
+        }
+        var v = e.target.closest(".fd-vid");
+        if (v && v.dataset.vid) {
+          e.stopPropagation();
+          v.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(v.dataset.vid) +
+            '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
+          v.classList.add("playing"); return;
+        }
+        var pb = e.target.closest("[data-cgplace]");
+        if (pb) { e.stopPropagation(); closeChPage(); openDetail(pb.dataset.cgplace); }
+      });
+    }
+    CHPAGE.innerHTML = '<div class="fd-cpick-box"><div class="cp-none">불러오는 중…</div></div>';
+    CHPAGE.classList.add("open");
+    document.body.classList.add("fd-detail-on");
+    var d = await rpc("food_channel_page", { p_slug: slug, p_places: 30, p_videos: 12 });
+    if (!d || !d.ok) { closeChPage(); return toast("불러오지 못했어요"); }
+    CHPAGE.innerHTML = '<div class="fd-cpick-box">' + chPageHtml(d) + '</div>';
+  }
+  function closeChPage() {
+    if (!CHPAGE) return;
+    CHPAGE.classList.remove("open");
+    document.body.classList.remove("fd-detail-on");
+  }
+
   /* ── 누구 고르기 ──────────────────────────────────────
      출처가 58개다. 가로 스크롤 한 줄로는 못 고른다.
      종류별로 묶고(공직자·인증·유튜버·방송) 이름 검색까지 붙인다. */
@@ -1144,12 +1228,20 @@
       CHPICK = document.createElement("div");
       CHPICK.className = "fd-cpick";
       document.body.appendChild(CHPICK);
+      /* 🔴 전파를 반드시 끊는다.
+         패널 클릭 처리기가 **document 위임**(379행)이라, 시트가 body 직속이면
+         같은 클릭을 시트 핸들러와 패널 핸들러가 **둘 다** 받는다.
+         둘 다 `chFilter` 를 토글하므로 두 번 뒤집혀 결국 null 이 된다 —
+         시트는 닫히는데 목록은 그대로인 채로(실측: 김사원세끼를 눌러도 국회 목록 유지). */
       CHPICK.addEventListener("click", function (e) {
-        if (e.target === CHPICK || e.target.closest("[data-chclose]")) { closeChPick(); return; }
+        if (e.target === CHPICK || e.target.closest("[data-chclose]")) {
+          e.stopPropagation(); closeChPick(); return;
+        }
         var b = e.target.closest("[data-ch2]");
         if (b) {
-          chFilter = (chFilter === b.dataset.ch2) ? null : b.dataset.ch2;
-          listLimit = 40; closeChPick(); loadList(); paintMapChips();
+          e.stopPropagation();
+          closeChPick();
+          openChPage(b.dataset.ch2);      // 목록만 거르는 게 아니라 그 사람 페이지를 연다
         }
       });
       /* 검색은 입력마다 다시 그린다 — 목록이 58개라 비용이 없다 */
@@ -1205,6 +1297,45 @@
   /* ── 상세 시트 — 여기가 싸움터다 ──────────────────────
      맛집여지도는 "방송에 나온 집"을 보여주고 끝난다. 갈라는 거기서 시작한다:
      맛있다 / 맛없다를 고르고, **고른 사람만** 말할 수 있다. */
+  var KINDCHIP = { yt: ["유튜버", "#d0796a"], tv: ["방송", "#6aa8d0"],
+                   guide: ["인증", "#8ac97a"], gov: ["공직자", "#c9a227"] };
+  function srcHtml(list) {
+    list = list || [];
+    if (!list.length) return "";
+    /* 같은 채널이 여러 번 나오면 최신 것만 남긴다 — 한 집이 한 방송에 여러 회 나올 수 있다. */
+    var seen = {}, rows = [];
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (seen[s.channel]) { if (!seen[s.channel].video_id && s.video_id) seen[s.channel] = s; continue; }
+      seen[s.channel] = s; rows.push(s.channel);
+    }
+    return '<div class="fs-wrap"><div class="fs-h">누가 다녀갔나' +
+        '<span class="fs-n">' + rows.length + '</span></div>' +
+      rows.map(function (slug) {
+        var s = seen[slug];
+        var k = KINDCHIP[chKind(slug)] || null;
+        var vid = s.video_id || "";
+        var when = s.aired_at ? String(s.aired_at).slice(0, 10) : "";
+        return '<div class="fs-i' + (vid ? " has-vid" : "") + '">' +
+          '<div class="fs-top">' +
+            '<span class="fs-av' + (s.thumb ? "" : " none") + '">' +
+              (s.thumb ? '<img src="' + esc(s.thumb) + '" alt="" loading="lazy">' : esc(initials(s.name))) +
+            '</span>' +
+            '<span class="fs-name">' + esc(s.name) + '</span>' +
+            (k ? '<span class="fs-k" style="--kc:' + k[1] + '">' + k[0] + '</span>' : '') +
+            (when ? '<span class="fs-when">' + esc(when) + '</span>' : '') +
+          '</div>' +
+          (vid
+            ? '<button type="button" class="fs-vid fd-vid" data-vid="' + esc(vid) + '">' +
+                '<img src="' + esc(ytThumb(vid)) + '" alt="" loading="lazy">' +
+                '<i class="fs-play">▶</i>' +
+                (s.title ? '<span class="fs-t">' + esc(s.title) + '</span>' : '') +
+              '</button>'
+            : (s.title ? '<p class="fs-t only">' + esc(s.title) + '</p>' : '')) +
+        '</div>';
+      }).join("") + '</div>';
+  }
+
   function showSheet(d) {
     curPlace = d;
     pushRecent(d.place);
@@ -1219,12 +1350,11 @@
         '<span class="addr">' + esc(p.address) + '</span>' +
       '</div>' +
       (p.phone ? '<a class="fd-tel" href="tel:' + esc(p.phone) + '">📞 ' + esc(p.phone) + '</a>' : '') +
-      (d.sources && d.sources.length
-        ? '<div class="fd-src">' + d.sources.map(function (s) {
-            return '<div class="fd-src-i">📺 <b>' + esc(s.name) + '</b>' +
-              (s.title ? '<span style="opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.title) + '</span>' : '') +
-            '</div>'; }).join("") + '</div>'
-        : '') +
+      /* 누가 다녀갔나 — 이 서비스의 정체성이라 상세에서도 1급으로 세운다.
+         ⚠️ 예전엔 '📺 채널명 제목' 텍스트 한 줄이었다. RPC 는 로고·영상ID·제목·방영일을
+            이미 다 주는데 화면이 안 썼다. 로고를 세우고, 영상이 있으면 썸네일을 붙여
+            그 자리에서 재생되게 한다(/yt 프록시 — 오류 153 회피 경로). */
+      srcHtml(d.sources) +
       /* 국회의원이 정치자금으로 밥 먹은 집이면 여기에 명단이 붙는다.
          비어 있으면 렌더 자체를 안 한다 — 4,700곳 대부분은 해당 없다. */
       '<div class="fd-asm" id="fd-asm"></div>' +

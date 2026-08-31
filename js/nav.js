@@ -410,7 +410,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const overlayOpen = () => document.querySelector(
       "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
-      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage, .fd-map.open, .fd-cpick.open, " +
+      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage, .fd-map.open, .fd-cpick.open, .fd-cgpage.open, " +
       ".gtour, .gt-stage, .trend-tour"   // 온보딩 투어가 떠 있으면 탭 스와이프 금지(투어가 카테고리 위를 덮어 스와이프를 가로챘다)
     ) || document.body.classList.contains("dm-detail");
 
@@ -829,7 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const scroller = () => document.scrollingElement || document.documentElement;
   const overlayOpen = () => document.querySelector(
     "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
-    "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), #nav-jog, .fd-map.open, .fd-cpick.open"
+    "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), #nav-jog, .fd-map.open, .fd-cpick.open, .fd-cgpage.open"
   ) || document.body.classList.contains("dm-detail");
 
   // ⚠️ DM 페이지 제외: 문서가 스크롤 잠금 상태라 항상 scrollTop 0 → 어느 탭에서 당겨도

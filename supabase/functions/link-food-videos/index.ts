@@ -44,7 +44,11 @@ async function syncChannel(slug: string, chId: string, cap: number) {
       const s = it.snippet || {};
       const vid = s.resourceId?.videoId;
       if (!vid || !s.title) continue;
-      rows.push({ channel: slug, video_id: vid, title: s.title, published_at: s.publishedAt });
+      /* 설명란까지 담는다 — 제목엔 상호가 없어도 설명엔 있다.
+         playlistItems 가 snippet 에 이미 실어주므로 추가 호출이 없다. */
+      rows.push({ channel: slug, video_id: vid, title: s.title,
+                  description: String(s.description || "").slice(0, 4000),
+                  published_at: s.publishedAt });
     }
     got += (d.items || []).length;
     token = d.nextPageToken || "";
@@ -85,7 +89,7 @@ Deno.serve(async (req) => {
      카탈로그를 다 못 보면 매칭이 통째로 헛돈다(실측: linked 1~2건). range 로 끝까지 읽는다. */
   const vids: any[] = [];
   for (let from = 0; from < 60000; from += 1000) {
-    const { data } = await supa.from("food_videos").select("channel,video_id,title")
+    const { data } = await supa.from("food_videos").select("channel,video_id,title,description")
       .range(from, from + 999);
     const arr = (data || []) as any[];
     vids.push(...arr);
@@ -94,7 +98,9 @@ Deno.serve(async (req) => {
   const byCh = new Map<string, { id: string; t: string }[]>();
   for (const v of vids) {
     const k = v.channel;
-    (byCh.get(k) || byCh.set(k, []).get(k)!).push({ id: v.video_id, t: norm(v.title) });
+    /* 제목 + 설명을 한 덩어리로 본다. 상호는 둘 중 어디에든 있을 수 있다. */
+    (byCh.get(k) || byCh.set(k, []).get(k)!)
+      .push({ id: v.video_id, t: norm((v.title || "") + " " + (v.description || "")) });
   }
 
   /* ⚠️ PostgREST 는 RPC 결과도 기본 1,000행에서 자른다 — p_limit 을 6000 으로 줘도
@@ -110,7 +116,10 @@ Deno.serve(async (req) => {
   const ups: any[] = [];
   for (const t of targets) {
     const n = norm(t.name);
-    if (n.length < 3) { skipped++; continue; }          // 두 글자 상호는 오탐이 많다
+    /* ⚠️ 설명란까지 보면 오탐이 늘어난다(설명에 다른 가게·협찬사가 섞인다).
+       세 글자로는 부족해 **네 글자 이상**만 본다. 짧은 상호는 포기하는 게
+       엉뚱한 영상을 붙이는 것보다 낫다 — '누가 갔나'가 거짓말이 되면 끝이다. */
+    if (n.length < 4) { skipped++; continue; }
     const list = byCh.get(t.channel);
     if (!list) continue;
     const hit = list.find((v) => v.t.includes(n));
