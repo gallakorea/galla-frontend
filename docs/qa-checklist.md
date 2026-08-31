@@ -324,9 +324,9 @@
 |---|---|---|
 | **RPC 631개** — SECURITY DEFINER 권한 가드 | `current_user` 로 권한 판정하면 구멍(소유자로 평가됨) | ❌ |
 | 핵심 RPC 회귀 | place_bet · battle_action · submit_bug · get_my_account · gp_wallet · predict_state · open_room_create · log_share · claim_tour_bonus | ❌ |
-| **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ❌ |
+| **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ✅ 3개 모두 용량제한·MIME 화이트리스트 있음. **쓰기 정책 3개에 소유자 검사가 없어** 남의 파일 삭제·덮어쓰기가 가능했다 → 소유자 조건으로 교체 |
 | R2 버킷(galla-media) | CORS · 공개 URL · 고아 파일 | ❌ |
-| **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ❌ |
+| **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ✅ publication 17표. 잠긴 컬럼은 comments.user_id(처리됨)·users(구독 코드 없음)뿐. `old` 비PK 필드를 쓰는 핸들러가 없어 default 복제ID로 충분 |
 | DB 트리거 | 알림 발생(notify 브릿지) · 카운터 갱신 | ❌ |
 | RLS 정책 회귀 | 남의 글 수정·삭제 차단 · PII 컬럼권한 | ❌ |
 
@@ -524,7 +524,7 @@ for f in js/*.js; do b=$(basename $f .js); grep -qi "$b" $D || echo "모듈 미�
 |---|---|
 | **CI/CD** | ❌ 없음 — Cloudflare Pages 자동배포만. **테스트 게이트 없이 main 푸시 = 즉시 배포** |
 | 배포 전 자동 검사(0장 5종) 강제 | ❌ 수동 |
-| **DB 마이그레이션 351개** — 적용 상태 대조 | ❌ |
+| **DB 마이그레이션 351개** — 적용 상태 대조 | ✅ 기록 363 vs 파일 385로 어긋나 있었다 — 22개가 직접 SQL 로 적용돼 기록 누락. 객체 실재 확인 후 채워 385==385 |
 | 롤백 절차(웹·OTA·앱스토어) | ❌ |
 | **DB 백업·복구 리허설** | ✅ 복원 리허설 완료 — 생성컬럼·트리거 두 곳에서 막혔던 것까지 해소 |
 | 엣지 함수 배포 이력·롤백 | ❌ |
