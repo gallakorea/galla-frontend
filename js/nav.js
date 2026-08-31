@@ -211,6 +211,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const navItems = document.querySelectorAll(".nav-item");
 
+  /* ♿ 하단 탭은 아이콘만 있고 글자가 없다. 실측(2026-09-01) 결과 다섯 중 넷이
+     스크린리더에 아무것도 안 읽혔다 — 주 내비게이션이 통째로 막힌 셈이다.
+     마크업이 40개 HTML 에 복제돼 있어 여기서 한 번에 붙인다.
+     아이콘 img 는 alt="" 로 둔다 — 이름은 버튼이 말하므로 중복 낭독을 피한다. */
+  const NAV_LABEL = { index: "홈", predict: "예측", dm: "메시지", trend: "트렌드", mypage: "마이" };
+  navItems.forEach((b) => {
+    const key = b.dataset.page;
+    const label = NAV_LABEL[key];
+    if (label && !b.getAttribute("aria-label")) b.setAttribute("aria-label", label);
+    const img = b.querySelector("img");
+    if (img && !img.hasAttribute("alt")) img.setAttribute("alt", "");
+    // 현재 탭을 보조기기에도 알린다(시각적으로는 .active 로만 표시돼 있었다)
+    if (b.classList.contains("active")) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+
   // 현재 탭 재탭 → 있던 위치에서 부드럽게 최상단으로 (거리 비례 duration, 최대 0.6s)
   // window.scrollTo({behavior:'smooth'})는 일부 페이지(iOS 피드)에서 무시돼 rAF로 직접 이자징
   function smoothScrollTop() {

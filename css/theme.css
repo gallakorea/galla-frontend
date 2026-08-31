@@ -267,3 +267,16 @@ input, textarea, select,
 /* 🤖 갈비스 아이콘 — 전역 크기·색. 각 페이지 버튼이 SVG 크기를 안 줘서 얇은 선으로 찌그러지던 것 방지(전 화면 공통). */
 .gv-galvis{ width:22px; height:22px; flex:0 0 auto; color:#5fd8ff; }
 [data-galvis]{ align-items:center; }
+
+/* ♿ 키보드 포커스 표시 — 실측(2026-09-01) 결과 버튼·링크에 outline:none 만 있고
+   대체 표시가 없어, 키보드로 다니면 지금 어디에 있는지 전혀 알 수 없었다(WCAG 2.4.7).
+   :focus-visible 이라 마우스 클릭에는 안 뜨고 키보드·보조기기에만 뜬다 — 디자인은 그대로다. */
+:where(a, button, input, select, textarea, [tabindex], [role="button"]):focus-visible {
+  outline: 2px solid var(--accent, #7c8cff);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* 어두운 배경 위 밝은 요소에서 링이 묻히지 않게 한 겹 더 */
+:where(button, [role="button"]):focus-visible {
+  box-shadow: 0 0 0 4px rgba(124, 140, 255, .25);
+}
