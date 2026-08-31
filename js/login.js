@@ -138,6 +138,17 @@
     /* ====================================================================
        MPA(단독 문서) — 기존 동작 그대로 (pop-out·히스토리 트랩·스와이프 홈 포함)
     ==================================================================== */
+    /* next 파라미터를 같은 사이트 경로로만 되돌린다. 외부·javascript:·데이터 URL 은 null.
+       new URL 은 브라우저와 같은 파서라 역슬래시·공백·탭 트릭이 여기서 정규화돼 걸린다. */
+    function sameOriginNext(n) {
+        if (!n) return null;
+        try {
+            const u = new URL(n, location.origin);
+            if (u.origin !== location.origin) return null;
+            return u.pathname.replace(/^\//, "") + u.search + u.hash;
+        } catch (_) { return null; }
+    }
+
     function bootMPA() {
         // 로그인 후 돌아갈 곳(gated 탭/페이지) — ?next= 우선, 없으면 같은 오리진 referrer.
         function _computeLoginNext() {
@@ -237,10 +248,12 @@
                 location.replace(dest);
             } else {
                 // 웹 브라우저(MPA): next 페이지로 그대로, 없으면 홈.
-                // 🔒 오픈 리다이렉트 차단 — 외부 URL·프로토콜상대(//)·javascript: 등은 무시하고 홈으로.
-                //    같은 사이트 상대경로(dm.html, /dm.html?x)만 허용.
-                const safeNext = (next && !/^https?:/i.test(next) && !/^\/\//.test(next) && !/^[a-z]+:/i.test(next)) ? next : "index.html";
-                location.replace(safeNext);
+                /* 🔒 오픈 리다이렉트 차단 — 예전엔 정규식 블랙리스트였고 다섯 가지로 샜다:
+                   "\\evil.com" · "/\\evil.com"(역슬래시를 브라우저가 슬래시로 읽는다) ·
+                   " javascript:" · "\tjavascript:" · "java\tscript:"(공백·탭을 URL 파서가 지운다).
+                   앞 둘은 실제로 외부 사이트로 나갔다 — 로그인 직후라 피싱에 그대로 쓰인다.
+                   막을 것을 나열하는 대신 브라우저 파서로 풀어서 오리진이 같을 때만 허용한다. */
+                location.replace(sameOriginNext(next) || "index.html");
             }
         }
 

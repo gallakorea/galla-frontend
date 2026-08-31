@@ -365,13 +365,22 @@
   }
 
   /* ================= 원본 기사 ================= */
-  async function loadArticle(url, title, press) {
+  /* ?url= 은 주소창에서 오는 남의 입력이다. esc() 는 HTML 이스케이프라 따옴표만 막을 뿐
+     스킴은 못 막는다 — javascript: 를 넣으면 갈라 도메인 위의 링크가 그대로 XSS 가 된다
+     (제보 링크에서 이미 한 번 당한 유형). URL 파서로 풀어 http/https 일 때만 링크로 만든다. */
+  const safeUrl = (u) => {
+    try { const x = new URL(String(u == null ? "" : u).trim()); return /^https?:$/.test(x.protocol) ? x.href : ""; }
+    catch (_) { return ""; }
+  };
+
+  async function loadArticle(rawUrl, title, press) {
+    const url = safeUrl(rawUrl);
     document.title = `${title || "기사"} · GALLA`;
     titleEl().textContent = title || press || "기사";
-    $("#np-ext").href = url;
-    $("#np-fallback-btn").href = url;
+    if (url) { $("#np-ext").href = url; $("#np-fallback-btn").href = url; }
+    else { $("#np-ext").removeAttribute("href"); $("#np-fallback-btn").removeAttribute("href"); }
     $("#np-fallback .nvf-title").textContent = title || "";
-    $("#np-ext").style.display = "";
+    $("#np-ext").style.display = url ? "" : "none";
 
     let d = null;
     try {
@@ -393,7 +402,7 @@
           <div class="reader-sub">${esc(d.siteName || press || "")}${d.published && fmtDate(d.published) ? " · " + fmtDate(d.published) : ""}</div>
           ${hero}
           ${body}
-          <a class="reader-origin" href="${esc(url)}" target="_blank" rel="noopener noreferrer">원문 기사에서 보기 ↗</a>
+          ${url ? `<a class="reader-origin" href="${esc(url)}" target="_blank" rel="noopener noreferrer">원문 기사에서 보기 ↗</a>` : ""}
         </article>`;
     } else {
       readerEl().hidden = true;
