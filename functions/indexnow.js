@@ -29,9 +29,38 @@ const ENDPOINTS = [
   "https://www.bing.com/indexnow",
   "https://yandex.com/indexnow",
 ];
+/* 제출 대상은 galla.im 것만 — 예전엔 u.includes(HOST) 였다.
+   그러면 https://evil.com/?x=galla.im 이 통과한다. 엔진이 최종적으로 거르긴 해도
+   남의 URL 이 우리 키로 올라가면 스팸으로 찍혀 키가 무효화된다. 호스트를 파싱해서 본다. */
+function onOurHost(u) {
+  if (typeof u !== "string") return false;
+  try {
+    const h = new URL(u);
+    return (h.protocol === "https:" || h.protocol === "http:") &&
+           (h.hostname === HOST || h.hostname.endsWith("." + HOST));
+  } catch { return false; }
+}
+
+/* 이 엔드포인트는 인증이 없다(크론이 헤더 없이 때린다). 그래서 아무나 반복 호출로
+   api.indexnow.org 의 429 를 더 태울 수 있다. 콜로별 캐시로 최소 간격을 강제한다 —
+   크론은 30분 주기라 영향 없고, 두들기는 쪽만 막힌다. */
+const THROTTLE_SEC = 60;
+async function throttled() {
+  try {
+    const cache = caches.default;
+    const key = new Request(`https://${HOST}/__indexnow_throttle`);
+    if (await cache.match(key)) return true;
+    await cache.put(key, new Response("1", {
+      headers: { "Cache-Control": `max-age=${THROTTLE_SEC}`, "Content-Type": "text/plain" },
+    }));
+  } catch { /* 캐시를 못 쓰면 그냥 통과 — 막는 게 목적이지 죽이는 게 목적이 아니다 */ }
+  return false;
+}
+
 async function submit(urls) {
-  urls = [...new Set(urls.filter((u) => typeof u === "string" && u.includes(HOST)))].slice(0, 500);
+  urls = [...new Set(urls.filter(onOurHost))].slice(0, 500);
   if (!urls.length) return { ok: false, reason: "no_urls", submitted: 0 };
+  if (await throttled()) return { ok: true, throttled: true, submitted: 0, reason: "too_frequent" };
   const body = JSON.stringify({ host: HOST, key: KEY, keyLocation: `https://${HOST}/${KEY}.txt`, urlList: urls });
   const tried = [];
   for (const ep of ENDPOINTS) {
