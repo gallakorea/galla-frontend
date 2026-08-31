@@ -946,6 +946,25 @@
     fetchBbox();   // setView 가 moveend 를 안 쏘는 경우가 있어 명시 호출
   }
 
+  /* 🔴 이 판을 떠날 때 열려 있던 오버레이를 전부 닫는다.
+     지도·상세·채널페이지는 document.body 에 붙어 있어서 **뷰를 바꿔도 살아남는다**.
+     남아 있으면 body 의 overflow:hidden 과 fd-*-on 클래스까지 같이 남아,
+     다음 판에서 헤더가 밀리고 탭이 통째로 안 눌린다(2026-08-31 시뮬 실측:
+     오래 쓰다 보면 상단 탭이 전부 죽고, 앱을 다시 켜야 살아났다).
+     search.js 의 GALLA_PAGE_TREND.deactivate() 가 이걸 부른다. */
+  window.GALLA_FOOD_CLOSE_ALL = function () {
+    try { if (MAP && MAP.classList.contains("open")) closeMap(true); } catch (_) {}
+    try { if (DETAIL && DETAIL.classList.contains("open")) closeDetail(true); } catch (_) {}
+    try { closeChPage(); } catch (_) {}
+    try { closeChPick(); } catch (_) {}
+    try { closeRegionPicker(); } catch (_) {}
+    /* 위 닫기들이 하나라도 못 돌았을 때를 대비한 마지막 빗자루 */
+    try {
+      document.body.classList.remove("fd-map-on", "fd-detail-on");
+      if (document.body.style.overflow === "hidden") document.body.style.overflow = "";
+    } catch (_) {}
+  };
+
   function closeMap(fromPop) {
     if (!MAP) return;
     MAP.classList.remove("open");

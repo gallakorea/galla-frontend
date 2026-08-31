@@ -1368,6 +1368,8 @@ window.GALLA_PAGE_TREND = {
   deactivate() {
     // 탭 이탈 시 검색 오버레이가 열려 있으면 닫는다(다른 페이지 위에 남지 않게)
     try { if (__searchLiftDrop) __searchLiftDrop(); } catch (_) {}
+    // 맛집 오버레이도 같은 이유로 닫는다 — 얘들은 body 에 붙어 있어 뷰를 바꿔도 안 사라진다
+    try { if (window.GALLA_FOOD_CLOSE_ALL) window.GALLA_FOOD_CLOSE_ALL(); } catch (_) {}
   },
   scrolltop() {
     const h = __trendRoot && (__trendRoot.closest(".view-host") || __trendRoot);
