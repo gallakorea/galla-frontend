@@ -46,12 +46,14 @@
       }
     } catch (_) {}
     if (MAPCFG.provider === "naver" && !MAPCFG.clientId) MAPCFG.provider = "leaflet";
-    /* 🔴 네이티브 앱은 무조건 Leaflet.
-       NCP Maps 는 '웹 서비스 URL' 을 콘솔에 등록한 origin 에서만 인증을 내준다.
-       그런데 앱의 origin 은 capacitor://localhost 라 **등록 자체가 불가능**하다
-       (콘솔이 http/https 만 받는다). 그래서 앱에서는 SDK 가 로드는 되고 인증만
-       실패해서 지도가 **백지**로 그려졌다 — 스크립트 onload 는 성공이라 폴백도
-       안 걸렸다(2026-08-31 시뮬 실측). 미리 갈라놓는다. */
+    /* 🔴 네이티브 앱은 Leaflet — 다만 이건 '해결'이 아니라 미봉이다.
+       NCP Maps 는 콘솔에 등록한 origin 에서만 인증을 내주는데 콘솔이 http/https 만 받고,
+       앱 origin 은 capacitor:// 다. iosScheme 을 https 로 돌려 origin 을 바꿔보려 했지만
+       **iOS 에서 불가능**하다 — WKWebView 는 http/https 에 커스텀 스킴 핸들러를 못 걸어서
+       Capacitor 가 조용히 무시한다(2026-09-01 실측, 지도는 그대로 Leaflet 으로 떨어졌다).
+       ⚠️ 지금 쓰는 tile.openstreetmap.org 는 **OSM 재단이 앱 배포에 쓰는 걸 금지**한다.
+          출시 전에 반드시 갈아야 한다 — galla.im 에 올린 지도 페이지를 iframe 으로
+          띄우거나(핫튜브 /yt 프록시와 같은 수법), 앱 사용이 허용되는 타일로 옮긴다. */
     if (isNativeOrigin()) MAPCFG.provider = "leaflet";
   }
 
@@ -820,6 +822,23 @@
   }
 
   /* ── 지도 (지연 로딩) ─────────────────────────────── */
+  /* 지도 바닥이 실제로 칠해졌는지 본다. 네이버는 래스터 타일을 <img> 로 깐다 —
+     하나라도 성공적으로 로드됐으면(naturalWidth>0) 살아 있는 것으로 본다.
+     넉넉히 기다리되(2.4초) 일찍 칠해지면 바로 통과시킨다. */
+  function tilesPainted(el, budget) {
+    var deadline = Date.now() + (budget || 2400);
+    return new Promise(function (res) {
+      (function tick() {
+        var ok = [].some.call(el.querySelectorAll("img"), function (im) {
+          return im.naturalWidth > 0 && /pstatic\.net|naver/.test(im.src || "");
+        });
+        if (ok) return res(true);
+        if (Date.now() >= deadline) return res(false);
+        setTimeout(tick, 200);
+      })();
+    });
+  }
+
   function loadLeaflet() {
     if (window.L) { L = window.L; return Promise.resolve(); }
     if (leafletLoading) return leafletLoading;
@@ -909,8 +928,20 @@
       /* 1순위 네이버. 인증·도메인 문제로 못 뜨면 조용히 Leaflet 으로 내려간다 —
          앱에서 지도가 백지가 되는 것보다 낫다. 어느 쪽으로 떴는지는 콘솔에 남긴다. */
       if (MAPCFG.provider === "naver") {
-        try { await loadNaver(); MB = naverBackend(cv, 37.5665, 126.978, 12); }
-        catch (e) { console.warn("[food] 네이버 지도 실패 → Leaflet 폴백:", String(e)); }
+        try {
+          await loadNaver(); MB = naverBackend(cv, 37.5665, 126.978, 12);
+          /* 🔴 "떴는데 백지"를 잡는 마지막 관문.
+             네이버가 실패하는 방식은 두 가지인데 폴백은 하나만 잡고 있었다.
+               ① 키 인증 실패 → navermap_authFailure 가 불린다(loadNaver 가 처리)
+               ② 스타일 JSONP 가 CSP·네트워크로 막힘 → **아무 콜백도 안 불린다**.
+                  SDK 는 살아 있고 마커는 그려지는데 바닥이 하얗다.
+             ②는 운영 galla.im 에서 실제로 났다(script-src 에 *.pstatic.net 누락).
+             그래서 콜백을 믿지 않고 **타일이 실제로 그려졌는지**를 눈으로 확인한다. */
+          if (!(await tilesPainted(cv))) throw new Error("naver_blank");
+        } catch (e) {
+          console.warn("[food] 네이버 지도 실패 → Leaflet 폴백:", String(e));
+          if (MB) { try { cv.innerHTML = ""; } catch (_) {} MB = null; }
+        }
       }
       if (!MB) {
         try { await loadLeaflet(); MB = leafletBackend(cv, 37.5665, 126.978, 12); }

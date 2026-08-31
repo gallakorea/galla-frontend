@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0901001"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0901003"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- 셸은 검색 노출 금지 — 콘텐츠는 실제 페이지들이 담당 -->
@@ -461,7 +461,11 @@
    안 먹혀 옛 화면이 박히던 문제 — 사장님 제보 2026-07-24). version.txt는 no-store로 항상 최신. */
 (function () {
   // 📦 로컬 번들(네이티브 앱) 로드면 version.txt 리로드 비활성 — 갱신은 OTA(Live Updates)가 담당.
-  try { if (location.protocol === 'capacitor:' || location.hostname === 'localhost' || location.protocol === 'file:') return; } catch (_) {}
+  try {
+    if (/GallaApp\//i.test(navigator.userAgent || '')) return;                       // ← 앱 origin 이 https://galla.im 이라 UA 로 본다
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
+    if (location.protocol === 'capacitor:' || location.hostname === 'localhost' || location.protocol === 'file:') return;
+  } catch (_) {}
   var loaded = null;
   function get() {
     return fetch('/version.txt?_=' + Date.now(), { cache: 'no-store' })

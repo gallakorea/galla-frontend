@@ -8,7 +8,13 @@
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
   // 📦 로컬 번들(네이티브 앱)로 로드된 경우 SW 불필요 — 자산이 이미 로컬. 웹/원격로딩은 그대로 등록.
-  if (location.protocol === 'capacitor:' || location.hostname === 'localhost') return;
+  /* 📦 네이티브 번들 판별 — protocol 로만 보면 안 된다.
+     앱 origin 을 https://galla.im 으로 바꾼 뒤로 protocol 은 https, hostname 은 galla.im 이라
+     예전 조건이 전부 빠져나간다. 그러면 앱 안에서 SW 가 등록되고 version.txt 폴링이 돌아
+     로컬 문서를 원격 버전과 비교하며 무한 리로드한다. UA(GallaApp/)를 1순위로 본다. */
+  if (/GallaApp\//i.test(navigator.userAgent || '')) return;
+  try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return; } catch (_) {}
+  if (location.protocol === 'capacitor:' || location.protocol === 'ionic:' || location.hostname === 'localhost') return;
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
