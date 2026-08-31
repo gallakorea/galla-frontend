@@ -1108,9 +1108,30 @@
      ⚠️ 장소에 붙은 영상은 3%뿐이다 — 채널들이 제목·설명에 상호를 안 쓴다
         (또간집 700편 → 매칭 9건). 그래서 여기선 **그 채널의 최근 영상**을 보여준다.
         "이 집이 나온 영상"이라고 속이지 않는다. 섹션 제목으로 구분한다. */
-  var CHPAGE = null;
-  function chPageHtml(d) {
-    var c = d.channel || {}, vs = d.videos || [], ps = d.places || [];
+  var CHPAGE = null, CG = null;      // CG: 열려 있는 채널의 상태(탭·오프셋·총계)
+
+  function cgVideoCard(v) {
+    return '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
+      '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
+      '<i class="fs-play">▶</i>' +
+      '<span class="cg-vt">' + esc(v.title || "") + '</span>' +
+      (v.at ? '<span class="cg-vd">' + esc(String(v.at).slice(0, 10)) + '</span>' : '') +
+    '</button>';
+  }
+  function cgPlaceRow(p) {
+    var th = p.cover || ytThumb(p.video_id) || "";
+    return '<button type="button" class="cg-p" data-cgplace="' + esc(p.id) + '">' +
+      '<span class="cg-pth">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) + '</span>' +
+      '<span class="cg-pb"><b>' + esc(p.name) + '</b>' +
+        '<i>' + esc([p.category, shortAddr(p.address)].filter(Boolean).join(" · ")) + '</i></span>' +
+      (p.visited ? '<span class="cg-ok">✓</span>' : '') +
+    '</button>';
+  }
+  /* 헤더는 한 번만 그리고, 아래 본문만 탭에 따라 갈아끼운다.
+     ⚠️ 참조한 서비스는 카드 한 장이 '영상 한 편'이다. 우리는 영상↔가게 매칭이 3%라
+        그 형태를 가게 목록에 쓰면 대부분 채널 로고만 반복된다(로고 벽).
+        그래서 **영상은 영상 탭, 가게는 가게 탭**으로 가른다 — 각자 진짜 정보를 담는다. */
+  function cgShell(c) {
     var k = KINDCHIP[c.kind] || null;
     var pct = c.total ? Math.round((c.visited || 0) * 100 / c.total) : 0;
     return '<div class="fd-sheet-grip"></div>' +
@@ -1120,37 +1141,56 @@
         '</span>' +
         '<div class="cg-id"><div class="cg-n">' + esc(c.name || "") +
           (k ? '<span class="fs-k" style="--kc:' + k[1] + '">' + k[0] + '</span>' : '') + '</div>' +
-          '<div class="cg-c">' + (c.total || 0) + '곳 · 도장 ' + (c.visited || 0) + '</div>' +
-        '</div>' +
+          '<div class="cg-c">' + (c.total || 0) + '곳 · 도장 ' + (c.visited || 0) + '</div></div>' +
         '<button type="button" class="cp-x" data-cgclose="1">✕</button>' +
       '</div>' +
       '<div class="cg-bar"><i style="width:' + pct + '%"></i></div>' +
-      (vs.length
-        ? '<div class="cg-sec">최근 영상<span class="fs-n">' + vs.length + '</span></div>' +
-          '<div class="cg-vids chip-scroll">' + vs.map(function (v) {
-            return '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
-              '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
-              '<i class="fs-play">▶</i>' +
-              '<span class="cg-vt">' + esc(v.title || "") + '</span></button>';
-          }).join("") + '</div>'
-        : '') +
-      '<div class="cg-sec">다녀간 집<span class="fs-n">' + (c.total || 0) + '</span></div>' +
-      (ps.length
-        ? '<div class="cg-list">' + ps.map(function (p) {
-            var th = p.cover || ytThumb(p.video_id) || "";
-            return '<button type="button" class="cg-p" data-cgplace="' + esc(p.id) + '">' +
-              '<span class="cg-pth">' +
-                (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) +
-              '</span>' +
-              '<span class="cg-pb"><b>' + esc(p.name) + '</b>' +
-                '<i>' + esc([p.category, shortAddr(p.address)].filter(Boolean).join(" · ")) + '</i></span>' +
-              (p.visited ? '<span class="cg-ok">✓</span>' : '') +
-            '</button>';
-          }).join("") +
-          (ps.length < (c.total || 0)
-            ? '<div class="fa-more">' + ps.length + ' / ' + c.total + '곳 · 목록에서 더 보기</div>' : '') +
-          '</div>'
-        : '<div class="cp-none">아직 등록된 집이 없어요</div>');
+      '<div class="cg-tabs">' +
+        '<button type="button" class="cg-tb" data-cgtab="places">다녀간 집' +
+          '<span class="fs-n">' + (c.total || 0) + '</span></button>' +
+        '<button type="button" class="cg-tb" data-cgtab="videos">영상' +
+          '<span class="fs-n" id="cg-vn"></span></button>' +
+      '</div>' +
+      '<div class="cg-body" id="cg-body"></div>';
+  }
+  function cgPaint() {
+    var box = CHPAGE.querySelector("#cg-body"); if (!box || !CG) return;
+    CHPAGE.querySelectorAll("[data-cgtab]").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.cgtab === CG.tab);
+    });
+    var vn = CHPAGE.querySelector("#cg-vn");
+    if (vn) vn.textContent = CG.vTotal || "";
+    if (CG.tab === "videos") {
+      box.innerHTML = CG.videos.length
+        ? '<div class="cg-grid">' + CG.videos.map(cgVideoCard).join("") + '</div>' +
+          (CG.videos.length < CG.vTotal
+            ? '<button type="button" class="fd-more-btn" data-cgmore="videos">영상 더 보기 ' +
+                '(' + CG.videos.length + '/' + CG.vTotal + ')</button>' : '')
+        : '<div class="cp-none">아직 영상이 없어요</div>';
+    } else {
+      box.innerHTML = CG.places.length
+        ? '<div class="cg-list">' + CG.places.map(cgPlaceRow).join("") + '</div>' +
+          (CG.places.length < CG.total
+            ? '<button type="button" class="fd-more-btn" data-cgmore="places">더 보기 ' +
+                '(' + CG.places.length + '/' + CG.total + ')</button>' : '')
+        : '<div class="cp-none">아직 등록된 집이 없어요</div>';
+    }
+  }
+  async function cgMore(kind) {
+    if (!CG || CG.busy) return;
+    CG.busy = true;
+    try {
+      if (kind === "videos") {
+        var v = await rpc("food_channel_videos",
+          { p_slug: CG.slug, p_limit: 24, p_offset: CG.videos.length });
+        if (v && v.ok) { CG.videos = CG.videos.concat(v.videos || []); CG.vTotal = v.total || 0; }
+      } else {
+        var d = await rpc("food_channel_places",
+          { p_slug: CG.slug, p_limit: 30, p_offset: CG.places.length });
+        if (d && d.ok) CG.places = CG.places.concat(d.places || []);
+      }
+      cgPaint();
+    } finally { CG.busy = false; }
   }
   async function openChPage(slug) {
     if (!CHPAGE) {
@@ -1158,28 +1198,44 @@
       CHPAGE.className = "fd-cpick fd-cgpage";
       document.body.appendChild(CHPAGE);
       /* ⚠️ 전파를 끊는다 — 패널 클릭 처리기가 document 위임이라 안 끊으면 두 번 처리된다
-         (누구 고르기 시트에서 이미 밟은 함정: chFilter 가 두 번 토글돼 null 이 됐다). */
+         (누구 고르기에서 밟은 함정: chFilter 가 두 번 토글돼 null 이 됐다). */
       CHPAGE.addEventListener("click", function (e) {
         if (e.target === CHPAGE || e.target.closest("[data-cgclose]")) {
           e.stopPropagation(); closeChPage(); return;
         }
+        e.stopPropagation();
+        var tb = e.target.closest("[data-cgtab]");
+        if (tb) {
+          CG.tab = tb.dataset.cgtab;
+          if (CG.tab === "videos" && !CG.videos.length && CG.vTotal !== 0) { cgMore("videos"); return; }
+          cgPaint(); return;
+        }
+        var mb = e.target.closest("[data-cgmore]");
+        if (mb) { cgMore(mb.dataset.cgmore); return; }
         var v = e.target.closest(".fd-vid");
         if (v && v.dataset.vid) {
-          e.stopPropagation();
           v.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(v.dataset.vid) +
             '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
           v.classList.add("playing"); return;
         }
         var pb = e.target.closest("[data-cgplace]");
-        if (pb) { e.stopPropagation(); closeChPage(); openDetail(pb.dataset.cgplace); }
+        if (pb) { closeChPage(); openDetail(pb.dataset.cgplace); }
       });
     }
     CHPAGE.innerHTML = '<div class="fd-cpick-box"><div class="cp-none">불러오는 중…</div></div>';
     CHPAGE.classList.add("open");
     document.body.classList.add("fd-detail-on");
-    var d = await rpc("food_channel_page", { p_slug: slug, p_places: 30, p_videos: 12 });
+    var d = await rpc("food_channel_page", { p_slug: slug, p_places: 30, p_videos: 24 });
     if (!d || !d.ok) { closeChPage(); return toast("불러오지 못했어요"); }
-    CHPAGE.innerHTML = '<div class="fd-cpick-box">' + chPageHtml(d) + '</div>';
+    var c = d.channel || {};
+    CG = { slug: slug, tab: "places", places: d.places || [], videos: d.videos || [],
+           total: c.total || 0, vTotal: (d.videos || []).length, busy: false };
+    /* 영상 총계는 별도 RPC 로 받는다 — 첫 화면은 24편만 싣고 총계만 먼저 표시한다 */
+    CHPAGE.innerHTML = '<div class="fd-cpick-box">' + cgShell(c) + '</div>';
+    cgPaint();
+    rpc("food_channel_videos", { p_slug: slug, p_limit: 1, p_offset: 0 }).then(function (v) {
+      if (v && v.ok && CG && CG.slug === slug) { CG.vTotal = v.total || 0; cgPaint(); }
+    });
   }
   function closeChPage() {
     if (!CHPAGE) return;

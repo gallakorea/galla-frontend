@@ -1027,13 +1027,36 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
   display: flex; align-items: center; gap: 7px; margin: 4px 0 9px;
   font-size: 13.5px; font-weight: 800; color: var(--text-hi);
 }
-/* 영상 가로 줄 — .chip-scroll 이라 셸 스와이프에서 제외된다 */
-.cg-vids { display: flex; gap: 9px; overflow-x: auto; scrollbar-width: none; padding-bottom: 14px; }
-.cg-vids::-webkit-scrollbar { display: none; }
+/* 채널 탭 — 영상과 가게를 가른다.
+   ⚠️ 참조 서비스처럼 카드 한 장 = 영상 한 편으로 가게 목록을 만들면,
+      영상↔가게 매칭이 3%인 우리는 대부분 채널 로고만 반복된다(로고 벽).
+      그래서 영상은 영상 탭에서 그리드로 훑고, 가게는 가게 탭에서 정보로 본다. */
+.cg-tabs {
+  display: flex; gap: 6px; margin-bottom: 12px;
+  position: sticky; top: 0; z-index: 2; background: var(--surface-1); padding: 2px 0 8px;
+}
+.cg-tb {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 0; border-radius: var(--r-sm); cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 13px; font-weight: 700;
+}
+.cg-tb.on { background: rgba(67,97,255,.16); border-color: var(--accent); color: var(--text-hi); }
+
+/* 영상 그리드 — 훑는 맛이 나야 한다 */
+.cg-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 9px; margin-bottom: 12px;
+}
 .cg-v {
-  position: relative; flex: 0 0 auto; width: 208px; aspect-ratio: 16 / 9;
+  position: relative; aspect-ratio: 16 / 9;
   padding: 0; border: 0; border-radius: var(--r-sm); overflow: hidden;
   background: #000; cursor: pointer;
+}
+.cg-vd {
+  position: absolute; right: 5px; top: 5px; padding: 2px 6px; border-radius: 999px;
+  background: rgba(0,0,0,.62); color: #e9ecf2; font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 .cg-v img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cg-v.playing iframe { width: 100%; height: 100%; border: 0; display: block; }
