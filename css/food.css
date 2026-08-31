@@ -742,3 +742,29 @@ button.fd-sec-sub.unset { color: var(--text-low); }
   background: rgba(67,97,255,.14); color: var(--accent-2);
 }
 .fd-ch.big img { width: 19px; height: 19px; }
+
+/* ── 상세 오버레이 — 지도에서 떼어냈다 ────────────────────
+   🚨 예전엔 상세 시트가 지도 오버레이 안에 있어서 지도를 거쳐야만 열렸다.
+      게다가 focusId 경로가 `lat != null` 을 요구해서 **좌표 없는 집은
+      카드를 눌러도 아무 일도 안 일어났다**(사장님: 어떤 건 뜨고 안 뜨고 한다).
+      130곳 중 60곳 남짓이 좌표가 없으니 절반이 그랬다.
+      이제 카드는 지도 없이 바로 열고, 좌표 조건도 없다. */
+.fd-detail { position: fixed; inset: 0; z-index: 10002; display: none; }
+.fd-detail.open { display: block; }
+.fd-detail-bg { position: absolute; inset: 0; background: rgba(0,0,0,.62); }
+.fd-detail .fd-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.22,.9,.3,1);
+  max-height: 88%;
+}
+.fd-detail.open .fd-sheet { transform: translateY(0); }
+.fd-detail .fd-fsheet { position: absolute; z-index: 2; }
+body.fd-detail-on { overflow: hidden; }
+body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important; }
+/* 시트 닫기 */
+.fd-dclose {
+  position: absolute; right: 12px; top: 12px; width: 30px; height: 30px; z-index: 3;
+  display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  background: var(--surface-3); border: 1px solid var(--line-2);
+  color: var(--text-mid); font-size: 14px; line-height: 1;
+}

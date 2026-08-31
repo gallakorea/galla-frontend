@@ -147,6 +147,50 @@
   var mode = "near";   // 하위 로직 호환(내부에서만 씀)
   var MAP, mapEl, L = null, leafletLoading = null, markers = [], moveTimer = 0, lastPlaces = [];
   var SHEET, curPlace = null;
+  var DETAIL = null;   // 상세 오버레이(지도와 분리)
+
+  /* 🚨 상세를 지도에서 떼어낸다.
+     예전엔 #fd-sheet 가 지도 오버레이 안에 있어서 **지도를 거쳐야만** 열렸다.
+     목록 카드를 눌러도 지도가 뜨고 SDK 를 로드한 뒤에야 시트가 올라왔다 —
+     메뉴·사진·제보·댓글·판정이 다 거기 들어 있는데 사장님 눈엔 "기능이 사라진" 걸로 보였다.
+     이제 카드는 지도 없이 바로 상세를 연다. 지도의 핀도 같은 상세를 쓴다. */
+  function buildDetail() {
+    if (DETAIL) return;
+    DETAIL = document.createElement("div");
+    DETAIL.className = "fd-detail";
+    DETAIL.innerHTML = '<div class="fd-detail-bg"></div>' +
+      '<div class="fd-sheet" id="fd-sheet"></div>' +
+      '<div class="fd-fsheet" id="fd-dsub"></div>';
+    document.body.appendChild(DETAIL);
+    SHEET = DETAIL.querySelector("#fd-sheet");
+    DETAIL.addEventListener("click", onDetailClick);
+    DETAIL.addEventListener("submit", onDetailSubmit);
+    window.addEventListener("popstate", function () {
+      if (DETAIL.classList.contains("open")) closeDetail(true);
+    });
+  }
+  async function openDetail(id) {
+    buildDetail();
+    var d = await rpc("food_place_detail", { p_id: id });
+    if (!d || !d.ok) return toast("정보를 불러오지 못했어요");
+    DETAIL.classList.add("open");
+    document.body.classList.add("fd-detail-on");
+    try { history.pushState({ fdDetail: 1 }, ""); } catch (_) {}
+    showSheet(d);
+  }
+  function closeDetail(fromPop) {
+    if (!DETAIL) return;
+    hideSheet(); closeSub();
+    DETAIL.classList.remove("open");
+    document.body.classList.remove("fd-detail-on");
+    if (!fromPop) { try { if (history.state && history.state.fdDetail) history.back(); } catch (_) {} }
+    loadList();
+  }
+  function subSheet() { buildDetail(); return DETAIL.querySelector("#fd-dsub"); }
+  function closeSub() {
+    var el = DETAIL && DETAIL.querySelector("#fd-dsub");
+    if (el) { el.classList.remove("open"); el.innerHTML = ""; }
+  }
 
   /* ── 공용 ─────────────────────────────────────────── */
   function esc(s) {
@@ -273,11 +317,11 @@
     var mo = t.closest && t.closest("[data-more]");
     if (mo) { listLimit += 60; mo.textContent = "불러오는 중…"; loadList(); return; }
     var rc = t.closest && t.closest("#fd-list .fd-rc");
-    if (rc) { openMap(null, rc.dataset.id); return; }
+    if (rc) { openDetail(rc.dataset.id); return; }
     var card = t.closest && t.closest("#fd-list .fd-card");
-    if (card) { openMap(null, card.dataset.id); return; }
+    if (card) { openDetail(card.dataset.id); return; }
     var fb = t.closest && t.closest("#fd-list .fb-card");
-    if (fb) { openMap(null, fb.dataset.id); return; }
+    if (fb) { openDetail(fb.dataset.id); return; }
     var bg = t.closest && t.closest("#fd-list [data-badge]");
     if (bg) { claimBadge(bg.dataset.badge); return; }
     var all = t.closest && t.closest("#fd-list .fb-all");
@@ -655,10 +699,8 @@
           '<button type="button" class="fd-filt" id="fd-filt" aria-label="필터">⚙</button>' +
         '</div>' +
       '</div>' +
-      '<div class="fd-sheet" id="fd-sheet"></div>' +
       '<div class="fd-fsheet" id="fd-fsheet"></div>';
     document.body.appendChild(MAP);
-    SHEET = MAP.querySelector("#fd-sheet");
 
     // 오버레이는 body 직속이라 스냅샷 대상은 아니지만, 규칙을 하나로 두는 편이 안전하다.
     MAP.addEventListener("click", function (e) {
@@ -671,28 +713,6 @@
         chFilter = (chFilter === c.dataset.slug) ? null : c.dataset.slug;
         paintMapChips(); paintChips(); fetchBbox(); return;
       }
-      var vw = t.closest(".fd-vid");
-      if (vw && vw.dataset.vid) {
-        vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
-          '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
-        vw.classList.add("playing"); return;
-      }
-      if (t.closest('[data-a="report"]')) { openReport(); return; }
-      var wy = t.closest("[data-why]");
-      if (wy) { sendWhy(wy.dataset.why); return; }
-      if (t.closest("[data-why-skip]")) { closeWhy(); return; }
-      if (t.closest('[data-a="photo"]')) { addPhoto(); return; }
-      var px = t.closest("[data-photo]");
-      if (px) { removePhoto(px.dataset.photo); return; }
-      if (t.closest('[data-a="menu"]')) { openMenuForm(); return; }
-      if (t.closest('[data-a="menu-save"]')) { saveMenu(); return; }
-      var rep = t.closest("[data-rep]");
-      if (rep) { sendReport(rep.dataset.rep); return; }
-      if (t.closest(".fd-act")) { onSheetClick(e); return; }
-      var jb = t.closest("[data-j]");
-      if (jb) { onJudge(jb.dataset.j); return; }
-      var lk = t.closest("[data-like]");
-      if (lk) { onLike(lk.dataset.like, lk); return; }
       if (t.closest("#fd-filt")) { openFilter(); return; }
       var fch = t.closest("#fd-fsheet [data-ch]");
       if (fch) { chFilter = fch.dataset.ch || null; openFilter(); paintChips(); paintMapChips(); return; }
@@ -704,17 +724,7 @@
         if (ff.dataset.f === "reset") { catFilter = null; minShows = null; chFilter = null; openFilter(); paintChips(); paintMapChips(); return; }
         if (ff.dataset.f === "apply") { closeFilter(); fetchBbox(); loadList(); return; }
       }
-      if (t.closest("#fd-sheet")) return;
-      // 시트 밖을 누르면 닫는다
       if (MAP.querySelector("#fd-fsheet.open") && !t.closest("#fd-fsheet")) closeFilter();
-    });
-    // 한마디 등록 — 시트가 매번 새로 그려지므로 위임으로 받는다
-    MAP.addEventListener("submit", function (e) {
-      if (e.target && e.target.id === "fd-say") { e.preventDefault(); onSay(); return; }
-      if (e.target && e.target.id === "fw-f") {
-        e.preventDefault();
-        var i = MAP.querySelector("#fw-i"); sendWhy(i && i.value.trim()); return;
-      }
     });
 
     // 뒤로가기로 닫힌다 — 앱에서 지도가 갇히면 안 된다.
@@ -767,7 +777,7 @@
       var d = await rpc("food_place_detail", { p_id: focusId });
       if (d && d.ok && d.place && d.place.lat != null) {
         MB.setView(+d.place.lat, +d.place.lon, 16);
-        showSheet(d);
+        openDetail(focusId);
         return;
       }
     }
@@ -900,6 +910,7 @@
     var vid = (d.sources || []).reduce(function (a, x) { return a || x.video_id; }, "");
     SHEET.innerHTML =
       '<div class="fd-sheet-grip"></div>' +
+      '<button type="button" class="fd-dclose" aria-label="닫기">✕</button>' +
       '<h3>' + esc(p.name) + '</h3>' +
       '<div class="fd-meta">' +
         (p.category ? '<span class="fd-cat">' + esc(p.category) + '</span>' : '') +
@@ -1056,7 +1067,7 @@
     ["other",     "❓ 그 밖의 문제"]
   ];
   function openReport() {
-    var FS = MAP.querySelector("#fd-fsheet");
+    var FS = subSheet();
     FS.innerHTML = '<div class="fd-sheet-grip"></div>' +
       '<div class="ff-head">정보가 잘못됐나요?</div>' +
       '<p class="fr-lead">' + esc(curPlace.place.name) + ' — 무엇이 문제인가요?</p>' +
@@ -1069,20 +1080,20 @@
   async function sendReport(kind) {
     if (!curPlace) return;
     if (!(await loggedIn())) return needLogin();
-    var bd = MAP.querySelector("#fr-body");
+    var bd = DETAIL.querySelector("#fr-body");
     var r = await rpc("food_report", { p_id: curPlace.place.id, p_kind: kind,
                                        p_body: bd ? bd.value : null });
-    closeFilter();
+    closeSub();
     if (!r || !r.ok) return toast("접수하지 못했어요");
     if (r.already) return toast("이미 접수된 제보예요");
-    if (r.hidden) { toast("폐업 제보가 모여 지도에서 내렸어요"); hideSheet(); fetchBbox(); loadList(); return; }
+    if (r.hidden) { toast("폐업 제보가 모여 지도에서 내렸어요"); closeDetail(); return; }
     toast(kind === "closed"
       ? "폐업 제보 " + r.closed_votes + "/" + r.threshold + " — 고맙습니다"
       : "제보 고맙습니다");
   }
 
   function openMenuForm() {
-    var FS = MAP.querySelector("#fd-fsheet");
+    var FS = subSheet();
     FS.innerHTML = '<div class="fd-sheet-grip"></div>' +
       '<div class="ff-head">메뉴 제보</div>' +
       '<p class="fr-lead">한 줄에 하나씩. "메뉴명 가격" 형식이면 가격까지 잡힙니다.</p>' +
@@ -1093,7 +1104,7 @@
   async function saveMenu() {
     if (!curPlace) return;
     if (!(await loggedIn())) return needLogin();
-    var ta = MAP.querySelector("#fm-ta"); if (!ta) return;
+    var ta = DETAIL.querySelector("#fm-ta"); if (!ta) return;
     /* "김치찌개 9000" / "김치찌개 9,000원" 둘 다 받는다. 마지막 숫자 덩어리를 가격으로 본다. */
     var items = (ta.value || "").split(/\n+/).map(function (line) {
       var t = line.trim(); if (!t) return null;
@@ -1106,7 +1117,7 @@
       if (r && r.reason === "full") return toast("이 집은 메뉴가 가득 찼어요");
       return toast("등록하지 못했어요");
     }
-    closeFilter();
+    closeSub();
     toast(r.added ? r.added + "개 등록했어요" : "이미 등록된 메뉴예요");
     var d = await rpc("food_place_detail", { p_id: curPlace.place.id });
     if (d && d.ok) { curPlace = d; var el = SHEET.querySelector("#fd-menu");
@@ -1126,6 +1137,43 @@
   function hideSheet() { if (SHEET) { SHEET.classList.remove("open"); curPlace = null; } }
 
   /* 판정 — 같은 걸 또 누르면 취소된다(서버 규칙). 취소되면 댓글 입력이 다시 잠긴다. */
+  /* 상세 오버레이 위임 — 예전엔 이 처리들이 지도(MAP)에 붙어 있었다.
+     상세를 지도에서 떼어냈으니 함께 옮긴다. 안 옮기면 버튼이 전부 죽는다. */
+  function onDetailClick(e) {
+    var t = e.target;
+    if (t.closest(".fd-dclose") || t.closest(".fd-detail-bg")) { closeDetail(); return; }
+    var vw = t.closest(".fd-vid");
+    if (vw && vw.dataset.vid) {
+      vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
+        '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
+      vw.classList.add("playing"); return;
+    }
+    var wy = t.closest("[data-why]");
+    if (wy) { sendWhy(wy.dataset.why); return; }
+    if (t.closest("[data-why-skip]")) { closeWhy(); return; }
+    if (t.closest('[data-a="photo"]')) { addPhoto(); return; }
+    var px = t.closest("[data-photo]");
+    if (px) { removePhoto(px.dataset.photo); return; }
+    if (t.closest('[data-a="menu"]')) { openMenuForm(); return; }
+    if (t.closest('[data-a="menu-save"]')) { saveMenu(); return; }
+    if (t.closest('[data-a="report"]')) { openReport(); return; }
+    var rep = t.closest("[data-rep]");
+    if (rep) { sendReport(rep.dataset.rep); return; }
+    if (t.closest(".fd-act")) { onSheetClick(e); return; }
+    var jb = t.closest("[data-j]");
+    if (jb) { onJudge(jb.dataset.j); return; }
+    var lk = t.closest("[data-like]");
+    if (lk) { onLike(lk.dataset.like, lk); return; }
+    if (DETAIL.querySelector("#fd-dsub.open") && !t.closest("#fd-dsub")) closeSub();
+  }
+  function onDetailSubmit(e) {
+    if (e.target && e.target.id === "fd-say") { e.preventDefault(); onSay(); return; }
+    if (e.target && e.target.id === "fw-f") {
+      e.preventDefault();
+      var i = DETAIL.querySelector("#fw-i"); sendWhy(i && i.value.trim()); return;
+    }
+  }
+
   /* 판정 직후 '왜?'를 묻는다 — 여기가 참여 엔진이다.
      예전엔 판정과 댓글이 끊겨 있어서 누르고 그냥 끝났다. 근거가 안 쌓이니
      다음 사람이 볼 게 없고 반박할 대상도 없었다(사진 0·메뉴 0의 진짜 원인).
