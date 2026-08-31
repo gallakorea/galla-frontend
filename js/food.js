@@ -190,6 +190,7 @@
         '<button type="button" class="fd-mode" data-m="overrated">💀 과대평가</button>' +
         '<button type="button" class="fd-mode" data-m="browse">📺 방송별</button>' +
         '<button type="button" class="fd-mode" data-m="leaders">🏆 랭킹</button>' +
+        '<button type="button" class="fd-mode" data-m="badges">🏅 업적</button>' +
       '</div>' +
       '<div class="fd-chips chip-scroll" id="fd-chips"></div>' +
       '<div class="fd-list" id="fd-list"><div class="fd-empty">불러오는 중…</div></div>';
@@ -224,6 +225,8 @@
     if (card) { openMap(null, card.dataset.id); return; }
     var fb = t.closest && t.closest("#fd-list .fb-card");
     if (fb) { openMap(null, fb.dataset.id); return; }
+    var bg = t.closest && t.closest("#fd-list [data-badge]");
+    if (bg) { claimBadge(bg.dataset.badge); return; }
     var all = t.closest && t.closest("#fd-list .fb-all");
     if (all) {
       chFilter = all.dataset.all; mode = "near";
@@ -343,8 +346,34 @@
     '</div>';
   }
 
+  /* 업적 — 저쪽 것을 참고하되 갈라 축(판정·논객·방송 정복)을 얹었다.
+     ⚠️ 배지에 GP 를 기본으로 걸지 않았다(reward_gp 기본 0). 도장·판정·찜은 자기신고라
+        화폐를 붙이면 그대로 파밍이 된다. 서버가 reward_gp>0 을 주면 그때만 GP 를 준다. */
+  function badgeCard(b) {
+    var pct = Math.min(100, Math.round((b.have / b.target) * 100));
+    return '<div class="fg-card' + (b.done ? " done" : "") + '">' +
+      '<div class="fg-ic">' + b.icon + '</div>' +
+      '<div class="fg-n">' + esc(b.name) + '</div>' +
+      '<div class="fg-h">' + esc(b.hint) + '</div>' +
+      '<div class="fg-bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="fg-p">' + b.have + ' / ' + b.target + '</div>' +
+      (b.done && !b.claimed
+        ? '<button type="button" class="fg-claim" data-badge="' + esc(b.code) + '">받기' +
+            (b.reward_gp > 0 ? ' +' + b.reward_gp + 'GP' : '') + '</button>'
+        : b.claimed ? '<div class="fg-got">✓ 획득</div>' : '') +
+    '</div>';
+  }
+  async function loadBadges() {
+    var d = await rpc("food_badges");
+    if (!d || !d.ok) { LIST.innerHTML = '<div class="fd-empty">업적을 불러오지 못했어요</div>'; return; }
+    LIST.innerHTML =
+      '<div class="fg-head">업적 <b>' + d.got + ' / ' + d.total + '</b></div>' +
+      '<div class="fg-grid">' + (d.badges || []).map(badgeCard).join("") + '</div>';
+  }
+
   async function loadList() {
     if (!LIST) return;
+    if (mode === "badges") { await loadBadges(); return; }
     if (mode === "leaders") { await loadLeaders(); return; }
     if (mode === "browse") { await loadBrowse(); return; }
     var ps, d;
@@ -785,6 +814,17 @@
   }
 
   /* ── 부팅 ─────────────────────────────────────────── */
+  async function claimBadge(code) {
+    if (!(await loggedIn())) return needLogin();
+    var r = await rpc("food_badge_claim", { p_code: code });
+    if (!r || !r.ok) {
+      if (r && r.reason === "not_yet") return toast("아직 " + r.have + "/" + r.target + "예요");
+      return toast("잠시 후 다시 시도해주세요");
+    }
+    if (!r.already) toast("🏅 " + (r.name || "업적") + " 획득!" + (r.amount ? " +" + r.amount + "GP" : ""));
+    loadBadges();
+  }
+
   async function loadChannels() {
     var d = await rpc("food_channel_stats");
     CH = (d && d.channels) || [];
