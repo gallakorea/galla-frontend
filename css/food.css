@@ -632,7 +632,14 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 .fd-modes, .fd-sort, #fd-chips { display: none !important; }
 
 /* ── 카테고리 타일 — 같은 영상에서 나온 집들이 사진을 공유하는 걸 막는다 ── */
-.fd-tile { display: grid; place-items: center; width: 100%; height: 100%; font-size: 26px; }
+/* 사진이 없을 때의 자리표 — 이모지 벽이 되지 않도록 상호 글자를 크게 세운다.
+   업종별 색은 catTile() 이 인라인으로 준다(여기선 타이포와 질감만). */
+.fd-tile {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  font-size: clamp(20px, 7vw, 34px); font-weight: 800; letter-spacing: -.02em;
+  background-image: radial-gradient(circle at 30% 25%, rgba(255,255,255,.07), transparent 60%);
+  user-select: none;
+}
 
 /* ── 더 보기 / 끝 ────────────────────────────────────────── */
 .fd-more-btn {
@@ -686,6 +693,8 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 .fp-i { position: relative; flex: 0 0 auto; width: 112px; height: 112px;
   border-radius: 11px; overflow: hidden; background: var(--surface-2); }
 .fp-i img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 공공누리 출처 표기 — 유저 닉네임과 구분되게 옅게 둔다(의무 표기라 지우면 안 된다) */
+.fp-by.src { font-style: normal; opacity: .75; letter-spacing: -.01em; }
 .fp-x { position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; cursor: pointer;
   border-radius: 50%; border: 0; background: rgba(0,0,0,.62); color: #fff; font-size: 11px; }
 .fp-empty { padding: 16px 2px; text-align: center; color: var(--text-low); font-size: 12.5px; }
@@ -749,6 +758,12 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 }
 .fh-ch.on .fh-ch-i { border-color: var(--accent); }
 .fh-ch-i img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 유튜브 채널이 없는 출처(백년가게·방송)는 로고가 없다 — 첫 글자로 채운다 */
+.fh-ch-i.none {
+  display: grid; place-items: center;
+  background: var(--surface-3); color: var(--text-mid);
+  font-size: 15px; font-weight: 800; letter-spacing: -.02em;
+}
 .fh-ch-n { font-size: 11.5px; font-weight: 700; color: var(--text-hi); max-width: 72px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fh-ch.on .fh-ch-n { color: var(--accent-2); }

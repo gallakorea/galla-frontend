@@ -476,15 +476,43 @@
      ⚠️ 영상 하나에 식당이 여러 곳 나오면 그 집들이 같은 video_id 를 공유한다.
         그대로 두면 같은 사진이 5번 반복되고(사장님 지적), 게다가 그건 '가게 사진'이
         아니라 '영상 썸네일'이라 오해까지 준다 → 목록 안에서 한 번만 쓴다. */
-  var CATTILE = {
-    "한식": ["#3a2a1e", "🍚"], "중식": ["#33201f", "🥢"], "일식": ["#1e2c33", "🍣"],
-    "양식": ["#2b2438", "🍝"], "분식": ["#33261a", "🌭"], "카페": ["#26301f", "☕"],
-    "술집": ["#301f2a", "🍶"], "기타": ["#242730", "🍽"]
-  };
+  /* 사진 없는 집의 자리표.
+     ⚠️ 예전엔 업종 8종에 이모지 하나씩이라, 사진이 0곳이던 시절 목록이 통째로
+        똑같은 🍜 벽이었다(실측 2026-08-31: 4,076곳 중 사진 0곳). 이모지는 정보가 0이다.
+        → 업종 색 + **상호 첫 글자**로 집마다 다르게 만든다. 최소한 어느 집인지는 보인다. */
+  var CATTILE = [
+    [/한식|백반|국밥|해장|곰탕|설렁|찌개|정식|한정식/, "#3a2a1e", "#c9a06a"],
+    [/고기|갈비|삼겹|곱창|막창|족발|보쌈|치킨|닭/,     "#3a221e", "#d08a6a"],
+    [/중식|중국|짜장|짬뽕|만두/,                        "#33201f", "#d0796a"],
+    [/일식|초밥|스시|돈까스|우동|라멘|카레/,            "#1e2c33", "#6aa8d0"],
+    [/양식|파스타|피자|스테이크|햄버거|버거/,           "#2b2438", "#a68ad0"],
+    [/분식|김밥|떡볶|만두|국수|칼국수|냉면/,            "#33261a", "#d0b46a"],
+    [/카페|디저트|베이커리|제과|빵|커피/,               "#26301f", "#8ac97a"],
+    [/술집|주점|호프|포차|이자카야|바|맥주/,            "#301f2a", "#d06a9a"],
+    [/회|해물|생선|장어|아구|조개|물회/,                "#1f2f30", "#6ac9c0"]
+  ];
+  function catTile(cat) {
+    var c = String(cat || "");
+    for (var i = 0; i < CATTILE.length; i++) if (CATTILE[i][0].test(c)) return CATTILE[i];
+    return [null, "#242730", "#8b93a7"];
+  }
+  /* 상호에서 글자를 뽑는다 — 지점명·괄호는 떼고 앞 두 글자.
+     '명동교자 본점' → '명동', '77돌곱창' → '77'. */
+  function initials(name) {
+    var raw = String(name || "").replace(/\([^)]*\)/g, "").trim();
+    /* ⚠️ '○○점' 을 무조건 떼면 상호 자체가 사라진다 — '듀팡과자점' → '' → '?' 였다(실측).
+       지점명은 보통 **띄어쓰기 뒤**에 온다('명동교자 본점'). 붙어 있는 건 상호의 일부로 본다.
+       그래도 남는 게 두 글자가 안 되면 원래 이름을 쓴다. */
+    var n = raw.replace(/\s+(본점|직영점|[가-힣A-Za-z0-9]{1,6}점)$/, "").trim();
+    if (n.length < 2) n = raw;
+    return n.slice(0, 2) || "?";
+  }
   var usedThumb = null;
   function tileHtml(p) {
-    var t = CATTILE[p.category] || CATTILE["기타"];
-    return '<span class="fd-tile" style="background:' + t[0] + '">' + t[1] + '</span>';
+    var t = catTile(p.category);
+    return '<span class="fd-tile" style="background:' + t[1] + ';color:' + t[2] + '">' +
+             esc(initials(p.name)) +
+           '</span>';
   }
   function card(p) {
     /* 유저가 올린 사진이 있으면 그게 먼저다 — 이건 '이 가게 사진'이 맞고,
@@ -657,7 +685,11 @@
         '<div class="fh-row chip-scroll">' + chs.slice(0, 12).map(function (c) {
           return '<button type="button" class="fh-ch' + (chFilter === c.slug ? " on" : "") +
             '" data-ch2="' + esc(c.slug) + '">' +
-            '<span class="fh-ch-i">' + (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">' : '') + '</span>' +
+            /* 로고가 없는 출처(백년가게·생방송 투데이처럼 유튜브 채널이 없는 곳)는
+               빈 원으로 나왔다. 이름 첫 글자로 채운다 — 빈 동그라미보다 낫다. */
+            '<span class="fh-ch-i' + (c.thumb ? '' : ' none') + '">' +
+              (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">' : esc(initials(c.name))) +
+            '</span>' +
             '<span class="fh-ch-n">' + esc(c.name) + '</span>' +
             '<span class="fh-ch-c">' + c.total + '곳</span></button>';
         }).join("") + '</div></section>';
@@ -1047,8 +1079,11 @@
         '<button type="button" class="fp-add" data-a="photo">+ 사진 올리기</button></div>' +
       (ps.length
         ? '<div class="fp-row chip-scroll">' + ps.map(function (x) {
+            /* 공공 데이터 사진(관광공사)은 공공누리라 **출처 표시가 의무**다.
+               유저 제보는 닉네임이 곧 출처이므로 credit 이 비어 있다. */
+            var by = x.credit ? x.credit : (x.nick || "익명");
             return '<div class="fp-i"><img src="' + esc(x.url) + '" alt="" loading="lazy">' +
-              '<span class="fp-by">' + esc(x.nick || "익명") + '</span>' +
+              '<span class="fp-by' + (x.credit ? ' src' : '') + '">' + esc(by) + '</span>' +
               (x.mine ? '<button type="button" class="fp-x" data-photo="' + x.id + '">✕</button>' : '') +
             '</div>'; }).join("") + '</div>'
         : '<div class="fp-empty">아직 사진이 없어요. 다녀오셨다면 한 장 올려주세요.</div>');
