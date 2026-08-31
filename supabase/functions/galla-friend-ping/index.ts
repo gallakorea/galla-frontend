@@ -3,7 +3,7 @@
         쿨다운 20h(하루 1회 상한). 런당 상한으로 비용 통제.
    동작: 기억(팔로업·관심사) 기반 개인화 한 줄 생성 → notifications INSERT(→푸시) → pending_ping 저장
         (푸시를 무시해도 다음에 챗 열면 그 말로 시작 — friend.js consume_ping). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

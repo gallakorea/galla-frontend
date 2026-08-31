@@ -11,7 +11,7 @@
 //
 // 🔑 같은 네이버 검색 키로 블로그·뉴스·웹문서를 다 쓴다. 지역검색과 동일 자격증명.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,

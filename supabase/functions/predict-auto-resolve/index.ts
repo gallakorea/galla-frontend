@@ -3,7 +3,7 @@
 //  2) 일반 마켓: AI 심판(gpt-4o-mini) — 최근 뉴스 헤드라인을 근거로 예/아니오 판정.
 //     '모름'이면 보류(다음 시간 재시도), 마감 48시간 경과에도 불가면 전액 환불.
 //  predict_resolve(p_outcome_id null) = 환불 정산. 수동(관리자/생성자) 정산은 오버라이드로 유지.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

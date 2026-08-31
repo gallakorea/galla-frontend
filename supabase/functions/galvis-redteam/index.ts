@@ -1,7 +1,7 @@
 /* 🤖 galvis-redteam — 주1회 크론이 합성 페르소나로 라이브 galla-friend를 두드려 '고친 실패 시그니처'가
    재출현하는지 코드로 채점(레드플래그, LLM 판정 없음=결정적·무료). 결과를 redteam_runs에 축적.
    ⚠️ 스로어웨이 유저를 만들어 실대화하므로 finally에서 '반드시' 삭제(SFT 오염·유저 누적 방지). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
 const SB = Deno.env.get("SUPABASE_URL")!;
 const SVC = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

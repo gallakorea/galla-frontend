@@ -1,7 +1,7 @@
 // 🔥 커뮤니티 인기글 수집 — 상위 커뮤니티 다수 (일베 등 고위험 제외)
 // 제목/링크/썸네일만 수집(본문 복제 X). 안전 키워드 사전필터 + 제목 정규화 중복제거.
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";

@@ -8,7 +8,7 @@
 
    가드: JWT 필수, 플랫폼 일일캡(ai_daily_caps.generate-video), 유저 24h 한도(my_thumbnails kind='video').
    키: SHOTSTACK_API_KEY(필수), SHOTSTACK_ENV(stage=무료·워터마크 / v1=유료·무워터마크, 기본 stage). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 // 🎟 등급 게이트 — app_settings.ai_tiers 의 롤링 윈도우. 장애 시 통과(게이트가 서비스를 죽이면 안 된다).

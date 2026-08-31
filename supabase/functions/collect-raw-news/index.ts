@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const NAVER_NEWS_API = "https://openapi.naver.com/v1/search/news.json";
 const KEYWORDS = ["대통령", "금리", "사건", "AI", "야구"];

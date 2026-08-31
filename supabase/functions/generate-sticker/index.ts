@@ -7,7 +7,7 @@
    · 유명 IP·실존 인물 키워드 차단 — 나중에 이모티콘을 팔 계획이라면 특히 중요
    · 생성 권한은 이 함수에만(테이블 INSERT 권한을 클라에 주지 않음)
    · 하루 상한: 유저별=charge RPC, 플랫폼 전체=ai_budget_take(GP 차감 전 검사) */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 import { logSpendUnits } from "../_shared/spend.ts";

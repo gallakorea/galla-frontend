@@ -1,6 +1,6 @@
 // ⚖️ 일기토 AI 심판 — 관중 무투표/동표(judging)인 대결의 대화록을 읽고 승자 판정
 // 남용/비용 방지: status='judging' 인 대결만 처리(1회 판정 후 finished 로 잠김)
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

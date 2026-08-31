@@ -2,7 +2,7 @@
 // 클라이언트가 이 URL로 청크를 PATCH 업로드 → R2 경유 없이, 네트워크가 끊겨도 이어서 재개.
 // (기존 R2 단일 PUT + stream-ingest 복사 방식은 대용량/모바일에서 실패·이중전송 문제가 있었음)
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const CF_ACCOUNT = Deno.env.get("CF_STREAM_ACCOUNT")!;
 const CF_TOKEN = Deno.env.get("CF_STREAM_TOKEN")!;

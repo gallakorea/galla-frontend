@@ -2,7 +2,7 @@
 //  - google: 구글 트렌드 realtime RSS (KR) — 키워드 + 대략 검색량
 //  - signal: signal.bz 집계(네이트·줌 등 포털 실시간 검색어) top10
 // 소스별로 전체 삭제 후 최신 스냅샷을 넣는다. 서비스롤로 실행(RLS 우회).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,

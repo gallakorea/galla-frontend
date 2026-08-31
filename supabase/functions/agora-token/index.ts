@@ -5,7 +5,7 @@
    시크릿(콘솔에서 추출·저장 완료):
      AGORA_APP_ID          — 8f840fdde3034835aca160b777c87bf8 (공개)
      AGORA_APP_CERTIFICATE — (비밀, secret에만) */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import { RtcTokenBuilder, RtcRole } from "https://esm.sh/agora-token@2.0.5";
 
 const admin = createClient(

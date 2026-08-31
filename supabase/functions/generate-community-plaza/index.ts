@@ -1,7 +1,7 @@
 // 🔥 커뮤니티 인기글 → AI 재작성 → 광장 자동 게시
 // 원문 통째 복제 X. 제목을 바탕으로 '원본과 다른' 짧은 광장 글로 재창작 + 출처 아웃링크.
 // 강력 안전필터: 혐오·불법·명예훼손·개인정보·정치극단·성인 → 스킵.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

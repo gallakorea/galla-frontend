@@ -3,7 +3,7 @@
    여기서 1시간짜리 임시 자격증명만 만들어 준다(만료되면 무용지물).
    최초 1회 TURN 키가 없으면 CF API로 만들어 app_private_kv에 보관한다(부트스트랩).
    CF 토큰에 Calls 권한이 없으면 STUN 전용으로 우아하게 후퇴 — 통화는 여전히 된다. */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,

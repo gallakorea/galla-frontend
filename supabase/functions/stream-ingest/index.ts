@@ -1,7 +1,7 @@
 // R2에 올라간 영상을 Cloudflare Stream으로 이관(copy-from-URL) → HLS URL 반환.
 // 신규 업로드가 어댑티브 스트리밍(즉시 재생)이 되도록. 트랜스코딩은 비동기(수십 초~).
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const CF_ACCOUNT = Deno.env.get("CF_STREAM_ACCOUNT")!;
 const CF_TOKEN = Deno.env.get("CF_STREAM_TOKEN")!;

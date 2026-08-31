@@ -4,7 +4,7 @@
 //
 // 모델 무관 설계: 기본은 기존 OPENAI_API_KEY(gpt-4o-mini). 저가형(DeepSeek 등 OpenAI-호환)으로
 // 갈아끼우려면 env만: JARVIS_BASE_URL / JARVIS_API_KEY / JARVIS_MODEL.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 
