@@ -149,6 +149,15 @@ Deno.serve(async (req) => {
   const regions = deep ? REGIONS : REGIONS.slice(0, 9);
   const phrases = deep ? PHRASES : PHRASES.slice(0, 2);
 
+  /* 🔁 회전 — 채널을 지정하지 않으면 '가장 오래 안 돈 4개'만 돈다.
+     전 채널을 한 번에 돌리면 검색 API 에서 서로 굶는다(실측: 21개 동시 → 스니펫 0~75,
+     단독일 땐 570). 매 실행 몇 개씩 돌리면 며칠에 걸쳐 전체가 고르게 갱신된다. */
+  const rotN = Number(url.searchParams.get("n") || "4");
+  let slugs: string[] | null = null;
+  if (!only) {
+    const { data: qd } = await supa.rpc("food_discover_queue", { p_n: rotN });
+    slugs = (qd || []) as string[];
+  }
   const { data: chans } = await supa.from("food_channels")
     .select("slug,name,active").eq("active", true).order("sort");
 
@@ -157,6 +166,7 @@ Deno.serve(async (req) => {
 
   for (const c of (chans || []) as any[]) {
     if (only && c.slug !== only) continue;
+    if (!only && slugs && !slugs.includes(c.slug)) continue;
     try {
       /* 표현 × 지역 스윕. 스니펫은 한데 모으고, 상호는 이름으로 중복을 걷은 뒤
          **한 번씩만** 검증한다 — 검증이 제일 비싼 단계라 여기서 아껴야 한다. */
@@ -170,7 +180,12 @@ Deno.serve(async (req) => {
           await new Promise((s) => setTimeout(s, 40));
         }
       }
-      if (!snips.length) { report.push({ ch: c.slug, snippets: 0 }); continue; }
+      if (!snips.length) {
+        /* 🚨 결과가 0건이어도 도장은 찍는다. 안 찍으면 그 채널이 큐 맨 앞에 영원히 남아
+           매 실행 슬롯을 잡아먹는다(실측: meokbosa 가 도장 없이 계속 1번이었다). */
+        await supa.rpc("food_discover_stamp", { p_slug: c.slug });
+        report.push({ ch: c.slug, snippets: 0 }); continue;
+      }
 
       /* 스니펫이 많으면 AI 한 번에 다 못 넣는다 — 덩어리로 나눠 뽑고 이름으로 합친다 */
       const chunks: string[][] = [];
@@ -196,6 +211,7 @@ Deno.serve(async (req) => {
         res = data || res;
       }
       added += res.new || 0;
+      await supa.rpc("food_discover_stamp", { p_slug: c.slug });   // 회전 도장
       report.push({ ch: c.slug, snippets: snips.length, cands: cands.length,
                     verified: items.length, ...res });
     } catch (e) {
