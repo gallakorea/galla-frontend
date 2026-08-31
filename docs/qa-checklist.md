@@ -594,7 +594,7 @@ api.anthropic.com                      (미국)
 | 고아 레코드(삭제된 부모의 자식) | ❌ |
 | R2 고아 파일 vs DB 참조 | 🔶 purge_orphan_media 크론은 있음 |
 | **AI 예산 소진·상한 동작**(ai_budget_usage·model_for 다운그레이드) | ✅ ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가** |
-| Supabase·Cloudflare 한도(요청·저장·대역폭) | ❌ |
+| Supabase·Cloudflare 한도(요청·저장·대역폭) | 🔶 DB 919MB(1,130→919 정리) · Storage 1.16GB는 참조 0건이라 백업 후 삭제 대기(사장님) |
 | 월 원가 추이 대비 요금제 마진 | 🔶 ai_spend 수정 직후라 데이터 축적 필요 |
 
 
