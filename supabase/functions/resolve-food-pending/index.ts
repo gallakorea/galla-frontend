@@ -37,7 +37,42 @@ const j = (o: unknown, s = 200) =>
 
 const strip = (s: string) => String(s || "").replace(/<[^>]*>/g, "").trim();
 
-type Found = { name: string; address: string; category?: string; phone?: string };
+type Found = { name: string; address: string; category?: string; phone?: string;
+               lat?: number; lon?: number };
+
+/* ⚠️ 상호만으로 검색하면 엉뚱한 업소가 1위로 온다(실측: '기분전환' → 패션 매장).
+   1) 음식점 계열이 아니면 버린다.  2) 지역힌트가 있으면 주소가 그 지역이어야 한다. */
+const FOOD_RE = /^(음식점|카페|제과|베이커리|술집|주점)/;
+function isFood(rawCategory: string) {
+  const c = String(rawCategory || "");
+  return FOOD_RE.test(c) || /음식|카페|한식|중식|일식|양식|분식|치킨|호프|주점|베이커리/.test(c);
+}
+/* 🚨 체인점 함정: 영상이 "아웃백 스테이크"라고만 하면 지점을 알 수 없다.
+   그런데 지역검색은 아무 지점이나 1위로 준다(실측: 아웃백 → 명동점).
+   지역힌트도 없는데 지점명이 붙은 결과를 받아들이면 **없는 사실을 지어내는 것**이다.
+   → 힌트가 없으면 '○○점' 형태는 버린다. 힌트가 있으면 지역 검사가 걸러준다. */
+function branchOk(hint: string | null, queryName: string, foundTitle: string) {
+  if (hint) return true;
+  const hasBranch = /[가-힣A-Za-z0-9]{2,}\s*점$/.test(foundTitle.trim());
+  if (!hasBranch) return true;
+  return /점$/.test(queryName.trim());   // 원래 상호에 '점'이 있었다면 통과
+}
+function regionOk(hint: string | null, addr: string) {
+  if (!hint) return true;
+  // 힌트의 토큰 하나라도 주소에 있어야 한다("서울 중구" → '중구' 포함)
+  const toks = hint.split(/\s+/).filter((t) => t.length >= 2);
+  if (!toks.length) return true;
+  return toks.some((t) => addr.includes(t.replace(/(특별시|광역시|시|군|구)$/, "")));
+}
+/* 지역검색이 주는 좌표. WGS84×10^7 로 오는 게 현재 규격이라 나눠서 쓰되,
+   한국 범위를 벗어나면 버린다(좌표계가 바뀌어도 조용히 틀리지 않게). */
+function pickCoord(mapx: string, mapy: string) {
+  let lon = Number(mapx), lat = Number(mapy);
+  if (!isFinite(lon) || !isFinite(lat)) return {};
+  if (Math.abs(lon) > 1000) { lon /= 1e7; lat /= 1e7; }
+  if (lat < 33 || lat > 39.5 || lon < 124 || lon > 132) return {};
+  return { lat, lon };
+}
 
 /* 상호 → 주소. 지역힌트를 붙이면 동명이인(체인·같은 이름 다른 동네)을 줄인다. */
 async function findPlace(name: string, hint: string | null): Promise<{ hit: Found | null; err?: string }> {
@@ -62,18 +97,23 @@ async function findPlace(name: string, hint: string | null): Promise<{ hit: Foun
   const want = norm(name);
   const best = items.find((it: any) => {
     const t = norm(strip(it.title));
-    return t.includes(want) || want.includes(t);
+    if (!(t.includes(want) || want.includes(t))) return false;
+    if (!isFood(strip(it.category))) return false;               // 음식점만
+    if (!branchOk(hint, name, strip(it.title))) return false;    // 체인 지점 임의선택 금지
+    const a = strip(it.roadAddress) || strip(it.address);
+    return !!a && regionOk(hint, a);                             // 지역 일치
   });
   if (!best) return { hit: null };
 
   const addr = strip(best.roadAddress) || strip(best.address);
-  if (!addr) return { hit: null };
+  const c = pickCoord(best.mapx, best.mapy);
   return {
     hit: {
       name: strip(best.title) || name,
       address: addr,
       category: (strip(best.category).split(">").pop() || "").trim() || undefined,
       phone: strip(best.telephone) || undefined,
+      lat: c.lat, lon: c.lon,
     },
   };
 }
@@ -122,7 +162,10 @@ Deno.serve(async (req) => {
       await supa.rpc("food_pending_settle", { p_id: it.id, p_place: null });
       continue;
     }
-    const g = await geocode(hit.address);
+    /* 검색이 준 좌표를 먼저 쓴다 — 지오코딩 호출을 아끼고, NCP 키가 없어도 좌표가 남는다.
+       (검색 키와 NCP 키는 서로 다른 발급처다. 실측: 검색은 되는데 지오코딩만 실패했다) */
+    let g: any = (hit.lat != null) ? { lat: hit.lat, lon: hit.lon, address: hit.address }
+                                   : await geocode(hit.address);
     if (g.lat) geoOk++;
     await supa.rpc("food_pending_settle", {
       p_id: it.id,
