@@ -5,6 +5,17 @@
   const $ = (s, r) => (r || document).querySelector(s);
   const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
   const fmt = (n) => (n || 0).toLocaleString();
+  /* 🔒 유저가 넣은 URL 은 http(s) 만 링크로 만든다.
+     제보·버그신고의 링크·미디어는 이용자가 값을 정한다. esc() 는 `<>&"` 만 바꾸므로
+     'javascript:...' 는 그대로 살아남고, 관리자가 그 링크를 누르면 **관리자 세션에서**
+     스크립트가 돈다 — 이 앱에서 가장 위험한 XSS 경로였다(2026-08-31 실측: submit_tip 이
+     javascript: 링크를 그대로 저장했다).
+     서버(submit_tip)에서도 막았지만, 이미 저장된 행과 다른 입력 경로가 있으므로 여기서도 막는다.
+     안전하지 않으면 링크로 만들지 않고 텍스트로만 보여준다. */
+  const safeUrl = (u) => {
+    const v = String(u == null ? "" : u).trim();
+    return /^https?:\/\//i.test(v) ? v : "";
+  };
   const ago = (ts) => { if (!ts) return ""; const s = (Date.now() - new Date(ts).getTime()) / 1000; if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전"; if (s < 86400) return Math.floor(s / 3600) + "시간 전"; return Math.floor(s / 86400) + "일 전"; };
   let sb, ME = null;
   const main = () => document.getElementById("ad-main");
@@ -262,9 +273,11 @@
           <span class="ad-tk-m">${esc(t.nickname || "-")} · ${esc(t.category || "-")} · ${ago(t.created_at)} · 지급 ${fmt(t.reward_gp || 0)}GP</span></div>
         ${t.body ? `<div class="ad-tip-b">${esc(t.body)}</div>` : ""}
         ${media.length ? `<div class="ad-tip-media">${media.map(m => m.kind === "video"
-          ? `<video src="${esc(m.url)}" muted playsinline controls></video>`
-          : `<a href="${esc(m.url)}" target="_blank"><img src="${esc(m.url)}"></a>`).join("")}</div>` : ""}
-        ${links.length ? `<div class="ad-tip-links">${links.map(l => `<a href="${esc(l)}" target="_blank" rel="noopener">🔗 ${esc(l)}</a>`).join("")}</div>` : ""}
+          ? (safeUrl(m.url) ? `<video src="${esc(safeUrl(m.url))}" muted playsinline controls></video>` : `<span class="ad-bad-url">⚠️ 차단된 주소: ${esc(m.url)}</span>`)
+          : (safeUrl(m.url) ? `<a href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener"><img src="${esc(safeUrl(m.url))}"></a>` : `<span class="ad-bad-url">⚠️ 차단된 주소: ${esc(m.url)}</span>`)).join("")}</div>` : ""}
+        ${links.length ? `<div class="ad-tip-links">${links.map(l => safeUrl(l)
+          ? `<a href="${esc(safeUrl(l))}" target="_blank" rel="noopener">🔗 ${esc(l)}</a>`
+          : `<span class="ad-bad-url">⚠️ 차단된 주소: ${esc(l)}</span>`).join("")}</div>` : ""}
         ${t.status === "pending" ? `<div class="ad-tip-acts">
           <button class="ad-btn primary" data-act="approve">✅ 채택 (+2,000GP)</button>
           <button class="ad-btn danger" data-act="reject">✖ 반려</button></div>`
@@ -476,7 +489,7 @@
       const rows = t?.rows || [];
       if (!rows.length) { body.innerHTML = `<div class="ad-soon">내역이 없어요.</div>`; return; }
       if (kind === "content") {
-        body.innerHTML = rows.map(r => `<a class="ad-tl" href="${esc(r.link || "#")}" target="_blank">
+        body.innerHTML = rows.map(r => `<a class="ad-tl" href="${esc(safeUrl(r.link) || "#")}" target="_blank" rel="noopener">
           <span class="ad-tl-ic">${r.icon || "•"}</span>
           <span class="ad-tl-m"><span class="ad-tl-l">${esc(r.label)}${r.anon ? ' <span class="ad-tag t-anon">🕶 익명</span>' : ""}</span>
             <span class="ad-tl-t">${esc(r.text || "")}</span></span>
