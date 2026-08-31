@@ -624,3 +624,32 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 }
 .fd-more-btn:active { background: var(--surface-2); }
 .fd-end { padding: 18px 0 4px; text-align: center; color: var(--text-low); font-size: 12px; }
+
+/* ── 탐색 허브 (캐치테이블 벤치마킹) ──────────────────────
+   저쪽 홈은 '목록'이 아니라 지역·카테고리 진입점의 조합이다.
+   우리 둘러보기도 그냥 카드 리스트였다 → 위에 탐색 블록을 얹는다.
+   데이터는 이미 받은 food_regions/food_categories 를 눌러 쓴다(추가 호출 없음). */
+.fh-sec { margin: 0 -14px 20px; }
+.fh-h { display: flex; align-items: center; padding: 0 14px 10px;
+  font-size: 14px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em; }
+.fh-near { margin-left: auto; padding: 5px 10px; border-radius: 999px; cursor: pointer;
+  background: rgba(67,97,255,.14); border: 1px solid rgba(67,97,255,.32);
+  color: var(--accent-2); font-size: 11.5px; font-weight: 700; }
+.fh-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 14px 2px; }
+.fh-row::-webkit-scrollbar { display: none; }
+.fh-loc {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 88px; padding: 12px 12px 11px; border-radius: 13px; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--line-1);
+}
+.fh-loc.on { border-color: var(--accent); background: rgba(67,97,255,.1); }
+.fh-loc-n { font-size: 14px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em; }
+.fh-loc-c { font-size: 11px; color: var(--text-low); font-variant-numeric: tabular-nums; }
+.fh-cat {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  padding: 9px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: var(--surface-1); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 13px; font-weight: 600;
+}
+.fh-cat.on { background: var(--text-hi); border-color: var(--text-hi); color: #000; }
+.fh-cat .n { font-size: 11px; opacity: .55; font-variant-numeric: tabular-nums; }

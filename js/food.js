@@ -245,6 +245,11 @@
       if (sortBy === "near" && !myPos) { askPos(); return; }
       loadList(); return;
     }
+    var hc = t.closest && t.closest("[data-cat2]");
+    if (hc) { catFilter = hc.dataset.cat2 || null; listLimit = 40; loadList(); return; }
+    if (t.closest && t.closest("#fd-list [data-near]")) { askPos(); return; }
+    var hr = t.closest && t.closest("#fd-list [data-region]");
+    if (hr) { pickRegion(hr.dataset.region, hr.dataset.rname); return; }
     var mo = t.closest && t.closest("[data-more]");
     if (mo) { listLimit += 60; mo.textContent = "불러오는 중…"; loadList(); return; }
     var rc = t.closest && t.closest("#fd-list .fd-rc");
@@ -494,8 +499,47 @@
       '<div class="fg-grid">' + (d.badges || []).map(badgeCard).join("") + '</div>';
   }
 
+  /* 탐색 허브 — 캐치테이블 홈은 '목록'이 아니라 지역·카테고리 진입점의 조합이다.
+     우리 둘러보기도 그냥 카드 리스트였다. 데이터는 이미 있다(food_regions/food_categories)
+     — 서버를 더 부르지 않고 이미 받은 걸 눌러 쓴다. */
+  function hubHtml() {
+    if (tab !== "browse") return "";
+    var out = "";
+    var cities = [];
+    ((REGIONS && REGIONS.sido) || []).forEach(function (sd) {
+      (sd.cities || []).forEach(function (c) {
+        if (c.n) cities.push({ code: c.code, name: c.name, n: c.n, sido: sd.name });
+      });
+    });
+    cities.sort(function (a, b) { return b.n - a.n; });
+    if (cities.length) {
+      out += '<section class="fh-sec"><div class="fh-h">어디로 가시나요?' +
+        '<button type="button" class="fh-near" data-near="1">내 주변</button></div>' +
+        '<div class="fh-row chip-scroll">' + cities.slice(0, 10).map(function (c) {
+          return '<button type="button" class="fh-loc' + (myRegion === c.code ? " on" : "") +
+            '" data-region="' + esc(c.code) + '" data-rname="' + esc(c.name) + '">' +
+            '<span class="fh-loc-n">' + esc(c.name) + '</span>' +
+            '<span class="fh-loc-c">' + c.n + '곳</span></button>';
+        }).join("") + '</div></section>';
+    }
+    if (CATS && CATS.length) {
+      out += '<section class="fh-sec"><div class="fh-h">무엇을 먹을까요?</div>' +
+        '<div class="fh-row chip-scroll">' +
+          '<button type="button" class="fh-cat' + (catFilter ? "" : " on") + '" data-cat2="">전체</button>' +
+          CATS.map(function (c) {
+            return '<button type="button" class="fh-cat' + (catFilter === c.name ? " on" : "") +
+              '" data-cat2="' + esc(c.name) + '">' + esc(c.name) +
+              '<span class="n">' + c.n + '</span></button>';
+          }).join("") + '</div></section>';
+    }
+    return out;
+  }
+
   async function loadList() {
     if (!LIST) return;
+    // 허브에 쓸 데이터는 한 번만 받아 캐시한다
+    if (tab === "browse" && !REGIONS) REGIONS = await rpc("food_regions");
+    if (tab === "browse" && !CATS.length) CATS = (await rpc("food_categories")) || [];
     if (tab === "me")   { return seg === "leaders" ? loadLeaders() : loadBadges(); }
     if (tab === "rank" && seg === "shows") { return loadBrowse(); }
     /* 둘러보기는 정렬(seg)만 바뀌고, 랭킹은 서버 랭킹 종류(seg)가 바뀐다 */
@@ -519,7 +563,7 @@
       return;
     }
     usedThumb = new Set();
-    LIST.innerHTML = recentHtml() + ps.map(card).join("") +
+    LIST.innerHTML = hubHtml() + recentHtml() + ps.map(card).join("") +
       (ps.length >= listLimit
         ? '<button type="button" class="fd-more-btn" data-more="1">더 보기</button>'
         : (ps.length > 12 ? '<div class="fd-end">' + ps.length + '곳을 다 봤어요</div>' : ''));
