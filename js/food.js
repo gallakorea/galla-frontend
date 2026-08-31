@@ -414,6 +414,7 @@
       });
       return;
     }
+    if (t.closest && t.closest("[data-chpick]")) { openChPick(); return; }
     var gt = t.closest && t.closest("[data-gotab]");
     if (gt) { tab = gt.dataset.gotab; seg = "all"; listLimit = 40; paintTabs(); loadList(); return; }
     var h2 = t.closest && t.closest("[data-ch2]");
@@ -748,7 +749,11 @@
     var chs = CH.filter(function (c) { return c.total; }).sort(function (a, b) { return b.total - a.total; });
     if (chs.length) {
       out += '<section class="fh-sec"><div class="fh-h">누가 다녀갔나' +
-        '<button type="button" class="fh-near" data-gotab="who">전체 보기</button></div>' +
+        /* ⚠️ 예전엔 '전체 보기'가 탭만 옮겼다. 그런데 출처가 58개인데 홈에는 12개만
+           가로로 깔리고 종류(유튜버·방송·인증·공직자)가 뒤섞여 있어서
+           "유튜버만 보고 싶다"가 안 됐고, 원하는 사람을 찾으려면 계속 밀어야 했다.
+           → 종류별로 묶고 검색까지 되는 선택 시트를 연다. */
+        '<button type="button" class="fh-near" data-chpick="1">누구 고르기</button></div>' +
         '<div class="fh-row chip-scroll">' + chs.slice(0, 12).map(function (c) {
           return '<button type="button" class="fh-ch' + (chFilter === c.slug ? " on" : "") +
             '" data-ch2="' + esc(c.slug) + '">' +
@@ -1096,6 +1101,74 @@
        SHEET(=DETAIL 안의 요소)를 못 찾고 조용히 죽었다 — **핀을 눌러도 아무 일이
        안 일어났다**(2026-08-31 시뮬 실측). 목록 카드와 같은 입구를 쓴다. */
     return MB.marker(+p.lat, +p.lon, html, 38, function () { openDetail(p.id); });
+  }
+
+  /* ── 누구 고르기 ──────────────────────────────────────
+     출처가 58개다. 가로 스크롤 한 줄로는 못 고른다.
+     종류별로 묶고(공직자·인증·유튜버·방송) 이름 검색까지 붙인다. */
+  var KINDNAME = { gov: "공직자", guide: "인증", yt: "유튜버", tv: "방송" };
+  var KINDORDER = ["gov", "guide", "yt", "tv"];
+  var CHPICK = null;
+  function chPickHtml(q) {
+    q = (q || "").replace(/\s/g, "").toLowerCase();
+    var list = CH.filter(function (c) {
+      if (!c.total) return false;
+      return !q || c.name.replace(/\s/g, "").toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) { return b.total - a.total; });
+    var byKind = {};
+    list.forEach(function (c) { (byKind[c.kind] = byKind[c.kind] || []).push(c); });
+    var secs = KINDORDER.filter(function (k) { return byKind[k] && byKind[k].length; })
+      .map(function (k) {
+        return '<div class="cp-k">' + KINDNAME[k] +
+            ' <b>' + byKind[k].length + '</b></div>' +
+          '<div class="cp-grid">' + byKind[k].map(function (c) {
+            return '<button type="button" class="cp-i' + (chFilter === c.slug ? " on" : "") +
+              '" data-ch2="' + esc(c.slug) + '">' +
+              '<span class="cp-av' + (c.thumb ? "" : " none") + '">' +
+                (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">'
+                         : esc(initials(c.name))) + '</span>' +
+              '<span class="cp-n">' + esc(c.name) + '</span>' +
+              '<span class="cp-c">' + c.total + '</span></button>';
+          }).join("") + '</div>';
+      }).join("");
+    return '<div class="fd-sheet-grip"></div>' +
+      '<div class="cp-h">누가 다녀갔나' +
+        '<button type="button" class="cp-x" data-chclose="1">✕</button></div>' +
+      '<input class="cp-q" id="cp-q" type="search" placeholder="이름으로 찾기" value="' + esc(q ? q : "") + '">' +
+      (chFilter ? '<button type="button" class="cp-clear" data-ch2="' + esc(chFilter) + '">' +
+                    '선택 해제 — ' + esc(chName(chFilter)) + '</button>' : "") +
+      (secs || '<div class="cp-none">찾는 이름이 없어요</div>');
+  }
+  function openChPick() {
+    if (!CHPICK) {
+      CHPICK = document.createElement("div");
+      CHPICK.className = "fd-cpick";
+      document.body.appendChild(CHPICK);
+      CHPICK.addEventListener("click", function (e) {
+        if (e.target === CHPICK || e.target.closest("[data-chclose]")) { closeChPick(); return; }
+        var b = e.target.closest("[data-ch2]");
+        if (b) {
+          chFilter = (chFilter === b.dataset.ch2) ? null : b.dataset.ch2;
+          listLimit = 40; closeChPick(); loadList(); paintMapChips();
+        }
+      });
+      /* 검색은 입력마다 다시 그린다 — 목록이 58개라 비용이 없다 */
+      CHPICK.addEventListener("input", function (e) {
+        if (!e.target.matches("#cp-q")) return;
+        var v = e.target.value, box = CHPICK.querySelector(".fd-cpick-box");
+        box.innerHTML = chPickHtml(v);
+        var q = box.querySelector("#cp-q");
+        if (q) { q.value = v; q.focus(); }
+      });
+    }
+    CHPICK.innerHTML = '<div class="fd-cpick-box">' + chPickHtml("") + '</div>';
+    CHPICK.classList.add("open");
+    document.body.classList.add("fd-detail-on");
+  }
+  function closeChPick() {
+    if (!CHPICK) return;
+    CHPICK.classList.remove("open");
+    document.body.classList.remove("fd-detail-on");
   }
 
   /* ── 필터 시트 ────────────────────────────────────────

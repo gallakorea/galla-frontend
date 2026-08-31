@@ -870,3 +870,67 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
 /* 공직자 마커 — 기관 마크. 방송 로고 핀과 같은 크기로 두되 배경/테두리는 인라인으로 준다. */
 .fd-pin.is-gov { width: 38px; height: 38px; padding: 2px; overflow: visible; border-width: 2.5px; }
 .fd-map .fd-pin.is-gov svg { width: 100%; height: 100%; display: block; }
+
+/* ── 누구 고르기 시트 ─────────────────────────────────
+   출처 58개를 가로 한 줄로 미는 건 선택이 아니라 노동이다.
+   종류별로 묶어 한 화면에 펼치고 검색을 붙인다. */
+.fd-cpick {
+  position: fixed; inset: 0; z-index: 10050; display: none;
+  background: rgba(0,0,0,.62); backdrop-filter: blur(2px);
+  align-items: flex-end; justify-content: center;
+}
+.fd-cpick.open { display: flex; }
+.fd-cpick-box {
+  width: 100%; max-width: 640px; max-height: 86vh; max-height: 86dvh;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--surface-1); border-top-left-radius: 20px; border-top-right-radius: 20px;
+  padding: 8px 14px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  border-top: 1px solid var(--line-2);
+}
+.cp-h {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center;
+  padding: 6px 0 10px; background: var(--surface-1);
+  font-size: 16px; font-weight: 800; color: var(--text-hi);
+}
+.cp-x {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  background: var(--surface-3); border: 1px solid var(--line-2); color: var(--text-hi);
+  font-size: 15px; line-height: 1; display: grid; place-items: center;
+}
+.cp-q {
+  width: 100%; padding: 11px 13px; margin-bottom: 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-hi); font-size: 16px; outline: none;   /* 16px — iOS 확대 방지 */
+}
+.cp-clear {
+  width: 100%; padding: 9px 0; margin-bottom: 12px; border-radius: var(--r-sm); cursor: pointer;
+  background: transparent; border: 1px dashed var(--line-2);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 600;
+}
+.cp-k { font-size: 12px; font-weight: 800; color: var(--text-low); margin: 4px 0 8px; }
+.cp-k b { color: var(--accent-2); }
+.cp-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px; margin-bottom: 16px;
+}
+.cp-i {
+  display: grid; justify-items: center; gap: 5px; padding: 10px 4px 8px; cursor: pointer;
+  border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line-1);
+}
+.cp-i.on { border-color: var(--accent); background: rgba(67,97,255,.14); }
+.cp-av {
+  width: 42px; height: 42px; border-radius: 50%; overflow: hidden;
+  background: var(--surface-3); flex: 0 0 auto;
+}
+.cp-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-av.none {
+  display: grid; place-items: center; color: var(--text-mid);
+  font-size: 14px; font-weight: 800; letter-spacing: -.02em;
+}
+.cp-n {
+  font-size: 11.5px; font-weight: 700; color: var(--text-hi); text-align: center;
+  line-height: 1.25; max-width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cp-c { font-size: 10.5px; color: var(--text-low); font-variant-numeric: tabular-nums; }
+.cp-none { padding: 26px 0; text-align: center; color: var(--text-low); font-size: 13px; }
