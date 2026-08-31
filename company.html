@@ -985,6 +985,121 @@ h2.dsp{font-size:clamp(1.8rem,3.6vw,2.75rem);max-width:16em;letter-spacing:-.03e
 .hire-n{margin:0;font-size:.85rem;color:var(--ink-low);line-height:1.7}
 @media (prefers-reduced-motion: reduce){.hire-go,.hire-go i{transition:none}}
 
+/* ── 카드 장면 ────────────────────────────────────────
+   기술 넷과 원칙 넷이 전부 같은 HUD 링이라 구별이 안 됐다. 여덟 개 각각
+   자기 내용을 연기하는 장면으로 바꾼다. 화면에 들어온 카드만 움직인다 —
+   여덟이 동시에 돌면 시선 둘 곳이 없어진다. */
+.scene{
+  display:block;width:100%;margin:0 0 20px;padding:0;
+  border:1px solid var(--rule-soft);background:var(--void);overflow:hidden;
+}
+.scene svg{display:block;width:100%;height:auto;color:var(--c,var(--ice))}
+.scene .ln{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.scene .fl{fill:currentColor;stroke:none}
+.scene .dim{opacity:.26}
+.scene .hot{stroke:var(--red)}
+.scene .tx{fill:currentColor;font-family:"IBM Plex Mono","Noto Sans KR",monospace;font-size:11px;letter-spacing:.06em}
+.scene .tx.dimt{fill:var(--ink-low)}
+.card:nth-child(1){--c:var(--ice)} .card:nth-child(2){--c:var(--ember)}
+.card:nth-child(3){--c:var(--frost)} .card:nth-child(4){--c:var(--red)}
+.pr:nth-child(1){--c:var(--ice)} .pr:nth-child(2){--c:var(--red)}
+.pr:nth-child(3){--c:var(--ember)} .pr:nth-child(4){--c:var(--frost)}
+.card .viz,.pr .viz{display:none}          /* 코너 아이콘은 장면으로 대체됐다 */
+
+@media (prefers-reduced-motion: no-preference){
+  .card.live .scene *,.pr.live .scene *{animation-play-state:running}
+  .scene *{animation-play-state:paused}
+
+  /* 기억 — 조각이 들어와 압축되고, 질의가 하나를 끄집어낸다 */
+  .s-mem .i1,.s-mem .i2,.s-mem .i3{transform-box:view-box;animation:memin 3.6s ease-in both infinite}
+  .s-mem .i2{animation-delay:.4s} .s-mem .i3{animation-delay:.8s}
+  @keyframes memin{0%{transform:translateX(-14px);opacity:0}18%{opacity:1}70%{transform:translateX(46px);opacity:0}100%{opacity:0}}
+  .s-mem .funnel{stroke-dasharray:180;animation:draww 3.6s ease-out infinite}
+  @keyframes draww{0%{stroke-dashoffset:180}40%,100%{stroke-dashoffset:0}}
+  .s-mem .recall2{transform-box:view-box;animation:recall2 3.6s ease-in-out infinite}
+  @keyframes recall2{0%,44%{opacity:0;transform:none}62%,84%{opacity:.9;transform:translateX(10px)}100%{opacity:0}}
+  .s-mem .probe{transform-box:view-box;animation:probe 3.6s ease-in-out infinite}
+  @keyframes probe{0%,30%{transform:translateX(24px);opacity:0}46%{opacity:.8}62%{transform:translateX(-84px);opacity:.8}78%,100%{transform:translateX(-84px);opacity:0}}
+  .s-mem .out{transform-box:fill-box;transform-origin:center;animation:outpop 3.6s ease-out infinite}
+  @keyframes outpop{0%,66%{transform:scale(0)}78%,94%{transform:scale(1)}100%{transform:scale(0)}}
+
+  /* 감정 — 바늘은 관성으로 천천히, 급입력은 눌린다 */
+  .s-emo .needle{transform-box:view-box;transform-origin:90px 78px;animation:needle 7s cubic-bezier(.4,0,.5,1) infinite}
+  @keyframes needle{0%,100%{transform:rotate(-46deg)}30%{transform:rotate(-8deg)}62%{transform:rotate(34deg)}}
+  .s-emo .arcfill{stroke-dasharray:196;stroke-dashoffset:120;animation:arcf 7s cubic-bezier(.4,0,.5,1) infinite}
+  @keyframes arcf{0%,100%{stroke-dashoffset:150}30%{stroke-dashoffset:104}62%{stroke-dashoffset:56}}
+  .s-emo .smooth2{stroke-dasharray:120;animation:draww2 5s ease-in-out infinite}
+  @keyframes draww2{0%{stroke-dashoffset:120}62%,100%{stroke-dashoffset:0}}
+  .s-emo .jolt{transform-box:view-box;transform-origin:204px 78px;animation:jolt 5s cubic-bezier(.3,.9,.3,1) infinite}
+  @keyframes jolt{0%,52%{transform:scaleY(0);opacity:0}62%{transform:scaleY(1);opacity:.9}100%{transform:scaleY(.05);opacity:0}}
+
+  /* 창작 — 정거장을 지날 때마다 산출물이 남는다 */
+  .s-cre .tok2{transform-box:view-box;animation:tok2 5.4s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes tok2{0%,6%{transform:translateX(0)}30%,40%{transform:translateX(75px)}64%,74%{transform:translateX(140px)}96%,100%{transform:translateX(0)}}
+  .s-cre .o1,.s-cre .o2,.s-cre .o3{transform-box:view-box;transform-origin:center}
+  .s-cre .o1{animation:opop 5.4s ease-out infinite}
+  .s-cre .o2{animation:opop 5.4s ease-out infinite;animation-delay:1.6s}
+  .s-cre .o3{animation:opop 5.4s ease-out infinite;animation-delay:3.4s}
+  @keyframes opop{0%{transform:scale(0) translateY(10px);opacity:0}8%{transform:none;opacity:1}70%{opacity:1}86%,100%{opacity:0}}
+  .s-cre .st1,.s-cre .st2,.s-cre .st3{transform-box:view-box;transform-origin:center}
+  .s-cre .st1{animation:lightup 5.4s ease-out infinite}
+  .s-cre .st2{animation:lightup 5.4s ease-out infinite;animation-delay:1.6s}
+  .s-cre .st3{animation:lightup 5.4s ease-out infinite;animation-delay:3.4s}
+  @keyframes lightup{0%,100%{opacity:.42}6%,22%{opacity:1;transform:scale(1.08)}}
+
+  /* 안전 — 위험을 만나면 흐름이 멈추고 창구로 튼다 */
+  .s-saf .flowline{stroke-dasharray:7 8;animation:gflow 1.6s linear infinite}
+  .s-saf .danger{transform-box:view-box;transform-origin:center;animation:dang 6s ease-in-out infinite}
+  @keyframes dang{0%,18%{opacity:0;transform:scale(.6)}28%,44%{opacity:1;transform:none}56%,100%{opacity:0}}
+  .s-saf .shield{transform-box:view-box;transform-origin:104px 16px;animation:shld 6s cubic-bezier(.3,1.4,.4,1) infinite}
+  @keyframes shld{0%,44%{opacity:0;transform:translateY(-26px) scale(.8)}56%,88%{opacity:1;transform:none}100%{opacity:0}}
+  .s-saf .reroute{stroke-dasharray:120;animation:draww3 6s ease-out infinite}
+  @keyframes draww3{0%,56%{stroke-dashoffset:120}76%,100%{stroke-dashoffset:0}}
+
+  /* 창작자 몫 — 75 가 먼저, 가장 크게 찬다 */
+  .s-shr .b75,.s-shr .b20,.s-shr .b05{transform-box:view-box;transform-origin:left center}
+  .s-shr .b75{animation:fillx 5s cubic-bezier(.2,.8,.3,1) infinite}
+  .s-shr .b20{animation:fillx 5s cubic-bezier(.2,.8,.3,1) infinite;animation-delay:.7s}
+  .s-shr .b05{animation:fillx 5s cubic-bezier(.2,.8,.3,1) infinite;animation-delay:1s}
+  @keyframes fillx{0%{transform:scaleX(0)}22%,88%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+  .s-shr .lock{transform-box:view-box;transform-origin:center;animation:lockin 5s ease-out infinite}
+  @keyframes lockin{0%,60%{opacity:0;transform:translateY(-8px)}74%,92%{opacity:.85;transform:none}100%{opacity:0}}
+
+  /* 상품 아님 — 광고주로 가려던 화살이 막히고 되돌아온다 */
+  .s-nop .a1{stroke-dasharray:70;animation:arr1 5.4s ease-in-out infinite}
+  @keyframes arr1{0%{stroke-dashoffset:70;opacity:.9}22%{stroke-dashoffset:0;opacity:.9}44%,100%{stroke-dashoffset:0;opacity:0}}
+  .s-nop .wall{transform-box:view-box;transform-origin:126px 50px;animation:wall 5.4s cubic-bezier(.3,1.5,.4,1) infinite}
+  @keyframes wall{0%,20%{opacity:0;transform:scaleY(.2)}30%,86%{opacity:1;transform:none}100%{opacity:0}}
+  .s-nop .back{stroke-dasharray:80;animation:arr2 5.4s ease-in-out infinite}
+  @keyframes arr2{0%,36%{stroke-dashoffset:80;opacity:0}40%{opacity:.9}62%,86%{stroke-dashoffset:0;opacity:.9}100%{opacity:0}}
+  .s-nop .ad{animation:addim 5.4s ease-in-out infinite}
+  @keyframes addim{0%,26%{opacity:.26}44%,100%{opacity:.1}}
+  .s-nop .who{transform-box:view-box;transform-origin:center;animation:lightup 5.4s ease-out infinite;animation-delay:3.4s}
+
+  /* 안전 우선 — 안전 게이트가 열려야 기능이 나간다 */
+  .s-gat .car-s{transform-box:view-box;animation:runs 5.2s cubic-bezier(.4,0,.4,1) infinite}
+  @keyframes runs{0%,4%{transform:translateX(0)}30%,100%{transform:translateX(196px)}}
+  .s-gat .car-f{transform-box:view-box;animation:runf 5.2s cubic-bezier(.4,0,.4,1) infinite}
+  @keyframes runf{0%,4%{transform:translateX(0)}22%,44%{transform:translateX(92px)}70%,100%{transform:translateX(196px)}}
+  .s-gat .g-s{transform-box:view-box;transform-origin:128px 30px;animation:opens 5.2s ease-in-out infinite}
+  @keyframes opens{0%,10%{transform:rotate(0)}24%,100%{transform:rotate(78deg)}}
+  .s-gat .g-f{transform-box:view-box;transform-origin:128px 74px;animation:openf 5.2s ease-in-out infinite}
+  @keyframes openf{0%,44%{transform:rotate(0)}58%,100%{transform:rotate(-78deg)}}
+  .s-gat .chk{stroke-dasharray:40;animation:draww4 5.2s ease-out infinite}
+  @keyframes draww4{0%,30%{stroke-dashoffset:40}44%,100%{stroke-dashoffset:0}}
+
+  /* 작게, 끝까지 — 쌓고 다시 돌아와 손을 댄다 */
+  .s-own .k-1,.s-own .k-2,.s-own .k-3{transform-box:view-box}
+  .s-own .k-1{animation:stack 5s cubic-bezier(.2,1.3,.4,1) infinite}
+  .s-own .k-2{animation:stack 5s cubic-bezier(.2,1.3,.4,1) infinite;animation-delay:.2s}
+  .s-own .k-3{animation:stack 5s cubic-bezier(.2,1.3,.4,1) infinite;animation-delay:.4s}
+  @keyframes stack{0%{transform:translateY(16px);opacity:0}16%,100%{transform:none;opacity:1}}
+  .s-own .loop2{stroke-dasharray:150;animation:draww5 5s ease-in-out infinite}
+  @keyframes draww5{0%,26%{stroke-dashoffset:150}56%,100%{stroke-dashoffset:0}}
+  .s-own .hand2{transform-box:view-box;animation:tend 5s ease-in-out infinite}
+  @keyframes tend{0%,54%{opacity:0;transform:translateX(14px)}68%,92%{opacity:1;transform:none}100%{opacity:0}}
+}
+
 /* ── 연혁 ──────────────────────────────────────────── */
 
 /* ── 풀블리드 진술 밴드 ────────────────────────────── */
@@ -1728,25 +1843,53 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <p class="body"><span data-i="t126"></span></p>
         <div class="cards">
           <div class="card">
-            <svg class="viz hud " viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path d="M25 36 h14 M27 32 h10 M29 28 h6"/></g></svg><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
+            <figure class="scene s-mem" aria-hidden="true"><svg viewBox="0 0 240 100"><g class="sc-in"><rect class="fl i1" x="6" y="24" width="22" height="7" rx="3.5"/>
+ <rect class="fl i2" x="6" y="46" width="28" height="7" rx="3.5"/>
+ <rect class="fl i3" x="6" y="68" width="18" height="7" rx="3.5"/></g>
+<path class="ln funnel" d="M52 18 L86 44 V58 L52 84 Z"/>
+<g class="shelf"><rect class="ln" x="104" y="20" width="72" height="11" rx="2"/>
+ <rect class="ln" x="104" y="38" width="72" height="11" rx="2"/>
+ <rect class="ln" x="104" y="56" width="72" height="11" rx="2"/>
+ <rect class="ln" x="104" y="74" width="72" height="11" rx="2"/></g>
+<rect class="fl recall2" x="104" y="38" width="72" height="11" rx="2"/>
+<path class="ln probe" d="M196 8 V92"/>
+<path class="ln dim" d="M188 46 H232"/><circle class="fl out" cx="228" cy="46" r="5"/></svg></figure><circle class="fl pulse" cx="32" cy="32" r="5"/></svg>
             <div class="k">Memory</div>
             <h3><span data-i="t127"></span></h3>
             <p><span data-i="t128"></span></p>
           </div>
           <div class="card">
-            <svg class="viz hud " viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path class="hwave" d="M22 32 C26 24 30 24 32 32 C34 40 38 40 42 32"/></g></svg>
+            <figure class="scene s-emo" aria-hidden="true"><svg viewBox="0 0 240 100"><path class="ln dim" d="M28 78 A62 62 0 0 1 152 78"/>
+<path class="ln arcfill" d="M28 78 A62 62 0 0 1 152 78"/>
+<g class="needle"><path class="ln" d="M90 78 V26"/></g>
+<circle class="fl" cx="90" cy="78" r="5"/>
+<path class="ln dim" d="M168 78 H236"/>
+<path class="ln smooth2" d="M168 68 C186 52 194 84 210 62 C222 46 228 58 236 52"/>
+<g class="jolt"><path class="ln hot" d="M200 78 L204 16 L208 78"/></g></svg></figure>
             <div class="k">Emotion</div>
             <h3><span data-i="t129"></span></h3>
             <p><span data-i="t130"></span></p>
           </div>
           <div class="card">
-            <svg class="viz hud " viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path d="M28 25 L41 32 L28 39 Z"/></g></svg>
+            <figure class="scene s-cre" aria-hidden="true"><svg viewBox="0 0 240 100"><path class="ln dim" d="M24 62 H216"/>
+<g class="st1"><circle class="ln" cx="40" cy="62" r="11"/><path class="ln" d="M35 62 h10 M40 57 v10"/></g>
+<g class="st2"><rect class="ln" x="98" y="46" width="34" height="24" rx="3"/><path class="fl" d="M110 53 l12 6 -12 6 Z"/></g>
+<g class="st3"><path class="ln" d="M180 74 V46 M170 56 l10-10 10 10"/><path class="ln" d="M168 80 h24"/></g>
+<circle class="fl tok2" cx="40" cy="62" r="5"/>
+<g class="pop"><rect class="fl o1" x="30" y="20" width="20" height="12" rx="2"/>
+ <rect class="fl o2" x="105" y="20" width="20" height="12" rx="2"/>
+ <rect class="fl o3" x="172" y="20" width="20" height="12" rx="2"/></g></svg></figure>
             <div class="k">Creation</div>
             <h3><span data-i="t131"></span></h3>
             <p><span data-i="t132"></span></p>
           </div>
           <div class="card">
-            <svg class="viz hud " viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path d="M32 20 L42 24 V33 C42 39 37 43 32 45 C27 43 22 39 22 33 V24 Z"/></g></svg>
+            <figure class="scene s-saf" aria-hidden="true"><svg viewBox="0 0 240 100"><path class="ln flowline" d="M8 44 H96"/>
+<g class="danger"><path class="ln hot" d="M104 30 L120 62 H88 Z"/><path class="ln hot" d="M104 42 v8"/></g>
+<g class="shield"><path class="ln" d="M104 16 L128 25 V46 C128 60 116 68 104 73 C92 68 80 60 80 46 V25 Z"/></g>
+<path class="ln reroute" d="M126 44 C160 44 160 78 196 78"/>
+<rect class="ln" x="196" y="62" width="38" height="32" rx="4"/>
+<path class="fl" d="M204 72 h22 v3 h-22Z M204 80 h14 v3 h-14Z"/></svg></figure>
             <div class="k">Safety</div>
             <h3><span data-i="t133"></span></h3>
             <p><span data-i="t134"></span></p>
@@ -1763,25 +1906,48 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
         <h2 class="dsp"><span data-i="t136"></span></h2>
         <div class="principles">
           <div class="pr">
-            <svg class="viz hud" viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><circle cx="32" cy="32" r="3.4" fill="currentColor" stroke="none"/><path d="M32 22 v-4 M32 46 v-4 M22 32 h-4 M46 32 h4"/></g></svg>
+            <figure class="scene s-shr" aria-hidden="true"><svg viewBox="0 0 240 100"><rect class="ln dim" x="14" y="34" width="212" height="26" rx="3"/>
+<rect class="fl b75" x="14" y="34" width="159" height="26" rx="3"/>
+<rect class="fl b20" x="173" y="34" width="42" height="26" rx="3" opacity=".45"/>
+<rect class="fl b05" x="215" y="34" width="11" height="26" rx="3" opacity=".8"/>
+<path class="ln dim" d="M14 68 V78 M173 68 V78 M215 68 V78 M226 68 V78"/>
+<text class="tx" x="16" y="26">75 창작자</text><text class="tx dimt" x="175" y="26">20</text><text class="tx dimt" x="212" y="26">5</text>
+<path class="ln lock" d="M104 84 h12 v8 h-12Z M106 84 v-4 a4 4 0 0 1 8 0 v4"/></svg></figure>
             <div class="pri">01</div>
             <h3><span data-i="t137"></span></h3>
             <p><span data-i="t138"></span></p>
           </div>
           <div class="pr">
-            <svg class="viz hud" viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path d="M24 24 L40 40 M40 24 L24 40"/></g></svg>
+            <figure class="scene s-nop" aria-hidden="true"><svg viewBox="0 0 240 100"><g class="who"><circle class="ln" cx="34" cy="50" r="11"/><path class="ln" d="M18 78 a16 16 0 0 1 32 0"/></g>
+<path class="ln arrw a1" d="M56 50 H118"/><path class="ln arrw a1" d="M110 42 l8 8 -8 8"/>
+<g class="wall"><path class="ln hot" d="M126 16 V84"/><path class="ln hot" d="M112 34 L140 66 M140 34 L112 66"/></g>
+<g class="ad"><rect class="ln dim" x="160" y="32" width="66" height="36" rx="3"/><path class="ln dim" d="M170 44 h46 M170 56 h30"/></g>
+<path class="ln arrw back" d="M112 68 C88 82 62 78 52 68"/><path class="ln arrw back" d="M60 60 l-8 8 8 8"/></svg></figure>
             <div class="pri">02</div>
             <h3><span data-i="t139"></span></h3>
             <p><span data-i="t140"></span></p>
           </div>
           <div class="pr">
-            <svg class="viz hud" viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><path d="M32 20 L42 24 V33 C42 39 37 43 32 45 C27 43 22 39 22 33 V24 Z"/><path d="M32 28 v6"/></g></svg>
+            <figure class="scene s-gat" aria-hidden="true"><svg viewBox="0 0 240 100"><path class="ln dim" d="M8 30 H232 M8 74 H232"/>
+<text class="tx dimt" x="10" y="24">SAFETY</text><text class="tx dimt" x="10" y="94">FEATURE</text>
+<g class="gate g-s"><path class="ln" d="M128 12 V30"/></g>
+<g class="gate g-f"><path class="ln" d="M128 56 V74"/></g>
+<circle class="fl car-s" cx="24" cy="30" r="6"/>
+<circle class="fl car-f" cx="24" cy="74" r="6"/>
+<path class="ln chk" d="M198 24 l7 8 14-16"/></svg></figure>
             <div class="pri">03</div>
             <h3><span data-i="t141"></span></h3>
             <p><span data-i="t142"></span></p>
           </div>
           <div class="pr">
-            <svg class="viz hud" viewBox="0 0 64 64" aria-hidden="true"><g class="hring"><g class="hr r1"><circle cx="32" cy="32" r="29" stroke-dasharray="1 5.6"/></g><g class="hr r2"><path d="M32 6 A26 26 0 0 1 58 32" stroke-linecap="round"/><path d="M32 58 A26 26 0 0 1 6 32" stroke-linecap="round"/></g><g class="hr r3"><circle cx="32" cy="32" r="21" stroke-dasharray="14 9"/></g><g class="hr r4"><path d="M32 16 A16 16 0 0 1 48 32" stroke-linecap="round" stroke-width="2.6"/></g></g><g class="hsw"><path d="M32 32 L32 7"/></g><circle class="hcore" cx="32" cy="32" r="6"/><circle class="hcore2" cx="32" cy="32" r="10"/><g class="hgl"><rect x="21" y="26" width="22" height="12" rx="2"/><path d="M25 32 h2.6 M30.7 32 h2.6 M36.4 32 h2.6"/></g></svg>
+            <figure class="scene s-own" aria-hidden="true"><svg viewBox="0 0 240 100"><g class="blocks"><rect class="ln k-1" x="26" y="66" width="30" height="20" rx="3"/>
+ <rect class="ln k-2" x="62" y="66" width="30" height="20" rx="3"/>
+ <rect class="ln k-3" x="44" y="42" width="30" height="20" rx="3"/></g>
+<path class="ln loop2" d="M110 76 C150 76 150 30 110 30 C86 30 82 44 82 44"/>
+<path class="ln" d="M90 36 L82 44 L92 50"/>
+<g class="hand2"><circle class="fl" cx="170" cy="40" r="7"/><path class="ln" d="M170 47 v18 M158 74 a12 12 0 0 1 24 0"/>
+ <path class="ln" d="M178 44 h26"/></g>
+<path class="ln dim" d="M14 92 H226"/></svg></figure>
             <div class="pri">04</div>
             <h3><span data-i="t143"></span></h3>
             <p><span data-i="t144"></span></p>
@@ -3001,6 +3167,19 @@ footer .fine{font-size:.66rem;letter-spacing:.06em;color:#5c637a;max-width:70ch}
     window.addEventListener('resize', hit);
     hit();
   })();
+
+
+  /* 화면에 들어온 카드만 장면을 돌린다. 여덟이 동시에 움직이면 시선 둘 곳이 없다. */
+  if(!reduce && window.IntersectionObserver){
+    var scards=document.querySelectorAll('.card, .pr');
+    var sio=new IntersectionObserver(function(es){
+      for(var i=0;i<es.length;i++) es[i].target.classList.toggle('live', es[i].isIntersecting);
+    },{threshold:.2});
+    for(var si=0;si<scards.length;si++) sio.observe(scards[si]);
+  } else {
+    var sc2=document.querySelectorAll('.card, .pr');
+    for(var s2=0;s2<sc2.length;s2++) sc2[s2].classList.add('live');
+  }
 
   /* ── 스크롤 진행선 ── */
   (function(){
