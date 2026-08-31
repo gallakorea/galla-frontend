@@ -821,3 +821,52 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
   height: 100dvh;   /* 모바일 주소창 대응 — 미지원 브라우저는 위 100vh 로 */
   top: 0; left: 0; right: auto; bottom: auto;
 }
+
+/* ── 국회의원이 다녀간 집 ─────────────────────────────
+   갈라만 가진 축이라 상세에서 눈에 띄어야 하지만, 정치색이 강한 정보라
+   화면 톤은 오히려 차분하게 간다 — 수치가 말하게 두고 우리가 편들지 않는다. */
+.fd-asm { display: none; }
+.fd-asm.on {
+  display: block; margin-top: 16px; padding: 13px 13px 11px;
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(120,140,255,.06), transparent 70%);
+}
+.fa-h {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-size: 13.5px; font-weight: 800; color: var(--text-hi); margin-bottom: 10px;
+}
+.fa-src { font-size: 10.5px; font-weight: 600; color: var(--text-low); }
+.fa-stat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.fa-stat > div {
+  padding: 8px 4px; border-radius: var(--r-sm); background: var(--surface-2);
+  text-align: center; display: grid; gap: 2px;
+}
+.fa-stat b { font-size: 15px; font-weight: 800; color: var(--text-hi); font-variant-numeric: tabular-nums; }
+.fa-stat i { font-size: 10.5px; font-style: normal; color: var(--text-low); }
+
+.fa-party { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.fa-pt {
+  padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  color: var(--pc); border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent);
+  background: color-mix(in srgb, var(--pc) 12%, transparent);
+}
+.fa-pt b { font-variant-numeric: tabular-nums; }
+
+.fa-rows { display: flex; flex-direction: column; }
+.fa-row {
+  display: grid; grid-template-columns: 6px auto 1fr auto auto;
+  align-items: center; gap: 7px; padding: 6px 2px;
+  border-top: 1px solid var(--line-1); font-size: 12px;
+}
+.fa-row:first-child { border-top: 0; }
+.fa-dot { width: 6px; height: 6px; border-radius: 50%; }
+.fa-mp { color: var(--text-hi); font-weight: 700; }
+.fa-pty { color: var(--text-low); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-dt { color: var(--text-low); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fa-amt { color: var(--text-mid); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fa-more { padding: 7px 2px 0; font-size: 11px; color: var(--text-low); text-align: center; }
+.fa-note { margin-top: 9px; font-size: 10.5px; line-height: 1.5; color: var(--text-low); }
+
+/* 공직자 마커 — 기관 마크. 방송 로고 핀과 같은 크기로 두되 배경/테두리는 인라인으로 준다. */
+.fd-pin.is-gov { width: 38px; height: 38px; padding: 2px; overflow: visible; border-width: 2.5px; }
+.fd-map .fd-pin.is-gov svg { width: 100%; height: 100%; display: block; }

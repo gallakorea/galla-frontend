@@ -177,8 +177,10 @@
   var TABS = [
     { t: "browse", name: "둘러보기",   segs: [["new","최신"],["near","가까운"],["heat","화제"]] },
     /* '인증'은 유튜버도 방송도 아니다 — 백년가게(정부 지정)·미쉐린·블루리본처럼
-       기관이 인정한 집이다. 백년가게만 800곳대라 전체에 묻어두면 안 보인다. */
-    { t: "who",    name: "누가 갔나",  segs: [["all","전체"],["yt","유튜버"],["tv","방송"],["guide","인증"]] },
+       기관이 인정한 집이다. 백년가게만 800곳대라 전체에 묻어두면 안 보인다.
+       '공직자'는 국회의원이 정치자금으로 밥 먹은 집 — 갈라만 가진 축이다. */
+    { t: "who",    name: "누가 갔나",
+      segs: [["all","전체"],["yt","유튜버"],["tv","방송"],["guide","인증"],["gov","공직자"]] },
     { t: "rank",   name: "랭킹",       segs: [["controversial","논란"],["loved","인정"],["overrated","과대평가"]] },
     { t: "me",     name: "기록",       segs: [["badges","업적"],["leaders","순위"]] }
   ];
@@ -221,7 +223,66 @@
     document.body.classList.add("fd-detail-on");
     try { history.pushState({ fdDetail: 1 }, ""); } catch (_) {}
     showSheet(d);
+    loadAssembly(id);            // 해당되는 집만 명단이 붙는다(없으면 조용히 끝)
   }
+
+  /* ── 국회의원 방문 명단 ──────────────────────────────
+     ⚖️ 기록에 적힌 것만 보여준다. 추정·점수화를 붙이지 않는다 —
+        판단은 이용자의 판정(맛있다/맛없다)이 한다.
+     출처: 오마이뉴스·경향신문·뉴스타파(중앙선관위 정보공개, MIT). */
+  var PARTY_C = {
+    "더불어민주당": "#1f4fd8", "국민의힘": "#d81f2a", "조국혁신당": "#1f9ed8",
+    "정의당": "#d8c31f", "개혁신당": "#e86a1f", "진보당": "#c81f5a"
+  };
+  function won(n) {
+    n = Number(n) || 0;
+    if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
+    if (n >= 10000) return Math.round(n / 10000).toLocaleString() + "만";
+    return n.toLocaleString();
+  }
+  async function loadAssembly(id) {
+    var box = SHEET && SHEET.querySelector("#fd-asm");
+    if (!box) return;
+    var d = await rpc("food_assembly_detail", { p_id: id, p_limit: 30 });
+    if (!d || !d.ok || !d.stat) return;                 // 해당 없는 집
+    var st = d.stat, rows = d.rows || [];
+    var parties = Object.keys(st.parties || {})
+      .map(function (k) { return [k, st.parties[k]]; })
+      .sort(function (a, b) { return b[1] - a[1]; }).slice(0, 4);
+    var per = st.visits > 0 ? Math.round(st.amount / st.visits) : 0;
+    box.innerHTML =
+      '<div class="fa-h">🏛 국회의원이 다녀간 집' +
+        '<span class="fa-src">오마이뉴스·경향신문·뉴스타파</span></div>' +
+      '<div class="fa-stat">' +
+        '<div><b>' + st.mps + '</b><i>의원</i></div>' +
+        '<div><b>' + st.visits + '</b><i>결제</i></div>' +
+        '<div><b>' + won(st.amount) + '</b><i>총액</i></div>' +
+        '<div><b>' + won(per) + '</b><i>건당</i></div>' +
+      '</div>' +
+      (parties.length
+        ? '<div class="fa-party">' + parties.map(function (x) {
+            return '<span class="fa-pt" style="--pc:' + (PARTY_C[x[0]] || "#6b7280") + '">' +
+              esc(x[0]) + ' <b>' + x[1] + '</b></span>'; }).join("") + '</div>'
+        : "") +
+      (rows.length
+        ? '<div class="fa-rows">' + rows.map(function (r) {
+            return '<div class="fa-row">' +
+              '<span class="fa-dot" style="background:' + (PARTY_C[r.party] || "#6b7280") + '"></span>' +
+              '<b class="fa-mp">' + esc(r.mp) + '</b>' +
+              '<span class="fa-pty">' + esc(r.party || "") + '</span>' +
+              '<span class="fa-dt">' + esc(String(r.date || "").slice(0, 10)) + '</span>' +
+              '<span class="fa-amt">' + won(r.amount) + '원</span>' +
+            '</div>'; }).join("") +
+          (d.total > rows.length
+            ? '<div class="fa-more">전체 ' + d.total + '건 중 최근 ' + rows.length + '건</div>' : "") +
+          '</div>'
+        : "") +
+      '<p class="fa-note">' + (st.y0 || "") + '~' + (st.y1 || "") +
+        ' 정치자금 지출내역. 중앙선관위 정보공개 자료를 언론 3사가 정리한 것으로,' +
+        ' 기재된 내용만 그대로 표시합니다.</p>';
+    box.classList.add("on");
+  }
+
   function closeDetail(fromPop) {
     if (!DETAIL) return;
     hideSheet(); closeSub();
@@ -264,6 +325,10 @@
      우리 서버에 복제 저장하면 상표·저작권 문제가 된다). CSP img-src 에 https: 가 열려 있다. */
   var chThumb = function (slug) {
     for (var i = 0; i < CH.length; i++) if (CH[i].slug === slug) return CH[i].thumb || "";
+    return "";
+  };
+  var chKind = function (slug) {
+    for (var i = 0; i < CH.length; i++) if (CH[i].slug === slug) return CH[i].kind || "";
     return "";
   };
 
@@ -586,7 +651,7 @@
   async function loadBrowse(kind) {
     var d = await rpc("food_browse", { p_per: 10, p_channels: 20 });
     var secs = (d && d.sections) || [];
-    if (kind === "yt" || kind === "tv" || kind === "guide") {
+    if (kind === "yt" || kind === "tv" || kind === "guide" || kind === "gov") {
       secs = secs.filter(function (x) { return x.kind === kind; });
     }
     LIST.innerHTML = secs.length
@@ -940,16 +1005,77 @@
     }
   }
 
+  /* 공직자 출처는 기관 마크로 구분한다 — 국회는 국회 휘장, 정부는 정부상징(태극),
+     지자체는 해당 시·도. 이미지 파일을 재호스팅하지 않고 SVG 로 그린다
+     (방송 로고는 YouTube CDN 참조, 기관 마크는 자체 렌더 — 둘 다 복제 저장은 안 한다).
+     시·도 데이터가 들어오면 GOVMARK 에 항목만 늘리면 된다. */
+  var GOVMARK = {
+    /* 국회 — 무궁화 휘장 안에 '국' */
+    assembly: {
+      bg: "#0d2a52", ring: "#c9a227",
+      svg: '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+        '<g fill="#c9a227">' +
+        '<circle cx="20" cy="7.6" r="5.1"/><circle cx="31.8" cy="16.2" r="5.1"/>' +
+        '<circle cx="27.3" cy="30.1" r="5.1"/><circle cx="12.7" cy="30.1" r="5.1"/>' +
+        '<circle cx="8.2" cy="16.2" r="5.1"/>' +
+        '</g><circle cx="20" cy="20" r="9.4" fill="#0d2a52"/>' +
+        '<text x="20" y="24.6" text-anchor="middle" font-size="12.5" font-weight="800" fill="#c9a227">국</text>' +
+        '</svg>'
+    },
+    /* 중앙정부 — 정부상징 문양.
+       행안부 '정부기에 관한 공고'(2016.3.29. 대통령공고 제264호) 사용방법 '다' 항:
+       "정부를 상징하는 문양이 필요한 경우 깃면의 바탕 또는 글자를 제외하여 사용할 수 있다."
+       표준 색도: 좌측 진한 파랑 2.5PB 2/6 · 우측 선명한 빨강 2.5R 4/14 · 가운데 흰색. */
+    gov: {
+      bg: "#ffffff", ring: "#8f9199",
+      svg: '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+        '<circle cx="20" cy="20" r="16" fill="#fff"/>' +
+        '<path d="M4 20a16 16 0 0 1 32 0 8 8 0 0 0-16 0 8 8 0 0 1-16 0Z" fill="#003876"/>' +
+        '<path d="M36 20a16 16 0 0 1-32 0 8 8 0 0 0 16 0 8 8 0 0 1 16 0Z" fill="#c8102e"/>' +
+        '</svg>'
+    },
+    /* 지자체 기본 — 시청 */
+    city: {
+      bg: "#1f3d2b", ring: "#5fbf7f",
+      svg: '<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="#5fbf7f">' +
+        '<path d="M20 5 6 14h28L20 5Z"/><rect x="7" y="16" width="26" height="17" rx="1.6"/>' +
+        '</g><rect x="17.6" y="23" width="4.8" height="10" fill="#0b0b0e"/></svg>'
+    },
+    /* 서울시 — 한글 로고타입 */
+    seoul: {
+      bg: "#ffffff", ring: "#c0392b",
+      svg: '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+        '<text x="20" y="26" text-anchor="middle" font-size="15" font-weight="800" fill="#c0392b">서울</text>' +
+        '</svg>'
+    }
+  };
+  var CITY_RE = /^(busan|daegu|incheon|gwangju|daejeon|ulsan|gyeonggi|sejong|jeju)/;
+  function govMark(slug) {
+    var m = GOVMARK[slug] ||
+            (/^seoul/.test(slug || "") ? GOVMARK.seoul
+             : CITY_RE.test(slug || "") ? GOVMARK.city : GOVMARK.gov);
+    return { html: m.svg, bg: m.bg, ring: m.ring };
+  }
+
   /* 마커에 '어느 방송에 나왔는지'를 띄운다 — 지도만 봐도 또간집인지 쯔양인지 안다.
      로고가 아직 없는 채널(썸네일 수집 전)이나 유저 제보 건은 기본 아이콘으로 떨어진다. */
   function pin(p) {
-    var slug = (p.channels && p.channels.length) ? p.channels[0] : "";
-    var thumb = slug ? chThumb(slug) : "";
-    var more = (p.channels && p.channels.length > 1) ? p.channels.length : 0;
-    var inner = thumb
-      ? '<img src="' + esc(thumb) + '" alt="' + esc(chName(slug)) + '" loading="lazy">'
-      : '<span class="fd-pin-e">' + (p.visited ? "✓" : "🍜") + '</span>';
-    var html = '<div class="fd-pin' + (p.visited ? " visited" : "") + (thumb ? " has-logo" : "") + '">' +
+    /* 출처가 여럿이면 공직자를 먼저 세운다 — 갈라에만 있는 정보라 지도에서 눈에 띄어야 한다. */
+    var chs = (p.channels || []);
+    var gov = "";
+    for (var gi = 0; gi < chs.length; gi++) if (chKind(chs[gi]) === "gov") { gov = chs[gi]; break; }
+    var slug = gov || (chs.length ? chs[0] : "");
+    var thumb = (!gov && slug) ? chThumb(slug) : "";
+    var more = chs.length > 1 ? chs.length : 0;
+    var gm = gov ? govMark(gov) : null;
+    var inner = gm
+      ? gm.html
+      : (thumb
+          ? '<img src="' + esc(thumb) + '" alt="' + esc(chName(slug)) + '" loading="lazy">'
+          : '<span class="fd-pin-e">' + (p.visited ? "✓" : "🍜") + '</span>');
+    var html = '<div class="fd-pin' + (p.visited ? " visited" : "") +
+      (thumb ? " has-logo" : "") + (gm ? " is-gov" : "") + '"' +
+      (gm ? ' style="background:' + gm.bg + ';border-color:' + gm.ring + '"' : "") + '>' +
       inner +
       (p.visited ? '<i class="fd-pin-chk">✓</i>' : '') +
       (more ? '<i class="fd-pin-n">' + more + '</i>' : '') +
@@ -1015,6 +1141,9 @@
               (s.title ? '<span style="opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.title) + '</span>' : '') +
             '</div>'; }).join("") + '</div>'
         : '') +
+      /* 국회의원이 정치자금으로 밥 먹은 집이면 여기에 명단이 붙는다.
+         비어 있으면 렌더 자체를 안 한다 — 4,700곳 대부분은 해당 없다. */
+      '<div class="fd-asm" id="fd-asm"></div>' +
       '<div class="fd-judge" id="fd-judge"></div>' +
       '<div class="fd-why" id="fd-why"></div>' +
       /* 출처 영상 — 썸네일로 먼저 띄우고 누를 때만 iframe 을 붙인다.
