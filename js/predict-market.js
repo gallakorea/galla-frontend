@@ -144,6 +144,7 @@ function render(){
     </div>
     ${m.image_url?`<div class="pb-img"><img src="${esc(m.image_url)}" alt="" loading="lazy" onerror="this.closest('.pb-img')?.remove()"></div>`:''}
     <div class="pb-q">${esc(m.question)}</div>
+    ${m.ai_generated ? '<div class="pb-ai">🤖 이 문항은 AI가 만들었습니다 — 사실과 다를 수 있으니 직접 확인해 주세요.</div>' : ''}
     <div class="pmd-creator" id="pmdCreator" hidden></div>
     ${m.description?`<div class="pb-desc">${esc(m.description)}</div>`:''}
     ${m.issue_id?`<a class="pb-issue-link" href="issue.html?id=${m.issue_id}">⚔️ 원본 이슈에서 진영 대결 보기 →</a>`:''}
