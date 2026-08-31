@@ -74,12 +74,16 @@ Deno.serve(async (req) => {
   const budget = Number(allowed || 0);
   if (budget <= 0) return j({ ok: true, reason: "daily_cap_reached", budget: 0 });
 
-  const { data: targets } = await supa.rpc("food_places_without_photo",
-    { p_limit: budget, p_offset: 0 });
+  /* 🔴 '사진 없는 곳'을 그냥 앞에서부터 가져오면 **실패한 곳이 매번 다시 온다** —
+     구글에 사진이 없던 집은 계속 사진이 없으니 영원히 큐 맨 앞이다.
+     실측: 매칭 12 → 7 → 4 → 2 → 0. 같은 20곳을 여섯 번 다시 물어봤다(유료 API에서).
+     → places_tried 에 물어본 사실을 남기고, 안 물어본 곳만 대상으로 받는다. */
+  const { data: targets } = await supa.rpc("food_places_for_places_api", { p_limit: budget });
 
   let called = 0, matched = 0, inserted = 0;
   const errs: string[] = [];
   const rows: any[] = [];
+  const tried: any[] = [];
 
   for (const p of (targets || []) as any[]) {
     if (called >= budget) break;
@@ -99,6 +103,7 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) { if (errs.length < 3) errs.push(`${r.status}:${(await r.text()).slice(0, 120)}`); continue; }
       const hit = ((await r.json())?.places || [])[0];
+      tried.push({ place_id: p.id, found: !!hit?.photos?.length });
       if (!hit?.photos?.length) continue;
 
       /* 이름이 겹치고 좌표가 2km 안일 때만 인정 */
@@ -121,6 +126,10 @@ Deno.serve(async (req) => {
     } catch (e) { if (errs.length < 3) errs.push(String(e).slice(0, 120)); }
   }
 
+  /* 물어본 사실을 먼저 남긴다 — 사진 저장이 실패해도 재조회는 막아야 한다 */
+  for (let i = 0; i < tried.length; i += 200) {
+    await supa.from("places_tried").upsert(tried.slice(i, i + 200), { onConflict: "place_id" });
+  }
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
     const { error } = await supa.from("food_photos").insert(chunk);
@@ -130,5 +139,5 @@ Deno.serve(async (req) => {
   await supa.from("places_usage").update({ photos: inserted })
     .eq("day", new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10));
 
-  return j({ ok: true, budget, called, matched, inserted, errs });
+  return j({ ok: true, budget, called, matched, inserted, tried: tried.length, errs });
 });

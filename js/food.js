@@ -515,15 +515,11 @@
            '</span>';
   }
   function card(p) {
-    /* 유저가 올린 사진이 있으면 그게 먼저다 — 이건 '이 가게 사진'이 맞고,
-       집마다 다르니 중복도 안 생긴다. 없을 때만 영상 썸네일로 떨어진다. */
-    var vid = p.video_id;
+    /* 둘러보기는 **가게 사진**만 쓴다(사장님 지시).
+       예전엔 사진이 없으면 영상 썸네일로 떨어졌는데, 유튜브 썸네일은 자막이 박힌
+       방송 표지라 '식당 리스트'에 섞이면 무엇을 보는 화면인지 흐려진다.
+       영상 썸네일은 '누가 갔나'의 몫이다 — 거기선 그게 정보다. */
     var th = p.cover || "";
-    if (!th) {
-      var dup = vid && usedThumb && usedThumb.has(vid);
-      if (vid && usedThumb) usedThumb.add(vid);
-      th = dup ? "" : ytThumb(vid);
-    }
     var tot = (p.good || 0) + (p.bad || 0);
     var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
     var ch = (p.channels && p.channels.length) ? p.channels[0] : "";
@@ -558,11 +554,14 @@
     return vid ? "https://i.ytimg.com/vi/" + encodeURIComponent(vid) + "/mqdefault.jpg" : "";
   }
   function browseCard(p) {
-    var th = ytThumb(p.video_id);
+    /* '누가 갔나'는 **그 채널의 영상 썸네일**이 원칙이다(어느 방송에 나왔는지가 정보다).
+       food_browse 가 채널을 맞춰(f2.channel = ch.slug) 영상을 골라준다.
+       다만 영상이 연결된 곳이 264곳뿐이라, 없으면 가게 사진 → 상호 타일 순으로 내려간다. */
+    var th = ytThumb(p.video_id) || p.cover || "";
     var tot = (p.good || 0) + (p.bad || 0);
     return '<div class="fb-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
       '<div class="fb-thumb">' +
-        (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : '<span class="fb-noimg">🍜</span>') +
+        (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) +
         (p.visited ? '<i class="fb-stamp">✓ 갔다옴</i>' : '') +
       '</div>' +
       '<div class="fb-name">' + esc(p.name) + '</div>' +
