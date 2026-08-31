@@ -142,6 +142,100 @@
     };
   }
 
+  /* ═══ 네이티브 백엔드 — 웹뷰 뒤에 깔린 네이버 지도(GallaNaverMap 플러그인) ═══
+     NCP 웹 SDK 는 등록된 http/https origin 에서만 인증을 내주는데 앱 origin 은 capacitor:// 라
+     등록이 아예 불가능하다. 네이티브 SDK 는 **번들 ID·패키지명**으로 등록받아 그 벽이 없다.
+
+     ⚠️ 위쪽 로직(fetchBbox·drawMarkers)은 동기 호출을 기대한다(getBounds·getZoom).
+        네이티브는 전부 비동기라, idle 이벤트로 받은 마지막 값을 들고 있다가 그걸 돌려준다.
+     ⚠️ 마커는 하나씩 못 보낸다(왕복 400번). 모아서 한 번에 넘긴다. */
+  function nativeBackend(el, lat, lon, zoom) {
+    var P = window.Capacitor.Plugins.GallaNaverMap;
+    var last = { swLat: 0, swLon: 0, neLat: 0, neLon: 0, zoom: zoom, ok: false };
+    var idleFns = [], clickMap = {}, pending = [], flushT = 0, seq = 0;
+
+    P.addListener("idle", function (e) {
+      last = { swLat: +e.swLat, swLon: +e.swLon, neLat: +e.neLat, neLon: +e.neLon,
+               zoom: +e.zoom, ok: (+e.neLat > +e.swLat) && (+e.neLon > +e.swLon) };
+      idleFns.forEach(function (f) { try { f(); } catch (_) {} });
+    });
+    P.addListener("markerClick", function (e) {
+      var f = clickMap[e && e.id]; if (f) try { f(); } catch (_) {}
+    });
+
+    /* ⚠️ 캔버스 DOM 을 재서 넘기면 안 된다 — 오버레이가 막 열린 시점엔 아직 0 이고,
+       그러면 네이티브 지도가 0 크기로 만들어져 아무것도 안 그려진다
+       (실측 로그: "(NMapsMap) Error: distanvePerminWidth is 0").
+       .fd-map 은 position:fixed; inset:0 이라 어차피 화면 전체다. 화면을 그대로 쓴다. */
+    function rect() {
+      return { x: 0, y: 0,
+               width: window.innerWidth || document.documentElement.clientWidth,
+               height: window.innerHeight || document.documentElement.clientHeight };
+    }
+    function flush() {
+      flushT = 0;
+      var list = pending.filter(function (m) { return !m.__dead; });
+      P.setMarkers({ markers: list.map(function (m) { return m.spec; }) }).catch(function () {});
+    }
+    function schedule() { if (!flushT) flushT = setTimeout(flush, 0); }
+
+    var f0 = rect();
+    P.create({ x: f0.x, y: f0.y, width: f0.width, height: f0.height,
+               lat: lat, lng: lon, zoom: zoom }).catch(function (e) {
+      console.warn("[food] 네이티브 지도 create 실패:", e);
+    });
+    /* 지도가 웹뷰 **뒤**에 있으므로 캔버스는 비어 있어야 보인다 */
+    el.classList.add("fd-canvas-native");
+    document.body.classList.add("fd-native-map");
+    document.documentElement.classList.add("fd-native-map");
+
+    return {
+      kind: "native",
+      onIdle: function (fn) { idleFns.push(fn); },
+      getBounds: function () {
+        if (!last.ok) return null;                     // 접혀 있으면 호출부가 재시도한다
+        return { swLat: last.swLat, swLon: last.swLon, neLat: last.neLat, neLon: last.neLon };
+      },
+      getZoom: function () { return Math.round(last.zoom || zoom); },
+      setView: function (la, lo, z) {
+        P.setCamera({ lat: la, lng: lo, zoom: z || last.zoom || zoom }).catch(function () {});
+      },
+      refresh: function () {
+        var f = rect();
+        P.setFrame({ x: f.x, y: f.y, width: f.width, height: f.height }).catch(function () {});
+        /* 첫 진입엔 idle 이 아직 안 와서 경계가 없다 — 한 번 물어서 채워둔다 */
+        P.getBounds().then(function (b) {
+          if (!b || !b.ok) return;
+          last = { swLat: +b.swLat, swLon: +b.swLon, neLat: +b.neLat, neLon: +b.neLon,
+                   zoom: +b.zoom, ok: true };
+          idleFns.forEach(function (f2) { try { f2(); } catch (_) {} });
+        }).catch(function () {});
+      },
+      marker: function (la, lo, html, size, onClick, spec) {
+        var id = "m" + (++seq);
+        var sp = spec || { kind: "pin", text: "🍜" };
+        sp.id = id; sp.lat = la; sp.lng = lo; sp.size = size;
+        var m = { spec: sp, __dead: false };
+        if (onClick) clickMap[id] = onClick;
+        pending.push(m); schedule();
+        return m;
+      },
+      drop: function (m) {
+        if (!m) return;
+        m.__dead = true;
+        delete clickMap[m.spec && m.spec.id];
+        var i = pending.indexOf(m); if (i >= 0) pending.splice(i, 1);
+        schedule();
+      },
+      teardown: function () {
+        el.classList.remove("fd-canvas-native");
+        document.body.classList.remove("fd-native-map");
+        document.documentElement.classList.remove("fd-native-map");
+        P.destroy().catch(function () {});
+      }
+    };
+  }
+
   function leafletBackend(el, lat, lon, zoom) {
     var map = L.map(el, { zoomControl: false, attributionControl: true, tap: false })
                .setView([lat, lon], zoom);
@@ -927,7 +1021,18 @@
       var cv = MAP.querySelector("#fd-canvas");
       /* 1순위 네이버. 인증·도메인 문제로 못 뜨면 조용히 Leaflet 으로 내려간다 —
          앱에서 지도가 백지가 되는 것보다 낫다. 어느 쪽으로 떴는지는 콘솔에 남긴다. */
-      if (MAPCFG.provider === "naver") {
+      /* 🥇 앱에서는 네이티브 지도가 1순위 — 웹 SDK 는 origin 때문에 인증이 안 된다.
+         플러그인이 없는 예전 빌드(OTA 로 웹만 갱신된 앱)도 있으므로 존재를 확인하고 쓴다. */
+      var NP = null;
+      try { NP = isNativeOrigin() && window.Capacitor && window.Capacitor.Plugins
+                  && window.Capacitor.Plugins.GallaNaverMap; } catch (_) {}
+      if (NP && MAPCFG.clientId) {
+        try {
+          await NP.setup({ ncpKeyId: MAPCFG.clientId });
+          MB = nativeBackend(cv, 37.5665, 126.978, 12);
+        } catch (e) { console.warn("[food] 네이티브 지도 실패 → 다음 후보:", String(e)); MB = null; }
+      }
+      if (!MB && MAPCFG.provider === "naver" && !isNativeOrigin()) {
         try {
           await loadNaver(); MB = naverBackend(cv, 37.5665, 126.978, 12);
           /* 🔴 "떴는데 백지"를 잡는 마지막 관문.
@@ -998,6 +1103,9 @@
 
   function closeMap(fromPop) {
     if (!MAP) return;
+    /* 🔴 네이티브 지도는 웹뷰 **뒤**에 있는 별개의 뷰라 DOM 을 닫아도 안 사라진다.
+       남겨두면 다음 판 뒤에 지도가 계속 떠 있고 웹뷰는 투명한 채로 남는다. */
+    if (MB && MB.teardown) { try { MB.teardown(); } catch (_) {} MB = null; }
     MAP.classList.remove("open");
     document.body.classList.remove("fd-map-on");
     document.body.style.overflow = "";
@@ -1062,7 +1170,9 @@
         var m = MB.marker(cla, clo,
           '<div class="fd-cluster" style="width:' + size + 'px;height:' + size + 'px;font-size:' +
           (n < 100 ? 13 : 11) + 'px">' + n + '</div>', size,
-          function () { MB.setView(cla, clo, Math.min(z + 3, 17)); });
+          function () { MB.setView(cla, clo, Math.min(z + 3, 17)); },
+          { kind: "cluster", text: String(n), bg: "#4361ffe6", ring: "#ffffffd9", fg: "#ffffff",
+            logo: "", badge: "", count: 0 });
         markers.push(m);
       });
     }
@@ -1072,6 +1182,10 @@
      지자체는 해당 시·도. 이미지 파일을 재호스팅하지 않고 SVG 로 그린다
      (방송 로고는 YouTube CDN 참조, 기관 마크는 자체 렌더 — 둘 다 복제 저장은 안 한다).
      시·도 데이터가 들어오면 GOVMARK 에 항목만 늘리면 된다. */
+  /* 네이티브 지도용 — SVG 휘장을 Core Graphics 로 다시 그리면 웹과 반드시 어긋난다.
+     앱에서는 같은 색 원 안에 기관 한 글자를 넣어 대신한다(모양은 다르고 의미는 같다). */
+  var GOVMARK_CHAR = { assembly: "국", gov: "정", seoul: "서", gyeonggi: "경" };
+
   var GOVMARK = {
     /* 국회 — 무궁화 휘장 안에 '국' */
     assembly: {
@@ -1155,7 +1269,20 @@
        오버레이(#fd-detail)로 뽑아낸 뒤에도 이 경로만 옛 코드로 남아서, showSheet 이
        SHEET(=DETAIL 안의 요소)를 못 찾고 조용히 죽었다 — **핀을 눌러도 아무 일이
        안 일어났다**(2026-08-31 시뮬 실측). 목록 카드와 같은 입구를 쓴다. */
-    return MB.marker(+p.lat, +p.lon, html, 38, function () { openDetail(p.id); });
+    /* 네이티브 지도(앱)는 HTML 을 못 그린다 — 같은 판단을 구조체로도 함께 넘긴다.
+       '무엇을 세울지'는 여기서만 정하고, 웹은 HTML 로 앱은 이 spec 으로 각자 그린다.
+       두 곳에서 따로 판단하게 두면 웹과 앱의 지도가 반드시 어긋난다. */
+    var spec = {
+      kind: "pin",
+      bg: gm ? gm.bg : (p.visited ? "#1db954" : "#4361ff"),
+      ring: gm ? gm.ring : "#ffffff",
+      fg: "#ffffff",
+      logo: (!gm && thumb) ? thumb : "",
+      text: gm ? (GOVMARK_CHAR[gov] || "관") : (thumb ? "" : (p.visited ? "✓" : "🍜")),
+      badge: p.visited ? "✓" : "",
+      count: more || 0
+    };
+    return MB.marker(+p.lat, +p.lon, html, 38, function () { openDetail(p.id); }, spec);
   }
 
   /* ── 채널 페이지 ──────────────────────────────────────

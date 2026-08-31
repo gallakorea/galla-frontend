@@ -1113,3 +1113,26 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
 .fi-src { margin-top: 6px; font-size: 10.5px; color: var(--text-low); }
 /* 목록 카드 둘째 줄 */
 .fd-sub2 { margin: 2px 0 0; font-size: 11.5px; color: var(--text-low); }
+
+/* ═══ 네이티브 지도(앱) — 지도는 웹뷰 **뒤**에 있다 ═══
+   그래서 이 위로 덮는 모든 배경은 투명해야 한다. 하나라도 불투명하게 남으면
+   지도는 멀쩡히 떠 있는데 화면은 시커멓다 — '지도가 안 뜬다'로 보이는 그 증상이다.
+   ⚠️ 헤더 그라데이션·바텀시트는 그대로 둔다. 그건 지도 위에 떠야 하는 UI다. */
+body.fd-native-map .fd-map { background: transparent; }
+body.fd-native-map .fd-map-canvas,
+.fd-map-canvas.fd-canvas-native { background: transparent; }
+/* 🔴 배경만 투명하게 해선 안 된다 — 뒤에 있는 판(트렌드 등)이 자기 픽셀을 그대로 칠하고
+   있어서, 지도가 아니라 **직전 화면이 비쳐 보인다**(실측: 지도 헤더 밑에 트렌드 목록이 그대로).
+   지도가 웹뷰 뒤에 있는 동안엔 셸의 판들을 아예 안 그리게 한다.
+   display:none 이 아니라 visibility 인 이유 — 스크롤 위치와 재생 중인 영상을 잃지 않으려고. */
+body.fd-native-map #tab-track,
+body.fd-native-map #stack-root,
+body.fd-native-map .nav,
+body.fd-native-map header { visibility: hidden; }
+/* 🔴 body 만 투명하게 해선 소용없다 — theme.css 가 `html { background:#0a0a0b !important }` 로
+   문서 자체를 칠한다. 그 검정이 웹뷰 뒤 지도를 통째로 덮는다(실측: 지도 뷰를 빨강으로 칠해도
+   화면은 검정 그대로였다). html 에도 클래스를 걸고 여기서 함께 벗긴다.
+   body::before(노치 filler)도 불투명해서 상단을 가린다 — 같이 끈다. */
+html.fd-native-map,
+html.fd-native-map body { background: transparent !important; }
+html.fd-native-map body::before { display: none; }
