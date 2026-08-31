@@ -591,6 +591,10 @@
     var th = p.cover || "";
     var tot = (p.good || 0) + (p.bad || 0);
     var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
+    /* 카드에도 영업시간·평점을 한 줄 얹는다 — 목록에서 바로 판단이 되게 */
+    var hrs = todayHours(p.hours);
+    var sub2 = [hrs ? hrs.replace(/^[^:]*:\s*/, "") : "",
+                p.rating ? "★" + p.rating : ""].filter(Boolean).join(" · ");
     var ch = (p.channels && p.channels.length) ? p.channels[0] : "";
     return '<article class="fd-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
       '<div class="fd-th">' +
@@ -601,6 +605,7 @@
       '<div class="fd-b">' +
         '<h4 class="fd-name">' + esc(p.name) + '</h4>' +
         '<p class="fd-sub">' + esc(meta) + '</p>' +
+        (sub2 ? '<p class="fd-sub2">' + esc(sub2) + '</p>' : '') +
         '<div class="fd-foot">' +
           (ch ? '<span class="fd-ch big">' +
                   (chThumb(ch) ? '<img src="' + esc(chThumb(ch)) + '" alt="" loading="lazy">' : '') +
@@ -1353,6 +1358,35 @@
   /* ── 상세 시트 — 여기가 싸움터다 ──────────────────────
      맛집여지도는 "방송에 나온 집"을 보여주고 끝난다. 갈라는 거기서 시작한다:
      맛있다 / 맛없다를 고르고, **고른 사람만** 말할 수 있다. */
+  /* 가게 정보 — 전화·영업시간·평점.
+     참조 서비스 카드가 좋아 보이는 건 사진이 아니라 이것들이었다(저쪽도 사진 없는 집은
+     채널 로고로 때운다). 구글에서 사진과 같은 호출로 받아온다.
+     ⚖️ 구글 데이터라 출처를 밝힌다. 영업시간은 오늘 요일만 접어서 보여주고 펼치게 한다. */
+  var DAYIDX = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  function todayHours(h) {
+    if (!h || !h.length) return "";
+    var want = DAYIDX[new Date().getDay()];
+    for (var i = 0; i < h.length; i++) if (String(h[i]).indexOf(want) === 0) return String(h[i]);
+    return String(h[0]);
+  }
+  function infoHtml(p) {
+    var h = p.hours || [], t = todayHours(h);
+    var bits = [];
+    if (p.phone) bits.push('<a class="fi-i fi-tel" href="tel:' + esc(p.phone) + '">' +
+      '<b>전화</b>' + esc(p.phone) + '</a>');
+    if (t) bits.push('<button type="button" class="fi-i fi-hr" data-hours="1">' +
+      '<b>영업</b>' + esc(t.replace(/^[^:]*:\s*/, "")) +
+      (h.length > 1 ? '<i class="fi-more">▾</i>' : '') + '</button>');
+    if (p.rating) bits.push('<span class="fi-i fi-rt"><b>★</b>' + esc(String(p.rating)) +
+      (p.rating_n ? '<i>(' + p.rating_n + ')</i>' : '') + '</span>');
+    if (!bits.length) return "";
+    return '<div class="fi-wrap">' + bits.join("") +
+      '<div class="fi-days" id="fi-days" hidden>' +
+        h.map(function (x) { return '<div>' + esc(x) + '</div>'; }).join("") +
+        (p.info_src === "google" ? '<div class="fi-src">영업시간·전화 · Google</div>' : '') +
+      '</div></div>';
+  }
+
   var KINDCHIP = { yt: ["유튜버", "#d0796a"], tv: ["방송", "#6aa8d0"],
                    guide: ["인증", "#8ac97a"], gov: ["공직자", "#c9a227"] };
   function srcHtml(list) {
@@ -1405,7 +1439,7 @@
         (p.category ? '<span class="fd-cat">' + esc(p.category) + '</span>' : '') +
         '<span class="addr">' + esc(p.address) + '</span>' +
       '</div>' +
-      (p.phone ? '<a class="fd-tel" href="tel:' + esc(p.phone) + '">📞 ' + esc(p.phone) + '</a>' : '') +
+      infoHtml(p) +
       /* 누가 다녀갔나 — 이 서비스의 정체성이라 상세에서도 1급으로 세운다.
          ⚠️ 예전엔 '📺 채널명 제목' 텍스트 한 줄이었다. RPC 는 로고·영상ID·제목·방영일을
             이미 다 주는데 화면이 안 썼다. 로고를 세우고, 영상이 있으면 썸네일을 붙여
@@ -1641,6 +1675,11 @@
       vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
         '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
       vw.classList.add("playing"); return;
+    }
+    if (t.closest("[data-hours]")) {
+      var dd = SHEET && SHEET.querySelector("#fi-days");
+      if (dd) dd.hidden = !dd.hidden;
+      return;
     }
     var wy = t.closest("[data-why]");
     if (wy) { sendWhy(wy.dataset.why); return; }

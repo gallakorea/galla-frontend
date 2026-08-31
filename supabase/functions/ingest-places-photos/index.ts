@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
   const errs: string[] = [];
   const rows: any[] = [];
   const tried: any[] = [];
+  const info: any[] = [];
 
   for (const p of (targets || []) as any[]) {
     if (called >= budget) break;
@@ -94,7 +95,13 @@ Deno.serve(async (req) => {
         headers: {
           "content-type": "application/json",
           "X-Goog-Api-Key": KEY,
-          "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.photos",
+          /* 사진과 **같은 호출로** 전화·영업시간·평점까지 받는다(추가 호출 0).
+             ⚠️ 이 필드들은 Enterprise SKU 라 Text Search 단가가 올라간다. 그래도
+                하루 상한(구글 콘솔 + places_take)이 이중으로 막고 있어 폭주하지 않는다.
+             ⚖️ 구글 약관상 Place ID 외 콘텐츠는 최대 30일 캐시 — 사진과 같은 주기로 갱신. */
+          "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.photos," +
+            "places.nationalPhoneNumber,places.regularOpeningHours.weekdayDescriptions," +
+            "places.rating,places.userRatingCount,places.priceLevel",
         },
         body: JSON.stringify({
           textQuery: `${p.name} ${p.address || ""}`.trim(),
@@ -104,16 +111,34 @@ Deno.serve(async (req) => {
       if (!r.ok) { if (errs.length < 3) errs.push(`${r.status}:${(await r.text()).slice(0, 120)}`); continue; }
       const hit = ((await r.json())?.places || [])[0];
       tried.push({ place_id: p.id, found: !!hit?.photos?.length });
-      if (!hit?.photos?.length) continue;
+      if (!hit) continue;
 
-      /* 이름이 겹치고 좌표가 2km 안일 때만 인정 */
+      /* 이름이 겹치고 좌표가 2km 안일 때만 인정 — 정보든 사진이든 이 관문을 지나야 한다 */
       const t = norm(hit.displayName?.text || ""), n = norm(p.name);
       if (!(t.includes(n) || n.includes(t))) continue;
       const dy = Number(hit.location?.latitude) - Number(p.lat);
       const dx = Number(hit.location?.longitude) - Number(p.lon);
       if (!isFinite(dx) || !isFinite(dy) || (dx * dx + dy * dy) >= 0.02 * 0.02) continue;
+      if (!hit.photos?.length) {
+        /* 사진은 없어도 전화·영업시간은 챙긴다 */
+        info.push({ place_id: p.id, phone: hit.nationalPhoneNumber || "",
+                    hours: hit.regularOpeningHours?.weekdayDescriptions || null,
+                    rating: hit.rating ?? "", rating_n: hit.userRatingCount ?? "",
+                    price_level: hit.priceLevel || "" });
+        continue;
+      }
 
       matched++;
+      /* 사진이 없어도 정보는 챙긴다 — 참조 서비스 카드가 좋아 보이는 건
+         사진이 아니라 전화·영업시간이었다(저쪽도 사진 없는 집은 로고로 때운다). */
+      info.push({
+        place_id: p.id,
+        phone: hit.nationalPhoneNumber || "",
+        hours: hit.regularOpeningHours?.weekdayDescriptions || null,
+        rating: hit.rating ?? "",
+        rating_n: hit.userRatingCount ?? "",
+        price_level: hit.priceLevel || "",
+      });
       const ph = hit.photos[0];
       const stored = await toR2(ph.name, p.id);
       if (!stored) continue;                       // R2 에 못 담으면 아예 저장하지 않는다
@@ -130,8 +155,18 @@ Deno.serve(async (req) => {
   for (let i = 0; i < tried.length; i += 200) {
     await supa.from("places_tried").upsert(tried.slice(i, i + 200), { onConflict: "place_id" });
   }
-  for (let i = 0; i < rows.length; i += 200) {
-    const chunk = rows.slice(i, i + 200);
+  /* ⚠️ 이제 대상이 '사진 없는 곳'이 아니라 '안 물어본 곳'이라, 이미 사진이 있는 집도
+     정보를 받으려고 다시 온다. 그때 사진 insert 는 유니크 충돌이 나므로 미리 걸러낸다. */
+  const keys = rows.map((r) => r.ext_key);
+  const have = new Set<string>();
+  for (let i = 0; i < keys.length; i += 200) {
+    const { data } = await supa.from("food_photos").select("ext_key")
+      .in("ext_key", keys.slice(i, i + 200));
+    for (const r of (data || []) as any[]) have.add(r.ext_key);
+  }
+  const fresh = rows.filter((r) => !have.has(r.ext_key));
+  for (let i = 0; i < fresh.length; i += 200) {
+    const chunk = fresh.slice(i, i + 200);
     const { error } = await supa.from("food_photos").insert(chunk);
     if (error) { if (errs.length < 5) errs.push(String(error.message).slice(0, 160)); }
     else inserted += chunk.length;
@@ -139,5 +174,10 @@ Deno.serve(async (req) => {
   await supa.from("places_usage").update({ photos: inserted })
     .eq("day", new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10));
 
-  return j({ ok: true, budget, called, matched, inserted, tried: tried.length, errs });
+  let infoN = 0;
+  for (let i = 0; i < info.length; i += 200) {
+    const { data } = await supa.rpc("food_place_info_set", { p_items: info.slice(i, i + 200) });
+    infoN += (data?.n ?? 0);
+  }
+  return j({ ok: true, budget, called, matched, inserted, info: infoN, tried: tried.length, errs });
 });

@@ -1088,3 +1088,28 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cg-ok { flex: 0 0 auto; color: var(--ok); font-size: 14px; font-weight: 800; }
+
+/* ── 가게 정보 (전화·영업시간·평점) ────────────────────
+   참조 서비스 카드가 좋아 보이는 건 사진이 아니라 이것들이었다.
+   저쪽도 사진 없는 집은 채널 로고로 때운다 — 차이는 정보였다. */
+.fi-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fi-i {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 11px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-hi); font-size: 12.5px; font-weight: 600;
+  text-decoration: none;
+}
+.fi-i b { color: var(--text-low); font-size: 11px; font-weight: 700; }
+.fi-tel { color: var(--accent-2); }
+.fi-rt { cursor: default; }
+.fi-rt b { color: #f5c451; font-size: 12px; }
+.fi-rt i { font-style: normal; color: var(--text-low); font-size: 11px; }
+.fi-more { font-style: normal; color: var(--text-low); font-size: 10px; }
+.fi-days {
+  width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--text-mid); font-size: 12px; line-height: 1.75;
+}
+.fi-src { margin-top: 6px; font-size: 10.5px; color: var(--text-low); }
+/* 목록 카드 둘째 줄 */
+.fd-sub2 { margin: 2px 0 0; font-size: 11.5px; color: var(--text-low); }
