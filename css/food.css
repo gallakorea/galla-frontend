@@ -488,3 +488,64 @@ button.fd-sec-sub.unset { color: var(--text-low); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fd-city b { margin-left: 4px; color: var(--accent-2); font-size: 11px; }
 .fd-city.zero { color: var(--text-low); opacity: .55; }
+
+/* ═══ 카드 재설계 (2026-08-31) ═══════════════════════════════
+   사장님: "너무 촌스럽다." 맞다. 예전 카드는 이름·주소·태그·점수가 전부 비슷한
+   크기와 무게로 쌓여 눈이 갈 곳이 없었다. 위계를 셋으로 줄인다:
+     ① 썸네일이 먼저 눈에 든다  ② 상호가 크고 밝다  ③ 나머지는 한 줄로 눌러 회색.
+   사진은 출처 영상 썸네일 — 매장 사진이 없는 우리가 가진 유일한 이미지다.
+   ⚠️ 아래 규칙이 위쪽 .fd-card/.fd-name/.fd-addr 블록을 덮는다(순서로 이긴다). */
+.fd-list { gap: 10px; }
+.fd-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px; border-radius: 14px; cursor: pointer;
+  background: var(--surface-1); border: 1px solid transparent;   /* 테두리를 지운다 — 상자가 아니라 덩어리로 */
+  transition: background .15s ease;
+}
+.fd-card:active { background: var(--surface-2); }
+.fd-card.visited { opacity: 1; }                                  /* 통째 흐리기 대신 썸네일만 */
+
+.fd-th {
+  position: relative; flex: 0 0 auto; width: 84px; height: 84px;
+  border-radius: 11px; overflow: hidden; background: var(--surface-3);
+  display: grid; place-items: center;
+}
+.fd-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-th-e { font-size: 24px; opacity: .35; }
+.fd-card.visited .fd-th img { opacity: .4; }
+.fd-th-chk {
+  position: absolute; right: 5px; bottom: 5px; width: 19px; height: 19px;
+  display: grid; place-items: center; border-radius: 50%; font-style: normal;
+  background: var(--ok); color: #04120a; font-size: 11px; font-weight: 800;
+}
+
+.fd-b { flex: 1; min-width: 0; }
+.fd-card .fd-name {
+  margin: 0; font-size: 15.5px; font-weight: 700; letter-spacing: -.02em;
+  color: var(--text-hi); line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fd-card .fd-name .stamp { display: none; }                       /* 도장은 썸네일 배지로 옮겼다 */
+.fd-sub {
+  margin: 3px 0 0; font-size: 12px; color: var(--text-low); line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fd-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.fd-ch {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 62%;
+  padding: 3px 9px 3px 3px; border-radius: 999px;
+  background: var(--surface-3); color: var(--text-mid);
+  font-size: 11px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fd-ch img { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.fd-more { font-size: 10.5px; color: var(--text-low); font-weight: 700; }
+.fd-vs { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-low); }
+.fd-vs b { color: var(--pro); font-weight: 800; }
+.fd-vs i { color: var(--con); font-weight: 800; font-style: normal; }
+
+/* 섹션에 숨 쉴 공간 — 예전엔 간격이 촘촘하고 균일해서 다 붙어 보였다 */
+.fd-sec { margin-top: 22px; }
+.fd-sec-head { margin-bottom: 14px; }
+.fd-chips { padding-bottom: 14px; }
+.fd-sort { margin-bottom: 12px; }

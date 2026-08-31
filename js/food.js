@@ -317,23 +317,36 @@
     return ps;
   }
 
+  /* 카드 — 사진을 주인공으로. 예전엔 이름·주소·태그·점수가 전부 비슷한 무게로 쌓여
+     눈이 갈 곳이 없었다(사장님: 촌스럽다). 위계를 셋으로 줄인다:
+       ① 썸네일  ② 상호(크게)  ③ 나머지는 한 줄로 눌러서 회색.
+     사진은 출처 영상 썸네일을 쓴다 — 매장 사진이 없는 우리가 가진 유일한 이미지다. */
+  function shortAddr(ad) {
+    var t = String(ad || "").split(/\s+/);
+    return t.length > 2 ? t.slice(1, 3).join(" ") : t.join(" ");
+  }
   function card(p) {
-    return '<div class="fd-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
-      '<div class="fd-card-b">' +
-        '<div class="fd-name">' + esc(p.name) + (p.visited ? '<span class="stamp">✓ 갔다옴</span>' : '') + '</div>' +
-        '<div class="fd-addr">' + esc(p.address) +
-          (distText(p) ? '<span class="fd-dist">' + distText(p) + '</span>' : '') + '</div>' +
-        ((p.channels && p.channels.length)
-          ? '<div class="fd-tags">' + p.channels.slice(0, 3).map(function (s) {
-              return '<span class="fd-tag">' + esc(chName(s)) + '</span>'; }).join("") + '</div>'
-          : '') +
-        (p.total ? '<div class="fd-score">' +
-            '<span class="good">맛있다 ' + p.good + '</span>' +
-            '<span class="sep">vs</span>' +
-            '<span class="bad">맛없다 ' + p.bad + '</span>' +
-            (mode === "controversial" ? '<span class="fd-heat">🔥 ' + p.heat + '</span>' : '') +
-          '</div>' : '') +
-      '</div></div>';
+    var th = ytThumb(p.video_id);
+    var tot = (p.good || 0) + (p.bad || 0);
+    var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
+    var ch = (p.channels && p.channels.length) ? p.channels[0] : "";
+    return '<article class="fd-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
+      '<div class="fd-th">' +
+        (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : '<span class="fd-th-e">🍜</span>') +
+        (p.visited ? '<i class="fd-th-chk">✓</i>' : '') +
+      '</div>' +
+      '<div class="fd-b">' +
+        '<h4 class="fd-name">' + esc(p.name) + '</h4>' +
+        '<p class="fd-sub">' + esc(meta) + '</p>' +
+        '<div class="fd-foot">' +
+          (ch ? '<span class="fd-ch">' +
+                  (chThumb(ch) ? '<img src="' + esc(chThumb(ch)) + '" alt="" loading="lazy">' : '') +
+                  esc(chName(ch)) + '</span>' : '') +
+          (p.channels && p.channels.length > 1 ? '<span class="fd-more">+' + (p.channels.length - 1) + '</span>' : '') +
+          (tot ? '<span class="fd-vs"><b>' + p.good + '</b>:<i>' + p.bad + '</i></span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</article>';
   }
 
   var EMPTY = {
