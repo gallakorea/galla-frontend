@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
      → places_tried 에 물어본 사실을 남기고, 안 물어본 곳만 대상으로 받는다. */
   const { data: targets } = await supa.rpc("food_places_for_places_api", { p_limit: budget });
 
-  let called = 0, matched = 0, inserted = 0;
+  let called = 0, matched = 0, inserted = 0, quotaDead = false;
   const errs: string[] = [];
   const rows: any[] = [];
   const tried: any[] = [];
@@ -108,7 +108,14 @@ Deno.serve(async (req) => {
           languageCode: "ko", regionCode: "KR", maxResultCount: 1,
         }),
       });
-      if (!r.ok) { if (errs.length < 3) errs.push(`${r.status}:${(await r.text()).slice(0, 120)}`); continue; }
+      if (!r.ok) {
+        if (errs.length < 3) errs.push(`${r.status}:${(await r.text()).slice(0, 120)}`);
+        /* 🔴 429 는 '이 집이 안 된다'가 아니라 '오늘 구글이 문을 닫았다'는 뜻이다.
+           예전엔 continue 라서 남은 대상 전부에 429 를 한 번씩 더 맞았다 —
+           예산은 선차감이라 그 몫이 그대로 증발했다(8/31: 980콜). 즉시 멈춘다. */
+        if (r.status === 429 || r.status === 403) { quotaDead = true; break; }
+        continue;
+      }
       const hit = ((await r.json())?.places || [])[0];
       tried.push({ place_id: p.id, found: !!hit?.photos?.length });
       if (!hit) continue;
@@ -171,13 +178,17 @@ Deno.serve(async (req) => {
     if (error) { if (errs.length < 5) errs.push(String(error.message).slice(0, 160)); }
     else inserted += chunk.length;
   }
-  await supa.from("places_usage").update({ photos: inserted })
-    .eq("day", new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10));
+  /* 받아놓고 못 쓴 몫을 돌려준다 — 429 로 일찍 멈췄을 때가 대부분이다 */
+  if (budget > called) await supa.rpc("places_refund", { p_n: budget - called });
+  /* ⚠️ 장부의 하루는 구글 할당량과 같은 태평양시다(KST 아님). 여기서 KST 를 쓰면
+        하루가 어긋나 엉뚱한 행의 photos 를 덮어쓴다. */
+  const laDay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  await supa.from("places_usage").update({ photos: inserted }).eq("day", laDay);
 
   let infoN = 0;
   for (let i = 0; i < info.length; i += 200) {
     const { data } = await supa.rpc("food_place_info_set", { p_items: info.slice(i, i + 200) });
     infoN += (data?.n ?? 0);
   }
-  return j({ ok: true, budget, called, matched, inserted, info: infoN, tried: tried.length, errs });
+  return j({ ok: true, budget, called, matched, inserted, info: infoN, tried: tried.length, quotaDead, errs });
 });
