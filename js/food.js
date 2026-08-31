@@ -753,15 +753,46 @@
       '<div class="fb-row chip-scroll">' + (sec.places || []).map(browseCard).join("") + '</div>' +
     '</section>';
   }
+  /* ── 채널 인덱스 ────────────────────────────────────────
+     "누가 갔나"에 섹션만 있으면 **누가 있는지 알려면 끝까지 스크롤해야 한다**(사장님 지적).
+     참조 서비스는 채널 그리드를 맨 위에 두고 눌러서 들어가게 한다 — 그 어포던스만 가져온다.
+     ⚠️ 탭을 새로 빼지 않는다. 저쪽 '모아보기'가 하는 일을 우리는 이미 이 탭이 하고 있고,
+        탭을 늘리면 같은 걸 두 군데서 찾게 된다. 인덱스를 이 탭의 머리로 붙인다.
+     ⚠️ 우리 채널은 59개다(저쪽 14개). 전부 깔면 그리드만 30줄이라 섹션이 안 보인다.
+        → 많은 순 12개만 깔고 나머지는 이미 있는 '누구 고르기' 시트(검색·종류별)로 넘긴다. */
+  function chIndexHtml(kind) {
+    var list = CH.filter(function (c) {
+      return c.total > 0 && (kind === "all" || !kind || chKind(c.slug) === kind);
+    }).sort(function (a, b) { return b.total - a.total; });
+    if (!list.length) return "";
+    var top = list.slice(0, 12);
+    return '<section class="fx-idx">' +
+      '<div class="fx-h"><b>어떤 방송을 볼까요?</b>' +
+        '<button type="button" class="fx-more" data-chpick>전체 ' + list.length + '개 ›</button></div>' +
+      '<div class="fx-grid">' + top.map(function (c) {
+        var th = c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">'
+                         : '<span class="fx-ini">' + esc(initials(c.name)) + '</span>';
+        return '<button type="button" class="fx-card" data-ch2="' + esc(c.slug) + '">' +
+          '<span class="fx-av">' + th + '</span>' +
+          '<span class="fx-tx"><b>' + esc(c.name) + '</b>' +
+            '<i>' + c.total + '곳</i></span>' +
+          /* 정복률은 저쪽에 없는 축이다 — 목록이 아니라 '내가 얼마나 깼나'로 보이게 한다 */
+          (c.visited ? '<span class="fx-bar"><i style="width:' +
+             Math.max(3, Math.round(c.visited * 100 / c.total)) + '%"></i></span>' : '') +
+        '</button>';
+      }).join("") + '</div></section>';
+  }
+
   async function loadBrowse(kind) {
     var d = await rpc("food_browse", { p_per: 10, p_channels: 20 });
     var secs = (d && d.sections) || [];
     if (kind === "yt" || kind === "tv" || kind === "guide" || kind === "gov") {
       secs = secs.filter(function (x) { return x.kind === kind; });
     }
+    var idx = chIndexHtml(kind);
     LIST.innerHTML = secs.length
-      ? '<div class="fb-wrap">' + secs.map(sectionHtml).join("") + '</div>'
-      : '<div class="fd-empty">아직 방송별로 모을 만큼 쌓이지 않았어요.<br>수집이 하루 두 번 돕니다.</div>';
+      ? idx + '<div class="fb-wrap">' + secs.map(sectionHtml).join("") + '</div>'
+      : (idx || '<div class="fd-empty">아직 방송별로 모을 만큼 쌓이지 않았어요.<br>수집이 하루 두 번 돕니다.</div>');
   }
 
   /* 랭킹 — 저쪽은 '많이 다녀온 / 많이 등록한' 두 줄이다.

@@ -1136,3 +1136,39 @@ body.fd-native-map header { visibility: hidden; }
 html.fd-native-map,
 html.fd-native-map body { background: transparent !important; }
 html.fd-native-map body::before { display: none; }
+
+/* ═══ 채널 인덱스 — "누가 갔나"의 머리 ═══
+   섹션만 있으면 누가 있는지 알려면 끝까지 스크롤해야 한다. 위에 그리드를 깐다.
+   ⚠️ 카드는 2열 고정 — 로고 + 이름 + 곳수가 한 줄에 들어가는 최소 폭이다.
+      3열로 줄이면 '허영만의 백반기행' 같은 긴 이름이 두 줄로 깨진다. */
+.fx-idx { margin: 2px 0 16px; }
+.fx-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; }
+.fx-h b { font-size: 15px; font-weight: 800; color: var(--text-hi); }
+.fx-more {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--accent); font-size: 12.5px; font-weight: 700;
+}
+.fx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fx-card {
+  position: relative; display: flex; align-items: center; gap: 9px;
+  padding: 10px 11px; cursor: pointer; text-align: left; overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  border-radius: var(--r-md, 12px);
+}
+.fx-card:active { transform: scale(.98); }
+.fx-av {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; overflow: hidden;
+  background: var(--surface-3); display: grid; place-items: center;
+}
+.fx-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fx-ini { font-size: 12px; font-weight: 800; color: var(--text-mid); }
+.fx-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fx-tx b {
+  font-size: 13px; font-weight: 700; color: var(--text-hi);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fx-tx i { font-style: normal; font-size: 11.5px; color: var(--text-low);
+  font-variant-numeric: tabular-nums; }
+/* 정복률 — 목록이 아니라 '내가 얼마나 깼나'로 보이게 하는 우리 쪽 축 */
+.fx-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--line-1); }
+.fx-bar i { display: block; height: 100%; background: var(--ok); }
