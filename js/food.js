@@ -133,10 +133,13 @@
   var SEC, CHIPS, LIST, PROG, MODES;
   /* 표면이 7개인데 전부 같은 높이의 칩으로 나열돼 본문 전에 200px 을 먹었다(사장님: 다 엎어).
      → 2층으로 접는다. 상위 탭 3개 × 하위 세그먼트. 이모지는 쓰지 않는다 — 타이포와 여백으로 가른다. */
+  /* ⚠️ 인플루언서를 랭킹 하위 세그먼트에 묻어놨던 게 실수였다(사장님 지적).
+     "누가 다녀갔나"는 이 서비스의 정체성이지 랭킹의 한 종류가 아니다 — 1급 탭이다. */
   var TABS = [
-    { t: "browse", name: "둘러보기", segs: [["new","최신"],["near","가까운"],["heat","화제"]] },
-    { t: "rank",   name: "랭킹",     segs: [["controversial","논란"],["loved","인정"],["overrated","과대평가"],["shows","방송별"]] },
-    { t: "me",     name: "기록",     segs: [["badges","업적"],["leaders","순위"]] }
+    { t: "browse", name: "둘러보기",   segs: [["new","최신"],["near","가까운"],["heat","화제"]] },
+    { t: "who",    name: "누가 갔나",  segs: [["all","전체"],["yt","유튜버"],["tv","방송"]] },
+    { t: "rank",   name: "랭킹",       segs: [["controversial","논란"],["loved","인정"],["overrated","과대평가"]] },
+    { t: "me",     name: "기록",       segs: [["badges","업적"],["leaders","순위"]] }
   ];
   var tab = "browse", seg = "new";
   var GAPS = null;
@@ -254,6 +257,13 @@
           '첫 판정이 그 집의 기준이 됩니다.</div>' + ps.map(card).join("");
       });
       return;
+    }
+    var gt = t.closest && t.closest("[data-gotab]");
+    if (gt) { tab = gt.dataset.gotab; seg = "all"; listLimit = 40; paintTabs(); loadList(); return; }
+    var h2 = t.closest && t.closest("[data-ch2]");
+    if (h2) {
+      chFilter = (chFilter === h2.dataset.ch2) ? null : h2.dataset.ch2;
+      listLimit = 40; loadList(); paintMapChips(); return;
     }
     var hc = t.closest && t.closest("[data-cat2]");
     if (hc) { catFilter = hc.dataset.cat2 || null; listLimit = 40; loadList(); return; }
@@ -411,7 +421,7 @@
         '<h4 class="fd-name">' + esc(p.name) + '</h4>' +
         '<p class="fd-sub">' + esc(meta) + '</p>' +
         '<div class="fd-foot">' +
-          (ch ? '<span class="fd-ch">' +
+          (ch ? '<span class="fd-ch big">' +
                   (chThumb(ch) ? '<img src="' + esc(chThumb(ch)) + '" alt="" loading="lazy">' : '') +
                   esc(chName(ch)) + '</span>' : '') +
           (p.channels && p.channels.length > 1 ? '<span class="fd-more">+' + (p.channels.length - 1) + '</span>' : '') +
@@ -458,9 +468,10 @@
       '<div class="fb-row chip-scroll">' + (sec.places || []).map(browseCard).join("") + '</div>' +
     '</section>';
   }
-  async function loadBrowse() {
-    var d = await rpc("food_browse", { p_per: 10, p_channels: 12 });
+  async function loadBrowse(kind) {
+    var d = await rpc("food_browse", { p_per: 10, p_channels: 20 });
     var secs = (d && d.sections) || [];
+    if (kind === "yt" || kind === "tv") secs = secs.filter(function (x) { return x.kind === kind; });
     LIST.innerHTML = secs.length
       ? '<div class="fb-wrap">' + secs.map(sectionHtml).join("") + '</div>'
       : '<div class="fd-empty">아직 방송별로 모을 만큼 쌓이지 않았어요.<br>수집이 하루 두 번 돕니다.</div>';
@@ -548,6 +559,19 @@
             '<span class="fh-loc-c">' + c.n + '곳</span></button>';
         }).join("") + '</div></section>';
     }
+    /* 누가 다녀갔나 — 맛집여지도의 정체성이 이것이다. 지역·카테고리와 나란히 1급으로 둔다. */
+    var chs = CH.filter(function (c) { return c.total; }).sort(function (a, b) { return b.total - a.total; });
+    if (chs.length) {
+      out += '<section class="fh-sec"><div class="fh-h">누가 다녀갔나' +
+        '<button type="button" class="fh-near" data-gotab="who">전체 보기</button></div>' +
+        '<div class="fh-row chip-scroll">' + chs.slice(0, 12).map(function (c) {
+          return '<button type="button" class="fh-ch' + (chFilter === c.slug ? " on" : "") +
+            '" data-ch2="' + esc(c.slug) + '">' +
+            '<span class="fh-ch-i">' + (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">' : '') + '</span>' +
+            '<span class="fh-ch-n">' + esc(c.name) + '</span>' +
+            '<span class="fh-ch-c">' + c.total + '곳</span></button>';
+        }).join("") + '</div></section>';
+    }
     if (CATS && CATS.length) {
       out += '<section class="fh-sec"><div class="fh-h">무엇을 먹을까요?</div>' +
         '<div class="fh-row chip-scroll">' +
@@ -568,7 +592,7 @@
     if (tab === "browse" && !CATS.length) CATS = (await rpc("food_categories")) || [];
     if (tab === "browse") GAPS = await rpc("food_gaps", { p_region: myRegion });
     if (tab === "me")   { return seg === "leaders" ? loadLeaders() : loadBadges(); }
-    if (tab === "rank" && seg === "shows") { return loadBrowse(); }
+    if (tab === "who") { return loadBrowse(seg); }
     /* 둘러보기는 정렬(seg)만 바뀌고, 랭킹은 서버 랭킹 종류(seg)가 바뀐다 */
     mode = (tab === "rank") ? seg : "near";
     sortBy = (tab === "browse") ? seg : "new";

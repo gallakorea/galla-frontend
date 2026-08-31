@@ -717,3 +717,28 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 .fg-banner span { display: block; margin-top: 3px; font-size: 11.5px;
   color: var(--text-low); font-weight: 500; }
 .fg-lead { padding: 4px 2px 14px; color: var(--text-mid); font-size: 12.5px; line-height: 1.55; }
+
+/* ── 인플루언서 — 이 서비스의 정체성이다 ─────────────────
+   ⚠️ 랭킹 하위 세그먼트에 묻어놨던 게 실수였다. "누가 다녀갔나"는
+      랭킹의 한 종류가 아니라 1급 탐색 축이다. 탭으로 올리고 허브에도 세운다. */
+.fh-ch {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 74px; padding: 4px 2px; cursor: pointer; background: none; border: 0;
+}
+.fh-ch-i {
+  width: 54px; height: 54px; border-radius: 50%; overflow: hidden; display: block;
+  background: var(--surface-3); border: 2px solid transparent;
+}
+.fh-ch.on .fh-ch-i { border-color: var(--accent); }
+.fh-ch-i img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fh-ch-n { font-size: 11.5px; font-weight: 700; color: var(--text-hi); max-width: 72px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fh-ch.on .fh-ch-n { color: var(--accent-2); }
+.fh-ch-c { font-size: 10px; color: var(--text-low); font-variant-numeric: tabular-nums; }
+
+/* 카드의 방송 칩을 키운다 — 작아서 눈에 안 띄었다 */
+.fd-ch.big {
+  padding: 4px 11px 4px 4px; font-size: 12px; font-weight: 700;
+  background: rgba(67,97,255,.14); color: var(--accent-2);
+}
+.fd-ch.big img { width: 19px; height: 19px; }
