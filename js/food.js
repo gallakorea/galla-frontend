@@ -234,11 +234,14 @@
     "더불어민주당": "#1f4fd8", "국민의힘": "#d81f2a", "조국혁신당": "#1f9ed8",
     "정의당": "#d8c31f", "개혁신당": "#e86a1f", "진보당": "#c81f5a"
   };
+  /* ⚠️ 금액은 반드시 축약한다. 원본 그대로 찍으면 '15,207,000원'이 되어
+     요약 칸에서 줄바꿈이 나고 표가 무너진다(실측). 단위는 여기서만 붙인다 —
+     호출부에서 '원'을 또 붙이면 '238,000원원'이 된다. */
   function won(n) {
     n = Number(n) || 0;
     if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
     if (n >= 10000) return Math.round(n / 10000).toLocaleString() + "만";
-    return n.toLocaleString();
+    return n.toLocaleString() + "원";
   }
   async function loadAssembly(id) {
     var box = SHEET && SHEET.querySelector("#fd-asm");
@@ -271,7 +274,7 @@
               '<b class="fa-mp">' + esc(r.mp) + '</b>' +
               '<span class="fa-pty">' + esc(r.party || "") + '</span>' +
               '<span class="fa-dt">' + esc(String(r.date || "").slice(0, 10)) + '</span>' +
-              '<span class="fa-amt">' + won(r.amount) + '원</span>' +
+              '<span class="fa-amt">' + won(r.amount) + '</span>' +
             '</div>'; }).join("") +
           (d.total > rows.length
             ? '<div class="fa-more">전체 ' + d.total + '건 중 최근 ' + rows.length + '건</div>' : "") +
@@ -1060,11 +1063,19 @@
   /* 마커에 '어느 방송에 나왔는지'를 띄운다 — 지도만 봐도 또간집인지 쯔양인지 안다.
      로고가 아직 없는 채널(썸네일 수집 전)이나 유저 제보 건은 기본 아이콘으로 떨어진다. */
   function pin(p) {
-    /* 출처가 여럿이면 공직자를 먼저 세운다 — 갈라에만 있는 정보라 지도에서 눈에 띄어야 한다. */
+    /* 출처가 여럿일 때 무엇을 세울지.
+       ⚠️ 처음엔 공직자를 항상 먼저 세웠다. 그런데 의원 밥집이 여의도·광화문·을지로에
+          몰려 있어서 **도심 지도가 국회 마크로 뒤덮였다**(실측: 화면 289곳 중 절반 이상).
+          갈라만 가진 축이라 눈에 띄게 한 건데 도심에선 역효과였다.
+       → 평소엔 방송·유튜버 로고를 세우고, **국회 칩으로 필터했을 때만** 국회 마크를 쓴다.
+         국회가 유일한 출처인 집은 당연히 그대로 국회 마크다. 두 축이 서로 안 가린다. */
     var chs = (p.channels || []);
     var gov = "";
     for (var gi = 0; gi < chs.length; gi++) if (chKind(chs[gi]) === "gov") { gov = chs[gi]; break; }
-    var slug = gov || (chs.length ? chs[0] : "");
+    var other = "";
+    for (var oi = 0; oi < chs.length; oi++) if (chKind(chs[oi]) !== "gov") { other = chs[oi]; break; }
+    if (gov && other && chKind(chFilter) !== "gov") gov = "";   // 필터 안 걸었으면 방송을 세운다
+    var slug = gov || other || (chs.length ? chs[0] : "");
     var thumb = (!gov && slug) ? chThumb(slug) : "";
     var more = chs.length > 1 ? chs.length : 0;
     var gm = gov ? govMark(gov) : null;
