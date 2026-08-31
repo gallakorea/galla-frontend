@@ -222,9 +222,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (label && !b.getAttribute("aria-label")) b.setAttribute("aria-label", label);
     const img = b.querySelector("img");
     if (img && !img.hasAttribute("alt")) img.setAttribute("alt", "");
-    // 현재 탭을 보조기기에도 알린다(시각적으로는 .active 로만 표시돼 있었다)
-    if (b.classList.contains("active")) b.setAttribute("aria-current", "page");
-    else b.removeAttribute("aria-current");
   });
 
   // 현재 탭 재탭 → 있던 위치에서 부드럽게 최상단으로 (거리 비례 duration, 최대 0.6s)
@@ -270,9 +267,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // 1️⃣ 초기 상태: 현재 페이지 기준으로만 active 처리
     if (page === currentPage) {
       item.classList.add("active");
+      item.setAttribute("aria-current", "page");   // ♿ 현재 탭을 보조기기에도 알린다
       if (activeSrc) img.src = activeSrc;
     } else {
       item.classList.remove("active");
+      item.removeAttribute("aria-current");
       if (baseSrc) img.src = baseSrc;
     }
 
