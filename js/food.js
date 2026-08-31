@@ -139,6 +139,7 @@
     { t: "me",     name: "기록",     segs: [["badges","업적"],["leaders","순위"]] }
   ];
   var tab = "browse", seg = "new";
+  var GAPS = null;
   var listLimit = 40;   // '더 보기'로 늘린다 — 예전엔 40에서 끊기고 더 볼 방법이 없었다
   var mode = "near";   // 하위 로직 호환(내부에서만 씀)
   var MAP, mapEl, L = null, leafletLoading = null, markers = [], moveTimer = 0, lastPlaces = [];
@@ -244,6 +245,15 @@
       sortBy = sb2.dataset.sort;
       if (sortBy === "near" && !myPos) { askPos(); return; }
       loadList(); return;
+    }
+    if (t.closest && t.closest("[data-untouched]")) {
+      rpc("food_untouched", { p_region: myRegion, p_limit: 40 }).then(function (d) {
+        var ps = (d && d.places) || [];
+        usedThumb = new Set();
+        LIST.innerHTML = '<div class="fg-lead">아직 아무도 판정하지 않은 집이에요.<br>' +
+          '첫 판정이 그 집의 기준이 됩니다.</div>' + ps.map(card).join("");
+      });
+      return;
     }
     var hc = t.closest && t.closest("[data-cat2]");
     if (hc) { catFilter = hc.dataset.cat2 || null; listLimit = 40; loadList(); return; }
@@ -508,9 +518,19 @@
   /* 탐색 허브 — 캐치테이블 홈은 '목록'이 아니라 지역·카테고리 진입점의 조합이다.
      우리 둘러보기도 그냥 카드 리스트였다. 데이터는 이미 있다(food_regions/food_categories)
      — 서버를 더 부르지 않고 이미 받은 걸 눌러 쓴다. */
+  function gapsHtml() {
+    if (!GAPS || !GAPS.total) return "";
+    var n = GAPS.no_vote;
+    if (!n) return "";
+    /* "채워주세요"가 아니라 "아직 아무도 안 했다" 로 말한다.
+       빈 칸은 부탁이지만, 아무도 안 한 건 기회다. 첫 사람은 그 집의 기준이 된다. */
+    return '<button type="button" class="fg-banner" data-untouched="1">' +
+      '<b>' + n + '곳</b>이 아직 아무 판정도 없어요' +
+      '<span>첫 판정이 그 집의 기준이 됩니다 ›</span></button>';
+  }
   function hubHtml() {
     if (tab !== "browse") return "";
-    var out = "";
+    var out = gapsHtml();
     var cities = [];
     ((REGIONS && REGIONS.sido) || []).forEach(function (sd) {
       (sd.cities || []).forEach(function (c) {
@@ -546,6 +566,7 @@
     // 허브에 쓸 데이터는 한 번만 받아 캐시한다
     if (tab === "browse" && !REGIONS) REGIONS = await rpc("food_regions");
     if (tab === "browse" && !CATS.length) CATS = (await rpc("food_categories")) || [];
+    if (tab === "browse") GAPS = await rpc("food_gaps", { p_region: myRegion });
     if (tab === "me")   { return seg === "leaders" ? loadLeaders() : loadBadges(); }
     if (tab === "rank" && seg === "shows") { return loadBrowse(); }
     /* 둘러보기는 정렬(seg)만 바뀌고, 랭킹은 서버 랭킹 종류(seg)가 바뀐다 */
@@ -633,6 +654,9 @@
         vw.classList.add("playing"); return;
       }
       if (t.closest('[data-a="report"]')) { openReport(); return; }
+      var wy = t.closest("[data-why]");
+      if (wy) { sendWhy(wy.dataset.why); return; }
+      if (t.closest("[data-why-skip]")) { closeWhy(); return; }
       if (t.closest('[data-a="photo"]')) { addPhoto(); return; }
       var px = t.closest("[data-photo]");
       if (px) { removePhoto(px.dataset.photo); return; }
@@ -662,7 +686,11 @@
     });
     // 한마디 등록 — 시트가 매번 새로 그려지므로 위임으로 받는다
     MAP.addEventListener("submit", function (e) {
-      if (e.target && e.target.id === "fd-say") { e.preventDefault(); onSay(); }
+      if (e.target && e.target.id === "fd-say") { e.preventDefault(); onSay(); return; }
+      if (e.target && e.target.id === "fw-f") {
+        e.preventDefault();
+        var i = MAP.querySelector("#fw-i"); sendWhy(i && i.value.trim()); return;
+      }
     });
 
     // 뒤로가기로 닫힌다 — 앱에서 지도가 갇히면 안 된다.
@@ -861,6 +889,7 @@
             '</div>'; }).join("") + '</div>'
         : '') +
       '<div class="fd-judge" id="fd-judge"></div>' +
+      '<div class="fd-why" id="fd-why"></div>' +
       /* 출처 영상 — 썸네일로 먼저 띄우고 누를 때만 iframe 을 붙인다.
          시트 열 때마다 iframe 을 심으면 무겁고, 자동재생도 원치 않는다.
          재생은 /yt 프록시를 쓴다 — 앱(capacitor origin)에서 직접 임베드가 막히는 걸
@@ -923,6 +952,7 @@
       (ps.length
         ? '<div class="fp-row chip-scroll">' + ps.map(function (x) {
             return '<div class="fp-i"><img src="' + esc(x.url) + '" alt="" loading="lazy">' +
+              '<span class="fp-by">' + esc(x.nick || "익명") + '</span>' +
               (x.mine ? '<button type="button" class="fp-x" data-photo="' + x.id + '">✕</button>' : '') +
             '</div>'; }).join("") + '</div>'
         : '<div class="fp-empty">아직 사진이 없어요. 다녀오셨다면 한 장 올려주세요.</div>');
@@ -976,6 +1006,7 @@
         ? '<div class="fm-list">' + ms.map(function (m) {
             return '<div class="fm-row"><span class="fm-n">' + esc(m.name) +
               (m.source === "yt" ? '<i class="fm-src" title="영상에서 자동 추출">📺</i>' : '') +
+              (m.source === "user" && m.nick ? '<i class="fm-by">' + esc(m.nick) + '</i>' : '') +
               '</span><b class="fm-p">' + (m.price ? esc(won(m.price)) : "–") + '</b></div>';
           }).join("") + '</div>'
         : '<div class="fm-empty">아직 메뉴가 없어요. 다녀오셨다면 알려주세요.</div>');
@@ -1071,6 +1102,36 @@
   function hideSheet() { if (SHEET) { SHEET.classList.remove("open"); curPlace = null; } }
 
   /* 판정 — 같은 걸 또 누르면 취소된다(서버 규칙). 취소되면 댓글 입력이 다시 잠긴다. */
+  /* 판정 직후 '왜?'를 묻는다 — 여기가 참여 엔진이다.
+     예전엔 판정과 댓글이 끊겨 있어서 누르고 그냥 끝났다. 근거가 안 쌓이니
+     다음 사람이 볼 게 없고 반박할 대상도 없었다(사진 0·메뉴 0의 진짜 원인).
+     한 줄이라도 남으면 그게 다음 사람의 판정 근거가 되고, 반대편이 반박한다. */
+  var WHY = {
+    good: ["재료가 좋다", "가격이 착하다", "웨이팅 값 한다", "또 갈 거다", "사장님이 좋다"],
+    bad:  ["과대평가", "비싸다", "웨이팅 아깝다", "그냥 그렇다", "다신 안 간다"]
+  };
+  function askWhy(v) {
+    var el = SHEET && SHEET.querySelector("#fd-why"); if (!el) return;
+    el.innerHTML =
+      '<div class="fw-t">' + (v === "good" ? "어디가 좋았어요?" : "왜 별로였어요?") +
+        '<button type="button" class="fw-skip" data-why-skip="1">건너뛰기</button></div>' +
+      '<div class="fw-row chip-scroll">' + WHY[v].map(function (w) {
+        return '<button type="button" class="fw-c" data-why="' + esc(w) + '">' + esc(w) + '</button>';
+      }).join("") + '</div>' +
+      '<form class="fw-f" id="fw-f"><input id="fw-i" maxlength="300" placeholder="직접 쓰기 (선택)">' +
+        '<button type="submit">남기기</button></form>';
+    el.classList.add("on");
+  }
+  function closeWhy() { var el = SHEET && SHEET.querySelector("#fd-why"); if (el) { el.classList.remove("on"); el.innerHTML = ""; } }
+
+  async function sendWhy(body) {
+    if (!curPlace || !curPlace.mine) return closeWhy();
+    var r = await rpc("food_judge_say", {
+      p_id: curPlace.place.id, p_verdict: curPlace.mine, p_body: body || null });
+    closeWhy();
+    if (r && r.comment_id) { toast("한마디 남겼어요"); loadTalk(curPlace.place.id); }
+  }
+
   async function onJudge(v) {
     if (!curPlace) return;
     if (!(await loggedIn())) return needLogin();
@@ -1084,7 +1145,7 @@
       i.disabled = !r.mine; if (b) b.disabled = !r.mine;
       i.placeholder = r.mine ? "여기 어땠어요?" : "먼저 맛있다 / 맛없다를 골라주세요";
     }
-    if (r.mine) toast(r.mine === "good" ? "맛있다 쪽에 섰어요" : "맛없다 쪽에 섰어요");
+    if (r.mine) askWhy(r.mine); else closeWhy();
     if (mode !== "near") loadList();   // 랭킹 화면이면 순위가 바뀐다
   }
 

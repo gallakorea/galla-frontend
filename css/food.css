@@ -674,3 +674,46 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 /* 사진 여러 장인 집은 카드에 장수 배지 */
 .fd-th-n { position: absolute; left: 5px; top: 5px; padding: 1px 6px; border-radius: 999px;
   background: rgba(0,0,0,.6); color: #fff; font-size: 10px; font-weight: 700; font-style: normal; }
+
+/* ── 참여 엔진: 판정 직후 '왜?' ──────────────────────────
+   예전엔 판정과 댓글이 끊겨 있어 누르고 그냥 끝났다. 근거가 안 쌓이니 다음 사람이
+   볼 게 없고 반박할 대상도 없었다 — 사진 0·메뉴 0 의 진짜 원인이다. */
+.fd-why { max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(.22,.9,.3,1); }
+.fd-why.on { max-height: 220px; margin-top: 10px; }
+.fw-t { display: flex; align-items: center; font-size: 13px; font-weight: 700;
+  color: var(--text-hi); margin-bottom: 9px; }
+.fw-skip { margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--text-low); font-size: 11.5px; }
+.fw-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 9px; }
+.fw-row::-webkit-scrollbar { display: none; }
+.fw-c { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: var(--surface-2); border: 1px solid var(--line-2);
+  color: var(--text-hi); font-size: 12.5px; font-weight: 600; }
+.fw-c:active { background: var(--surface-3); }
+.fw-f { display: flex; gap: 7px; }
+.fw-f input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-hi); font-size: 16px; outline: none; }   /* 16px — iOS 확대 방지 */
+.fw-f button { flex: 0 0 auto; padding: 0 14px; border-radius: var(--r-sm); border: 0; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 700; }
+
+/* ── 기여자 이름 — 익명으로 묻히면 다음 사람이 안 올린다 ── */
+.fp-by { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 7px;
+  background: linear-gradient(transparent, rgba(0,0,0,.75));
+  color: #fff; font-size: 10px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-by { margin-left: 6px; font-style: normal; font-size: 10.5px; color: var(--text-low); }
+
+/* ── 결핍 배너 — "채워주세요"가 아니라 "아직 아무도 안 했다" ──
+   빈 칸은 부탁이지만, 아무도 안 한 건 기회다. */
+.fg-banner {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  margin-bottom: 18px; padding: 14px 16px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255,159,67,.14), rgba(67,97,255,.10));
+  border: 1px solid rgba(255,159,67,.28);
+  color: var(--text-hi); font-size: 13.5px; font-weight: 600;
+}
+.fg-banner b { color: #ff9f43; font-weight: 800; }
+.fg-banner span { display: block; margin-top: 3px; font-size: 11.5px;
+  color: var(--text-low); font-weight: 500; }
+.fg-lead { padding: 4px 2px 14px; color: var(--text-mid); font-size: 12.5px; line-height: 1.55; }
