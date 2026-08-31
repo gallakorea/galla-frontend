@@ -6,7 +6,7 @@
 //   · 원문은 절대 건드리지 않는다. 번역은 '보기 옵션'이지 콘텐츠 교체가 아니다.
 //
 //  ⚠️ 남용 방지: 유저별 일일 글자수 한도(translate_gate). 없으면 우리 API가 남의 번역기가 된다.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

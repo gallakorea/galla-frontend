@@ -8,7 +8,7 @@
 
    ⚠️ env 필요(사장님 발급 후 설정): NAVER_CLIENT_ID, NAVER_CLIENT_SECRET.
    verify_jwt=false (로그인 전 호출) — 대신 네이버 code 검증이 게이트. */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,

@@ -5,7 +5,7 @@
      3) grant_gc_topup(멱등)로 GC 지급 — 같은 txid 재검증해도 1회만
    ⚠️ 절대 클라의 금액을 믿지 않는다. 상품ID→GC는 서버 gc_products가 결정.
    ⚠️ GP 가 아니라 GC 다 — GP 는 판매하지 않는다(예측 판돈이라 규제 대상). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { googleGetPurchase, googleConsume, googleGetSubscription, googleAckSubscription } from "../_shared/store.ts";
 
 const sb = createClient(

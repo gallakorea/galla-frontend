@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0901006"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0901012"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인정보 처리방침 - GALLA</title>
 
@@ -59,6 +59,8 @@
     .xf-b { padding: 10px 12px; font-size: 13px; line-height: 1.75; color: #cfcfcf; }
     .xf-b b { color: #fff; display: inline-block; min-width: 44px; }
     .xf-b a { color: #8ab4ff; }
+    /* 학습 이용 고지 — 다른 항목과 같은 크기로 지나가면 안 되는 내용이라 눈에 걸리게 한다 */
+    .xf-b b.xf-warn { color: #ffb3ad; min-width: 0; }
 
     .section {
       padding: 24px 16px;
@@ -110,7 +112,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=081807">
+  <link rel="stylesheet" href="./css/theme.css?v=0901010">
 <link rel="stylesheet" href="./css/desktop.css?v=080412">
 </head>
 
@@ -215,7 +217,10 @@
           <div class="xf-b">
             <b>업무</b> AI 친구 '갈비스' 대화 생성<br>
             <b>항목</b> 대화 내용, 닉네임, 대화 맥락으로 함께 전달되는 이용자 기억 정보<br>
-            <b>보유</b> 요청 처리 후 즉시 파기(모델 학습에 이용되지 않도록 계약·설정)<br>
+            <b>보유</b> DeepSeek 개인정보 처리방침에 따름(이용 목적 달성 시까지)<br>
+            <b class="xf-warn">⚠️ 학습 이용</b> DeepSeek은 이용자가 입력한 내용을
+            <b>자사 기술의 학습·개선 목적으로 추가 이용할 수 있다</b>고 자사 방침에 고지하고 있습니다.
+            AI 친구 '갈비스'는 선택 기능이므로, 원하지 않으시면 이용하지 않으실 수 있습니다.<br>
             <a href="https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
           </div>
         </div>
@@ -225,7 +230,7 @@
           <div class="xf-b">
             <b>업무</b> AI 이미지 편집·의도 분석(Gemini), 앱 푸시 알림 발송(FCM), 이용 통계(Analytics), 동영상 재생(YouTube)<br>
             <b>항목</b> 편집 요청 이미지, 대화 일부, 푸시 토큰, 기기·접속 정보<br>
-            <b>보유</b> 요청 처리 후 즉시 파기(통계·푸시는 서비스 이용 종료 시까지)<br>
+            <b>보유</b> 요청 처리 후 파기(사업자 정책에 따라 오·남용 점검 목적으로 단기 보관될 수 있음). 통계·푸시는 서비스 이용 종료 시까지<br>
             <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
           </div>
         </div>
@@ -235,7 +240,7 @@
           <div class="xf-b">
             <b>업무</b> AI 대화·문장 생성(대체 경로)<br>
             <b>항목</b> 대화 내용, 닉네임<br>
-            <b>보유</b> 요청 처리 후 즉시 파기<br>
+            <b>보유</b> 요청 처리 후 파기(사업자 정책에 따라 오·남용 점검 목적으로 단기 보관될 수 있음)<br>
             <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
           </div>
         </div>
@@ -245,7 +250,7 @@
           <div class="xf-b">
             <b>업무</b> AI 응답 품질 개선<br>
             <b>항목</b> 대화 내용(닉네임 등 식별정보를 제거한 형태)<br>
-            <b>보유</b> 요청 처리 후 즉시 파기<br>
+            <b>보유</b> 요청 처리 후 파기(사업자 정책에 따라 오·남용 점검 목적으로 단기 보관될 수 있음)<br>
             <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">개인정보처리방침 ↗</a>
           </div>
         </div>
@@ -282,9 +287,11 @@
       <ul>
         <li><b>무엇이 전달되나</b> — 이용자가 입력한 대화 내용과, 대화를 이어가기 위해 회사가 저장한
             기억 정보(관심사·이전 대화 요약 등), 그리고 닉네임이 함께 전달됩니다.</li>
-        <li><b>학습 이용</b> — 회사는 이용자의 대화를 <b>외부 AI 사업자의 모델 학습에 제공하지 않습니다.</b>
-            회사가 자체 서비스 품질 개선을 위해 대화를 보관·활용하는 경우, 닉네임 등 식별정보를 제거한
-            형태로만 이용합니다.</li>
+        <li><b>학습 이용</b> — 회사는 이용자의 대화를 <b>학습 목적으로 외부에 제공하지 않습니다.</b>
+            다만 답변 생성을 위해 전달된 내용을 <b>수탁자가 자사 정책에 따라 자사 기술 개선에 이용할 수 있으며</b>,
+            그 여부와 조건은 수탁자마다 다릅니다(위 §6의 각 사업자 방침 링크 참조).
+            회사가 자체 서비스 품질 개선을 위해 대화를 보관·활용하는 경우에는 닉네임·프로필 요약 등
+            식별정보를 제거한 형태로만 이용합니다.</li>
         <li><b>보유기간</b> — 대화 기록과 기억 정보는 회원 탈퇴 시 지체 없이 파기합니다.
             이용자는 언제든 갈비스 설정에서 기억 정보를 삭제할 수 있습니다.</li>
         <li><b>AI 생성 표시</b> — AI가 만든 뉴스 요약·예측 문항·이미지에는 AI 생성물임을 표시합니다.</li>
@@ -443,13 +450,13 @@
     </div>
 </nav>
 
-<script src="./js/nav.js?v=0831139"></script>
+<script src="./js/nav.js?v=0901011"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
 <script src="./js/nav-jog.js?v=0828020" defer></script>
 
 <script src="js/back.js?v=080412"></script>
 <script src="/js/analytics.js?v=080412"></script>
-<script src="/js/pwa.js?v=0821140"></script>
+<script src="/js/pwa.js?v=0901012"></script>
   <script src="/js/pull-refresh.js?v=080412"></script>
 
 <!-- 계정 삭제 (애플 5.1.1(v)/구글 정책 필수) — 공용 모듈 -->

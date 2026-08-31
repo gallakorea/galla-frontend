@@ -2,7 +2,7 @@
 // run_bug_hunt()이 새 critical/high 발견 시 x-bug-secret 헤더로 호출한다.
 // verify_jwt=false (공유 시크릿으로 자체 인증). 임의 호출 방지 = BUG_ALERT_SECRET.
 import webpush from "npm:web-push@3.6.7";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 webpush.setVapidDetails(

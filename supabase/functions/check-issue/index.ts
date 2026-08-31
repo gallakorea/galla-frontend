@@ -3,7 +3,7 @@
    ② OpenAI Moderation API(무료 엔드포인트 /v1/moderations — 혐오·폭력·선정성·자해·괴롭힘)
    → 위험도(안전/주의/위험) + 점수 + 문제항목[{field,severity,category,message,suggestion}].
    발행마다 1회만 호출(저빈도). 로그인 유저 검증 + 텍스트 길이 상한으로 남용 방지. */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const OPENAI = Deno.env.get("OPENAI_API_KEY") || "";
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });

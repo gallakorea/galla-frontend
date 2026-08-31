@@ -12,7 +12,7 @@
      presign  {id} → 결과 mp4 업로드용 R2 presigned PUT URL
      done     {id, key} → artifacts.video_url 확정, state done
      fail     {id, error} */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;

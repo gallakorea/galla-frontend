@@ -500,3 +500,13 @@
 .pb-img{ width:100%; border-radius:16px; overflow:hidden; margin:2px 0 12px;
   border:1px solid rgba(255,255,255,.08); background:#15161c; }
 .pb-img img{ width:100%; max-height:300px; object-fit:cover; display:block; }
+
+/* 🤖 AI 생성 표시 — 개인정보처리방침 §6-1 이 "AI가 만든 예측 문항엔 표시한다"고 약속한다.
+   눈에는 띄되 문항을 가리지 않는 크기로. */
+.pm-ai-tag{ display:inline-flex; align-items:center; margin-left:6px; padding:1px 6px;
+  border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.2px;
+  color:var(--muted,#8a90a0); background:var(--chip,rgba(255,255,255,.06));
+  border:1px solid var(--line,rgba(255,255,255,.1)); vertical-align:middle; white-space:nowrap; }
+.pb-ai{ margin:6px 0 2px; padding:8px 10px; border-radius:10px; font-size:12px; line-height:1.5;
+  color:var(--muted,#8a90a0); background:var(--chip,rgba(255,255,255,.05));
+  border:1px solid var(--line,rgba(255,255,255,.09)); }

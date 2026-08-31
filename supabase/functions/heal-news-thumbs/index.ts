@@ -1,7 +1,7 @@
 // 갈라뉴스 썸네일 자가 치유 — 히어로가 없거나 깨진(404/403) 기사에 대해
 // 원문 기사에서 og:image / twitter:image 를 다시 긁어와 채운다. 30분마다 크론.
 // 전 매체 공통 안전망(조선일보 &amp; 문제, newsen 등 개별 매체와 무관하게 동작).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,

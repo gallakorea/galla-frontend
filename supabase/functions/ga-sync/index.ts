@@ -4,7 +4,7 @@
 //   GA_PROPERTY_ID      : GA4 숫자 Property ID (측정ID G-XXX 아님)
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY : 자동 주입
 // 크론이 anon Bearer 로 호출(verify_jwt=true 유지). 응답엔 민감 원본을 담지 않음(상태만).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });

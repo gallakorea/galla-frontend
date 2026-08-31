@@ -3,7 +3,7 @@
    남용 방지: 함수가 '정말 그 메시지의 발신자인가'를 서버에서 재확인한다 —
    임의 payload로 남의 기기에 푸시를 쏘는 건 불가능. 알림 내용도 DB에서 읽는다. */
 import webpush from "npm:web-push@3.6.7";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { importPKCS8, SignJWT } from "https://esm.sh/jose@5.9.6";
 
 const sb = createClient(

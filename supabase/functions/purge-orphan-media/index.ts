@@ -17,7 +17,7 @@
 */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const CF_ACCOUNT_ID = Deno.env.get("CF_ACCOUNT_ID")!;
 const R2_BUCKET     = Deno.env.get("R2_BUCKET")!;

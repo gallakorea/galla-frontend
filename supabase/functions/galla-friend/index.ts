@@ -3,7 +3,7 @@
 //   Her식 고립형 대체도 아닌 — 부딪혀도 곁에 남는 친구. (1단계: 같이 놀고·평론·잡담)
 //
 // 모델 무관: 기본 OPENAI_API_KEY(gpt-4o-mini). env로 교체 — FRIEND_API_KEY/BASE_URL/MODEL.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",

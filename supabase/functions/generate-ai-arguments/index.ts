@@ -1,6 +1,6 @@
 // 🧠 이슈 찬반 논점 생성 — 이슈 상세의 "AI 논점 카드"(양측 핵심 논거 한 줄씩)를 만들어 ai_news(mode='argument')에 저장.
 // ⚠️ 리포에 소스가 없던 레거시 배포 함수(2026-08-08 QA에서 500 발견) — DeepSeek 우선/OpenAI 폴백으로 재작성.
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "jsr:@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

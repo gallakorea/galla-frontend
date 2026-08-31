@@ -18,7 +18,7 @@
 //   둘이 다르다는 걸 매번 헷갈려서, 검색 키가 없으면 NCP 키로도 한 번 시도하고
 //   무엇이 실패했는지 응답에 남긴다.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,

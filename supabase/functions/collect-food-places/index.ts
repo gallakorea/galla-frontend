@@ -21,7 +21,7 @@
 // ⚠️ 크론에 Authorization 헤더를 빼면 401 인데 pg_cron 이력엔 'succeeded' 로 남는다.
 //    조용히 아무것도 안 하는 상태가 된다 — 갈비스 크론 4개가 실제로 이 상태였다.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,

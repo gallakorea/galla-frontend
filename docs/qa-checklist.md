@@ -213,7 +213,7 @@
 
 | 항목 | 상태 |
 |---|---|
-| 크론 인증(Authorization 헤더) | ❌ 재점검 필요 — 없으면 401인데 이력엔 'succeeded' |
+| 크론 인증(Authorization 헤더) | ✅ 5개는 x-cron-secret(Vault) 자체인증, indexnow 는 대상이 우리 워커 — 오탐이었다 (§22) 재점검 필요 — 없으면 401인데 이력엔 'succeeded' |
 | 엣지 함수 47종 헬스 | ❌ |
 | AI 원가 장부(ai_spend) 누락 함수 | 🔶 galla-friend 수정 완료, 나머지 재확인 필요 |
 | 클라 에러 수집(client_errors) | ❌ |
@@ -256,10 +256,10 @@
 | 항목 | 상태 |
 |---|---|
 | **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ✅ |
-| 기본 OG 이미지 폴백 | ❌ |
-| **robots.txt · sitemap.xml.js 동적 생성** | ❌ |
-| **IndexNow 색인 제출**(`functions/indexnow.js`) | ❌ |
-| 엣지 메타 주입(`_middleware.js`) | ❌ |
+| 기본 OG 이미지 폴백 | ✅ 존재하지 않는 id → 기본 문구 + og-default.png(332KB, 200) 확인 |
+| **robots.txt · sitemap.xml.js 동적 생성** | ✅ robots 200 · sitemap 2,885 URL(523KB) 정상 생성 |
+| **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
+| 엣지 메타 주입(`_middleware.js`) | ✅ `/issue?id=` 에 og:title·description·image 주입 확인 |
 | imgproxy 외부 이미지 프록시 | 🔶 앱에서만 확인 |
 | PWA 설치 유도·오프라인 페이지 | ❌ |
 
@@ -267,9 +267,9 @@
 
 | 항목 | 상태 |
 |---|---|
-| **추천 신호 층(feed_signals) 15분 집계** | ❌ |
+| **추천 신호 층(feed_signals) 15분 집계** | ✅ 롤업 2일간 192회 전부 성공·집계본 최신. 원천이 87행인 건 런칭 전 트래픽 문제지 고장 아님 |
 | 조회수 집계(content_daily_views) | ❌ |
-| **릴스 실행 에이전트(agent_jobs · reel-agent)** | ❌ |
+| **릴스 실행 에이전트(agent_jobs · reel-agent)** | ✅ 중간상태 무한정체 발견(389시간) → 90분 회수기 신설. 과거 코드버그 2건은 이미 해소됨 |
 | 미디어 R2 이관·고아 정리(purge-orphan-media·video-migrate-worker) | ❌ |
 | 뉴스 썸네일 치유(heal-news-thumbs) | ❌ |
 | 링크 미리보기·본문 추출(link-preview·article-reader) | ❌ |
@@ -324,9 +324,9 @@
 |---|---|---|
 | **RPC 631개** — SECURITY DEFINER 권한 가드 | `current_user` 로 권한 판정하면 구멍(소유자로 평가됨) | ❌ |
 | 핵심 RPC 회귀 | place_bet · battle_action · submit_bug · get_my_account · gp_wallet · predict_state · open_room_create · log_share · claim_tour_bonus | ❌ |
-| **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ❌ |
+| **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ✅ 3개 모두 용량제한·MIME 화이트리스트 있음. **쓰기 정책 3개에 소유자 검사가 없어** 남의 파일 삭제·덮어쓰기가 가능했다 → 소유자 조건으로 교체 |
 | R2 버킷(galla-media) | CORS · 공개 URL · 고아 파일 | ❌ |
-| **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ❌ |
+| **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ✅ publication 17표. 잠긴 컬럼은 comments.user_id(처리됨)·users(구독 코드 없음)뿐. `old` 비PK 필드를 쓰는 핸들러가 없어 default 복제ID로 충분 |
 | DB 트리거 | 알림 발생(notify 브릿지) · 카운터 갱신 | ❌ |
 | RLS 정책 회귀 | 남의 글 수정·삭제 차단 · PII 컬럼권한 | ❌ |
 
@@ -371,12 +371,12 @@ comm -13 /tmp/used /tmp/set   # 설정만 있고 안 쓰는 죽은 키
 
 | 미설정 키 | 결과 | 상태 |
 |---|---|---|
-| **KMA_SERVICE_KEY** | 날씨가 기상청 실황이 아니라 **Open-Meteo 모델 예측 폴백**으로 돈다. '지금 우리 동네'의 근거가 달라진다 | ❌ 확인 필요 |
+| **KMA_SERVICE_KEY** | 날씨가 기상청 실황이 아니라 **Open-Meteo 모델 예측 폴백**으로 돈다. '지금 우리 동네'의 근거가 달라진다 | ✅ 244개 지역 관측·온도 전부 수신, 7분 전 갱신 확인 필요 |
 | FIREBASE_SERVICE_ACCOUNT | 안드로이드 푸시 전무 | ⛔ 알려진 미설정 |
 | APPLE_* (5종) · GOOGLE_SA_* | IAP 영수증 검증 불가 | ⛔ 스토어 등록 전 |
 | STORE_NOTIFY_KEY | 구독 생명주기 웹훅 인증 없음 | ❌ |
 | RESEND_API_KEY · BUG_ALERT_EMAIL | **버그 제보가 와도 메일 알림이 안 간다** | ❌ |
-| EMBED_API_KEY | OPENAI_API_KEY 로 폴백 — 임베딩 공간이 의도와 다를 수 있다(라우터 정확도) | ❌ |
+| EMBED_API_KEY | OPENAI_API_KEY 로 폴백 — 임베딩 공간이 의도와 다를 수 있다(라우터 정확도) | ✅ galvis_intents 57건 전부 임베딩 보유 |
 | ANTHROPIC_API_KEY | 클로드 경로 사용 불가(폴백은 있음) | 🔶 |
 | STT_* · CF_STT_MODEL · CF_WORKERS_AI_TOKEN | 음성 인식 경로 | ❌ |
 | FRIEND_* (7종) · JARVIS_* · *_MODEL | 전부 기본값 폴백 — 의도한 모델이 아닐 수 있다 | 🔶 |
@@ -386,20 +386,20 @@ comm -13 /tmp/used /tmp/set   # 설정만 있고 안 쓰는 죽은 키
 ### 외부 서비스 14곳 — 하나 죽으면 어디가 멈추나
 | 서비스 | 쓰는 곳 | 죽으면 |
 |---|---|---|
-| DeepSeek | 갈비스·뉴스·예측 생성 | 대화·자동생성 전부 | ❌ |
+| DeepSeek | 갈비스·뉴스·예측 생성 | 대화·자동생성 전부 | ✅ galla_news 5분 전 생성. ai_spend 에 13개 함수·1,715회·$0.51/주 기록됨(원가 0인 행 0건) |
 | Gemini / OpenAI / Anthropic | 폴백·임베딩·이미지 | 품질 저하·라우터 | ❌ |
 | Cloudflare R2 | 모든 미디어 | 업로드·재생 | 🔶 |
 | Cloudflare Pages Functions | OG카드·sitemap·imgproxy·IndexNow | 공유 미리보기·색인 | ❌ |
 | Capgo(OTA) | 앱 웹자산 배포 | 앱이 옛 코드에 갇힘 | 🔶 |
-| YouTube API | 핫튜브 수집 | 급상승 목록 | ❌ |
-| 기상청 / Open-Meteo | 날씨 | 폴백 중 | ❌ |
+| YouTube API | 핫튜브 수집 | 급상승 목록 | ✅ youtube_hot 5분 전 수집 |
+| 기상청 / Open-Meteo | 날씨 | 폴백 중 | ✅ weather_obs 244지역 5분 전 갱신 |
 | GIPHY | DM GIF | GIF 검색 | ❌ |
 | Shotstack | 영상 생성 | 창작 대행 | ⛔ |
 | Agora / CF Calls / TURN | 통화·라이브 | 음성 기능 | ⛔ |
 | Resend | 메일 발송 | 알림 메일 | ❌ |
 | GA | 통계 | 지표 | ❌ |
 | Apple / Google 스토어 | IAP·구독 | 결제 | ⛔ |
-| 뉴스 RSS(연합·조선·동아 등) | 뉴스 수집 | 기사 유입 | ❌ |
+| 뉴스 RSS(연합·조선·동아 등) | 뉴스 수집 | 기사 유입 | ✅ news_articles_raw 0분 전 수집 |
 
 
 ## 12. 품질 축 (기능 아님 — 놓치기 쉬움)
@@ -408,9 +408,9 @@ comm -13 /tmp/used /tmp/set   # 설정만 있고 안 쓰는 죽은 키
 |---|---|
 | **다국어(i18n · GALLA_t · locale 컬럼)** — 번역 누락·깨짐 | ❌ |
 | translate 엣지 함수 | ❌ |
-| **성능** — 콜드스타트·LCP·이미지 용량 | ❌ |
+| **성능** — 콜드스타트·LCP·이미지 용량 | ✅ 홈 실측 144개 2.23MB(JS 1.66MB)·DOM 943ms·로드 1296ms. 로고가 표시 12배라 120KB→29KB. dm.js 는 이미 유휴 로딩 처리됨 |
 | **접근성** — 대비·포커스 링·스크린리더·큰 글씨 | ❌ |
-| **반응형** — 태블릿·좁은 PC창(481~1099px) | ❌ |
+| **반응형** — 태블릿·좁은 PC창(481~1099px) | ✅ 481·768·900·1099·1280 전부 가로스크롤 없음. 1280 신규 로드 시 PC 좌측 레일(홈·예측·메시지·트렌드·마이) 정상 생성 |
 | 빈 상태(콘텐츠 0개) 화면 | 🔶 난장·숏판 비운 뒤 미확인 |
 | 에러 상태(네트워크 실패·403·404) | ❌ |
 | 긴 텍스트·이모지·RTL 깨짐 | ❌ |
@@ -524,9 +524,9 @@ for f in js/*.js; do b=$(basename $f .js); grep -qi "$b" $D || echo "모듈 미�
 |---|---|
 | **CI/CD** | ❌ 없음 — Cloudflare Pages 자동배포만. **테스트 게이트 없이 main 푸시 = 즉시 배포** |
 | 배포 전 자동 검사(0장 5종) 강제 | ❌ 수동 |
-| **DB 마이그레이션 351개** — 적용 상태 대조 | ❌ |
+| **DB 마이그레이션 351개** — 적용 상태 대조 | ✅ 기록 363 vs 파일 385로 어긋나 있었다 — 22개가 직접 SQL 로 적용돼 기록 누락. 객체 실재 확인 후 채워 385==385 |
 | 롤백 절차(웹·OTA·앱스토어) | ❌ |
-| **DB 백업·복구 리허설** | ❌ |
+| **DB 백업·복구 리허설** | ✅ 복원 리허설 완료 — 생성컬럼·트리거 두 곳에서 막혔던 것까지 해소 |
 | 엣지 함수 배포 이력·롤백 | ❌ |
 | 장애 감지(무엇이 알려주나) | 🔶 bug-alert 있으나 **RESEND 키 없어 메일 안 감**(10-F) |
 | 상태 페이지·다운타임 공지 | ❌ |
@@ -562,10 +562,10 @@ api.anthropic.com                      (미국)
 | 항목 | 상태 |
 |---|---|
 | **AI 사업자 4곳 위탁·국외이전 고지** | ✅ 방침 §6 전면 개정 — 수탁자 7곳(DeepSeek·OpenAI·Google·Anthropic·Resend 추가), §6-1 AI 전용 조항 신설 |
-| 이전 국가·시점·방법·항목 명시 | ❌ |
-| 대화 내용의 보유기간·파기 | ❌ |
-| AI 학습 이용 여부 고지(sft_samples 로 축적 중) | ❌ |
-| **AI 생성 콘텐츠 표시**(갈라뉴스·예측·광장 자동생성) | ❌ |
+| 이전 국가·시점·방법·항목 명시 | 이미 §6 카드에 전부 있었다(체크리스트가 낡음) | ✅ |
+| 대화 내용의 보유기간·파기 | 문구 있음 + **실제 동작 검증**: 대화 원본 `friend_relationship.chat_log` 은 CASCADE 로 정상 파기 ✅. 그런데 학습 표본 복사본은 안 지워졌다(아래) | ✅ |
+| AI 학습 이용 여부 고지(sft_samples 로 축적 중) | **방침과 코드가 어긋났다** — `curate_sft_samples` 가 `profile_summary`(평균 270자·최대 362자) 를 학습 표본 127건에 통째로 넣었고, `sft_samples` 엔 `user_id` 가 없어 탈퇴해도 못 지웠다. 제거·소급 정리·메일/전화 스크럽 추가 | ✅ |
+| **AI 생성 콘텐츠 표시**(갈라뉴스·예측·광장 자동생성) | 갈라뉴스는 배지+고지문 있었음. **예측 문항엔 없었다** — 285개 중 245개가 LLM 작성. `markets.ai_generated` 추가·목록 🤖 AI 태그·상세 고지문, 라이브 검증(245/285) | ✅ |
 | 만 14세 미만 확인 | 🔶 방침엔 있음 — 실제 동작 미확인 |
 
 ⚠️ 결제보다 먼저다. **대화가 이미 나가고 있다.**
@@ -578,20 +578,20 @@ api.anthropic.com                      (미국)
 | anon 키 노출 | 정상(공개 전제) | ✅ |
 | **CSP** | `default-src 'self'` 로 잠겨 있음. 다만 `script-src 'unsafe-inline'` 허용 · Cloudflare Insights 는 차단됨(통계 유실) | 🔶 |
 | XSS — 유저 입력 렌더 | 실페이로드로 감사(댓글·광장마커·핫튜브·날씨·제보) | ✅ **제보 링크 `javascript:` → 관리자 세션 XSS 발견·수정**(서버 스킴검사 + admin safeUrl) |
-| RPC 631개 권한 가드 | SECURITY DEFINER 에서 `current_user` 쓰면 구멍 | ❌ |
-| RLS 회귀(남의 글 수정·삭제) | ❌ |
+| RPC 631개 권한 가드 | `current_user` 사용 **0건**. anon 실행가능 SECURITY DEFINER 340개 중 가드없음 88개를 전수 분류 — 쓰기 6개는 전부 안전(조회수 `+1` 하드코딩, 일기토는 시간게이트), 읽기는 `issue_demographics` k-익명성(30명·5명 컷) 확인 | ✅ **`email_available` 가입여부 열거 발견·IP 시간당 60회 제한** |
+| RLS 회귀(남의 글 수정·삭제) | 타인 계정으로 이슈·댓글·광장·예측 수정/삭제 전부 0행, DM·알림·북마크·갈비스기억·GP장부 읽기 0행. 남의 행이 실제로 존재함을 확인해 검사가 헛돌지 않음을 검증(DM 729·알림 1,300) | ✅ |
 | PII 컬럼권한(users·user_profiles) | 잠금 이력 있음 — 회귀 미확인 | 🔶 |
-| 의존성 취약점(`npm audit`) | ❌ |
-| 오픈 리다이렉트 · 클릭재킹 | frame-ancestors 'self' 는 설정됨 | 🔶 |
-| 파일 업로드 검증(용량·타입·악성) | ❌ |
-| 딥링크 파라미터 검증 | ❌ |
+| 의존성 취약점(`npm audit`) | 웹은 `package.json` 없음(정적). 엣지 함수 56개가 `supabase-js@2` 범위지정 — eszip 로 배포시 고정되나 재배포 때 조용히 최신으로 갈아탄다. 2.112.4 로 고정 | ✅ |
+| 오픈 리다이렉트 · 클릭재킹 | `frame-ancestors 'self'` 설정됨. **`login.html?next=` 가드가 정규식 블랙리스트라 5가지로 샜다** — `\\evil.com`·`/\\evil.com`(역슬래시→슬래시), ` javascript:`·`\tjavascript:`·`java\tscript:`(공백·탭을 파서가 지움). 브라우저 파서로 실측 확인 후 오리진 비교로 교체, 12케이스 검증 | ✅ |
+| 파일 업로드 검증(용량·타입·악성) | ✅ upload-media 서버측 MIME 판정 + 종류별 MAX_BYTES |
+| 딥링크 파라미터 검증 | `?next`·`?to`·`?ref`·`?url` 소비처 전수. `to`·`ref` 는 화이트리스트라 안전. **`news?url=` 이 href 3곳에 그대로 들어가 `javascript:` XSS 가능** → `safeUrl`(URL 파서, http/https만) 추가·링크 숨김 | ✅ |
 
 ## 21. 데이터 정합성·비용
 
 | 항목 | 상태 |
 |---|---|
-| 카운터 드리프트(like_count·comment_count vs 실제) | 🔶 GP 원장 드리프트를 버그헌터 ⑨ 로 자동검사(30분). like/comment 카운터는 미검증 |
-| 고아 레코드(삭제된 부모의 자식) | ❌ |
+| 카운터 드리프트(like_count·comment_count vs 실제) | 44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료 | ✅ |
+| 고아 레코드(삭제된 부모의 자식) | FK 없는 참조 58개 분류(다형성·외부ID 제외). **`ai_news_jobs` 3행·`ai_trends` 3행이 이미 고아** — 정리 후 이슈 자식 7표에 FK(일기토만 SET NULL) | ✅ |
 | R2 고아 파일 vs DB 참조 | 🔶 purge_orphan_media 크론은 있음 |
 | **AI 예산 소진·상한 동작**(ai_budget_usage·model_for 다운그레이드) | ✅ ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가** |
 | Supabase·Cloudflare 한도(요청·저장·대역폭) | 🔶 DB 919MB(1,130→919 정리) · Storage 1.16GB는 참조 0건이라 백업 후 삭제 대기(사장님) |
@@ -611,3 +611,67 @@ api.anthropic.com                      (미국)
 - 끝나면 **세고 지운다**. 지우기 전 카운트 → 삭제 → 잔여 0 확인.
 - 삭제는 반드시 **ID 명시**. `delete from X` (WHERE 없음)는 사고다.
 - 투표처럼 되돌릴 수 없는 것은 미리 사장님께 알린다.
+
+---
+
+## 22. 크론·엣지 인증 (2026-08-31 점검)
+
+| 항목 | 결과 |
+|---|---|
+| `verify_jwt=false` 34개 자체인증 | 33개 통과. `article-reader` 만 무방비 → SSRF 호스트 차단 추가 ✅ |
+| 크론 `Authorization` 없는 6개 | 오탐. 5개는 `x-cron-secret`(Vault) 자체인증, `indexnow_ping` 은 대상이 우리 워커 ✅ |
+| `galla.im/indexnow` 외부 노출 | 호스트 검사가 문자열 포함(`u.includes`)이라 `evil.com/?x=galla.im` 통과 → URL 파싱 + 콜로 캐시 60초 스로틀 ✅ |
+| 크론 응답 타임아웃 | 24시간 25건이 `Timeout of 60000 ms`. 인증이 아니라 `collect-youtube-hot` 이 60초를 넘던 것 — 일은 되는데 성공·실패 구분이 불가능했다. 180초로 상향 후 200 확인 ✅ |
+| `food_resolve_job` | 스케줄(`55 5,17`)은 있는데 실행 이력 0건 — 17:55 재확인 필요 🔶 |
+
+### 이 점검에서 새로 드러난 것
+- **광장 투표가 0행이다.** 글 946개에 `plaza_votes` 가 하나도 없다. 시드 글이라 그럴 수도 있으나 `vote_plaza_post` 동작 확인이 필요하다(로그인 필요) 🔶
+- **`ai_trends` 는 죽은 표다.** 어디서도 참조하지 않고 3행 전부 고아였다. 드롭 여부는 사장님 판단 🔶
+- **`posts`(숏판·롱판)가 0행이다.** 카운터 검사가 통과한 게 아니라 검사할 데이터가 없었다 🔶
+
+
+## 23. AI 사업자 학습 이용 — 방침 대조 (2026-08-31)
+
+방침 §6-1 의 단정 다섯 개를 실제 동작·사업자 정책과 대조했다.
+
+| 단정 | 결과 |
+|---|---|
+| 대화 원본을 탈퇴 시 파기 | ✅ `friend_relationship` CASCADE 확인 |
+| 갈라뉴스 AI 표시 | ✅ 리더에 '갈라뉴스 · AI 종합' 배지 + 고지문 |
+| 예측 문항 AI 표시 | 신설(`ai_generated`) — 라이브 245/285 확인 ✅ |
+| 자체 활용 시 식별정보 제거 | `profile_summary` 제거·소급 정리 ✅ |
+| **외부 사업자 학습에 제공 안 함** | ❌ **DeepSeek 방침이 정반대를 명시** — 아래 |
+
+**DeepSeek** 개인정보 처리방침(우리가 §6 에 링크한 바로 그 문서):
+> 「개인정보보호법」 제15조 제3항에 따라 귀하의 개인정보를 **당사 기술 학습∙개선 목적으로 추가적으로 이용할 수 있습니다**
+
+오픈 플랫폼 약관은 학습에 대해 침묵하고 API 예외 조항이 없다. 우리 코드에도 학습 거부
+헤더·설정 흔적이 전수 grep 0건. → 방침을 사실대로 고쳤다.
+
+🔶 **사장님 결정 대기**
+1. DeepSeek 계정에 학습 거부 설정이 있으면 끄기 → 더 강한 문구로 복원 가능
+2. 또는 갈비스를 학습 제외가 명시된 사업자(OpenAI·Anthropic API)로 이전
+3. 또는 현 상태 유지(지금 문구가 사실에 맞음)
+
+
+## 24. 크론 51개 전수 · 접근성 (2026-09-01)
+
+**크론**: 51개 중 실행 이력 없음 2개(오늘 만든 food 잡 — 다음 스케줄 확인 필요),
+비활성 1개, 7일 실패 6건. 실패는 비율로 봐야 한다:
+- 5분 잡 4개 = 각 2,016회 중 1회(0.05%) — 같은 분에 몰린 일회성, 결함 아님
+- `purge_old_news` 8회 중 1회 — 어제 수정 후 5초로 성공(전엔 20~31초)
+- `media_ref_refresh` 7회 중 1회 — **함수 안에서 statement_timeout 을 올려도 무효**였다
+  (문장 타이머는 시작 시 이미 걸림). 크론 command 앞으로 옮겨 해결
+
+**산출물 신선도**: 뉴스·날씨·핫튜브·갈라뉴스 전부 5분 이내 ✅.
+`feed_signals` 12시간은 트래픽 부족이지 고장 아님(롤업 192회 전부 성공).
+`agent_jobs` 는 **중간 상태 무한 정체 발견** — 90분 회수기 신설.
+
+**접근성**(홈 실측):
+| 항목 | 결과 |
+|---|---|
+| 하단 탭 이름 | 다섯 중 넷이 스크린리더에 안 읽힘 → aria-label 5개·aria-current 추가 ✅ |
+| 포커스 링 | outline:none 만 있고 대체 없음 → :focus-visible 전역 추가, Tab 키로 확인 ✅ |
+| 본문 대비 | 5종 미달(최저 2.59 @9px, 푸터 3.0~4.2) 🔶 |
+| 터치 타깃 | 68개 중 25개가 24px 미만(찬반 버튼 18x51 등, WCAG 2.2 AA) 🔶 |
+| 이미지 alt | 내비 5개 해결. 콘텐츠 썸네일 4개는 남음 🔶 |

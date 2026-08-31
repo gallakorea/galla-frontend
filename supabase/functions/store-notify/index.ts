@@ -11,7 +11,7 @@
 
    ⚠️ 처리 못 한 알림에도 200 을 돌려준다 — 4xx/5xx 를 주면 스토어가 며칠간
       같은 알림을 계속 재시도한다. '해당 없음'은 실패가 아니다. */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { jwsPayload, appleGetTransaction, googleGetPurchase, b64urlToBytes, googleGetSubscription } from "../_shared/store.ts";
 
 const sb = createClient(

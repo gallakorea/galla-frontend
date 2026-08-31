@@ -271,7 +271,7 @@ function countUp(root){
 async function loadMarkets(){
   // 🌍 읽기 필터 — 내 언어 + global 마켓. 언어가 하나뿐이면 no-op.
   const { data, error } = await (window.GALLA_lfilter || function (q) { return q; })(supa.from('markets')
-    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at,created_by')
+    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at,created_by,ai_generated')
     .order('created_at',{ascending:false}));
   if(error){ console.error(error); return; }
   allMarkets = data||[];
@@ -333,7 +333,7 @@ function renderMarkets(){
       <div class="pm-card-top">
         <div class="pm-card-thumb">${m.image_url?`<img src="${esc(m.image_url)}" loading="lazy">`:'🎯'}</div>
         <div class="pm-card-h">
-          <div class="pm-card-q">${esc(m.question)}</div>
+          <div class="pm-card-q">${esc(m.question)}${m.ai_generated ? '<span class="pm-ai-tag" title="AI가 만든 문항입니다">🤖 AI</span>' : ''}</div>
           <div class="pm-card-meta">${esc(m.category||'')} · ${statusBadge}${m.is_jackpot?' · 🎁 보너스':''}</div>
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>

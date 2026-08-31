@@ -1,6 +1,6 @@
 // 갈라뉴스 생성 — 최근 헤드라인을 AI로 주제별 묶고, 각 주제의 여러 소스를 종합해
 // 우리 표현으로 새 기사 작성(사실 기반, 원문 복제 아님). 소스는 관련기사로 링크.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import { DOMParser, type Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 
 import { logSpend } from "../_shared/spend.ts";

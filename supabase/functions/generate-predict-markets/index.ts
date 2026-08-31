@@ -1,7 +1,7 @@
 // 🔮 매일 재밌고 자극적인 예측 마켓 5개 자동 생성
 // gpt-4o-mini가 예/아니오 예측 질문 생성 → admin_create_market으로 삽입.
 // 안전: 실존인물 명예훼손·혐오·불법·성인·자살 소재 배제. 위트있고 참여욕구 자극.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
 

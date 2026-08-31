@@ -9,7 +9,7 @@
      APNS_BUNDLE_ID — im.galla.app  (VoIP 토픽은 <bundle>.voip)
      APNS_ENV       — "production" | "sandbox" (개발 빌드는 sandbox)
    키가 없으면 { ok:false, reason:'not_configured' }를 돌려주고 조용히 넘어간다(통화 자체는 실시간 시그널로 진행). */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import { SignJWT, importPKCS8 } from "https://esm.sh/jose@5.9.6";
 
 const admin = createClient(

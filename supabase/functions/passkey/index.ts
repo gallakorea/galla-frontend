@@ -6,7 +6,7 @@
      'login-finish'    (비로그인) → 검증 성공 시 magiclink token_hash 반환 → 프론트 verifyOtp로 세션
    rpID=galla.im (웹 전용 — Capacitor 네이티브는 associated-domains 필요, 추후).
    verify_jwt=false (register는 내부에서 수동 JWT 검증). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,

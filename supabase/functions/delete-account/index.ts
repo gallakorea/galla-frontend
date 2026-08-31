@@ -2,7 +2,7 @@
    흐름: 호출자 JWT 검증 → anonymize_account(PII 제거·툼스톤) → auth.users 삭제(로그인·이메일 제거).
    설계: 콘텐츠(댓글·발제)는 익명 유지 — 남의 댓글이 연쇄삭제되지 않게. 개인정보·로그인만 없앤다.
    되돌릴 수 없다. 프론트에서 재확인 후 호출. */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,

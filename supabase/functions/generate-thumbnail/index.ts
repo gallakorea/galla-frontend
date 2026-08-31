@@ -2,7 +2,7 @@
    흐름: JWT → 프롬프트 검열(moderation+IP가드) → 플랫폼 일일캡 → 유저 일일한도 → gpt-image-1 → R2 → my_thumbnails.
    지금은 무료(완성형 우선) — 남용가드는 플랫폼 캡(ai_daily_caps.generate-thumbnail) + 유저 24h 한도.
    과금(GP)은 나중에 붙인다. 생성 권한은 이 함수에만(클라에 이미지생성/INSERT 권한 없음). */
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 import { logSpendUnits } from "../_shared/spend.ts";
