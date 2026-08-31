@@ -116,22 +116,41 @@ async function recentVideos(chanId: string, since: string | null, cap = 50, titl
     if (re && !re.test(s.title || "")) continue;       // 이 프로그램 편이 아니다
     out.push({
       id: s.resourceId?.videoId, title: s.title || "",
-      desc: (s.description || "").slice(0, 900),        // 설명은 길다 — 앞부분에 상호·주소가 있다
+      /* ⚠️ 900자로 자르고 있었다. 먹방 채널은 설명 뒷부분에 가게 목록을 다는 일이 많아
+         잘린 뒤쪽을 통째로 못 보고 있었다. 토큰이 좀 더 들어도 앞을 다 본다. */
+      desc: (s.description || "").slice(0, 4000),
       at,
     });
   }
   return out.filter((v) => v.id);
 }
 
+/* 인기 댓글 — 공식 commentThreads.list(1유닛). 자막은 소유자 인증이 필요해 못 받지만,
+   댓글은 공식 창구다. 한국 먹방 채널은 상호·주소를 고정 댓글에 다는 일이 흔하다.
+   ⚠️ 댓글이 꺼진 영상은 403 이 온다 — 정상이므로 조용히 넘어간다. */
+async function topComments(videoId: string): Promise<string> {
+  try {
+    const d = await ytGet("commentThreads", {
+      part: "snippet", videoId, order: "relevance", maxResults: "5", textFormat: "plainText",
+    });
+    const t = (d?.items || [])
+      .map((it: any) => it?.snippet?.topLevelComment?.snippet?.textDisplay || "")
+      .filter(Boolean).join("\n").slice(0, 1500);
+    return t;
+  } catch (_) { return ""; }
+}
+
 /* 제목·설명 → 상호/주소. 한 영상에 여러 집이 나오는 경우가 많다(먹방 투어).
    ⚠️ 모델이 지어내는 게 제일 무섭다 — "설명에 없으면 비워라"를 계속 못박는다.
       주소가 없으면 지오코딩이 어차피 실패하므로 버린다. */
 let lastAiNote = "";   // 마지막 AI 호출 상태 — 조용한 실패를 리포트에 드러낸다
-async function extract(vids: { id: string; title: string; desc: string; at: string }[], ch: string): Promise<Hit[]> {
+async function extract(vids: { id: string; title: string; desc: string; at: string; cmt?: string }[], ch: string): Promise<Hit[]> {
   lastAiNote = "";
   if (!vids.length) { lastAiNote = "no_videos"; return []; }
   if (!DS) { lastAiNote = "no_ai_key"; return []; }
-  const payload = vids.map((v, i) => `[${i}] 제목: ${v.title}\n설명: ${v.desc}`).join("\n---\n");
+  const payload = vids.map((v, i) =>
+    `[${i}] 제목: ${v.title}\n설명: ${v.desc}` + (v.cmt ? `\n댓글: ${v.cmt}` : "")
+  ).join("\n---\n");
   /* ⚠️ 예전 규칙은 "주소 없으면 버려라" 였다 — 실측 결과 또간집 6편에서 0건이 나왔다.
      유튜브 설명에는 상호명만 있고 주소가 거의 없다. 버리면 쿼터만 태우고 남는 게 없다.
      → 주소가 있으면 좌표까지 확정하고, 없으면 상호 + 지역힌트만 받아 대기열에 쌓는다. */
@@ -265,7 +284,8 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const only = url.searchParams.get("channel");         // 한 채널만 돌려보는 수동 실행용
-  const perCh = Number(url.searchParams.get("cap") || "50");   // 50편 = 1유닛. 넓게 훑고 제목으로 거른다.
+  const perCh = Number(url.searchParams.get("cap") || "50");
+  const useComments = url.searchParams.get("comments") === "1";   // 50편 = 1유닛. 넓게 훑고 제목으로 거른다.
 
   const { data: chans } = await supa.from("food_channels")
     .select("slug,name,kind,yt_channel_id,yt_query,yt_title_re,thumb,last_video_at")
@@ -285,7 +305,18 @@ Deno.serve(async (req) => {
       const vids = await recentVideos(id, c.last_video_at, perCh, c.yt_title_re);
       if (!vids.length) { report.push({ ch: c.slug, videos: 0 }); continue; }
 
-      const hits = await extract(vids, c.slug);
+      let hits = await extract(vids, c.slug);
+      /* 🧪 실측 결과(2026-08-31): 댓글을 붙여도 0건이었다.
+         쯔양 50편·츄더 50편·또리네 50편·홍유 50편·맛있는녀석들 40편 → 전부 0.
+         이 채널들은 제목·설명·댓글 어디에도 상호를 쓰지 않는다. 정보가 영상 안에만 있다.
+         효과가 없는데 실행당 180유닛을 먹으므로 기본은 끈다(?comments=1 로 재시험 가능).
+         ⚠️ 자막은 공식 경로가 없다 — captions.download 는 **영상 소유자 인증**을 요구한다.
+            비공식 timedtext·yt-dlp 는 YouTube 약관이 금지하는 접근이라 쓰지 않는다. */
+      if (useComments && !hits.length && vids.length) {
+        const sub = vids.slice(0, 12);
+        for (const v of sub) (v as any).cmt = await topComments(v.id);
+        if (sub.some((v: any) => v.cmt)) hits = await extract(sub, c.slug);
+      }
       /* 주소가 있는 건만 좌표를 확정해 바로 지도에 올린다.
          주소가 없는 건(대다수)은 버리지 않고 food_pending 에 쌓아둔다 —
          장소검색 키가 생기면 일괄 승격한다. 키를 기다리는 동안에도 자산이 쌓인다. */
