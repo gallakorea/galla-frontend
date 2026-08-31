@@ -78,15 +78,22 @@
                 logoControlOptions: { position: nv.Position.BOTTOM_LEFT } };
     if (MAPCFG.styleId) opt.customStyleId = MAPCFG.styleId;
     var map = new nv.Map(el, opt);
+    /* ⚠️ 컨테이너 레이아웃이 확정되기 전에 getBounds() 를 부르면 네이버는 경계를
+       **중심점 하나로 접어서** 돌려준다(실측: sw==ne==center). 넓이 0 이라 질의가
+       0건이 되고 "이 구역엔 없어요"가 뜬다. 레이아웃이 잡히면 다시 그린다. */
+    setTimeout(function () { try { map.refresh(true); } catch (_) {} }, 60);
+    nv.Event.once(map, "init", function () { try { map.refresh(true); } catch (_) {} });
     return {
       kind: "naver",
       onIdle: function (fn) { nv.Event.addListener(map, "idle", fn); },
       getBounds: function () {
         var b = map.getBounds();
-        // 네이버 LatLngBounds 는 getMin()/getMax() 로 남서·북동을 준다
         var mn = b.getMin ? b.getMin() : b.getSW(), mx = b.getMax ? b.getMax() : b.getNE();
-        return { swLat: mn.y != null ? mn.y : mn.lat(), swLon: mn.x != null ? mn.x : mn.lng(),
-                 neLat: mx.y != null ? mx.y : mx.lat(), neLon: mx.x != null ? mx.x : mx.lng() };
+        var r = { swLat: mn.y != null ? mn.y : mn.lat(), swLon: mn.x != null ? mn.x : mn.lng(),
+                  neLat: mx.y != null ? mx.y : mx.lat(), neLon: mx.x != null ? mx.x : mx.lng() };
+        // 퇴화(한 점으로 접힘) 감지 — 호출부가 재시도하도록 null 을 준다
+        if (!(r.neLat > r.swLat) || !(r.neLon > r.swLon)) return null;
+        return r;
       },
       getZoom: function () { return map.getZoom(); },
       setView: function (la, lo, z) { map.setCenter(new nv.LatLng(la, lo)); if (z) map.setZoom(z); },
@@ -97,7 +104,8 @@
         if (onClick) nv.Event.addListener(m, "click", onClick);
         return m;
       },
-      drop: function (m) { try { m.setMap(null); } catch (_) {} }
+      drop: function (m) { try { m.setMap(null); } catch (_) {} },
+      _raw: map
     };
   }
 
@@ -145,7 +153,7 @@
   var GAPS = null;
   var listLimit = 40;   // '더 보기'로 늘린다 — 예전엔 40에서 끊기고 더 볼 방법이 없었다
   var mode = "near";   // 하위 로직 호환(내부에서만 씀)
-  var MAP, mapEl, L = null, leafletLoading = null, markers = [], moveTimer = 0, lastPlaces = [];
+  var MAP, mapEl, L = null, leafletLoading = null, markers = [], moveTimer = 0, lastPlaces = [], bboxRetry = 0;
   var SHEET, curPlace = null;
   var DETAIL = null;   // 상세 오버레이(지도와 분리)
 
@@ -174,6 +182,9 @@
     var d = await rpc("food_place_detail", { p_id: id });
     if (!d || !d.ok) return toast("정보를 불러오지 못했어요");
     DETAIL.classList.add("open");
+    /* 지도에서 왔으면 스크림을 옅게 — 핀을 누른 자리가 뒤에 보여야 공간 맥락이 산다.
+       목록에서 왔으면 뒤에 지도가 없으니 진하게 덮는다(사장님 지적). */
+    DETAIL.classList.toggle("over-map", !!(MAP && MAP.classList.contains("open")));
     document.body.classList.add("fd-detail-on");
     try { history.pushState({ fdDetail: 1 }, ""); } catch (_) {}
     showSheet(d);
@@ -762,6 +773,7 @@
         catch (_) { toast("지도를 불러오지 못했어요"); closeMap(); return; }
       }
       MAP.dataset.provider = MB.kind;
+      try { window.__fdMB = MB; } catch (_) {}   // 진단용 — 지도 경계 계산이 틀렸을 때 들여다본다
       MB.onIdle(function () { clearTimeout(moveTimer); moveTimer = setTimeout(fetchBbox, 260); });
       // 지도 위 제스처는 셸로 절대 넘기지 않는다 (오버레이 + 이중 방어)
       ["touchstart", "touchmove"].forEach(function (t) {
@@ -804,6 +816,15 @@
   async function fetchBbox() {
     if (!MB || !MAP.classList.contains("open")) return;
     var b = MB.getBounds();
+    if (!b) {
+      /* 지도가 아직 자기 크기를 모른다 — 경계가 한 점으로 접혀 있다.
+         0건을 그리면 "이 구역엔 없어요"가 잘못 뜨므로, 조용히 다시 시도한다. */
+      MB.refresh();
+      bboxRetry = (bboxRetry || 0) + 1;
+      if (bboxRetry < 8) { clearTimeout(moveTimer); moveTimer = setTimeout(fetchBbox, 250); }
+      return;
+    }
+    bboxRetry = 0;
     var d = await rpc("food_map", {
       p_sw_lat: b.swLat, p_sw_lon: b.swLon,
       p_ne_lat: b.neLat, p_ne_lon: b.neLon,

@@ -768,3 +768,23 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
   background: var(--surface-3); border: 1px solid var(--line-2);
   color: var(--text-mid); font-size: 14px; line-height: 1;
 }
+/* 지도에서 핀을 눌러 열었을 땐 지도가 뒤에 보여야 한다 — 스크림을 옅게,
+   시트도 화면을 다 먹지 않게 낮춘다(핀 주변을 확인하면서 읽는 게 맞다). */
+.fd-detail.over-map .fd-detail-bg { background: rgba(0,0,0,.28); }
+.fd-detail.over-map .fd-sheet { max-height: 66%; }
+
+/* ═══ 🚨 오버레이가 0×0 으로 접히던 버그 (2026-08-31) ═══════
+   증상: 지도가 열렸는데 마커 0개, "이 구역엔 없어요". 경계값이 중심점 하나로 접혔다.
+   추적: getBounds 파싱이 아니라 **컨테이너가 0×0** 이었다.
+        .fd-map 은 position:fixed; inset:0 인데 computed width/height 가 0px 였다.
+   원인: position:fixed 의 컨테이닝 블록은 보통 뷰포트지만, 조상에 transform 이 걸리면
+        그 조상이 컨테이닝 블록이 된다. 갈라 셸은 탭 스와이프에 transform 을 쓴다
+        (galla-spa 의 fixed/transform 함정과 같은 자리).
+   해결: 뷰포트 단위로 크기를 못박는다 — vw/vh 는 컨테이닝 블록과 무관하게
+        항상 뷰포트를 기준으로 잡힌다. inset:0 만 믿으면 안 된다. */
+.fd-map, .fd-detail, .fd-rpick {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;   /* 모바일 주소창 대응 — 미지원 브라우저는 위 100vh 로 */
+  top: 0; left: 0; right: auto; bottom: auto;
+}
