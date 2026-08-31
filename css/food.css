@@ -653,3 +653,24 @@ button.fd-sec-sub.unset { color: var(--text-low); }
 }
 .fh-cat.on { background: var(--text-hi); border-color: var(--text-hi); color: #000; }
 .fh-cat .n { font-size: 11px; opacity: .55; font-variant-numeric: tabular-nums; }
+
+/* ── 사진 제보 ───────────────────────────────────────────
+   우리에겐 매장 사진이 없다. 유저가 채워야 캐치테이블 수준의 비주얼이 나온다.
+   사진이 생기면 카드가 영상 썸네일 대신 그걸 쓴다 — 중복·오해가 동시에 사라진다. */
+.fd-photos { margin-top: 16px; border-top: 1px solid var(--line-1); padding-top: 13px; }
+.fp-h { display: flex; align-items: center; font-size: 13px; font-weight: 700;
+  color: var(--text-hi); margin-bottom: 9px; }
+.fp-h b { color: var(--accent-2); margin-left: 4px; }
+.fp-add { margin-left: auto; padding: 5px 10px; border-radius: 999px; cursor: pointer;
+  background: var(--accent); border: 0; color: #fff; font-size: 11.5px; font-weight: 700; }
+.fp-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.fp-row::-webkit-scrollbar { display: none; }
+.fp-i { position: relative; flex: 0 0 auto; width: 112px; height: 112px;
+  border-radius: 11px; overflow: hidden; background: var(--surface-2); }
+.fp-i img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fp-x { position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; cursor: pointer;
+  border-radius: 50%; border: 0; background: rgba(0,0,0,.62); color: #fff; font-size: 11px; }
+.fp-empty { padding: 16px 2px; text-align: center; color: var(--text-low); font-size: 12.5px; }
+/* 사진 여러 장인 집은 카드에 장수 배지 */
+.fd-th-n { position: absolute; left: 5px; top: 5px; padding: 1px 6px; border-radius: 999px;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 10px; font-weight: 700; font-style: normal; }

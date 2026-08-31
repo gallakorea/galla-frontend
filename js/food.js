@@ -379,10 +379,15 @@
     return '<span class="fd-tile" style="background:' + t[0] + '">' + t[1] + '</span>';
   }
   function card(p) {
+    /* 유저가 올린 사진이 있으면 그게 먼저다 — 이건 '이 가게 사진'이 맞고,
+       집마다 다르니 중복도 안 생긴다. 없을 때만 영상 썸네일로 떨어진다. */
     var vid = p.video_id;
-    var dup = vid && usedThumb && usedThumb.has(vid);
-    if (vid && usedThumb) usedThumb.add(vid);
-    var th = dup ? "" : ytThumb(vid);
+    var th = p.cover || "";
+    if (!th) {
+      var dup = vid && usedThumb && usedThumb.has(vid);
+      if (vid && usedThumb) usedThumb.add(vid);
+      th = dup ? "" : ytThumb(vid);
+    }
     var tot = (p.good || 0) + (p.bad || 0);
     var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
     var ch = (p.channels && p.channels.length) ? p.channels[0] : "";
@@ -390,6 +395,7 @@
       '<div class="fd-th">' +
         (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) +
         (p.visited ? '<i class="fd-th-chk">✓</i>' : '') +
+        (p.photos_n > 1 ? '<i class="fd-th-n">' + p.photos_n + '</i>' : '') +
       '</div>' +
       '<div class="fd-b">' +
         '<h4 class="fd-name">' + esc(p.name) + '</h4>' +
@@ -627,6 +633,9 @@
         vw.classList.add("playing"); return;
       }
       if (t.closest('[data-a="report"]')) { openReport(); return; }
+      if (t.closest('[data-a="photo"]')) { addPhoto(); return; }
+      var px = t.closest("[data-photo]");
+      if (px) { removePhoto(px.dataset.photo); return; }
       if (t.closest('[data-a="menu"]')) { openMenuForm(); return; }
       if (t.closest('[data-a="menu-save"]')) { saveMenu(); return; }
       var rep = t.closest("[data-rep]");
@@ -869,6 +878,7 @@
       '<a class="fd-ext" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' +
         encodeURIComponent(p.name + " " + (p.address || "")) + '">🗺 네이버지도에서 열기</a>' +
       /* 메뉴판 — 유저 제보와 AI 추출을 구분해 보여준다. 출처가 안 보이면 신뢰가 안 선다. */
+      '<div class="fd-photos" id="fd-photos">' + photoHtml(d.photos || []) + '</div>' +
       '<div class="fd-menu" id="fd-menu">' + menuHtml(d.menus || []) + '</div>' +
       '<button type="button" class="fd-flag" data-a="report">🏳 정보가 잘못됐나요?</button>' +
       '<div class="fd-talk">' +
@@ -903,6 +913,59 @@
       proAttr: 'data-j="good"', conAttr: 'data-j="bad"',
       myStance: mine === "good" ? "pro" : mine === "bad" ? "con" : null
     });
+  }
+
+  /* 사진 — 우리에겐 매장 사진이 없다. 유저가 채워야 한다.
+     캐치테이블 수준의 비주얼은 이 데이터 없이는 구조적으로 안 나온다. */
+  function photoHtml(ps) {
+    return '<div class="fp-h">사진' + (ps.length ? ' <b>' + ps.length + '</b>' : '') +
+        '<button type="button" class="fp-add" data-a="photo">+ 사진 올리기</button></div>' +
+      (ps.length
+        ? '<div class="fp-row chip-scroll">' + ps.map(function (x) {
+            return '<div class="fp-i"><img src="' + esc(x.url) + '" alt="" loading="lazy">' +
+              (x.mine ? '<button type="button" class="fp-x" data-photo="' + x.id + '">✕</button>' : '') +
+            '</div>'; }).join("") + '</div>'
+        : '<div class="fp-empty">아직 사진이 없어요. 다녀오셨다면 한 장 올려주세요.</div>');
+  }
+  async function addPhoto() {
+    if (!curPlace) return;
+    if (!(await loggedIn())) return needLogin();
+    if (!window.GALLA_UPLOAD_MEDIA) return toast("업로드 모듈을 불러오지 못했어요");
+    var inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+    document.body.appendChild(inp);
+    inp.addEventListener("change", async function () {
+      var f = inp.files && inp.files[0];
+      inp.remove();
+      if (!f) return;
+      if (f.size > 12 * 1024 * 1024) return toast("사진이 너무 커요 (12MB 이하)");
+      toast("올리는 중…");
+      try {
+        var url = await window.GALLA_UPLOAD_MEDIA(f, "image");
+        var r = await rpc("food_photo_add", { p_id: curPlace.place.id, p_url: url });
+        if (!r || !r.ok) {
+          if (r && r.reason === "mine_full") return toast("한 집에 5장까지 올릴 수 있어요");
+          if (r && r.reason === "full") return toast("이 집은 사진이 가득 찼어요");
+          return toast("등록하지 못했어요");
+        }
+        toast("사진 고맙습니다");
+        await refreshSheet();
+      } catch (e) { toast("업로드 실패 — 잠시 후 다시"); }
+    });
+    inp.click();
+  }
+  async function removePhoto(id) {
+    var r = await rpc("food_photo_remove", { p_photo: Number(id) });
+    if (r && r.ok) { toast("내렸어요"); refreshSheet(); }
+  }
+  async function refreshSheet() {
+    if (!curPlace) return;
+    var d = await rpc("food_place_detail", { p_id: curPlace.place.id });
+    if (!d || !d.ok) return;
+    curPlace = d;
+    var ph = SHEET.querySelector("#fd-photos");
+    if (ph) ph.innerHTML = photoHtml(d.photos || []);
+    loadList();
   }
 
   function won(n) { return n == null ? "" : Number(n).toLocaleString("ko-KR") + "원"; }
