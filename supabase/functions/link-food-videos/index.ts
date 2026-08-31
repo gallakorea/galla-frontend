@@ -84,7 +84,19 @@ Deno.serve(async (req) => {
     }
   }
 
-  /* ── 매칭 ── 채널이 같은 영상 안에서만 상호를 찾는다 */
+  /* ── 매칭 ① 주소 기반 ── 상호보다 주소가 훨씬 강한 키다.
+     설명란에 주소를 적는 채널이 많다(김사원 296편 중 240편). 상호는 표기가 흔들리고
+     동명이인이 있지만 주소는 안 그렇다 — 실측: 이름 기반 18건 → 주소 기반 131곳.
+     방금 동기화한 채널만 돌린다(전 채널을 한 번에 돌리면 statement timeout 이 난다). */
+  for (const r of report) {
+    if (!r.ch || r.err) continue;
+    try {
+      const { data } = await supa.rpc("food_link_videos_by_address", { p_channel: r.ch });
+      r.addr = data || null;
+    } catch (e) { r.addr_err = String(e).slice(0, 120); }
+  }
+
+  /* ── 매칭 ② 이름 기반 ── 채널이 같은 영상 안에서만 상호를 찾는다 */
   /* ⚠️ 여기서도 PostgREST 1,000행 상한에 걸린다 — .limit(50000) 을 줘도 1,000편만 온다.
      카탈로그를 다 못 보면 매칭이 통째로 헛돈다(실측: linked 1~2건). range 로 끝까지 읽는다. */
   const vids: any[] = [];
