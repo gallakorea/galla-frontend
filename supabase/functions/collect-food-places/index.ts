@@ -39,6 +39,72 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 
 const CHAT_URL = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
+/* 🔴 예비 공급자 — DeepSeek 잔액이 마르면(402) 추출이 통째로 0건이 되는데, 로그를 안 보면
+   '수집할 게 없었다'와 구분이 안 된다(실측 2026-08-31). 키가 이미 있는 Gemini 로 넘어간다. */
+const GEM = Deno.env.get("GEMINI_API_KEY") || "";
+
+let lastAiNote = "";   // 마지막 AI 호출 상태 — 조용한 실패를 리포트에 드러낸다
+let dsDead = false;
+const AIERR = (m: string) => { lastAiNote = m; console.error(m); };
+/* 모델 이름을 박아두면 구글이 단종시키는 날 조용히 404 로 죽는다
+   (실측 2026-08-31: gemini-2.5-flash → "no longer available to new users").
+   목록에서 generateContent 를 지원하는 flash 계열을 골라 캐시한다. */
+let gemPick: string | null = null;
+async function gemModel(): Promise<string | null> {
+  if (gemPick) return gemPick;
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEM}&pageSize=200`);
+    if (!r.ok) { AIERR(`gemini_models ${r.status}:${(await r.text()).slice(0, 100)}`); return null; }
+    const ms = ((await r.json())?.models || []) as any[];
+    const ok = ms.filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
+                 .map((m) => String(m.name || "").replace(/^models\//, ""))
+                 .filter((n) => !/embedding|aqa|image|tts|vision|live|native-audio/i.test(n));
+    /* 싸고 빠른 flash 우선, 없으면 아무거나 */
+    gemPick = ok.find((n) => /flash/.test(n) && !/lite/.test(n)) || ok.find((n) => /flash/.test(n)) || ok[0] || null;
+    if (!gemPick) AIERR("gemini_no_model");
+    return gemPick;
+  } catch (e) { AIERR("gemini_models " + String(e).slice(0, 100)); return null; }
+}
+
+
+
+async function chatJson(sys: string, user: string): Promise<string | null> {
+  if (DS && !dsDead) {
+    const r = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+      }),
+    });
+    if (r.ok) return (await r.json())?.choices?.[0]?.message?.content || null;
+    const body = (await r.text()).slice(0, 200);
+    if (r.status === 402 || r.status === 401) dsDead = true;
+    lastAiNote = `deepseek_${r.status}: ${body}`;
+    console.error("deepseek", r.status, body);
+  }
+  if (!GEM) return null;
+  const model = await gemModel();
+  if (!model) return null;
+  const g = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEM}`,
+    { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sys }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: { temperature: 0, responseMimeType: "application/json" },
+      }) });
+  if (!g.ok) {
+    const body = (await g.text()).slice(0, 200);
+    lastAiNote = `gemini_${g.status}: ${body}`;
+    console.error("gemini", g.status, body);
+    return null;
+  }
+  const d = await g.json();
+  return d?.candidates?.[0]?.content?.parts?.map((x: any) => x.text).join("") || null;
+}
 
 type Chan = {
   slug: string; name: string; kind: string;
@@ -68,14 +134,45 @@ async function ytGet(path: string, params: Record<string, string>) {
 }
 
 /* 채널 ID 확정 — 100유닛짜리라 한 번만 부르고 DB에 박는다.
-   ⚠️ 손으로 UC... 를 적어 넣지 않는다. 틀린 채널을 긁어도 아무도 눈치채지 못한다. */
-async function resolveChannel(c: Chan): Promise<string | null> {
+   ⚠️ 손으로 UC... 를 적어 넣지 않는다. 틀린 채널을 긁어도 아무도 눈치채지 못한다.
+
+   그런데 '한 번만'이 지켜지지 않았다. 미해소 채널을 매 실행 처음부터 다시 시도해서
+   쿼터가 마르면 **앞쪽 몇 개에서만 낭비하고 뒤쪽은 순서가 영영 안 왔다**
+   (실측 2026-08-31: 42개 중 21개가 null 인 채로 정체). 그래서
+   ① 실행당 예산(resolveBudget)을 두고 ② 오래 안 해본 것부터 돌리고
+   ③ 쿼터 에러가 나면 그 실행의 해소는 즉시 접는다.
+
+   그리고 top1 을 그대로 믿지 않는다 — '수요미식회' 같은 종영 프로그램은 공식 채널이
+   없어서 엉뚱한 채널이 1등으로 올라온다. 제목이 우리 이름과 겹칠 때만 박는다. */
+let quotaDead = false;
+
+function titleMatches(want: string, got: string) {
+  const n = (x: string) => x.replace(/[\s·・,'"“”‘’\-–—]/g, "").toLowerCase();
+  const a = n(want), b = n(got);
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  /* 2글자 이상 토큰이 하나라도 겹치면 인정 — '백종원의 3대 천왕' vs '백종원' */
+  const toks = want.split(/\s+/).map(n).filter((t) => t.length >= 2);
+  return toks.some((t) => b.includes(t));
+}
+
+async function resolveChannel(c: Chan, budget: { left: number }): Promise<string | null> {
   if (c.yt_channel_id) return c.yt_channel_id;
-  if (!c.yt_query) return null;
-  const d = await ytGet("search", {
-    part: "snippet", type: "channel", q: c.yt_query, maxResults: "1", regionCode: "KR",
-  });
-  const id = d?.items?.[0]?.snippet?.channelId || d?.items?.[0]?.id?.channelId || null;
+  if (!c.yt_query || quotaDead || budget.left <= 0) return null;
+  budget.left--;
+  await supa.from("food_channels").update({ resolve_tried_at: new Date().toISOString() }).eq("slug", c.slug);
+  let d: any;
+  try {
+    d = await ytGet("search", {
+      part: "snippet", type: "channel", q: c.yt_query, maxResults: "5", regionCode: "KR",
+    });
+  } catch (e) {
+    if (/\b403\b|quota/i.test(String(e))) quotaDead = true;
+    throw e;
+  }
+  const hit = (d?.items || []).find((it: any) =>
+    titleMatches(c.name, it?.snippet?.channelTitle || it?.snippet?.title || ""));
+  const id = hit?.snippet?.channelId || hit?.id?.channelId || null;
   if (id) await supa.from("food_channels").update({ yt_channel_id: id }).eq("slug", c.slug);
   return id;
 }
@@ -143,7 +240,6 @@ async function topComments(videoId: string): Promise<string> {
 /* 제목·설명 → 상호/주소. 한 영상에 여러 집이 나오는 경우가 많다(먹방 투어).
    ⚠️ 모델이 지어내는 게 제일 무섭다 — "설명에 없으면 비워라"를 계속 못박는다.
       주소가 없으면 지오코딩이 어차피 실패하므로 버린다. */
-let lastAiNote = "";   // 마지막 AI 호출 상태 — 조용한 실패를 리포트에 드러낸다
 async function extract(vids: { id: string; title: string; desc: string; at: string; cmt?: string }[], ch: string): Promise<Hit[]> {
   lastAiNote = "";
   if (!vids.length) { lastAiNote = "no_videos"; return []; }
@@ -169,22 +265,7 @@ async function extract(vids: { id: string; title: string; desc: string; at: stri
     "   price 는 숫자만(2천원→2000, 1,700원→1700).\n" +
     '9. 출력은 JSON 만: {"items":[{"i":0,"name":"","address":"","region_hint":"","category":"","menus":[{"name":"","price":""}]}]}\n' +
     "10. 뽑을 게 없으면 {\"items\":[]} 를 출력한다. 억지로 채우지 마라.";
-  const r = await fetch(CHAT_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
-    body: JSON.stringify({
-      model: MODEL, temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: sys }, { role: "user", content: payload }],
-    }),
-  });
-  if (!r.ok) {
-    const body = (await r.text()).slice(0, 200);
-    lastAiNote = `ai_http_${r.status}: ${body}`;
-    console.error("deepseek", r.status, body);
-    return [];
-  }
-  const txt = (await r.json())?.choices?.[0]?.message?.content || "{}";
+  const txt = (await chatJson(sys, payload)) || "{}";
   let parsed: any = {};
   try { parsed = JSON.parse(txt); }
   catch { lastAiNote = "ai_bad_json: " + txt.slice(0, 160); return []; }
@@ -287,9 +368,18 @@ Deno.serve(async (req) => {
   const perCh = Number(url.searchParams.get("cap") || "50");
   const useComments = url.searchParams.get("comments") === "1";   // 50편 = 1유닛. 넓게 훑고 제목으로 거른다.
 
+  /* 해소 예산 — search.list 100유닛 × N. 기본 3개(300유닛)면 하루 쿼터를 해치지 않는다. */
+  const budget = { left: Number(url.searchParams.get("resolve") || "3") };
+
   const { data: chans } = await supa.from("food_channels")
     .select("slug,name,kind,yt_channel_id,yt_query,yt_title_re,thumb,last_video_at")
     .eq("active", true).order("sort");
+  /* 미해소 채널은 '오래 안 해본 것' 순으로 돌린다 — sort 순으로 두면 앞쪽만 계속 시도한다. */
+  const { data: pend } = await supa.from("food_channels")
+    .select("slug").eq("active", true).is("yt_channel_id", null)
+    .order("resolve_tried_at", { ascending: true, nullsFirst: true })
+    .limit(Math.max(budget.left, 1));
+  const resolveSet = new Set((pend || []).map((r: any) => r.slug));
 
   const report: any[] = [];
   let newTotal = 0, dupTotal = 0, stagedTotal = 0;
@@ -297,8 +387,11 @@ Deno.serve(async (req) => {
   for (const c of (chans || []) as Chan[]) {
     if (only && c.slug !== only) continue;
     try {
-      const id = await resolveChannel(c);
-      if (!id) { report.push({ ch: c.slug, err: "no_channel_id" }); continue; }
+      if (!c.yt_channel_id && !only && !resolveSet.has(c.slug)) {
+        report.push({ ch: c.slug, err: "resolve_queued" }); continue;   // 다음 실행 차례
+      }
+      const id = await resolveChannel(c, budget);
+      if (!id) { report.push({ ch: c.slug, err: quotaDead ? "yt_quota" : "no_channel_id" }); continue; }
       c.yt_channel_id = id;
       await fetchThumb(c);          // 마커용 채널 로고 (없을 때만 1유닛)
 

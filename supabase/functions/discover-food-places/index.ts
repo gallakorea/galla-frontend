@@ -24,9 +24,17 @@ const S_SEC = Deno.env.get("NAVER_SEARCH_SECRET") || Deno.env.get("NAVER_CLIENT_
 const DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const CHAT_URL = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
+/* 🔴 예비 공급자 — DeepSeek 잔액이 마르면(402 Insufficient Balance) 추출이 통째로 0건이 된다.
+   실측 2026-08-31: 스니펫 3,560건을 모으고도 후보 0건이었다. 이유가 보이지 않아서
+   '스윕이 안 먹힌다'로 오진하기 딱 좋은 실패다. 키가 이미 있는 Gemini 로 자동으로 넘어간다. */
+const GEM = Deno.env.get("GEMINI_API_KEY") || "";
+
 
 const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+const aiErrors: string[] = [];
+let dsDead = false;
+const AIERR = (m: string) => { if (aiErrors.length < 8) aiErrors.push(m); };
 const strip = (s: string) => String(s || "").replace(/<[^>]*>/g, "").replace(/&[a-z]+;/g, " ").trim();
 
 /* 네이버 검색(블로그·뉴스·웹) — 사실을 모으는 창구 */
@@ -43,9 +51,69 @@ async function nsearch(kind: "blog" | "news" | "webkr", query: string, display =
   return { items: (d?.items || []).map((it: any) => strip(it.title) + " — " + strip(it.description)) };
 }
 
+/* 모델 이름을 박아두면 구글이 단종시키는 날 조용히 404 로 죽는다
+   (실측 2026-08-31: gemini-2.5-flash → "no longer available to new users").
+   목록에서 generateContent 를 지원하는 flash 계열을 골라 캐시한다. */
+let gemPick: string | null = null;
+async function gemModel(): Promise<string | null> {
+  if (gemPick) return gemPick;
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEM}&pageSize=200`);
+    if (!r.ok) { AIERR(`gemini_models ${r.status}:${(await r.text()).slice(0, 100)}`); return null; }
+    const ms = ((await r.json())?.models || []) as any[];
+    const ok = ms.filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
+                 .map((m) => String(m.name || "").replace(/^models\//, ""))
+                 .filter((n) => !/embedding|aqa|image|tts|vision|live|native-audio/i.test(n));
+    /* 싸고 빠른 flash 우선, 없으면 아무거나 */
+    gemPick = ok.find((n) => /flash/.test(n) && !/lite/.test(n)) || ok.find((n) => /flash/.test(n)) || ok[0] || null;
+    if (!gemPick) AIERR("gemini_no_model");
+    return gemPick;
+  } catch (e) { AIERR("gemini_models " + String(e).slice(0, 100)); return null; }
+}
+
+/* JSON 한 덩어리를 받아오는 단일 관문. DeepSeek → (실패 시) Gemini.
+   어느 쪽이 왜 죽었는지는 aiErrors 에 남겨 리포트로 올린다 — 조용한 0건이 제일 나쁘다. */
+async function chatJson(sys: string, user: string): Promise<string | null> {
+  if (DS && !dsDead) {
+    const r = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+      }),
+    });
+    if (r.ok) return (await r.json())?.choices?.[0]?.message?.content || null;
+    const msg = (await r.text()).slice(0, 120);
+    /* 402(잔액)·401(키) 은 이번 실행 내내 계속 실패한다 — 한 번만 기록하고 바로 예비로 간다. */
+    if (r.status === 402 || r.status === 401) dsDead = true;
+    if (aiErrors.length < 4) aiErrors.push(`deepseek ${r.status}:${msg}`);
+  }
+  if (!GEM) return null;
+  const model = await gemModel();
+  if (!model) return null;
+  const u = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEM}`;
+  const g = await fetch(u, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: sys }] },
+      contents: [{ role: "user", parts: [{ text: user }] }],
+      generationConfig: { temperature: 0, responseMimeType: "application/json" },
+    }),
+  });
+  if (!g.ok) {
+    if (aiErrors.length < 6) aiErrors.push(`gemini ${g.status}:${(await g.text()).slice(0, 120)}`);
+    return null;
+  }
+  const d = await g.json();
+  return d?.candidates?.[0]?.content?.parts?.map((x: any) => x.text).join("") || null;
+}
+
 /* 스니펫 → 상호 후보. 지역까지 같이 뽑아야 동명이인을 줄일 수 있다. */
 async function extractNames(channel: string, snippets: string[]): Promise<{ name: string; region?: string }[]> {
-  if (!snippets.length || !DS) return [];
+  if (!snippets.length || (!DS && !GEM)) return [];
   const sys =
     `너는 '${channel}' 에 소개된 **식당 이름**만 뽑는 추출기다.\n` +
     "규칙:\n" +
@@ -56,19 +124,10 @@ async function extractNames(channel: string, snippets: string[]): Promise<{ name
     "5. 사람 이름·채널명·프랜차이즈 본사명은 식당이 아니다. 버린다.\n" +
     '6. 출력은 JSON 만: {"items":[{"name":"","region":""}]}\n' +
     '7. 확실하지 않으면 넣지 마라. 빈 배열이 틀린 값보다 낫다.';
-  const r = await fetch(CHAT_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
-    body: JSON.stringify({
-      model: MODEL, temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [{ role: "system", content: sys },
-                 { role: "user", content: snippets.join("\n---\n").slice(0, 12000) }],
-    }),
-  });
-  if (!r.ok) return [];
+  const body = snippets.join("\n---\n").slice(0, 12000);
+  const t = await chatJson(sys, body);
+  if (!t) return [];
   try {
-    const t = (await r.json())?.choices?.[0]?.message?.content || "{}";
     const p = JSON.parse(t);
     return (p.items || [])
       .filter((x: any) => x && String(x.name || "").trim().length >= 2)
@@ -134,7 +193,7 @@ Deno.serve(async (req) => {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);
-  if (!DS) return j({ ok: false, reason: "no_ai_key" }, 500);
+  if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);
 
   const url = new URL(req.url);
   const only = url.searchParams.get("channel");
@@ -142,24 +201,59 @@ Deno.serve(async (req) => {
   /* 다각도 수집 — 한 줄만 치면 상위 몇 개만 본다.
      표현 × 지역으로 갈라 훑으면 같은 채널에서 훨씬 넓게 긁힌다.
      네이버 검색은 일 25,000회라 이 정도 조합은 여유롭다. */
-  const REGIONS = ["", "서울", "부산", "대구", "인천", "광주", "대전", "울산",
-                   "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-  const PHRASES = ["맛집", "다녀간 맛집", "나온 식당", "방문 맛집"];
-  const deep = url.searchParams.get("deep") === "1";
-  const regions = deep ? REGIONS : REGIONS.slice(0, 9);
-  const phrases = deep ? PHRASES : PHRASES.slice(0, 2);
+  /* 다각도 수집 — 한 줄만 치면 상위 몇 개만 본다.
+     표현 × 지역으로 갈라 훑으면 같은 채널에서 훨씬 넓게 긁힌다.
+     네이버 검색은 일 25,000회라 이 정도 조합은 여유롭다.
 
-  /* 🔁 회전 — 채널을 지정하지 않으면 '가장 오래 안 돈 4개'만 돈다.
+     ⚠️ 예전엔 매 실행 **똑같은 조합**(표현 4 × 시도 17)만 돌았다. 한 번 긁고 나면
+        두 번째부터는 같은 결과라 새 장소가 거의 안 늘었다(그래서 데이터가 멈췄다).
+        → 채널마다 회차(discover_wave)를 세고, 그 값으로 표현·지역 창을 민다.
+          한 실행의 비용은 그대로인데 며칠에 걸쳐 훨씬 넓게 덮인다. */
+  const SIDO = ["", "서울", "부산", "대구", "인천", "광주", "대전", "울산",
+                "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
+  /* 시군구까지 내려가면 같은 채널에서도 새 이름이 계속 나온다 —
+     블로그는 '강남 맛집'처럼 구 단위로 쓰지 시도 단위로 안 쓴다. */
+  const GU = [
+    "서울 강남", "서울 강북", "서울 마포", "서울 종로", "서울 중구", "서울 성동", "서울 광진",
+    "서울 송파", "서울 영등포", "서울 서초", "서울 용산", "서울 노원", "서울 은평", "서울 관악",
+    "부산 해운대", "부산 서면", "부산 남포동", "부산 광안리", "부산 기장",
+    "대구 중구", "대구 수성", "인천 중구", "인천 부평", "광주 동구", "대전 유성",
+    "경기 수원", "경기 성남", "경기 고양", "경기 용인", "경기 부천", "경기 안양", "경기 파주",
+    "강원 강릉", "강원 속초", "강원 춘천", "충남 천안", "전북 전주", "전남 여수", "전남 순천",
+    "경북 경주", "경북 포항", "경남 창원", "경남 통영", "제주 서귀포", "제주 제주시",
+  ];
+  const PHRASES = ["맛집", "다녀간 맛집", "나온 식당", "방문 맛집",
+                   "소개된 맛집", "추천 맛집", "출연 맛집", "가본 곳", "노포", "웨이팅"];
+  const deep = url.searchParams.get("deep") === "1";
+
+  /* 회차로 창을 민다. 지역은 시도(항상) + 시군구 일부(회차마다 다른 구간). */
+  function windowFor(wave: number) {
+    const pn = deep ? 4 : 2;
+    const ph: string[] = [];
+    for (let i = 0; i < pn; i++) ph.push(PHRASES[(wave * pn + i) % PHRASES.length]);
+    const sido = deep ? SIDO : SIDO.slice(0, 9);
+    const gn = deep ? 12 : 6;
+    const gu: string[] = [];
+    for (let i = 0; i < gn; i++) gu.push(GU[(wave * gn + i) % GU.length]);
+    return { phrases: ph, regions: [...sido, ...gu] };
+  }
+
+  /* 🔁 회전 — 채널을 지정하지 않으면 '가장 오래 안 돈 N개'만 돈다.
      전 채널을 한 번에 돌리면 검색 API 에서 서로 굶는다(실측: 21개 동시 → 스니펫 0~75,
      단독일 땐 570). 매 실행 몇 개씩 돌리면 며칠에 걸쳐 전체가 고르게 갱신된다. */
   const rotN = Number(url.searchParams.get("n") || "4");
   let slugs: string[] | null = null;
+  const waveOf = new Map<string, number>();
   if (!only) {
     const { data: qd } = await supa.rpc("food_discover_queue", { p_n: rotN });
-    slugs = (qd || []) as string[];
+    const rows = (qd || []) as any[];
+    slugs = rows.map((r) => (typeof r === "string" ? r : r.slug));
+    for (const r of rows) if (typeof r !== "string") waveOf.set(r.slug, Number(r.wave) || 0);
   }
+  const forceWave = url.searchParams.get("wave");
+
   const { data: chans } = await supa.from("food_channels")
-    .select("slug,name,active").eq("active", true).order("sort");
+    .select("slug,name,active,discover_wave").eq("active", true).order("sort");
 
   const report: any[] = [];
   let added = 0;
@@ -170,13 +264,23 @@ Deno.serve(async (req) => {
     try {
       /* 표현 × 지역 스윕. 스니펫은 한데 모으고, 상호는 이름으로 중복을 걷은 뒤
          **한 번씩만** 검증한다 — 검증이 제일 비싼 단계라 여기서 아껴야 한다. */
+      const wave = forceWave != null ? Number(forceWave) : (waveOf.get(c.slug) ?? c.discover_wave ?? 0);
+      const { phrases, regions } = windowFor(wave);
       const snips: string[] = [];
       for (const ph of phrases) {
         for (const rg of regions) {
           const q = `${c.name} ${rg} ${ph}${extra ? " " + extra : ""}`.replace(/\s+/g, " ").trim();
           const b = await nsearch("blog", q, 30);
           snips.push(...(b.items || []));
-          if (!rg) { const n = await nsearch("news", q, 15); snips.push(...(n.items || [])); }
+          if (!rg) {
+            /* 시도·구 없는 '전국' 질의에서만 다른 코퍼스도 함께 본다 —
+               뉴스는 방송 직후 기사를, 웹문서는 블로그가 못 잡는 정리글을 준다.
+               (webkr 은 지금까지 한 번도 안 쓰던 창구였다) */
+            const n = await nsearch("news", q, 15);
+            snips.push(...(n.items || []));
+            const w = await nsearch("webkr", q, 20);
+            snips.push(...(w.items || []));
+          }
           await new Promise((s) => setTimeout(s, 40));
         }
       }
@@ -187,12 +291,19 @@ Deno.serve(async (req) => {
         report.push({ ch: c.slug, snippets: 0 }); continue;
       }
 
-      /* 스니펫이 많으면 AI 한 번에 다 못 넣는다 — 덩어리로 나눠 뽑고 이름으로 합친다 */
+      /* 스니펫이 많으면 AI 한 번에 다 못 넣는다 — 덩어리로 나눠 뽑고 이름으로 합친다.
+         ⚠️ 스윕을 넓히자 한 채널에서 3,600건이 나왔다. 앞에서부터 14덩어리만 읽으면
+            **84%를 버린다** — 게다가 앞쪽은 같은 질의의 연속이라 중복이 몰려 있다.
+            중복을 걷고 전체에서 고르게 뽑아 읽는다. */
+      const uniq = Array.from(new Set(snips));
+      const CHUNK_CAP = 14;
+      const step = Math.max(1, Math.floor(uniq.length / (CHUNK_CAP * 40)));
+      const spread = step > 1 ? uniq.filter((_, i) => i % step === 0) : uniq;
       const chunks: string[][] = [];
-      for (let i = 0; i < snips.length; i += 40) chunks.push(snips.slice(i, i + 40));
+      for (let i = 0; i < spread.length; i += 40) chunks.push(spread.slice(i, i + 40));
       const seen = new Set<string>();
       const cands: { name: string; region?: string }[] = [];
-      for (const ck of chunks.slice(0, 8)) {
+      for (const ck of chunks.slice(0, CHUNK_CAP)) {
         for (const x of await extractNames(c.name, ck)) {
           const k = x.name.replace(/\s/g, "").toLowerCase();
           if (seen.has(k)) continue;
@@ -212,8 +323,9 @@ Deno.serve(async (req) => {
       }
       added += res.new || 0;
       await supa.rpc("food_discover_stamp", { p_slug: c.slug });   // 회전 도장
-      report.push({ ch: c.slug, snippets: snips.length, cands: cands.length,
-                    verified: items.length, ...res });
+      report.push({ ch: c.slug, wave, snippets: snips.length, read: Math.min(chunks.length, CHUNK_CAP) * 40,
+                    cands: cands.length, verified: items.length, ...res,
+                    ai: aiErrors.slice(0, 3) });
     } catch (e) {
       report.push({ ch: c.slug, err: String(e).slice(0, 140) });
     }
