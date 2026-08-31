@@ -62,11 +62,31 @@ Deno.serve(async (req) => {
   const usable = tour.filter((t) =>
     t.firstimage && (t.cpyrhtDivCd === "Type1" || t.cpyrhtDivCd === "Type3"));
 
-  const idx = new Map<string, Tour[]>();
+  /* ⚠️ 처음엔 '이름 완전일치'만 봤다. 그런데 관광공사와 우리 표기가 미묘하게 다르다
+     ('여원찜갈비 월성직영점' vs '여원찜갈비'). 실측하니 완전일치로 놓치는 게 185곳이었다.
+     → 좌표(약 1km 격자)로 후보를 먼저 좁히고, 그 안에서 이름을 세 단계로 본다:
+       ① 완전일치 ② 지점명 뗀 뒤 일치 ③ 3글자 이상 부분일치.
+     좌표가 먼저라 동명이인이 섞일 위험은 오히려 줄어든다. */
+  const cell = (la: number, lo: number) => `${Math.round(la * 100)}:${Math.round(lo * 100)}`;
+  const grid = new Map<string, Tour[]>();
   for (const t of usable) {
-    const k = norm(t.title);
-    (idx.get(k) || idx.set(k, []).get(k)!).push(t);
+    const la = Number(t.mapy), lo = Number(t.mapx);
+    if (!isFinite(la) || !isFinite(lo)) continue;
+    const k = cell(la, lo);
+    (grid.get(k) || grid.set(k, []).get(k)!).push(t);
   }
+  const nearby = (la: number, lo: number) => {
+    const out: Tour[] = [];
+    for (const dy of [-0.01, 0, 0.01]) for (const dx of [-0.01, 0, 0.01]) {
+      const g = grid.get(cell(la + dy, lo + dx));
+      if (g) out.push(...g);
+    }
+    return out;
+  };
+  /* 지점명을 뗀 상호 — 붙어 있는 '○○점'은 상호의 일부일 수 있으니 공백을 요구한다 */
+  const baseName = (s: string) =>
+    norm(String(s || "").replace(/\([^)]*\)/g, "")
+      .replace(/\s+(본점|직영점|[가-힣A-Za-z0-9]{1,6}점)$/, "").trim());
 
   /* 사진이 아직 없는 곳만 대상.
      ⚠️ PostgREST 는 기본 1,000행에서 자른다 — 그냥 부르면 4,000곳 중 1,000곳만 봤다.
@@ -81,14 +101,20 @@ Deno.serve(async (req) => {
   const rows: any[] = [];
   let seen = 0;
   for (const p of places) {
-    const cands = idx.get(norm(p.name));
-    if (!cands) continue;
-    seen++;
-    const hit = cands.find((t) => {
-      const dx = Number(t.mapx) - Number(p.lon), dy = Number(t.mapy) - Number(p.lat);
-      return isFinite(dx) && isFinite(dy) && (dx * dx + dy * dy) < 0.02 * 0.02;   // 약 2km
-    });
+    const la = Number(p.lat), lo = Number(p.lon);
+    if (!isFinite(la) || !isFinite(lo)) continue;
+    const cands = nearby(la, lo);
+    if (!cands.length) continue;
+    const pn = norm(p.name), pb = baseName(p.name);
+    const hit =
+      cands.find((t) => norm(t.title) === pn) ||
+      (pb.length >= 2 ? cands.find((t) => baseName(t.title) === pb) : null) ||
+      (pb.length >= 3 ? cands.find((t) => {
+        const tb = baseName(t.title);
+        return tb.length >= 3 && (tb.includes(pb) || pb.includes(tb));
+      }) : null);
     if (!hit) continue;
+    seen++;
     /* ⚠️ 관광공사가 주는 URL 은 http:// 다. food_photos 는 https 만 받고(CHECK),
        앱 CSP 도 img-src 가 https: 라 그대로 넣으면 저장도 표시도 안 된다.
        같은 CDN 이 https 로 정상 서빙하는 걸 확인했으므로 올려서 넣는다. */
