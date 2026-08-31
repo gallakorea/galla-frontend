@@ -16,6 +16,26 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+
+/* 💰 일일 예산 상한. app_settings.ai_daily_caps 의 이 함수 이름 항목을 읽고,
+   ai_budget_usage 에 행 잠금으로 카운트를 올린다(동시 호출에도 천장을 안 넘는다).
+   ⚠️ 2026-08-31 감사에서 이 함수가 상한을 **한 번도 안 읽고 있었다**는 걸 발견했다.
+   ai_daily_caps 에 항목은 있는데 코드가 부르지 않아, 설정만 있고 실제로는 무제한이었다.
+   유저가 직접 트리거하는 경로라 반복 호출로 원가가 무한히 늘 수 있었다. */
+async function aiBudgetOk(fn: string, n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: fn, p_n: n }),
+    });
+    if (!r.ok) return true;              // 예산 확인 실패로 기능을 멈추지는 않는다
+    const j = await r.json();
+    return j?.ok !== false;
+  } catch { return true; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -27,6 +47,8 @@ Deno.serve(async (req) => {
     const { data: exist } = await supa.from("ai_news").select("stance").eq("issue_id", issueId).eq("mode", "argument");
     const hasPro = exist?.some((d) => d.stance === "pro"), hasCon = exist?.some((d) => d.stance === "con");
     if (hasPro && hasCon) return json({ ok: true, cached: true });
+
+    if (!(await aiBudgetOk("generate-ai-arguments"))) return json({ ok: false, reason: "daily_cap" }, 429);
 
     const title = String(body?.title || "").slice(0, 200);
     const desc = String(body?.description || body?.one_line || "").slice(0, 800);
