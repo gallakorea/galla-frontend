@@ -256,10 +256,10 @@
 | 항목 | 상태 |
 |---|---|
 | **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ✅ |
-| 기본 OG 이미지 폴백 | ❌ |
-| **robots.txt · sitemap.xml.js 동적 생성** | ❌ |
+| 기본 OG 이미지 폴백 | ✅ 존재하지 않는 id → 기본 문구 + og-default.png(332KB, 200) 확인 |
+| **robots.txt · sitemap.xml.js 동적 생성** | ✅ robots 200 · sitemap 2,885 URL(523KB) 정상 생성 |
 | **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
-| 엣지 메타 주입(`_middleware.js`) | ❌ |
+| 엣지 메타 주입(`_middleware.js`) | ✅ `/issue?id=` 에 og:title·description·image 주입 확인 |
 | imgproxy 외부 이미지 프록시 | 🔶 앱에서만 확인 |
 | PWA 설치 유도·오프라인 페이지 | ❌ |
 
@@ -267,9 +267,9 @@
 
 | 항목 | 상태 |
 |---|---|
-| **추천 신호 층(feed_signals) 15분 집계** | ❌ |
+| **추천 신호 층(feed_signals) 15분 집계** | ✅ 롤업 2일간 192회 전부 성공·집계본 최신. 원천이 87행인 건 런칭 전 트래픽 문제지 고장 아님 |
 | 조회수 집계(content_daily_views) | ❌ |
-| **릴스 실행 에이전트(agent_jobs · reel-agent)** | ❌ |
+| **릴스 실행 에이전트(agent_jobs · reel-agent)** | ✅ 중간상태 무한정체 발견(389시간) → 90분 회수기 신설. 과거 코드버그 2건은 이미 해소됨 |
 | 미디어 R2 이관·고아 정리(purge-orphan-media·video-migrate-worker) | ❌ |
 | 뉴스 썸네일 치유(heal-news-thumbs) | ❌ |
 | 링크 미리보기·본문 추출(link-preview·article-reader) | ❌ |
