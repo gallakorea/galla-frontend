@@ -126,6 +126,7 @@
   }
 
   var sb = null, CH = [], chFilter = null, onlyUnvisited = false;
+  var catFilter = null, minShows = null, CATS = [];   // 필터 시트 상태
   var myRegion = null, myRegionName = "";
   var SEC, CHIPS, LIST, PROG, MODES;
   var mode = "near";   // near | controversial | loved | overrated
@@ -188,6 +189,7 @@
         '<button type="button" class="fd-mode" data-m="loved">👑 인정받은 집</button>' +
         '<button type="button" class="fd-mode" data-m="overrated">💀 과대평가</button>' +
         '<button type="button" class="fd-mode" data-m="browse">📺 방송별</button>' +
+        '<button type="button" class="fd-mode" data-m="leaders">🏆 랭킹</button>' +
       '</div>' +
       '<div class="fd-chips chip-scroll" id="fd-chips"></div>' +
       '<div class="fd-list" id="fd-list"><div class="fd-empty">불러오는 중…</div></div>';
@@ -317,12 +319,38 @@
       : '<div class="fd-empty">아직 방송별로 모을 만큼 쌓이지 않았어요.<br>수집이 하루 두 번 돕니다.</div>';
   }
 
+  /* 랭킹 — 저쪽은 '많이 다녀온 / 많이 등록한' 두 줄이다.
+     우리는 세 번째 축을 넣는다: 판정왕(맛있다·맛없다를 가장 많이 던진 사람).
+     갈라는 구경이 아니라 싸움이 본체니까. */
+  var MEDAL = ["🥇", "🥈", "🥉"];
+  function leaderCol(title, rows, unit) {
+    return '<div class="fl-col"><div class="fl-t">' + title + '</div>' +
+      (rows && rows.length
+        ? rows.map(function (r, i) {
+            return '<div class="fl-row"><span class="fl-rk">' + (MEDAL[i] || (i + 1)) + '</span>' +
+              '<span class="fl-nick">' + esc(r.nick) + '</span>' +
+              '<b class="fl-n">' + r.n + '</b></div>'; }).join("")
+        : '<div class="fl-empty">아직 없어요</div>') +
+      '<div class="fl-unit">' + unit + '</div></div>';
+  }
+  async function loadLeaders() {
+    var d = await rpc("food_leaders", { p_limit: 10 });
+    if (!d || !d.ok) { LIST.innerHTML = '<div class="fd-empty">랭킹을 불러오지 못했어요</div>'; return; }
+    LIST.innerHTML = '<div class="fl-wrap">' +
+      leaderCol("👟 많이 다녀온", d.visited, "도장 수") +
+      leaderCol("⚔️ 판정왕", d.judged, "맛있다·맛없다 던진 수") +
+      leaderCol("✍️ 많이 등록한", d.added, "제보 수") +
+    '</div>';
+  }
+
   async function loadList() {
     if (!LIST) return;
+    if (mode === "leaders") { await loadLeaders(); return; }
     if (mode === "browse") { await loadBrowse(); return; }
     var ps, d;
     if (mode === "near") {
-      d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: 40 });
+      d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: 40,
+                                  p_category: catFilter, p_min_shows: minShows });
       ps = (d && d.places) || [];
     } else {
       // 랭킹은 전국 기준. 최소 표수를 넘긴 집만 올라온다(표본이 적으면 우연이니까).
@@ -370,9 +398,11 @@
         '<div class="fd-map-row">' +
           '<div class="fd-chips chip-scroll" id="fd-mchips" style="flex:1;padding-bottom:0"></div>' +
           '<button type="button" class="fd-unvisited" id="fd-unv">안 가본 곳</button>' +
+          '<button type="button" class="fd-filt" id="fd-filt" aria-label="필터">⚙</button>' +
         '</div>' +
       '</div>' +
-      '<div class="fd-sheet" id="fd-sheet"></div>';
+      '<div class="fd-sheet" id="fd-sheet"></div>' +
+      '<div class="fd-fsheet" id="fd-fsheet"></div>';
     document.body.appendChild(MAP);
     SHEET = MAP.querySelector("#fd-sheet");
 
@@ -387,11 +417,31 @@
         chFilter = (chFilter === c.dataset.slug) ? null : c.dataset.slug;
         paintMapChips(); paintChips(); fetchBbox(); return;
       }
+      var vw = t.closest(".fd-vid");
+      if (vw && vw.dataset.vid) {
+        vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
+          '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
+        vw.classList.add("playing"); return;
+      }
       if (t.closest(".fd-act")) { onSheetClick(e); return; }
       var jb = t.closest("[data-j]");
       if (jb) { onJudge(jb.dataset.j); return; }
       var lk = t.closest("[data-like]");
       if (lk) { onLike(lk.dataset.like, lk); return; }
+      if (t.closest("#fd-filt")) { openFilter(); return; }
+      var fch = t.closest("#fd-fsheet [data-ch]");
+      if (fch) { chFilter = fch.dataset.ch || null; openFilter(); paintChips(); paintMapChips(); return; }
+      var fcat = t.closest("#fd-fsheet [data-cat]");
+      if (fcat) { catFilter = fcat.dataset.cat || null; openFilter(); return; }
+      var ff = t.closest("#fd-fsheet [data-f]");
+      if (ff) {
+        if (ff.dataset.f === "multi") { minShows = minShows ? null : 2; openFilter(); return; }
+        if (ff.dataset.f === "reset") { catFilter = null; minShows = null; chFilter = null; openFilter(); paintChips(); paintMapChips(); return; }
+        if (ff.dataset.f === "apply") { closeFilter(); fetchBbox(); loadList(); return; }
+      }
+      if (t.closest("#fd-sheet")) return;
+      // 시트 밖을 누르면 닫는다
+      if (MAP.querySelector("#fd-fsheet.open") && !t.closest("#fd-fsheet")) closeFilter();
     });
     // 한마디 등록 — 시트가 매번 새로 그려지므로 위임으로 받는다
     MAP.addEventListener("submit", function (e) {
@@ -478,7 +528,8 @@
     var d = await rpc("food_map", {
       p_sw_lat: b.swLat, p_sw_lon: b.swLon,
       p_ne_lat: b.neLat, p_ne_lon: b.neLon,
-      p_channel: chFilter, p_only_unvisited: onlyUnvisited, p_limit: 400
+      p_channel: chFilter, p_only_unvisited: onlyUnvisited, p_limit: 400,
+      p_category: catFilter, p_min_shows: minShows
     });
     lastPlaces = (d && d.places) || [];
     var c = MAP.querySelector("#fd-count");
@@ -539,16 +590,52 @@
     });
   }
 
+  /* ── 필터 시트 ────────────────────────────────────────
+     카테고리는 실제 데이터에서 뽑는다(food_categories) — 없는 걸 버튼으로 두면
+     눌러도 0건이라 고장난 것처럼 보인다. */
+  async function openFilter() {
+    var FS = MAP.querySelector("#fd-fsheet");
+    if (!CATS.length) CATS = (await rpc("food_categories")) || [];
+    FS.innerHTML =
+      '<div class="fd-sheet-grip"></div>' +
+      '<div class="ff-head">필터<button type="button" class="ff-reset" data-f="reset">초기화</button></div>' +
+      '<div class="ff-sec"><div class="ff-t">여러 곳에 소개</div>' +
+        '<button type="button" class="ff-chip' + (minShows ? " on" : "") + '" data-f="multi">👑 2곳 이상 소개</button>' +
+      '</div>' +
+      '<div class="ff-sec"><div class="ff-t">방송·유튜브</div><div class="ff-row chip-scroll">' +
+        '<button type="button" class="ff-chip' + (chFilter ? "" : " on") + '" data-ch="">전체</button>' +
+        CH.filter(function (c) { return c.total; }).map(function (c) {
+          return '<button type="button" class="ff-chip' + (chFilter === c.slug ? " on" : "") + '" data-ch="' + esc(c.slug) + '">' +
+            (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy">' : '') + esc(c.name) + '</button>';
+        }).join("") +
+      '</div></div>' +
+      '<div class="ff-sec"><div class="ff-t">음식 종류</div><div class="ff-grid">' +
+        '<button type="button" class="ff-chip' + (catFilter ? "" : " on") + '" data-cat="">전체</button>' +
+        CATS.map(function (c) {
+          return '<button type="button" class="ff-chip' + (catFilter === c.name ? " on" : "") + '" data-cat="' + esc(c.name) + '">' +
+            esc(c.name) + '<span class="n">' + c.n + '</span></button>';
+        }).join("") +
+      '</div></div>' +
+      '<button type="button" class="ff-go" data-f="apply">결과 보기</button>';
+    FS.classList.add("open");
+  }
+  function closeFilter() { var FS = MAP && MAP.querySelector("#fd-fsheet"); if (FS) FS.classList.remove("open"); }
+
   /* ── 상세 시트 — 여기가 싸움터다 ──────────────────────
      맛집여지도는 "방송에 나온 집"을 보여주고 끝난다. 갈라는 거기서 시작한다:
      맛있다 / 맛없다를 고르고, **고른 사람만** 말할 수 있다. */
   function showSheet(d) {
     curPlace = d;
     var p = d.place, st = d.stats || { good: 0, bad: 0 };
+    var vid = (d.sources || []).reduce(function (a, x) { return a || x.video_id; }, "");
     SHEET.innerHTML =
       '<div class="fd-sheet-grip"></div>' +
       '<h3>' + esc(p.name) + '</h3>' +
-      '<div class="addr">' + esc(p.address) + (p.category ? ' · ' + esc(p.category) : '') + '</div>' +
+      '<div class="fd-meta">' +
+        (p.category ? '<span class="fd-cat">' + esc(p.category) + '</span>' : '') +
+        '<span class="addr">' + esc(p.address) + '</span>' +
+      '</div>' +
+      (p.phone ? '<a class="fd-tel" href="tel:' + esc(p.phone) + '">📞 ' + esc(p.phone) + '</a>' : '') +
       (d.sources && d.sources.length
         ? '<div class="fd-src">' + d.sources.map(function (s) {
             return '<div class="fd-src-i">📺 <b>' + esc(s.name) + '</b>' +
@@ -556,12 +643,22 @@
             '</div>'; }).join("") + '</div>'
         : '') +
       '<div class="fd-judge" id="fd-judge"></div>' +
+      /* 출처 영상 — 썸네일로 먼저 띄우고 누를 때만 iframe 을 붙인다.
+         시트 열 때마다 iframe 을 심으면 무겁고, 자동재생도 원치 않는다.
+         재생은 /yt 프록시를 쓴다 — 앱(capacitor origin)에서 직접 임베드가 막히는 걸
+         우회하려고 만들어둔 그 페이지다(핫튜브 오류 153). */
+      (vid ? '<div class="fd-vid" data-vid="' + esc(vid) + '">' +
+               '<img src="https://i.ytimg.com/vi/' + esc(vid) + '/mqdefault.jpg" alt="" loading="lazy">' +
+               '<i class="fd-vid-play">▶</i></div>' : '') +
       '<div class="fd-acts">' +
         '<button type="button" class="fd-act' + (d.visited ? " on" : "") + '" data-a="visit">' +
           (d.visited ? "✓ 갔다옴" : "갔다옴") + '</button>' +
         '<button type="button" class="fd-act save' + (d.saved ? " on" : "") + '" data-a="save">' +
           (d.saved ? "★ 찜함" : "☆ 찜") + '</button>' +
+        '<button type="button" class="fd-act" data-a="share">↗ 공유</button>' +
       '</div>' +
+      '<a class="fd-ext" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' +
+        encodeURIComponent(p.name + " " + (p.address || "")) + '">🗺 네이버지도에서 열기</a>' +
       '<div class="fd-talk">' +
         '<div class="fd-talk-h">한마디 <span id="fd-talk-n"></span></div>' +
         '<div class="fd-talk-list" id="fd-talk-list"></div>' +
@@ -659,6 +756,13 @@
 
   async function onSheetClick(e) {
     var b = e.target.closest(".fd-act"); if (!b || !curPlace) return;
+    if (b.dataset.a === "share") {
+      var pl = curPlace.place;
+      if (window.GALLA_share) GALLA_share({
+        url: location.origin + "/search.html?tab=food",
+        title: pl.name, text: pl.name + " — " + (pl.address || "") + " · 갈라 맛집" });
+      return;
+    }
     if (!(await loggedIn())) return needLogin();
     var id = curPlace.place.id;
     if (b.dataset.a === "visit") {

@@ -303,3 +303,75 @@ body.fd-map-on #frOrb { display: none !important; }
 .fb-score .bad { color: var(--con); font-weight: 700; }
 .fb-score .sep { color: var(--text-low); margin: 0 3px; }
 .fb-score.empty { color: var(--text-low); }
+
+/* ── 상세 시트 고도화 ────────────────────────────────────── */
+.fd-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.fd-cat { flex: 0 0 auto; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  background: rgba(255,159,67,.16); color: #ff9f43; }
+.fd-tel { display: inline-block; margin-top: 7px; font-size: 13px; font-weight: 700;
+  color: var(--accent-2); text-decoration: none; }
+/* 출처 영상 — 썸네일 먼저, 누를 때만 iframe(무게·자동재생 회피) */
+.fd-vid { position: relative; margin-top: 13px; border-radius: var(--r-md); overflow: hidden;
+  background: #000; aspect-ratio: 16/9; cursor: pointer; }
+.fd-vid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-vid iframe { width: 100%; height: 100%; border: 0; display: block; }
+.fd-vid.playing { cursor: default; }
+.fd-vid-play { position: absolute; inset: 0; margin: auto; width: 52px; height: 52px;
+  display: grid; place-items: center; border-radius: 50%; font-style: normal;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 19px; padding-left: 3px;
+  border: 2px solid rgba(255,255,255,.85); }
+.fd-ext { display: block; margin-top: 9px; padding: 11px 0; text-align: center;
+  border: 1px solid var(--line-2); border-radius: var(--r-sm);
+  color: var(--text-mid); font-size: 13px; font-weight: 600; text-decoration: none; }
+.fd-ext:active { background: var(--surface-2); }
+
+/* ── 필터 시트 ───────────────────────────────────────────── */
+.fd-filt { flex: 0 0 auto; width: 34px; height: 32px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 14px; }
+.fd-fsheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 520;
+  transform: translateY(110%); transition: transform .28s cubic-bezier(.22,.9,.3,1);
+  background: var(--surface-1); border-top: 1px solid var(--line-2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  max-height: 76%; overflow-y: auto;
+}
+.fd-fsheet.open { transform: translateY(0); }
+.ff-head { display: flex; align-items: center; font-size: 16px; font-weight: 800;
+  color: var(--text-hi); margin-bottom: 4px; }
+.ff-reset { margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--text-low); font-size: 12.5px; }
+.ff-sec { margin-top: 15px; }
+.ff-t { font-size: 12.5px; font-weight: 700; color: var(--text-mid); margin-bottom: 8px; }
+.ff-row { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 0 16px 3px; }
+.ff-row::-webkit-scrollbar { display: none; }
+.ff-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+.ff-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: var(--surface-2); border: 1px solid var(--line-1);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 600; }
+.ff-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ff-chip img { width: 17px; height: 17px; border-radius: 50%; object-fit: cover; }
+.ff-chip .n { opacity: .6; font-size: 11px; }
+.ff-go { width: 100%; margin-top: 18px; padding: 14px 0; border: 0; border-radius: var(--r-sm);
+  background: var(--accent-grad); color: #fff; font-size: 14.5px; font-weight: 800;
+  cursor: pointer; box-shadow: var(--accent-glow); }
+
+/* ── 랭킹 ────────────────────────────────────────────────── */
+.fl-wrap { display: flex; flex-direction: column; gap: 12px; }
+.fl-col { background: var(--surface-1); border: 1px solid var(--line-1);
+  border-radius: var(--r-md); padding: 13px 14px; }
+.fl-t { font-size: 13.5px; font-weight: 800; color: var(--text-hi); margin-bottom: 9px; }
+.fl-row { display: flex; align-items: center; gap: 9px; padding: 5px 0;
+  border-bottom: 1px solid var(--line-1); }
+.fl-row:last-of-type { border-bottom: 0; }
+.fl-rk { flex: 0 0 22px; text-align: center; font-size: 12px; color: var(--text-low);
+  font-variant-numeric: tabular-nums; }
+.fl-nick { flex: 1; min-width: 0; font-size: 13px; color: var(--text-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-n { flex: 0 0 auto; font-size: 13px; font-weight: 800; color: var(--accent-2);
+  font-variant-numeric: tabular-nums; }
+.fl-unit { margin-top: 8px; font-size: 11px; color: var(--text-low); text-align: right; }
+.fl-empty { padding: 12px 0; text-align: center; color: var(--text-low); font-size: 12.5px; }
