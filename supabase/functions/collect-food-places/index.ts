@@ -47,8 +47,10 @@ type Chan = {
   thumb: string | null;            // 채널 아바타 — 지도 마커에 띄운다
   last_video_at: string | null;
 };
+type MenuItem = { name: string; price?: string };
 type Hit = {
   name: string; address: string; region_hint?: string; category?: string;
+  menus?: MenuItem[];   // 영상 본문에 가격이 적혀 있을 때만 (먹방 채널은 자주 적는다)
   channel: string; video_id: string; video_title: string; aired_at: string;
   lat?: number; lon?: number; phone?: string;
 };
@@ -143,8 +145,11 @@ async function extract(vids: { id: string; title: string; desc: string; at: stri
     "5. 상호는 간판 이름만. '맛집', '편', 'EP.', 회차 번호 같은 수식은 제거한다.\n" +
     "6. 식당이 아닌 것(채널명, 협찬사, 유튜버 이름)은 넣지 마라.\n" +
     "7. category 는 한식/중식/일식/양식/분식/카페/술집/기타 중 하나. 모르면 빈 문자열.\n" +
-    '8. 출력은 JSON 만: {"items":[{"i":0,"name":"","address":"","region_hint":"","category":""}]}\n' +
-    "9. 뽑을 게 없으면 {\"items\":[]} 를 출력한다. 억지로 채우지 마라.";
+    "8. menus: 본문에 **메뉴명과 가격이 실제로 적혀 있을 때만** 뽑는다(예: '길거리 토스트 2천원').\n" +
+    "   가격이 없으면 menus 는 빈 배열로 둔다. 가격을 절대 추측하지 마라 — 틀린 가격은 없는 것만 못하다.\n" +
+    "   price 는 숫자만(2천원→2000, 1,700원→1700).\n" +
+    '9. 출력은 JSON 만: {"items":[{"i":0,"name":"","address":"","region_hint":"","category":"","menus":[{"name":"","price":""}]}]}\n' +
+    "10. 뽑을 게 없으면 {\"items\":[]} 를 출력한다. 억지로 채우지 마라.";
   const r = await fetch(CHAT_URL, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
@@ -177,6 +182,11 @@ async function extract(vids: { id: string; title: string; desc: string; at: stri
       address: addr.length >= 6 ? addr : "",
       region_hint: String(it.region_hint || "").trim() || (addr.length < 6 ? addr : ""),
       category: it.category || undefined,
+      menus: Array.isArray(it.menus)
+        ? it.menus.filter((m: any) => m && m.name && String(m.price || "").match(/\d/))
+                  .slice(0, 20)
+                  .map((m: any) => ({ name: String(m.name).trim(), price: String(m.price) }))
+        : undefined,
       channel: ch, video_id: v.id, video_title: v.title, aired_at: v.at,
     });
   }
@@ -290,6 +300,18 @@ Deno.serve(async (req) => {
         const { data } = await supa.rpc("food_ingest", { p_items: geo });
         res = data || res;
       }
+      /* 가격이 적혀 있던 건만 메뉴를 붙인다. food_ingest 는 id 를 돌려주지 않으므로
+         이름으로 되찾는다(같은 배치에서 방금 넣은 것이라 안전하다). */
+      let menuAdded = 0;
+      for (const h of geo) {
+        if (!h.menus || !h.menus.length) continue;
+        const { data: rows } = await supa.from("food_places").select("id")
+          .eq("name", h.name).limit(1);
+        const pid = rows && rows[0] && rows[0].id;
+        if (!pid) continue;
+        const { data: mr } = await supa.rpc("food_menu_ingest", { p_id: pid, p_items: h.menus });
+        menuAdded += (mr && mr.added) || 0;
+      }
       let staged = 0;
       if (noAddr.length) {
         const { data } = await supa.rpc("food_stage", { p_items: noAddr });
@@ -307,7 +329,7 @@ Deno.serve(async (req) => {
         .eq("slug", c.slug);
 
       report.push({ ch: c.slug, videos: vids.length, found: hits.length,
-                    geo: geo.filter(g => g.lat).length, staged, ai: lastAiNote,
+                    geo: geo.filter(g => g.lat).length, staged, menus: menuAdded, ai: lastAiNote,
                     sample: vids.slice(0, 3).map((v) => v.title.slice(0, 60)), ...res });
     } catch (e) {
       report.push({ ch: c.slug, err: String(e).slice(0, 180) });

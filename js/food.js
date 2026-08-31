@@ -127,6 +127,8 @@
 
   var sb = null, CH = [], chFilter = null, onlyUnvisited = false;
   var catFilter = null, minShows = null, CATS = [];   // 필터 시트 상태
+  var myPos = null;                 // 내 위치(있으면 거리·가까운순이 열린다)
+  var sortBy = "new";               // new | near | heat
   var myRegion = null, myRegionName = "";
   var SEC, CHIPS, LIST, PROG, MODES;
   var mode = "near";   // near | controversial | loved | overrated
@@ -174,7 +176,7 @@
     SEC.innerHTML =
       '<div class="fd-sec-head">' +
         '<div><div class="fd-sec-t">방송에 나온 집</div>' +
-        '<div class="fd-sec-sub" id="fd-sub">내 동네부터</div></div>' +
+        '<button type="button" class="fd-sec-sub" id="fd-sub">동네 고르기 ›</button></div>' +
         '<button type="button" class="fd-open-map" id="fd-open">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>지도로 보기</button>' +
@@ -210,6 +212,7 @@
   document.addEventListener("click", function (e) {
     var t = e.target;
     if (t.closest && t.closest("#fd-open")) { openMap(); return; }
+    if (t.closest && t.closest("#fd-sub")) { openRegionPicker(); return; }
     var m = t.closest && t.closest("#fd-modes .fd-mode");
     if (m) {
       mode = m.dataset.m;
@@ -221,6 +224,14 @@
       chFilter = (chFilter === chip.dataset.slug) ? null : chip.dataset.slug;
       paintChips(); loadList(); return;
     }
+    var sb2 = t.closest && t.closest("#fd-list [data-sort]");
+    if (sb2) {
+      sortBy = sb2.dataset.sort;
+      if (sortBy === "near" && !myPos) { askPos(); return; }
+      loadList(); return;
+    }
+    var rc = t.closest && t.closest("#fd-list .fd-rc");
+    if (rc) { openMap(null, rc.dataset.id); return; }
     var card = t.closest && t.closest("#fd-list .fd-card");
     if (card) { openMap(null, card.dataset.id); return; }
     var fb = t.closest && t.closest("#fd-list .fb-card");
@@ -259,11 +270,59 @@
     } else if (PROG) PROG.hidden = true;
   }
 
+  /* 거리 — 캐치테이블의 "내 위치에서 719m"를 차용. 좌표가 이미 있으니 서버를 안 부른다. */
+  function km(a, b, c, d) {
+    var R = 6371, r = Math.PI / 180;
+    var x = Math.sin((c - a) * r / 2), y = Math.sin((d - b) * r / 2);
+    return 2 * R * Math.asin(Math.sqrt(x * x + Math.cos(a * r) * Math.cos(c * r) * y * y));
+  }
+  function distText(p) {
+    if (!myPos || p.lat == null) return "";
+    var d = km(myPos.lat, myPos.lon, +p.lat, +p.lon);
+    return d < 1 ? Math.round(d * 1000) + "m" : d.toFixed(1) + "km";
+  }
+  /* 최근 본 곳 — 캐치테이블의 '최근 본 매장'. 서버에 남길 필요가 없는 개인 흔적이라
+     localStorage 에 둔다(비로그인도 되고, 서버 부담도 없다). */
+  function pushRecent(p) {
+    try {
+      var a = JSON.parse(localStorage.getItem("galla_food_recent") || "[]");
+      a = a.filter(function (x) { return x.id !== p.id; });
+      a.unshift({ id: p.id, name: p.name, address: p.address, cat: p.category });
+      localStorage.setItem("galla_food_recent", JSON.stringify(a.slice(0, 12)));
+    } catch (_) {}
+  }
+  function recentHtml() {
+    var a = [];
+    try { a = JSON.parse(localStorage.getItem("galla_food_recent") || "[]"); } catch (_) {}
+    if (!a.length) return "";
+    return '<div class="fd-recent"><div class="fd-recent-t">최근 본 곳</div>' +
+      '<div class="fd-recent-row chip-scroll">' + a.map(function (x) {
+        return '<button type="button" class="fd-rc" data-id="' + esc(x.id) + '">' +
+          '<span class="fd-rc-n">' + esc(x.name) + '</span>' +
+          '<span class="fd-rc-a">' + esc((x.address || "").split(" ").slice(0, 2).join(" ")) + '</span></button>';
+      }).join("") + '</div></div>';
+  }
+  function sortPlaces(ps) {
+    if (sortBy === "near" && myPos) {
+      return ps.slice().sort(function (a, b) {
+        if (a.lat == null) return 1; if (b.lat == null) return -1;
+        return km(myPos.lat, myPos.lon, +a.lat, +a.lon) - km(myPos.lat, myPos.lon, +b.lat, +b.lon);
+      });
+    }
+    if (sortBy === "heat") {
+      return ps.slice().sort(function (a, b) {
+        return ((b.good || 0) + (b.bad || 0)) - ((a.good || 0) + (a.bad || 0));
+      });
+    }
+    return ps;
+  }
+
   function card(p) {
     return '<div class="fd-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
       '<div class="fd-card-b">' +
         '<div class="fd-name">' + esc(p.name) + (p.visited ? '<span class="stamp">✓ 갔다옴</span>' : '') + '</div>' +
-        '<div class="fd-addr">' + esc(p.address) + '</div>' +
+        '<div class="fd-addr">' + esc(p.address) +
+          (distText(p) ? '<span class="fd-dist">' + distText(p) + '</span>' : '') + '</div>' +
         ((p.channels && p.channels.length)
           ? '<div class="fd-tags">' + p.channels.slice(0, 3).map(function (s) {
               return '<span class="fd-tag">' + esc(chName(s)) + '</span>'; }).join("") + '</div>'
@@ -386,13 +445,19 @@
       d = await rpc("food_rank", { p_kind: mode, p_min_votes: 3, p_limit: 40 });
       ps = (d && d.places) || [];
     }
+    ps = sortPlaces(ps);
     if (!ps.length) {
       LIST.innerHTML = '<div class="fd-empty">' + (EMPTY[mode] ||
         ((myRegionName ? esc(myRegionName) + "엔 " : "") + "아직 등록된 방송 맛집이 없어요.<br>지도에서 다른 동네를 둘러보세요.")) +
         '</div>';
       return;
     }
-    LIST.innerHTML = ps.map(card).join("");
+    LIST.innerHTML = recentHtml() +
+      '<div class="fd-sort">' +
+        '<button type="button" class="fd-sb' + (sortBy === "new" ? " on" : "") + '" data-sort="new">최신순</button>' +
+        '<button type="button" class="fd-sb' + (sortBy === "near" ? " on" : "") + '" data-sort="near">가까운순</button>' +
+        '<button type="button" class="fd-sb' + (sortBy === "heat" ? " on" : "") + '" data-sort="heat">화제순</button>' +
+      '</div>' + ps.map(card).join("");
   }
 
   /* ── 지도 (지연 로딩) ─────────────────────────────── */
@@ -452,6 +517,11 @@
           '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
         vw.classList.add("playing"); return;
       }
+      if (t.closest('[data-a="report"]')) { openReport(); return; }
+      if (t.closest('[data-a="menu"]')) { openMenuForm(); return; }
+      if (t.closest('[data-a="menu-save"]')) { saveMenu(); return; }
+      var rep = t.closest("[data-rep]");
+      if (rep) { sendReport(rep.dataset.rep); return; }
       if (t.closest(".fd-act")) { onSheetClick(e); return; }
       var jb = t.closest("[data-j]");
       if (jb) { onJudge(jb.dataset.j); return; }
@@ -655,6 +725,7 @@
      맛있다 / 맛없다를 고르고, **고른 사람만** 말할 수 있다. */
   function showSheet(d) {
     curPlace = d;
+    pushRecent(d.place);
     var p = d.place, st = d.stats || { good: 0, bad: 0 };
     var vid = (d.sources || []).reduce(function (a, x) { return a || x.video_id; }, "");
     SHEET.innerHTML =
@@ -688,6 +759,9 @@
       '</div>' +
       '<a class="fd-ext" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' +
         encodeURIComponent(p.name + " " + (p.address || "")) + '">🗺 네이버지도에서 열기</a>' +
+      /* 메뉴판 — 유저 제보와 AI 추출을 구분해 보여준다. 출처가 안 보이면 신뢰가 안 선다. */
+      '<div class="fd-menu" id="fd-menu">' + menuHtml(d.menus || []) + '</div>' +
+      '<button type="button" class="fd-flag" data-a="report">🏳 정보가 잘못됐나요?</button>' +
       '<div class="fd-talk">' +
         '<div class="fd-talk-h">한마디 <span id="fd-talk-n"></span></div>' +
         '<div class="fd-talk-list" id="fd-talk-list"></div>' +
@@ -722,6 +796,19 @@
     });
   }
 
+  function won(n) { return n == null ? "" : Number(n).toLocaleString("ko-KR") + "원"; }
+  function menuHtml(ms) {
+    return '<div class="fm-h">메뉴' + (ms.length ? ' <b>' + ms.length + '</b>' : '') +
+        '<button type="button" class="fm-add" data-a="menu">+ 메뉴 제보</button></div>' +
+      (ms.length
+        ? '<div class="fm-list">' + ms.map(function (m) {
+            return '<div class="fm-row"><span class="fm-n">' + esc(m.name) +
+              (m.source === "yt" ? '<i class="fm-src" title="영상에서 자동 추출">📺</i>' : '') +
+              '</span><b class="fm-p">' + (m.price ? esc(won(m.price)) : "–") + '</b></div>';
+          }).join("") + '</div>'
+        : '<div class="fm-empty">아직 메뉴가 없어요. 다녀오셨다면 알려주세요.</div>');
+  }
+
   function talkRow(c) {
     return '<div class="fd-c ' + (c.faction === "good" ? "good" : "bad") + '">' +
       '<div class="fd-c-h"><b>' + esc(c.nick) + '</b>' +
@@ -729,6 +816,74 @@
       '<div class="fd-c-b">' + esc(c.body) + '</div>' +
       '<button type="button" class="fd-c-like' + (c.liked ? " on" : "") + '" data-like="' + c.id + '">' +
         '👍 ' + (c.likes || 0) + '</button></div>';
+  }
+
+  /* 정보 제보 — 데이터가 자동수집이라 폐업한 집이 계속 쌓인다.
+     서로 다른 유저 3명이 '폐업'을 찍으면 서버가 **자동으로 지도에서 내린다**(status='hidden').
+     완전 삭제가 아니라 오판이어도 되돌릴 수 있다. */
+  var REPORT_KINDS = [
+    ["closed",    "🚫 폐업했어요"],
+    ["address",   "📍 주소가 달라요"],
+    ["duplicate", "👯 중복된 집이에요"],
+    ["info",      "✏️ 정보를 고쳐주세요"],
+    ["other",     "❓ 그 밖의 문제"]
+  ];
+  function openReport() {
+    var FS = MAP.querySelector("#fd-fsheet");
+    FS.innerHTML = '<div class="fd-sheet-grip"></div>' +
+      '<div class="ff-head">정보가 잘못됐나요?</div>' +
+      '<p class="fr-lead">' + esc(curPlace.place.name) + ' — 무엇이 문제인가요?</p>' +
+      '<div class="fr-list">' + REPORT_KINDS.map(function (k) {
+        return '<button type="button" class="fr-item" data-rep="' + k[0] + '">' + k[1] + '</button>';
+      }).join("") + '</div>' +
+      '<input class="fr-body" id="fr-body" maxlength="500" placeholder="자세히 알려주시면 더 좋아요 (선택)">';
+    FS.classList.add("open");
+  }
+  async function sendReport(kind) {
+    if (!curPlace) return;
+    if (!(await loggedIn())) return needLogin();
+    var bd = MAP.querySelector("#fr-body");
+    var r = await rpc("food_report", { p_id: curPlace.place.id, p_kind: kind,
+                                       p_body: bd ? bd.value : null });
+    closeFilter();
+    if (!r || !r.ok) return toast("접수하지 못했어요");
+    if (r.already) return toast("이미 접수된 제보예요");
+    if (r.hidden) { toast("폐업 제보가 모여 지도에서 내렸어요"); hideSheet(); fetchBbox(); loadList(); return; }
+    toast(kind === "closed"
+      ? "폐업 제보 " + r.closed_votes + "/" + r.threshold + " — 고맙습니다"
+      : "제보 고맙습니다");
+  }
+
+  function openMenuForm() {
+    var FS = MAP.querySelector("#fd-fsheet");
+    FS.innerHTML = '<div class="fd-sheet-grip"></div>' +
+      '<div class="ff-head">메뉴 제보</div>' +
+      '<p class="fr-lead">한 줄에 하나씩. "메뉴명 가격" 형식이면 가격까지 잡힙니다.</p>' +
+      '<textarea class="fm-ta" id="fm-ta" rows="6" placeholder="김치찌개 9000&#10;계란말이 7000&#10;공기밥 1000"></textarea>' +
+      '<button type="button" class="ff-go" data-a="menu-save">등록</button>';
+    FS.classList.add("open");
+  }
+  async function saveMenu() {
+    if (!curPlace) return;
+    if (!(await loggedIn())) return needLogin();
+    var ta = MAP.querySelector("#fm-ta"); if (!ta) return;
+    /* "김치찌개 9000" / "김치찌개 9,000원" 둘 다 받는다. 마지막 숫자 덩어리를 가격으로 본다. */
+    var items = (ta.value || "").split(/\n+/).map(function (line) {
+      var t = line.trim(); if (!t) return null;
+      var m = t.match(/^(.*?)[\s:]+([0-9][0-9,]*)\s*원?$/);
+      return m ? { name: m[1].trim(), price: m[2] } : { name: t };
+    }).filter(function (x) { return x && x.name; });
+    if (!items.length) return toast("메뉴를 입력해주세요");
+    var r = await rpc("food_menu_add", { p_id: curPlace.place.id, p_items: items });
+    if (!r || !r.ok) {
+      if (r && r.reason === "full") return toast("이 집은 메뉴가 가득 찼어요");
+      return toast("등록하지 못했어요");
+    }
+    closeFilter();
+    toast(r.added ? r.added + "개 등록했어요" : "이미 등록된 메뉴예요");
+    var d = await rpc("food_place_detail", { p_id: curPlace.place.id });
+    if (d && d.ok) { curPlace = d; var el = SHEET.querySelector("#fd-menu");
+      if (el) el.innerHTML = menuHtml(d.menus || []); }
   }
 
   async function loadTalk(id) {
@@ -825,6 +980,141 @@
     loadBadges();
   }
 
+  function paintRegion() {
+    var sub = SEC && SEC.querySelector("#fd-sub");
+    if (!sub) return;
+    // 동네가 없으면 '전국'이라고 정직하게 말한다. '내 동네부터'라고 거짓말하지 않는다.
+    sub.textContent = (myRegionName ? "📍 " + myRegionName : "전국 전체") + " ›";
+    sub.classList.toggle("unset", !myRegionName);
+    var lead = SEC.parentElement && SEC.parentElement.querySelector(".fd-lead");
+    if (lead) lead.textContent = myRegionName
+      ? myRegionName + "에서 방송에 나온 집 — 다녀온 곳은 도장으로 채운다."
+      : "화면 속 그 집, 지도에 다 있다 — 동네를 고르면 내 주변만 볼 수 있어요.";
+  }
+
+  /* 동네 고르기 — 날씨의 지역 검색(weather_search)을 그대로 쓴다. 지역 축이 같으니까.
+     ⚠️ 지도 오버레이 안에 띄우지 않는다. 처음엔 #fd-fsheet 를 재사용했는데 지도를 강제로
+        열게 되어 **시트 뒤가 시커먼 빈 지도**가 됐다(실측). 동네 고르기는 지도가 필요 없다. */
+  var RPICK = null;
+  function openRegionPicker() {
+    if (!RPICK) {
+      RPICK = document.createElement("div");
+      RPICK.className = "fd-rpick";
+      RPICK.innerHTML = '<div class="fd-rpick-bg"></div><div class="fd-fsheet" id="fd-rsheet"></div>';
+      document.body.appendChild(RPICK);
+      RPICK.addEventListener("click", function (e) {
+        var t = e.target;
+        if (t.closest && t.closest("[data-near]")) { pickNearby(); return; }
+        var sd = t.closest && t.closest("[data-sido]");
+        if (sd) { sidoPick = sd.dataset.sido; paintSido(); return; }
+        var rg = t.closest && t.closest("[data-region]");
+        if (rg) { pickRegion(rg.dataset.region, rg.dataset.rname); return; }
+        if (!t.closest || !t.closest("#fd-rsheet")) closeRegionPicker();
+      });
+    }
+    var FS = RPICK.querySelector("#fd-rsheet");
+    FS.innerHTML = '<div class="fd-sheet-grip"></div>' +
+      '<div class="ff-head">동네 고르기' +
+        '<button type="button" class="fd-near" data-near="1">◎ 내 주변</button></div>' +
+      '<input class="fr-body" id="fd-rq" placeholder="동네 검색 — 전주, 여수, 안동…" autocomplete="off">' +
+      '<div class="fd-sido chip-scroll" id="fd-sido"></div>' +
+      '<div class="fd-rlist" id="fd-rlist"><div class="fm-empty">불러오는 중…</div></div>';
+    RPICK.classList.add("open");
+    requestAnimationFrame(function () { FS.classList.add("open"); });
+    paintSido();
+
+    var i = FS.querySelector("#fd-rq");
+    i.addEventListener("input", function () {
+      clearTimeout(i.__t);
+      i.__t = setTimeout(async function () {
+        var q = i.value.trim();
+        var box = FS.querySelector("#fd-rlist");
+        if (q.length < 1) { sidoPick = sidoPick || null; paintCities(); return; }
+        var r = await rpc("weather_search", { p_q: q, p_limit: 14 });
+        box.className = "fd-rlist";
+        box.innerHTML = (r && r.length)
+          ? r.map(function (x) {
+              return '<button type="button" class="fr-item" data-region="' + esc(x.code) + '" data-rname="' +
+                esc(x.name) + '">📍 ' + esc(x.name) + '<span class="fd-rsido">' + esc(x.sido || "") + '</span></button>';
+            }).join("")
+          : '<div class="fm-empty">그런 동네가 없어요</div>';
+      }, 200);
+    });
+  }
+
+  /* 시도 → 시군구 2단. 검색만 있으면 이름을 아는 사람만 쓸 수 있다(사장님: 캐치테이블 방식).
+     맛집이 있는 동네를 앞세운다 — 0곳만 잔뜩 보이면 고를 맛이 안 난다. */
+  var REGIONS = null, sidoPick = null;
+  async function paintSido() {
+    if (!REGIONS) REGIONS = await rpc("food_regions");
+    var row = RPICK.querySelector("#fd-sido"); if (!row) return;
+    var sd = (REGIONS && REGIONS.sido) || [];
+    if (!sidoPick) { var best = sd.slice().sort(function (a, b) { return b.n - a.n; })[0]; sidoPick = best && best.code; }
+    row.innerHTML = '<button type="button" class="ff-chip' + (myRegion ? "" : " on") + '" data-region="">전국</button>' +
+      sd.map(function (x) {
+        return '<button type="button" class="ff-chip' + (sidoPick === x.code ? " on" : "") + '" data-sido="' + esc(x.code) + '">' +
+          esc(x.name) + (x.n ? '<span class="n">' + x.n + '</span>' : '') + '</button>';
+      }).join("");
+    paintCities();
+  }
+  function paintCities() {
+    var box = RPICK.querySelector("#fd-rlist"); if (!box) return;
+    var sd = ((REGIONS && REGIONS.sido) || []).filter(function (x) { return x.code === sidoPick; })[0];
+    if (!sd) { box.innerHTML = ""; return; }
+    box.className = "fd-rlist grid";
+    var head = '<button type="button" class="fd-city" data-region="' + esc(sd.code) + '" data-rname="' +
+      esc(sd.name) + '">' + esc(sd.name) + ' 전체</button>';
+    box.innerHTML = head + (sd.cities || []).map(function (c) {
+      return '<button type="button" class="fd-city' + (c.n ? "" : " zero") + '" data-region="' + esc(c.code) +
+        '" data-rname="' + esc(c.name) + '">' + esc(c.name) +
+        (c.n ? '<b>' + c.n + '</b>' : '') + '</button>';
+    }).join("");
+  }
+
+  /* 내 주변 — 가진 좌표(weather_regions)로 가장 가까운 동네를 고른다.
+     역지오코딩을 부르지 않아도 된다. 동네 단위면 이 정도로 충분하다. */
+  /* 가까운순을 처음 누르면 위치를 묻는다 — 미리 묻지 않는다(권한 피로) */
+  function askPos() {
+    if (!navigator.geolocation) { sortBy = "new"; return toast("이 기기는 위치를 못 받아요"); }
+    toast("위치 확인 중…");
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      loadList();
+    }, function () { sortBy = "new"; toast("위치 권한이 필요해요"); loadList(); },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+  }
+
+  async function pickNearby() {
+    if (!navigator.geolocation) return toast("이 기기는 위치를 못 받아요");
+    toast("위치 확인 중…");
+    navigator.geolocation.getCurrentPosition(async function (pos) {
+      var la = pos.coords.latitude, lo = pos.coords.longitude;
+      var r = await rpc("food_nearest_region", { p_lat: la, p_lon: lo });
+      if (r && r.ok) pickRegion(r.code, r.name);
+      else toast("가까운 동네를 못 찾았어요");
+    }, function () {
+      toast("위치 권한이 필요해요");
+    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+  }
+
+  function closeRegionPicker() {
+    if (!RPICK) return;
+    var FS = RPICK.querySelector("#fd-rsheet");
+    if (FS) FS.classList.remove("open");
+    setTimeout(function () { RPICK.classList.remove("open"); }, 240);
+  }
+  function pickRegion(code, name) {
+    myRegion = code || null; myRegionName = name || "";
+    try {
+      if (myRegion) localStorage.setItem("galla_food_region", JSON.stringify({ code: code, name: name }));
+      else localStorage.removeItem("galla_food_region");
+    } catch (_) {}
+    closeRegionPicker();
+    paintRegion(); loadList();
+    if (MAP && MAP.classList.contains("open")) fetchBbox();
+    toast(myRegionName ? myRegionName + "로 바꿨어요" : "전국으로 바꿨어요");
+  }
+
   async function loadChannels() {
     var d = await rpc("food_channel_stats");
     CH = (d && d.channels) || [];
@@ -834,11 +1124,20 @@
 
   async function boot() {
     if (!mount()) return;   // 패널이 없거나 이미 붙어 있음
-    // 내 동네 = 날씨 즐겨찾기 첫 번째. 없으면 전국.
-    var my = await rpc("weather_my");
-    if (my && my.length) { myRegion = my[0].code; myRegionName = my[0].name; }
-    var sub = SEC.querySelector("#fd-sub");
-    if (sub && myRegionName) sub.textContent = myRegionName + " 기준";
+    /* 내 동네 — 예전엔 날씨 즐겨찾기(weather_my)만 봤다. 그런데 즐겨찾기를 안 해둔
+       유저는 myRegion 이 null 이라 **전국이 통째로** 나오면서 제목만 '우리 동네'였다.
+       맛집 보려고 날씨 탭에 먼저 다녀오라는 것도 이상하다(사장님 지적).
+       → 맛집 탭이 자체로 동네를 갖는다. 날씨 즐겨찾기는 '첫 값 제안'으로만 쓰고
+         선택은 localStorage 에 둔다 — 날씨 설정을 건드리지 않는다. */
+    try {
+      var saved = JSON.parse(localStorage.getItem("galla_food_region") || "null");
+      if (saved && saved.code) { myRegion = saved.code; myRegionName = saved.name; }
+    } catch (_) {}
+    if (!myRegion) {
+      var my = await rpc("weather_my");
+      if (my && my.length) { myRegion = my[0].code; myRegionName = my[0].name; }
+    }
+    paintRegion();
     await loadChannels();
     await loadList();
   }
