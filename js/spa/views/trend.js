@@ -24,6 +24,9 @@ const SCRIPTS = [
   { src: "/js/draft.js" },              // GALLA_draft(광장 임시저장 — plaza.js보다 먼저)
   { src: "/js/plaza-render.js" },       // 광장 본문 렌더러
   { src: "/js/weather.js" },            // 🔴 날씨 탭 — 없으면 "불러오는 중…"에서 영영 멈춘다(실측 2026-08-29)
+  { src: "/js/media-upload.js" },       // GALLA_UPLOAD_MEDIA — 맛집 사진 제보(food.js보다 먼저)
+  { src: "/js/vote-bar.js" },           // GALLA_VoteBar — 맛집 판정 바(food.js보다 먼저)
+  { src: "/js/food.js" },               // 🔴 맛집 탭 — 없으면 패널이 통째로 빈 화면(실측 2026-08-31 시뮬)
   { src: "/js/comment-actions.js" },    // GALLA_cmtEdit/cmtDelete — 없으면 광장 댓글 수정·삭제 불가
   { src: "/js/items.js" },              // GALLA_myItems/openShop — 다른 뷰를 먼저 안 열면 없다(순서 의존 제거)
   { src: "/js/noti-icons.js" },         // 알림 아이콘 세트

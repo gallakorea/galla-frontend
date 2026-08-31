@@ -28,7 +28,7 @@
      클라이언트 ID 는 app_settings('food_map') 에서 읽는다 → 배포 없이 교체 가능. */
   var MAPCFG = { provider: "leaflet", clientId: "", param: "ncpKeyId", styleId: "" };
   var MB = null;              // 활성 백엔드 어댑터
-  var naverLoading = null;
+  var naverLoading = null, naverAuthFailed = false;
 
   async function loadMapCfg() {
     try {
@@ -46,20 +46,51 @@
       }
     } catch (_) {}
     if (MAPCFG.provider === "naver" && !MAPCFG.clientId) MAPCFG.provider = "leaflet";
+    /* 🔴 네이티브 앱은 무조건 Leaflet.
+       NCP Maps 는 '웹 서비스 URL' 을 콘솔에 등록한 origin 에서만 인증을 내준다.
+       그런데 앱의 origin 은 capacitor://localhost 라 **등록 자체가 불가능**하다
+       (콘솔이 http/https 만 받는다). 그래서 앱에서는 SDK 가 로드는 되고 인증만
+       실패해서 지도가 **백지**로 그려졌다 — 스크립트 onload 는 성공이라 폴백도
+       안 걸렸다(2026-08-31 시뮬 실측). 미리 갈라놓는다. */
+    if (isNativeOrigin()) MAPCFG.provider = "leaflet";
+  }
+
+  function isNativeOrigin() {
+    try {
+      if (location.protocol === "capacitor:" || location.protocol === "ionic:") return true;
+      if (typeof window.GALLA_isApp === "function" && window.GALLA_isApp()) return true;
+    } catch (_) {}
+    return false;
   }
 
   function loadNaver() {
-    if (window.naver && window.naver.maps) return Promise.resolve();
+    if (window.naver && window.naver.maps) {
+      return naverAuthFailed ? Promise.reject(new Error("naver_auth")) : Promise.resolve();
+    }
     if (naverLoading) return naverLoading;
     naverLoading = new Promise(function (res, rej) {
+      /* SDK 는 인증 실패를 onerror 로 알리지 않는다 — 전역 콜백 하나만 부르고
+         지도는 흰 화면이 된다. 그래서 이 콜백이 유일한 신호다. */
+      window.navermap_authFailure = function () {
+        naverAuthFailed = true;
+        console.warn("[food] 네이버 지도 인증 실패(등록 안 된 origin) → Leaflet");
+        rej(new Error("naver_auth"));
+      };
       var sc = document.createElement("script");
       sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?" +
                encodeURIComponent(MAPCFG.param) + "=" + encodeURIComponent(MAPCFG.clientId);
-      sc.onload = function () { (window.naver && window.naver.maps) ? res() : rej(new Error("naver_no_maps")); };
+      sc.onload = function () {
+        if (!window.naver || !window.naver.maps) return rej(new Error("naver_no_maps"));
+        /* 인증 결과는 로드 직후 비동기로 온다 — 한 박자 기다렸다가 판정한다.
+           바로 성공 처리하면 authFailure 가 뜨기 전에 백지 지도를 만들어버린다. */
+        setTimeout(function () { naverAuthFailed ? rej(new Error("naver_auth")) : res(); }, 500);
+      };
       sc.onerror = function () { rej(new Error("naver_load_fail")); };
       document.head.appendChild(sc);
-      // SDK 가 인증 실패하면 onerror 없이 조용히 죽는다 — 타임아웃으로 잡는다
-      setTimeout(function () { (window.naver && window.naver.maps) ? res() : rej(new Error("naver_timeout")); }, 6000);
+      setTimeout(function () {
+        if (naverAuthFailed) return rej(new Error("naver_auth"));
+        (window.naver && window.naver.maps) ? res() : rej(new Error("naver_timeout"));
+      }, 6000);
     });
     return naverLoading;
   }
@@ -884,10 +915,11 @@
       (p.visited ? '<i class="fd-pin-chk">✓</i>' : '') +
       (more ? '<i class="fd-pin-n">' + more + '</i>' : '') +
       '</div>';
-    return MB.marker(+p.lat, +p.lon, html, 38, async function () {
-      var d = await rpc("food_place_detail", { p_id: p.id });
-      if (d && d.ok) showSheet(d);
-    });
+    /* ⚠️ 예전엔 여기서 직접 rpc + showSheet() 를 불렀다. 상세를 지도 밖 독립
+       오버레이(#fd-detail)로 뽑아낸 뒤에도 이 경로만 옛 코드로 남아서, showSheet 이
+       SHEET(=DETAIL 안의 요소)를 못 찾고 조용히 죽었다 — **핀을 눌러도 아무 일이
+       안 일어났다**(2026-08-31 시뮬 실측). 목록 카드와 같은 입구를 쓴다. */
+    return MB.marker(+p.lat, +p.lon, html, 38, function () { openDetail(p.id); });
   }
 
   /* ── 필터 시트 ────────────────────────────────────────
