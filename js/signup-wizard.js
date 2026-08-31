@@ -37,6 +37,11 @@
             const h = $("emailHint");
             if (h && !h.querySelector("a")) h.insertAdjacentHTML("beforeend",
               ' <a href="login.html" style="color:#9daaff;font-weight:800">로그인 →</a>');
+          } else if (ea.reason === "rate") {
+            /* 이메일 열거 방지 한도(IP·시간당)에 걸린 것 — 유저 잘못이 아니다.
+               막지 않고 통과시킨다. 중복이면 signUp 이 최종적으로 잡는다. */
+            hintEl("emailHint", "확인은 건너뛸게요 — 다음으로 진행해 주세요", true);
+            return true;
           } else hintEl("emailHint", "✕ 이메일 형식을 확인해주세요", false);
           return false;
         }
