@@ -578,10 +578,10 @@ api.anthropic.com                      (미국)
 | anon 키 노출 | 정상(공개 전제) | ✅ |
 | **CSP** | `default-src 'self'` 로 잠겨 있음. 다만 `script-src 'unsafe-inline'` 허용 · Cloudflare Insights 는 차단됨(통계 유실) | 🔶 |
 | XSS — 유저 입력 렌더 | 실페이로드로 감사(댓글·광장마커·핫튜브·날씨·제보) | ✅ **제보 링크 `javascript:` → 관리자 세션 XSS 발견·수정**(서버 스킴검사 + admin safeUrl) |
-| RPC 631개 권한 가드 | SECURITY DEFINER 에서 `current_user` 쓰면 구멍 | ❌ |
-| RLS 회귀(남의 글 수정·삭제) | ❌ |
+| RPC 631개 권한 가드 | `current_user` 사용 **0건**. anon 실행가능 SECURITY DEFINER 340개 중 가드없음 88개를 전수 분류 — 쓰기 6개는 전부 안전(조회수 `+1` 하드코딩, 일기토는 시간게이트), 읽기는 `issue_demographics` k-익명성(30명·5명 컷) 확인 | ✅ **`email_available` 가입여부 열거 발견·IP 시간당 60회 제한** |
+| RLS 회귀(남의 글 수정·삭제) | 타인 계정으로 이슈·댓글·광장·예측 수정/삭제 전부 0행, DM·알림·북마크·갈비스기억·GP장부 읽기 0행. 남의 행이 실제로 존재함을 확인해 검사가 헛돌지 않음을 검증(DM 729·알림 1,300) | ✅ |
 | PII 컬럼권한(users·user_profiles) | 잠금 이력 있음 — 회귀 미확인 | 🔶 |
-| 의존성 취약점(`npm audit`) | ❌ |
+| 의존성 취약점(`npm audit`) | 웹은 `package.json` 없음(정적). 엣지 함수 56개가 `supabase-js@2` 범위지정 — eszip 로 배포시 고정되나 재배포 때 조용히 최신으로 갈아탄다. 2.112.4 로 고정 | ✅ |
 | 오픈 리다이렉트 · 클릭재킹 | frame-ancestors 'self' 는 설정됨 | 🔶 |
 | 파일 업로드 검증(용량·타입·악성) | ❌ |
 | 딥링크 파라미터 검증 | ❌ |
@@ -590,8 +590,8 @@ api.anthropic.com                      (미국)
 
 | 항목 | 상태 |
 |---|---|
-| 카운터 드리프트(like_count·comment_count vs 실제) | 🔶 GP 원장 드리프트를 버그헌터 ⑨ 로 자동검사(30분). like/comment 카운터는 미검증 |
-| 고아 레코드(삭제된 부모의 자식) | ❌ |
+| 카운터 드리프트(like_count·comment_count vs 실제) | 44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료 | ✅ |
+| 고아 레코드(삭제된 부모의 자식) | FK 없는 참조 58개 분류(다형성·외부ID 제외). **`ai_news_jobs` 3행·`ai_trends` 3행이 이미 고아** — 정리 후 이슈 자식 7표에 FK(일기토만 SET NULL) | ✅ |
 | R2 고아 파일 vs DB 참조 | 🔶 purge_orphan_media 크론은 있음 |
 | **AI 예산 소진·상한 동작**(ai_budget_usage·model_for 다운그레이드) | ✅ ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가** |
 | Supabase·Cloudflare 한도(요청·저장·대역폭) | 🔶 DB 919MB(1,130→919 정리) · Storage 1.16GB는 참조 0건이라 백업 후 삭제 대기(사장님) |
@@ -611,3 +611,20 @@ api.anthropic.com                      (미국)
 - 끝나면 **세고 지운다**. 지우기 전 카운트 → 삭제 → 잔여 0 확인.
 - 삭제는 반드시 **ID 명시**. `delete from X` (WHERE 없음)는 사고다.
 - 투표처럼 되돌릴 수 없는 것은 미리 사장님께 알린다.
+
+---
+
+## 22. 크론·엣지 인증 (2026-08-31 점검)
+
+| 항목 | 결과 |
+|---|---|
+| `verify_jwt=false` 34개 자체인증 | 33개 통과. `article-reader` 만 무방비 → SSRF 호스트 차단 추가 ✅ |
+| 크론 `Authorization` 없는 6개 | 오탐. 5개는 `x-cron-secret`(Vault) 자체인증, `indexnow_ping` 은 대상이 우리 워커 ✅ |
+| `galla.im/indexnow` 외부 노출 | 호스트 검사가 문자열 포함(`u.includes`)이라 `evil.com/?x=galla.im` 통과 → URL 파싱 + 콜로 캐시 60초 스로틀 ✅ |
+| 크론 응답 타임아웃 | 24시간 25건이 `Timeout of 60000 ms`. 인증이 아니라 `collect-youtube-hot` 이 60초를 넘던 것 — 일은 되는데 성공·실패 구분이 불가능했다. 180초로 상향 후 200 확인 ✅ |
+| `food_resolve_job` | 스케줄(`55 5,17`)은 있는데 실행 이력 0건 — 17:55 재확인 필요 🔶 |
+
+### 이 점검에서 새로 드러난 것
+- **광장 투표가 0행이다.** 글 946개에 `plaza_votes` 가 하나도 없다. 시드 글이라 그럴 수도 있으나 `vote_plaza_post` 동작 확인이 필요하다(로그인 필요) 🔶
+- **`ai_trends` 는 죽은 표다.** 어디서도 참조하지 않고 3행 전부 고아였다. 드롭 여부는 사장님 판단 🔶
+- **`posts`(숏판·롱판)가 0행이다.** 카운터 검사가 통과한 게 아니라 검사할 데이터가 없었다 🔶
