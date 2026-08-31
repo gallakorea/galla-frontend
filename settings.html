@@ -2,10 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0830015"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0830016"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=0819130">
+    <link rel="stylesheet" href="./css/settings.css?v=0830016">
     <link rel="stylesheet" href="./css/items.css?v=0809117">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
@@ -215,6 +215,19 @@
         <div class="st-item"><span class="st-ic">📦</span> 버전 정보 <span class="st-val" id="st-version">—</span></div>
         <div class="st-item" data-target="terms.html"><span class="st-ic">📄</span> 서비스 이용약관 <span class="st-arrow">›</span></div>
         <div class="st-item" data-target="privacy.html"><span class="st-ic">🔒</span> 개인정보 처리방침 <span class="st-arrow">›</span></div>
+        <div class="st-item" data-target="youth.html"><span class="st-ic">🧒</span> 청소년보호정책 <span class="st-arrow">›</span></div>
+
+        <!-- ⚖️ 앱에는 웹 푸터가 없다. 전자상거래법 §10 사업자 정보 표시를 여기서 채운다.
+             약관 본문 안에만 두면 '초기화면 표시' 요건을 못 채운다. -->
+        <div class="st-biz">
+          <b>주식회사 갈라랩스</b>
+          대표자 Frank Lee (이상민)<br>
+          경기도 여주시 연양길 159-34<br>
+          사업자등록번호 162-86-03935 · 통신판매업 신고번호 준비 중<br>
+          개인정보 보호책임자 · 청소년보호 책임자 : 대표이사<br>
+          문의 gallakorea@gmail.com<br>
+          호스팅 Cloudflare, Inc. · Supabase, Inc.
+        </div>
     </section>
 
     <a class="st-logout" id="ad-admin-link" href="admin-login.html" style="background:linear-gradient(135deg,#3d6bff,#2b4fd0);color:#fff;text-decoration:none;text-align:center;border-radius:12px;font-weight:900">🛠 관리자 관제센터</a>
@@ -253,7 +266,7 @@
     <script src="./js/nav.js?v=0828028"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
 <script src="./js/nav-jog.js?v=0828020" defer></script>
-    <script src="./js/dm-call.js?v=0830015" defer></script>
+    <script src="./js/dm-call.js?v=0830016" defer></script>
 
 </div>
 
@@ -288,7 +301,7 @@ function waitForSupabaseClient() {
   <script src="./vendor/supabase.js?v=0809131"></script>
 
 <!-- Supabase Client 생성 -->
-<script src="js/supabase.js?v=0830015"></script>
+<script src="js/supabase.js?v=0830016"></script>
 <script src="js/logout-flow.js?v=080412"></script>
 <script src="js/back.js?v=080412"></script>
 

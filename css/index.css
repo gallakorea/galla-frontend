@@ -887,6 +887,11 @@ body.shorts-open .header { display: none !important; }
 .site-footer .sf-social{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 16px; margin-top:2px; }
 .site-footer .sf-social a{ color:#6b7488; font-size:12px; text-decoration:none; }
 .site-footer .sf-social a:hover{ color:#c9d1e0; }
+/* ⚖️ 사업자 정보 — 전자상거래법 §10 초기화면 표시. 읽히되 시선을 뺏지 않게 가장 낮은 단계. */
+.site-footer .sf-biz{ display:flex; flex-wrap:wrap; gap:2px 10px; justify-content:center;
+  color:#5b6376; font-size:11px; line-height:1.85; margin-top:14px; padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.06); max-width:640px; margin-inline:auto; }
+.site-footer .sf-biz b{ color:#7b8497; font-weight:700; }
 .site-footer .sf-copy{ color:#565e70; font-size:11px; margin-top:6px; line-height:1.5; }
 
 /* =========================================================

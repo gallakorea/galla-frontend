@@ -226,3 +226,11 @@ body {
 /* 관리자 관제센터 링크 — 기본 숨김. admin_flag일 때만 JS가 display:block로 노출.
    (예전엔 인라인 display:block이 hidden을 덮어써 비관리자에게도 보였다) */
 #ad-admin-link { display: none; }
+
+
+/* ⚖️ 사업자 정보 — 설정 맨 아래. 눈에 띌 필요는 없지만 항상 도달 가능해야 한다.
+   전자상거래법 §10 은 초기화면 표시를 요구하는데, 앱에는 웹 푸터가 없어 여기가 그 자리다. */
+.st-biz{ margin:14px 4px 0; padding:12px 14px; border-radius:12px;
+  background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+  color:#7b8497; font-size:11.5px; line-height:1.9; }
+.st-biz b{ display:block; color:#aab2c4; font-size:12.5px; margin-bottom:2px; }

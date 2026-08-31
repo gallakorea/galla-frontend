@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0830015"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0830016"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <!-- ⚠️ MPA/SPA 완전 분리: index.html = 순수 MPA(웹 홈피드·SEO). 네이티브 앱은 index.html이 아니라
          app.html(SPA)을 바로 로드한다(번들 sync가 index.html을 app.html로 대체, 원본 피드는 home.html로 보존).
          과거의 index→app 리다이렉트는 부팅 이중로드 깜빡임을 만들어 제거함. 여기엔 어떤 SPA 리다이렉트도 두지 않는다. -->
@@ -40,7 +40,7 @@
   {"@context":"https://schema.org","@type":"WebApplication","@id":"https://galla.im/#app","name":"GALLA 갈라","url":"https://galla.im/","applicationCategory":"SocialNetworkingApplication","operatingSystem":"Web, Android, iOS","browserRequirements":"JavaScript 필요","inLanguage":"ko-KR","isAccessibleForFree":true,"publisher":{"@id":"https://galla.im/#organization"},"image":"https://galla.im/assets/og/og-default.png","screenshot":"https://galla.im/assets/og/og-default.png","featureList":["실시간 이슈 배틀","갈라리(숏폼·롱폼 콘텐츠)","갈라예측(예측 게임)","갈라뉴스(AI 뉴스 종합)","난장 라이브","광장 커뮤니티","일기토 실시간 토론"],"offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"}}
   </script>
 
-    <link rel="stylesheet" href="css/index.css?v=081802" />
+    <link rel="stylesheet" href="css/index.css?v=0830016" />
     <link rel="stylesheet" href="./css/header.css?v=080412">
     <link rel="stylesheet" href="./css/write-hub.css?v=080412">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
@@ -154,6 +154,7 @@
       <nav class="sf-links sf-sub" aria-label="정책·지원">
         <a href="/terms">이용약관</a>
         <a href="/privacy">개인정보처리방침</a>
+        <a href="/youth">청소년보호정책</a>
         <a href="/support">고객센터</a>
         <a href="/archive">전체 콘텐츠</a>
       </nav>
@@ -162,6 +163,19 @@
         <a href="https://www.tiktok.com/@galla.korea" rel="me noopener" target="_blank">틱톡</a>
         <a href="https://x.com/gallakorea" rel="me noopener" target="_blank">X</a>
         <a href="https://www.facebook.com/share/1CqxGVvrkV/" rel="me noopener" target="_blank">페이스북</a>
+      </div>
+      <!-- ⚖️ 전자상거래법 §10 은 사업자 정보를 '초기화면'에 표시하도록 한다.
+           약관 안에만 두면 요건을 못 채운다 — 유료 결제를 켜기 전 반드시 여기 있어야 한다.
+           ⚠️ 통신판매업 신고번호는 신고가 끝나야 채울 수 있다(현재 준비 중). -->
+      <div class="sf-biz" aria-label="사업자 정보">
+        <b>주식회사 갈라랩스</b>
+        <span>대표자 Frank Lee (이상민)</span>
+        <span>경기도 여주시 연양길 159-34</span>
+        <span>사업자등록번호 162-86-03935</span>
+        <span>통신판매업 신고번호 준비 중</span>
+        <span>개인정보 보호책임자·청소년보호 책임자 대표이사</span>
+        <span>문의 gallakorea@gmail.com</span>
+        <span>호스팅 Cloudflare, Inc. · Supabase, Inc.</span>
       </div>
       <p class="sf-copy">© 2026 GALLA 갈라 · 대한민국 실시간 이슈·숏폼·예측·갈라뉴스</p>
     </footer>
@@ -204,7 +218,7 @@
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/signals.js?v=0819120"></script><!-- 📊 신호 층: SPA 셸은 nav.js를 싣지 않아 직접 등록 -->
-<script src="js/supabase.js?v=0830015"></script>
+<script src="js/supabase.js?v=0830016"></script>
 <script src="js/social-auth.js?v=0828031"></script>
 <script src="./js/hls-attach.js?v=081803"></script>
 <script src="js/battle-fx.js?v=080412"></script>
@@ -220,14 +234,14 @@
 <script src="js/follow.js?v=080412"></script>
 <script src="js/ghost.js?v=080412"></script>
 <script src="js/user-sheet.js?v=080412"></script>
-<script src="js/report-block.js?v=0830015"></script>
+<script src="js/report-block.js?v=0830016"></script>
 <script src="js/index.js?v=0828020"></script>
 <script type="module" src="js/shorts.js?v=202608281555"></script>
 <script src="js/fx.js?v=080412"></script>
 <script src="./js/nav.js?v=0828028"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
 <script src="./js/nav-jog.js?v=0828020" defer></script>
-<script src="./js/dm-call.js?v=0830015" defer></script>
+<script src="./js/dm-call.js?v=0830016" defer></script>
 <script src="js/a2hs.js?v=0808104"></script>
 <script src="js/welcome.js?v=0814140"></script>
 <script src="js/onboard.js?v=0828020"></script>
@@ -247,7 +261,7 @@
       share-sheet.js 가 필요한 CSS 를 스스로 싣는다. */
 (function () {
   function load() {
-    var s = document.createElement('script'); s.src = 'js/dm.js?v=0830015'; document.head.appendChild(s);
+    var s = document.createElement('script'); s.src = 'js/dm.js?v=0830016'; document.head.appendChild(s);
   }
   if (window.requestIdleCallback) requestIdleCallback(load, { timeout: 2500 });
   else window.addEventListener('load', function () { setTimeout(load, 600); });

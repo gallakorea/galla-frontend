@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+<meta name="galla-ver" content="0830016"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>청소년보호정책 - GALLA</title>
+
+  <link rel="stylesheet" href="./css/index.css?v=0830016">
+  <link rel="stylesheet" href="./css/nav.css?v=0808104">
+
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      max-width: 480px;
+      margin: 0 auto;
+      font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      background: #000;
+      border-bottom: 1px solid #111;
+      z-index: 10;
+    }
+
+    .header-inner {
+      height: 50px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .back-btn {
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .header-spacer {
+      width: 24px;
+    }
+
+    /* 국외이전 고지 카드 — 480px 화면에서 표는 읽기 어려워 카드로 쌓는다.
+       개인정보보호법 §28-8 ③ 항목(이전받는 자·국가·항목·목적·보유기간·거부방법)을 다 담는다. */
+    .xfer { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+    .xf { border: 1px solid #1e1e1e; border-radius: 10px; background: #0b0b0b; overflow: hidden; }
+    .xf-h { padding: 10px 12px; background: #121212; font-weight: 700; font-size: 14px; line-height: 1.45; }
+    .xf-c { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; background: #16305a; color: #9ec7ff; vertical-align: 2px; }
+    .xf-c.cn { background: #4a1d1d; color: #ffb3ad; }
+    .xf-b { padding: 10px 12px; font-size: 13px; line-height: 1.75; color: #cfcfcf; }
+    .xf-b b { color: #fff; display: inline-block; min-width: 44px; }
+    .xf-b a { color: #8ab4ff; }
+
+    .section {
+      padding: 24px 16px;
+    }
+
+    .policy {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ccc;
+    }
+
+    .policy h2 {
+      margin-top: 28px;
+      margin-bottom: 10px;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .policy p {
+      margin-bottom: 10px;
+    }
+
+    .policy ul {
+      padding-left: 18px;
+      margin-bottom: 10px;
+    }
+
+    .acct-del-wrap { margin-top: 6px; }
+    .acct-del-link { font-size: 12.5px; color: #8a8f9a; text-decoration: underline;
+      text-underline-offset: 3px; }
+    .acct-del-link:active { color: #ff6a6a; }
+    .policy li {
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #777;
+    }
+  </style>
+  <link rel="stylesheet" href="./css/galla-ui.css?v=080412">
+  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=081807">
+<link rel="stylesheet" href="./css/desktop.css?v=080412">
+</head>
+
+<body data-page="mypage">
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="st-header">
+        <button class="st-back" data-back="index.html" aria-label="뒤로">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="st-title">청소년보호정책</div>
+        <div class="st-back" style="visibility:hidden"></div>
+    </header>
+
+  <!-- CONTENT -->
+  <section class="section">
+    <div class="policy">
+
+      <p>
+        주식회사 갈라랩스(이하 “회사”)는 청소년이 유해정보에 노출되지 않고 갈라(GALLA)를 이용할 수 있도록
+        「청소년 보호법」 제42조의2 및 관계 법령에 따라 다음과 같이 청소년보호정책을 수립·시행합니다.
+      </p>
+
+      <h2>1. 유해정보에 대한 청소년 접근 제한</h2>
+      <ul>
+        <li>성인용 콘텐츠가 포함될 수 있는 카테고리(19금)를 별도로 구분하고, 해당 카테고리는 성인 인증을 거친 이용자에게만 노출합니다.</li>
+        <li>만 14세 미만은 회원으로 가입할 수 없습니다.</li>
+        <li>청소년유해매체물로 판단되는 게시물은 접근을 제한하거나 삭제합니다.</li>
+      </ul>
+
+      <h2>2. 유해정보에 대한 관리</h2>
+      <ul>
+        <li>신고 기능으로 접수된 유해 게시물은 확인 즉시 노출을 중단합니다.</li>
+        <li>AI가 생성하는 콘텐츠(갈라뉴스 요약·예측 문항·AI 이미지)에는 유해표현 필터를 적용합니다.</li>
+        <li>반복적으로 유해정보를 게시한 이용자는 이용을 제한할 수 있습니다.</li>
+      </ul>
+
+      <h2>3. 청소년보호를 위한 교육</h2>
+      <p>
+        회사는 청소년보호 업무 담당자를 대상으로 청소년유해정보의 식별·차단 방법과 관계 법령에 대한 교육을 실시합니다.
+      </p>
+
+      <h2>4. 유해정보 신고 방법</h2>
+      <ul>
+        <li>게시물·댓글의 <b>⋯ 메뉴 → 신고하기</b></li>
+        <li>이메일 <b>gallakorea@gmail.com</b></li>
+      </ul>
+      <p>접수된 신고는 확인 후 지체 없이 처리하며, 처리 결과를 신고자에게 안내합니다.</p>
+
+      <h2>5. 청소년보호 책임자</h2>
+      <ul>
+        <li><b>청소년보호 책임자</b>: 대표이사</li>
+        <li><b>연락처</b>: gallakorea@gmail.com</li>
+      </ul>
+      <p>청소년 관련 피해가 발생한 경우 아래 기관의 도움을 받으실 수 있습니다.</p>
+      <ul>
+        <li>청소년사이버상담센터 1388 — <a href="https://www.cyber1388.kr" target="_blank" rel="noopener">cyber1388.kr</a></li>
+        <li>불법·유해정보 신고 1377 — <a href="https://www.kocsc.or.kr" target="_blank" rel="noopener">방송통신심의위원회</a></li>
+        <li>디지털성범죄피해자지원센터 — <a href="https://d4u.stop.or.kr" target="_blank" rel="noopener">d4u.stop.or.kr</a></li>
+      </ul>
+
+      <h2>6. 사업자 정보</h2>
+      <ul>
+        <li><b>상호</b>: 주식회사 갈라랩스</li>
+        <li><b>대표자</b>: Frank Lee (이상민)</li>
+        <li><b>주소</b>: 경기도 여주시 연양길 159-34</li>
+        <li><b>사업자등록번호</b>: 162-86-03935</li>
+        <li><b>문의</b>: gallakorea@gmail.com</li>
+      </ul>
+
+      <p style="margin-top:24px;color:#888;font-size:13px">
+        본 정책은 2026년 9월 1일부터 시행됩니다. 내용이 변경되는 경우 시행 7일 전부터 공지합니다.
+      </p>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- ============================= -->
+<!-- ⭐ BOTTOM NAVIGATION -->
+<!-- ============================= -->
+<nav class="nav">
+  <div class="nav-inner">
+      <button class="nav-item" data-page="index" data-target="index.html">
+        <img src="./assets/icons/nav-home.svg"
+             data-base="./assets/icons/nav-home.svg"
+             data-active="./assets/icons/nav-home-active.svg">
+      </button>
+
+      <button class="nav-item" data-page="predict" data-target="galla-predict.html">
+        <img src="./assets/icons/nav-predict.svg"
+             data-base="./assets/icons/nav-predict.svg"
+             data-active="./assets/icons/nav-predict-active.svg">
+      </button>
+
+      <button class="nav-item nav-dm" data-page="dm" data-target="dm.html" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
+
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
+
+      <button class="nav-item" data-page="mypage" data-target="mypage.html">
+        <img src="./assets/icons/nav-user.svg"
+             data-base="./assets/icons/nav-user.svg"
+             data-active="./assets/icons/nav-user-active.svg">
+      </button>
+    </div>
+</nav>
+
+<script src="./js/nav.js?v=0828028"></script>
+<script src="./js/desktop-pc.js?v=081603" defer></script>
+<script src="./js/nav-jog.js?v=0828020" defer></script>
+
+<script src="js/back.js?v=080412"></script>
+<script src="/js/analytics.js?v=080412"></script>
+<script src="/js/pwa.js?v=0821140"></script>
+  <script src="/js/pull-refresh.js?v=080412"></script>
+
+<!-- 계정 삭제 (애플 5.1.1(v)/구글 정책 필수) — 공용 모듈 -->
+<script src="./vendor/supabase.js?v=0809131"></script>
+<script src="./js/supabase.js?v=0830016"></script>
+<script src="./js/account-delete.js?v=080412"></script>
+<script>
+  document.getElementById('acctDelLink')?.addEventListener('click', function (e) {
+    e.preventDefault();
+    window.GALLA_deleteAccount && window.GALLA_deleteAccount(this);
+  });
+</script>
+</body>
+</html>
