@@ -112,6 +112,11 @@
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>' +
           "<span>지도</span></button>" +
       "</div>" +
+      /* 어디 갈래 입구 — 참여의 진짜 입구는 상세 페이지가 될 수 없다.
+         상세까지 오려면 이미 그 장소를 찾아 들어와야 하고, 그러면 참여가 유입을 절대 못 넘는다. */
+      '<button type="button" class="tv-vs" id="tv-vs">' +
+        '<span class="tv-vs-t"><b>어디 갈래</b>여행 유튜버가 간 곳 16강 · 40초</span>' +
+        '<span class="tv-vs-go">시작 →</span></button>' +
       '<div class="tv-chips chip-scroll" id="tv-chips"></div>' +
       '<div class="tv-chips tv-chips2 chip-scroll" id="tv-chips2" hidden></div>' +
       '<div class="tv-dash" id="tv-dash" hidden></div>' +
@@ -143,6 +148,9 @@
     SEC.__tvWired = true;
 
     SEC.querySelector("#tv-openmap").addEventListener("click", openMap);
+    SEC.querySelector("#tv-vs").addEventListener("click", function () {
+      (window.GALLA_nav || function (u) { location.href = u; })("travel-vs.html");
+    });
     DASH.addEventListener("click", async function (e) {
       var tb = e.target.closest("[data-dtab]");
       if (tb) { DASH_TAB = tb.dataset.dtab; paintDash(); return; }

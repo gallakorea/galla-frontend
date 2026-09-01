@@ -7,6 +7,7 @@
  *  /share/video/<id>            → 핫튜브 영상 (유튜브로 안 흘리고 갈라 랜딩으로 붙잡음)
  *  /share/news/<id>             → 갈라뉴스 (AI 3줄 요약)
  *  /share/travel/<id|8자>       → 여행지 (누가 다녀갔나 + 판정)
+ *  /share/travel-vs/<코드>      → 어디 갈래 결과 (내가 고른 1위 + 성향)
  *  /share/comment/<scope>/<id>  → 댓글·대댓글 인용 카드 (scope=issue|news|market|plaza|post|video)
  *  /share/trend                 → 지금 갈라 실시간 트렌드 TOP (랜딩)
  *  /share/room/<id>             → 육성 난장 입장 초대 (랜딩)
@@ -29,6 +30,15 @@ const short = (n) => {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "천";
   return String(n);
 };
+
+/* 한글 조사 — '더블린가 1위'가 나왔다. 받침 유무로 갈라야 한다.
+   마지막 글자가 한글이 아니면(영문·숫자) 판단할 근거가 없으니 안전한 쪽을 쓴다. */
+function josa(word, withBatchim, without) {
+  const c = String(word || "").trim().slice(-1);
+  const code = c.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return without;      // 한글이 아니다
+  return (code % 28) ? withBatchim : without;
+}
 
 // 국가코드 → 국기. 여행 카드는 첫 글자부터 어디인지 보여야 열린다.
 function flagOf(cc) {
@@ -461,6 +471,32 @@ export async function onRequestGet(context) {
       desc = `${clip(row.summary || "", 90) || "여러 기사를 AI가 3줄로 정리한 갈라뉴스."} · 오늘 뭐 터졌는지 갈라뉴스에서 다 봐.`;
       image = row.hero_image || defImg;
       dest = `${origin}/news.html?gn=${encodeURIComponent(id)}`;
+    }
+  } else if (type === "travel-vs" && id) {
+    /* 코드 = <우승sid>.<2위sid>.<4강sid>.<4강sid>.<성향2자>. DB 에 결과를 안 남기고
+       주소에 담는 구조라(갈라 궁합과 같다) 여기서 sid 로 장소를 되찾는다. */
+    const parts = String(id).split(".");
+    const t = (parts.pop() || "").toUpperCase();
+    const sids = parts.filter((x) => /^[0-9a-f]{8}$/i.test(x)).slice(0, 4);
+    const TYPE = {
+      DA: "가까운 데서 잘 논다", DB: "서너 시간이 딱",
+      DC: "멀리 가는 편",       DD: "지구 반대편까지",
+    };
+    const rows = sids.length
+      ? await sbAll(`travel_vs_pool?sid=in.(${sids.map(encodeURIComponent).join(",")})&select=sid,slug,name,country,cover`)
+      : [];
+    const by = new Map(rows.map((r) => [r.sid, r]));
+    const champ = by.get(sids[0]);
+    if (champ) {
+      const rest = sids.slice(1).map((x) => by.get(x)).filter(Boolean).map((x) => x.name);
+      title = `🧳 ${TYPE[t] || "어디 갈래"} — 내 1위는 ${clip(champ.name, 24)}`;
+      const nm = clip(champ.name, 20);
+      desc = rest.length
+        ? `${nm}${champ.country ? `(${clip(champ.country, 10)})` : ""}${josa(nm, "이", "가")} 1위. 다음은 ${clip(rest.join("·"), 40)}. 넌 어디 갈래?`
+        : `여행 유튜버가 간 곳 16강. 40초면 끝나고, 고른 곳은 “가고 싶은 여행지” 순위가 된다.`;
+      image = champ.cover || defImg;
+      /* 목적지는 결과 화면 — 받은 사람이 남의 결과를 보고 바로 자기 판을 시작할 수 있다 */
+      dest = `${origin}/travel-vs?r=${encodeURIComponent(id)}`;
     }
   } else if (type === "travel" && id) {
     /* 여행지 카드의 알맹이는 '누가 갔나'다. 사진 좋은 여행지는 널렸지만

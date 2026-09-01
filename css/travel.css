@@ -571,3 +571,16 @@ body.tv-lock { overflow: hidden; }
   display: flex; align-items: center; justify-content: center;
 }
 .tv-share svg { width: 16px; height: 16px; }
+
+/* 어디 갈래 입구 — 탭 최상단. 카드처럼 보이되 목록 카드와 헷갈리면 안 되므로 가로 띠로 둔다. */
+.tv-vs {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: calc(100% - 24px); margin: 4px 12px 10px; padding: 13px 15px;
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background: linear-gradient(100deg, var(--surface-2), var(--surface-1));
+  cursor: pointer; text-align: left;
+}
+.tv-vs-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tv-vs-t b { font-size: 15px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em; }
+.tv-vs-t { font-size: 11.5px; color: var(--text-low); }
+.tv-vs-go { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--brand, #6b7cff); }
