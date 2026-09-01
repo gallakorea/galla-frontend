@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+<meta name="galla-ver" content="0901170"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>여행지 - GALLA</title>
+  <!-- OG / 공유 카드 기본값 (콘텐츠별은 /share/<type>/<id> 엣지 렌더) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GALLA 갈라">
+  <meta property="og:title" content="GALLA · 무엇을 하든 판이 되는 곳">
+  <meta property="og:description" content="찬성이냐 반대냐, 당신의 진영은? 지금 갈라에서 여론 전투에 참전하세요.">
+  <meta property="og:image" content="https://galla.im/assets/og/og-default.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://galla.im/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
+  <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 무엇을 하든 판이 되는 곳, 갈라.">
+
+
+  <!-- plaza_detail 전용 CSS만 -->
+  <link rel="stylesheet" href="./css/travel.css?v=0901170">
+  <link rel="stylesheet" href="./css/items.css?v=0809117">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=080412">
+  <link rel="stylesheet" href="./css/owner-actions.css?v=080412">
+  <link rel="stylesheet" href="./css/header.css?v=080412">
+  <link rel="stylesheet" href="./css/nav.css?v=0808104">
+  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=0901010">
+  <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
+  <script src="/js/splash-boot.js?v=0814140"></script>
+</head>
+
+<body data-page="trend">
+<div id="app">
+
+  <header class="header">
+    <div class="header-inner header-3">
+      <button class="back-btn" id="btn-back" data-back="search.html?tab=travel">
+        ← <span class="back-text">뒤로</span>
+      </button>
+      <img src="assets/logo.png" alt="GALLA" class="logo"
+           onclick="(window.GALLA_nav||function(u){location.href=u})('index.html')" />
+      <span></span>
+    </div>
+  </header>
+
+  <!-- 여행지 상세 — js/travel-place.js 가 채운다 -->
+  <main class="tv-page" id="tv-page"></main>
+
+</div>
+
+<script src="./js/travel-place.js?v=0901170"></script>
+<script src="js/back.js?v=080412"></script>
+<script src="/js/analytics.js?v=080412"></script>
+<script src="js/duel-alert.js?v=080412"></script>
+<link rel="stylesheet" href="./css/dm.css?v=080412">
+<link rel="stylesheet" href="./css/dm-quiet.css?v=0829030">
+<link rel="stylesheet" href="css/desktop.css?v=080412">
+<script src="js/dm.js?v=0830017"></script>
+<script src="js/bug-report.js?v=0829040"></script>
+<script src="/js/pwa.js?v=0901012"></script>
+  <script src="/js/pull-refresh.js?v=080412"></script>
+<!-- 🎙 라이브 난장 진입(콘텐츠 연계) -->
+<script src="js/dm-live.js?v=0829010"></script>
+</body>
+</html>
