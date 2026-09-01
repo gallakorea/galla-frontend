@@ -498,15 +498,52 @@
       }).join("");
   }
 
+  /* 같은 날짜(=같은 영상)에서 나온 점들은 방영일이 같아 순서가 아무렇게나 정해진다.
+     그대로 이으면 한 도시 안에서 선이 지그재그로 엉킨다(사장님: 뒤죽박죽 난리).
+     → **날짜가 같은 구간만** 직전 점에서 가까운 순으로 다시 세운다(그리디 최근접).
+     ⚠️ 날짜가 다른 점들의 순서는 절대 안 건드린다 — 그건 실제 여행 순서다. */
+  function tidyOrder(steps) {
+    var day = function (s) { return String(s.aired_at || "").slice(0, 10); };
+    var out = [], i = 0;
+    while (i < steps.length) {
+      var j = i;
+      while (j + 1 < steps.length && day(steps[j + 1]) === day(steps[i]) && day(steps[i])) j++;
+      if (j === i) { out.push(steps[i]); i++; continue; }
+      var run = steps.slice(i, j + 1);
+      var cur = out.length ? out[out.length - 1] : run[0];
+      var left = run.slice(), seq = [];
+      while (left.length) {
+        var best = 0, bd = Infinity;
+        for (var k = 0; k < left.length; k++) {
+          var dx = Number(left[k].lat) - Number(cur.lat), dy = Number(left[k].lon) - Number(cur.lon);
+          var d = dx * dx + dy * dy;                       // 정렬만 하면 되니 제곱거리로 충분
+          if (d < bd) { bd = d; best = k; }
+        }
+        cur = left[best]; seq.push(cur); left.splice(best, 1);
+      }
+      out = out.concat(seq);
+      i = j + 1;
+    }
+    return out.map(function (s, idx) { return Object.assign({}, s, { n: idx + 1 }); });
+  }
+
   /* 🚩 여정마다 선을 끊는다. 이걸 안 하면 6년치가 한 줄로 이어져 선이 지구를 여러 번 가로지른다
      (빠니보틀 41점 실측). MultiLineString 하나에 여정별 좌표 묶음을 넣으면 레이어는 하나로 끝난다. */
   function paintRoute() {
     if (!MAP || !ROUTE_DATA) return;
     clearRoute();
     paintTripChips();
-    var steps = (ROUTE_DATA.steps || []).filter(function (s) {
+    var raw = (ROUTE_DATA.steps || []).filter(function (s) {
       return TRIP == null || s.trip === TRIP;
     });
+    /* 여정별로 나눠 정돈한 뒤 다시 합친다 — 여정을 넘나들며 정렬하면 안 된다. */
+    var byT = {}, order = [];
+    raw.forEach(function (s) {
+      if (!(s.trip in byT)) { byT[s.trip] = []; order.push(s.trip); }
+      byT[s.trip].push(s);
+    });
+    var steps = [];
+    order.forEach(function (t) { steps = steps.concat(tidyOrder(byT[t])); });
     var hint = document.getElementById("tv-map-hint");
     if (!steps.length) { if (hint) hint.textContent = "그릴 경로가 없어요"; return; }
 

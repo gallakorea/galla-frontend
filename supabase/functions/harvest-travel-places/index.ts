@@ -103,6 +103,12 @@ const SYS = [
     '"city":"영문 도시명","country_code":"AF","country":"아프가니스탄","kind":"food"}]}',
 ].join("\n");
 
+/* 지도에 점으로 찍을 수 없는 것들 — 대륙·대양·극지방.
+   ⚠️ 실측 사고: LLM 이 '북극'을 country_code=AE 로 줬고, 두바이 안에서 'Arctic' 이라는
+      업소가 걸려 **북극이 두바이에 꽂혔다**. 이런 이름은 검증을 통과해도 뜻이 없다.
+      (남극은 실제 목적지지만 나라 좌표계가 없어 마찬가지로 제외한다 — 나중에 별도로 다룬다.) */
+const MACRO = /^(북극|남극|arctic|antarctic(a)?|유럽|아시아|아프리카|아메리카|오세아니아|중동|동남아(시아)?|북미|남미|중남미|서유럽|동유럽|남미대륙|태평양|대서양|인도양|지중해|europe|asia|africa|america|oceania|middle\s*east|pacific|atlantic|indian\s+ocean)$/i;
+
 /* ── ② 해외: OSM Nominatim ────────────────────────────
    ⚖️ ODbL 이다. 실재 확인과 좌표 용도로만 쓰고 화면에 출처를 표시한다.
       QID 가 딸려 오면 좌표를 위키데이터(CC0) 것으로 갈아끼운다(geo_source 로 구분).  */
@@ -333,6 +339,12 @@ Deno.serve(async (req) => {
   const budget = Number(allow || 0);
   if (budget <= 0) return j({ ok: true, channel, picked: 0, note: "지오코딩 하루 몫 소진" });
 
+  /* ⏱ 시간 상자 — 엣지 유휴 150초를 넘기면 회차가 **통째로 날아간다**(응답도 안 남는다).
+     실측: n=45 회차가 그렇게 사라졌다. 편수로 조절하면 영상마다 걸리는 시간이 달라
+     매번 아슬아슬하다(LLM 2~4초 + 지오코딩 1.1초씩). 그래서 편수가 아니라 **시계**로 끊는다.
+     110초에 도달하면 하던 것까지 저장하고 정상 종료한다 — 남은 영상은 다음 회차가 가져간다. */
+  const DEADLINE = Date.now() + 110_000;
+
   const items: any[] = [];
   const done: string[] = [];
   const wantCredit = new Map<string, any[]>();     // 커먼즈 파일명 → 그 파일을 쓰는 item 들
@@ -342,6 +354,7 @@ Deno.serve(async (req) => {
 
   for (const v of list) {
     if (halted) break;
+    if (Date.now() > DEADLINE) { halted = "시간 상자(110초) 도달"; break; }
     done.push(v.video_id);                        // 결과와 무관하게 '물어봤다'를 남긴다
     let places: any[] = [];
     try {
@@ -360,6 +373,11 @@ Deno.serve(async (req) => {
       const scale = ["country", "region", "city", "spot"].includes(p?.scale) ? p.scale : "spot";
       const query = en || local;
       if (ko.length < 2 || !query) { dropped++; continue; }
+      if (MACRO.test(ko.trim()) || MACRO.test(query.trim())) {
+        dropped++;
+        if (dropSamples.length < 10) dropSamples.push(ko + " (대륙·극지 등 점으로 못 찍음)");
+        continue;
+      }
       if (geoCalls >= budget) { halted = "budget"; done.pop(); break; }
 
       let hit: any = null;
@@ -376,7 +394,7 @@ Deno.serve(async (req) => {
             await sleep(1100);
             geoCalls++;
             const o = await nominatim([query, city, "South Korea"].filter(Boolean).join(", "), "KR");
-            if (o) hit = fromOsm(o, ko, scale);
+            if (o && nameLooksSame(o, query)) hit = fromOsm(o, ko, scale);
           }
         } else {
           geoCalls++;
@@ -384,14 +402,14 @@ Deno.serve(async (req) => {
           const q = scale === "spot" ? [query, city].filter(Boolean).join(", ") : query;
           const o = await nominatim(q, cc || null);
           await sleep(1100);                       // Nominatim 정책: 초당 1회
-          if (o) hit = fromOsm(o, ko, scale);
+          if (o && nameLooksSame(o, query)) hit = fromOsm(o, ko, scale);
           /* 1차 실패 — 도시명을 떼고 이름 하나로 한 번 더. OSM 의 도시 경계 밖(교외·시장 안)에
              찍힌 가게가 이 한 번에 걸린다. */
           if (!hit && scale === "spot" && city && geoCalls < budget) {
             geoCalls++;
             const o2 = await nominatim(query, cc || null);
             await sleep(1100);
-            if (o2) hit = fromOsm(o2, ko, scale);
+            if (o2 && nameLooksSame(o2, query)) hit = fromOsm(o2, ko, scale);
           }
         }
         /* 2차 실패 — 위키데이터 검색(OSM 과 구멍이 다르다: OSM 은 가게에, 위키데이터는
@@ -514,13 +532,30 @@ Deno.serve(async (req) => {
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
-             geoCalls, ...res, halted: halted || undefined,
+             geoCalls, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
+             ...res, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
 });
 
 /* Nominatim 응답 → 우리 모양. 여기서 걸러야 할 것:
    · 좌표 없는 결과
    · 나라/광역 행정구역 자체(place=country|state) — '일본' 핀이 지도에 꽂히는 걸 막는다 */
+/* 우리가 찾던 이름과 결과의 이름이 서로 남남이면 버린다.
+   ⚠️ 이 관문이 없으면 나라를 잘못 짚은 질의가 그 나라 안의 **아무 업소**로 확정된다
+      (북극 → 두바이의 'Arctic'). 국내 관광공사 경로엔 이미 같은 관문이 있다. */
+function nameLooksSame(o: any, query: string) {
+  const n = (x: string) => String(x || "").toLowerCase().replace(/[\s'".,()\-·]/g, "");
+  const want = n(query);
+  if (want.length < 3) return true;                 // 너무 짧으면 이름으로 못 가른다
+  const nd = o?.namedetails || {};
+  const cands = [nd.name, nd["name:en"], nd["name:ko"], nd.official_name,
+                 String(o?.display_name || "").split(",")[0]];
+  return cands.some(function (c: any) {
+    const g = n(c);
+    return g && (g.includes(want) || want.includes(g));
+  });
+}
+
 function fromOsm(o: any, ko: string, scale = "spot") {
   const lat = Number(o.lat), lon = Number(o.lon);
   if (!isFinite(lat) || !isFinite(lon)) return null;
