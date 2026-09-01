@@ -19,6 +19,13 @@ const supa = createClient(
 );
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 const SEOUL = Deno.env.get("SEOUL_OPENAPI_KEY") || "";
+const GG = Deno.env.get("GG_OPENAPI_KEY") || "";
+
+/* ⚠️ 경기 openapi.gg.go.kr 는 WAF 가 붙어 있다. User-Agent 가 없으면 JSON 대신
+      euc-kr HTML("보안 정책에 의해 차단되었습니다")을 200 으로 돌려준다(실측).
+      브라우저 UA 를 반드시 실어보낸다. */
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+           "(KHTML, like Gecko) Chrome/140.0 Safari/537.36";
 const S_ID = Deno.env.get("NAVER_SEARCH_ID") || Deno.env.get("NAVER_CLIENT_ID") || "";
 const S_SEC = Deno.env.get("NAVER_SEARCH_SECRET") || Deno.env.get("NAVER_CLIENT_SECRET") || "";
 
@@ -72,10 +79,10 @@ async function verify(name: string, addr: string) {
   };
 }
 
-/* '상호(주소)' 를 가른다. 괄호는 반각·전각 둘 다 온다.
+/* 서울: '상호(주소)' 를 가른다. 괄호는 반각·전각 둘 다 온다.
    ⚠️ 주소에 '서울'이 빠진 값이 흔하다('중구 다동길13'). 지역 힌트가 '중구 다동길13' 이 되면
       hintOf 가 엉뚱한 두 토큰을 잡는다 — 본청 데이터이므로 서울을 앞에 채워준다. */
-function parseLoc(loc: string) {
+function parseSeoul(loc: string) {
   const m = String(loc || "").trim().match(/^(.*?)\s*[(（]\s*(.+?)\s*[)）]\s*$/);
   if (!m) return null;
   const name = m[1].trim();
@@ -85,41 +92,83 @@ function parseLoc(loc: string) {
   return { name, addr };
 }
 
+/* 경기: USE_LOC 에 **상호만** 온다(실측 40건 중 주소 0건).
+   ⚠️ 주소가 없으면 동명 상호를 못 가른다. 짧은 상호는 아예 안 묻는다 —
+      '본당' '온담' 같은 두 글자는 전국에 널렸고, 엉뚱한 집을 붙이면 '누가 갔나'가 거짓말이 된다.
+      지역 힌트 '경기'로 검색하고, 돌려받은 주소에 '경기'가 없으면 regionOk 가 버린다. */
+function parseGg(loc: string) {
+  const name = String(loc || "").trim().replace(/\s+/g, " ");
+  if (name.replace(/\s/g, "").length < 4) return null;
+  return { name, addr: "경기" };
+}
+
+/* 소스별 설정 — 새 지자체는 여기 한 줄만 는다 */
+const SOURCES: Record<string, {
+  cursor: string; channel: string; key: () => string;
+  url: (k: string, s: number, e: number) => string;
+  rows: (b: any) => { list: any[]; total: number };
+  loc: (r: any) => string;
+  parse: (loc: string) => { name: string; addr: string } | null;
+}> = {
+  seoul: {
+    cursor: "seoul_odExpense", channel: "seoul_gov", key: () => SEOUL,
+    url: (k, s, e) => `http://openapi.seoul.go.kr:8088/${k}/json/odExpense/${s}/${e}/`,
+    rows: (b) => ({ list: b?.odExpense?.row || [], total: Number(b?.odExpense?.list_total_count || 0) }),
+    loc: (r) => r?.EXEC_LOC || "", parse: parseSeoul,
+  },
+  gg: {
+    cursor: "gg_TBGGHPEXECDESCM", channel: "gg_gov", key: () => GG,
+    /* 경기는 offset 이 아니라 페이지 번호다 — 커서를 pSize 로 나눠 페이지로 바꾼다 */
+    url: (k, s, e) => `https://openapi.gg.go.kr/TBGGHPEXECDESCM?KEY=${k}&Type=json` +
+                      `&pSize=${e - s + 1}&pIndex=${Math.floor((s - 1) / (e - s + 1)) + 1}`,
+    rows: (b) => {
+      const box = b?.TBGGHPEXECDESCM;
+      return { list: box?.[1]?.row || [],
+               total: Number(box?.[0]?.head?.[0]?.list_total_count || 0) };
+    },
+    loc: (r) => r?.USE_LOC || "", parse: parseGg,
+  },
+};
+
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
   if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
-  if (!SEOUL) return j({ ok: false, reason: "no_seoul_key" }, 500);
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);
 
   const url = new URL(req.url);
-  const source = "seoul_odExpense";
+  const src = url.searchParams.get("source") || "seoul";
+  const cfg = SOURCES[src];
+  if (!cfg) return j({ ok: false, reason: "unknown_source" }, 400);
+  const key = cfg.key();
+  if (!key) return j({ ok: false, reason: `no_key_${src}` }, 500);
+
   const n = Math.min(Number(url.searchParams.get("n") || "300"), 1000);
   const cap = Math.min(Number(url.searchParams.get("cap") || "110"), 200);
 
   const { data: cur } = await supa.from("gov_ingest_cursor").select("next_offset")
-    .eq("source", source).maybeSingle();
+    .eq("source", cfg.cursor).maybeSingle();
   const start = Math.max(Number(cur?.next_offset || 1), 1);
   const end = start + n - 1;
 
-  const r = await fetch(`http://openapi.seoul.go.kr:8088/${SEOUL}/json/odExpense/${start}/${end}/`);
-  if (!r.ok) return j({ ok: false, reason: `seoul ${r.status}` }, 502);
-  const body = await r.json();
-  const box = body?.odExpense;
-  const rows: any[] = box?.row || [];
-  const total = Number(box?.list_total_count || 0);
-  if (!rows.length) {
-    return j({ ok: true, source, start, note: "더 없음", total });
-  }
+  /* ⚠️ UA 를 반드시 싣는다 — 경기 WAF 는 UA 없는 요청에 euc-kr HTML 을 200 으로 돌려준다. */
+  const r = await fetch(cfg.url(key, start, end), { headers: { "User-Agent": UA } });
+  if (!r.ok) return j({ ok: false, reason: `${src} ${r.status}` }, 502);
+  const text = await r.text();
+  let body: any;
+  try { body = JSON.parse(text); }
+  catch { return j({ ok: false, reason: `${src}_not_json`, head: text.slice(0, 120) }, 502); }
+  const { list: rows, total } = cfg.rows(body);
+  if (!rows.length) return j({ ok: true, source: src, start, note: "더 없음", total });
 
   /* 배치 안에서 먼저 접는다 — 한 부서가 같은 집을 계속 간다 */
   const cand = new Map<string, { name: string; addr: string }>();
   for (const row of rows) {
-    const p = parseLoc(row?.EXEC_LOC || "");
+    const p = cfg.parse(cfg.loc(row));
     if (!p) continue;
-    cand.set(`${p.name}|${p.addr}`.replace(/\s/g, "").toLowerCase(), p);
+    cand.set(`${src}|${p.name}|${p.addr}`.replace(/\s/g, "").toLowerCase(), p);
   }
   const keys = [...cand.keys()];
 
@@ -128,7 +177,7 @@ Deno.serve(async (req) => {
   for (let i = 0; i < keys.length; i += 200) {
     const { data } = await supa.from("gov_expense_seen").select("loc_key")
       .in("loc_key", keys.slice(i, i + 200));
-    for (const s of (data || []) as any[]) seen.add(s.loc_key);
+    for (const x of (data || []) as any[]) seen.add(x.loc_key);
   }
   const todo = keys.filter((k) => !seen.has(k)).slice(0, cap);
 
@@ -139,7 +188,7 @@ Deno.serve(async (req) => {
     const v = await verify(p.name, p.addr);
     await new Promise((s) => setTimeout(s, 70));
     stamp.push({ loc_key: k, resolved: !!v });
-    if (v) items.push({ ...v, channel: "seoul_gov", origin: "gov" });
+    if (v) items.push({ ...v, channel: cfg.channel, origin: "gov" });
   }
 
   let res: any = { new: 0, dup: 0 };
@@ -153,9 +202,9 @@ Deno.serve(async (req) => {
   /* 커서는 '읽은 행 수' 만큼 민다. cap 에 걸려 못 본 장소는 어차피 뒤에서 또 나온다
      (같은 집을 계속 가는 데이터라 유실이 아니다). */
   await supa.from("gov_ingest_cursor")
-    .upsert({ source, next_offset: end + 1, total, updated_at: new Date().toISOString() },
-            { onConflict: "source" });
+    .upsert({ source: cfg.cursor, next_offset: end + 1, total,
+              updated_at: new Date().toISOString() }, { onConflict: "source" });
 
-  return j({ ok: true, source, start, end, total, rows: rows.length,
+  return j({ ok: true, source: src, start, end, total, rows: rows.length,
              locs: keys.length, fresh: todo.length, verified: items.length, ...res });
 });
