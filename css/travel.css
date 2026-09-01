@@ -289,8 +289,24 @@ body.tv-lock { overflow: hidden; }
   padding: 6px 12px; font-size: 13px; font-weight: 800; color: var(--text-hi);
 }
 
-.tv-cc.wide { grid-column: 1 / -1; }
-.tv-cc.wide .tv-cc-img { aspect-ratio: 16/6; }
+/* ── 지역 = 띠(band) ─────────────────────────────────
+   나라는 2열 카드, 장소는 가로 리스트, 지역은 사진 위에 글자를 얹은 낮은 띠.
+   세 층이 형태로 갈려야 '지금 어느 층인지'를 글자 없이 안다. */
+.tv-band {
+  grid-column: 1 / -1; position: relative; display: flex; align-items: center;
+  width: 100%; min-height: 76px; padding: 14px 16px; cursor: pointer;
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background-color: var(--surface-2); background-size: cover; background-position: center;
+  color: #fff; text-align: left; overflow: hidden;
+}
+.tv-band:active { filter: brightness(1.15); }
+.tv-band-l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.tv-band-n { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+.tv-band-s {
+  font-size: 11.5px; color: rgba(255,255,255,.82);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tv-band-x { flex: 0 0 auto; font-size: 22px; color: rgba(255,255,255,.6); line-height: 1; }
 
 /* 이 나라 장소 전부 보기 */
 .tv-all {

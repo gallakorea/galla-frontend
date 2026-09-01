@@ -213,19 +213,21 @@
       "</div></button>";
   }
 
-  /* 지역 카드 — 나라 카드와 같은 배너 문법(층이 같은 성격이라 형태도 같게) */
+  /* 지역 = '띠'다. 나라(2열 카드)·장소(가로 리스트)와 **형태 자체가 다르다** —
+     사장님: "국가 하부 카테고리도 다른 방식으로 해."
+     사진 위에 글자를 얹은 낮은 밴드라, 카드가 아니라 '구간 머리'로 읽힌다. */
   function areaHTML(a) {
-    var names = (a.names || []).slice(0, 3).join(" · ");
-    return '<button type="button" class="tv-cc wide" data-area="' + esc(a.name) + '">' +
-      '<div class="tv-cc-img">' +
-        (a.cover ? '<img src="' + esc(a.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                 : '<span class="tv-ph">' + flag(COUNTRY) + "</span>") +
-      "</div>" +
-      '<div class="tv-cc-b">' +
-        '<div class="tv-cc-n">' + esc(a.name) + "</div>" +
-        '<div class="tv-cc-s">' + a.spots + "곳" + (a.creators ? " · 크리에이터 " + a.creators + "명" : "") + "</div>" +
-        (names ? '<div class="tv-cc-p">' + esc(names) + "</div>" : "") +
-      "</div></button>";
+    var names = (a.names || []).slice(0, 2).join(" · ");
+    return '<button type="button" class="tv-band" data-area="' + esc(a.name) + '"' +
+      (a.cover ? ' style="background-image:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.15)),url(' +
+                 esc(a.cover).replace(/"/g, "%22") + ')"' : "") + ">" +
+      '<span class="tv-band-l">' +
+        '<span class="tv-band-n">' + esc(a.name) + "</span>" +
+        '<span class="tv-band-s">' + a.spots + "곳" +
+          (a.creators ? " · 크리에이터 " + a.creators + "명" : "") +
+          (names ? " · " + esc(names) : "") + "</span>" +
+      "</span>" +
+      '<span class="tv-band-x">›</span></button>';
   }
 
   /* ── 목록 ─────────────────────────────────────────── */
