@@ -555,3 +555,11 @@ body.tv-lock { overflow: hidden; }
 /* 고른 영상 줄 */
 .tv-vid.on { background: var(--surface-2); border-radius: 8px; }
 .tv-vid.on b { color: #38d6b0; }
+
+/* 공유 버튼 — 닫기 왼쪽 */
+.tv-share {
+  position: absolute; right: 50px; top: 10px; z-index: 2; width: 32px; height: 32px;
+  border: 0; border-radius: 50%; background: rgba(0,0,0,.5); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.tv-share svg { width: 16px; height: 16px; }

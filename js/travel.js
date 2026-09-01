@@ -484,7 +484,15 @@
       '<div class="tv-trips chip-scroll" id="tv-trips"></div>' +
       '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
     document.body.appendChild(MAPBOX);
-    MAPBOX.querySelector("#tv-map-x").addEventListener("click", closeMap);
+    MAPBOX.querySelector("#tv-map-x").addEventListener("click", function () { closeMap(); });
+    /* 🔴 상세를 닫으면 back() 이 도는데, 그 popstate 를 지도가 **자기 것으로 오해**해 같이 닫힌다
+       (맛집에서 실제로 겪은 사고). 상세에서 돌아오면 state 는 다시 {tvMap:1} 이다 —
+       그 자리로 돌아온 거면 지도는 그대로 둔다. 리스너 등록 순서에 기대지 않는 판별이다. */
+    window.addEventListener("popstate", function () {
+      if (!MAPBOX.classList.contains("open")) return;
+      try { if (history.state && history.state.tvMap) return; } catch (_) {}
+      closeMap(true);
+    });
     MAPBOX.querySelector("#tv-routes").addEventListener("click", function (e) {
       var b = e.target.closest("[data-route]"); if (!b) return;
       TRIP = null;                       // 크리에이터를 바꾸면 여정 선택은 버린다
@@ -504,16 +512,18 @@
     });
     return MAPBOX;
   }
-  function closeMap() {
+  function closeMap(fromPop) {
     if (!MAPBOX) return;
     MAPBOX.classList.remove("open");
     document.body.classList.remove("tv-lock");
+    if (!fromPop) { try { if (history.state && history.state.tvMap) history.back(); } catch (_) {} }
   }
 
   async function openMap() {
     var box = buildMapBox();
     box.classList.add("open");
     document.body.classList.add("tv-lock");
+    try { history.pushState({ tvMap: 1 }, ""); } catch (_) {}
     try { await loadMapLibre(); }
     catch (_) { toast("지도를 불러오지 못했어요."); closeMap(); return; }
 
@@ -805,17 +815,23 @@
       var pl = e.target.closest("[data-place]");
       if (pl) openDetail(pl.dataset.place);
     });
+    window.addEventListener("popstate", function () {
+      if (CRE.classList.contains("open")) closeCre(true);
+    });
     return CRE;
   }
-  function closeCre() {
+  function closeCre(fromPop) {
     if (!CRE) return;
     CRE.classList.remove("open"); CRE.innerHTML = "";
-    document.body.classList.remove("tv-lock");
+    if (window.GALLA_stopInlineVideos) GALLA_stopInlineVideos();
+    if (!(MAPBOX && MAPBOX.classList.contains("open"))) document.body.classList.remove("tv-lock");
+    if (!fromPop) { try { if (history.state && history.state.tvCre) history.back(); } catch (_) {} }
   }
   async function openCreator(slug) {
     var d = buildCre();
     d.classList.add("open");
     document.body.classList.add("tv-lock");
+    try { history.pushState({ tvCre: 1 }, ""); } catch (_) {}
     d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오는 중…</div></div>';
     CRE_DATA = await rpc("travel_creator", { p_slug: slug, p_limit: 200 });
     CRE_CC = null;
@@ -891,13 +907,21 @@
     DETAIL.addEventListener("click", function (e) {
       if (e.target === DETAIL || e.target.closest("#tv-close")) closeDetail();
     });
+    /* 뒤로가기로 닫힌다 — 오버레이인데 닫기 버튼밖에 없으면 앱에서 갇힌 느낌이 든다(사장님 지적).
+       맛집 상세와 같은 규약: 열 때 pushState, 닫을 때 back(). */
+    window.addEventListener("popstate", function () {
+      if (DETAIL.classList.contains("open")) closeDetail(true);
+    });
     return DETAIL;
   }
-  function closeDetail() {
+  function closeDetail(fromPop) {
     if (!DETAIL) return;
     DETAIL.classList.remove("open");
     DETAIL.innerHTML = "";
-    document.body.classList.remove("tv-lock");
+    if (window.GALLA_stopInlineVideos) GALLA_stopInlineVideos();   // 닫았는데 소리만 남는 것 방지
+    /* 지도 위에서 닫으면 지도가 남아야 하므로 body 잠금은 지도 상태를 보고 푼다 */
+    if (!(MAPBOX && MAPBOX.classList.contains("open"))) document.body.classList.remove("tv-lock");
+    if (!fromPop) { try { if (history.state && history.state.tvDetail) history.back(); } catch (_) {} }
   }
 
   var CUR = null;
@@ -905,6 +929,15 @@
     var d = buildDetail();
     d.classList.add("open");
     document.body.classList.add("tv-lock");
+    /* 주소창에 장소를 싣는다 — 링크를 복사해 보낼 수 있고, 새로고침해도 그 장소가 열린다.
+       ⚠️ 오버레이를 페이지처럼 쓰려면 URL 이 있어야 한다. 없으면 '공유'가 불가능하고,
+          앱에서 새로고침 한 번에 목록 맨 위로 돌아간다. */
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set("tab", "travel");
+      u.searchParams.set("place", id);
+      history.pushState({ tvDetail: 1, place: id }, "", u.pathname + u.search);
+    } catch (_) { try { history.pushState({ tvDetail: 1 }, ""); } catch (__) {} }
     d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오는 중…</div></div>';
     var info = await rpc("travel_place_info", { p_id: id });
     if (!info || !info.ok) { d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">없는 장소예요.</div></div>'; return; }
@@ -928,6 +961,8 @@
     d.innerHTML =
       '<div class="tv-sheet">' +
         '<button type="button" class="tv-x" id="tv-close" aria-label="닫기">✕</button>' +
+        '<button type="button" class="tv-share" id="tv-share" aria-label="공유">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>' +
         /* 히어로에서 바로 재생한다(사장님: 이 화면에서 영상이 재생돼야).
            GALLA_playInline 은 앱 공용 프록시 플레이어라 앱에서도 오류 153 이 안 난다. */
         (vids.length
@@ -1013,6 +1048,13 @@
     d.querySelector("#tv-write").addEventListener("submit", function (e) {
       e.preventDefault(); say();
     });
+    var sh = d.querySelector("#tv-share");
+    if (sh) sh.addEventListener("click", function () {
+      var url = location.origin + location.pathname + "?tab=travel&place=" + CUR.place.id;
+      if (navigator.share) navigator.share({ title: CUR.place.name, url: url }).catch(function () {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast("링크를 복사했어요"); });
+    });
+
     /* 히어로 자체가 재생 버튼이다. */
     var hero = d.querySelector("#tv-hero");
     if (hero) hero.addEventListener("click", function () { playHere(hero.dataset.vid); });
@@ -1137,8 +1179,16 @@
                      paintChips(); paintDash(); await load(); }
     } finally { booting = false; }
   }
+  /* 링크로 들어온 경우 — ?place=<id> 면 그 장소를 바로 연다. */
+  function openFromUrl() {
+    try {
+      var id = new URLSearchParams(location.search).get("place");
+      if (id && /^[0-9a-f-]{36}$/i.test(id)) openDetail(id);
+    } catch (_) {}
+  }
+
   var start = function () {
-    tryBoot();
+    tryBoot().then(openFromUrl);
     try {
       new MutationObserver(function () { tryBoot(); })
         .observe(document.body, { childList: true, subtree: true });
