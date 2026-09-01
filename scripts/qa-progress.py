@@ -59,6 +59,20 @@ def main():
     n = sum(tot.values())
     print(f"\n합계 {n}행 — 완료 {tot['완료']} · 부분 {tot['부분']} · 미착수 {tot['미착수']} · 막힘 {tot['막힘']}")
     print(f"완료율 {tot['완료']/n*100:.1f}%  (완료+부분 {(tot['완료']+tot['부분'])/n*100:.1f}%)")
+    # 칸 단위 — 웹/iOS/AOS 표는 한 행이 세 칸이라, 행 판정만 보면 '웹만 확인'이 안 보인다.
+    cell = {m: 0 for m in MARKS}
+    for ln in DOC.read_text().splitlines():
+        t = ln.strip()
+        if not t.startswith("|"):
+            continue
+        if set(t.replace("|", "").replace(" ", "")) <= set("-:"):
+            continue
+        cells = [c.strip() for c in t.strip("|").split("|")]
+        for c in cells[1:]:
+            for m in MARKS:
+                if m in c:
+                    cell[m] += 1
+    print(f"칸 단위 — ✅ {cell['✅']} · 🔶 {cell['🔶']} · ❌ {cell['❌']} · ⛔ {cell['⛔']}")
     if want:
         print(f"\n── {want} {len(listed)}행 ──")
         print("\n".join(listed))
