@@ -295,3 +295,23 @@ revoke all on function public.travel_videos_mark_harvested(text[])    from anon,
 revoke all on function public.travel_channels_next(integer)           from anon, authenticated;
 revoke all on function public.travel_geo_take(int)                    from anon, authenticated;
 revoke all on function public.travel_geo_refund(int)                  from anon, authenticated;
+
+/* ── 10. 수확 채널 라운드로빈 ──────────────────────────
+   ⚠️ '안 물어본 영상이 제일 많은 채널'을 고르면 그 채널만 계속 돈다(빠니보틀 1,000편).
+      오래 안 본 채널부터 준다 — 목록 화면에 특정 크리에이터만 쏠리는 걸 막는 장치이기도 하다.
+      맛집은 이걸 안 해서 전국 화면이 마지막에 훑은 채널로 쏠렸다.                        */
+alter table public.travel_channels add column if not exists last_harvest_at timestamptz;
+
+create or replace function public.travel_channel_to_harvest()
+returns table(slug text, pending bigint)
+language sql stable security definer set search_path = public as $$
+  select c.slug, count(v.video_id) as pending
+    from travel_channels c
+    join travel_videos v on v.channel = c.slug and v.harvested_at is null
+   where c.active
+   group by c.slug, c.last_harvest_at
+  having count(v.video_id) > 0
+   order by c.last_harvest_at nulls first
+   limit 1;
+$$;
+revoke all on function public.travel_channel_to_harvest() from anon, authenticated;

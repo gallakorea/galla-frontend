@@ -434,6 +434,10 @@ body.fd-map-on #frOrb { display: none !important; }
 .fm-n { flex: 1; min-width: 0; font-size: 13px; color: var(--text-hi);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fm-src { font-style: normal; font-size: 10px; margin-left: 5px; opacity: .65; }
+/* 정부 고시 '착한가격업소' 표식 — 메뉴판 제목 옆. 값의 출처를 밝히는 자리다 */
+.fm-gp { margin-left: 8px; font-size: 11px; font-weight: 700; color: #7ee0a5;
+         background: rgba(29,185,84,.14); border: 1px solid rgba(29,185,84,.32);
+         border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .fm-p { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--text-mid);
   font-variant-numeric: tabular-nums; }
 .fm-empty { padding: 14px 2px; text-align: center; color: var(--text-low); font-size: 12.5px; }

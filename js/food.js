@@ -1693,7 +1693,7 @@
         encodeURIComponent(p.name + " " + (p.address || "")) + '">🗺 네이버지도에서 열기</a>' +
       /* 메뉴판 — 유저 제보와 AI 추출을 구분해 보여준다. 출처가 안 보이면 신뢰가 안 선다. */
       '<div class="fd-photos" id="fd-photos">' + photoHtml(d.photos || []) + '</div>' +
-      '<div class="fd-menu" id="fd-menu">' + menuHtml(d.menus || []) + '</div>' +
+      '<div class="fd-menu" id="fd-menu">' + menuHtml(d.menus || [], p.good_price) + '</div>' +
       '<button type="button" class="fd-flag" data-a="report">🏳 정보가 잘못됐나요?</button>' +
       '<div class="fd-talk">' +
         '<div class="fd-talk-h">한마디 <span id="fd-talk-n"></span></div>' +
@@ -1787,13 +1787,17 @@
   }
 
   function won(n) { return n == null ? "" : Number(n).toLocaleString("ko-KR") + "원"; }
-  function menuHtml(ms) {
+  function menuHtml(ms, gp) {
     return '<div class="fm-h">메뉴' + (ms.length ? ' <b>' + ms.length + '</b>' : '') +
+        /* 정부가 '착한가격업소'로 지정한 집이면 밝힌다 — 가격이 왜 이렇게 싼지 설명이 된다 */
+        (gp ? '<span class="fm-gp">🏷 착한가격업소</span>' : '') +
         '<button type="button" class="fm-add" data-a="menu">+ 메뉴 제보</button></div>' +
       (ms.length
         ? '<div class="fm-list">' + ms.map(function (m) {
             return '<div class="fm-row"><span class="fm-n">' + esc(m.name) +
               (m.source === "yt" ? '<i class="fm-src" title="영상에서 자동 추출">📺</i>' : '') +
+              /* 출처가 정부 고시면 그렇게 밝힌다 — 값은 분기마다 갱신되므로 유저 제보보다 믿을 만하다 */
+              (m.source === "goodprice" ? '<i class="fm-src" title="행정안전부 착한가격업소 고시가">🏷</i>' : '') +
               (m.source === "user" && m.nick ? '<i class="fm-by">' + esc(m.nick) + '</i>' : '') +
               '</span><b class="fm-p">' + (m.price ? esc(won(m.price)) : "–") + '</b></div>';
           }).join("") + '</div>'
@@ -1874,7 +1878,7 @@
     toast(r.added ? r.added + "개 등록했어요" : "이미 등록된 메뉴예요");
     var d = await rpc("food_place_detail", { p_id: curPlace.place.id });
     if (d && d.ok) { curPlace = d; var el = SHEET.querySelector("#fd-menu");
-      if (el) el.innerHTML = menuHtml(d.menus || []); }
+      if (el) el.innerHTML = menuHtml(d.menus || [], (d.place || {}).good_price); }
   }
 
   async function loadTalk(id) {
