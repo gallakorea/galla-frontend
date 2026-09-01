@@ -57,7 +57,20 @@
          그러면 이 리스너가 조용히 무시해서 **로그인이 아무 말 없이 실패**했다(실측 2026-08-28).
          이제는 '토큰이나 코드가 들어 있으면' 처리한다 — 어디로 떨어지든 받는다.
          매직링크·이메일 인증처럼 코드 대신 토큰이 바로 오는 경로도 같이 살아난다. */
-      if (!code && !at) { if (url.indexOf("auth-callback") < 0) return; }
+      /* 🔒 우리 콜백에서 온 것만 받는다 (2026-09-01 실측 결함).
+         예전엔 "토큰이 들어 있으면 어디서 왔든" 처리했다. 그래서 아무 앱·웹페이지가
+             im.galla.app://cb#access_token=…&refresh_token=…
+         를 열면 그대로 setSession 이 돌아 **피해자 앱이 공격자 계정으로 로그인**됐다
+         (세션 고정). 시뮬레이터에서 openurl 로 재현 — 가짜 토큰이라 'Invalid JWT structure'
+         까지 갔다 = 토큰을 실제로 먹었다는 뜻이다. 진짜 토큰이면 조용히 바뀐다.
+         정상 경로는 둘뿐이다:
+           · im.galla.app://auth-callback…  (NATIVE_REDIRECT)
+           · https://galla.im/…             (SITE_URL 폴백·유니버설링크·auth-callback.html)
+         PKCE code 경로는 로컬 code_verifier 로 검증되지만, 토큰 직행 경로는 검증이 없어
+         출처를 여기서 막아야 한다. */
+      const fromOurCallback = url.indexOf("auth-callback") >= 0 || /^https:\/\/galla\.im\//i.test(url);
+      if (!fromOurCallback) return;
+      if (!code && !at) return;
       try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
       try {
         const c = sb();

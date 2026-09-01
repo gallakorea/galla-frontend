@@ -591,7 +591,7 @@ api.anthropic.com                      (미국)
 | 의존성 취약점(`npm audit`) | 웹은 `package.json` 없음(정적). 엣지 함수 56개가 `supabase-js@2` 범위지정 — eszip 로 배포시 고정되나 재배포 때 조용히 최신으로 갈아탄다. 2.112.4 로 고정 | ✅ |
 | 오픈 리다이렉트 · 클릭재킹 | `frame-ancestors 'self'` 설정됨. **`login.html?next=` 가드가 정규식 블랙리스트라 5가지로 샜다** — `\\evil.com`·`/\\evil.com`(역슬래시→슬래시), ` javascript:`·`\tjavascript:`·`java\tscript:`(공백·탭을 파서가 지움). 브라우저 파서로 실측 확인 후 오리진 비교로 교체, 12케이스 검증 | ✅ |
 | 파일 업로드 검증(용량·타입·악성) | ✅ upload-media 서버측 MIME 판정 + 종류별 MAX_BYTES |
-| 딥링크 파라미터 검증 | `?next`·`?to`·`?ref`·`?url` 소비처 전수. `to`·`ref` 는 화이트리스트라 안전. **`news?url=` 이 href 3곳에 그대로 들어가 `javascript:` XSS 가능** → `safeUrl`(URL 파서, http/https만) 추가·링크 숨김 | ✅ |
+| 딥링크 파라미터 검증 | `?next`·`?to`·`?ref`·`?url` 소비처 전수. `to`·`ref` 는 화이트리스트라 안전. **`news?url=` 이 href 3곳에 그대로 들어가 `javascript:` XSS 가능** → `safeUrl`(URL 파서, http/https만) 추가·링크 숨김. **2026-09-01 추가 발견: 딥링크의 `#access_token` 을 출처 검사 없이 먹어 세션 고정이 됐다 → 콜백 출처 검사 추가**(§26-14) | ✅ |
 
 ## 21. 데이터 정합성·비용
 
@@ -933,3 +933,38 @@ RLS 가 꺼진 채 익명에게 **읽기**가 열려 있었다(8/31에 쓰기만
 
 ⚠️ `posts`(숏판·롱판) 는 **행이 0개**라 이 검사가 헛돌았다. 검사가 통과한 게 아니라 **대상이 없었다.**
    덤으로 알게 된 것: 운영 DB 에 숏판·롱판 콘텐츠가 하나도 없다(8/30 에 업로드 확인했던 것들이 지워졌다).
+
+### 26-14. 딥링크로 **남의 계정에 로그인시킬 수 있었다** — 고침
+
+`?next`·`?url` 같은 **쿼리 파라미터**는 앞선 감사에서 다 훑었는데, **인증 토큰 딥링크**는 빠져 있었다.
+
+`js/social-auth.js` 의 `appUrlOpen` 처리기는 **어디서 온 URL이든** `#access_token`·`refresh_token`
+이 들어 있으면 그대로 `supabase.auth.setSession()` 에 넣었다. 즉 아무 앱·웹페이지가
+
+```
+im.galla.app://cb#access_token=<공격자토큰>&refresh_token=<공격자토큰>
+```
+
+를 열면 **피해자 앱이 조용히 공격자 계정으로 로그인**된다(세션 고정). 그 뒤 피해자가 쓰는 글·DM·
+결제가 전부 공격자 계정에 쌓이고, 공격자는 나중에 그걸 그대로 열어본다.
+
+시뮬레이터 실증(`xcrun simctl openurl`):
+
+| 보낸 링크 | 고치기 전 | 고친 뒤 |
+|---|---|---|
+| `im.galla.app://cb#access_token=…`(공격 형태) | **"로그인 처리 실패 — Invalid JWT structure"** = 토큰을 실제로 먹었다(가짜라 거기서 멈춤) | **무반응**(무시) ✅ |
+| `im.galla.app://auth-callback#access_token=…`(정상 콜백 형태) | 처리 | **처리 유지**(같은 알림) ✅ |
+
+고침: 토큰·코드를 받아들이는 조건을 **우리 콜백에서 온 것**으로 좁혔다 —
+`auth-callback` 이 들어 있거나 `https://galla.im/` 로 시작하는 URL만.
+(PKCE `code` 경로는 로컬 code_verifier 로 검증되지만 **토큰 직행 경로는 검증이 없어** 출처로 막아야 한다.)
+
+### 26-15. XSS·업로드 재검증 (이미 ✅ 이던 항목)
+
+- **XSS**: 프로필 소개글·광장 글 제목/본문·광장 댓글에 `<img onerror>`·`<script>`·속성 깨기
+  세 종류를 실제로 넣고 목록·상세에서 확인 — **전부 텍스트로 이스케이프**, 주입된 노드 0개,
+  플래그 미실행. 테스트 글·댓글은 삭제 완료(잔존 0).
+- **업로드**: `text/html`·`image/svg+xml` 업로드 → **415 invalid_mime_type**.
+  익명 업로드는 세 버킷 모두 **403 RLS 거부**. 버킷 한도 issues 114MB·plaza-images 14MB·profiles 8MB.
+- ⚠️ 부수 발견: **`plaza-images`·`profiles` 에는 DELETE 정책이 아예 없다**(소유자도 못 지움).
+  보안 구멍은 아니지만 글을 지워도 파일이 남아 **고아 파일이 계속 쌓인다**(issues 버킷 197파일 1.16GB 와 같은 계열).
