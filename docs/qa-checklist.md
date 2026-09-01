@@ -736,6 +736,30 @@ QA 클론은 `~/Developer/galla-frontend`. 그냥 sync 하면 **옛날 웹 코�
 검증: `email_available` RPC(가입 마법사 정상 경로)는 anon 키로 여전히 `{"ok": true}`,
 같은 키로 표를 직접 읽으면 `42501 permission denied`. 마이그레이션 `20260901270000` · 기록까지 반영.
 
+### 26-1-B. 익명이 부를 수 있던 파이프라인 RPC 15개 — **고침**
+
+`SECURITY DEFINER` 496개를 훑었다. `current_user` 로 권한을 판정하는 함수는 **0개**(그 함정은 깨끗하다).
+문제는 **가드가 아예 없는데 익명이 부를 수 있는 쓰기 함수 15개**였다.
+
+| 함수 | 밖에서 가능했던 것 |
+|---|---|
+| `places_take(want, cap)` | 구글 Places 하루 한도(1,200)를 한 번에 태워 **그날 사진 수집을 정지** |
+| `food_merge_place(keep, drop)` | 식당 레코드 병합·출처 행 삭제 = **원격 데이터 파괴** |
+| `food_videos_mark_harvested(ids)` | 영상을 '수확 완료'로 찍어 **영원히 건너뛰게** 만듦 |
+| `naver_take/refund` · `places_refund` · `food_assembly_*` · `food_place_info_set` · `food_link_videos_by_address` · `food_merge_channel` | 같은 계열 장부·병합 조작 |
+| `reap_stalled_agent_jobs(90)` · `trg_recount_*` | 크론·트리거 정비 함수 직접 호출 |
+
+전수 호출자 확인: 프론트 `js/` 에서 부르는 곳 **0곳** — 전부 엣지 함수(service_role)·크론이다.
+`bump_view` 계열(조회수)과 `duel_resolve`(시간으로 잠긴 상태 전이)는 공개가 맞아 그대로 뒀다.
+
+⚠️ **여기서 한 번 헛발질했다 — 기록해 둔다.**
+`revoke ... from anon, authenticated` 를 걸고 끝낸 줄 알았는데, 함수 ACL 이 `=X/postgres`
+(**PUBLIC 에 EXECUTE**)라 익명은 그 경로로 그대로 들어왔다. 회수 직후 anon 키로 `places_take` 를
+불러보니 **여전히 `1` 을 돌려줬다**(그 호출로 그날 한도 1칸을 실제로 태웠다).
+`from public` 으로 걷어야 닫힌다. 확인은 눈으로 ACL 읽지 말고
+`has_function_privilege('anon', oid, 'EXECUTE')` 로 — 15개 전부 `false`, `service_role` 은 `true` 확인.
+마이그레이션 `20260901280000`.
+
 ### 26-2. ⚠️ 뿌리 — **새로 만드는 표는 익명 쓰기가 열린 채 태어난다** (사장님 판단 필요)
 
 위 3개는 실수가 아니라 기본값이다. 빈 표를 하나 만들어 권한을 찍어보고 되돌렸다:
