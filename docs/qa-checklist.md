@@ -675,3 +675,45 @@ api.anthropic.com                      (미국)
 | 본문 대비 | 5종 미달(최저 2.59 @9px, 푸터 3.0~4.2) 🔶 |
 | 터치 타깃 | 68개 중 25개가 24px 미만(찬반 버튼 18x51 등, WCAG 2.2 AA) 🔶 |
 | 이미지 alt | 내비 5개 해결. 콘텐츠 썸네일 4개는 남음 🔶 |
+
+
+## 25. 앱 SPA 하단 여백 — #app 규칙 증발 (2026-09-01)
+
+**결함**: 앱 로그인 화면에서 **'🔑 패스키로 로그인' 버튼이 하단 네비 알약에 반쯤 덮여 못 눌렀다.**
+페이지 끝이라 더 스크롤되지도 않았다 = 앱에서 패스키 로그인 자체가 불가능.
+재현: 시뮬레이터 → 하단 '마이' → 로그인 화면 → 끝까지 스크롤.
+
+**진짜 원인은 로그인이 아니다.** 뷰 로더는 `#app` **안쪽만** 뷰 호스트로 옮긴다 →
+SPA 문서엔 `#app` 요소가 0개(`document.querySelectorAll('#app').length === 0` 실측).
+그런데 루트 CSS 14개 파일이 `#app` 에 하단 네비 여백을 걸어놨다
+(index 72px · search 94px · plaza 140px · plaza_detail 124px · random 160px …).
+그 여백이 앱에서 통째로 증발해 **마지막 요소가 알약(62+14px+세이프에어리어) 밑에 깔린다.**
+
+실측(375×812 · 세이프에어리어 0 — 아이폰은 홈 인디케이터 34px만큼 더 나빠진다):
+
+| 화면 | 네비 위 여유 | 판정 |
+|---|---|---|
+| 약관 | −23px (마지막 문단) | ❌ → ✅ +73px |
+| 개인정보 | −33px | ❌ → ✅ |
+| 계정 편집 | −4px ('변경사항 저장' 버튼) | ❌ → ✅ |
+| 로그인(앱) | 패스키 버튼 절반 | ❌ → ✅ 네비 숨김 |
+| 설정·등급·퀘스트·지갑·충전내역·로그인기록·비번변경 | 여유 있음 | ✅ |
+
+**고침**(커밋 `50a8c8952` 코드 + `71137c7e6` 스탬프):
+1. `js/spa/view-loader.js` — 페이지 CSS 의 `#app` 규칙을 뷰 호스트로 복제(라우트 스코프).
+   ⚠️ 통째로 복제하면 `#app{position:relative}` 가 셸의 `.view-host{position:absolute;inset:0;overflow:auto}` 를
+   이겨 **호스트가 4,147px로 부풀고 스크롤이 죽는다**(1차 시도에서 실측). position/overflow/height 계열은 제외.
+2. `js/spa/router.js` — login·signup·reset 을 네비 숨김 목록(FULL_EDITORS)에 추가.
+   auth 화면은 원래 '셸 밖 풀스크린' 설계라 여백이 24px뿐이고, 여백을 더하면 로고가 잘린다(옛 92px 실패 이력).
+3. `css/index.css` — `#app` 하단 여백 72px → `calc(96px + safe-area)`. 웹도 같이 고쳐진다.
+
+**검증**: 시뮬레이터 재설치 후 로그인 끝까지 스크롤 — 패스키 버튼 전체 노출·네비 없음.
+약관 뷰 −23px → +49px(복제만) → +73px(여백까지). 홈 피드·트렌드 탭 회귀 없음.
+
+**남은 것**: 파라미터가 필요한 스택 뷰(이슈·광장 상세·시청·예측 상세)는 미측정.
+`scripts/occlusion-audit.js` 는 MPA(iframe) 기준이라 **SPA 뷰의 이 결함을 구조적으로 못 잡는다** —
+SPA 호스트를 훑는 감사기가 따로 필요하다.
+
+**환경 함정**: `npm run sync` 의 기본 소스가 `~/Developer/GitHub/galla-frontend`(0830004, 8/30에 멈춤)다.
+QA 클론은 `~/Developer/galla-frontend`. 그냥 sync 하면 **옛날 웹 코드가 앱에 실린다.**
+반드시 `GALLA_WEB_SRC=/Users/franksangminlee/Developer/galla-frontend npm run sync`.

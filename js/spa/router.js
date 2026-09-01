@@ -184,7 +184,13 @@
      하단 탭 네비를 숨긴다. 네비(z-index 9999)가 스택 뷰(#stack-root, z 40) 위에 떠서
      CTA 버튼을 덮어 '다음 단계'를 눌러도 네비(DM)로 새던 버그의 근본 수정. 상세 뷰(이슈·예측
      상세 등)는 네비 유지, 에디터만 숨김. pop으로 에디터가 빠지면 자동 복구. */
-  const FULL_EDITORS = new Set(["write", "gallari-write", "report", "bug", "confirm", "preview"]);
+  /* 🔐 로그인·가입·비번찾기도 같은 이유로 여기에 있다(2026-09-01 시뮬 재현).
+     auth 화면은 원래 '셸 밖 풀스크린'으로 설계됐고(css/auth.css 주석) 그래서 하단 여백이 24px뿐이다.
+     SPA 는 셸 안에서 띄우니 네비가 그대로 떠 '🔑 패스키로 로그인' 버튼이 알약에 반쯤 덮였고,
+     페이지 끝이라 더 스크롤되지도 않아 앱에서 패스키 로그인이 아예 불가능했다.
+     여백을 더하면 세로중앙 정렬이 밀려 로고가 잘린다(옛 92px 여백의 실패 이력) → 네비를 숨긴다. */
+  const FULL_EDITORS = new Set(["write", "gallari-write", "report", "bug", "confirm", "preview",
+                                "login", "signup", "reset"]);
   function syncEditorNav() {
     try {
       const top = stack[stack.length - 1];

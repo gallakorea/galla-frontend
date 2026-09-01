@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+<meta name="galla-ver" content="0901020"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+  <title>조각 촬영 - GALLA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=0901010">
+  <link rel="stylesheet" href="./css/clips.css?v=0901020">
+</head>
+
+<body data-page="clips">
+<div id="app">
+  <div class="clip-wrap">
+
+    <div class="clip-stage">
+      <video id="clipCam" playsinline autoplay muted></video>
+
+      <div class="clip-top">
+        <button class="clip-x" id="clipBack" aria-label="닫기">✕</button>
+        <span class="clip-title">조각</span>
+        <button class="clip-twin" id="clipTwin" aria-pressed="false"
+                aria-label="트윈 — 숏판과 롱판에 동시 발행">⧉ 트윈</button>
+        <span class="clip-count" id="clipCount"></span>
+      </div>
+
+      <!-- 조각이 기기에만 있다는 사실은 반드시 먼저 말한다.
+           말없이 사라지면 버그로 읽히고, 그 순간 신뢰를 잃는다. -->
+      <div class="clip-note" id="clipInfo">
+        조각은 <b>이 기기에만</b> 저장돼요. 앱을 지우거나 기기를 바꾸면 사라져요 —
+        <b>발행한 영상은 남아 있어요.</b>
+      </div>
+
+      <div class="clip-note warn" id="clipWarn" hidden style="top:calc(env(safe-area-inset-top,0px) + 118px)">
+        이 브라우저가 영구 보관을 허락하지 않았어요. 저장 공간이 부족하면 조각이 지워질 수 있어요.
+      </div>
+
+      <div class="clip-note" id="clipStale" hidden style="top:auto;bottom:12px">
+        <span id="clipStaleText"></span>
+        <button id="clipStaleBtn">정리하기</button>
+      </div>
+
+      <div class="clip-denied" id="clipDenied" hidden>
+        <div>
+          <div class="cd-h">카메라를 열지 못했어요</div>
+          <p id="clipDeniedWhy"></p>
+          <p style="font-size:13px;margin-top:6px">설정 → 갈라 → 카메라·마이크를 켜주세요.</p>
+          <button id="clipRetry">다시 시도</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="clip-bottom">
+      <div class="clip-presets">
+        <button class="cp-preset on" data-ms="1000">1초</button>
+        <button class="cp-preset" data-ms="2000">2초</button>
+        <button class="cp-preset" data-ms="3000">3초</button>
+      </div>
+
+      <div class="clip-row">
+        <button class="clip-side" id="clipLib" aria-label="보관함">▤</button>
+
+        <div class="clip-shutter-wrap">
+          <span class="clip-tip">바로 1초를 찍어보세요</span>
+          <svg class="clip-ring" viewBox="0 0 86 86" aria-hidden="true">
+            <circle class="rg-bg" pathLength="100"></circle>
+            <circle class="rg-fg" id="clipRing" pathLength="100"></circle>
+          </svg>
+          <button class="clip-shutter" id="clipShutter" aria-label="촬영"></button>
+        </div>
+
+        <button class="clip-side" id="clipFlip" aria-label="카메라 전환">⟳</button>
+      </div>
+
+      <div class="clip-strip" id="clipStrip"></div>
+    </div>
+
+  </div>
+  <div class="clip-toast" id="clipToast"></div>
+</div>
+
+<script src="./js/clips-store.js?v=0901023"></script>
+<script src="./js/clips.js?v=0901023"></script>
+<script>
+  document.getElementById('clipBack').addEventListener('click', function () {
+    if (history.length > 1) history.back();
+    else (window.GALLA_nav || function (u) { location.href = u; })('index.html');
+  });
+</script>
+</body>
+</html>
