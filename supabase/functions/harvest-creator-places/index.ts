@@ -116,14 +116,20 @@ async function chatJson(sys: string, user: string): Promise<string | null> {
   return (await g.json())?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
+/* ⚠️ 메뉴는 여기서 같이 뽑는다 — 별도 API 가 없기 때문이다.
+   네이버 지역검색에도 구글 플레이스에도 메뉴 항목이 없고, 네이버 플레이스 페이지를
+   긁는 건 안 하기로 한 경로다. 반면 크리에이터는 설명에 '한돈 생삼겹 16,000원' 처럼
+   가격을 자주 적는다. 이미 LLM 을 한 번 부르므로 여기 얹으면 추가 비용이 0이다. */
 const SYS = [
-  "너는 한국 음식 유튜브 영상의 제목과 설명에서 '그 영상이 다녀온 음식점'만 뽑는 추출기다.",
+  "너는 한국 음식 유튜브 영상의 제목과 설명에서 '그 영상이 다녀온 음식점'과 '거기서 파는 메뉴'를 뽑는 추출기다.",
   "규칙:",
   "1) 설명에 적힌 도로명 주소와 짝이 되는 가게만 뽑는다. 주소가 없는 가게는 뽑지 않는다.",
   "2) 협찬사·광고주·본인 채널·굿즈·쿠팡 링크 같은 건 가게가 아니다. 제외한다.",
   "3) 지점명이 있으면 상호에 포함한다(예: '○○식당 본점').",
-  "4) 지어내지 않는다. 확실하지 않으면 빈 배열을 준다.",
-  'JSON 만: {"shops":[{"name":"상호","address":"도로명 주소"}]}',
+  "4) 메뉴는 **설명에 값이 적혀 있는 것만** 뽑는다. 가격이 없으면 그 메뉴는 넣지 않는다.",
+  "5) price 는 숫자만 넣는다(원 단위). '16,000원' → 16000. 범위나 '시가'는 넣지 않는다.",
+  "6) 지어내지 않는다. 확실하지 않으면 빈 배열을 준다.",
+  'JSON 만: {"shops":[{"name":"상호","address":"도로명 주소","menus":[{"name":"메뉴명","price":16000}]}]}',
 ].join("\n");
 
 Deno.serve(async (req) => {
@@ -181,7 +187,16 @@ Deno.serve(async (req) => {
       await new Promise((r) => setTimeout(r, 70));   // 네이버 호출 간격
       if (!ok) { dropped++; continue; }
       verified++;
-      items.push({ ...ok, channel, origin: "yt",
+      /* 메뉴는 네이버 검증을 통과한 가게에만 딸려 보낸다 —
+         존재가 확인 안 된 집에 메뉴까지 붙으면 거짓말이 두 겹이 된다. */
+      const menus = Array.isArray(s?.menus)
+        ? s.menus
+            .map((m: any) => ({ name: String(m?.name || "").trim(), price: Number(m?.price) }))
+            .filter((m: any) => m.name.length >= 1 && Number.isFinite(m.price)
+                                && m.price > 0 && m.price < 1000000)
+            .slice(0, 20)
+        : [];
+      items.push({ ...ok, channel, origin: "yt", menus,
                    video_id: v.video_id, video_title: v.title, aired_at: v.published_at });
     }
   }
