@@ -26,7 +26,7 @@
   if (window.__gallaTravel) return;
   window.__gallaTravel = true;
 
-  var SEC = null, LIST = null, CHIPS = null, CHIPS2 = null, DETAIL = null;
+  var SEC = null, LIST = null, CHIPS = null, CHIPS2 = null, DASH = null, DETAIL = null;
   var sb = null;
   /* 세그먼트는 둘뿐이다. '판정' 랭킹 탭은 사장님 지시로 뺐다 —
      "누적 투표로 갈리게 될 거니" 랭킹을 따로 화면으로 만들 필요가 없다.
@@ -111,6 +111,7 @@
       "</div>" +
       '<div class="tv-chips chip-scroll" id="tv-chips"></div>' +
       '<div class="tv-chips tv-chips2 chip-scroll" id="tv-chips2" hidden></div>' +
+      '<div class="tv-dash" id="tv-dash" hidden></div>' +
       '<div class="tv-list" id="tv-list"></div>';
     panel.appendChild(SEC);
 
@@ -127,6 +128,7 @@
     SEC = panel.querySelector(".tv-sec");
     CHIPS = SEC.querySelector("#tv-chips");
     CHIPS2 = SEC.querySelector("#tv-chips2");
+    DASH = SEC.querySelector("#tv-dash");
     LIST = SEC.querySelector("#tv-list");
   }
 
@@ -138,11 +140,20 @@
     SEC.__tvWired = true;
 
     SEC.querySelector("#tv-openmap").addEventListener("click", openMap);
+    DASH.addEventListener("click", async function (e) {
+      var tb = e.target.closest("[data-dtab]");
+      if (tb) { DASH_TAB = tb.dataset.dtab; paintDash(); return; }
+      var cc = e.target.closest("[data-country]");
+      if (cc) { COUNTRY = cc.dataset.country; AREA = null;
+                await loadAreas(); paintChips(); paintDash(); load(); return; }
+      var pl = e.target.closest("[data-place]");
+      if (pl) openDetail(pl.dataset.place);
+    });
     SEC.querySelector("#tv-seg").addEventListener("click", function (e) {
       var b = e.target.closest(".tv-sg"); if (!b) return;
       VIEW = b.dataset.view;
       SEC.querySelectorAll(".tv-sg").forEach(function (x) { x.classList.toggle("on", x === b); });
-      paintChips(); load();
+      paintChips(); paintDash(); load();
     });
     CHIPS.addEventListener("click", async function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
@@ -150,7 +161,7 @@
       COUNTRY = b.dataset.cc || null;
       AREA = null;                    // 나라가 바뀌면 지역 선택은 버린다
       await loadAreas();
-      paintChips(); load();
+      paintChips(); paintDash(); load();
     });
     CHIPS2.addEventListener("click", function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
@@ -161,7 +172,7 @@
       var cc = e.target.closest("[data-country]");
       if (cc) {
         COUNTRY = cc.dataset.country; AREA = null;
-        await loadAreas(); paintChips(); load();
+        await loadAreas(); paintChips(); paintDash(); load();
         try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
         return;
       }
@@ -211,6 +222,64 @@
     CHIPS.hidden = !html;
 
     if (CHIPS2) { CHIPS2.innerHTML = ""; CHIPS2.hidden = true; }   // 지역은 그리드가 맡는다
+  }
+
+  /* ── 대시보드 ─────────────────────────────────────────
+     사장님: "나라들 위에 데이터를 보여주면 좋겠다. 인기 여행지, 유튜버 최다 방문 같은."
+     ⚠️ 유저 표(또 간다/찜)는 아직 0이다. 그걸로 '인기 여행지'를 만들면 빈 화면이거나 거짓말이다.
+        우리가 실제로 가진 건 **크리에이터의 발자국**이라 세 축으로 간다:
+          겹친 곳(여러 유튜버가 간 곳) / 최근 다녀간 곳 / 유튜버가 많이 간 나라.
+        표가 쌓이면 '또 간다 랭킹'을 여기 얹는다(travel_rank 가 이미 있다). */
+  var DASH_DATA = null, DASH_TAB = "recent";
+  async function loadDash() {
+    DASH_DATA = await rpc("travel_dashboard", { p_n: 12 });
+  }
+  function paintDash() {
+    if (!DASH) return;
+    var show = VIEW === "feed" && !COUNTRY && DASH_DATA && DASH_DATA.ok;
+    if (!show) { DASH.hidden = true; DASH.innerHTML = ""; return; }
+    var d = DASH_DATA, t = d.totals || {};
+    /* 겹친 곳이 아직 없으면 그 탭 자체를 안 만든다 — 눌렀는데 비어 있는 탭이 제일 나쁘다. */
+    var tabs = [];
+    if ((d.multi || []).length) tabs.push(["multi", "🔥 여러 유튜버가 간 곳"]);
+    tabs.push(["recent", "🆕 최근 다녀간 곳"]);
+    tabs.push(["countries", "🌍 유튜버가 많이 간 나라"]);
+    if (!tabs.some(function (x) { return x[0] === DASH_TAB; })) DASH_TAB = tabs[0][0];
+
+    var body = "";
+    if (DASH_TAB === "countries") {
+      body = (d.countries || []).map(function (c) {
+        return '<button type="button" class="tv-dc" data-country="' + esc(c.code) + '">' +
+          '<span class="tv-dc-f">' + flag(c.code) + "</span>" +
+          '<span class="tv-dc-n">' + esc(c.name || c.code) + "</span>" +
+          '<span class="tv-dc-s">' + c.n + "곳 · " + c.chn + "명</span></button>";
+      }).join("");
+    } else {
+      var list = DASH_TAB === "multi" ? (d.multi || []) : (d.recent || []);
+      body = list.map(function (p) {
+        var badge = DASH_TAB === "multi" ? p.n + "명 다녀감"
+                  : (String(p.at || "").slice(0, 10).replace(/-/g, ".").slice(2));
+        return '<button type="button" class="tv-dp" data-place="' + esc(p.id) + '">' +
+          '<span class="tv-dp-i">' +
+            (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                     : '<span class="tv-ph">' + flag(p.country_code) + "</span>") +
+            '<i class="tv-dp-b">' + esc(badge) + "</i></span>" +
+          '<span class="tv-dp-n">' + esc(p.name) + "</span>" +
+          '<span class="tv-dp-s">' + flag(p.country_code) + " " +
+            esc([p.area, p.country].filter(Boolean)[0] || "") + "</span></button>";
+      }).join("");
+    }
+
+    DASH.hidden = false;
+    DASH.innerHTML =
+      '<div class="tv-dash-t">여행 유튜버 <b>' + (t.creators || 0) + "명</b>이 다녀간 <b>" +
+        (t.places || 0) + "곳</b> · " + (t.countries || 0) + "개국" +
+        '<span class="tv-dash-v">영상 ' + (t.videos || 0).toLocaleString() + "편에서 뽑는 중</span></div>" +
+      '<div class="tv-dash-tabs">' + tabs.map(function (x) {
+        return '<button type="button" class="tv-dash-tb' + (DASH_TAB === x[0] ? " on" : "") +
+          '" data-dtab="' + x[0] + '">' + x[1] + "</button>";
+      }).join("") + "</div>" +
+      '<div class="tv-dash-row chip-scroll">' + body + "</div>";
   }
 
   /* ── 나라 카드 ────────────────────────────────────────
@@ -926,13 +995,15 @@
         grab(panel);
         wire();
         booting = true;
-        try { await loadCountries(); await loadAreas(); paintChips(); await load(); } finally { booting = false; }
+        try { await loadCountries(); await loadAreas(); await loadDash();
+              paintChips(); paintDash(); await load(); } finally { booting = false; }
       }
       return;
     }
     booting = true;
     try {
-      if (mount()) { await loadCountries(); await loadAreas(); paintChips(); await load(); }
+      if (mount()) { await loadCountries(); await loadAreas(); await loadDash();
+                     paintChips(); paintDash(); await load(); }
     } finally { booting = false; }
   }
   var start = function () {
