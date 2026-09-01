@@ -25,19 +25,45 @@ else:
 changed = sorted({l.strip() for l in out.splitlines()
                   if (l.strip().startswith("js/") or l.strip().startswith("css/"))
                   and l.strip().endswith((".js", ".css"))})
-if not changed:
-    print("바뀐 JS 없음 — 검사할 것이 없다"); sys.exit(0)
-
 app = (ROOT / "app.html").read_text(encoding="utf-8", errors="ignore")
 m = re.search(r'name="galla-ver"\s+content="(\d+)"', app)
 if not m:
     print("app.html 에서 galla-ver 를 못 찾았다"); sys.exit(2)
 cur = m.group(1)
 
+PAGES = [h for h in sorted(ROOT.glob("**/*.html"))
+         if not {"node_modules", ".git", ".wrangler"} & set(h.parts)]
+
+# ⚠️ 뒤처진 배포 도장 — 이게 이 스크립트의 첫 검사여야 한다(바뀐 JS 가 없어도 돈다).
+#    전수 범프를 "옛 도장 문자열 → 새 도장"으로 치환해 왔는데, 그러면 값이 다른 파일은
+#    매번 조용히 건너뛰고 **영원히 뒤처진다**. auth/confirm.html 이 0901133 에 갇혀 있었다
+#    (가입 인증 메일의 첫 착지점이다). 범프는 값을 특정하지 말고 정규식으로 밀어야 한다.
+behind = []
+for h in PAGES:
+    mm = re.search(r'name="galla-ver"\s+content="(\d+)"', h.read_text(encoding="utf-8", errors="ignore"))
+    if mm and mm.group(1) != cur:
+        behind.append(f"{h.relative_to(ROOT)} ({mm.group(1)})")
+if behind:
+    print(f"현재 배포 도장: {cur}")
+    print(f"\n❌ 배포 도장이 뒤처진 HTML {len(behind)}개 — 이 페이지들은 스냅샷이 안 깨진다")
+    for b in behind[:12]:
+        print(f"     {b}")
+    if len(behind) > 12:
+        print(f"     … 외 {len(behind)-12}개")
+    print("\n전수 범프는 옛 값을 찾지 말고 정규식으로:")
+    print(f"""     python3 -c "import re,pathlib
+for f in pathlib.Path('.').rglob('*.html'):
+    if {{'node_modules','.git','.wrangler'}} & set(f.parts): continue
+    s=f.read_text(encoding='utf-8')
+    t=re.sub(r'(name=\\"galla-ver\\"\\s+content=\\")\\d+', r'\\g<1>{cur}', s)
+    if t!=s: f.write_text(t,encoding='utf-8')" """)
+    sys.exit(1)
+
+if not changed:
+    print(f"현재 배포 도장: {cur} · 바뀐 JS 없음 — 도장은 전부 맞다"); sys.exit(0)
+
 stale = collections.defaultdict(list)
-for html in sorted(ROOT.glob("**/*.html")):
-    if "node_modules" in html.parts:
-        continue
+for html in PAGES:
     txt = html.read_text(encoding="utf-8", errors="ignore")
     for js in changed:
         for ver in re.findall(re.escape(js) + r"\?v=(\d+)", txt):
@@ -46,10 +72,11 @@ for html in sorted(ROOT.glob("**/*.html")):
 
 # 도장 자체가 없는 HTML — 전수 범프(sed 로 옛 도장 치환)가 통째로 건너뛴다.
 # auth/confirm.html 이 이 상태였고, 가입 인증 첫 착지점인데 pwa.js 가 18일 묵어 있었다.
-nostamp = [h for h in sorted(ROOT.glob("**/*.html"))
-           if "node_modules" not in h.parts
-           and re.search(r'(js|vendor)/[A-Za-z0-9_./-]+\.js\?v=', h.read_text(encoding="utf-8", errors="ignore"))
-           and 'name="galla-ver"' not in h.read_text(encoding="utf-8", errors="ignore")]
+nostamp = []
+for h in PAGES:
+    t = h.read_text(encoding="utf-8", errors="ignore")
+    if re.search(r'(js|vendor)/[A-Za-z0-9_./-]+\.js\?v=', t) and 'name="galla-ver"' not in t:
+        nostamp.append(h)
 
 print(f"현재 배포 도장: {cur} · 바뀐 JS·CSS {len(changed)}개")
 if nostamp:

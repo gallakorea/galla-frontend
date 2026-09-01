@@ -90,18 +90,19 @@ Deno.serve(async (req) => {
     if (called >= budget) break;
     called++;
     try {
+      /* 🔎 1단계 — **무료** 검색. 필드마스크를 places.id 하나로 좁히면
+         'Text Search Essentials (IDs Only)' SKU 가 되고, 이건 무료 한도가 **무제한**이다.
+         예전엔 여기서 전화·영업시간·평점까지 같이 받았는데(한 번에 끝나서 좋아 보였다),
+         그 필드들이 Enterprise+Atmosphere 등급을 불러서 곳당 $0.040 이 됐다.
+         지금은 아이디만 받고, 실제 정보는 2단계 Place Details Pro($0.017)에서 받는다.
+         곳당 $0.047 → $0.024 로 **절반**이다. 크레딧 안에 들어가느냐를 가르는 차이였다.
+         ⚠️ 대신 전화·영업시간·평점은 포기한다 — 그게 값의 두 배를 만들던 범인이다. */
       const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           "X-Goog-Api-Key": KEY,
-          /* 사진과 **같은 호출로** 전화·영업시간·평점까지 받는다(추가 호출 0).
-             ⚠️ 이 필드들은 Enterprise SKU 라 Text Search 단가가 올라간다. 그래도
-                하루 상한(구글 콘솔 + places_take)이 이중으로 막고 있어 폭주하지 않는다.
-             ⚖️ 구글 약관상 Place ID 외 콘텐츠는 최대 30일 캐시 — 사진과 같은 주기로 갱신. */
-          "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.photos," +
-            "places.nationalPhoneNumber,places.regularOpeningHours.weekdayDescriptions," +
-            "places.rating,places.userRatingCount,places.priceLevel",
+          "X-Goog-FieldMask": "places.id",
         },
         body: JSON.stringify({
           textQuery: `${p.name} ${p.address || ""}`.trim(),
@@ -116,7 +117,24 @@ Deno.serve(async (req) => {
         if (r.status === 429 || r.status === 403) { quotaDead = true; break; }
         continue;
       }
-      const hit = ((await r.json())?.places || [])[0];
+      const cand = ((await r.json())?.places || [])[0];
+      if (!cand?.id) { tried.push({ place_id: p.id, found: false }); continue; }
+
+      /* 🔎 2단계 — Place Details **Pro**($17/1,000, 월 5,000 무료). 여기서 이름·좌표·사진을 받는다.
+         1단계가 아이디만 주므로 **여기서 처음** 맞는 집인지 확인할 수 있다. 그래서 아닌 집에도
+         한 번은 쓰게 되는데, 그래도 예전 한 방($0.047)보다 싸다. */
+      const dres = await fetch(`https://places.googleapis.com/v1/places/${cand.id}?languageCode=ko`, {
+        headers: {
+          "X-Goog-Api-Key": KEY,
+          "X-Goog-FieldMask": "id,displayName,formattedAddress,location,photos",
+        },
+      });
+      if (!dres.ok) {
+        if (errs.length < 3) errs.push(`d${dres.status}:${(await dres.text()).slice(0, 100)}`);
+        if (dres.status === 429 || dres.status === 403) { quotaDead = true; break; }
+        continue;
+      }
+      const hit = await dres.json();
       tried.push({ place_id: p.id, found: !!hit?.photos?.length });
       if (!hit) continue;
 
@@ -126,26 +144,11 @@ Deno.serve(async (req) => {
       const dy = Number(hit.location?.latitude) - Number(p.lat);
       const dx = Number(hit.location?.longitude) - Number(p.lon);
       if (!isFinite(dx) || !isFinite(dy) || (dx * dx + dy * dy) >= 0.02 * 0.02) continue;
-      if (!hit.photos?.length) {
-        /* 사진은 없어도 전화·영업시간은 챙긴다 */
-        info.push({ place_id: p.id, phone: hit.nationalPhoneNumber || "",
-                    hours: hit.regularOpeningHours?.weekdayDescriptions || null,
-                    rating: hit.rating ?? "", rating_n: hit.userRatingCount ?? "",
-                    price_level: hit.priceLevel || "" });
-        continue;
-      }
+      /* ⚠️ 전화·영업시간·평점은 이제 안 받는다(Enterprise 필드라 단가를 두 배로 만들었다).
+         빈 값을 밀어넣으면 이미 있던 정보가 지워지므로 info 수집 자체를 걷어냈다. */
+      if (!hit.photos?.length) continue;
 
       matched++;
-      /* 사진이 없어도 정보는 챙긴다 — 참조 서비스 카드가 좋아 보이는 건
-         사진이 아니라 전화·영업시간이었다(저쪽도 사진 없는 집은 로고로 때운다). */
-      info.push({
-        place_id: p.id,
-        phone: hit.nationalPhoneNumber || "",
-        hours: hit.regularOpeningHours?.weekdayDescriptions || null,
-        rating: hit.rating ?? "",
-        rating_n: hit.userRatingCount ?? "",
-        price_level: hit.priceLevel || "",
-      });
       const ph = hit.photos[0];
       const stored = await toR2(ph.name, p.id);
       if (!stored) continue;                       // R2 에 못 담으면 아예 저장하지 않는다
