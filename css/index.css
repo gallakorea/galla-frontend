@@ -18,7 +18,11 @@ body { display: block; }
     width: 100%;
     max-width: 480px;
     min-height: 100vh;
-    padding-bottom: 72px;
+    /* 하단 플로팅 네비(높이 62px + bottom 14px = 76px, 여기에 세이프에어리어가 더 붙는다)를 피한다.
+       72px 고정이라 아이폰(홈 인디케이터 34px)에선 항상 모자랐다 — 실측 2026-09-01(375×812,
+       세이프에어리어 0): 약관 마지막 문단이 네비 밑 23px, 개인정보 33px, 계정편집 '변경사항 저장'
+       버튼 4px. 이 파일을 base 로 쓰는 루트 페이지 전부가 같은 값을 상속한다. */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 /* HERO */

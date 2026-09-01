@@ -181,8 +181,11 @@
         const sel = prelude.split(",").map(one => {
           const t = one.trim();
           if (!t) return "";
-          // body / html / :root 는 '이 뷰' 자체로 바꾼다. body.foo 같은 건 뒤를 살린다.
-          const m = t.match(/^(?:html|body|:root)\b(.*)$/);
+          /* body / html / :root / #app 은 '이 뷰' 자체로 바꾼다. body.foo 같은 건 뒤를 살린다.
+             ⚠️ #app 이 여기 있는 이유: 뷰 로더는 #app **안쪽만** 옮겨오므로 SPA 문서엔 #app 요소가
+             하나도 없다(실측 2026-09-01: document.querySelectorAll('#app').length === 0).
+             그래서 페이지가 #app 에 건 레이아웃(하단 네비 여백·max-width·min-height)이 통째로 증발한다. */
+          const m = t.match(/^(?:html|body|:root|#app)\b(.*)$/);
           if (m) { const rest = m[1].trim(); return rest ? scope + rest : scope; }
           return scope + " " + t;
         }).filter(Boolean).join(",");
@@ -222,7 +225,81 @@
       }));
       document.head.appendChild(l);
     });
-    return Promise.all(pending);
+    const done = Promise.all(pending);
+    /* 링크 CSS 가 붙은 뒤 #app 규칙을 뷰 호스트로 복제한다(아래 shimAppRules 주석). */
+    done.then(() => shimAppRules(pageName, styles));
+    setTimeout(() => shimAppRules(pageName, styles), 1500);   // link.onload 가 안 뜨는 네이티브 대비 재시도
+    return done;
+  }
+
+  /* ── 🩹 #app 규칙 되살리기 ────────────────────────────────────────
+     뷰 로더는 #app **안쪽**만 뷰 호스트로 옮긴다 → SPA 문서에 #app 요소가 0개다.
+     그런데 루트 CSS 14개 파일이 #app 에 페이지 레이아웃을 걸고 있다
+     (index 72px · search 94px · plaza 140px · plaza_detail 124px · random 160px …).
+     그 여백이 통째로 사라지니, 스크롤을 끝까지 내려도 마지막 요소가 하단 플로팅 네비
+     (62px + bottom 14px + 세이프에어리어) 밑에 깔린 채 나오지 않는다.
+     실측 2026-09-01 (375×812, 세이프에어리어 0 · 아이폰은 여기서 34px 더 나빠진다):
+       약관 −23px · 개인정보 −33px · 계정편집 '변경사항 저장' 버튼 −4px.
+     → 그 페이지가 실제로 쓰는 #app 규칙을 뷰 호스트 선택자로 복제해 MPA 와 같은 상자를 만든다.
+     (뷰마다 다른 페이지 CSS 가 섞이지 않도록 라우트 이름 스코프로 가둔다.) */
+  const appShimmed = new Set();
+
+  function shimAppRules(pageName, styles) {
+    if (!pageName || appShimmed.has(pageName)) return;
+    const want = new Set();
+    (styles || []).forEach(h => { try { want.add(new URL(h, location.href).pathname); } catch (_) {} });
+    if (!want.size) return;
+    const scope = '.view-host[data-spa-view="' + pageName + '"]';
+    const out = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let path = null;
+      try { path = sheet.href ? new URL(sheet.href, location.href).pathname : null; } catch (_) {}
+      if (!path || !want.has(path)) continue;
+      let rules = null;
+      try { rules = sheet.cssRules; } catch (_) { continue; }   // 크로스오리진 시트는 못 읽는다 — 건너뛴다
+      if (rules) collectAppRules(rules, scope, out);
+    }
+    if (!out.length) return;            // 아직 파싱 전일 수 있다 — 표시를 남기지 않아야 재시도가 산다
+    appShimmed.add(pageName);
+    const st = document.createElement("style");
+    st.setAttribute("data-spa-appshim", pageName);
+    st.textContent = out.join("\n");
+    document.head.appendChild(st);
+  }
+
+  /* MPA 에서 #app 은 body 안의 '블록'이었지만 SPA 에선 그 자리가 **스크롤 컨테이너**(뷰 호스트)다.
+     그래서 상자 모양(여백·너비)만 옮기고, 스크롤 계약을 깨는 속성은 두고 온다.
+     실측 2026-09-01: 안 거르고 통째로 복제했더니 index.css 의 #app{position:relative} 가
+     셸의 .stack-view .view-host{position:absolute;inset:0;overflow:auto} 를 이기고(같은 특이도·나중 선언)
+     호스트가 콘텐츠 높이(4,147px)로 부풀어 스크롤이 통째로 죽었다. */
+  const UNSAFE_PROP = /^(position|top|right|bottom|left|inset(-.*)?|overflow(-x|-y)?|height|max-height|transform|will-change|contain)$/;
+
+  function safeDecls(style) {
+    const parts = [];
+    for (let i = 0; i < style.length; i++) {
+      const prop = style.item(i);
+      if (UNSAFE_PROP.test(prop)) continue;
+      const pri = style.getPropertyPriority(prop);
+      parts.push(prop + ":" + style.getPropertyValue(prop) + (pri ? " !" + pri : "") + ";");
+    }
+    return parts.join("");
+  }
+
+  function collectAppRules(rules, scope, out) {
+    for (const r of rules) {
+      if (r.cssRules && r.conditionText !== undefined) {        // @media · @supports — 안쪽을 재귀로
+        const inner = [];
+        collectAppRules(r.cssRules, scope, inner);
+        if (inner.length) out.push((r.media ? "@media " : "@supports ") + r.conditionText + "{" + inner.join("\n") + "}");
+        continue;
+      }
+      const sel = r.selectorText;
+      if (!sel || !/#app\b/.test(sel)) continue;               // #applyAi 같은 건 \b 가 걸러낸다
+      const mapped = sel.split(",").map(s => s.trim()).filter(s => /#app\b/.test(s))
+        .map(s => s.replace(/#app\b/g, scope)).join(",");
+      const decls = safeDecls(r.style);
+      if (mapped && decls) out.push(mapped + "{" + decls + "}");
+    }
   }
 
   // 뷰 모듈(P1+) — js/spa/views/<name>.js 의 mount/unmount. 없으면 null(정적 표시).

@@ -1,0 +1,154 @@
+/* 🎬 조각 촬영 — 화면 전체가 카메라, 밝은 건 셔터 하나
+   기능(트윈·프리셋)은 보이되 흐리게 둔다. 첫 행동을 하나로 몰기 위해서다. */
+
+.clip-wrap {
+  position: fixed; inset: 0; background: #000;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── 카메라 ── */
+.clip-stage { position: relative; flex: 1; min-height: 0; background: #000; }
+#clipCam {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; background: #000;
+}
+
+/* ── 상단 ── */
+.clip-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,.6), transparent);
+}
+.clip-x {
+  width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto;
+  background: rgba(0,0,0,.45); border: 1px solid var(--line-2, rgba(255,255,255,.12));
+  color: #fff; font-size: 18px; line-height: 1; display: grid; place-items: center;
+}
+.clip-title { color: #fff; font-weight: 800; font-size: 15px; }
+.clip-count { margin-left: auto; color: rgba(255,255,255,.75); font-size: 12px; font-weight: 700; }
+
+/* ── 트윈 토글 ── */
+.clip-twin {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 800;
+  background: rgba(0,0,0,.45); border: 1px solid var(--line-2, rgba(255,255,255,.12));
+  color: rgba(255,255,255,.62);
+}
+.clip-twin.on {
+  background: var(--accent, #4361ff); border-color: transparent; color: #fff;
+  box-shadow: var(--accent-glow, 0 6px 22px rgba(67,97,255,.32));
+}
+
+/* ── 안내 배너 ── */
+.clip-note {
+  position: absolute; left: 12px; right: 12px; z-index: 3;
+  top: calc(env(safe-area-inset-top, 0px) + 58px);
+  padding: 9px 12px; border-radius: var(--r-md, 14px);
+  background: rgba(0,0,0,.62); border: 1px solid var(--line-1, rgba(255,255,255,.07));
+  color: rgba(255,255,255,.86); font-size: 12px; line-height: 1.55;
+}
+.clip-note b { color: #fff; }
+.clip-note.warn { border-color: rgba(255,77,103,.45); }
+.clip-note button {
+  margin-left: 8px; padding: 4px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 800;
+}
+
+/* ── 권한 거부 ── */
+.clip-denied {
+  position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
+  background: #000; padding: 24px; text-align: center;
+}
+.clip-denied p { color: var(--text-mid, #a4abb8); font-size: 14px; line-height: 1.7; }
+.clip-denied .cd-h { color: #fff; font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+.clip-denied button {
+  margin-top: 14px; padding: 11px 22px; border-radius: 999px;
+  background: var(--accent, #4361ff); color: #fff; font-weight: 800; font-size: 14px;
+}
+
+/* ── 하단 조작부 ── */
+.clip-bottom {
+  position: relative; z-index: 3; flex: 0 0 auto;
+  padding: 12px 12px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  background: linear-gradient(0deg, #000 62%, transparent);
+}
+
+/* 길이 프리셋 — 무료 3개(샤디도 프리셋 3개까지 무료) */
+.clip-presets { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.cp-preset {
+  padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 800;
+  background: rgba(255,255,255,.08); color: rgba(255,255,255,.6);
+  border: 1px solid transparent;
+}
+.cp-preset.on { background: #fff; color: #000; }
+
+/* 셔터 */
+.clip-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.clip-side {
+  width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+  background: rgba(255,255,255,.10); color: #fff;
+  display: grid; place-items: center; font-size: 19px;
+}
+.clip-shutter-wrap { position: relative; width: 86px; height: 86px; flex: 0 0 auto; }
+.clip-shutter {
+  position: absolute; inset: 9px; border-radius: 50%;
+  background: #fff; border: none; transition: transform .12s ease;
+}
+.clip-shutter.rec { transform: scale(.82); background: #ff4d67; }
+.clip-ring { position: absolute; inset: 0; transform: rotate(-90deg); pointer-events: none; }
+.clip-ring circle {
+  fill: none; stroke-width: 4; r: 41; cx: 43; cy: 43;
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+  pathLength: 100;
+}
+.clip-ring .rg-bg { stroke: rgba(255,255,255,.22); stroke-dashoffset: 0; }
+.clip-ring .rg-fg { stroke: var(--accent-2, #6f86ff); }
+
+/* 안내 말풍선 — 첫 행동을 하나로 */
+.clip-tip {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(100% + 8px); white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--accent, #4361ff); color: #fff; font-size: 12px; font-weight: 800;
+}
+.clip-tip::after {
+  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--accent, #4361ff);
+}
+
+/* ── 조각 스트립 ── */
+.clip-strip {
+  display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 2px;
+  scrollbar-width: none;
+}
+.clip-strip::-webkit-scrollbar { display: none; }
+.cs-empty { color: var(--text-low, #6b7280); font-size: 12px; padding: 10px 4px; }
+.cs-item {
+  position: relative; width: 54px; height: 72px; flex: 0 0 auto;
+  border-radius: var(--r-sm, 10px); overflow: hidden; background: var(--surface-3, #1c1e26);
+  border: 1px solid var(--line-1, rgba(255,255,255,.07)); padding: 0;
+}
+.cs-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cs-noimg { display: block; width: 100%; height: 100%; background: var(--surface-2, #14151a); }
+.cs-dur {
+  position: absolute; right: 3px; bottom: 3px;
+  padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,.62);
+  color: #fff; font-size: 10px; font-weight: 800;
+}
+.cs-twin {
+  position: absolute; left: 3px; top: 3px;
+  padding: 1px 4px; border-radius: 4px; background: var(--accent, #4361ff);
+  color: #fff; font-size: 9px; font-weight: 800;
+}
+
+/* ── 토스트 ── */
+.clip-toast {
+  position: fixed; left: 50%; transform: translateX(-50%) translateY(10px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 128px); z-index: 20;
+  padding: 10px 16px; border-radius: 999px; pointer-events: none;
+  background: rgba(20,21,26,.95); border: 1px solid var(--line-2, rgba(255,255,255,.12));
+  color: #fff; font-size: 13px; font-weight: 700;
+  opacity: 0; transition: opacity .18s ease, transform .18s ease;
+}
+.clip-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }

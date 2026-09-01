@@ -30,6 +30,19 @@
       desc: '사진·영상·링크로 제보하고 GP 보상 받기',
       accent: '#33d17a',
     },
+    /* 🎬 2026-09-01 추가 — posts(숏판·롱판)가 0행이었다. 만들 사람이 없어서가 아니라
+       **허브에 진입로가 아예 없었다**(발제·예측·광장·제보 넷뿐).
+       'clip' 은 최소 단위를 1초로 부순 새 경로, 'gallari' 는 숨어 있던 기존 업로드. */
+    clip: {
+      key: 'clip', emoji: '🎬', title: '조각 찍기',
+      desc: '1초씩 모아서 한 편으로 — 편집 없이',
+      accent: '#6f86ff',
+    },
+    gallari: {
+      key: 'gallari', emoji: '📼', title: '숏판·롱판',
+      desc: '이미 만든 영상을 올려 판에 겨루기',
+      accent: '#ffb648',
+    },
   };
 
   let sheet = null;
@@ -113,6 +126,8 @@
     if (type === 'predict') nav('galla-predict.html?compose=1');
     if (type === 'plaza')   nav('search.html?tab=plaza&compose=1');   // 광장은 트렌드로 통합(2026-07-22)
     if (type === 'report')  nav('report.html');
+    if (type === 'clip')    nav('clips.html');
+    if (type === 'gallari') nav('gallari-write.html');
   }
 
   window.openWriteHub = async function (context) {
