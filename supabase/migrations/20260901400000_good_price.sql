@@ -93,14 +93,24 @@ begin
     gu := nullif(btrim(regexp_replace(coalesce(g.sigun,''), '^.*\s', '')), '');
     if gu is null then miss := miss + 1; continue; end if;
 
-    select count(*), min(p.id) into cnt, pid
+    -- ⚠️ min(uuid) 는 없다(42883). 세는 것과 고르는 것을 나눈다 — 붙여 쓰면 함수가 통째로 죽는다.
+    select count(*) into cnt
       from food_places p
      where lower(regexp_replace(p.name, '[^가-힣a-zA-Z0-9]', '', 'g'))
            = lower(regexp_replace(g.name, '[^가-힣a-zA-Z0-9]', '', 'g'))
-       and coalesce(p.address,'') like '%' || gu || '%';
+       and coalesce(p.address,'') like '%' || gu || '%'
+       and p.status = 'live';
 
     if cnt = 0 then miss := miss + 1; continue; end if;
     if cnt > 1 then ambig := ambig + 1; continue; end if;
+
+    select p.id into pid
+      from food_places p
+     where lower(regexp_replace(p.name, '[^가-힣a-zA-Z0-9]', '', 'g'))
+           = lower(regexp_replace(g.name, '[^가-힣a-zA-Z0-9]', '', 'g'))
+       and coalesce(p.address,'') like '%' || gu || '%'
+       and p.status = 'live'
+     limit 1;
 
     update food_goodprice set place_id = pid, matched_at = now() where id = g.id;
     update food_places set good_price = true where id = pid and good_price = false;
@@ -126,3 +136,9 @@ revoke all on function food_goodprice_load(jsonb) from public, anon, authenticat
 revoke all on function food_goodprice_link(int)   from public, anon, authenticated;
 grant execute on function food_goodprice_load(jsonb) to service_role;
 grant execute on function food_goodprice_link(int)   to service_role;
+
+-- food_menus.source 체크에 'goodprice' 를 더한다. 안 더하면 잇기가 23514 로 통째로 죽는다
+-- (QA 에서 잡았다 — 실데이터로 처음 돌리는 날 12,645행이 전부 실패했을 자리다).
+alter table food_menus drop constraint if exists food_menus_source_check;
+alter table food_menus add constraint food_menus_source_check
+  check (source in ('user','yt','goodprice','gov','naver'));
