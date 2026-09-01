@@ -152,6 +152,8 @@
         try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
         return;
       }
+      var cr = e.target.closest("[data-creator]");
+      if (cr) { openCreator(cr.dataset.creator); return; }
       var ar = e.target.closest("[data-area]");
       if (ar) { AREA = ar.dataset.area; paintChips(); load(); return; }
       if (e.target.closest("[data-area-all]")) { AREA = "*"; paintChips(); load(); return; }
@@ -269,12 +271,13 @@
         var secs = (b && b.sections) || [];
         LIST.innerHTML = secs.length ? secs.map(function (s) {
           return '<section class="tv-who">' +
-            '<div class="tv-who-h">' +
+            '<button type="button" class="tv-who-h" data-creator="' + esc(s.slug) + '">' +
               (s.thumb ? '<img src="' + esc(s.thumb) + '" alt="" referrerpolicy="no-referrer">' : "") +
-              '<div><div class="tv-who-n">' + esc(s.name) + "</div>" +
-              '<div class="tv-who-s">' + s.total + "곳" +
-              (s.visited ? " · 내가 간 곳 " + s.visited : "") + "</div></div>" +
-            "</div>" +
+              '<span><span class="tv-who-n">' + esc(s.name) + "</span>" +
+              '<span class="tv-who-s">' + s.total + "곳" +
+              (s.visited ? " · 내가 간 곳 " + s.visited : "") + "</span></span>" +
+              '<span class="tv-who-x">›</span>' +
+            "</button>" +
             '<div class="tv-row chip-scroll">' + s.places.map(function (p) {
               /* 16:9 + ▶ 배지 — '이건 그 사람이 찍은 화면'이라고 형태로 말한다.
                  둘러보기의 정사각 실사진과 한눈에 갈린다. */
@@ -574,6 +577,95 @@
     } finally { pinBusy = false; }
   }
 
+  /* ── 크리에이터 상세 ──────────────────────────────────
+     '누가 갔나'는 가로 스크롤 몇 장이 끝이라 그 사람이 어디를 얼마나 다녔는지가 안 보인다.
+     여기서는 **나라 → 지역 → 장소(+그 영상)** 로 펼친다(사장님 지시).
+     ⚠️ 상세 시트(DETAIL)와 같은 오버레이를 재사용하면 장소를 열 때 서로 덮어쓴다.
+        크리에이터는 자기 오버레이를 갖는다. */
+  var CRE = null, CRE_DATA = null, CRE_CC = null;
+  function buildCre() {
+    if (CRE && document.body.contains(CRE)) return CRE;
+    CRE = document.createElement("div");
+    CRE.className = "tv-detail tv-cre";
+    document.body.appendChild(CRE);
+    CRE.addEventListener("click", function (e) {
+      if (e.target === CRE || e.target.closest("#tv-cre-x")) return closeCre();
+      var cc = e.target.closest("[data-cc2]");
+      if (cc) { CRE_CC = cc.dataset.cc2 || null; paintCre(); return; }
+      if (e.target.closest("#tv-cre-map")) {
+        closeCre();
+        openMap().then(function () { drawRoute(CRE_DATA.channel.slug); });
+        return;
+      }
+      var pl = e.target.closest("[data-place]");
+      if (pl) openDetail(pl.dataset.place);
+    });
+    return CRE;
+  }
+  function closeCre() {
+    if (!CRE) return;
+    CRE.classList.remove("open"); CRE.innerHTML = "";
+    document.body.classList.remove("tv-lock");
+  }
+  async function openCreator(slug) {
+    var d = buildCre();
+    d.classList.add("open");
+    document.body.classList.add("tv-lock");
+    d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오는 중…</div></div>';
+    CRE_DATA = await rpc("travel_creator", { p_slug: slug, p_limit: 200 });
+    CRE_CC = null;
+    if (!CRE_DATA || !CRE_DATA.ok) { d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오지 못했어요.</div></div>'; return; }
+    paintCre();
+  }
+  function paintCre() {
+    var d = buildCre(), c = CRE_DATA.channel || {};
+    var places = (CRE_DATA.places || []).filter(function (p) {
+      return !CRE_CC || p.country_code === CRE_CC;
+    });
+    /* 지역별로 묶는다. 지역을 모르는 건 '기타'로 몰지 않고 나라 이름을 쓴다 —
+       '기타'는 유저에게 아무 정보도 주지 않는다. */
+    var groups = [], idx = {};
+    places.forEach(function (p) {
+      var key = p.area || p.country || "그 외";
+      if (!(key in idx)) { idx[key] = groups.length; groups.push({ key: key, items: [] }); }
+      groups[idx[key]].items.push(p);
+    });
+
+    d.innerHTML =
+      '<div class="tv-sheet">' +
+        '<button type="button" class="tv-x" id="tv-cre-x" aria-label="닫기">✕</button>' +
+        '<div class="tv-cre-h">' +
+          (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" referrerpolicy="no-referrer">' : "") +
+          '<div><div class="tv-cre-n">' + esc(c.name || "") + "</div>" +
+            '<div class="tv-cre-s">' + (CRE_DATA.total || 0) + "곳 · 영상 " + (c.videos || 0) + "편</div></div>" +
+          '<button type="button" class="tv-cre-map" id="tv-cre-map">지도에서 경로 보기</button>' +
+        "</div>" +
+        '<div class="tv-chips chip-scroll tv-cre-cc">' +
+          '<button type="button" class="tv-chip' + (CRE_CC ? "" : " on") + '" data-cc2="">전체</button>' +
+          (CRE_DATA.countries || []).map(function (x) {
+            return '<button type="button" class="tv-chip' + (CRE_CC === x.code ? " on" : "") +
+              '" data-cc2="' + esc(x.code) + '">' + flag(x.code) + " " + esc(x.name || x.code) +
+              ' <i>' + x.n + "</i></button>";
+          }).join("") +
+        "</div>" +
+        '<div class="tv-cre-b">' +
+          (groups.length ? groups.map(function (g) {
+            return '<div class="tv-cre-g"><div class="tv-cre-gt">' + esc(g.key) +
+              ' <i>' + g.items.length + "곳</i></div>" +
+              g.items.map(function (p) {
+                return '<button type="button" class="tv-cre-i" data-place="' + esc(p.id) + '">' +
+                  (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                           : '<span class="tv-ph">🌍</span>') +
+                  '<span class="tv-cre-t">' +
+                    '<b>' + esc(p.name) + (p.visited ? " ✓" : "") + "</b>" +
+                    '<i>' + esc(p.video_title || "") + "</i>" +
+                  "</span></button>";
+              }).join("") + "</div>";
+          }).join("") : '<div class="tv-empty">아직 정리된 곳이 없어요.</div>') +
+        "</div>" +
+      "</div>";
+  }
+
   /* ── 상세 오버레이 ────────────────────────────────── */
   function buildDetail() {
     if (DETAIL && document.body.contains(DETAIL)) return DETAIL;
@@ -787,4 +879,5 @@
 
   window.GALLA_openTravelPlace = openDetail;
   window.GALLA_openTravelMap = openMap;
+  window.GALLA_openTravelCreator = openCreator;
 })();
