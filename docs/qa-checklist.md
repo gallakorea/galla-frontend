@@ -322,13 +322,13 @@
 
 | 항목 | 확인할 것 | 상태 |
 |---|---|---|
-| **RPC 631개** — SECURITY DEFINER 권한 가드 | `current_user` 로 권한 판정하면 구멍(소유자로 평가됨) | ❌ |
+| **RPC 631개** — SECURITY DEFINER 권한 가드 | `current_user` 로 권한 판정하면 구멍(소유자로 평가됨) | ✅ definer 496개 전수 — `current_user` 로 판정하는 함수 **0개**. 대신 가드 없이 익명이 부를 수 있던 쓰기 함수 15개를 찾아 회수(§26-1-B) |
 | 핵심 RPC 회귀 | place_bet · battle_action · submit_bug · get_my_account · gp_wallet · predict_state · open_room_create · log_share · claim_tour_bonus | ❌ |
 | **스토리지 버킷 3종** | issues · plaza-images · profiles — 공개범위·용량·고아 | ✅ 3개 모두 용량제한·MIME 화이트리스트 있음. **쓰기 정책 3개에 소유자 검사가 없어** 남의 파일 삭제·덮어쓰기가 가능했다 → 소유자 조건으로 교체 |
 | R2 버킷(galla-media) | CORS · 공개 URL · 고아 파일 | ❌ |
 | **실시간 구독** | follows(맞팔 즉시반영) · dm_messages · pager · 난장 | ✅ publication 17표. 잠긴 컬럼은 comments.user_id(처리됨)·users(구독 코드 없음)뿐. `old` 비PK 필드를 쓰는 핸들러가 없어 default 복제ID로 충분 |
 | DB 트리거 | 알림 발생(notify 브릿지) · 카운터 갱신 | ❌ |
-| RLS 정책 회귀 | 남의 글 수정·삭제 차단 · PII 컬럼권한 | ❌ |
+| RLS 정책 회귀 | 남의 글 수정·삭제 차단 · PII 컬럼권한 | 🔶 RLS 꺼진 채 익명 쓰기 가능한 표 3개·익명 읽기 가능한 유저 표 4개를 찾아 전부 닫았다(§26). 남의 글 수정·삭제 정책 회귀는 아직 미실행 |
 
 ## 9-B. 네이티브 플러그인·권한 (실기기 필요)
 
@@ -799,3 +799,22 @@ alter default privileges in schema public revoke all on tables from anon, authen
 - **`external_trends` 0행 · `raw_trends` 1월 이후 정지** — 죽은 표다.
   `collect-external-trends` 는 `portal_search_trends` 에 쓰고 그건 03:20에 갱신돼 있다.
 - **raw 뉴스 26만 행이 7일 초과** — 보존 정책이 30일이라 정상. 30일 초과는 13행뿐.
+
+### 26-5. 날씨 탭 유저 표 4개 — **고침**
+
+RLS 가 꺼진 채 익명에게 **읽기**가 열려 있었다(8/31에 쓰기만 닫았다).
+
+| 표 | 새던 것 |
+|---|---|
+| `weather_favs(user_id, region)` | **어떤 유저가 어느 동네를 담아뒀는지** |
+| `weather_comments(user_id, region, body)` | 한마디 작성자 매핑 |
+| `weather_reports(user_id, region, kind)` | 누가 어느 동네에서 제보했는지 |
+| `travel_geo_budget(day, used, cap)` | 내부 예산 장부 |
+
+행이 0·2·3행이라 유출 규모는 작았지만 런칭하면 그대로 커진다.
+화면은 전부 RPC 경유(`weather_now`·`weather_room`·`weather_say`·`weather_fav`·`weather_report`·
+`weather_my`·`weather_search` 일곱 개 전부 SECURITY DEFINER, owner=postgres=표 소유자)라
+정책 없이 RLS 만 켜고 권한을 걷었다. 프론트에서 표를 직접 select 하는 코드는 0곳(js/ 전수).
+
+검증: anon 키로 `weather_now` → `{"ok": true, ...}` 정상, `weather_room(seoul)` → 정상 응답,
+같은 키로 `weather_comments` 직접 읽기 → `42501`. 마이그레이션 `20260901290000`.
