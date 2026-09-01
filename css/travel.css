@@ -250,6 +250,8 @@ body.tv-lock { overflow: hidden; }
 
 /* ── 나라 그리드 — 둘러보기 1계층 ─────────────────────
    장소 카드(가로형)와 **모양 자체를 다르게** 한다. 같은 모양이면 유저가 층을 구분 못 한다. */
+/* 2열 — 사장님 지시: 대한민국이 왼쪽 위, 오른쪽 일본, 그 밑에 미국·중국.
+   한 줄에 하나로 두면 스크롤 두 번에 네 나라밖에 못 본다. */
 .tv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .tv-cc {
   display: flex; flex-direction: column; padding: 0; border: 1px solid var(--line-1);
@@ -257,11 +259,17 @@ body.tv-lock { overflow: hidden; }
   cursor: pointer; text-align: left;
 }
 .tv-cc:active { background: var(--surface-2); }
+/* ⚠️ 위키보이저 배너는 가로로 아주 길다(대략 7:1). 4:3 으로 자르면 좋은 컷이 다 날아간다.
+   카드 자체를 와이드로 가져가면 배너가 의도대로 보이고, 리스트형 장소 카드와도 형태가 갈린다. */
+/* ⚠️ 위키보이저 배너는 대략 7:1 이라 정사각으로 자르면 좋은 컷이 다 날아간다.
+   2열에서도 최대한 가로로 — 3:2 가 배너 중앙을 가장 덜 훼손하는 타협점이다. */
 .tv-cc-img {
-  position: relative; width: 100%; aspect-ratio: 4/3; background: var(--surface-2);
-  display: flex; align-items: center; justify-content: center;
+  position: relative; width: 100%; aspect-ratio: 2/1; background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.tv-cc-img img { width: 100%; height: 100%; object-fit: cover; }
+/* 배너가 7:1 이라 세로로 좁은 상자일수록 원본의 가로를 더 많이 보여준다.
+   3:2 로 뒀더니 미국·태국 카드가 하늘만 나왔다(실측) → 2:1 로 넓힌다. */
+.tv-cc-img img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .tv-cc-flag {
   position: absolute; left: 7px; top: 7px; font-size: 17px;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.6));
@@ -280,3 +288,30 @@ body.tv-lock { overflow: hidden; }
   display: inline-flex; align-items: center; flex: 0 0 auto;
   padding: 6px 12px; font-size: 13px; font-weight: 800; color: var(--text-hi);
 }
+
+.tv-cc.wide { grid-column: 1 / -1; }
+.tv-cc.wide .tv-cc-img { aspect-ratio: 16/6; }
+
+/* 이 나라 장소 전부 보기 */
+.tv-all {
+  grid-column: 1 / -1; width: 100%; padding: 11px 0; border: 1px dashed var(--line-2, var(--line-1));
+  border-radius: var(--r-md); background: transparent; color: var(--text-mid);
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+
+/* 누가 갔나 — 16:9 + 재생 배지. 둘러보기의 실사진과 형태로 구분된다. */
+.tv-mini { width: 168px; }
+.tv-mini-i {
+  position: relative; display: block; width: 168px; aspect-ratio: 16/9;
+  border-radius: var(--r-sm); overflow: hidden; background: var(--surface-2);
+}
+.tv-mini-i img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tv-play {
+  position: absolute; right: 6px; bottom: 6px; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,.66); backdrop-filter: blur(4px);
+}
+.tv-play::after {
+  content: ""; position: absolute; left: 8px; top: 6px;
+  border-left: 8px solid #fff; border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+}
+.tv-mini-s { font-size: 11px; color: var(--text-low); }

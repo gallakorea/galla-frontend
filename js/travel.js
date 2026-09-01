@@ -13,10 +13,11 @@
        ① **카드는 항상 '장소(spot)'다.** 나라·지역·도시는 카드가 아니라 내비게이션이다.
           (섞어 놓으면 '우간다' 카드와 '돈키호테 롯폰기점' 카드가 나란히 뜬다 — 실제로 그랬다)
        ② 둘러보기는 2계층: **나라 그리드 → (나라 선택) 지역 칩 + 장소 카드**.
-       ③ 사진의 뜻을 화면마다 다르게 준다:
-          · 둘러보기 = 장소 실사진 우선 → "그곳이 어떤 곳인가"
-          · 누가 갔나 = 그 크리에이터의 영상 썸네일 우선 → "그 사람이 어떻게 담았나"
-          · 나라 카드 = 그 나라 장소의 실사진(영상 썸네일 금지 — 나라가 '영상'처럼 보인다)
+       ③ **층마다 사진의 출처가 다르다.** 이게 화면의 구분성을 만든다:
+          · 나라 카드 · 지역 카드 = 위키보이저 여행 배너(그 나라·도시의 가장 아름다운 컷).
+            🚫 영상 썸네일 절대 금지 — 나라가 '영상'처럼 보인다(사장님 지적).
+          · 장소 카드 = 장소 실사진 → 없으면 영상 썸네일(허용)
+          · 누가 갔나 = 그 크리에이터의 영상 썸네일 + ▶ 배지, 16:9 (영상임을 형태로 말한다)
    · 🚨 지도는 아직 없다. tile.openstreetmap.org 는 OSM 재단이 **앱 배포에 쓰는 걸 금지**해서
      맛집도 출시 전 교체 과제로 남아 있다. 같은 빚을 하나 더 지지 않는다 —
      타일 문제가 풀리면 travel_map RPC 가 이미 준비돼 있으니 그때 붙인다.
@@ -129,6 +130,7 @@
     });
     CHIPS.addEventListener("click", async function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
+      if (b.dataset.areaBack) { AREA = null; paintChips(); load(); return; }   // 지역 → 나라
       COUNTRY = b.dataset.cc || null;
       AREA = null;                    // 나라가 바뀌면 지역 선택은 버린다
       await loadAreas();
@@ -147,6 +149,9 @@
         try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
         return;
       }
+      var ar = e.target.closest("[data-area]");
+      if (ar) { AREA = ar.dataset.area; paintChips(); load(); return; }
+      if (e.target.closest("[data-area-all]")) { AREA = "*"; paintChips(); load(); return; }
       var card = e.target.closest("[data-place]");
       if (card) openDetail(card.dataset.place);
     });
@@ -164,9 +169,10 @@
   }
   var AREAS = [];
   async function loadAreas() {
-    /* 나라를 안 고르면 지역 칩은 뜻이 없다 — 전 세계 광역을 한 줄에 늘어놓을 수는 없다. */
+    /* 지역은 '칩'이 아니라 '그리드'로 보여준다 — 칩과 그리드가 같은 일을 두 번 하면
+       유저는 무엇을 눌러야 할지 모른다(사장님: 중구난방). 여기선 카드용 데이터를 받는다. */
     if (!COUNTRY) { AREAS = []; return; }
-    var r = await rpc("travel_areas", { p_country: COUNTRY, p_limit: 30 });
+    var r = await rpc("travel_area_cards", { p_country: COUNTRY, p_limit: 30 });
     AREAS = (r && r.areas) || [];
   }
   function paintChips() {
@@ -176,24 +182,17 @@
     var html = "";
     if (VIEW === "feed" && COUNTRY) {
       var c = countryOf(COUNTRY);
+      var cname = (c && c.name) || COUNTRY;
       html = '<button type="button" class="tv-chip back" data-cc="">← 전체 나라</button>' +
-             '<span class="tv-crumb">' + flag(COUNTRY) + " " + esc((c && c.name) || COUNTRY) + "</span>";
+        (AREA
+          ? '<button type="button" class="tv-chip back" data-area-back="1">' + flag(COUNTRY) + " " + esc(cname) + "</button>" +
+            '<span class="tv-crumb">' + esc(AREA === "*" ? "전체 장소" : AREA) + "</span>"
+          : '<span class="tv-crumb">' + flag(COUNTRY) + " " + esc(cname) + "</span>");
     }
     CHIPS.innerHTML = html;
     CHIPS.hidden = !html;
 
-    /* 2단 — 나라 안의 광역(도쿄도·교토부·온타리오주). 기초자치단체(미나토구)로 쪼개면
-       유저가 찾는 '도쿄'가 화면에서 사라진다. 그래서 축은 광역이다. */
-    if (!CHIPS2) return;
-    var show = VIEW === "feed" && COUNTRY && AREAS.length;
-    CHIPS2.innerHTML = show
-      ? '<button type="button" class="tv-chip sm' + (AREA ? "" : " on") + '" data-area="">전체</button>' +
-        AREAS.map(function (a) {
-          return '<button type="button" class="tv-chip sm' + (AREA === a.name ? " on" : "") +
-                 '" data-area="' + esc(a.name) + '">' + esc(a.name) + ' <i>' + a.n + "</i></button>";
-        }).join("")
-      : "";
-    CHIPS2.hidden = !show;
+    if (CHIPS2) { CHIPS2.innerHTML = ""; CHIPS2.hidden = true; }   // 지역은 그리드가 맡는다
   }
 
   /* ── 나라 카드 ────────────────────────────────────────
@@ -208,7 +207,23 @@
       "</div>" +
       '<div class="tv-cc-b">' +
         '<div class="tv-cc-n">' + esc(c.name || c.code) + "</div>" +
-        '<div class="tv-cc-s">' + c.spots + "곳 · 크리에이터 " + c.creators + "명</div>" +
+        '<div class="tv-cc-s">' +
+          (c.spots ? c.spots + "곳 · 크리에이터 " + c.creators + "명" : "곧 채워져요") + "</div>" +
+        (names ? '<div class="tv-cc-p">' + esc(names) + "</div>" : "") +
+      "</div></button>";
+  }
+
+  /* 지역 카드 — 나라 카드와 같은 배너 문법(층이 같은 성격이라 형태도 같게) */
+  function areaHTML(a) {
+    var names = (a.names || []).slice(0, 3).join(" · ");
+    return '<button type="button" class="tv-cc wide" data-area="' + esc(a.name) + '">' +
+      '<div class="tv-cc-img">' +
+        (a.cover ? '<img src="' + esc(a.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                 : '<span class="tv-ph">' + flag(COUNTRY) + "</span>") +
+      "</div>" +
+      '<div class="tv-cc-b">' +
+        '<div class="tv-cc-n">' + esc(a.name) + "</div>" +
+        '<div class="tv-cc-s">' + a.spots + "곳" + (a.creators ? " · 크리에이터 " + a.creators + "명" : "") + "</div>" +
         (names ? '<div class="tv-cc-p">' + esc(names) + "</div>" : "") +
       "</div></button>";
   }
@@ -260,10 +275,15 @@
               (s.visited ? " · 내가 간 곳 " + s.visited : "") + "</div></div>" +
             "</div>" +
             '<div class="tv-row chip-scroll">' + s.places.map(function (p) {
+              /* 16:9 + ▶ 배지 — '이건 그 사람이 찍은 화면'이라고 형태로 말한다.
+                 둘러보기의 정사각 실사진과 한눈에 갈린다. */
               return '<button type="button" class="tv-mini" data-place="' + esc(p.id) + '">' +
-                (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                         : '<span class="tv-ph">🌍</span>') +
-                '<span class="tv-mini-n">' + esc(p.name) + "</span></button>";
+                '<span class="tv-mini-i">' +
+                  (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                           : '<span class="tv-ph">🌍</span>') +
+                  '<i class="tv-play"></i></span>' +
+                '<span class="tv-mini-n">' + esc(p.name) + "</span>" +
+                '<span class="tv-mini-s">' + esc([p.city, p.country].filter(Boolean)[0] || "") + "</span></button>";
             }).join("") + "</div></section>";
         }).join("") : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
       } else if (!COUNTRY) {
@@ -271,10 +291,19 @@
         LIST.innerHTML = COUNTRIES.length
           ? '<div class="tv-grid">' + COUNTRIES.map(countryHTML).join("") + "</div>"
           : '<div class="tv-empty">아직 모인 곳이 없어요.</div>';
+      } else if (!AREA) {
+        /* 2계층 — 그 나라의 지역(도쿄도·교토부). 여기까지가 '어디로 갈까'의 층이다.
+           지역이 하나뿐이면 층을 하나 세울 이유가 없다 — 바로 장소로 내려간다. */
+        if (AREAS.length === 1) { AREA = AREAS[0].name; return await load(); }
+        var all = '<button type="button" class="tv-all" data-area-all="1">이 나라 장소 전부 보기 →</button>';
+        LIST.innerHTML = AREAS.length
+          ? '<div class="tv-grid">' + AREAS.map(areaHTML).join("") + all + "</div>"
+          : '<div class="tv-empty">아직 이 나라에 장소가 없어요. 크리에이터가 다녀가면 채워집니다.</div>';
       } else {
         /* 2계층 — 그 나라의 장소만. scale='spot' 고정이라 나라·지역 행이 섞이지 않는다. */
         var f = await rpc("travel_feed", {
-          p_scale: "spot", p_country: COUNTRY, p_area: AREA, p_limit: 40 });
+          p_scale: "spot", p_country: COUNTRY,
+          p_area: AREA === "*" ? null : AREA, p_limit: 40 });
         var fp = (f && f.places) || [];
         LIST.innerHTML = fp.length ? fp.map(cardHTML).join("")
           : '<div class="tv-empty">이 지역엔 아직 장소가 없어요. 크리에이터가 다녀가면 채워집니다.</div>';
