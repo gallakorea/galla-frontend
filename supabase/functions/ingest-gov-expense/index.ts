@@ -61,7 +61,11 @@ async function verify(name: string, addr: string) {
      한도가 소진된 뒤에는 멀쩡한 식당 9,086곳이 영구히 건너뛰기로 박혔다
      (실측 2026-09-01: 통과율 57% → 11% → 0%로 무너지는 동안 계속 도장이 찍혔다).
      인프라 실패는 예외로 올려 배치를 통째로 중단시킨다 — 오늘 구글 429에서 배운 것과 같다. */
-  if (!r.ok) throw new Error(`naver_${r.status}`);
+  if (!r.ok) {
+    /* 본문까지 실어 올린다 — 네이버는 errorCode 로 한도 종류를 구분해준다
+       (012 호출한도 초과 / 024 인증실패 등). 상태코드만 보면 '무슨 한도인지' 를 못 가른다. */
+    throw new Error(`naver_${r.status}:${(await r.text()).slice(0, 160)}`);
+  }
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -184,7 +188,16 @@ Deno.serve(async (req) => {
       .in("loc_key", keys.slice(i, i + 200));
     for (const x of (data || []) as any[]) seen.add(x.loc_key);
   }
-  const todo = keys.filter((k) => !seen.has(k)).slice(0, cap);
+  let todo = keys.filter((k) => !seen.has(k)).slice(0, cap);
+
+  /* 💰 오늘 몫을 먼저 받는다 — 429 를 맞고 멈추는 게 아니라 그 전에 선다.
+     오늘 사고: 크론·루프가 동시에 때려 하루치 25,000 을 다 태웠다(콘솔 25000/25000 확인). */
+  const { data: allow } = await supa.rpc("naver_take", { p_want: todo.length });
+  const budget = Number(allow || 0);
+  if (budget <= 0) {
+    return j({ ok: true, source: src, start, note: "네이버 하루 몫 소진", locs: keys.length });
+  }
+  todo = todo.slice(0, budget);
 
   const items: any[] = [];
   const stamp: any[] = [];
@@ -198,6 +211,9 @@ Deno.serve(async (req) => {
     stamp.push({ loc_key: k, resolved: !!v });
     if (v) items.push({ ...v, channel: cfg.channel, origin: "gov" });
   }
+
+  /* 받아놓고 못 쓴 몫은 돌려준다(중단됐을 때가 대부분이다) */
+  if (budget > stamp.length) await supa.rpc("naver_refund", { p_n: budget - stamp.length });
 
   let res: any = { new: 0, dup: 0 };
   if (items.length) {

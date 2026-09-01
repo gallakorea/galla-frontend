@@ -1676,13 +1676,12 @@
       '<div class="fd-asm" id="fd-asm"></div>' +
       '<div class="fd-judge" id="fd-judge"></div>' +
       '<div class="fd-why" id="fd-why"></div>' +
-      /* 출처 영상 — 썸네일로 먼저 띄우고 누를 때만 iframe 을 붙인다.
-         시트 열 때마다 iframe 을 심으면 무겁고, 자동재생도 원치 않는다.
-         재생은 /yt 프록시를 쓴다 — 앱(capacitor origin)에서 직접 임베드가 막히는 걸
-         우회하려고 만들어둔 그 페이지다(핫튜브 오류 153). */
-      (vid ? '<div class="fd-vid" data-vid="' + esc(vid) + '">' +
-               '<img src="https://i.ytimg.com/vi/' + esc(vid) + '/mqdefault.jpg" alt="" loading="lazy">' +
-               '<i class="fd-vid-play">▶</i></div>' : '') +
+      /* 🔴 여기 있던 '출처 영상' 블록을 걷어낸다 — 같은 영상이 두 번 그려졌다.
+         vid 는 출처 목록에서 첫 영상을 뽑은 값이고(위 var vid), srcHtml 이 이미
+         그 영상을 채널 로고·제목과 함께 그린다. 영상이 있으면 **항상** 중복이었다.
+         srcHtml 이 영상을 그리기 전의 옛 코드가 남아 있던 자리다.
+         (재생은 srcHtml 쪽 .fd-vid 가 /yt 프록시로 처리한다 — 앱에서 직접 임베드가
+          막히는 걸 우회하는 그 경로. 지우는 건 중복 렌더뿐이고 기능은 그대로다.) */
       '<div class="fd-acts">' +
         '<button type="button" class="fd-act' + (d.visited ? " on" : "") + '" data-a="visit">' +
           (d.visited ? "✓ 갔다옴" : "갔다옴") + '</button>' +

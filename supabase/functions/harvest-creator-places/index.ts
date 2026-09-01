@@ -58,7 +58,11 @@ async function verify(name: string, addr: string) {
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
   /* 🔴 '못 찾았다'와 '못 불렀다'를 가른다. 둘 다 null 로 두면 한도가 소진된 뒤
      멀쩡한 식당이 '물어봤음'으로 박혀 영구히 건너뛰기가 된다(실측 2026-09-01, 9,086건). */
-  if (!r.ok) throw new Error(`naver_${r.status}`);
+  if (!r.ok) {
+    /* 본문까지 실어 올린다 — 네이버는 errorCode 로 한도 종류를 구분해준다
+       (012 호출한도 초과 / 024 인증실패 등). 상태코드만 보면 '무슨 한도인지' 를 못 가른다. */
+    throw new Error(`naver_${r.status}:${(await r.text()).slice(0, 160)}`);
+  }
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -139,9 +143,15 @@ Deno.serve(async (req) => {
   const list = (vids || []) as any[];
   if (!list.length) return j({ ok: true, channel, picked: 0, note: "수확할 영상 없음" });
 
+  /* 💰 네이버 몫을 먼저 받는다. 영상 하나에 최대 3곳까지 물어보므로 그만큼 잡아두고,
+     안 쓴 몫은 끝에 돌려준다. 오늘 하루치를 다 태운 뒤라 이 관문 없이는 다시 못 돈다. */
+  const { data: allow } = await supa.rpc("naver_take", { p_want: list.length * 3 });
+  const budget = Number(allow || 0);
+  if (budget <= 0) return j({ ok: true, channel, picked: 0, note: "네이버 하루 몫 소진" });
+
   const items: any[] = [];
   const done: string[] = [];
-  let extracted = 0, verified = 0, dropped = 0;
+  let extracted = 0, verified = 0, dropped = 0, naverCalls = 0;
 
   let halted = "";
   for (const v of list) {
@@ -159,6 +169,8 @@ Deno.serve(async (req) => {
       const addr = String(s?.address || "").trim();
       if (name.length < 2 || addr.length < 6) { dropped++; continue; }
       let ok: any = null;
+      if (naverCalls >= budget) { halted = "budget"; done.pop(); break; }
+      naverCalls++;
       try { ok = await verify(name, addr); }
       catch (e) {
         /* 인프라 실패 — 이 영상은 도장을 빼고 중단한다(다음 회차에 다시 온다) */
@@ -173,6 +185,8 @@ Deno.serve(async (req) => {
                    video_id: v.video_id, video_title: v.title, aired_at: v.published_at });
     }
   }
+
+  if (budget > naverCalls) await supa.rpc("naver_refund", { p_n: budget - naverCalls });
 
   let res: any = { new: 0, dup: 0 };
   if (items.length) {
