@@ -675,11 +675,13 @@
     var panel = document.querySelector('.tab-panel[data-panel="travel"]');
     if (!panel || booting) return;
     if (panel.querySelector(".tv-sec")) {
-      if (!SEC || !document.contains(SEC)) {
-        SEC = panel.querySelector(".tv-sec");
-        CHIPS = SEC.querySelector("#tv-chips");
-    CHIPS2 = SEC.querySelector("#tv-chips2");
-        LIST = SEC.querySelector("#tv-list");
+      if (!SEC || !document.contains(SEC) || !SEC.__tvWired) {
+        /* ⚠️ 참조만 다시 잡고 끝내면 화면은 멀쩡한데 아무것도 안 눌린다.
+           스냅샷이 복원한 .tv-sec 은 **새 노드**라 리스너가 없다. grab 과 wire 는 항상 같이.
+           조건에 __tvWired 를 넣은 이유: 노드가 문서 안에 있어도(=contains 통과) 리스너가
+           없을 수 있다. 실제로 그 상태로 나라 카드·세그·지도 버튼이 전부 죽어 있었다. */
+        grab(panel);
+        wire();
         booting = true;
         try { await loadCountries(); await loadAreas(); paintChips(); await load(); } finally { booting = false; }
       }
