@@ -183,7 +183,10 @@ Deno.serve(async (req) => {
   /* ⚠️ 장부의 하루는 구글 할당량과 같은 태평양시다(KST 아님). 여기서 KST 를 쓰면
         하루가 어긋나 엉뚱한 행의 photos 를 덮어쓴다. */
   const laDay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  await supa.from("places_usage").update({ photos: inserted }).eq("day", laDay);
+  /* ⚠️ 예전엔 update({photos: inserted}) 였다 — 회차마다 **덮어써서** 마지막 회차 값만 남았다.
+     calls 는 누적인데 photos 만 아니어서, 650장 받은 날이 장부엔 21장으로 찍혔다.
+     한도를 올릴지 판단할 때 보는 숫자가 30분의 1이었다. 누적으로 더한다. */
+  await supa.rpc("places_photos_add", { p_day: laDay, p_n: inserted });
 
   let infoN = 0;
   for (let i = 0; i < info.length; i += 200) {
