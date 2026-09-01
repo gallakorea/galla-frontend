@@ -482,3 +482,16 @@ body.tv-lock { overflow: hidden; }
 .tv-dc-f { font-size: 20px; }
 .tv-dc-n { font-size: 13px; font-weight: 800; color: var(--text-hi); }
 .tv-dc-s { font-size: 11px; color: var(--text-low); }
+
+/* 인증 뱃지 — 카드 오른쪽 위(맛집의 '인증' 세그먼트와 같은 뜻) */
+.tv-cert {
+  position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,.62); color: #fff; font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tv-certs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tv-certp {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+  background: rgba(255,209,102,.14); color: #ffd166; font-size: 12px; font-weight: 800;
+}
+.tv-certp i { font-style: normal; font-weight: 600; color: var(--text-low); font-size: 11px; }

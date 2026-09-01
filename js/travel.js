@@ -243,6 +243,7 @@
     var tabs = [];
     if ((d.multi || []).length) tabs.push(["multi", "🔥 여러 유튜버가 간 곳"]);
     tabs.push(["recent", "🆕 최근 다녀간 곳"]);
+    if ((d.certs || []).length) tabs.push(["certs", "🏛 인증 여행지"]);
     tabs.push(["countries", "🌍 유튜버가 많이 간 나라"]);
     if (!tabs.some(function (x) { return x[0] === DASH_TAB; })) DASH_TAB = tabs[0][0];
 
@@ -255,9 +256,11 @@
           '<span class="tv-dc-s">' + c.n + "곳 · " + c.chn + "명</span></button>";
       }).join("");
     } else {
-      var list = DASH_TAB === "multi" ? (d.multi || []) : (d.recent || []);
+      var list = DASH_TAB === "multi" ? (d.multi || [])
+               : DASH_TAB === "certs" ? (d.certs || []) : (d.recent || []);
       body = list.map(function (p) {
         var badge = DASH_TAB === "multi" ? p.n + "명 다녀감"
+                  : DASH_TAB === "certs" ? ((p.emoji || "🏛") + " " + (p.cert || "인증"))
                   : (String(p.at || "").slice(0, 10).replace(/-/g, ".").slice(2));
         return '<button type="button" class="tv-dp" data-place="' + esc(p.id) + '">' +
           '<span class="tv-dp-i">' +
@@ -326,11 +329,14 @@
       ? '<span class="tv-v hot">또 간다 ' + Math.round(a * 100 / (a + o)) + "%</span>" +
         '<span class="tv-vn">가본 사람 ' + (a + o) + "명</span>"
       : (w > 0 ? '<span class="tv-v want">♡ ' + w + "</span>" : '<span class="tv-vn">아직 표 없음</span>');
+    /* 인증(유네스코 등)은 카드 오른쪽 위에 이모지 하나로. 맛집의 '인증' 세그먼트와 같은 자리다. */
+    var cert = (p.certs || [])[0];
     return '<article class="tv-card" data-place="' + esc(p.id) + '">' +
       '<div class="tv-thumb">' +
         (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                  : '<span class="tv-ph">' + flag(p.country_code) + "</span>") +
         (badge ? '<span class="tv-badge">' + badge + "</span>" : "") +
+        (cert ? '<span class="tv-cert">' + esc(cert) + "</span>" : "") +
       "</div>" +
       '<div class="tv-body">' +
         '<div class="tv-name">' + esc(p.name) + "</div>" +
@@ -852,6 +858,12 @@
             (p.category ? " · " + esc(p.category) : "") + "</div>" +
           (p.name_local || p.name_en
             ? '<div class="tv-d-alt">' + esc(p.name_local || p.name_en) + "</div>" : "") +
+          ((p.certs || []).length
+            ? '<div class="tv-certs">' + p.certs.map(function (c) {
+                return '<span class="tv-certp">' + esc(c.emoji || "🏅") + " " + esc(c.name) +
+                  (c.blurb ? '<i>' + esc(c.blurb) + "</i>" : "") + "</span>";
+              }).join("") + "</div>"
+            : "") +
           (p.status === "pending"
             ? '<div class="tv-warn">좌표를 아직 못 찾은 곳이에요. 지도에는 안 올라갑니다.</div>' : "") +
 
