@@ -172,7 +172,23 @@
       hero.innerHTML = '<img src="https://i.ytimg.com/vi/' + esc(vid) +
                        '/hqdefault.jpg" alt="" referrerpolicy="no-referrer"><i class="tv-hero-play"></i>';
     }
-    if (window.GALLA_playInline) window.GALLA_playInline(hero, vid, "");
+    /* ⚠️ 앱(capacitor origin)에서는 유튜브 임베드가 오류 153 으로 죽어서 프록시 페이지가 필요하다.
+       웹에서는 반대로 프록시가 걸림돌이다 — 로컬·개발 도메인에서 프록시 페이지가 안 열려
+       검은 화면만 남는다(사장님 제보). 그래서 origin 을 보고 갈라 쓴다. */
+    var native = false;
+    try {
+      native = location.protocol === "capacitor:" || location.protocol === "ionic:" ||
+               (typeof window.GALLA_isApp === "function" && window.GALLA_isApp());
+    } catch (_) {}
+    if (native && window.GALLA_playInline) {
+      window.GALLA_playInline(hero, vid, "");
+    } else {
+      if (window.GALLA_stopInlineVideos) GALLA_stopInlineVideos();
+      hero.classList.add("vplaying");
+      hero.innerHTML = '<iframe src="https://www.youtube.com/embed/' + encodeURIComponent(vid) +
+        '?autoplay=1&playsinline=1&rel=0" title="" frameborder="0" allowfullscreen ' +
+        'allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"></iframe>';
+    }
     ROOT.querySelectorAll(".tv-vid").forEach(function (el) {
       el.classList.toggle("on", el.dataset.vid === vid);
     });

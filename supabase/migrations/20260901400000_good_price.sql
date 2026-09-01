@@ -34,6 +34,11 @@ create unique index if not exists food_goodprice_uk
                      coalesce(address, ''));
 create index if not exists food_goodprice_unlinked on food_goodprice (id) where place_id is null;
 
+-- ⚠️ 못 이은 행을 표시 안 하면 배치가 늘 같은 앞 500개만 다시 본다(실측: 2회차부터 linked 0).
+--    '언제 시도했는지'를 남기고 오래된 것부터 본다 — 한 번에 다 훑으면서도, 매일 다시 시도한다.
+alter table food_goodprice add column if not exists tried_at timestamptz;
+create index if not exists food_goodprice_try on food_goodprice (tried_at nulls first) where place_id is null;
+
 alter table food_goodprice enable row level security;
 drop policy if exists gp_read on food_goodprice;
 create policy gp_read on food_goodprice for select using (true);
@@ -87,9 +92,11 @@ declare
   gu text;
 begin
   for g in
-    select * from food_goodprice where place_id is null order by id limit greatest(p_limit, 1)
+    select * from food_goodprice where place_id is null
+     order by tried_at nulls first, id limit greatest(p_limit, 1)
   loop
     -- '광진구' / '수원시 팔달구' 같은 값에서 마지막 토큰(구·군·시)만 쓴다
+    update food_goodprice set tried_at = now() where id = g.id;   -- 봤다는 표시(다음 배치가 넘어가게)
     gu := nullif(btrim(regexp_replace(coalesce(g.sigun,''), '^.*\s', '')), '');
     if gu is null then miss := miss + 1; continue; end if;
 
@@ -142,3 +149,8 @@ grant execute on function food_goodprice_link(int)   to service_role;
 alter table food_menus drop constraint if exists food_menus_source_check;
 alter table food_menus add constraint food_menus_source_check
   check (source in ('user','yt','goodprice','gov','naver'));
+
+-- 잇기가 통계 타임아웃으로 죽었다(9,395행 × 11,842가게 전수 비교). 이름 정규화식에 인덱스를 건다.
+-- 이게 없으면 매 행마다 food_places 를 통째로 훑으며 regexp_replace 를 돌린다.
+create index if not exists food_places_normexpr
+  on food_places (lower(regexp_replace(name, '[^가-힣a-zA-Z0-9]', '', 'g')));

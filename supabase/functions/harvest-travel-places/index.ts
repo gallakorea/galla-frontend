@@ -565,11 +565,19 @@ Deno.serve(async (req) => {
   for (let i = 0; i < done.length; i += 200) {
     await supa.rpc("travel_videos_mark_harvested", { p_ids: done.slice(i, i + 200) });
   }
+
+  /* 회차마다 조금씩 치운다 — 중복은 수확이 도는 한 계속 생기므로 한 번 청소로 끝나지 않는다.
+     ⚠️ 자동으로 지우는 건 '이름이 완전히 같고 한쪽만 QID' 인 것뿐이다(RPC 안에서 상한 30). */
+  let merged = 0;
+  try {
+    const { data: dd } = await supa.rpc("travel_dedupe_auto", { p_limit: 20 });
+    merged = Number(dd?.merged || 0);
+  } catch (_) { /* 청소 실패가 수확을 되돌리지는 않는다 */ }
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
              geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
-             ...res, halted: halted || undefined,
+             ...res, merged, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
 });
 
@@ -586,9 +594,17 @@ function nameLooksSame(o: any, query: string) {
   const nd = o?.namedetails || {};
   const cands = [nd.name, nd["name:en"], nd["name:ko"], nd.official_name,
                  String(o?.display_name || "").split(",")[0]];
+  /* ⚠️ 포함만 보면 안 된다. 'Pyramids' 가 'Pyramids Heights Compound'(5km 밖 오피스 단지)를
+        통과시켰다 — 랜드마크 질의가 그 단어를 상호에 넣은 아무 업소로 확정된 것이다.
+        길이 비율까지 본다: 짧은 쪽이 긴 쪽의 절반은 돼야 같은 이름으로 친다.
+        여기서 떨어져도 장소가 버려지는 건 아니다 — 다음 관문(위키데이터)으로 넘어간다. */
   return cands.some(function (c: any) {
     const g = n(c);
-    return g && (g.includes(want) || want.includes(g));
+    if (!g) return false;
+    if (g === want) return true;
+    if (!(g.includes(want) || want.includes(g))) return false;
+    const short = Math.min(g.length, want.length), long = Math.max(g.length, want.length);
+    return short / long >= 0.5;
   });
 }
 
