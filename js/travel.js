@@ -213,21 +213,17 @@
       "</div></button>";
   }
 
-  /* 지역 = '띠'다. 나라(2열 카드)·장소(가로 리스트)와 **형태 자체가 다르다** —
-     사장님: "국가 하부 카테고리도 다른 방식으로 해."
-     사진 위에 글자를 얹은 낮은 밴드라, 카드가 아니라 '구간 머리'로 읽힌다. */
+  /* 지역 = **정사각 타일**(사진 위에 글자).
+     띠(가로 밴드)로 만들었더니 '목록'처럼 읽혀서 고르는 층이라는 느낌이 약했다(사장님 지적).
+     나라는 2:1 와이드 + 글자가 사진 **아래**, 지역은 1:1 + 글자가 사진 **위** —
+     비율과 글자 위치 두 가지가 동시에 달라서 층이 헷갈리지 않는다. */
   function areaHTML(a) {
-    var names = (a.names || []).slice(0, 2).join(" · ");
-    return '<button type="button" class="tv-band" data-area="' + esc(a.name) + '"' +
-      (a.cover ? ' style="background-image:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.15)),url(' +
+    return '<button type="button" class="tv-tile" data-area="' + esc(a.name) + '"' +
+      (a.cover ? ' style="background-image:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.78)),url(' +
                  esc(a.cover).replace(/"/g, "%22") + ')"' : "") + ">" +
-      '<span class="tv-band-l">' +
-        '<span class="tv-band-n">' + esc(a.name) + "</span>" +
-        '<span class="tv-band-s">' + a.spots + "곳" +
-          (a.creators ? " · 크리에이터 " + a.creators + "명" : "") +
-          (names ? " · " + esc(names) : "") + "</span>" +
-      "</span>" +
-      '<span class="tv-band-x">›</span></button>';
+      '<span class="tv-tile-n">' + esc(a.name) + "</span>" +
+      '<span class="tv-tile-s">' + a.spots + "곳" +
+        (a.creators ? " · 크리에이터 " + a.creators + "명" : "") + "</span></button>";
   }
 
   /* ── 목록 ─────────────────────────────────────────── */
@@ -353,9 +349,14 @@
     MAPBOX.innerHTML =
       '<div class="tv-map-c" id="tv-map-c"></div>' +
       '<button type="button" class="tv-map-x" id="tv-map-x" aria-label="닫기">✕</button>' +
-      '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>';
+      '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>' +
+      '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
     document.body.appendChild(MAPBOX);
     MAPBOX.querySelector("#tv-map-x").addEventListener("click", closeMap);
+    MAPBOX.querySelector("#tv-routes").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-route]"); if (!b) return;
+      drawRoute(b.dataset.route || null);
+    });
     return MAPBOX;
   }
   function closeMap() {
@@ -386,7 +387,7 @@
       MAP.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       /* moveend 마다 bbox 로 다시 물어본다 — 전 세계를 한 번에 내려받으면 안 된다. */
       MAP.on("moveend", refreshPins);
-      MAP.on("load", function () { MAP.resize(); refreshPins(); });
+      MAP.on("load", function () { MAP.resize(); refreshPins(); loadRouteChips(); });
       /* dvh 는 주소창이 접히고 펴질 때 값이 바뀐다 — 그때마다 다시 맞춘다.
          이게 없으면 스크롤 한 번에 지도 아래가 잘린 채로 남는다. */
       try {
@@ -397,12 +398,94 @@
       }
     } else {
       MAP.resize();
-      refreshPins();
+      ROUTE ? drawRoute(ROUTE) : refreshPins();
+      loadRouteChips();
     }
+  }
+
+  /* ── 크리에이터 여정 ───────────────────────────────────
+     Polarsteps 가 하는 것: 다녀온 점을 시간순으로 이어 선으로 만든다.
+     우리는 새로 모을 게 없다 — (채널, 영상, 방영일)과 좌표가 이미 다 있다.
+     ⚠️ 경로 모드에선 bbox 핀 갱신을 멈춘다. 안 그러면 지도를 움직일 때마다
+        경로 마커 위에 일반 핀이 겹쳐 쌓여 선이 안 보인다. */
+  var ROUTE = null;                 // 선택된 채널 slug (null = 전체 핀 모드)
+  var ROUTE_MARKERS = [];
+
+  async function loadRouteChips() {
+    var r = await rpc("travel_route_channels", { p_limit: 20 });
+    var chans = (r && r.channels) || [];
+    var box = document.getElementById("tv-routes");
+    if (!box) return;
+    box.innerHTML =
+      '<button type="button" class="tv-rchip' + (ROUTE ? "" : " on") + '" data-route="">전체</button>' +
+      chans.map(function (c) {
+        return '<button type="button" class="tv-rchip' + (ROUTE === c.slug ? " on" : "") +
+          '" data-route="' + esc(c.slug) + '">' +
+          (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" referrerpolicy="no-referrer">' : "") +
+          esc(c.name) + " <i>" + c.n + "</i></button>";
+      }).join("");
+  }
+
+  function clearRoute() {
+    ROUTE_MARKERS.forEach(function (m) { m.remove(); });
+    ROUTE_MARKERS = [];
+    try {
+      if (MAP.getLayer("tv-route-line")) MAP.removeLayer("tv-route-line");
+      if (MAP.getLayer("tv-route-glow")) MAP.removeLayer("tv-route-glow");
+      if (MAP.getSource("tv-route")) MAP.removeSource("tv-route");
+    } catch (_) {}
+  }
+
+  async function drawRoute(slug) {
+    if (!MAP) return;
+    ROUTE = slug || null;
+    loadRouteChips();
+    clearRoute();
+    if (!ROUTE) { refreshPins(); return; }          // 전체 핀 모드로 복귀
+
+    MARKERS.forEach(function (m) { m.remove(); });
+    MARKERS = [];
+    var r = await rpc("travel_route", { p_channel: ROUTE, p_limit: 200 });
+    var steps = (r && r.steps) || [];
+    var hint = document.getElementById("tv-map-hint");
+    if (steps.length < 2) {
+      if (hint) hint.textContent = (r && r.name ? r.name + " — " : "") + "그릴 경로가 아직 부족해요";
+      return;
+    }
+    var coords = steps.map(function (s) { return [Number(s.lon), Number(s.lat)]; });
+
+    MAP.addSource("tv-route", {
+      type: "geojson",
+      data: { type: "Feature", geometry: { type: "LineString", coordinates: coords } },
+    });
+    /* 두 겹으로 긋는다 — 굵은 반투명 글로우 위에 얇은 실선. 위성 밝은 타일 위에서도 선이 보인다. */
+    MAP.addLayer({ id: "tv-route-glow", type: "line", source: "tv-route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#38d6b0", "line-width": 8, "line-opacity": 0.22 } });
+    MAP.addLayer({ id: "tv-route-line", type: "line", source: "tv-route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#38d6b0", "line-width": 2.4, "line-dasharray": [2, 1.4] } });
+
+    steps.forEach(function (st, i) {
+      var el = document.createElement("button");
+      el.type = "button";
+      el.className = "tv-step" + (i === 0 ? " first" : "") + (i === steps.length - 1 ? " last" : "");
+      el.innerHTML = '<span class="tv-step-n">' + st.n + "</span>";
+      el.title = st.n + ". " + st.name + (st.city ? " · " + st.city : "");
+      el.addEventListener("click", function (e) { e.stopPropagation(); openDetail(st.id); });
+      ROUTE_MARKERS.push(new maplibregl.Marker({ element: el, anchor: "center" })
+        .setLngLat([Number(st.lon), Number(st.lat)]).addTo(MAP));
+    });
+
+    var b = coords.reduce(function (acc, c) { return acc.extend(c); },
+      new maplibregl.LngLatBounds(coords[0], coords[0]));
+    MAP.fitBounds(b, { padding: 56, duration: 700, maxZoom: 9 });
+    if (hint) hint.textContent = (r.name || "") + " · " + steps.length + "곳 여정";
   }
 
   var pinBusy = false;
   async function refreshPins() {
+    if (ROUTE) return;              // 경로 모드에선 일반 핀을 얹지 않는다
     if (!MAP || pinBusy) return;
     pinBusy = true;
     try {

@@ -289,24 +289,18 @@ body.tv-lock { overflow: hidden; }
   padding: 6px 12px; font-size: 13px; font-weight: 800; color: var(--text-hi);
 }
 
-/* ── 지역 = 띠(band) ─────────────────────────────────
-   나라는 2열 카드, 장소는 가로 리스트, 지역은 사진 위에 글자를 얹은 낮은 띠.
-   세 층이 형태로 갈려야 '지금 어느 층인지'를 글자 없이 안다. */
-.tv-band {
-  grid-column: 1 / -1; position: relative; display: flex; align-items: center;
-  width: 100%; min-height: 76px; padding: 14px 16px; cursor: pointer;
+/* ── 지역 = 정사각 타일 ───────────────────────────────
+   나라(2:1 · 글자 아래)와 비율·글자 위치가 둘 다 달라 층이 헷갈리지 않는다. */
+.tv-tile {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  aspect-ratio: 1 / 1; padding: 12px; cursor: pointer; overflow: hidden;
   border: 1px solid var(--line-1); border-radius: var(--r-md);
   background-color: var(--surface-2); background-size: cover; background-position: center;
-  color: #fff; text-align: left; overflow: hidden;
+  color: #fff; text-align: left; gap: 2px;
 }
-.tv-band:active { filter: brightness(1.15); }
-.tv-band-l { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
-.tv-band-n { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
-.tv-band-s {
-  font-size: 11.5px; color: rgba(255,255,255,.82);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.tv-band-x { flex: 0 0 auto; font-size: 22px; color: rgba(255,255,255,.6); line-height: 1; }
+.tv-tile:active { filter: brightness(1.15); }
+.tv-tile-n { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+.tv-tile-s { font-size: 11.5px; color: rgba(255,255,255,.85); }
 
 /* 이 나라 장소 전부 보기 */
 .tv-all {
@@ -331,3 +325,33 @@ body.tv-lock { overflow: hidden; }
   border-left: 8px solid #fff; border-top: 5px solid transparent; border-bottom: 5px solid transparent;
 }
 .tv-mini-s { font-size: 11px; color: var(--text-low); }
+
+/* ── 지도: 크리에이터 경로 ────────────────────────────
+   ⚠️ nav 위(z 10000)의 오버레이 안이라 z-index 는 지도 캔버스보다만 높으면 된다. */
+.tv-routes {
+  position: absolute; left: 0; right: 0; bottom: 14px; z-index: 3;
+  display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; padding: 0 12px;
+}
+.tv-routes::-webkit-scrollbar { display: none; }
+.tv-rchip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px 6px 6px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(0,0,0,.66); backdrop-filter: blur(8px);
+  color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.tv-rchip:not(:has(img)) { padding-left: 12px; }
+.tv-rchip img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.tv-rchip i { font-style: normal; font-size: 10.5px; opacity: .65; }
+.tv-rchip.on { background: #38d6b0; color: #06231c; }
+
+/* 여정 위의 순번 마커 — 일반 핀(로고 원형)과 형태가 달라야 경로가 읽힌다 */
+.tv-map .tv-step, .maplibregl-marker.tv-step {
+  width: 26px; height: 26px; padding: 0; cursor: pointer; box-sizing: border-box;
+  border: 2px solid #fff; border-radius: 50%; background: #38d6b0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.5); flex: none;
+}
+.tv-map .tv-step.first { background: #ffd166; }
+.tv-map .tv-step.last  { background: #ff5c2b; }
+.tv-step-n { font-size: 11px; font-weight: 800; color: #06231c; }
+.tv-map .tv-step.last .tv-step-n { color: #fff; }
