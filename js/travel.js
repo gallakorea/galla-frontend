@@ -350,12 +350,19 @@
       '<div class="tv-map-c" id="tv-map-c"></div>' +
       '<button type="button" class="tv-map-x" id="tv-map-x" aria-label="닫기">✕</button>' +
       '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>' +
+      '<div class="tv-trips chip-scroll" id="tv-trips"></div>' +
       '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
     document.body.appendChild(MAPBOX);
     MAPBOX.querySelector("#tv-map-x").addEventListener("click", closeMap);
     MAPBOX.querySelector("#tv-routes").addEventListener("click", function (e) {
       var b = e.target.closest("[data-route]"); if (!b) return;
+      TRIP = null;                       // 크리에이터를 바꾸면 여정 선택은 버린다
       drawRoute(b.dataset.route || null);
+    });
+    MAPBOX.querySelector("#tv-trips").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-trip]"); if (!b) return;
+      TRIP = b.dataset.trip ? Number(b.dataset.trip) : null;
+      paintRoute();
     });
     return MAPBOX;
   }
@@ -398,7 +405,7 @@
       }
     } else {
       MAP.resize();
-      ROUTE ? drawRoute(ROUTE) : refreshPins();
+      ROUTE ? paintRoute() : refreshPins();
       loadRouteChips();
     }
   }
@@ -409,6 +416,8 @@
      ⚠️ 경로 모드에선 bbox 핀 갱신을 멈춘다. 안 그러면 지도를 움직일 때마다
         경로 마커 위에 일반 핀이 겹쳐 쌓여 선이 안 보인다. */
   var ROUTE = null;                 // 선택된 채널 slug (null = 전체 핀 모드)
+  var TRIP = null;                  // 선택된 여정 번호 (null = 전 여정)
+  var ROUTE_DATA = null;            // 마지막으로 받은 travel_route 응답
   var ROUTE_MARKERS = [];
 
   async function loadRouteChips() {
@@ -441,35 +450,69 @@
     ROUTE = slug || null;
     loadRouteChips();
     clearRoute();
-    if (!ROUTE) { refreshPins(); return; }          // 전체 핀 모드로 복귀
-
+    if (!ROUTE) {                                   // 전체 핀 모드로 복귀
+      ROUTE_DATA = null; paintTripChips();
+      refreshPins(); return;
+    }
     MARKERS.forEach(function (m) { m.remove(); });
     MARKERS = [];
-    var r = await rpc("travel_route", { p_channel: ROUTE, p_limit: 200 });
-    var steps = (r && r.steps) || [];
-    var hint = document.getElementById("tv-map-hint");
-    if (steps.length < 2) {
-      if (hint) hint.textContent = (r && r.name ? r.name + " — " : "") + "그릴 경로가 아직 부족해요";
-      return;
-    }
-    var coords = steps.map(function (s) { return [Number(s.lon), Number(s.lat)]; });
+    ROUTE_DATA = await rpc("travel_route", { p_channel: ROUTE, p_limit: 200 });
+    TRIP = null;
+    paintTripChips();
+    paintRoute();
+  }
 
-    MAP.addSource("tv-route", {
-      type: "geojson",
-      data: { type: "Feature", geometry: { type: "LineString", coordinates: coords } },
+  /* 여정 칩 — 점이 둘 이상인 여정만 고를 수 있게 한다(한 점짜리는 선이 안 그려진다). */
+  function paintTripChips() {
+    var box = document.getElementById("tv-trips");
+    if (!box) return;
+    var trips = ((ROUTE_DATA && ROUTE_DATA.trips) || []).filter(function (t) { return t.n >= 2; });
+    if (!ROUTE_DATA || !trips.length) { box.innerHTML = ""; box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML =
+      '<button type="button" class="tv-tchip' + (TRIP ? "" : " on") + '" data-trip="">전 여정</button>' +
+      trips.map(function (t) {
+        var d = String(t.from || "").slice(2, 7).replace("-", ".");   // 26.03
+        var cs = (t.countries || []).join("·");
+        return '<button type="button" class="tv-tchip' + (TRIP === t.trip ? " on" : "") +
+          '" data-trip="' + t.trip + '">' + esc(d) + " " + esc(cs) + " <i>" + t.n + "곳</i></button>";
+      }).join("");
+  }
+
+  /* 🚩 여정마다 선을 끊는다. 이걸 안 하면 6년치가 한 줄로 이어져 선이 지구를 여러 번 가로지른다
+     (빠니보틀 41점 실측). MultiLineString 하나에 여정별 좌표 묶음을 넣으면 레이어는 하나로 끝난다. */
+  function paintRoute() {
+    if (!MAP || !ROUTE_DATA) return;
+    clearRoute();
+    paintTripChips();
+    var steps = (ROUTE_DATA.steps || []).filter(function (s) {
+      return TRIP == null || s.trip === TRIP;
     });
-    /* 두 겹으로 긋는다 — 굵은 반투명 글로우 위에 얇은 실선. 위성 밝은 타일 위에서도 선이 보인다. */
-    MAP.addLayer({ id: "tv-route-glow", type: "line", source: "tv-route",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#38d6b0", "line-width": 8, "line-opacity": 0.22 } });
-    MAP.addLayer({ id: "tv-route-line", type: "line", source: "tv-route",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#38d6b0", "line-width": 2.4, "line-dasharray": [2, 1.4] } });
+    var hint = document.getElementById("tv-map-hint");
+    if (!steps.length) { if (hint) hint.textContent = "그릴 경로가 없어요"; return; }
 
-    steps.forEach(function (st, i) {
+    var byTrip = {};
+    steps.forEach(function (s) { (byTrip[s.trip] = byTrip[s.trip] || []).push([Number(s.lon), Number(s.lat)]); });
+    var lines = Object.keys(byTrip).map(function (k) { return byTrip[k]; })
+                      .filter(function (c) { return c.length >= 2; });
+
+    if (lines.length) {
+      MAP.addSource("tv-route", {
+        type: "geojson",
+        data: { type: "Feature", geometry: { type: "MultiLineString", coordinates: lines } },
+      });
+      MAP.addLayer({ id: "tv-route-glow", type: "line", source: "tv-route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#38d6b0", "line-width": 8, "line-opacity": 0.22 } });
+      MAP.addLayer({ id: "tv-route-line", type: "line", source: "tv-route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#38d6b0", "line-width": 2.4, "line-dasharray": [2, 1.4] } });
+    }
+
+    steps.forEach(function (st) {
       var el = document.createElement("button");
       el.type = "button";
-      el.className = "tv-step" + (i === 0 ? " first" : "") + (i === steps.length - 1 ? " last" : "");
+      el.className = "tv-step" + (st.n === 1 ? " first" : "");
       el.innerHTML = '<span class="tv-step-n">' + st.n + "</span>";
       el.title = st.n + ". " + st.name + (st.city ? " · " + st.city : "");
       el.addEventListener("click", function (e) { e.stopPropagation(); openDetail(st.id); });
@@ -477,10 +520,17 @@
         .setLngLat([Number(st.lon), Number(st.lat)]).addTo(MAP));
     });
 
+    var coords = steps.map(function (s) { return [Number(s.lon), Number(s.lat)]; });
     var b = coords.reduce(function (acc, c) { return acc.extend(c); },
       new maplibregl.LngLatBounds(coords[0], coords[0]));
     MAP.fitBounds(b, { padding: 56, duration: 700, maxZoom: 9 });
-    if (hint) hint.textContent = (r.name || "") + " · " + steps.length + "곳 여정";
+
+    if (hint) {
+      var t = TRIP && (ROUTE_DATA.trips || []).filter(function (x) { return x.trip === TRIP; })[0];
+      hint.textContent = (ROUTE_DATA.name || "") +
+        (t ? " · " + String(t.from || "").slice(0, 7) + " " + (t.countries || []).join("·") : " · 전 여정") +
+        " · " + steps.length + "곳";
+    }
   }
 
   var pinBusy = false;
