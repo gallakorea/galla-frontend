@@ -407,7 +407,19 @@
       } else if (!AREA) {
         /* 2계층 — 그 나라의 지역(도쿄도·교토부). 여기까지가 '어디로 갈까'의 층이다.
            지역이 하나뿐이면 층을 하나 세울 이유가 없다 — 바로 장소로 내려간다. */
-        if (AREAS.length === 1) { AREA = AREAS[0].name; return await load(); }
+        /* ⚠️ 여기서 load() 를 그냥 다시 부르면 **영원히 '불러오는 중'** 이 된다.
+           load() 첫 줄의 `if (loading) return` 가드에 자기 자신이 걸리기 때문이다
+           (실측: 지역이 하나뿐인 몽골에서 화면이 멈췄다).
+           재귀 전에 가드를 풀고, 빵부스러기도 같이 갱신한다. */
+        if (AREAS.length <= 1) {
+          /* ⚠️ 지역이 하나뿐일 때 그 지역으로 들어가면, **광역이 비어 있는 장소들이 통째로 빠진다**
+             (몽골 6곳 중 1곳만 떴다 — 나머지 5곳은 admin1 이 null 이라 지역 목록에 안 들어간다).
+             그래서 특정 지역이 아니라 '전체 장소'(AREA='*')로 내려간다. 결과가 항상 더 많다. */
+          AREA = "*";
+          paintChips();
+          loading = false;
+          return await load();
+        }
         var all = '<button type="button" class="tv-all" data-area-all="1">이 나라 장소 전부 보기 →</button>';
         LIST.innerHTML = AREAS.length
           ? '<div class="tv-grid">' + AREAS.map(areaHTML).join("") + all + "</div>"
