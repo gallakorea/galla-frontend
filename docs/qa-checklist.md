@@ -214,14 +214,14 @@
 | 항목 | 상태 |
 |---|---|
 | 크론 인증(Authorization 헤더) | ✅ 5개는 x-cron-secret(Vault) 자체인증, indexnow 는 대상이 우리 워커 — 오탐이었다 (§22) 재점검 필요 — 없으면 401인데 이력엔 'succeeded' |
-| 엣지 함수 47종 헬스 | ❌ |
+| 엣지 함수 47종 헬스 | ✅ §10-C 로 전수 반영(72개 ACTIVE) |
 | AI 원가 장부(ai_spend) 누락 함수 | 🔶 galla-friend 수정 완료, 나머지 재확인 필요 |
-| 클라 에러 수집(client_errors) | ❌ |
-| 버그헌터 자동 스캔 | ❌ |
-| 레드팀 배터리 | ❌ |
+| 클라 에러 수집(client_errors) | ✅ 24시간 28건 수집·마지막 03:15. 14일 보존 정책 위반 0건 (2026-09-01 실측) |
+| 버그헌터 자동 스캔 | ✅ 30분 크론 정상(24h 6건 갱신·마지막 03:30). **미해결 216건이 쌓여 있었다** — §26 |
+| 레드팀 배터리 | 🔶 galvis-redteam 주간 크론 27회 기록(마지막 08-30 19:00). redteam_bank 는 08-09 이후 멈춤 |
 | 관제센터(admin) | ❌ |
 | RLS·컬럼권한 회귀 | ❌ |
-| 백업·복구 | ❌ |
+| 백업·복구 | 🔶 복원 리허설은 완료(§17). **PITR 은 여전히 꺼져 있어 24시간 유실 구간** — 사장님 몫 |
 
 ---
 
@@ -304,15 +304,15 @@
 
 | 묶음 | 잡 | 확인할 것 | 상태 |
 |---|---|---|---|
-| 뉴스 수집 | collect_raw_news(5분) · collect_rss_news(10분) · categorize_raw_news(10분) · group_related_news(15분) · fetch_article_thumbnail · fetch_missing_thumbnails · heal_news_thumbs | 수집량 · 썸네일 결손 | ❌ |
-| 뉴스 생성·정리 | generate_galla_news(30분) · purge_galla_news_daily · purge_old_news_daily | 품질 · 보존기간 | ❌ |
-| 트렌드 | collect_external_trends(20분) · collect_youtube_hot(30분) · community_hot_collect/generate · hot_scores(10분) | 급상승 델타 · 중복 | ❌ |
-| 예측 | predict_markets_generate · predict_issue_market · predict_auto_resolve(매시) · predict_season_rollover · season_rollover | 자동생성 5개 · 오판정 | ❌ |
-| 이슈 | settle-due-issues(매시) | 마감·정산 | ❌ |
+| 뉴스 수집 | collect_raw_news(5분) · collect_rss_news(10분) · categorize_raw_news(10분) · group_related_news(15분) · fetch_article_thumbnail · fetch_missing_thumbnails · heal_news_thumbs | 수집량 · 썸네일 결손 | ✅ 24h 11,557건 수집(1시간 568건)·썸네일 결손 951건=8.2%(원문에 사진이 없는 몫) |
+| 뉴스 생성·정리 | generate_galla_news(30분) · purge_galla_news_daily · purge_old_news_daily | 품질 · 보존기간 | ✅ 6시간 60건 생성. 보존 정책(raw 30일·갈라뉴스 90일) 위반 raw 13건·갈라뉴스 0건 = 삭제 배치 꼬리 |
+| 트렌드 | collect_external_trends(20분) · collect_youtube_hot(30분) · community_hot_collect/generate · hot_scores(10분) | 급상승 델타 · 중복 | ✅ portal_search_trends 03:20 갱신·youtube_hot 2시간 1,820건·community_hot 은 하루 2회(09/21 UTC) 정시. ⚠️ `external_trends`(0행)·`raw_trends`(1월 5행)는 **죽은 표** — 수집기는 portal_search_trends 에 쓴다 |
+| 예측 | predict_markets_generate · predict_issue_market · predict_auto_resolve(매시) · predict_season_rollover · season_rollover | 자동생성 5개 · 오판정 | ✅ 24h 생성 6개·정산 10개. 마감지남 미정산 3개는 **48시간 유예(GRACE_MS) 안**이라 정상 — 유예 뒤 환불 처리된다(오탐 아님 확인) |
+| 이슈 | settle-due-issues(매시) | 마감·정산 | ✅ 마감 지났는데 미정산인 이슈 0건 |
 | 갈비스 | galvis_ping_daily · friend_memory_maintain · curate-sft-daily · distill-failures-daily · craft-exemplars · galvis-craftbench/redteam(주간) | 선톡·기억정리·학습데이터 | ❌ |
-| 추천·통계 | feed_signals_rollup(15분) · snapshot_daily_views · gallian_cache_refresh · pattern_perf_score · ga_sync(10분) | 집계 정확성 | ❌ |
-| 미디어 | video_migrate(5분) · purge_orphan_media · media_ref_refresh | 이관·고아정리 | ❌ |
-| 운영 | bug_hunt(30분) · client_errors_purge · ai_user_usage_purge · ai_window_sweep · dm-expire-sweep(5분) · secret-mailbox-sweep · weather_sync(10분) · indexnow_ping | 자동스캔·정리 | ❌ |
+| 추천·통계 | feed_signals_rollup(15분) · snapshot_daily_views · gallian_cache_refresh · pattern_perf_score · ga_sync(10분) | 집계 정확성 | 🔶 조회수(오늘 170행)·gallian_cache(03:20) 정상. **feed_signals 는 평생 87행·25시간째 0건** — 계측이 광장·숏판 두 표면에만 붙어 있다(§26) |
+| 미디어 | video_migrate(5분) · purge_orphan_media · media_ref_refresh | 이관·고아정리 | ✅ 이관 대기 0건(밀린 것 없음)·미해결 실패 0건 |
+| 운영 | bug_hunt(30분) · client_errors_purge · ai_user_usage_purge · ai_window_sweep · dm-expire-sweep(5분) · secret-mailbox-sweep · weather_sync(10분) · indexnow_ping | 자동스캔·정리 | ✅ 51개 active·24h 실패 4건(각 288회 중 1회=0.35%). 날씨 1시간 244건·버그헌터 03:30 갱신 |
 
 ⚠️ **크론 인증 함정**: Authorization 헤더 없이 부르면 401 인데 `job_run_details` 에는 `succeeded` 로 남는다.
    "돌고 있다"가 아니라 **산출물이 늘었는지**로 확인해야 한다.
@@ -691,13 +691,13 @@ SPA 문서엔 `#app` 요소가 0개(`document.querySelectorAll('#app').length ==
 
 실측(375×812 · 세이프에어리어 0 — 아이폰은 홈 인디케이터 34px만큼 더 나빠진다):
 
-| 화면 | 네비 위 여유 | 판정 |
+| 화면 | 고치기 전 네비 위 여유 | 고친 뒤 |
 |---|---|---|
-| 약관 | −23px (마지막 문단) | ❌ → ✅ +73px |
-| 개인정보 | −33px | ❌ → ✅ |
-| 계정 편집 | −4px ('변경사항 저장' 버튼) | ❌ → ✅ |
-| 로그인(앱) | 패스키 버튼 절반 | ❌ → ✅ 네비 숨김 |
-| 설정·등급·퀘스트·지갑·충전내역·로그인기록·비번변경 | 여유 있음 | ✅ |
+| 로그인(앱) — 패스키 버튼 | 절반 가림, 스크롤 끝 | ✅ 네비 숨김·전체 노출 |
+| 개인정보 | −33px | ✅ |
+| 약관 | −23px (마지막 문단) | ✅ +73px |
+| 계정 편집 — '변경사항 저장' | −4px | ✅ |
+| 설정·등급·퀘스트·지갑·충전내역·로그인기록·비번변경 | 여유 있음(원래 정상) | ✅ |
 
 **고침**(커밋 `50a8c8952` 코드 + `71137c7e6` 스탬프):
 1. `js/spa/view-loader.js` — 페이지 CSS 의 `#app` 규칙을 뷰 호스트로 복제(라우트 스코프).
@@ -717,3 +717,61 @@ SPA 호스트를 훑는 감사기가 따로 필요하다.
 **환경 함정**: `npm run sync` 의 기본 소스가 `~/Developer/GitHub/galla-frontend`(0830004, 8/30에 멈춤)다.
 QA 클론은 `~/Developer/galla-frontend`. 그냥 sync 하면 **옛날 웹 코드가 앱에 실린다.**
 반드시 `GALLA_WEB_SRC=/Users/franksangminlee/Developer/galla-frontend npm run sync`.
+
+
+## 26. 백엔드 전수 점검 (2026-09-01, 크론·버그헌터·신호층)
+
+### 26-1. 익명이 쓸 수 있던 표 3개 — **고침**
+
+버그헌터가 critical 4건을 24시간 넘게 띄우고 있었는데(hits 29~42, 8/31부터) 아무도 안 보고 있었다.
+넷 다 직접 확인했다 — **3건은 진짜, 1건은 오탐**이다.
+
+| 대상 | 상태였던 것 | 실제 피해 | 조치 |
+|---|---|---|---|
+| `email_probe_rate` | RLS off + anon 에 SELECT/INSERT/UPDATE/**DELETE** | 8/31에 이메일 열거를 막으려 만든 IP·시간당 카운터다. **anon 이 지우면 제한이 초기화 = 방어 무력** | RLS on · 권한 회수 ✅ |
+| `places_tried` | 〃 | 맛집 수집기 '이미 물어본 곳' 장부 — 통째로 채우면 수집이 조용히 멈춘다 | ✅ |
+| `places_usage` | 〃 | 일일 사진 한도 장부 — '한도 소진'으로 조작 가능 | ✅ |
+| `_sft_scrub(text)` | anon EXECUTE | **오탐** — `language sql immutable` 순수 정규식 치환이라 부작용·권한상승 없음 | 그래도 회수(경보 정리) |
+
+검증: `email_available` RPC(가입 마법사 정상 경로)는 anon 키로 여전히 `{"ok": true}`,
+같은 키로 표를 직접 읽으면 `42501 permission denied`. 마이그레이션 `20260901270000` · 기록까지 반영.
+
+### 26-2. ⚠️ 뿌리 — **새로 만드는 표는 익명 쓰기가 열린 채 태어난다** (사장님 판단 필요)
+
+위 3개는 실수가 아니라 기본값이다. 빈 표를 하나 만들어 권한을 찍어보고 되돌렸다:
+
+```
+current_user=postgres / 새 표의 anon·authenticated 권한 =
+  anon:SELECT,INSERT,UPDATE,DELETE · authenticated:SELECT,INSERT,UPDATE,DELETE
+```
+
+즉 **SQL 에디터·Management API 로 만든 모든 표는 RLS 도 꺼진 채 익명 전권으로 시작한다.**
+마이그레이션에서 `revoke` 를 빠뜨리면 그 순간 구멍이다(그리고 `revoke ... from public` 만으로는
+anon·authenticated 가 안 걷힌다 — email_probe_rate 가 그 사례).
+
+한 줄로 막을 수 있다:
+
+```sql
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+```
+
+⚠️ **대신 앞으로 만드는 표는 필요한 읽기 권한을 명시적으로 줘야 한다.** 안 주면 42501 로
+목록이 백지가 된다(전례 있음). 지금 다른 세션이 맛집 표를 계속 만들고 있어 **사장님 승인 뒤에** 건다.
+
+### 26-3. 추천 신호 층이 두 표면에서만 쌓인다
+
+`feed_signals` 는 **평생 87행**(광장 83 · 숏판/롱판 4), 마지막 25시간 전이다.
+크론(`feed_signals_rollup` 15분)은 정상이지만 **집계할 원본이 안 들어온다.**
+
+원인은 계측 위치다 — `GALLA_signal` 호출부가 `plaza.js` · `gallari.js` · `gallari-reels.js` **셋뿐**이다.
+홈 피드 · 트렌드 · 예측 · 이슈 · 뉴스 · 핫튜브에는 한 줄도 없다. `js/signals.js` 자체도
+`app.html` · `index.html` 두 곳만 싣는다. 랭커를 붙여도 **랭킹할 재료가 없다.**
+(기능 추가라 이번 회차에서는 고치지 않고 남긴다.)
+
+### 26-4. 오탐이라 접은 것 (기록해 둔다)
+
+- **예측 마감지남 3건 미정산** — `predict-auto-resolve` 의 48시간 유예 안이었다(초과 시 환불 처리).
+  걸린 3건 전부 베팅 0건이고 `place_bet` 이 `close_at` 을 막고 있어 잠긴 GP 도 없다.
+- **`external_trends` 0행 · `raw_trends` 1월 이후 정지** — 죽은 표다.
+  `collect-external-trends` 는 `portal_search_trends` 에 쓰고 그건 03:20에 갱신돼 있다.
+- **raw 뉴스 26만 행이 7일 초과** — 보존 정책이 30일이라 정상. 30일 초과는 13행뿐.
