@@ -1,0 +1,701 @@
+<title>갈라 런칭 QA 현황판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#f6f6f9; --surface:#fff; --raised:#fbfbfd; --line:#e5e5ec; --line2:#efeff5;
+  --ink:#14151a; --ink2:#4a4c58; --muted:#8b8d99;
+  --accent:#4d5bd4; --accent-soft:#edeefc;
+  --done:#0f9d63; --done-bg:#e7f6ef;
+  --part:#b7791f; --part-bg:#fdf4e3;
+  --todo:#7b7d8a; --todo-bg:#f0f0f4;
+  --block:#c0392b; --block-bg:#fbeceb;
+  --shadow:0 1px 2px rgba(20,21,26,.05),0 10px 28px -20px rgba(20,21,26,.35);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0b0e; --surface:#15161c; --raised:#191a22; --line:#282932; --line2:#20212a;
+  --ink:#e9eaf0; --ink2:#b4b6c2; --muted:#83859a;
+  --accent:#8792ff; --accent-soft:#1b1e3c;
+  --done:#3ecf8e; --done-bg:#0f2a20;
+  --part:#e8b23c; --part-bg:#2b2110;
+  --todo:#8b8d99; --todo-bg:#1e1f27;
+  --block:#ff7f70; --block-bg:#2f1715;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.95);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0e; --surface:#15161c; --raised:#191a22; --line:#282932; --line2:#20212a;
+  --ink:#e9eaf0; --ink2:#b4b6c2; --muted:#83859a;
+  --accent:#8792ff; --accent-soft:#1b1e3c;
+  --done:#3ecf8e; --done-bg:#0f2a20;
+  --part:#e8b23c; --part-bg:#2b2110;
+  --todo:#8b8d99; --todo-bg:#1e1f27;
+  --block:#ff7f70; --block-bg:#2f1715;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 32px -22px rgba(0,0,0,.95);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+ font:400 15px/1.65 "IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1060px;margin:0 auto;padding:44px 20px 90px;display:flex;flex-direction:column;gap:34px}
+h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--muted);font-size:13.5px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* 저울 — 된 것 vs 안 된 것 */
+.scale{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+ padding:26px 26px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:18px}
+.scale-head{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;justify-content:space-between}
+.side{display:flex;flex-direction:column;gap:2px}
+.side .num{font-family:"IBM Plex Mono",monospace;font-size:44px;font-weight:600;line-height:1;
+ font-variant-numeric:tabular-nums}
+.side .lab{font-size:13px;font-weight:600;letter-spacing:.02em}
+.side.l .num{color:var(--done)} .side.l .lab{color:var(--done)}
+.side.r{text-align:right} .side.r .num{color:var(--ink2)} .side.r .lab{color:var(--muted)}
+.side .of{font-size:12px;color:var(--muted);font-weight:400}
+.bar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--todo-bg)}
+.bar span{display:block}
+.bar .b-done{background:var(--done)} .bar .b-part{background:var(--part)}
+.bar .b-block{background:var(--block)} .bar .b-todo{background:var(--todo);opacity:.34}
+.keys{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--ink2)}
+.keys b{font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* 카드 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+ padding:24px 24px 20px;box-shadow:var(--shadow)}
+.card>h2{margin:0 0 4px;font-size:18px;font-weight:700;letter-spacing:-.01em;
+ display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card>h2 .cnt{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;
+ padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.card>.lede{margin:0 0 18px;color:var(--ink2);font-size:13.5px;max-width:62ch}
+
+.card.warn{border-color:color-mix(in srgb,var(--block) 42%,var(--line));
+ background:linear-gradient(180deg,var(--block-bg),var(--surface) 62%)}
+.card.warn>h2 .cnt{background:var(--block-bg);color:var(--block)}
+
+.area{border-top:1px solid var(--line2);padding:14px 0 4px}
+.area:first-of-type{border-top:0;padding-top:2px}
+.area h4{margin:0 0 9px;font-size:12px;font-weight:700;letter-spacing:.06em;
+ color:var(--muted);text-transform:uppercase;display:flex;align-items:baseline;gap:9px}
+.ratio{font-family:"IBM Plex Mono",monospace;font-weight:600;letter-spacing:0;
+ color:var(--ink2);text-transform:none;font-size:11.5px}
+.ratio i{color:var(--muted);font-style:normal;margin:0 1px}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:5px;
+ grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.list li{display:flex;align-items:baseline;gap:8px;padding:6px 11px;border-radius:9px;
+ background:var(--raised);border:1px solid var(--line2);font-size:13.5px;line-height:1.45}
+.list li::before{content:"";flex:0 0 auto;width:7px;height:7px;border-radius:2px;margin-top:6px}
+li.done::before{background:var(--done)} li.part::before{background:var(--part)}
+li.todo::before{background:var(--todo);opacity:.5} li.block::before{background:var(--block)}
+li .t{flex:1 1 auto;min-width:0}
+li .n{flex:0 0 auto;font-size:11.5px;color:var(--muted);max-width:46%;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li.done{background:var(--done-bg);border-color:color-mix(in srgb,var(--done) 22%,var(--line2))}
+li.part{background:var(--part-bg);border-color:color-mix(in srgb,var(--part) 22%,var(--line2))}
+li.block{background:var(--block-bg);border-color:color-mix(in srgb,var(--block) 22%,var(--line2))}
+.empty{color:var(--muted);font-size:13.5px;margin:0}
+
+.judge{margin:14px 0 0;padding:11px 13px;border-radius:10px;background:var(--accent-soft);
+ color:var(--ink2);font-size:12.5px;line-height:1.55}
+.judge b{color:var(--accent)}
+
+.fixes{display:grid;gap:9px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+ list-style:none;margin:0;padding:0}
+.fixes li{padding:11px 13px;border-radius:11px;background:var(--raised);
+ border:1px solid var(--line2);font-size:13.5px;line-height:1.5}
+.fixes b{display:block;font-weight:600;margin-bottom:2px}
+.fixes span{color:var(--muted);font-size:12.5px}
+
+footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
+@media(max-width:600px){
+  .wrap{padding:28px 14px 64px;gap:26px}
+  h1{font-size:22px}
+  .side .num{font-size:34px}
+  .card{padding:19px 16px 16px;border-radius:14px}
+  .list{grid-template-columns:1fr}
+  li .n{max-width:40%}
+}
+
+</style>
+
+<div class="wrap">
+
+<header>
+  <h1>갈라 런칭 QA 현황판</h1>
+  <p class="sub">항목 <b class="mono">321</b>개 · 2026-09-01 기준 · <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">scripts/qa-board.py</span> 로 자동 생성</p>
+</header>
+
+<div class="scale">
+  <div class="scale-head">
+    <div class="side l">
+      <div class="num mono">217</div>
+      <div class="lab">된 것</div>
+      <div class="of">확인 102 · 부분 115</div>
+    </div>
+    <div class="side r">
+      <div class="num mono">104</div>
+      <div class="lab">안 된 것</div>
+      <div class="of">미확인 84 · 막힘 20</div>
+    </div>
+  </div>
+  <div class="bar" role="img" aria-label="된 것 217개, 안 된 것 104개">
+    <span class="b-done" style="width:31.7757%"></span>
+    <span class="b-part" style="width:35.8255%"></span>
+    <span class="b-block" style="width:6.2305%"></span>
+    <span class="b-todo" style="width:26.1682%"></span>
+  </div>
+  <div class="keys">
+    <span><i class="dot" style="background:var(--done)"></i><b>확인 102</b> — 실제로 눌러보고 DB까지 대조</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 115</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--block)"></i><b>막힘 20</b> — 키·실기기·결제 등 외부 조건</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 84</b> — 아직 손 못 댐</span>
+  </div>
+  <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
+  지금은 항목 321개 · 된 것 217(확인 102 · 부분 115) · 안 된 것 104(미확인 84 · 막힘 20).
+  <b>미확인 172 → 84.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
+</div>
+
+<div class="card warn">
+  <h2>먼저 봐야 할 것 <span class="cnt">20</span></h2>
+  <p class="lede">출시를 실제로 막을 수 있는 것들. 심사에서 걸리거나(앱스토어·법정 표기), 사고가 나면 되돌리기 어려운 것(보안·가입 경로)입니다.</p>
+  <section class="area">
+  <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
+  <ul class="list"><li class="todo"><span class="t">이메일 가입 → 인증메일 → /auth/confirm</span></li>
+<li class="block"><span class="t">소셜 로그인 — 구글</span><span class="n">provider 키 미설정</span></li>
+<li class="block"><span class="t">소셜 로그인 — 카카오</span></li>
+<li class="block"><span class="t">소셜 로그인 — 네이버</span></li>
+<li class="todo"><span class="t">패스키 등록·로그인</span></li>
+<li class="todo"><span class="t">비밀번호 재설정 메일</span></li></ul>
+</section>
+<section class="area">
+  <h4>9. 플랫폼 고유 (에뮬·실기기)<span class="ratio">6<i>/</i>13</span></h4>
+  <ul class="list"><li class="todo"><span class="t">유니버설/앱 링크(https://galla.im)</span></li>
+<li class="todo"><span class="t">푸시 권한 요청</span><span class="n">Firebase 미설정</span></li>
+<li class="todo"><span class="t">푸시 수신·탭 이동</span></li>
+<li class="todo"><span class="t">카메라·마이크·사진 권한</span></li>
+<li class="todo"><span class="t">오프라인·네트워크 끊김</span></li>
+<li class="todo"><span class="t">앱↔웹 세션 공유</span></li>
+<li class="todo"><span class="t">화면 회전·큰 글씨·다크모드</span></li></ul>
+</section>
+<section class="area">
+  <h4>11. 심사·규정<span class="ratio">3<i>/</i>6</span></h4>
+  <ul class="list"><li class="todo"><span class="t">사행성 용어 금지(판돈→대결 GP 등)</span></li>
+<li class="todo"><span class="t">약관·개인정보·청소년보호 링크</span></li>
+<li class="todo"><span class="t">계정 삭제 동선(앱스토어 필수)</span></li></ul>
+</section>
+<section class="area">
+  <h4>16. 계정 상태·어뷰징<span class="ratio">4<i>/</i>8</span></h4>
+  <ul class="list"><li class="todo"><span class="t">삭제(탈퇴) 계정의 잔존 콘텐츠</span><span class="n">글·댓글이 어떻게 보이나</span></li>
+<li class="todo"><span class="t">미인증 이메일 상태</span><span class="n">어디까지 허용</span></li>
+<li class="todo"><span class="t">다계정·GP 파밍</span><span class="n">초대 보상·제보 보상 악용</span></li>
+<li class="todo"><span class="t">신고 처리 SLA·검열</span><span class="n">접수는 되는데 **처리 동선 미확인**</span></li></ul>
+</section>
+  <p class="judge"><b>이건 데이터가 아니라 판단입니다.</b> 체크리스트에 '출시 차단' 표시가 따로 없어서, 앱스토어 필수 항목·전자상거래법 표기·보안 회귀·가입 경로를 기준으로 골랐습니다.</p>
+</div>
+
+<div class="card">
+  <h2>된 것 <span class="cnt">217</span></h2>
+  <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
+  <section class="area">
+  <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
+  <ul class="list"><li class="done"><span class="t">이메일 로그인</span></li>
+<li class="part"><span class="t">비밀번호 변경</span><span class="n">8자미만·불일치 가드 동작 확인, 실제 변경은 미수행</span></li>
+<li class="part"><span class="t">로그인 기록</span><span class="n">0830 결함: 기록기 부재→log_login RPC 신설. 활성기기+이력 렌더 확인</span></li>
+<li class="part"><span class="t">로그아웃</span><span class="n">세션 제거 확인. 재로그인은 비번 필요라 사장님 몫</span></li>
+<li class="part"><span class="t">계정 삭제(탈퇴)</span><span class="n">FK 없는 58개 컬럼 발견, anonymize_account 확장. 실제 앱 동선은 파괴적이라 미실행 — docs/account-deletion-audit-20260831.md</span></li>
+<li class="done"><span class="t">세션 유지(앱 재시작)</span></li></ul>
+</section>
+<section class="area">
+  <h4>2. 콘텐츠 생성<span class="ratio">7<i>/</i>11</span></h4>
+  <ul class="list"><li class="part"><span class="t">광장 글 (텍스트)</span></li>
+<li class="part"><span class="t">광장 글 — 사진·영상·링크 첨부</span><span class="n">Supabase Storage plaza-images 업로드, body 에 [IMAGE] 마커 + thumbnail 저장, 목록·상세 렌더 확인</span></li>
+<li class="part"><span class="t">숏판(세로) 업로드</span><span class="n">CDN 200·PNG→JPG·표지·태그</span></li>
+<li class="part"><span class="t">숏판 — 캐러셀 여러 장</span><span class="n">UI만</span></li>
+<li class="part"><span class="t">롱판(가로) 업로드</span><span class="n">post kind=horizontal, Cloudflare Stream HLS+자동썸네일 둘 다 200. ※ Stream 과금 확인 필요</span></li>
+<li class="part"><span class="t">제보하기 (+100 GP)</span><span class="n">tips + point_ledger tip:submit, 하루 3회 상한 서버강제</span></li>
+<li class="part"><span class="t">임시저장·복원</span><span class="n">광장만</span></li></ul>
+</section>
+<section class="area">
+  <h4>3. 상호작용<span class="ratio">26<i>/</i>26</span></h4>
+  <ul class="list"><li class="done"><span class="t">이슈 투표(찬반)</span></li>
+<li class="done"><span class="t">투표 후 진영 잠금 안내</span></li>
+<li class="part"><span class="t">이슈 댓글(참전)</span></li>
+<li class="part"><span class="t">이슈 대댓글</span></li>
+<li class="part"><span class="t">이슈 전투 — 공격</span><span class="n">HP 90→80(c_atk=14, 풀 100-dmg+heal), 쿨다운 60s·리셋권 유도 확인</span></li>
+<li class="part"><span class="t">이슈 전투 — 방어·지원</span><span class="n">방어+6·지원+8 healed 반영, 카운터 증가. 회복은 받은피해의 30%까지만(_hp_of) — 14피해면 최대4. 가드 4종 정확: 아군공격=same_faction, 적진방어/지원=cross_faction. 쿨다운은 행동종류별 60s</span></li>
+<li class="part"><span class="t">적진 침투(3/3 제한)</span><span class="n">내 진영 pro인데 댓글 faction=con 저장, 3→2 차감</span></li>
+<li class="part"><span class="t">격파·재참전 잠금·부활권</span><span class="n">battle_action: v_ko = hp_before&gt;0 &amp;&amp; hp=0. 실제 격파까지는 미도달</span></li>
+<li class="done"><span class="t">릴스 댓글</span></li>
+<li class="part"><span class="t">릴스 대댓글</span><span class="n">parent_id 저장·hv-cmt-r 22px 들여쓰기·1뎁스·부모삭제 FK CASCADE</span></li>
+<li class="part"><span class="t">광장 댓글</span><span class="n">버튼만</span></li>
+<li class="part"><span class="t">광장 대댓글</span></li>
+<li class="part"><span class="t">광장 추천/비추천</span></li>
+<li class="part"><span class="t">숏판 댓글·대댓글</span><span class="n">post_comments parent_id 저장·카운트 반영</span></li>
+<li class="part"><span class="t">뉴스 댓글·대댓글</span></li>
+<li class="part"><span class="t">핫튜브 댓글·대댓글</span></li>
+<li class="part"><span class="t">예측 의견배틀 댓글</span></li>
+<li class="part"><span class="t">날씨 동네 한마디</span></li>
+<li class="part"><span class="t">댓글 좋아요</span></li>
+<li class="part"><span class="t">좋아요·북마크(저장)</span><span class="n">토글만</span></li>
+<li class="done"><span class="t">공유 — 링크가 galla.im 인지</span></li>
+<li class="part"><span class="t">팔로우·언팔로우</span></li>
+<li class="part"><span class="t">신고(콘텐츠)</span></li>
+<li class="part"><span class="t">차단(유저)</span></li>
+<li class="part"><span class="t">버그 신고</span></li>
+<li class="part"><span class="t">유령 모드(익명) — 유령권 게이팅</span></li></ul>
+</section>
+<section class="area">
+  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
+  <ul class="list"><li class="part"><span class="t">유저 검색</span></li>
+<li class="part"><span class="t">DM 대화방 생성·전송</span><span class="n">입력만</span></li>
+<li class="part"><span class="t">DM 수신·읽음</span><span class="n">2계정 롤백 시뮬: 발신 → 수신자 조회 1행 → read_at 갱신 1행 → 제3자 조회 0행. 수신자에게 보이는 건 자기 스레드 2개·메시지 20행뿐(전체 729행 중)</span></li>
+<li class="part"><span class="t">DM 이미지·GIF·스티커</span><span class="n">운영 데이터에 kind=image 3·gif 6 존재(경로 동작). sticker 는 0건 — 미검증</span></li>
+<li class="part"><span class="t">DM 폴더·즐겨찾기·숨김</span><span class="n">dm_folders·dm_favs·dm_hidden 생성 성공 + 남의 계정에서 조회 시 0행(격리)</span></li>
+<li class="part"><span class="t">E2E 암호화</span><span class="n">구조 확인: user_e2e_keys 는 공개키만(10명), 개인키는 localStorage. 다만 운영에 kind='e2e' 메시지 0건 — 실제 암복호 왕복 미검증</span></li>
+<li class="part"><span class="t">친구 추가·목록</span></li>
+<li class="part"><span class="t">난장(오픈챗) 개설</span></li>
+<li class="part"><span class="t">난장 입장·대화</span></li>
+<li class="part"><span class="t">난장 방장 권한(강퇴·밴)</span><span class="n">롤백 시뮬: 비방장 밴 시도 → RLS 차단 / 방장 밴 → ban 1행·밴된 유저 멤버에서 자동 제거(_openroom_ban_kick 트리거)</span></li>
+<li class="part"><span class="t">삐삐 개통(랜덤)</span></li></ul>
+</section>
+<section class="area">
+  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
+  <ul class="list"><li class="part"><span class="t">대화 응답·문맥 유지</span></li>
+<li class="done"><span class="t">감정 엔진 기록</span></li>
+<li class="part"><span class="t">인물·사실 기억(friend_memory)</span><span class="n">person/mkey=몽자 저장 + embedding. 과거 0건 결함 해소 확인</span></li>
+<li class="part"><span class="t">선톡(ping)</span><span class="n">free 티어 galla-friend-ambient n=0 — 유료 전용 게이트는 확인, 실제 발송 미확인</span></li>
+<li class="done"><span class="t">원가 기록(ai_spend)</span><span class="n">2026-08-29 수정</span></li>
+<li class="part"><span class="t">턴 한도·게이트(무료 5턴)</span><span class="n">6번째 차단+리셋시각 안내. 게스트 2턴도 확인. pill 미갱신 결함은 0830007에서 수정</span></li></ul>
+</section>
+<section class="area">
+  <h4>6. 트렌드<span class="ratio">8<i>/</i>9</span></h4>
+  <ul class="list"><li class="part"><span class="t">통합검색 실행(이슈·예측·뉴스·유튜브·광장)</span><span class="n">0901 웹 로그인 실측: '이재명' → 해시태그 9 · 갈라이슈 1 · 뉴스 10 렌더</span></li>
+<li class="part"><span class="t">해시태그 검색</span><span class="n">#이재명 이슈 9건. 최근순·인기순 두 정렬 경로 모두 응답. 광장·예측은 태그 데이터 자체가 3건·1건뿐(빈 결과는 정상)</span></li>
+<li class="part"><span class="t">유저 검색</span></li>
+<li class="part"><span class="t">핫트렌드 실시간 검색어</span><span class="n">렌더만</span></li>
+<li class="part"><span class="t">갈라뉴스 열람</span><span class="n">galla_news_home 6섹션 · galla_news_category('정치') 정상. ⚠️ 카테고리 키는 한글이다('politics' 아님)</span></li>
+<li class="part"><span class="t">핫튜브 목록·급상승</span><span class="n">렌더만</span></li>
+<li class="part"><span class="t">날씨 — 지역선택·제보·동네한마디</span></li>
+<li class="part"><span class="t">광장 목록·정렬(후끈·최신·조회)</span></li></ul>
+</section>
+<section class="area">
+  <h4>7. 경제<span class="ratio">8<i>/</i>13</span></h4>
+  <ul class="list"><li class="done"><span class="t">GP 잔액 표시</span></li>
+<li class="part"><span class="t">예측 베팅 · GP 차감 · 배당</span></li>
+<li class="part"><span class="t">예측 정산·연승콤보</span><span class="n">0901 롤백 시뮬: 마감된 마켓에 1,000GP 베팅 → predict_resolve → won=true·payout 1,230(레이크 반영)·잔액 +1,230·연승 0→1. 마감 전 마켓은 정산 거부(가드 동작)</span></li>
+<li class="part"><span class="t">데일리 미션 수령</span><span class="n">롤백 시뮬: 미달 claim → incomplete 거부 / 5회 채우고 claim → +200GP / 재수령 → already 거부·잔액 불변·mission_claims 1행</span></li>
+<li class="part"><span class="t">출석·연속 보너스</span><span class="n">롤백 시뮬: claim_daily +100GP·streak 1, 재호출 already 거부. claim_daily_chest +62GP</span></li>
+<li class="part"><span class="t">갈라 뽑기(가챠)</span><span class="n">롤백 시뮬: 2회 뽑기 — GP 차감·rare 당첨(+1,000GP) 지급·일일 한도 카운트(used 2/limit 30) 동작</span></li>
+<li class="done"><span class="t">이용권 시트 — 가격 미노출</span></li>
+<li class="part"><span class="t">친구 초대(ref 코드)</span><span class="n">공유 URL만</span></li></ul>
+</section>
+<section class="area">
+  <h4>8. 설정·프로필<span class="ratio">8<i>/</i>10</span></h4>
+  <ul class="list"><li class="part"><span class="t">프로필 편집(닉·소개)</span></li>
+<li class="part"><span class="t">닉네임 중복·형식 검사</span><span class="n">nickname_available: 남의 닉 taken · 뒤 공백 붙여도 taken(정규화 동작) · 공백/특수문자 charset · 1글자 length · 내 닉은 ok</span></li>
+<li class="part"><span class="t">알림 설정 8종 토글</span></li>
+<li class="part"><span class="t">방해금지 시간</span><span class="n">notify_prefs(dnd_on/from/to/tz_off) 읽기·쓰기·원복 왕복 확인(웹 로그인)</span></li>
+<li class="part"><span class="t">보관(저장한 것) 목록</span><span class="n">북마크 왕복 실측: insert → 보관에 제목까지 렌더 → delete → 빈 상태. bookmarks 컬럼은 issue_id(target_type 아님)</span></li>
+<li class="part"><span class="t">내 등급·시즌 랭킹</span><span class="n">등급 화면 렌더·GI 진행도 정상. 시즌은 §26-6 결함(만료된 시즌이 계속 '진행중')</span></li>
+<li class="part"><span class="t">꾸미기(닉네임·프레임)</span><span class="n">user_cosmetics 행은 있으나 전부 null·user_frames 0개(심사계정이 아이템 미보유). 착용 동작은 미검증</span></li>
+<li class="part"><span class="t">갈라 성향 4축</span><span class="n">렌더만</span></li></ul>
+</section>
+<section class="area">
+  <h4>9. 플랫폼 고유 (에뮬·실기기)<span class="ratio">6<i>/</i>13</span></h4>
+  <ul class="list"><li class="done"><span class="t">콜드스타트·스플래시</span></li>
+<li class="done"><span class="t">5탭 전환·keep-alive</span></li>
+<li class="done"><span class="t">탭 첫 진입 FOUC</span><span class="n">2026-08-29 수정</span></li>
+<li class="done"><span class="t">하드웨어 뒤로가기</span><span class="n">2026-08-29 수정</span></li>
+<li class="done"><span class="t">딥링크(im.galla.app://)</span></li>
+<li class="part"><span class="t">OTA 버전 전파</span></li></ul>
+</section>
+<section class="area">
+  <h4>10. 운영·백엔드<span class="ratio">7<i>/</i>9</span></h4>
+  <ul class="list"><li class="done"><span class="t">크론 인증(Authorization 헤더)</span><span class="n">5개는 x-cron-secret(Vault) 자체인증, indexnow 는 대상이 우리 워커 — 오탐이었다 (§22) 재점검 필요 — 없으면 401인데 이력엔 'succeeded'</span></li>
+<li class="done"><span class="t">엣지 함수 47종 헬스</span><span class="n">§10-C 로 전수 반영(72개 ACTIVE)</span></li>
+<li class="part"><span class="t">AI 원가 장부(ai_spend) 누락 함수</span><span class="n">galla-friend 수정 완료, 나머지 재확인 필요</span></li>
+<li class="done"><span class="t">클라 에러 수집(client_errors)</span><span class="n">24시간 28건 수집·마지막 03:15. 14일 보존 정책 위반 0건 (2026-09-01 실측)</span></li>
+<li class="done"><span class="t">버그헌터 자동 스캔</span><span class="n">30분 크론 정상(24h 6건 갱신·마지막 03:30). **미해결 216건이 쌓여 있었다** — §26</span></li>
+<li class="part"><span class="t">레드팀 배터리</span><span class="n">galvis-redteam 주간 크론 27회 기록(마지막 08-30 19:00). redteam_bank 는 08-09 이후 멈춤</span></li>
+<li class="part"><span class="t">백업·복구</span><span class="n">복원 리허설은 완료(§17). **PITR 은 여전히 꺼져 있어 24시간 유실 구간** — 사장님 몫</span></li></ul>
+</section>
+<section class="area">
+  <h4>11. 심사·규정<span class="ratio">3<i>/</i>6</span></h4>
+  <ul class="list"><li class="done"><span class="t">인앱 anti-steering(가격·충전 유도 금지)</span><span class="n">iOS·AOS</span></li>
+<li class="done"><span class="t">창작 에이전트 잠금</span><span class="n">iOS·AOS</span></li>
+<li class="part"><span class="t">신고·차단 동선(앱스토어 필수)</span><span class="n">신고만</span></li></ul>
+</section>
+<section class="area">
+  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">3<i>/</i>8</span></h4>
+  <ul class="list"><li class="part"><span class="t">일기토(1:1 논쟁) 신청·수락</span><span class="n">서버 경로 롤백 시뮬: 티켓 없으면 no_ticket 거부·티켓 소모·판돈 500GP 잠금·상대 알림·수락 시 status live</span></li>
+<li class="part"><span class="t">일기토 진행·메시지(duel_messages)</span><span class="n">양쪽 duel_say → duel_messages 2행</span></li>
+<li class="part"><span class="t">일기토 관전·투표</span><span class="n">제3자 duel_vote → vote_challenger 1. 시간 만료 후 duel_resolve 2단계(live→voting→finished)·승자 GP ±500</span></li></ul>
+</section>
+<section class="area">
+  <h4>6-B. 공개·유입 (검색·공유·SEO)<span class="ratio">6<i>/</i>7</span></h4>
+  <ul class="list"><li class="done"><span class="t">공유 OG 카드(functions/share/ 엣지 렌더) — 카톡·X 미리보기</span></li>
+<li class="done"><span class="t">기본 OG 이미지 폴백</span><span class="n">존재하지 않는 id → 기본 문구 + og-default.png(332KB, 200) 확인</span></li>
+<li class="done"><span class="t">robots.txt · sitemap.xml.js 동적 생성</span><span class="n">robots 200 · sitemap 2,885 URL(523KB) 정상 생성</span></li>
+<li class="done"><span class="t">IndexNow 색인 제출(functions/indexnow.js)</span><span class="n">호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22)</span></li>
+<li class="done"><span class="t">엣지 메타 주입(_middleware.js)</span><span class="n">`/issue?id=` 에 og:title·description·image 주입 확인</span></li>
+<li class="part"><span class="t">imgproxy 외부 이미지 프록시</span><span class="n">앱에서만 확인</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-B. 데이터 파이프라인·추천<span class="ratio">9<i>/</i>10</span></h4>
+  <ul class="list"><li class="done"><span class="t">추천 신호 층(feed_signals) 15분 집계</span><span class="n">롤업 2일간 192회 전부 성공·집계본 최신. 원천이 87행인 건 런칭 전 트래픽 문제지 고장 아님</span></li>
+<li class="done"><span class="t">조회수 집계(content_daily_views)</span><span class="n">오늘치 이슈 1,447행·광장 312행. **스냅샷 총계와 실제 카운터가 상위 5건 전부 일치**(44/24/20/18/15) — 드리프트 0</span></li>
+<li class="done"><span class="t">릴스 실행 에이전트(agent_jobs · reel-agent)</span><span class="n">중간상태 무한정체 발견(389시간) → 90분 회수기 신설. 과거 코드버그 2건은 이미 해소됨</span></li>
+<li class="done"><span class="t">미디어 R2 이관·고아 정리(purge-orphan-media·video-migrate-worker)</span><span class="n">이관 대기 0건·미해결 실패 0건(video_migrations). 크론 288회/일 중 실패 1회(0.35%)</span></li>
+<li class="part"><span class="t">뉴스 썸네일 치유(heal-news-thumbs)</span><span class="n">24시간 수집 11,557건 중 썸네일 결손 951건(**8.2%**) — 원문에 사진이 없는 몫과 구분 못 해 '정상 범위'라고 단정은 못 한다</span></li>
+<li class="done"><span class="t">갈비스 시맨틱 라우터(galvis_intents)</span><span class="n">의도 57개·임베딩 적재됨(라우터 카탈로그 실재)</span></li>
+<li class="part"><span class="t">학습데이터 축적(sft_samples·distill-failures)</span><span class="n">크론(04:30 KST)은 도는데 **마지막 표본이 08-30 19:30 — 32시간째 0건**. 품질 필터에 다 걸린 건지 고장인지 미확인</span></li>
+<li class="part"><span class="t">창작 레퍼런스 DB(creator_patterns)</span><span class="n">48행 있으나 **08-14 이후 갱신 없음** — 수집이 멈춘 건지 의도인지 미확인</span></li>
+<li class="done"><span class="t">GA 동기화(ga-sync)</span><span class="n">ga_metrics(realtime·report28d) 13:50 UTC 갱신 — 10분 크론 정상. 2행짜리 upsert 구조가 맞다</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-C. 엣지 함수 47종 — 역할별 헬스 (전수)<span class="ratio">9<i>/</i>11</span></h4>
+  <ul class="list"><li class="done"><span class="t">수집(크론)</span><span class="n">collect-raw-news · collect-rss-news · collect-community-hot · collect-external-trends · collect-youtube-hot 스케줄 실행 · **Authorization 헤더**(없으면 401인데 이력엔 succeede</span></li>
+<li class="done"><span class="t">생성(크론)</span><span class="n">generate-galla-news · generate-community-plaza · generate-predict-markets · generate-ai-arguments 산출물 품질 · 중복 · 원가 기록 generate-galla-news·predict-markets·commun</span></li>
+<li class="done"><span class="t">정산(크론)</span><span class="n">predict-auto-resolve · weather-sync · heal-news-thumbs · purge-orphan-media 오판정 · 누락 predict-auto-resolve 270회/주. duel-ai-judge 는 유저 인증은 없으나 ai_budget_take 로 상한</span></li>
+<li class="part"><span class="t">갈비스</span><span class="n">galla-friend · galla-friend-ping · galla-jarvis · galvis-craftbench · galvis-redteam · distill-failures 응답 · 선톡 · 원가 · 레드팀 회귀 galla-friend만</span></li>
+<li class="done"><span class="t">창작</span><span class="n">generate-thumbnail · generate-video · generate-sticker · reel-agent GP 선차감·환불·검열 reel-agent 실패 46건 중 21건은 superseded(의도). 코드버그 2건은 이미 해소, 정체 7건은 회수기로 처리</span></li>
+<li class="part"><span class="t">미디어</span><span class="n">upload-media · stream-upload · stream-ingest · stream-to-r2 · video-migrate-worker · imgproxy 업로드·변환·R2·프록시 이미지만</span></li>
+<li class="part"><span class="t">인증</span><span class="n">naver-auth · passkey · delete-account 소셜복귀 · 패스키 · 탈퇴 / passkey 는 엣지함수가 아니라 Supabase Auth 내장 API 사용 — 번들에 registerPasskey·signInWithPasskey 실재 확인(리포의 passkey 함수</span></li>
+<li class="part"><span class="t">결제</span><span class="n">verify-iap · store-notify 영수증 검증 · 구독 생명주기 시뮬만</span></li>
+<li class="done"><span class="t">부가</span><span class="n">translate · gif-search · link-preview · article-reader · check-issue · galla-stt · ga-sync · yt 각 기능 동작 translate 는 uid 필수 + translate_gate 한도. send-push·plaza-</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-D. 크론 46개 — 스케줄 층 (⚠️ 3차 대조에서 발견)<span class="ratio">8<i>/</i>9</span></h4>
+  <ul class="list"><li class="done"><span class="t">뉴스 수집</span><span class="n">collect_raw_news(5분) · collect_rss_news(10분) · categorize_raw_news(10분) · group_related_news(15분) · fetch_article_thumbnail · fetch_missing_thumbnails · heal_ne</span></li>
+<li class="done"><span class="t">뉴스 생성·정리</span><span class="n">generate_galla_news(30분) · purge_galla_news_daily · purge_old_news_daily 품질 · 보존기간 6시간 60건 생성. 보존 정책(raw 30일·갈라뉴스 90일) 위반 raw 13건·갈라뉴스 0건 = 삭제 배치 꼬리</span></li>
+<li class="done"><span class="t">트렌드</span><span class="n">collect_external_trends(20분) · collect_youtube_hot(30분) · community_hot_collect/generate · hot_scores(10분) 급상승 델타 · 중복 portal_search_trends 03:20 갱신·youtube_hot</span></li>
+<li class="done"><span class="t">예측</span><span class="n">predict_markets_generate · predict_issue_market · predict_auto_resolve(매시) · predict_season_rollover · season_rollover 자동생성 5개 · 오판정 24h 생성 6개·정산 10개. 마감지남 미정산 </span></li>
+<li class="done"><span class="t">이슈</span><span class="n">settle-due-issues(매시) 마감·정산 마감 지났는데 미정산인 이슈 0건</span></li>
+<li class="part"><span class="t">추천·통계</span><span class="n">feed_signals_rollup(15분) · snapshot_daily_views · gallian_cache_refresh · pattern_perf_score · ga_sync(10분) 집계 정확성 조회수(오늘 170행)·gallian_cache(03:20) 정상. **feed_</span></li>
+<li class="done"><span class="t">미디어</span><span class="n">video_migrate(5분) · purge_orphan_media · media_ref_refresh 이관·고아정리 이관 대기 0건(밀린 것 없음)·미해결 실패 0건</span></li>
+<li class="done"><span class="t">운영</span><span class="n">bug_hunt(30분) · client_errors_purge · ai_user_usage_purge · ai_window_sweep · dm-expire-sweep(5분) · secret-mailbox-sweep · weather_sync(10분) · indexnow_ping 자동스</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-E. RPC 631개 · 스토리지 · 실시간<span class="ratio">4<i>/</i>7</span></h4>
+  <ul class="list"><li class="done"><span class="t">RPC 631개 — SECURITY DEFINER 권한 가드</span><span class="n">`current_user` 로 권한 판정하면 구멍(소유자로 평가됨) definer 496개 전수 — `current_user` 로 판정하는 함수 **0개**. 대신 가드 없이 익명이 부를 수 있던 쓰기 함수 15개를 찾아 회수(§26-1-B)</span></li>
+<li class="done"><span class="t">스토리지 버킷 3종</span><span class="n">issues · plaza-images · profiles — 공개범위·용량·고아 3개 모두 용량제한·MIME 화이트리스트 있음. **쓰기 정책 3개에 소유자 검사가 없어** 남의 파일 삭제·덮어쓰기가 가능했다 → 소유자 조건으로 교체</span></li>
+<li class="done"><span class="t">실시간 구독</span><span class="n">follows(맞팔 즉시반영) · dm_messages · pager · 난장 publication 17표. 잠긴 컬럼은 comments.user_id(처리됨)·users(구독 코드 없음)뿐. `old` 비PK 필드를 쓰는 핸들러가 없어 default 복제ID로 충분</span></li>
+<li class="part"><span class="t">RLS 정책 회귀</span><span class="n">남의 글 수정·삭제 차단 · PII 컬럼권한 RLS 꺼진 채 익명 쓰기 가능한 표 3개·익명 읽기 가능한 유저 표 4개를 찾아 전부 닫았다(§26). 남의 글 수정·삭제 정책 회귀는 아직 미실행</span></li></ul>
+</section>
+<section class="area">
+  <h4>9-B. 네이티브 플러그인·권한 (실기기 필요)<span class="ratio">2<i>/</i>15</span></h4>
+  <ul class="list"><li class="done"><span class="t">@capacitor/app — 딥링크·백그라운드 복귀</span></li>
+<li class="part"><span class="t">@capacitor/keyboard — resize:native</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-F. 환경변수·외부 의존 (⚠️ 4차 대조에서 발견 — 가장 조용히 죽는 층)<span class="ratio">11<i>/</i>25</span></h4>
+  <ul class="list"><li class="done"><span class="t">KMA_SERVICE_KEY</span><span class="n">날씨가 기상청 실황이 아니라 **Open-Meteo 모델 예측 폴백**으로 돈다. '지금 우리 동네'의 근거가 달라진다 244개 지역 관측·온도 전부 수신, 7분 전 갱신 확인 필요</span></li>
+<li class="done"><span class="t">EMBED_API_KEY</span><span class="n">OPENAI_API_KEY 로 폴백 — 임베딩 공간이 의도와 다를 수 있다(라우터 정확도) galvis_intents 57건 전부 임베딩 보유</span></li>
+<li class="part"><span class="t">ANTHROPIC_API_KEY</span><span class="n">클로드 경로 사용 불가(폴백은 있음)</span></li>
+<li class="part"><span class="t">FRIEND_* (7종) · JARVIS_* · *_MODEL</span><span class="n">전부 기본값 폴백 — 의도한 모델이 아닐 수 있다</span></li>
+<li class="part"><span class="t">죽은 키: CF_IMAGES_TOKEN · GNEWS_API_KEY · NEWS_API_KEY · TENOR_API_KEY</span><span class="n">코드가 안 씀 — 정리 대상</span></li>
+<li class="done"><span class="t">DeepSeek</span><span class="n">갈비스·뉴스·예측 생성 대화·자동생성 전부 galla_news 5분 전 생성. ai_spend 에 13개 함수·1,715회·$0.51/주 기록됨(원가 0인 행 0건)</span></li>
+<li class="part"><span class="t">Cloudflare R2</span><span class="n">모든 미디어 업로드·재생</span></li>
+<li class="part"><span class="t">Capgo(OTA)</span><span class="n">앱 웹자산 배포 앱이 옛 코드에 갇힘</span></li>
+<li class="done"><span class="t">YouTube API</span><span class="n">핫튜브 수집 급상승 목록 youtube_hot 5분 전 수집</span></li>
+<li class="done"><span class="t">기상청 / Open-Meteo</span><span class="n">날씨 폴백 중 weather_obs 244지역 5분 전 갱신</span></li>
+<li class="done"><span class="t">뉴스 RSS(연합·조선·동아 등)</span><span class="n">뉴스 수집 기사 유입 news_articles_raw 0분 전 수집</span></li></ul>
+</section>
+<section class="area">
+  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">4<i>/</i>9</span></h4>
+  <ul class="list"><li class="done"><span class="t">성능 — 콜드스타트·LCP·이미지 용량</span><span class="n">홈 실측 144개 2.23MB(JS 1.66MB)·DOM 943ms·로드 1296ms. 로고가 표시 12배라 120KB→29KB. dm.js 는 이미 유휴 로딩 처리됨</span></li>
+<li class="part"><span class="t">접근성 — 대비·포커스 링·스크린리더·큰 글씨</span><span class="n">§24 에 실측 있음 — 하단 탭 aria-label 5개·aria-current 추가 , :focus-visible 전역 추가 . **대비 5종 미달(최저 2.59)·터치타깃 25개 24px 미만·콘텐츠 썸네일 alt 4개**는 디자인 변경이라 사장님 판단 대기</span></li>
+<li class="done"><span class="t">반응형 — 태블릿·좁은 PC창(481~1099px)</span><span class="n">481·768·900·1099·1280 전부 가로스크롤 없음. 1280 신규 로드 시 PC 좌측 레일(홈·예측·메시지·트렌드·마이) 정상 생성</span></li>
+<li class="part"><span class="t">빈 상태(콘텐츠 0개) 화면</span><span class="n">난장·숏판 비운 뒤 미확인</span></li></ul>
+</section>
+<section class="area">
+  <h4>13. 페이지 대조표 (68개 — 고아 없는지 확인용)<span class="ratio">1<i>/</i>6</span></h4>
+  <ul class="list"><li class="part"><span class="t">shorts.html — 아무 데서도 링크 안 되는 고아 페이지(삭제 검토)</span></li></ul>
+</section>
+<section class="area">
+  <h4>15. 법무·심사 표시 (⚠️ 5차 발견 — 결제 붙이면 법 위반 소지)<span class="ratio">11<i>/</i>11</span></h4>
+  <ul class="list"><li class="done"><span class="t">사업자등록번호·상호·대표자명</span><span class="n">전자상거래법 §10 표시의무 웹 푸터·앱 설정·약관·청소년정책</span></li>
+<li class="part"><span class="t">통신판매업 신고번호</span><span class="n">결제 선행 요건 "준비 중"으로 표시 — **신고는 사장님 몫**</span></li>
+<li class="done"><span class="t">사업장 주소·연락처·이메일</span><span class="n">표시의무</span></li>
+<li class="done"><span class="t">호스팅 제공자 표시</span><span class="n">표시의무 Cloudflare·Supabase</span></li>
+<li class="done"><span class="t">청소년보호책임자</span><span class="n">청소년보호법 + `youth.html` 신설</span></li>
+<li class="done"><span class="t">개인정보 보호책임자</span><span class="n">개인정보보호법 §31</span></li>
+<li class="part"><span class="t">환불·청약철회 정책</span><span class="n">표시의무 terms·charges·wallet 에 언급은 있음</span></li>
+<li class="part"><span class="t">이용약관 본문</span><span class="n">2,887자 (내용 검토 필요)</span></li>
+<li class="part"><span class="t">개인정보처리방침 본문</span><span class="n">4,084자 (수집항목·보유기간 정확성 미검증)</span></li>
+<li class="done"><span class="t">앱스토어 개인정보 라벨(nutrition)</span><span class="n">심사 필수 docs/store-privacy-review.md (Tracking 전부 아니오 → ATT 불필요)</span></li>
+<li class="done"><span class="t">연령등급·심사 메모·테스트 계정 제공</span><span class="n">심사 필수 docs/store-privacy-review.md (17+ · 영문 심사메모 · 비번은 사장님이 직접 입력)</span></li></ul>
+</section>
+<section class="area">
+  <h4>16. 계정 상태·어뷰징<span class="ratio">4<i>/</i>8</span></h4>
+  <ul class="list"><li class="done"><span class="t">정지·제재 계정 상태</span><span class="n">기계는 다 있었는데 **아무것도 안 막고 있었다**(PERMISSIVE 정책은 OR 로 묶인다 · RLS 는 SECURITY DEFINER 안에서 평가 안 됨) RESTRICTIVE 정책 14개 + 쓰기 RPC 7개 가드 · docs/ban-enforcement-20260831.md</span></li>
+<li class="done"><span class="t">게스트(비로그인) 동선</span><span class="n">읽기 가능 범위 · 쓰기 차단 2026-08-30 — 이슈 읽기 O, 댓글·투표·숏판·제보 쓰기 전부 RLS 42501 차단. 투표 시도 시 로그인 화면으로 이동. 갈비스 2턴 후 가입 유도</span></li>
+<li class="part"><span class="t">도배 방지</span><span class="n">cooldown(날씨·이슈댓글) · daily_limit(썸네일·영상) 존재 — **댓글·DM·광장엔 없음**</span></li>
+<li class="part"><span class="t">좀비 세션(삭제된 계정 토큰)</span><span class="n">supabase.js 에 정리 로직 있음</span></li></ul>
+</section>
+<section class="area">
+  <h4>17. 배포·복구<span class="ratio">3<i>/</i>8</span></h4>
+  <ul class="list"><li class="done"><span class="t">DB 마이그레이션 351개 — 적용 상태 대조</span><span class="n">기록 363 vs 파일 385로 어긋나 있었다 — 22개가 직접 SQL 로 적용돼 기록 누락. 객체 실재 확인 후 채워 385==385</span></li>
+<li class="done"><span class="t">DB 백업·복구 리허설</span><span class="n">복원 리허설 완료 — 생성컬럼·트리거 두 곳에서 막혔던 것까지 해소</span></li>
+<li class="part"><span class="t">장애 감지(무엇이 알려주나)</span><span class="n">bug-alert 있으나 **RESEND 키 없어 메일 안 감**(10-F)</span></li></ul>
+</section>
+<section class="area">
+  <h4>18. 호환성 매트릭스<span class="ratio">1<i>/</i>7</span></h4>
+  <ul class="list"><li class="part"><span class="t">Chrome / Edge / Firefox</span><span class="n">Chrome 만</span></li></ul>
+</section>
+<section class="area">
+  <h4>19. 개인정보 국외이전 — AI 사업자 누락 (⚠️ 6차 발견, 법적 리스크)<span class="ratio">6<i>/</i>6</span></h4>
+  <ul class="list"><li class="done"><span class="t">AI 사업자 4곳 위탁·국외이전 고지</span><span class="n">방침 §6 전면 개정 — 수탁자 7곳(DeepSeek·OpenAI·Google·Anthropic·Resend 추가), §6-1 AI 전용 조항 신설</span></li>
+<li class="done"><span class="t">이전 국가·시점·방법·항목 명시</span><span class="n">이미 §6 카드에 전부 있었다(체크리스트가 낡음)</span></li>
+<li class="done"><span class="t">대화 내용의 보유기간·파기</span><span class="n">문구 있음 + **실제 동작 검증**: 대화 원본 `friend_relationship.chat_log` 은 CASCADE 로 정상 파기 . 그런데 학습 표본 복사본은 안 지워졌다(아래)</span></li>
+<li class="done"><span class="t">AI 학습 이용 여부 고지(sft_samples 로 축적 중)</span><span class="n">**방침과 코드가 어긋났다** — `curate_sft_samples` 가 `profile_summary`(평균 270자·최대 362자) 를 학습 표본 127건에 통째로 넣었고, `sft_samples` 엔 `user_id` 가 없어 탈퇴해도 못 지웠다. 제거·소급 정리·메일/전화 스크</span></li>
+<li class="done"><span class="t">AI 생성 콘텐츠 표시(갈라뉴스·예측·광장 자동생성)</span><span class="n">갈라뉴스는 배지+고지문 있었음. **예측 문항엔 없었다** — 285개 중 245개가 LLM 작성. `markets.ai_generated` 추가·목록 🤖 AI 태그·상세 고지문, 라이브 검증(245/285)</span></li>
+<li class="part"><span class="t">만 14세 미만 확인</span><span class="n">방침엔 있음 — 실제 동작 미확인</span></li></ul>
+</section>
+<section class="area">
+  <h4>20. 보안<span class="ratio">11<i>/</i>11</span></h4>
+  <ul class="list"><li class="done"><span class="t">service_role 키 클라이언트 노출</span></li>
+<li class="done"><span class="t">anon 키 노출</span><span class="n">정상(공개 전제)</span></li>
+<li class="part"><span class="t">CSP</span><span class="n">`default-src 'self'` 로 잠겨 있음. 다만 `script-src 'unsafe-inline'` 허용 · Cloudflare Insights 는 차단됨(통계 유실)</span></li>
+<li class="done"><span class="t">XSS — 유저 입력 렌더</span><span class="n">실페이로드로 감사(댓글·광장마커·핫튜브·날씨·제보) **제보 링크 `javascript:` → 관리자 세션 XSS 발견·수정**(서버 스킴검사 + admin safeUrl)</span></li>
+<li class="done"><span class="t">RPC 631개 권한 가드</span><span class="n">`current_user` 사용 **0건**. anon 실행가능 SECURITY DEFINER 340개 중 가드없음 88개를 전수 분류 — 쓰기 6개는 전부 안전(조회수 `+1` 하드코딩, 일기토는 시간게이트), 읽기는 `issue_demographics` k-익명성(30명·5명 컷) </span></li>
+<li class="done"><span class="t">RLS 회귀(남의 글 수정·삭제)</span><span class="n">타인 계정으로 이슈·댓글·광장·예측 수정/삭제 전부 0행, DM·알림·북마크·갈비스기억·GP장부 읽기 0행. 남의 행이 실제로 존재함을 확인해 검사가 헛돌지 않음을 검증(DM 729·알림 1,300)</span></li>
+<li class="part"><span class="t">PII 컬럼권한(users·user_profiles)</span><span class="n">잠금 이력 있음 — 회귀 미확인</span></li>
+<li class="done"><span class="t">의존성 취약점(npm audit)</span><span class="n">웹은 `package.json` 없음(정적). 엣지 함수 56개가 `supabase-js@2` 범위지정 — eszip 로 배포시 고정되나 재배포 때 조용히 최신으로 갈아탄다. 2.112.4 로 고정</span></li>
+<li class="done"><span class="t">오픈 리다이렉트 · 클릭재킹</span><span class="n">`frame-ancestors 'self'` 설정됨. **`login.html?next=` 가드가 정규식 블랙리스트라 5가지로 샜다** — `\\evil.com`·`/\\evil.com`(역슬래시→슬래시), ` javascript:`·`\tjavascript:`·`java\tscript</span></li>
+<li class="done"><span class="t">파일 업로드 검증(용량·타입·악성)</span><span class="n">upload-media 서버측 MIME 판정 + 종류별 MAX_BYTES</span></li>
+<li class="done"><span class="t">딥링크 파라미터 검증</span><span class="n">`?next`·`?to`·`?ref`·`?url` 소비처 전수. `to`·`ref` 는 화이트리스트라 안전. **`news?url=` 이 href 3곳에 그대로 들어가 `javascript:` XSS 가능** → `safeUrl`(URL 파서, http/https만) 추가·링크 숨김</span></li></ul>
+</section>
+<section class="area">
+  <h4>21. 데이터 정합성·비용<span class="ratio">6<i>/</i>6</span></h4>
+  <ul class="list"><li class="done"><span class="t">카운터 드리프트(like_count·comment_count vs 실제)</span><span class="n">44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료</span></li>
+<li class="done"><span class="t">고아 레코드(삭제된 부모의 자식)</span><span class="n">FK 없는 참조 58개 분류(다형성·외부ID 제외). **`ai_news_jobs` 3행·`ai_trends` 3행이 이미 고아** — 정리 후 이슈 자식 7표에 FK(일기토만 SET NULL)</span></li>
+<li class="part"><span class="t">R2 고아 파일 vs DB 참조</span><span class="n">purge_orphan_media 크론은 있음</span></li>
+<li class="done"><span class="t">AI 예산 소진·상한 동작(ai_budget_usage·model_for 다운그레이드)</span><span class="n">ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가**</span></li>
+<li class="part"><span class="t">Supabase·Cloudflare 한도(요청·저장·대역폭)</span><span class="n">DB 919MB(1,130→919 정리) · Storage 1.16GB는 참조 0건이라 백업 후 삭제 대기(사장님)</span></li>
+<li class="part"><span class="t">월 원가 추이 대비 요금제 마진</span><span class="n">ai_spend 수정 직후라 데이터 축적 필요</span></li></ul>
+</section>
+<section class="area">
+  <h4>22. 크론·엣지 인증 (2026-08-31 점검)<span class="ratio">5<i>/</i>5</span></h4>
+  <ul class="list"><li class="done"><span class="t">verify_jwt=false 34개 자체인증</span><span class="n">33개 통과. `article-reader` 만 무방비 → SSRF 호스트 차단 추가</span></li>
+<li class="done"><span class="t">크론 Authorization 없는 6개</span><span class="n">오탐. 5개는 `x-cron-secret`(Vault) 자체인증, `indexnow_ping` 은 대상이 우리 워커</span></li>
+<li class="done"><span class="t">galla.im/indexnow 외부 노출</span><span class="n">호스트 검사가 문자열 포함(`u.includes`)이라 `evil.com/?x=galla.im` 통과 → URL 파싱 + 콜로 캐시 60초 스로틀</span></li>
+<li class="done"><span class="t">크론 응답 타임아웃</span><span class="n">24시간 25건이 `Timeout of 60000 ms`. 인증이 아니라 `collect-youtube-hot` 이 60초를 넘던 것 — 일은 되는데 성공·실패 구분이 불가능했다. 180초로 상향 후 200 확인</span></li>
+<li class="part"><span class="t">food_resolve_job</span><span class="n">스케줄(`55 5,17`)은 있는데 실행 이력 0건 — 17:55 재확인 필요</span></li></ul>
+</section>
+<section class="area">
+  <h4>23. AI 사업자 학습 이용 — 방침 대조 (2026-08-31)<span class="ratio">4<i>/</i>5</span></h4>
+  <ul class="list"><li class="done"><span class="t">대화 원본을 탈퇴 시 파기</span><span class="n">`friend_relationship` CASCADE 확인</span></li>
+<li class="done"><span class="t">갈라뉴스 AI 표시</span><span class="n">리더에 '갈라뉴스 · AI 종합' 배지 + 고지문</span></li>
+<li class="done"><span class="t">예측 문항 AI 표시</span><span class="n">신설(`ai_generated`) — 라이브 245/285 확인</span></li>
+<li class="done"><span class="t">자체 활용 시 식별정보 제거</span><span class="n">`profile_summary` 제거·소급 정리</span></li></ul>
+</section>
+<section class="area">
+  <h4>24. 크론 51개 전수 · 접근성 (2026-09-01)<span class="ratio">5<i>/</i>5</span></h4>
+  <ul class="list"><li class="done"><span class="t">하단 탭 이름</span><span class="n">다섯 중 넷이 스크린리더에 안 읽힘 → aria-label 5개·aria-current 추가</span></li>
+<li class="done"><span class="t">포커스 링</span><span class="n">outline:none 만 있고 대체 없음 → :focus-visible 전역 추가, Tab 키로 확인</span></li>
+<li class="part"><span class="t">본문 대비</span><span class="n">5종 미달(최저 2.59 @9px, 푸터 3.0~4.2)</span></li>
+<li class="part"><span class="t">터치 타깃</span><span class="n">68개 중 25개가 24px 미만(찬반 버튼 18x51 등, WCAG 2.2 AA)</span></li>
+<li class="part"><span class="t">이미지 alt</span><span class="n">내비 5개 해결. 콘텐츠 썸네일 4개는 남음</span></li></ul>
+</section>
+<section class="area">
+  <h4>25. 앱 SPA 하단 여백 — #app 규칙 증발 (2026-09-01)<span class="ratio">5<i>/</i>5</span></h4>
+  <ul class="list"><li class="done"><span class="t">로그인(앱) — 패스키 버튼</span><span class="n">절반 가림, 스크롤 끝 네비 숨김·전체 노출</span></li>
+<li class="done"><span class="t">개인정보</span><span class="n">−33px</span></li>
+<li class="done"><span class="t">약관</span><span class="n">−23px (마지막 문단) +73px</span></li>
+<li class="done"><span class="t">계정 편집 — '변경사항 저장'</span><span class="n">−4px</span></li>
+<li class="done"><span class="t">설정·등급·퀘스트·지갑·충전내역·로그인기록·비번변경</span><span class="n">여유 있음(원래 정상)</span></li></ul>
+</section>
+<section class="area">
+  <h4>26. 백엔드 전수 점검 (2026-09-01, 크론·버그헌터·신호층)<span class="ratio">3<i>/</i>3</span></h4>
+  <ul class="list"><li class="done"><span class="t">email_probe_rate</span><span class="n">RLS off + anon 에 SELECT/INSERT/UPDATE/**DELETE** 8/31에 이메일 열거를 막으려 만든 IP·시간당 카운터다. **anon 이 지우면 제한이 초기화 = 방어 무력** RLS on · 권한 회수</span></li>
+<li class="done"><span class="t">places_tried</span><span class="n">〃 맛집 수집기 '이미 물어본 곳' 장부 — 통째로 채우면 수집이 조용히 멈춘다</span></li>
+<li class="done"><span class="t">places_usage</span><span class="n">〃 일일 사진 한도 장부 — '한도 소진'으로 조작 가능</span></li></ul>
+</section>
+</div>
+
+<div class="card">
+  <h2>막힘 <span class="cnt">20</span></h2>
+  <p class="lede">제가 뚫을 수 없는 것들. 사장님 키 등록·실기기·결제 오픈이 있어야 진행됩니다.</p>
+  <section class="area">
+  <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
+  <ul class="list"><li class="block"><span class="t">소셜 로그인 — 구글</span><span class="n">provider 키 미설정</span></li>
+<li class="block"><span class="t">소셜 로그인 — 카카오</span></li>
+<li class="block"><span class="t">소셜 로그인 — 네이버</span></li></ul>
+</section>
+<section class="area">
+  <h4>2. 콘텐츠 생성<span class="ratio">7<i>/</i>11</span></h4>
+  <ul class="list"><li class="block"><span class="t">이슈 발제</span><span class="n">잠김('곧 열려요')</span></li>
+<li class="block"><span class="t">예측 마켓 생성</span></li></ul>
+</section>
+<section class="area">
+  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
+  <ul class="list"><li class="block"><span class="t">면상톡·육성톡(1:1 통화)</span><span class="n">보류 기능</span></li></ul>
+</section>
+<section class="area">
+  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
+  <ul class="list"><li class="block"><span class="t">창작 대행(썸네일·영상)</span></li></ul>
+</section>
+<section class="area">
+  <h4>7. 경제<span class="ratio">8<i>/</i>13</span></h4>
+  <ul class="list"><li class="block"><span class="t">GP 상점 구매</span><span class="n">결제성</span></li>
+<li class="block"><span class="t">GC 충전</span><span class="n">결제성 차단이 정상</span></li>
+<li class="block"><span class="t">후원(발의자·크리에이터)</span><span class="n">결제성</span></li>
+<li class="block"><span class="t">출금 요청</span><span class="n">결제성</span></li>
+<li class="block"><span class="t">IAP 구매·복원</span><span class="n">스토어 상품 미등록</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-C. 엣지 함수 47종 — 역할별 헬스 (전수)<span class="ratio">9<i>/</i>11</span></h4>
+  <ul class="list"><li class="block"><span class="t">통화·라이브</span><span class="n">agora-token · rtc-sfu · turn-cred · call-push 토큰 발급 · SFU 연결 보류 기능</span></li></ul>
+</section>
+<section class="area">
+  <h4>9-B. 네이티브 플러그인·권한 (실기기 필요)<span class="ratio">2<i>/</i>15</span></h4>
+  <ul class="list"><li class="block"><span class="t">cordova-plugin-purchase — IAP</span><span class="n">상품 미등록</span></li>
+<li class="block"><span class="t">cordova-plugin-iosrtc — 통화</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-F. 환경변수·외부 의존 (⚠️ 4차 대조에서 발견 — 가장 조용히 죽는 층)<span class="ratio">11<i>/</i>25</span></h4>
+  <ul class="list"><li class="block"><span class="t">FIREBASE_SERVICE_ACCOUNT</span><span class="n">안드로이드 푸시 전무 알려진 미설정</span></li>
+<li class="block"><span class="t">APPLE_* (5종) · GOOGLE_SA_*</span><span class="n">IAP 영수증 검증 불가 스토어 등록 전</span></li>
+<li class="block"><span class="t">Shotstack</span><span class="n">영상 생성 창작 대행</span></li>
+<li class="block"><span class="t">Agora / CF Calls / TURN</span><span class="n">통화·라이브 음성 기능</span></li>
+<li class="block"><span class="t">Apple / Google 스토어</span><span class="n">IAP·구독 결제</span></li></ul>
+</section>
+</div>
+
+<div class="card">
+  <h2>아직 안 본 것 <span class="cnt">67</span></h2>
+  <p class="lede">위 '먼저 봐야 할 것'을 뺀 나머지입니다. 대부분 부가 기능·운영 도구·호환성이라 출시를 막지는 않지만, 하나씩은 봐야 합니다.</p>
+  <section class="area">
+  <h4>2. 콘텐츠 생성<span class="ratio">7<i>/</i>11</span></h4>
+  <ul class="list"><li class="todo"><span class="t">제보 — 미디어 첨부</span></li>
+<li class="todo"><span class="t">수정·삭제(owner-actions)</span></li></ul>
+</section>
+<section class="area">
+  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
+  <ul class="list"><li class="todo"><span class="t">난장 나가기·방장 권한</span></li>
+<li class="todo"><span class="t">육성 난장(라이브)</span></li>
+<li class="todo"><span class="t">삐삐 번호 골라 개통</span></li>
+<li class="todo"><span class="t">삐삐 음성 발신·수신</span><span class="n">마이크 필요</span></li></ul>
+</section>
+<section class="area">
+  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">위기 감지 → 상담카드</span></li>
+<li class="todo"><span class="t">컨시어지(택시·배달 딥링크)</span></li></ul>
+</section>
+<section class="area">
+  <h4>6. 트렌드<span class="ratio">8<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">핫튜브 영상 실제 재생</span><span class="n">에뮬 GPU 한계</span></li></ul>
+</section>
+<section class="area">
+  <h4>8. 설정·프로필<span class="ratio">8<i>/</i>10</span></h4>
+  <ul class="list"><li class="todo"><span class="t">프로필 사진 업로드</span></li>
+<li class="todo"><span class="t">내 글 통계</span></li></ul>
+</section>
+<section class="area">
+  <h4>10. 운영·백엔드<span class="ratio">7<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">관제센터(admin)</span></li>
+<li class="todo"><span class="t">RLS·컬럼권한 회귀</span></li></ul>
+</section>
+<section class="area">
+  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">3<i>/</i>8</span></h4>
+  <ul class="list"><li class="todo"><span class="t">일기토 AI 판정(duel-ai-judge)</span></li>
+<li class="todo"><span class="t">나만의 이모티콘(AI 생성·GP 차감·환불)</span></li>
+<li class="todo"><span class="t">DM 스티커 사용</span></li>
+<li class="todo"><span class="t">알림 목록·읽음 처리(notifications)</span></li>
+<li class="todo"><span class="t">갈라 성향 테스트(/match) 공유</span></li></ul>
+</section>
+<section class="area">
+  <h4>6-B. 공개·유입 (검색·공유·SEO)<span class="ratio">6<i>/</i>7</span></h4>
+  <ul class="list"><li class="todo"><span class="t">PWA 설치 유도·오프라인 페이지</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-B. 데이터 파이프라인·추천<span class="ratio">9<i>/</i>10</span></h4>
+  <ul class="list"><li class="todo"><span class="t">링크 미리보기·본문 추출(link-preview·article-reader)</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-C. 엣지 함수 47종 — 역할별 헬스 (전수)<span class="ratio">9<i>/</i>11</span></h4>
+  <ul class="list"><li class="todo"><span class="t">알림</span><span class="n">send-push · bug-alert APNs·FCM 발송 · 관리자 알림</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-D. 크론 46개 — 스케줄 층 (⚠️ 3차 대조에서 발견)<span class="ratio">8<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">갈비스</span><span class="n">galvis_ping_daily · friend_memory_maintain · curate-sft-daily · distill-failures-daily · craft-exemplars · galvis-craftbench/redteam(주간) 선톡·기억정리·학습데이터</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-E. RPC 631개 · 스토리지 · 실시간<span class="ratio">4<i>/</i>7</span></h4>
+  <ul class="list"><li class="todo"><span class="t">핵심 RPC 회귀</span><span class="n">place_bet · battle_action · submit_bug · get_my_account · gp_wallet · predict_state · open_room_create · log_share · claim_tour_bonus</span></li>
+<li class="todo"><span class="t">R2 버킷(galla-media)</span><span class="n">CORS · 공개 URL · 고아 파일</span></li>
+<li class="todo"><span class="t">DB 트리거</span><span class="n">알림 발생(notify 브릿지) · 카운터 갱신</span></li></ul>
+</section>
+<section class="area">
+  <h4>9-B. 네이티브 플러그인·권한 (실기기 필요)<span class="ratio">2<i>/</i>15</span></h4>
+  <ul class="list"><li class="todo"><span class="t">@capacitor/push-notifications</span><span class="n">Firebase 미설정</span></li>
+<li class="todo"><span class="t">@capacitor/haptics</span></li>
+<li class="todo"><span class="t">@capacitor/browser — 외부링크</span></li>
+<li class="todo"><span class="t">@capacitor/app-launcher — 택시·배달 딥링크</span></li>
+<li class="todo"><span class="t">권한: 카메라</span></li>
+<li class="todo"><span class="t">권한: 마이크</span></li>
+<li class="todo"><span class="t">권한: 사진 라이브러리(읽기·쓰기)</span></li>
+<li class="todo"><span class="t">권한: 위치(날씨)</span></li>
+<li class="todo"><span class="t">권한: 알림</span></li>
+<li class="todo"><span class="t">권한: 음성인식(iOS)·블루투스</span></li>
+<li class="todo"><span class="t">권한 거부 후 재요청 동선(help-permissions)</span></li></ul>
+</section>
+<section class="area">
+  <h4>10-F. 환경변수·외부 의존 (⚠️ 4차 대조에서 발견 — 가장 조용히 죽는 층)<span class="ratio">11<i>/</i>25</span></h4>
+  <ul class="list"><li class="todo"><span class="t">STORE_NOTIFY_KEY</span><span class="n">구독 생명주기 웹훅 인증 없음</span></li>
+<li class="todo"><span class="t">RESEND_API_KEY · BUG_ALERT_EMAIL</span><span class="n">**버그 제보가 와도 메일 알림이 안 간다**</span></li>
+<li class="todo"><span class="t">STT_* · CF_STT_MODEL · CF_WORKERS_AI_TOKEN</span><span class="n">음성 인식 경로</span></li>
+<li class="todo"><span class="t">TRANSLATE_MODEL</span><span class="n">다국어 번역</span></li>
+<li class="todo"><span class="t">Gemini / OpenAI / Anthropic</span><span class="n">폴백·임베딩·이미지 품질 저하·라우터</span></li>
+<li class="todo"><span class="t">Cloudflare Pages Functions</span><span class="n">OG카드·sitemap·imgproxy·IndexNow 공유 미리보기·색인</span></li>
+<li class="todo"><span class="t">GIPHY</span><span class="n">DM GIF GIF 검색</span></li>
+<li class="todo"><span class="t">Resend</span><span class="n">메일 발송 알림 메일</span></li>
+<li class="todo"><span class="t">GA</span><span class="n">통계 지표</span></li></ul>
+</section>
+<section class="area">
+  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">4<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">다국어(i18n · GALLA_t · locale 컬럼) — 번역 누락·깨짐</span></li>
+<li class="todo"><span class="t">translate 엣지 함수</span></li>
+<li class="todo"><span class="t">에러 상태(네트워크 실패·403·404)</span></li>
+<li class="todo"><span class="t">긴 텍스트·이모지·RTL 깨짐</span></li>
+<li class="todo"><span class="t">동시성(같은 계정 2기기)</span></li></ul>
+</section>
+<section class="area">
+  <h4>13. 페이지 대조표 (68개 — 고아 없는지 확인용)<span class="ratio">1<i>/</i>6</span></h4>
+  <ul class="list"><li class="todo"><span class="t">고객지원·문의(support) 문의 등록·답변</span></li>
+<li class="todo"><span class="t">리믹스 작성 흐름(write-remix → confirm.remix)</span></li>
+<li class="todo"><span class="t">사회적 환원 내역(donation-usage) 표시</span></li>
+<li class="todo"><span class="t">GP 사용 이력(gp-history) 정확성</span></li>
+<li class="todo"><span class="t">관리자 로그인(admin-login) 권한 게이트</span></li></ul>
+</section>
+<section class="area">
+  <h4>17. 배포·복구<span class="ratio">3<i>/</i>8</span></h4>
+  <ul class="list"><li class="todo"><span class="t">CI/CD</span><span class="n">없음 — Cloudflare Pages 자동배포만. **테스트 게이트 없이 main 푸시 = 즉시 배포**</span></li>
+<li class="todo"><span class="t">배포 전 자동 검사(0장 5종) 강제</span></li>
+<li class="todo"><span class="t">롤백 절차(웹·OTA·앱스토어)</span></li>
+<li class="todo"><span class="t">엣지 함수 배포 이력·롤백</span></li>
+<li class="todo"><span class="t">상태 페이지·다운타임 공지</span></li></ul>
+</section>
+<section class="area">
+  <h4>18. 호환성 매트릭스<span class="ratio">1<i>/</i>7</span></h4>
+  <ul class="list"><li class="todo"><span class="t">Safari(iOS·macOS)</span></li>
+<li class="todo"><span class="t">삼성 인터넷</span></li>
+<li class="todo"><span class="t">iOS 버전 하한(구형 기기)</span></li>
+<li class="todo"><span class="t">안드로이드 버전 하한 · 저사양</span></li>
+<li class="todo"><span class="t">태블릿·폴더블</span></li>
+<li class="todo"><span class="t">느린 3G · 오프라인 전환</span></li></ul>
+</section>
+<section class="area">
+  <h4>23. AI 사업자 학습 이용 — 방침 대조 (2026-08-31)<span class="ratio">4<i>/</i>5</span></h4>
+  <ul class="list"><li class="todo"><span class="t">외부 사업자 학습에 제공 안 함</span><span class="n">**DeepSeek 방침이 정반대를 명시** — 아래</span></li></ul>
+</section>
+</div>
+
+<footer>
+  이 페이지는 <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">python3 scripts/qa-board.py</span> 로 만듭니다.<br>체크리스트를 고쳤으면 이 스크립트를 다시 돌려서 아티팩트를 갱신하세요.
+</footer>
+
+</div>
