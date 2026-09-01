@@ -9,6 +9,14 @@
        가본 사람  → 또 간다 / 한 번이면 족   (경험자의 판정)
        안 가본 사람 → 가고 싶다 / 관심 없다   (수요·기대)
      둘의 낙차가 '과대평가 여행지' 랭킹이다. 상세는 travel_battle 마이그레이션 주석 참고.
+   · 화면 규칙(2026-09-01 확정) — 이걸 어기면 화면이 다시 중구난방이 된다:
+       ① **카드는 항상 '장소(spot)'다.** 나라·지역·도시는 카드가 아니라 내비게이션이다.
+          (섞어 놓으면 '우간다' 카드와 '돈키호테 롯폰기점' 카드가 나란히 뜬다 — 실제로 그랬다)
+       ② 둘러보기는 2계층: **나라 그리드 → (나라 선택) 지역 칩 + 장소 카드**.
+       ③ 사진의 뜻을 화면마다 다르게 준다:
+          · 둘러보기 = 장소 실사진 우선 → "그곳이 어떤 곳인가"
+          · 누가 갔나 = 그 크리에이터의 영상 썸네일 우선 → "그 사람이 어떻게 담았나"
+          · 나라 카드 = 그 나라 장소의 실사진(영상 썸네일 금지 — 나라가 '영상'처럼 보인다)
    · 🚨 지도는 아직 없다. tile.openstreetmap.org 는 OSM 재단이 **앱 배포에 쓰는 걸 금지**해서
      맛집도 출시 전 교체 과제로 남아 있다. 같은 빚을 하나 더 지지 않는다 —
      타일 문제가 풀리면 travel_map RPC 가 이미 준비돼 있으니 그때 붙인다.
@@ -89,9 +97,28 @@
       '<div class="tv-list" id="tv-list"></div>';
     panel.appendChild(SEC);
 
+    grab(panel);
+    wire();
+    return true;
+  }
+
+  /* 참조와 리스너를 갈라 놓는다.
+     ⚠️ SPA 스냅샷이 패널을 통째로 복원하면 .tv-sec 마크업은 돌아오지만 그 DOM 은 **새 노드**다.
+        예전엔 재부팅 경로가 참조만 다시 잡고 리스너를 안 붙여서, 화면은 멀쩡한데
+        나라 카드를 눌러도 아무 일이 없었다(실측 2026-09-01). 둘을 항상 같이 한다. */
+  function grab(panel) {
+    SEC = panel.querySelector(".tv-sec");
     CHIPS = SEC.querySelector("#tv-chips");
     CHIPS2 = SEC.querySelector("#tv-chips2");
     LIST = SEC.querySelector("#tv-list");
+  }
+
+  function wire() {
+    /* ⚠️ 가드를 data- 속성으로 두면 안 된다. 스냅샷이 마크업을 직렬화해 복원할 때
+       data-wired="1" 까지 같이 살아나서, 리스너가 없는 새 DOM 이 '이미 붙었다'고 주장한다.
+       JS 프로퍼티는 직렬화되지 않으므로 복원된 노드에선 항상 false 다. */
+    if (!SEC || SEC.__tvWired) return;
+    SEC.__tvWired = true;
 
     SEC.querySelector("#tv-openmap").addEventListener("click", openMap);
     SEC.querySelector("#tv-seg").addEventListener("click", function (e) {
@@ -112,18 +139,28 @@
       AREA = b.dataset.area || null;
       paintChips(); load();
     });
-    LIST.addEventListener("click", function (e) {
+    LIST.addEventListener("click", async function (e) {
+      var cc = e.target.closest("[data-country]");
+      if (cc) {
+        COUNTRY = cc.dataset.country; AREA = null;
+        await loadAreas(); paintChips(); load();
+        try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
+        return;
+      }
       var card = e.target.closest("[data-place]");
       if (card) openDetail(card.dataset.place);
     });
-    return true;
   }
 
   /* ── 칩 ───────────────────────────────────────────── */
   var COUNTRIES = [];
   async function loadCountries() {
-    var r = await rpc("travel_countries", { p_limit: 40 });
+    var r = await rpc("travel_country_cards", { p_limit: 40 });
     COUNTRIES = (r && r.countries) || [];
+  }
+  function countryOf(code) {
+    for (var i = 0; i < COUNTRIES.length; i++) if (COUNTRIES[i].code === code) return COUNTRIES[i];
+    return null;
   }
   var AREAS = [];
   async function loadAreas() {
@@ -134,14 +171,13 @@
   }
   function paintChips() {
     if (!CHIPS) return;
+    /* 나라를 고르기 전엔 칩이 없다 — 나라 선택은 그리드가 맡는다.
+       칩과 그리드가 같은 일을 두 번 하면 유저는 뭘 눌러야 할지 모른다. */
     var html = "";
-    if (VIEW === "feed") {
-      html = '<button type="button" class="tv-chip' + (COUNTRY ? "" : " on") + '" data-cc="">전체</button>' +
-        COUNTRIES.map(function (c) {
-          return '<button type="button" class="tv-chip' + (COUNTRY === c.code ? " on" : "") +
-                 '" data-cc="' + esc(c.code) + '">' + flag(c.code) + " " + esc(c.name || c.code) +
-                 ' <i>' + c.n + "</i></button>";
-        }).join("");
+    if (VIEW === "feed" && COUNTRY) {
+      var c = countryOf(COUNTRY);
+      html = '<button type="button" class="tv-chip back" data-cc="">← 전체 나라</button>' +
+             '<span class="tv-crumb">' + flag(COUNTRY) + " " + esc((c && c.name) || COUNTRY) + "</span>";
     }
     CHIPS.innerHTML = html;
     CHIPS.hidden = !html;
@@ -160,10 +196,29 @@
     CHIPS2.hidden = !show;
   }
 
+  /* ── 나라 카드 ────────────────────────────────────────
+     커버는 **그 나라 장소의 실사진**만 쓴다. 영상 썸네일을 쓰면 나라가 '영상'처럼 보인다. */
+  function countryHTML(c) {
+    var names = (c.names || []).slice(0, 3).join(" · ");
+    return '<button type="button" class="tv-cc" data-country="' + esc(c.code) + '">' +
+      '<div class="tv-cc-img">' +
+        (c.cover ? '<img src="' + esc(c.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                 : '<span class="tv-ph">' + flag(c.code) + "</span>") +
+        '<span class="tv-cc-flag">' + flag(c.code) + "</span>" +
+      "</div>" +
+      '<div class="tv-cc-b">' +
+        '<div class="tv-cc-n">' + esc(c.name || c.code) + "</div>" +
+        '<div class="tv-cc-s">' + c.spots + "곳 · 크리에이터 " + c.creators + "명</div>" +
+        (names ? '<div class="tv-cc-p">' + esc(names) + "</div>" : "") +
+      "</div></button>";
+  }
+
   /* ── 목록 ─────────────────────────────────────────── */
   function cardHTML(p) {
-    var sub = [p.admin1, p.city, p.country].filter(Boolean)
-                .filter(function (v, i, arr) { return arr.indexOf(v) === i; })   // 상하이시/상하이 중복 제거
+    /* 나라를 이미 고른 화면에서 나라명을 또 붙이면 줄이 지저분해진다 —
+       칩에 '🇯🇵 일본'이 이미 떠 있다. 지역만 남긴다. */
+    var sub = [p.admin1, p.city, COUNTRY ? null : p.country].filter(Boolean)
+                .filter(function (v, i, arr) { return arr.indexOf(v) === i; })
                 .join(" · ");
     var badge = SCALE_TX[p.scale] || KIND_TX[p.kind] || "";
     var a = p.again || 0, o = p.once || 0, w = p.want || 0;
@@ -211,11 +266,18 @@
                 '<span class="tv-mini-n">' + esc(p.name) + "</span></button>";
             }).join("") + "</div></section>";
         }).join("") : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
+      } else if (!COUNTRY) {
+        /* 1계층 — 나라 그리드. 여행은 '어디 나라 갈까'에서 시작한다. */
+        LIST.innerHTML = COUNTRIES.length
+          ? '<div class="tv-grid">' + COUNTRIES.map(countryHTML).join("") + "</div>"
+          : '<div class="tv-empty">아직 모인 곳이 없어요.</div>';
       } else {
-        var f = await rpc("travel_feed", { p_country: COUNTRY, p_area: AREA, p_limit: 40 });
+        /* 2계층 — 그 나라의 장소만. scale='spot' 고정이라 나라·지역 행이 섞이지 않는다. */
+        var f = await rpc("travel_feed", {
+          p_scale: "spot", p_country: COUNTRY, p_area: AREA, p_limit: 40 });
         var fp = (f && f.places) || [];
         LIST.innerHTML = fp.length ? fp.map(cardHTML).join("")
-          : '<div class="tv-empty">아직 이 나라 데이터가 없어요.</div>';
+          : '<div class="tv-empty">이 지역엔 아직 장소가 없어요. 크리에이터가 다녀가면 채워집니다.</div>';
       }
     } finally { loading = false; }
   }

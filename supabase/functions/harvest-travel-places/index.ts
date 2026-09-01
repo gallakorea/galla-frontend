@@ -257,9 +257,20 @@ async function tourapi(name: string) {
   const items = body?.response?.body?.items?.item;
   const list = Array.isArray(items) ? items : items ? [items] : [];
   const want = norm(name);
+  /* 🚨 여기가 국내 데이터를 통째로 오염시킨 자리다(실측 2026-09-01).
+     searchKeyword2 는 **제목에 그 글자가 들어간 아무거나**를 돌려준다:
+       '부산' → 감천사(부산) / '서울' → 가치서울 롯데백화점 / '남해' → 계남해변
+       '제주' → 강촌제주산흑돼지 / '대한민국' → 광명마당극축제X대한민국마당극축제
+     `title.includes(query)` 로 받으면 전부 통과한다. 관문을 셋으로 조인다:
+       ⓐ 두 글자 이하 질의는 아예 안 받는다(부산·서울·제주가 여기서 걸린다)
+       ⓑ 제목이 질의로 **시작**하거나 완전히 같아야 한다('계남해변'은 '남해'로 시작하지 않는다)
+       ⓒ 질의가 제목보다 훨씬 짧으면(절반 미만) 다른 가게다 */
+  if (want.length < 3) return null;
   const hit = list.find((it: any) => {
     const t = norm(it?.title);
-    return t.includes(want) || want.includes(t);
+    if (!t) return false;
+    if (t === want) return true;
+    return t.startsWith(want) && want.length >= t.length * 0.5;
   });
   if (!hit) return null;
   const lat = Number(hit.mapy), lon = Number(hit.mapx);
@@ -353,7 +364,9 @@ Deno.serve(async (req) => {
 
       let hit: any = null;
       try {
-        if (cc === "KR") {
+        if (cc === "KR" && scale === "spot") {
+          /* ⚠️ 관광공사는 **개별 장소 검색기**다. '서울'·'제주' 같은 지역명을 던지면
+             그 글자가 든 엉뚱한 가게를 돌려준다. 지역 단위는 OSM/위키데이터로 보낸다. */
           geoCalls++;
           const t = await tourapi(ko || query);
           if (t) {
