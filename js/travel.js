@@ -37,11 +37,14 @@
   var loading = false;
 
   /* 진영 라벨 — 화면 문구를 한 곳에 모은다. 네 곳에 흩어 놓으면 축이 조용히 갈라진다. */
+  /* 판정은 **둘뿐**이다(사장님: 선택지가 너무 많다).
+     '가고 싶다'는 판정이 아니라 찜(하트)으로 뺐고 '관심 없다'는 없앴다 — 누를 이유가 없다.
+     want/pass 라벨은 옛 댓글의 진영 표시에만 남긴다. */
   var V = {
-    again: { label: "또 간다",       tone: "hot",  side: "been" },
-    once:  { label: "한 번이면 족",  tone: "cold", side: "been" },
-    want:  { label: "가고 싶다",     tone: "want", side: "not"  },
-    pass:  { label: "관심 없다",     tone: "pass", side: "not"  },
+    again: { label: "또 간다",      tone: "hot"  },
+    once:  { label: "한 번이면 족", tone: "cold" },
+    want:  { label: "가고 싶다",    tone: "want" },
+    pass:  { label: "관심 없다",    tone: "pass" },
   };
 
   /* ── 공용 ─────────────────────────────────────────── */
@@ -238,7 +241,7 @@
     var votes = a + o > 0
       ? '<span class="tv-v hot">또 간다 ' + Math.round(a * 100 / (a + o)) + "%</span>" +
         '<span class="tv-vn">가본 사람 ' + (a + o) + "명</span>"
-      : (w > 0 ? '<span class="tv-v want">가고 싶다 ' + w + "</span>" : '<span class="tv-vn">아직 표 없음</span>');
+      : (w > 0 ? '<span class="tv-v want">♡ ' + w + "</span>" : '<span class="tv-vn">아직 표 없음</span>');
     return '<article class="tv-card" data-place="' + esc(p.id) + '">' +
       '<div class="tv-thumb">' +
         (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
@@ -614,7 +617,6 @@
     var sub = [p.city, p.country].filter(Boolean).join(" · ");
     var visited = (s.again || 0) + (s.once || 0);
     var pct = visited ? Math.round(s.again * 100 / visited) : 0;
-    var wantPct = (s.want + s.pass) ? Math.round(s.want * 100 / (s.want + s.pass)) : 0;
 
     d.innerHTML =
       '<div class="tv-sheet">' +
@@ -631,18 +633,31 @@
           (p.status === "pending"
             ? '<div class="tv-warn">좌표를 아직 못 찾은 곳이에요. 지도에는 안 올라갑니다.</div>' : "") +
 
-          /* 판정 — 두 축을 시각적으로도 갈라 놓는다. 같이 붙여 놓으면 안 가본 사람이
-             '또 간다'를 누른다(그러면 경험자 표가 통째로 오염된다). */
+          /* 설명 — 지어낸 문장이 아니라 위키백과·관광공사에서 가져온 것이다.
+             출처를 함께 띄운다(CC BY-SA·공공누리 둘 다 표시 의무가 있다). */
+          (p.summary
+            ? '<p class="tv-desc">' + esc(p.summary) +
+              (p.summary_url
+                ? ' <a href="' + esc(p.summary_url) + '" target="_blank" rel="noopener">' +
+                  (p.summary_src === "tour" ? "한국관광공사" : "위키백과") + " ↗</a>"
+                : ' <span class="tv-desc-s">' +
+                  (p.summary_src === "tour" ? "한국관광공사" : "위키백과") + "</span>") +
+              "</p>"
+            : "") +
+
+          /* 판정 두 개 + 찜 하나. 넷을 늘어놓으면 유저가 '나는 가본 사람인가'부터 분류해야 한다. */
           '<div class="tv-judge">' +
-            '<div class="tv-jrow"><span class="tv-jl">가봤다면</span>' +
-              voteBtn("again", mine, s.again) + voteBtn("once", mine, s.once) + "</div>" +
-            '<div class="tv-jrow"><span class="tv-jl">아직 안 가봤다면</span>' +
-              voteBtn("want", mine, s.want) + voteBtn("pass", mine, s.pass) + "</div>" +
+            voteBtn("again", mine, s.again) + voteBtn("once", mine, s.once) +
+            '<button type="button" class="tv-heart' + (CUR.saved ? " on" : "") + '" id="tv-save"' +
+              ' aria-label="가고 싶다">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>' +
+              (s.want ? '<i>' + s.want + "</i>" : "") + "</button>" +
           "</div>" +
+          '<div class="tv-jhint">가봤다면 판정하고, 아직이면 하트로 담아두세요</div>' +
 
           (visited ? '<div class="tv-gauge"><div class="tv-gbar"><i style="width:' + pct + '%"></i></div>' +
                      '<div class="tv-gtx">가본 ' + visited + "명 중 " + pct + "%가 또 간다" +
-                     (s.want + s.pass ? " · 안 가본 사람 " + wantPct + "%는 가고 싶다" : "") + "</div></div>"
+                     (s.want ? " · " + s.want + "명이 담아둠" : "") + "</div></div>"
                    : "") +
           (s.hype > 0.4 && visited >= 3
             ? '<div class="tv-hype">기대가 실제보다 앞선 곳 — 과대평가 지수 ' + s.hype + "</div>" : "") +
@@ -668,7 +683,8 @@
       "</div>";
 
     d.querySelector(".tv-judge").addEventListener("click", function (e) {
-      var b = e.target.closest(".tv-vote"); if (b) judge(b.dataset.v);
+      var b = e.target.closest(".tv-vote"); if (b) return judge(b.dataset.v);
+      if (e.target.closest("#tv-save")) toggleSave();
     });
     d.querySelector("#tv-write").addEventListener("submit", function (e) {
       e.preventDefault(); say();
@@ -688,6 +704,23 @@
     paintDetail();
     var c2 = document.querySelector("#tv-cmts"); if (c2 && keep) c2.innerHTML = keep;
     load();   // 목록의 표 수치도 같이 갱신
+  }
+
+  async function toggleSave() {
+    if (!(await loggedIn())) return needLogin();
+    var r = await rpc("travel_save", { p_id: CUR.place.id });
+    if (!r || !r.ok) return toast("실패했어요.");
+    CUR.saved = r.saved;
+    if (r.want != null) CUR.stats.want = r.want;
+    var b = document.querySelector("#tv-save");
+    if (b) {
+      b.classList.toggle("on", !!r.saved);
+      var i = b.querySelector("i");
+      if (CUR.stats.want) { if (i) i.textContent = CUR.stats.want;
+        else b.insertAdjacentHTML("beforeend", "<i>" + CUR.stats.want + "</i>"); }
+      else if (i) i.remove();
+    }
+    toast(r.saved ? "가고 싶은 곳에 담았어요" : "담기를 해제했어요");
   }
 
   async function loadTalk(id) {

@@ -123,9 +123,19 @@ body.tv-lock { overflow: hidden; }
 }
 
 /* 판정 — 두 축을 시각적으로 갈라 놓는다(안 가본 사람이 '또 간다'를 누르면 축이 오염된다) */
-.tv-judge { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-.tv-jrow { display: flex; align-items: center; gap: 6px; }
-.tv-jl { flex: 0 0 84px; font-size: 11.5px; color: var(--text-low); font-weight: 700; }
+/* 판정 둘 + 찜 하나. 넷을 늘어놓던 걸 줄였다(사장님: 선택지가 너무 많다). */
+.tv-judge { margin-top: 16px; display: flex; align-items: stretch; gap: 7px; }
+.tv-jhint { margin-top: 7px; font-size: 11.5px; color: var(--text-low); }
+.tv-heart {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 52px; padding: 0 12px; cursor: pointer;
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--text-mid);
+}
+.tv-heart svg { width: 19px; height: 19px; }
+.tv-heart i { font-style: normal; font-size: 12px; font-weight: 800; }
+.tv-heart.on { background: rgba(255,92,43,.16); border-color: transparent; color: #ff5c2b; }
+.tv-heart.on svg { fill: #ff5c2b; }
 .tv-vote {
   flex: 1 1 0; padding: 10px 4px; border-radius: var(--r-md); cursor: pointer;
   border: 1px solid var(--line-1); background: var(--surface-2);
@@ -369,3 +379,10 @@ body.tv-lock { overflow: hidden; }
 .tv-map .tv-step.last  { background: #ff5c2b; }
 .tv-step-n { font-size: 11px; font-weight: 800; color: #06231c; }
 .tv-map .tv-step.last .tv-step-n { color: #fff; }
+
+/* 여행지 설명 — 위키백과·관광공사에서 가져온 두 문장 */
+.tv-desc {
+  margin: 12px 0 0; font-size: 13px; line-height: 1.62; color: var(--text-mid);
+}
+.tv-desc a { color: var(--accent-2, #7d92ff); text-decoration: none; font-size: 11.5px; font-weight: 700; }
+.tv-desc-s { font-size: 11.5px; color: var(--text-low); }
