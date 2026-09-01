@@ -109,6 +109,24 @@ const SYS = [
       (남극은 실제 목적지지만 나라 좌표계가 없어 마찬가지로 제외한다 — 나중에 별도로 다룬다.) */
 const MACRO = /^(북극|남극|arctic|antarctic(a)?|유럽|아시아|아프리카|아메리카|오세아니아|중동|동남아(시아)?|북미|남미|중남미|서유럽|동유럽|남미대륙|태평양|대서양|인도양|지중해|europe|asia|africa|america|oceania|middle\s*east|pacific|atlantic|indian\s+ocean)$/i;
 
+/* 캐시를 씌운 지오코딩.
+   ⚠️ 회차 시간의 대부분이 Nominatim 대기였다(geoCalls 49~77 × 1.1초). 그런데 크리에이터들은
+      같은 곳을 반복해서 간다 — 같은 질의를 다시 묻지 않으면 그 시간이 통째로 사라진다.
+      캐시 적중은 지오 장부도 안 쓴다(외부 호출이 아니니까). */
+async function geocodeCached(q: string, cc: string | null, ko: string, scale: string) {
+  const key = (cc || "??") + "|" + q.toLowerCase().replace(/\s+/g, " ").trim();
+  try {
+    const { data } = await supa.rpc("travel_geocache_get", { p_key: key });
+    if (data) return { cached: true, hit: !!data.hit, value: data.payload || null };
+  } catch (_) { /* 캐시 실패는 그냥 캐시 미스로 */ }
+  return { cached: false, hit: false, value: null, key };
+}
+async function geocacheSave(cc: string | null, q: string, value: any) {
+  const key = (cc || "??") + "|" + q.toLowerCase().replace(/\s+/g, " ").trim();
+  try { await supa.rpc("travel_geocache_put", { p_key: key, p_hit: !!value, p_payload: value }); }
+  catch (_) {}
+}
+
 /* ── ② 해외: OSM Nominatim ────────────────────────────
    ⚖️ ODbL 이다. 실재 확인과 좌표 용도로만 쓰고 화면에 출처를 표시한다.
       QID 가 딸려 오면 좌표를 위키데이터(CC0) 것으로 갈아끼운다(geo_source 로 구분).  */
@@ -320,7 +338,9 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   let channel = url.searchParams.get("channel") || "";
-  const n = Math.min(Number(url.searchParams.get("n") || "8"), 20);
+  /* 상한이 20이라 시간 상자(110초)를 못 채우고 회차가 54초에 끝나고 있었다.
+     이제는 **시계가 안전장치**라 편수를 크게 잡아도 위험하지 않다 — 못 끝내면 다음 회차가 잇는다. */
+  const n = Math.min(Number(url.searchParams.get("n") || "8"), 120);
 
   if (!channel) {
     const { data } = await supa.rpc("travel_channel_to_harvest");
@@ -348,7 +368,7 @@ Deno.serve(async (req) => {
   const items: any[] = [];
   const done: string[] = [];
   const wantCredit = new Map<string, any[]>();     // 커먼즈 파일명 → 그 파일을 쓰는 item 들
-  let extracted = 0, verified = 0, dropped = 0, geoCalls = 0;
+  let extracted = 0, verified = 0, dropped = 0, geoCalls = 0, cacheHits = 0;
   const dropSamples: string[] = [];   // 검증에 떨어진 이름 — 왜 안 들어오는지 눈으로 봐야 고친다
   let halted = "";
 
@@ -397,19 +417,35 @@ Deno.serve(async (req) => {
             if (o && nameLooksSame(o, query)) hit = fromOsm(o, ko, scale);
           }
         } else {
-          geoCalls++;
           /* 지역(도시·나라)은 도시명을 덧붙이면 오히려 안 걸린다 — 이름 하나로 묻는다. */
           const q = scale === "spot" ? [query, city].filter(Boolean).join(", ") : query;
-          const o = await nominatim(q, cc || null);
-          await sleep(1100);                       // Nominatim 정책: 초당 1회
-          if (o && nameLooksSame(o, query)) hit = fromOsm(o, ko, scale);
+          const c1 = await geocodeCached(q, cc || null, ko, scale);
+          if (c1.cached) {
+            cacheHits++;
+            if (c1.hit && c1.value) hit = { ...c1.value, name_ko: c1.value.name_ko || ko };
+          } else {
+            geoCalls++;
+            const o = await nominatim(q, cc || null);
+            await sleep(1100);                     // Nominatim 정책: 초당 1회
+            const v = (o && nameLooksSame(o, query)) ? fromOsm(o, ko, scale) : null;
+            await geocacheSave(cc || null, q, v);
+            if (v) hit = v;
+          }
           /* 1차 실패 — 도시명을 떼고 이름 하나로 한 번 더. OSM 의 도시 경계 밖(교외·시장 안)에
              찍힌 가게가 이 한 번에 걸린다. */
-          if (!hit && scale === "spot" && city && geoCalls < budget) {
-            geoCalls++;
-            const o2 = await nominatim(query, cc || null);
-            await sleep(1100);
-            if (o2 && nameLooksSame(o2, query)) hit = fromOsm(o2, ko, scale);
+          if (!hit && scale === "spot" && city) {
+            const c2 = await geocodeCached(query, cc || null, ko, scale);
+            if (c2.cached) {
+              cacheHits++;
+              if (c2.hit && c2.value) hit = { ...c2.value, name_ko: c2.value.name_ko || ko };
+            } else if (geoCalls < budget) {
+              geoCalls++;
+              const o2 = await nominatim(query, cc || null);
+              await sleep(1100);
+              const v2 = (o2 && nameLooksSame(o2, query)) ? fromOsm(o2, ko, scale) : null;
+              await geocacheSave(cc || null, query, v2);
+              if (v2) hit = v2;
+            }
           }
         }
         /* 2차 실패 — 위키데이터 검색(OSM 과 구멍이 다르다: OSM 은 가게에, 위키데이터는
@@ -532,7 +568,7 @@ Deno.serve(async (req) => {
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
-             geoCalls, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
+             geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
              ...res, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
 });

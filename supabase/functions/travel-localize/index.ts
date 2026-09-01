@@ -118,6 +118,21 @@ Deno.serve(async (req) => {
   }
 
   const { data: res } = await supa.rpc("travel_localize_apply", { p_items: items });
-  return j({ ok: true, picked: list.length, ...(res || {}),
+
+  /* 광역이 아예 비어 있는 장소도 여기서 채운다.
+     수확 경로에서 뺀 일이다 — 거기선 장소마다 1.1초가 붙어 회차를 잡아먹었다. */
+  let a1 = 0;
+  try {
+    const { data: miss } = await supa.rpc("travel_places_missing_admin1", { p_limit: 12 });
+    const rows: any[] = [];
+    for (const m of ((miss || []) as any[])) {
+      const v = await koFromOsm(Number(m.lat), Number(m.lon), "admin1");
+      await sleep(1100);
+      if (v) { rows.push({ id: m.id, admin1: v }); a1++; }
+    }
+    if (rows.length) await supa.rpc("travel_admin1_save", { p_items: rows });
+  } catch (_) { /* 보강 실패가 한글화를 막지는 않는다 */ }
+
+  return j({ ok: true, picked: list.length, ...(res || {}), admin1Filled: a1,
              localized: items.filter((i) => i.ko).length, log });
 });
