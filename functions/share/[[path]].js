@@ -6,6 +6,7 @@
  *  /share/post/<id>             → 갈라리 숏판/롱판/사진
  *  /share/video/<id>            → 핫튜브 영상 (유튜브로 안 흘리고 갈라 랜딩으로 붙잡음)
  *  /share/news/<id>             → 갈라뉴스 (AI 3줄 요약)
+ *  /share/travel/<id|8자>       → 여행지 (누가 다녀갔나 + 판정)
  *  /share/comment/<scope>/<id>  → 댓글·대댓글 인용 카드 (scope=issue|news|market|plaza|post|video)
  *  /share/trend                 → 지금 갈라 실시간 트렌드 TOP (랜딩)
  *  /share/room/<id>             → 육성 난장 입장 초대 (랜딩)
@@ -28,6 +29,14 @@ const short = (n) => {
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "천";
   return String(n);
 };
+
+// 국가코드 → 국기. 여행 카드는 첫 글자부터 어디인지 보여야 열린다.
+function flagOf(cc) {
+  if (!cc || cc.length !== 2) return "📍";
+  try {
+    return String.fromCodePoint(...cc.toUpperCase().split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+  } catch { return "📍"; }
+}
 
 async function sbOne(query) {
   try {
@@ -452,6 +461,43 @@ export async function onRequestGet(context) {
       desc = `${clip(row.summary || "", 90) || "여러 기사를 AI가 3줄로 정리한 갈라뉴스."} · 오늘 뭐 터졌는지 갈라뉴스에서 다 봐.`;
       image = row.hero_image || defImg;
       dest = `${origin}/news.html?gn=${encodeURIComponent(id)}`;
+    }
+  } else if (type === "travel" && id) {
+    /* 여행지 카드의 알맹이는 '누가 갔나'다. 사진 좋은 여행지는 널렸지만
+       "빠니보틀·곽튜브가 다녀간 곳"은 갈라에만 있다 — 그게 열게 만드는 문장이다.
+       ⚠️ id 는 uuid 도 되고 주소에 쓰는 8자(sid)도 된다. 어느 쪽으로 링크가 만들어져도 열려야 한다. */
+    const key = /^[0-9a-f]{8}$/i.test(id) ? `sid=eq.${encodeURIComponent(id)}` : `id=eq.${encodeURIComponent(id)}`;
+    const row = await sbOne(`travel_places?${key}&select=id,slug,sid,name,country,country_code,city,admin1,summary,photo&limit=1`);
+    if (row) {
+      const src = await sbAll(`travel_place_sources?place_id=eq.${encodeURIComponent(row.id)}&select=channel,video_id&order=aired_at.desc&limit=12`);
+      const chans = [...new Set(src.map((v) => v.channel).filter(Boolean))];
+      const names = chans.length
+        /* ⚠️ 구독자 컬럼은 subs 다(subscribers 아님). 틀린 컬럼으로 order 를 걸면
+           PostgREST 가 400 을 주고, 여기선 그게 조용히 빈 배열이 돼서
+           카드의 알맹이인 '누가 갔나'가 통째로 사라진다(실측). */
+        ? await sbAll(`travel_channels?slug=in.(${chans.slice(0, 6).map(encodeURIComponent).join(",")})&select=slug,name,subs&order=subs.desc.nullslast`)
+        : [];
+      /* 채널명이 '빠니보틀 Pani Bottle'처럼 한글+영문 병기인 경우가 많다. 카드 한 줄에
+         셋을 넣으려면 한글만 남겨야 한다 — 영문만인 채널은 그대로 둔다. */
+      const shortName = (n) => {
+        const t = String(n || "").trim();
+        return /[가-힣]/.test(t) ? (t.replace(/\s*[A-Za-z0-9][A-Za-z0-9 .'&_-]*$/, "").trim() || t) : t;
+      };
+      const who = names.map((c) => shortName(c.name)).filter(Boolean);
+      /* 위치는 '가장 구체적인 한 곳 + 나라'. city 와 admin1 을 둘 다 쓰면
+         '기자 · 기자주'처럼 같은 말이 두 번 나오고 정작 나라가 빠진다. */
+      const where = [row.city || row.admin1, row.country]
+                      .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" · ");
+
+      title = `${flagOf(row.country_code)} ${clip(row.name, 40)}${where ? ` · ${clip(where, 24)}` : ""}`;
+      desc = who.length
+        ? `${clip(who.slice(0, 3).join("·"), 40)}${who.length > 3 ? ` 외 ${who.length - 3}명` : ""}이 다녀간 곳. 가볼 만한가? 강추냐 굳이냐, 갈라에서 판정하세요.`
+        : `${clip(row.summary || "여행 유튜버가 다녀간 곳", 80)} · 가볼 만한가? 갈라에서 판정하세요.`;
+      /* 사진은 '그 장소'가 먼저다. 크리에이터 썸네일은 얼굴·자막이 커서 눈길은 끌지만
+         공유받은 사람이 기대한 건 여행지다. 장소 사진이 없을 때만 영상 썸네일로 간다. */
+      const vid = (src[0] || {}).video_id;
+      image = row.photo || (vid ? `https://i.ytimg.com/vi/${encodeURIComponent(vid)}/maxresdefault.jpg` : defImg);
+      dest = `${origin}/travel/${encodeURIComponent(row.slug || "place")}-${row.sid}`;
     }
   } else if (type === "plaza" && id) {
     const row = await sbOne(`plaza_posts?id=eq.${encodeURIComponent(id)}&select=title,body,thumbnail,cover_image`);

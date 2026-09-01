@@ -105,6 +105,9 @@
           '<button type="button" class="tv-heart' + (CUR.saved ? " on" : "") + '" id="tv-save" aria-label="가고 싶다">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>' +
             (s.want ? "<i>" + s.want + "</i>" : "") + "</button>" +
+          '<button type="button" class="tv-shr" id="tv-share" aria-label="공유">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/></svg>' +
+          "</button>" +
         "</div>" +
         '<div class="tv-jhint">가볼 만한가? 판정하고, 담아두려면 하트</div>' +
 
@@ -146,7 +149,8 @@
     var judge = ROOT.querySelector(".tv-judge");
     if (judge) judge.addEventListener("click", function (e) {
       var b = e.target.closest(".tv-vote"); if (b) return doJudge(b.dataset.v);
-      if (e.target.closest("#tv-save")) toggleSave();
+      if (e.target.closest("#tv-save")) return toggleSave();
+      if (e.target.closest("#tv-share")) return share();
     });
     var hero = ROOT.querySelector("#tv-hero");
     if (hero) hero.addEventListener("click", function () { playHere(hero.dataset.vid); });
@@ -161,6 +165,22 @@
       /* 지도는 트렌드 탭에 산다 — 그쪽으로 보내고 지도를 연다. */
       (window.GALLA_nav || function (u) { location.href = u; })("search.html?tab=travel&map=1");
     });
+  }
+
+  /* 공유는 /share/travel/<sid> 로 보낸다 — 그 주소가 OG 카드를 만들고 예쁜 주소로 넘긴다.
+     ⚠️ 앱에서는 location.origin 이 capacitor://localhost 라 그걸 쓰면 죽은 링크가 된다.
+        GALLA_SITE 를 쓴다(js/supabase.js 가 심는다). */
+  function share() {
+    var p = CUR && CUR.place; if (!p) return;
+    var base = window.GALLA_SITE || "https://galla.im";
+    var key = p.sid || p.id;
+    var where = [p.city, p.country].filter(Boolean).join(" · ");
+    var url = base + "/share/travel/" + encodeURIComponent(key);
+    if (window.GALLA_share) {
+      GALLA_share({ url: url, title: p.name, text: p.name + (where ? " · " + where : "") + " — 가볼 만한가?" });
+    } else if (navigator.share) {
+      navigator.share({ title: p.name, url: url }).catch(function () {});
+    }
   }
 
   function playHere(vid) {

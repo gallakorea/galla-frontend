@@ -258,7 +258,7 @@ async function resolveSeo(path, params) {
 
 /* 발자국(어느 크리에이터가 갔나)이 이 페이지의 알맹이다 — 로봇에게도 그걸 보여준다 */
 async function travelExtras(id) {
-  const rows = await sbMany(`travel_place_sources?place_id=eq.${encodeURIComponent(id)}&select=channel,video_title,aired_at&order=aired_at.desc&limit=12`);
+  const rows = await sbMany(`travel_place_sources?place_id=eq.${encodeURIComponent(id)}&select=channel,video_id,video_title,aired_at&order=aired_at.desc&limit=12`);
   return { sources: rows };
 }
 
@@ -288,7 +288,11 @@ function travelSeo(row, extra) {
     row.name_local || row.name_en ? `현지 표기: ${row.name_local || row.name_en}` : "",
   ].filter(Boolean).join("\n\n");
   const canonical = travelUrl(row);
-  const image = row.photo || DEF_IMG;
+  /* 사진은 '그 장소'가 먼저. 없으면 크리에이터 영상 썸네일로 간다 —
+     /share/travel 카드와 같은 규칙이어야 카톡·검색에서 같은 그림이 뜬다. */
+  const firstVid = (extra?.sources || []).map((v) => v.video_id).filter(Boolean)[0];
+  const image = row.photo
+    || (firstVid ? `https://i.ytimg.com/vi/${encodeURIComponent(firstVid)}/maxresdefault.jpg` : DEF_IMG);
   return { k: "travel", thin, title: `${title} · 갈라 여행`, desc, canonical, image, ogType: "article",
     kicker: `${place || "여행"} · 갈라 여행`, h1, body, date: row.created_at,
     placeId: row.id, sources: extra?.sources || [],

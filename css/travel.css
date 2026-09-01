@@ -142,6 +142,14 @@ body.tv-lock { overflow: hidden; }
 .tv-heart i { font-style: normal; font-size: 12px; font-weight: 800; }
 .tv-heart.on { background: rgba(255,92,43,.16); border-color: transparent; color: #ff5c2b; }
 .tv-heart.on svg { fill: #ff5c2b; }
+/* 공유 — 하트와 같은 모양(둘 다 아이콘 전용)이라 규칙을 나눠 갖는다 */
+.tv-shr {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; padding: 0 11px; cursor: pointer;
+  border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--text-mid);
+}
+.tv-shr svg { width: 18px; height: 18px; }
 .tv-vote {
   flex: 1 1 0; padding: 10px 4px; border-radius: var(--r-md); cursor: pointer;
   border: 1px solid var(--line-1); background: var(--surface-2);
