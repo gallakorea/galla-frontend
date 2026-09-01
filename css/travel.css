@@ -519,3 +519,39 @@ body.tv-lock { overflow: hidden; }
 .tv-tr-s.up { color: #ff7a4d; font-weight: 800; }
 .tv-tr-s.dn { color: #7d92ff; }
 .tv-tr-s em { font-style: normal; color: var(--text-low); font-weight: 600; }
+
+/* 인증 핀 — 사진 대신 인증 마크를 그대로 보여준다(유네스코 🏛 / 국보 🏆 …) */
+.tv-map .tv-pin.cert, .maplibregl-marker.tv-pin.cert {
+  background: #fff8e6; border-color: #ffd166;
+}
+.tv-map .tv-pin.cert span { font-size: 17px; }
+
+/* 구독자 필터 칩 — 지도 위쪽(힌트 아래) */
+.tv-subs {
+  position: absolute; left: 0; right: 0; top: 58px; z-index: 3;
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 0 12px;
+}
+.tv-subs::-webkit-scrollbar { display: none; }
+.tv-schip {
+  flex: 0 0 auto; padding: 5px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(8px);
+  color: #fff; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+}
+.tv-schip.on { background: #fff; color: #111; }
+
+/* 히어로 재생 */
+.tv-hero.play { cursor: pointer; }
+.tv-hero-play {
+  position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border-radius: 50%; background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+}
+.tv-hero-play::after {
+  content: ""; position: absolute; left: 22px; top: 17px;
+  border-left: 19px solid #fff; border-top: 11px solid transparent; border-bottom: 11px solid transparent;
+}
+.tv-hero.vplaying { aspect-ratio: 16/9; }
+.tv-hero.vplaying iframe { width: 100%; height: 100%; border: 0; display: block; }
+.tv-h i { font-style: normal; font-weight: 600; font-size: 11.5px; color: var(--text-low); margin-left: 4px; }
+/* 고른 영상 줄 */
+.tv-vid.on { background: var(--surface-2); border-radius: 8px; }
+.tv-vid.on b { color: #38d6b0; }

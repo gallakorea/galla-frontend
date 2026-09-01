@@ -40,9 +40,12 @@
   /* 판정은 **둘뿐**이다(사장님: 선택지가 너무 많다).
      '가고 싶다'는 판정이 아니라 찜(하트)으로 뺐고 '관심 없다'는 없앴다 — 누를 이유가 없다.
      want/pass 라벨은 옛 댓글의 진영 표시에만 남긴다. */
+  /* ⚠️ 라벨만 바꾼다. DB 값(again/once)은 그대로 둔다 — 통계·과대평가 지수가 그 값에 걸려 있고,
+     이미 찍힌 표의 뜻도 유지된다. '또 간다/한 번이면 족'은 **가본 사람만** 답할 수 있어서
+     표가 안 모였다. '강추/굳이'는 숙소·식당·명소 어디에나 붙고 누구나 답한다(사장님 지시). */
   var V = {
-    again: { label: "또 간다",      tone: "hot"  },
-    once:  { label: "한 번이면 족", tone: "cold" },
+    again: { label: "강추", tone: "hot"  },
+    once:  { label: "굳이", tone: "cold" },
     want:  { label: "가고 싶다",    tone: "want" },
     pass:  { label: "관심 없다",    tone: "pass" },
   };
@@ -477,6 +480,7 @@
       '<div class="tv-map-c" id="tv-map-c"></div>' +
       '<button type="button" class="tv-map-x" id="tv-map-x" aria-label="닫기">✕</button>' +
       '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>' +
+      '<div class="tv-subs chip-scroll" id="tv-subs"></div>' +
       '<div class="tv-trips chip-scroll" id="tv-trips"></div>' +
       '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
     document.body.appendChild(MAPBOX);
@@ -485,6 +489,13 @@
       var b = e.target.closest("[data-route]"); if (!b) return;
       TRIP = null;                       // 크리에이터를 바꾸면 여정 선택은 버린다
       drawRoute(b.dataset.route || null);
+    });
+    MAPBOX.querySelector("#tv-subs").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-subs]"); if (!b) return;
+      MIN_SUBS = b.dataset.subs ? Number(b.dataset.subs) : null;
+      paintSubsChips();
+      /* 필터는 '전체 핀' 화면의 이야기다. 경로를 보는 중이면 경로를 유지한다. */
+      if (!ROUTE) refreshPins();
     });
     MAPBOX.querySelector("#tv-trips").addEventListener("click", function (e) {
       var b = e.target.closest("[data-trip]"); if (!b) return;
@@ -521,7 +532,7 @@
       MAP.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       /* moveend 마다 bbox 로 다시 물어본다 — 전 세계를 한 번에 내려받으면 안 된다. */
       MAP.on("moveend", refreshPins);
-      MAP.on("load", function () { MAP.resize(); refreshPins(); loadRouteChips(); });
+      MAP.on("load", function () { MAP.resize(); refreshPins(); loadRouteChips(); paintSubsChips(); });
       /* dvh 는 주소창이 접히고 펴질 때 값이 바뀐다 — 그때마다 다시 맞춘다.
          이게 없으면 스크롤 한 번에 지도 아래가 잘린 채로 남는다. */
       try {
@@ -533,7 +544,7 @@
     } else {
       MAP.resize();
       ROUTE ? paintRoute() : refreshPins();
-      loadRouteChips();
+      loadRouteChips(); paintSubsChips();
     }
   }
 
@@ -542,10 +553,25 @@
      우리는 새로 모을 게 없다 — (채널, 영상, 방영일)과 좌표가 이미 다 있다.
      ⚠️ 경로 모드에선 bbox 핀 갱신을 멈춘다. 안 그러면 지도를 움직일 때마다
         경로 마커 위에 일반 핀이 겹쳐 쌓여 선이 안 보인다. */
+  /* 구독자 필터 — 채널이 86개라 지도가 붐빈다. 크기로 걸러야 화면이 읽힌다(사장님 지시).
+     ⚠️ 임계값을 걸면 인증(유산) 핀은 빠진다 — 유산엔 구독자가 없어서, 안 빼면
+        "100만+"를 골랐는데 화면이 유산으로 가득 차는 이상한 결과가 된다. */
+  var SUBS_TIERS = [[null, "전체"], [100000, "10만+"], [500000, "50만+"],
+                    [1000000, "100만+"], [2000000, "200만+"]];
+  var MIN_SUBS = null;
   var ROUTE = null;                 // 선택된 채널 slug (null = 전체 핀 모드)
   var TRIP = null;                  // 선택된 여정 번호 (null = 전 여정)
   var ROUTE_DATA = null;            // 마지막으로 받은 travel_route 응답
   var ROUTE_MARKERS = [];
+
+  function paintSubsChips() {
+    var box = document.getElementById("tv-subs");
+    if (!box) return;
+    box.innerHTML = SUBS_TIERS.map(function (t) {
+      return '<button type="button" class="tv-schip' + (MIN_SUBS === t[0] ? " on" : "") +
+        '" data-subs="' + (t[0] == null ? "" : t[0]) + '">' + t[1] + "</button>";
+    }).join("");
+  }
 
   async function loadRouteChips() {
     var r = await rpc("travel_route_channels", { p_limit: 20 });
@@ -707,6 +733,7 @@
       var r = await rpc("travel_map", {
         p_south: b.getSouth(), p_west: b.getWest(),
         p_north: b.getNorth(), p_east: b.getEast(), p_limit: 300,
+        p_min_subs: MIN_SUBS,
       });
       var ps = (r && r.places) || [];
       MARKERS.forEach(function (m) { m.remove(); });
@@ -715,12 +742,26 @@
         var el = document.createElement("button");
         el.type = "button";
         el.className = "tv-pin" + (p.scale !== "spot" ? " area" : "");
-        /* 핀 얼굴은 크리에이터 로고다 — 맛집 지도와 같은 문법(누가 갔는지 핀만 봐도 안다).
-           로고가 없으면 장소 사진, 그것도 없으면 국기. */
-        el.innerHTML = p.ch_thumb
-          ? '<img src="' + esc(p.ch_thumb) + '" alt="" referrerpolicy="no-referrer">'
-          : (p.cover ? '<img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">'
-                     : '<span>' + flag((p.country_code || "")) + "</span>") ;
+        /* 핀 얼굴 순서: 크리에이터 로고 > **인증 마크** > 장소 사진 > 국기.
+           ⚠️ 인증으로 들어온 장소(유네스코·국보…)는 크리에이터가 없다. 그때 사진으로 떨어뜨렸더니
+              사진이 깨진 자리에 서비스워커 기본 이미지(GALLA 로고)가 떴다 — 아무 뜻 없는 핀이다
+              (사장님 지적). 유산이면 유산 마크를 쓴다.
+           ⚠️ 이미지에 onerror 를 달아 **깨지면 이모지로 되돌린다**. 안 그러면 같은 일이 또 난다. */
+        var fb = p.cert || flag(p.country_code || "");
+        if (p.ch_thumb) {
+          el.innerHTML = '<img src="' + esc(p.ch_thumb) + '" alt="" referrerpolicy="no-referrer">';
+        } else if (p.cert) {
+          el.className += " cert";
+          el.innerHTML = "<span>" + esc(p.cert) + "</span>";
+        } else if (p.cover) {
+          el.innerHTML = '<img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">';
+        } else {
+          el.innerHTML = "<span>" + fb + "</span>";
+        }
+        var im = el.querySelector("img");
+        if (im) im.addEventListener("error", function () {
+          el.innerHTML = "<span>" + fb + "</span>";
+        });
         if (p.ch_n > 1) el.innerHTML += '<i class="tv-pin-n">' + p.ch_n + "</i>";
         el.title = p.name + (p.ch_name ? " · " + p.ch_name : "");
         el.addEventListener("click", function (e) {
@@ -731,7 +772,11 @@
           .setLngLat([Number(p.lon), Number(p.lat)]).addTo(MAP));
       });
       var hint = document.getElementById("tv-map-hint");
-      if (hint) hint.textContent = ps.length ? "이 화면에 " + ps.length + "곳" : "이 지역엔 아직 없어요";
+      if (hint) {
+        var tier = SUBS_TIERS.filter(function (t) { return t[0] === MIN_SUBS; })[0];
+        hint.textContent = (ps.length ? "이 화면에 " + ps.length + "곳" : "이 지역엔 아직 없어요") +
+          (MIN_SUBS ? " · 구독자 " + tier[1] : "");
+      }
     } finally { pinBusy = false; }
   }
 
@@ -874,6 +919,7 @@
   }
   function paintDetail() {
     var p = CUR.place, s = CUR.stats, mine = CUR.mine;
+    var vids = CUR.videos || [];
     var d = buildDetail();
     var sub = [p.city, p.country].filter(Boolean).join(" · ");
     var visited = (s.again || 0) + (s.once || 0);
@@ -882,9 +928,16 @@
     d.innerHTML =
       '<div class="tv-sheet">' +
         '<button type="button" class="tv-x" id="tv-close" aria-label="닫기">✕</button>' +
-        (p.cover ? '<div class="tv-hero"><img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
-                   (p.photo_credit ? '<span class="tv-credit">' + esc(p.photo_credit) + "</span>" : "") + "</div>"
-                 : '<div class="tv-hero empty">' + flag(p.country_code) + "</div>") +
+        /* 히어로에서 바로 재생한다(사장님: 이 화면에서 영상이 재생돼야).
+           GALLA_playInline 은 앱 공용 프록시 플레이어라 앱에서도 오류 153 이 안 난다. */
+        (vids.length
+          ? '<div class="tv-hero play" id="tv-hero" data-vid="' + esc(vids[0].video_id) + '">' +
+              '<img src="https://i.ytimg.com/vi/' + esc(vids[0].video_id) + '/hqdefault.jpg" alt="" referrerpolicy="no-referrer">' +
+              '<i class="tv-hero-play"></i></div>'
+          : p.cover
+            ? '<div class="tv-hero"><img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
+              (p.photo_credit ? '<span class="tv-credit">' + esc(p.photo_credit) + "</span>" : "") + "</div>"
+            : '<div class="tv-hero empty">' + flag(p.country_code) + "</div>") +
         '<div class="tv-d-body">' +
           '<h3 class="tv-d-name">' + esc(p.name) + "</h3>" +
           '<div class="tv-d-sub">' + flag(p.country_code) + " " + esc(sub) +
@@ -920,7 +973,7 @@
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>' +
               (s.want ? '<i>' + s.want + "</i>" : "") + "</button>" +
           "</div>" +
-          '<div class="tv-jhint">가봤다면 판정하고, 아직이면 하트로 담아두세요</div>' +
+          '<div class="tv-jhint">가볼 만한가? 판정하고, 담아두려면 하트</div>' +
 
           (visited ? '<div class="tv-gauge"><div class="tv-gbar"><i style="width:' + pct + '%"></i></div>' +
                      '<div class="tv-gtx">가본 ' + visited + "명 중 " + pct + "%가 또 간다" +
@@ -929,8 +982,10 @@
           (s.hype > 0.4 && visited >= 3
             ? '<div class="tv-hype">기대가 실제보다 앞선 곳 — 과대평가 지수 ' + s.hype + "</div>" : "") +
 
-          (CUR.videos && CUR.videos.length
-            ? '<div class="tv-vids"><div class="tv-h">누가 갔나</div>' + CUR.videos.slice(0, 6).map(function (v) {
+          (vids.length
+            ? '<div class="tv-vids"><div class="tv-h">누가 갔나' +
+                (vids.length > 1 ? ' <i>' + vids.length + "개 영상 · 눌러서 재생</i>" : "") + "</div>" +
+              vids.slice(0, 8).map(function (v) {
                 return '<button type="button" class="tv-vid" data-vid="' + esc(v.video_id) +
                   '" data-vt="' + esc(v.title || "") + '" data-vc="' + esc(v.channel || "") + '">' +
                   '<span class="tv-vid-i">' +
@@ -958,11 +1013,42 @@
     d.querySelector("#tv-write").addEventListener("submit", function (e) {
       e.preventDefault(); say();
     });
-    var vids = d.querySelector(".tv-vids");
-    if (vids) vids.addEventListener("click", function (e) {
+    /* 히어로 자체가 재생 버튼이다. */
+    var hero = d.querySelector("#tv-hero");
+    if (hero) hero.addEventListener("click", function () { playHere(hero.dataset.vid); });
+
+    /* 여러 유튜버가 같은 곳에 갔으면 목록에서 **골라서** 히어로에 띄운다
+       (사장님: 지역 중복된 유튜버 있으면 선택해서 볼 수 있어야).
+       화면을 떠나 watch 페이지로 튕기지 않는다 — 판정·댓글이 여기 있다. */
+    var vbox = d.querySelector(".tv-vids");
+    if (vbox) vbox.addEventListener("click", function (e) {
       var b = e.target.closest("[data-vid]"); if (!b) return;
-      playVideo(b.dataset.vid, b.dataset.vt, b.dataset.vc);
+      playHere(b.dataset.vid, b);
     });
+  }
+
+  /* 상세 안에서 재생 — 공용 인라인 플레이어(앱 프록시)를 그대로 쓴다.
+     ⚠️ 직접 iframe 을 만들지 않는다. 앱(capacitor origin)에서 유튜브 임베드가 오류 153 으로
+        죽는 걸 핫튜브가 프록시로 풀어놨고, 그 경로가 GALLA_playInline 이다. */
+  function playHere(vid, row) {
+    if (!vid) return;
+    var hero = document.querySelector("#tv-hero");
+    if (!hero) return;
+    if (hero.dataset.vid !== vid) {
+      /* 다른 영상을 고르면 히어로를 그 썸네일로 갈아끼우고 다시 연다 */
+      hero.classList.remove("vplaying");
+      hero.dataset.vid = vid;
+      hero.innerHTML = '<img src="https://i.ytimg.com/vi/' + esc(vid) +
+                       '/hqdefault.jpg" alt="" referrerpolicy="no-referrer"><i class="tv-hero-play"></i>';
+    }
+    if (window.GALLA_playInline) window.GALLA_playInline(hero, vid, "");
+    else playVideo(vid);
+    /* 고른 줄을 표시해 둔다 — 여러 개 중 뭘 보고 있는지 알아야 한다 */
+    var box = document.querySelector(".tv-vids");
+    if (box) box.querySelectorAll("[data-vid]").forEach(function (el) {
+      el.classList.toggle("on", el.dataset.vid === vid);
+    });
+    try { hero.scrollIntoView({ block: "nearest" }); } catch (_) {}
   }
 
   async function judge(v) {
