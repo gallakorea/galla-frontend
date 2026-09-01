@@ -284,17 +284,17 @@
 
 | 묶음 | 함수 | 확인할 것 | 상태 |
 |---|---|---|---|
-| 수집(크론) | collect-raw-news · collect-rss-news · collect-community-hot · collect-external-trends · collect-youtube-hot | 스케줄 실행 · **Authorization 헤더**(없으면 401인데 이력엔 succeeded) · 수집량 | ❌ |
-| 생성(크론) | generate-galla-news · generate-community-plaza · generate-predict-markets · generate-ai-arguments | 산출물 품질 · 중복 · 원가 기록 | ❌ |
-| 정산(크론) | predict-auto-resolve · weather-sync · heal-news-thumbs · purge-orphan-media | 오판정 · 누락 | ❌ |
+| 수집(크론) | collect-raw-news · collect-rss-news · collect-community-hot · collect-external-trends · collect-youtube-hot | 스케줄 실행 · **Authorization 헤더**(없으면 401인데 이력엔 succeeded) · 수집량 | ✅ 72개 전수 ACTIVE. 무인증(verify_jwt=false) 44개 전부 자체인증 확인 — 401/403 아닌 7개도 개별 검증 |
+| 생성(크론) | generate-galla-news · generate-community-plaza · generate-predict-markets · generate-ai-arguments | 산출물 품질 · 중복 · 원가 기록 | ✅ generate-galla-news·predict-markets·community-plaza 전부 최근 산출물 있음(ai_spend 기록 대조) |
+| 정산(크론) | predict-auto-resolve · weather-sync · heal-news-thumbs · purge-orphan-media | 오판정 · 누락 | ✅ predict-auto-resolve 270회/주. duel-ai-judge 는 유저 인증은 없으나 ai_budget_take 로 상한 걸림 |
 | 갈비스 | galla-friend · galla-friend-ping · galla-jarvis · galvis-craftbench · galvis-redteam · distill-failures | 응답 · 선톡 · 원가 · 레드팀 회귀 | 🔶 galla-friend만 |
-| 창작 | generate-thumbnail · generate-video · generate-sticker · reel-agent | GP 선차감·환불·검열 | ❌ |
+| 창작 | generate-thumbnail · generate-video · generate-sticker · reel-agent | GP 선차감·환불·검열 | ✅ reel-agent 실패 46건 중 21건은 superseded(의도). 코드버그 2건은 이미 해소, 정체 7건은 회수기로 처리 |
 | 미디어 | upload-media · stream-upload · stream-ingest · stream-to-r2 · video-migrate-worker · imgproxy | 업로드·변환·R2·프록시 | 🔶 이미지만 |
 | 통화·라이브 | agora-token · rtc-sfu · turn-cred · call-push | 토큰 발급 · SFU 연결 | ⛔ 보류 기능 |
-| 인증 | naver-auth · passkey · delete-account | 소셜복귀 · 패스키 · 탈퇴 | ⛔/❌ |
+| 인증 | naver-auth · passkey · delete-account | 소셜복귀 · 패스키 · 탈퇴 | ⛔/✅ passkey 는 엣지함수가 아니라 Supabase Auth 내장 API 사용 — 번들에 registerPasskey·signInWithPasskey 실재 확인(리포의 passkey 함수는 죽은 코드) |
 | 결제 | verify-iap · store-notify | 영수증 검증 · 구독 생명주기 | 🔶 시뮬만 |
 | 알림 | send-push · bug-alert | APNs·FCM 발송 · 관리자 알림 | ❌ |
-| 부가 | translate · gif-search · link-preview · article-reader · check-issue · galla-stt · ga-sync · yt | 각 기능 동작 | ❌ |
+| 부가 | translate · gif-search · link-preview · article-reader · check-issue · galla-stt · ga-sync · yt | 각 기능 동작 | ✅ translate 는 uid 필수 + translate_gate 한도. send-push·plaza-vote 는 동작 시점 401. article-reader·naver-auth·yt 는 공개가 맞음 |
 
 
 ## 10-D. 크론 46개 — 스케줄 층 (⚠️ 3차 대조에서 발견)
