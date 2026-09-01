@@ -100,6 +100,10 @@
   /* 두 백엔드가 같은 얼굴을 갖도록 감싼다. 위쪽 로직(fetchBbox·drawMarkers)은
      어느 지도인지 몰라도 되게 — 나중에 카카오·VWorld 를 붙일 때도 여기만 는다. */
   function naverBackend(el, lat, lon, zoom) {
+    /* 🔴 SDK 가 반쯤 살아 있는 상태로 백엔드를 만들면 '떴는데 아무것도 안 되는' 지도가 된다
+       (실측: provider=naver 인데 타일 0, getBounds 가 nv.LatLng 에서 예외).
+       그러면 tilesPainted 도 못 잡고 Leaflet 폴백도 안 걸린다. 여기서 먼저 끊는다. */
+    if (!window.naver || !window.naver.maps) throw new Error("naver_sdk_missing");
     var nv = window.naver.maps;
     /* ⚠️ 지도를 CSS 필터로 강제 반전하지 않는다 — 네이버 지도 DOM 은 클래스 없는 div 뭉치라
        타일만 고를 선택자가 없고, 통째로 걸면 좌하단 NAVER 로고까지 반전된다.
@@ -120,7 +124,10 @@
       kind: "naver",
       onIdle: function (fn) { nv.Event.addListener(map, "idle", fn); },
       getBounds: function () {
-        var b = map.getBounds();
+        /* ⚠️ 예외를 그대로 던지면 fetchBbox 가 통째로 죽어 마커가 영영 안 그려진다.
+           '아직 모르겠다'는 null 로 알리고 호출부의 재시도에 맡긴다. */
+        var b;
+        try { b = map.getBounds(); } catch (_) { return null; }
         var mn = b.getMin ? b.getMin() : b.getSW(), mx = b.getMax ? b.getMax() : b.getNE();
         var r = { swLat: mn.y != null ? mn.y : mn.lat(), swLon: mn.x != null ? mn.x : mn.lng(),
                   neLat: mx.y != null ? mx.y : mx.lat(), neLon: mx.x != null ? mx.x : mx.lng() };
@@ -784,11 +791,14 @@
   }
 
   async function loadBrowse(kind) {
-    var d = await rpc("food_browse", { p_per: 10, p_channels: 20 });
+    /* 🔴 종류를 서버로 넘긴다. 예전엔 전체 상위 20채널을 받아 여기서 걸렀는데,
+       그러면 유튜버 37개 중 **전체 상위 20에 든 것만** 섹션이 됐다
+       (실측: 인덱스 12개인데 섹션 6개, 인증은 4개인데 2개). 위아래 모수를 맞춘다. */
+    var d = await rpc("food_browse", {
+      p_per: 10, p_channels: 20,
+      p_kind: (kind === "yt" || kind === "tv" || kind === "guide" || kind === "gov") ? kind : null,
+    });
     var secs = (d && d.sections) || [];
-    if (kind === "yt" || kind === "tv" || kind === "guide" || kind === "gov") {
-      secs = secs.filter(function (x) { return x.kind === kind; });
-    }
     var idx = chIndexHtml(kind);
     LIST.innerHTML = secs.length
       ? idx + '<div class="fb-wrap">' + secs.map(sectionHtml).join("") + '</div>'
@@ -1027,7 +1037,15 @@
     });
 
     // 뒤로가기로 닫힌다 — 앱에서 지도가 갇히면 안 된다.
-    window.addEventListener("popstate", function () { if (MAP.classList.contains("open")) closeMap(true); });
+    /* 🔴 상세를 닫으면 history.back() 이 도는데, 그 popstate 를 지도가 **자기 것으로 오해**해서
+       같이 닫혔다(실측: 지도 위 상세에서 X 를 눌렀더니 지도까지 사라짐).
+       지도와 상세는 각각 pushState 를 하므로, 상세에서 돌아오면 state 는 다시 {fdMap:1} 이다.
+       그 자리로 돌아온 거면 지도는 그대로 둔다 — 리스너 등록 순서에 기대지 않는 판별이다. */
+    window.addEventListener("popstate", function () {
+      if (!MAP.classList.contains("open")) return;
+      try { if (history.state && history.state.fdMap) return; } catch (_) {}
+      closeMap(true);
+    });
   }
 
   function paintMapChips() {
@@ -1877,7 +1895,11 @@
      상세를 지도에서 떼어냈으니 함께 옮긴다. 안 옮기면 버튼이 전부 죽는다. */
   function onDetailClick(e) {
     var t = e.target;
-    if (t.closest(".fd-dclose") || t.closest(".fd-detail-bg")) { closeDetail(); return; }
+    /* 🔴 배경(스크림) 클릭이 안 먹었다 — '.fd-detail-bg' 를 찾는데 그런 요소를 만든 적이 없다.
+       buildDetail 은 시트 둘(#fd-sheet, #fd-dsub)만 넣는다. 그래서 선택자가 영원히 안 맞고,
+       지도 위에 상세를 띄웠을 때 보이는 지도를 눌러도 닫히지 않았다(실측).
+       바깥을 누른 건 곧 DETAIL 자신이 타깃인 경우다 — 그걸로 판정한다. */
+    if (t.closest(".fd-dclose") || t === DETAIL || t.closest(".fd-detail-bg")) { closeDetail(); return; }
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
       vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
