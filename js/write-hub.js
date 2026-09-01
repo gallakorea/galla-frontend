@@ -45,6 +45,10 @@
     },
   };
 
+  /* 🔓 조각 촬영을 여는 스위치. 이어붙이기(네이티브 concat)가 붙으면 true 로.
+     clips.js 의 같은 이름 플래그와 함께 올린다(직접 URL 진입도 막혀 있다). */
+  const CLIPS_READY = false;
+
   let sheet = null;
 
   function build() {
@@ -149,14 +153,21 @@
     const list = sheet.querySelector('.wh-list');
     list.innerHTML = order.map(k => {
       const t = TYPES[k];
-      const locked = (k === 'galla' && !admin);
+      /* 🔒 잠금 사유는 유형마다 다르다 — 문구도 달라야 한다.
+         galla: 지금은 갈라 팀만 발제
+         clip : 찍히긴 하는데 이어붙여 발행하는 경로(네이티브 concat)가 아직 없다.
+                그대로 열면 조각만 쌓이고 아무것도 못 만든다(2026-09-01 사장님 확정). */
+      const locked = (k === 'galla' && !admin) || (k === 'clip' && !CLIPS_READY);
+      const lockWhy = (k === 'clip')
+        ? '1초씩 모으는 새 방식 · 정식 출시 뒤 바로 열려요'
+        : '지금은 갈라 팀이 발제 중 · 곧 모두에게 열립니다';
       return `
         <button class="wh-item${k === context ? ' wh-primary' : ''}${locked ? ' wh-locked' : ''}"
                 data-type="${k}" style="--wh-accent:${t.accent}">
           <span class="wh-emoji">${t.emoji}</span>
           <span class="wh-txt">
             <span class="wh-title">${t.title}${locked ? ' <span class="wh-soon">곧 열려요</span>' : ''}</span>
-            <span class="wh-desc">${locked ? '지금은 갈라 팀이 발제 중 · 곧 모두에게 열립니다' : t.desc}</span>
+            <span class="wh-desc">${locked ? lockWhy : t.desc}</span>
           </span>
           <span class="wh-arrow">${locked ? '' : '›'}</span>
         </button>`;
@@ -167,6 +178,11 @@
         if (btn.classList.contains('wh-locked')) {
           btn.classList.remove('wh-shake'); void btn.offsetWidth;
           btn.classList.add('wh-shake');
+          /* 흔들기만 하면 고장으로 읽힌다. 왜 못 쓰는지 말한다
+             (agent-hub.js 의 잠긴 문과 같은 톤). */
+          if (btn.dataset.type === 'clip') {
+            alert('조각 찍기는 아직 준비 중이에요.\n찍은 조각을 한 편으로 이어 붙이는 기능이 준비되면 바로 열립니다 🙂');
+          }
           return;
         }
         go(btn.dataset.type, context);

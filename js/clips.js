@@ -244,8 +244,34 @@
     $("clipRetry").addEventListener("click", startCamera);
   }
 
+  /* 🔓 런칭 게이트 — 찍기는 되는데 이어붙여 발행하는 경로(네이티브 concat)가 아직 없다.
+     허브만 막으면 URL 로 그냥 들어와진다. 여기서도 막고, 왜 못 쓰는지 말한다.
+     열 때: 이 한 줄과 write-hub.js 의 CLIPS_READY 를 같이 true 로. */
+  const CLIPS_READY = false;
+
+  function showSoon() {
+    const d = $("clipDenied");
+    d.hidden = false;
+    d.querySelector(".cd-h").textContent = "조각 찍기는 아직 준비 중이에요";
+    $("clipDeniedWhy").textContent =
+      "찍은 조각을 한 편으로 이어 붙이는 기능이 준비되면 바로 열려요.";
+    const p2 = d.querySelectorAll("p")[1];
+    if (p2) p2.textContent = "정식 출시 뒤 곧 열립니다 🙂";
+    const retry = $("clipRetry");
+    retry.textContent = "돌아가기";
+    retry.onclick = function () {
+      if (history.length > 1) history.back();
+      else (window.GALLA_nav || function (u) { location.href = u; })("index.html");
+    };
+    // 촬영 조작부는 접는다 — 눌러도 아무 일 없는 버튼이 제일 나쁘다
+    const bottom = document.querySelector(".clip-bottom");
+    if (bottom) bottom.hidden = true;
+    document.querySelectorAll(".clip-note").forEach((n) => { n.hidden = true; });
+  }
+
   async function init() {
     if (!Store) return;
+    if (!CLIPS_READY) { showSoon(); return; }
     bind();
 
     const p = await Store.ensurePersisted();
