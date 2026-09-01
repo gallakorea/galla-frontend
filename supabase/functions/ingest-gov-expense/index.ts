@@ -56,7 +56,12 @@ async function verify(name: string, addr: string) {
   u.searchParams.set("query", `${hint} ${name}`.trim());
   u.searchParams.set("display", "5");
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
-  if (!r.ok) return null;
+  /* 🔴 '네이버가 못 찾았다'와 '네이버를 못 불렀다'는 완전히 다른 일이다.
+     예전엔 둘 다 null 이라 호출부가 똑같이 '물어봤음' 도장을 찍었고,
+     한도가 소진된 뒤에는 멀쩡한 식당 9,086곳이 영구히 건너뛰기로 박혔다
+     (실측 2026-09-01: 통과율 57% → 11% → 0%로 무너지는 동안 계속 도장이 찍혔다).
+     인프라 실패는 예외로 올려 배치를 통째로 중단시킨다 — 오늘 구글 429에서 배운 것과 같다. */
+  if (!r.ok) throw new Error(`naver_${r.status}`);
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -183,9 +188,12 @@ Deno.serve(async (req) => {
 
   const items: any[] = [];
   const stamp: any[] = [];
+  let halted = "";
   for (const k of todo) {
     const p = cand.get(k)!;
-    const v = await verify(p.name, p.addr);
+    let v: any = null;
+    try { v = await verify(p.name, p.addr); }
+    catch (e) { halted = String(e).slice(0, 60); break; }   // 도장 안 찍고 즉시 중단
     await new Promise((s) => setTimeout(s, 70));
     stamp.push({ loc_key: k, resolved: !!v });
     if (v) items.push({ ...v, channel: cfg.channel, origin: "gov" });
@@ -201,10 +209,14 @@ Deno.serve(async (req) => {
   }
   /* 커서는 '읽은 행 수' 만큼 민다. cap 에 걸려 못 본 장소는 어차피 뒤에서 또 나온다
      (같은 집을 계속 가는 데이터라 유실이 아니다). */
-  await supa.from("gov_ingest_cursor")
-    .upsert({ source: cfg.cursor, next_offset: end + 1, total,
-              updated_at: new Date().toISOString() }, { onConflict: "source" });
+  /* ⚠️ 인프라 실패로 끊겼으면 커서를 밀지 않는다. 밀어버리면 그 구간을 영영 안 읽는다. */
+  if (!halted) {
+    await supa.from("gov_ingest_cursor")
+      .upsert({ source: cfg.cursor, next_offset: end + 1, total,
+                updated_at: new Date().toISOString() }, { onConflict: "source" });
+  }
 
   return j({ ok: true, source: src, start, end, total, rows: rows.length,
-             locs: keys.length, fresh: todo.length, verified: items.length, ...res });
+             locs: keys.length, fresh: todo.length, verified: items.length,
+             halted: halted || undefined, ...res });
 });

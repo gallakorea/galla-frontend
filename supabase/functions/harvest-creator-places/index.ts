@@ -56,7 +56,9 @@ async function verify(name: string, addr: string) {
   u.searchParams.set("query", `${hint} ${name}`.trim());
   u.searchParams.set("display", "5");
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
-  if (!r.ok) return null;
+  /* 🔴 '못 찾았다'와 '못 불렀다'를 가른다. 둘 다 null 로 두면 한도가 소진된 뒤
+     멀쩡한 식당이 '물어봤음'으로 박혀 영구히 건너뛰기가 된다(실측 2026-09-01, 9,086건). */
+  if (!r.ok) throw new Error(`naver_${r.status}`);
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -141,7 +143,9 @@ Deno.serve(async (req) => {
   const done: string[] = [];
   let extracted = 0, verified = 0, dropped = 0;
 
+  let halted = "";
   for (const v of list) {
+    if (halted) break;
     done.push(v.video_id);                       // 결과와 무관하게 '물어봤다'를 남긴다
     let shops: any[] = [];
     try {
@@ -154,7 +158,14 @@ Deno.serve(async (req) => {
       const name = String(s?.name || "").trim();
       const addr = String(s?.address || "").trim();
       if (name.length < 2 || addr.length < 6) { dropped++; continue; }
-      const ok = await verify(name, addr);
+      let ok: any = null;
+      try { ok = await verify(name, addr); }
+      catch (e) {
+        /* 인프라 실패 — 이 영상은 도장을 빼고 중단한다(다음 회차에 다시 온다) */
+        halted = String(e).slice(0, 60);
+        done.pop();
+        break;
+      }
       await new Promise((r) => setTimeout(r, 70));   // 네이버 호출 간격
       if (!ok) { dropped++; continue; }
       verified++;
@@ -172,5 +183,5 @@ Deno.serve(async (req) => {
     await supa.rpc("food_videos_mark_harvested", { p_ids: done.slice(i, i + 200) });
   }
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped, ...res,
-             ai: aiErrors.slice(0, 3) });
+             halted: halted || undefined, ai: aiErrors.slice(0, 3) });
 });
