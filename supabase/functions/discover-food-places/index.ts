@@ -263,6 +263,17 @@ Deno.serve(async (req) => {
 
   const report: any[] = [];
   let naverHalt = "";
+
+  /* 🔎 진단용: 네이버의 **진짜** 남은 한도를 잰다. 장부(우리가 세는 숫자)와 실제가
+     어긋나면 수확이 공짜로 굶는다. 호출 1건이라 장부를 태우지 않고 그냥 부른다. */
+  if (new URL(req.url).searchParams.get("probe") === "1") {
+    const pu = "https://openapi.naver.com/v1/search/local.json?query=" +
+               encodeURIComponent("김밥천국") + "&display=1";
+    const pr = await fetch(pu, {
+      headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC },
+    });
+    return j({ ok: true, probe: pr.status, body: (await pr.text()).slice(0, 200) });
+  }
   let added = 0;
 
   for (const c of (chans || []) as any[]) {
