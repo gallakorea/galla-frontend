@@ -61,6 +61,19 @@
     try { var r = await (await client()).rpc(fn, args || {}); return r && r.data; } catch (_) { return null; }
   }
   function toast(m) { window.GALLA_toast ? GALLA_toast(m) : 0; }
+
+  /* 영상 재생은 **앱 공용 경로 하나만** 쓴다(js/supabase.js 의 GALLA_openVideoPage).
+     ⚠️ youtube.com 링크를 그대로 열면 앱(capacitor://localhost)에서 새 탭이 안 열리거나
+        임베드가 오류 153 으로 죽는다 — 핫튜브가 그래서 프록시 재생 페이지를 만들었다.
+        여기서 URL 을 따로 조립하면 화면마다 결과가 갈린다. */
+  function playVideo(id, title, ch) {
+    if (!id) return;
+    if (window.GALLA_openVideoPage) return window.GALLA_openVideoPage(id, title || "", ch || "");
+    var u = "watch.html?v=" + encodeURIComponent(id) +
+            (title ? "&t=" + encodeURIComponent(title) : "") +
+            (ch ? "&c=" + encodeURIComponent(ch) : "");
+    (window.GALLA_nav || function (x) { location.href = x; })(u);
+  }
   function needLogin() {
     if (confirm("로그인이 필요해요. 로그인할까요?")) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
   }
@@ -597,6 +610,8 @@
         openMap().then(function () { drawRoute(CRE_DATA.channel.slug); });
         return;
       }
+      var vb = e.target.closest("[data-vid]");
+      if (vb) { playVideo(vb.dataset.vid, vb.dataset.vt, (CRE_DATA && CRE_DATA.channel || {}).name); return; }
       var pl = e.target.closest("[data-place]");
       if (pl) openDetail(pl.dataset.place);
     });
@@ -652,14 +667,23 @@
           (groups.length ? groups.map(function (g) {
             return '<div class="tv-cre-g"><div class="tv-cre-gt">' + esc(g.key) +
               ' <i>' + g.items.length + "곳</i></div>" +
+              /* 썸네일을 누르면 **영상이 재생**되고, 이름을 누르면 장소 상세로 간다.
+                 한 줄에 두 가지가 붙어 있으니 눌리는 자리를 갈라 놓는다. */
               g.items.map(function (p) {
-                return '<button type="button" class="tv-cre-i" data-place="' + esc(p.id) + '">' +
-                  (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                           : '<span class="tv-ph">🌍</span>') +
-                  '<span class="tv-cre-t">' +
+                return '<div class="tv-cre-i">' +
+                  (p.video_id
+                    ? '<button type="button" class="tv-cre-th" data-vid="' + esc(p.video_id) +
+                      '" data-vt="' + esc(p.video_title || "") + '" aria-label="영상 재생">' +
+                      (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                               : '<span class="tv-ph">🌍</span>') +
+                      '<i class="tv-play"></i></button>'
+                    : '<span class="tv-cre-th">' +
+                      (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                               : '<span class="tv-ph">🌍</span>') + "</span>") +
+                  '<button type="button" class="tv-cre-t" data-place="' + esc(p.id) + '">' +
                     '<b>' + esc(p.name) + (p.visited ? " ✓" : "") + "</b>" +
                     '<i>' + esc(p.video_title || "") + "</i>" +
-                  "</span></button>";
+                  "</button></div>";
               }).join("") + "</div>";
           }).join("") : '<div class="tv-empty">아직 정리된 곳이 없어요.</div>') +
         "</div>" +
@@ -756,10 +780,12 @@
 
           (CUR.videos && CUR.videos.length
             ? '<div class="tv-vids"><div class="tv-h">누가 갔나</div>' + CUR.videos.slice(0, 6).map(function (v) {
-                return '<a class="tv-vid" href="https://www.youtube.com/watch?v=' + esc(v.video_id) +
-                  '" target="_blank" rel="noopener">' +
-                  '<img src="https://i.ytimg.com/vi/' + esc(v.video_id) + '/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer">' +
-                  '<span><b>' + esc(v.channel) + "</b>" + esc(v.title || "") + "</span></a>";
+                return '<button type="button" class="tv-vid" data-vid="' + esc(v.video_id) +
+                  '" data-vt="' + esc(v.title || "") + '" data-vc="' + esc(v.channel || "") + '">' +
+                  '<span class="tv-vid-i">' +
+                    '<img src="https://i.ytimg.com/vi/' + esc(v.video_id) + '/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer">' +
+                    '<i class="tv-play"></i></span>' +
+                  '<span><b>' + esc(v.channel) + "</b>" + esc(v.title || "") + "</span></button>";
               }).join("") + "</div>"
             : "") +
 
@@ -780,6 +806,11 @@
     });
     d.querySelector("#tv-write").addEventListener("submit", function (e) {
       e.preventDefault(); say();
+    });
+    var vids = d.querySelector(".tv-vids");
+    if (vids) vids.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-vid]"); if (!b) return;
+      playVideo(b.dataset.vid, b.dataset.vt, b.dataset.vc);
     });
   }
 
