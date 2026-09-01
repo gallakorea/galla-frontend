@@ -660,6 +660,20 @@
      완성되면 편집기에 자동 첨부(setVideo). 앱을 나가도 잡은 서버에 살아있다. */
   function renderReelScript(text, place){
     if(!text || !logEl) return;
+    /* 🔒 창작 에이전트는 런칭 뒤에 연다(agent-hub.js 의 ENABLED 하나로 켜진다).
+       '새로 만들기' 쪽 문은 이미 잠겨 있었는데 **이 경로는 안 잠겨 있었다** —
+       갈비스가 reelScript 액션을 내리면 녹음·영상 만들기 버튼이 그대로 떴다(2026-09-01 발견).
+       대본은 보여준다(그 자체로 쓸모가 있다). 만드는 버튼만 접고 이유를 말한다. */
+    /* fail-closed — agent-hub.js 가 아직 안 실렸으면 undefined 다. 런칭 차단은
+       '모르면 막는다'가 맞다. 열 때 ENABLED=true 가 되면 여기도 같이 열린다. */
+    if (window.GALLA_AGENT_READY !== true) {
+      var lock = el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 릴스 대본' +
+        (place ? " — " + place : "") + '</div><div class="fr-script-body"></div>' +
+        '<div class="fr-reel-status">영상으로 만들어 주는 기능은 아직 준비 중이에요 — 정식 출시 뒤 바로 열려요 🙂</div></div>');
+      lock.querySelector(".fr-script-body").textContent = text;
+      logEl.appendChild(lock); scrollBottom();
+      return;
+    }
     var wrap=el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 릴스 대본'+(place?" — "+place:"")+'</div><div class="fr-script-body"></div>'+
       '<div class="fr-reel-ctl"><button class="fr-reel-rec">🎙 녹음 시작</button><button class="fr-reel-ai">🤖 AI 목소리로</button><span class="fr-reel-time"></span></div>'+
       '<div class="fr-reel-done" hidden><audio class="fr-reel-audio" controls></audio>'+
@@ -910,7 +924,7 @@
   function openBench(jobId, fallback){
     /* 🔒 잠금 중이면 작업대를 안 쓴다 — 예전처럼 말풍선 카드로 떨어진다.
        새 기능을 막는 것이지 되던 걸 막는 게 아니다. */
-    if(window.GALLA_AGENT_READY !== false && window.GALLA_openWorkbench){
+    if(window.GALLA_AGENT_READY === true && window.GALLA_openWorkbench){
       try{
         window.GALLA_openWorkbench(jobId);
         addMsg("a","컷 짜놨어! 작업대 열었으니까 어색한 데만 눌러서 바꿔줘 🎬");
