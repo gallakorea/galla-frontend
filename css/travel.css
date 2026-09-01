@@ -234,3 +234,8 @@ body.tv-lock { overflow: hidden; }
   border-radius: 999px; background: #ff5c2b; color: #fff;
   font-size: 10.5px; font-weight: 800; font-style: normal; line-height: 17px; text-align: center;
 }
+
+/* 2단 지역 칩 — 나라 칩보다 한 급 작게(위계가 눈에 보여야 한다) */
+.tv-chips2 { padding-top: 0; padding-bottom: 10px; }
+.tv-chip.sm { padding: 5px 10px; font-size: 11.5px; background: var(--surface-2); }
+.tv-chip.sm.on { background: #38d6b0; border-color: transparent; color: #07130f; font-weight: 800; }

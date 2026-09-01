@@ -121,6 +121,24 @@ async function nominatim(q: string, cc: string | null) {
   return Array.isArray(d) && d[0] ? d[0] : null;
 }
 
+/* 광역(도·주·현) 보강 — 이 한 번이 '도쿄'를 살린다.
+   ⚠️ 실측: 롯폰기 좌표를 zoom=10 으로 물으면 address 에 city='미나토구' 뿐이고 광역이 없다.
+      zoom=8 로 물어야 province='도쿄도' 가 나온다. 검색(forward) 결과만 믿으면
+      일본 장소가 전부 '○○구'로 흩어져 사장님이 말한 "일본 → 도쿄"가 화면에서 사라진다.
+   정방향 검색에 광역이 이미 있으면 부르지 않는다(공짜 호출이 아니다). */
+async function admin1Of(lat: number, lon: number) {
+  const u = new URL("https://nominatim.openstreetmap.org/reverse");
+  u.searchParams.set("lat", String(lat));
+  u.searchParams.set("lon", String(lon));
+  u.searchParams.set("format", "jsonv2");
+  u.searchParams.set("addressdetails", "1");
+  u.searchParams.set("zoom", "8");
+  const r = await fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "ko,en" } });
+  if (!r.ok) return null;
+  const a = (await r.json())?.address || {};
+  return a.state || a.province || a.region || a.county || null;
+}
+
 /* ── ③ 위키데이터(CC0) — 좌표·한국어 표기·대표사진 ──── */
 async function wikidata(qid: string) {
   const r = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`,
@@ -247,9 +265,12 @@ async function tourapi(name: string) {
   const lat = Number(hit.mapy), lon = Number(hit.mapx);
   if (!isFinite(lat) || !isFinite(lon)) return null;
   const okPhoto = hit.cpyrhtDivCd === "Type1" || hit.cpyrhtDivCd === "Type3";
+  const addr1 = strip(hit.addr1) || "";
   return {
     name: strip(hit.title) || name,
-    address: strip(hit.addr1) || null,
+    admin1: addr1.split(/\s+/)[0] || null,      /* '서울특별시 종로구 …' → 서울특별시 */
+    city: addr1.split(/\s+/)[1] || null,
+    address: addr1 || null,
     lat, lon,
     photo: okPhoto && hit.firstimage ? String(hit.firstimage) : null,
     photo_credit: okPhoto && hit.firstimage ? "한국관광공사" : null,
@@ -399,6 +420,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      /* 광역이 비었으면 한 번 더 물어 채운다(도쿄·마카오처럼 광역이 안 딸려오는 곳). */
+      /* ⚠️ 나라·광역 단위 행은 좌표가 '나라 중심점'이라 역지오코딩이 엉뚱한 주를 준다
+         (우간다 → Nakasongola, 페루 → Huánuco). 스팟·도시에만 묻는다. */
+      if (!hit.admin1 && hit.lat != null && geoCalls < budget
+          && (scale === "spot" || scale === "city")) {
+        geoCalls++;
+        try { hit.admin1 = await admin1Of(hit.lat, hit.lon); } catch (_) {}
+        await sleep(1100);
+      }
+
       /* QID 가 있으면 위키데이터(CC0)에서 좌표·한국어 표기·사진을 받아 승격한다. */
       if (hit.qid) {
         const w = await wikidata(hit.qid);
@@ -421,6 +452,7 @@ Deno.serve(async (req) => {
         name_en: hit.name_en || en || null,
         country_code: hit.country_code || cc || null,
         country: String(p?.country || "").trim() || null,
+        admin1: hit.admin1 || null,
         city: hit.city || city || null,
         address: hit.address || null,
         lat: hit.lat != null ? String(hit.lat) : null,
@@ -487,11 +519,16 @@ function fromOsm(o: any, ko: string, scale = "spot") {
   if (isArea && scale === "spot") return null;
   const cls = classify(cat, type);
   const addr = o.address || {};
+  /* ⚠️ city 만 저장하면 '도쿄'가 화면에서 사라진다 — Nominatim 의 city 는 기초자치단체라
+     도쿄가 '지요다구'·'미나토구'로 흩어지고 교토가 '교토시'가 된다(실측).
+     유저가 찾는 축은 광역(state/prefecture)이다. 둘 다 저장하고 화면은 광역으로 묶는다. */
+  const admin1 = addr.state || addr.province || addr.region || addr["state_district"] || null;
   return {
     name_ko: o?.namedetails?.["name:ko"] || ko,
     name_en: o?.namedetails?.["name:en"] || null,
     address: String(o.display_name || "").slice(0, 300),
-    city: addr.city || addr.town || addr.village || addr.county || null,
+    admin1: admin1,
+    city: addr.city || addr.town || addr.village || addr.municipality || addr.county || null,
     country_code: String(addr.country_code || "").toUpperCase() || null,
     lat, lon,
     category: cls.category,

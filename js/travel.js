@@ -17,13 +17,14 @@
   if (window.__gallaTravel) return;
   window.__gallaTravel = true;
 
-  var SEC = null, LIST = null, CHIPS = null, DETAIL = null;
+  var SEC = null, LIST = null, CHIPS = null, CHIPS2 = null, DETAIL = null;
   var sb = null;
   /* 세그먼트는 둘뿐이다. '판정' 랭킹 탭은 사장님 지시로 뺐다 —
      "누적 투표로 갈리게 될 거니" 랭킹을 따로 화면으로 만들 필요가 없다.
      travel_rank RPC 는 그대로 살려둔다(표가 쌓이면 그때 어디든 붙일 수 있게). */
   var VIEW = "feed";          // feed | who
   var COUNTRY = null;         // 나라 필터(ISO2)
+  var AREA = null;            // 나라 안의 광역 필터(도쿄도·교토부·온타리오주 …)
   var loading = false;
 
   /* 진영 라벨 — 화면 문구를 한 곳에 모은다. 네 곳에 흩어 놓으면 축이 조용히 갈라진다. */
@@ -84,10 +85,12 @@
           "<span>지도</span></button>" +
       "</div>" +
       '<div class="tv-chips chip-scroll" id="tv-chips"></div>' +
+      '<div class="tv-chips tv-chips2 chip-scroll" id="tv-chips2" hidden></div>' +
       '<div class="tv-list" id="tv-list"></div>';
     panel.appendChild(SEC);
 
     CHIPS = SEC.querySelector("#tv-chips");
+    CHIPS2 = SEC.querySelector("#tv-chips2");
     LIST = SEC.querySelector("#tv-list");
 
     SEC.querySelector("#tv-openmap").addEventListener("click", openMap);
@@ -97,9 +100,16 @@
       SEC.querySelectorAll(".tv-sg").forEach(function (x) { x.classList.toggle("on", x === b); });
       paintChips(); load();
     });
-    CHIPS.addEventListener("click", function (e) {
+    CHIPS.addEventListener("click", async function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
       COUNTRY = b.dataset.cc || null;
+      AREA = null;                    // 나라가 바뀌면 지역 선택은 버린다
+      await loadAreas();
+      paintChips(); load();
+    });
+    CHIPS2.addEventListener("click", function (e) {
+      var b = e.target.closest(".tv-chip"); if (!b) return;
+      AREA = b.dataset.area || null;
       paintChips(); load();
     });
     LIST.addEventListener("click", function (e) {
@@ -115,6 +125,13 @@
     var r = await rpc("travel_countries", { p_limit: 40 });
     COUNTRIES = (r && r.countries) || [];
   }
+  var AREAS = [];
+  async function loadAreas() {
+    /* 나라를 안 고르면 지역 칩은 뜻이 없다 — 전 세계 광역을 한 줄에 늘어놓을 수는 없다. */
+    if (!COUNTRY) { AREAS = []; return; }
+    var r = await rpc("travel_areas", { p_country: COUNTRY, p_limit: 30 });
+    AREAS = (r && r.areas) || [];
+  }
   function paintChips() {
     if (!CHIPS) return;
     var html = "";
@@ -128,11 +145,26 @@
     }
     CHIPS.innerHTML = html;
     CHIPS.hidden = !html;
+
+    /* 2단 — 나라 안의 광역(도쿄도·교토부·온타리오주). 기초자치단체(미나토구)로 쪼개면
+       유저가 찾는 '도쿄'가 화면에서 사라진다. 그래서 축은 광역이다. */
+    if (!CHIPS2) return;
+    var show = VIEW === "feed" && COUNTRY && AREAS.length;
+    CHIPS2.innerHTML = show
+      ? '<button type="button" class="tv-chip sm' + (AREA ? "" : " on") + '" data-area="">전체</button>' +
+        AREAS.map(function (a) {
+          return '<button type="button" class="tv-chip sm' + (AREA === a.name ? " on" : "") +
+                 '" data-area="' + esc(a.name) + '">' + esc(a.name) + ' <i>' + a.n + "</i></button>";
+        }).join("")
+      : "";
+    CHIPS2.hidden = !show;
   }
 
   /* ── 목록 ─────────────────────────────────────────── */
   function cardHTML(p) {
-    var sub = [p.city, p.country].filter(Boolean).join(" · ");
+    var sub = [p.admin1, p.city, p.country].filter(Boolean)
+                .filter(function (v, i, arr) { return arr.indexOf(v) === i; })   // 상하이시/상하이 중복 제거
+                .join(" · ");
     var badge = SCALE_TX[p.scale] || KIND_TX[p.kind] || "";
     var a = p.again || 0, o = p.once || 0, w = p.want || 0;
     var votes = a + o > 0
@@ -180,7 +212,7 @@
             }).join("") + "</div></section>";
         }).join("") : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
       } else {
-        var f = await rpc("travel_feed", { p_country: COUNTRY, p_limit: 40 });
+        var f = await rpc("travel_feed", { p_country: COUNTRY, p_area: AREA, p_limit: 40 });
         var fp = (f && f.places) || [];
         LIST.innerHTML = fp.length ? fp.map(cardHTML).join("")
           : '<div class="tv-empty">아직 이 나라 데이터가 없어요.</div>';
@@ -470,15 +502,16 @@
       if (!SEC || !document.contains(SEC)) {
         SEC = panel.querySelector(".tv-sec");
         CHIPS = SEC.querySelector("#tv-chips");
+    CHIPS2 = SEC.querySelector("#tv-chips2");
         LIST = SEC.querySelector("#tv-list");
         booting = true;
-        try { await loadCountries(); paintChips(); await load(); } finally { booting = false; }
+        try { await loadCountries(); await loadAreas(); paintChips(); await load(); } finally { booting = false; }
       }
       return;
     }
     booting = true;
     try {
-      if (mount()) { await loadCountries(); paintChips(); await load(); }
+      if (mount()) { await loadCountries(); await loadAreas(); paintChips(); await load(); }
     } finally { booting = false; }
   }
   var start = function () {
