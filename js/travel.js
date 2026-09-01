@@ -230,7 +230,7 @@
         우리가 실제로 가진 건 **크리에이터의 발자국**이라 세 축으로 간다:
           겹친 곳(여러 유튜버가 간 곳) / 최근 다녀간 곳 / 유튜버가 많이 간 나라.
         표가 쌓이면 '또 간다 랭킹'을 여기 얹는다(travel_rank 가 이미 있다). */
-  var DASH_DATA = null, DASH_TAB = "recent";
+  var DASH_DATA = null, DASH_TAB = "trend";
   async function loadDash() {
     DASH_DATA = await rpc("travel_dashboard", { p_n: 12 });
   }
@@ -241,14 +241,32 @@
     var d = DASH_DATA, t = d.totals || {};
     /* 겹친 곳이 아직 없으면 그 탭 자체를 안 만든다 — 눌렀는데 비어 있는 탭이 제일 나쁘다. */
     var tabs = [];
-    if ((d.multi || []).length) tabs.push(["multi", "🔥 여러 유튜버가 간 곳"]);
-    tabs.push(["recent", "🆕 최근 다녀간 곳"]);
+    /* '최근 다녀간 곳'은 뺐다(사장님: 의미 없을 듯). 그 자리에 **검색 트렌드**가 들어간다 —
+       "지금 사람들이 어디를 검색하고 있나"가 여행 화면에서 훨씬 쓸모 있는 정보다. */
+    if ((d.trend || []).length) tabs.push(["trend", "🔥 지금 검색 뜨는 곳"]);
+    if ((d.multi || []).length) tabs.push(["multi", "👣 여러 유튜버가 간 곳"]);
     if ((d.certs || []).length) tabs.push(["certs", "🏛 인증 여행지"]);
     tabs.push(["countries", "🌍 유튜버가 많이 간 나라"]);
     if (!tabs.some(function (x) { return x[0] === DASH_TAB; })) DASH_TAB = tabs[0][0];
 
     var body = "";
-    if (DASH_TAB === "countries") {
+    if (DASH_TAB === "trend") {
+      /* 나라 카드 — 검색 지수(일본=100 눈금)와 전월 대비 증감을 같이 보여준다.
+         증감만 보여주면 원래 검색량이 적은 나라가 +170% 로 1위가 된다(네팔 실측). */
+      body = (d.trend || []).map(function (t) {
+        var up = t.delta != null && t.delta > 0, dn = t.delta != null && t.delta < 0;
+        return '<button type="button" class="tv-tr" data-country="' + esc(t.code) + '">' +
+          '<span class="tv-tr-i">' +
+            (t.cover ? '<img src="' + esc(t.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                     : '<span class="tv-ph">' + flag(t.code) + "</span>") +
+            '<i class="tv-tr-r">' + t.ratio + "</i></span>" +
+          '<span class="tv-tr-n">' + flag(t.code) + " " + esc(t.name || t.code) + "</span>" +
+          '<span class="tv-tr-s' + (up ? " up" : dn ? " dn" : "") + '">' +
+            (t.delta == null ? "신규"
+              : (up ? "▲ " : dn ? "▼ " : "") + Math.abs(t.delta) + "%") +
+            '<em>' + (t.places || 0) + "곳</em></span></button>";
+      }).join("");
+    } else if (DASH_TAB === "countries") {
       body = (d.countries || []).map(function (c) {
         return '<button type="button" class="tv-dc" data-country="' + esc(c.code) + '">' +
           '<span class="tv-dc-f">' + flag(c.code) + "</span>" +
@@ -277,7 +295,10 @@
     DASH.innerHTML =
       '<div class="tv-dash-t">여행 유튜버 <b>' + (t.creators || 0) + "명</b>이 다녀간 <b>" +
         (t.places || 0) + "곳</b> · " + (t.countries || 0) + "개국" +
-        '<span class="tv-dash-v">영상 ' + (t.videos || 0).toLocaleString() + "편에서 뽑는 중</span></div>" +
+        '<span class="tv-dash-v">영상 ' + (t.videos || 0).toLocaleString() + "편에서 뽑는 중" +
+          (DASH_TAB === "trend" && d.trend_period
+            ? " · 검색 지수는 " + esc(String(d.trend_period).slice(0, 7)) + " 네이버 데이터랩"
+            : "") + "</span></div>" +
       '<div class="tv-dash-tabs">' + tabs.map(function (x) {
         return '<button type="button" class="tv-dash-tb' + (DASH_TAB === x[0] ? " on" : "") +
           '" data-dtab="' + x[0] + '">' + x[1] + "</button>";
