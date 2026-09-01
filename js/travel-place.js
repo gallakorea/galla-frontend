@@ -244,8 +244,13 @@
   async function boot(root, params) {
     ROOT = root || document.getElementById("tv-page");
     if (!ROOT) return;
+    /* 주소는 두 모양이다.
+         · /travel-place?id=<uuid>            — 앱·SPA 가 쓰는 내부 주소
+         · /travel/기자의-피라미드-b29e54ae     — 검색에 노출되는 주소(엣지가 재작성)
+       예쁜 주소에는 ?id= 가 없어서, 엣지가 <meta name="galla-place-id"> 로 심어 준다. */
     var id = (params && params.id) ||
-             new URLSearchParams(location.search).get("id") || "";
+             new URLSearchParams(location.search).get("id") ||
+             (document.querySelector('meta[name="galla-place-id"]') || {}).content || "";
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       ROOT.innerHTML = '<div class="tv-empty">잘못된 주소예요.</div>';
       return;

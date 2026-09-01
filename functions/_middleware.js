@@ -82,7 +82,7 @@ const hubHtml = () =>
 const wrapLinks = (inner) =>
   inner ? `<section class="seo-web" style="${LINK_WRAP}" aria-label="관련 콘텐츠">${inner}${hubHtml()}</section>` : "";
 
-const titleOf = (r) => r.title || r.question || clip(plain(r.caption), 60) || "";
+const titleOf = (r) => r.title || r.question || r.name || clip(plain(r.caption), 60) || "";
 
 // 상세 페이지 하단 "더 보기" — 같은 섹션 최신 8개(카테고리 무관: 본문 조회와 병렬로 돌리려고)
 const REL = {
@@ -91,6 +91,9 @@ const REL = {
   plaza:   [`plaza_posts?select=id,title&order=created_at.desc&limit=7`,                     (r) => `/plaza_detail?id=${r.id}`,   "광장 다른 글"],
   predict: [`markets?select=id,question&order=created_at.desc&limit=7`,                      (r) => `/predict-market?id=${r.id}`, "다른 예측 마켓"],
   post:    [`posts?is_published=eq.true&select=id,title,caption&order=created_at.desc&limit=7`, (r) => `/gallari-post?id=${r.id}`, "다른 콘텐츠"],
+  /* 여행지는 색인 대상 뷰에서만 뽑는다 — 링크로 밀어주는 곳과 사이트맵에 넣는 곳이
+     달라지면 로봇에게 앞뒤가 안 맞는 신호가 간다. */
+  travel:  [`travel_sitemap_v?select=id,slug,sid,name&order=updated_at.desc&limit=7`, (r) => `/travel/${encodeURIComponent(r.slug || "place")}-${r.sid}`, "다른 여행지"],
 };
 async function relatedLinks(k, selfId) {
   const spec = REL[k];
@@ -109,8 +112,18 @@ const kind = (path) => {
   if (p === "/plaza_detail") return "plaza";
   if (p === "/predict-market") return "predict";
   if (p === "/gallari-post") return "post";
+  if (p === "/travel-place") return "travel";
   return null;
 };
+
+/* 여행지는 주소가 다르다 — /travel/기자의-피라미드-b29e54ae
+   앞의 한글은 장식이고 **주소를 푸는 건 뒤의 8자(id 앞자리)뿐**이다.
+   이름이 나중에 한글로 바뀌어도 옛 주소가 죽지 않고 새 주소로 301 된다. */
+function travelSid(path) {
+  const m = /^\/travel\/(.+)-([0-9a-f]{8})$/.exec(decodeURIComponent(path));
+  return m ? { slug: m[1], sid: m[2] } : null;
+}
+const travelUrl = (row) => `${HOST}/travel/${encodeURIComponent(row.slug || "place")}-${row.sid}`;
 
 // 초대 링크(?ref=CODE) → 전용 초대 OG 카드. 일반 홈 카드와 달라야 클릭이 난다.
 // 후킹은 '오늘 최대 격전 이슈'(라이브)로. ⚠️숫자(회원수·표수)는 표본이 작을 때 역효과라
@@ -224,6 +237,11 @@ async function resolveSeo(path, params) {
       h1: heading, body: plain(row.caption) || "", date: row.created_at,
       jsonld: articleLd(heading, desc, image, canonical, row.created_at) };
   }
+  if (k === "travel" && params.get("id")) {
+    const row = await sbOne(`travel_places?id=eq.${encodeURIComponent(params.get("id"))}&select=id,slug,sid,name,name_en,name_local,country,country_code,admin1,city,category,scale,lat,lon,summary,summary_src,photo,created_at`);
+    if (!row) return null;
+    return travelSeo(row, await travelExtras(row.id));
+  }
   if (k === "predict" && params.get("id")) {
     const row = await sbOne(`markets?id=eq.${encodeURIComponent(params.get("id"))}&select=id,question,description,category,image_url,created_at`);
     if (!row) return null;
@@ -236,6 +254,65 @@ async function resolveSeo(path, params) {
       jsonld: articleLd(row.question, desc, image, canonical, row.created_at, row.description) };
   }
   return null;
+}
+
+/* 발자국(어느 크리에이터가 갔나)이 이 페이지의 알맹이다 — 로봇에게도 그걸 보여준다 */
+async function travelExtras(id) {
+  const rows = await sbMany(`travel_place_sources?place_id=eq.${encodeURIComponent(id)}&select=channel,video_title,aired_at&order=aired_at.desc&limit=12`);
+  return { sources: rows };
+}
+
+function travelSeo(row, extra) {
+  const who = (extra?.sources || []).length;
+  const where = [row.city, row.admin1, row.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+  const place = where.join(" · ");
+  const h1 = row.name;
+  const title = clip(`${h1}${row.country ? ` (${row.country})` : ""}`, 60);
+  /* 설명이 있으면 그걸 쓰고, 없으면 '몇 명이 다녀갔나'로 만든다.
+     ⚠️ 둘 다 없는 곳(국가유산 뱃지만 있는 4,390곳)은 thin 이라 색인시키지 않는다 —
+        뉴스에서 대량생산으로 걸렸던 것과 같은 실수를 반복하지 않는다. */
+  const desc = clip(row.summary
+    || (who ? `여행 유튜버 ${who}명이 다녀간 ${place || "여행지"}. 가볼 만한 곳인지 갈라에서 판정하고 한마디 남기세요.`
+            : `${place || "여행지"} — ${h1}.`), 150);
+  /* ⚠️ 이 판정은 travel_sitemap_v(사이트맵이 쓰는 뷰)와 **같은 규칙이어야 한다**.
+        어긋나면 서치콘솔에 "제출됐지만 noindex 표시됨"이 그 수만큼 쌓인다.
+        나라·광역은 뺀다 — '튀르키예'라는 제목에 본문도 '튀르키예'뿐인 페이지가
+        수백 개면 사이트 전체 품질 신호를 깎는다. */
+  const scaleOk = ["spot", "city"].includes(row.scale || "spot");
+  const thin = !(scaleOk && (who > 0 || String(row.summary || "").length >= 80));
+  /* ⚠️ 같은 말을 두 번 쓰지 않는다. 위치는 kicker 에, 영상 제목은 '누가 갔나' 목록에 이미 있다.
+     서버렌더에 같은 문장을 겹쳐 넣으면 사람 눈에 지저분하고 로봇에겐 키워드 반복으로 읽힌다. */
+  const body = [
+    row.summary,
+    !row.summary && place ? `위치: ${place}` : "",
+    row.name_local || row.name_en ? `현지 표기: ${row.name_local || row.name_en}` : "",
+  ].filter(Boolean).join("\n\n");
+  const canonical = travelUrl(row);
+  const image = row.photo || DEF_IMG;
+  return { k: "travel", thin, title: `${title} · 갈라 여행`, desc, canonical, image, ogType: "article",
+    kicker: `${place || "여행"} · 갈라 여행`, h1, body, date: row.created_at,
+    placeId: row.id, sources: extra?.sources || [],
+    jsonld: placeLd(row, desc, image, canonical, body) };
+}
+
+function placeLd(row, desc, image, url, body) {
+  const o = {
+    "@context": "https://schema.org", "@type": "TouristAttraction",
+    name: row.name, description: desc, image: [image], url,
+    inLanguage: "ko-KR",
+    ...(row.name_en || row.name_local ? { alternateName: row.name_local || row.name_en } : {}),
+    ...(body ? { disambiguatingDescription: clip(body, 1200) } : {}),
+    address: {
+      "@type": "PostalAddress",
+      ...(row.city ? { addressLocality: row.city } : {}),
+      ...(row.admin1 ? { addressRegion: row.admin1 } : {}),
+      ...(row.country_code ? { addressCountry: row.country_code } : {}),
+    },
+  };
+  if (row.lat != null && row.lon != null) {
+    o.geo = { "@type": "GeoCoordinates", latitude: Number(row.lat), longitude: Number(row.lon) };
+  }
+  return JSON.stringify(o);
 }
 
 function articleLd(title, desc, image, url, date, body) {
@@ -269,7 +346,8 @@ function breadcrumbLd(seo) {
   let path = "/";
   try { path = new URL(seo.canonical).pathname; } catch {}
   const items = [{ "@type": "ListItem", position: 1, name: "GALLA 갈라", item: `${HOST}/` }];
-  const sec = SEC[path];
+  // 여행지 주소는 /travel/<이름>-<8자> 라 정확일치가 안 된다 — 접두로 본다
+  const sec = path.startsWith("/travel/") ? ["갈라 여행", `${HOST}/search?tab=travel`] : SEC[path];
   if (sec) items.push({ "@type": "ListItem", position: 2, name: sec[0], item: sec[1] });
   items.push({ "@type": "ListItem", position: items.length + 1, name: clip(seo.h1, 60), item: seo.canonical });
   return JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items });
@@ -293,6 +371,22 @@ function newsArticleHtml(seo) {
 }
 
 // HTMLRewriter로 <head> 메타 교체 + 본문 스냅샷 + 크롤 링크 주입
+/* 로봇이 JS 없이 읽는 여행지 본문. travel-place.js 가 곧 같은 자리를 덮어쓴다. */
+function travelArticleHtml(seo) {
+  const S = "max-width:720px;margin:0 auto;padding:18px 16px;color:#c9d1e0;font-size:14px;line-height:1.7";
+  const vids = (seo.sources || []).map((v) => v.video_title).filter(Boolean).slice(0, 10);
+  return `<div style="${S}">` +
+    `<p style="margin:0 0 6px;font-size:12px;color:#8b94a8">${esc(seo.kicker)}</p>` +
+    `<h1 style="margin:0 0 10px;font-size:20px;color:#e8ecf4">${esc(seo.h1)}</h1>` +
+    String(seo.body || "").split(/\n{2,}/).map((t) => t.trim()).filter(Boolean)
+      .map((t) => `<p style="margin:0 0 10px">${esc(clip(t, 1200))}</p>`).join("") +
+    (vids.length
+      ? `<h2 style="margin:16px 0 6px;font-size:14px;color:#8b94a8">누가 갔나</h2><ul style="margin:0;padding-left:18px">` +
+        vids.map((t) => `<li style="margin:0 0 4px">${esc(clip(t, 90))}</li>`).join("") + `</ul>`
+      : "") +
+    `</div>`;
+}
+
 function rewrite(res, seo, linksHtml) {
   // 목록 페이지: 메타는 원본 유지하고 링크 그물만 깐다
   if (!seo) {
@@ -315,6 +409,8 @@ function rewrite(res, seo, linksHtml) {
     `<meta name="twitter:description" content="${esc(seo.desc)}">` +
     `<meta name="twitter:image" content="${esc(seo.image)}">` +
     // 초대 카드는 검색 색인 대상이 아니라 JSON-LD/스냅샷 없음
+    /* 예쁜 주소(/travel/…)에는 ?id= 가 없다. 클라이언트가 자기 id 를 알 길이 여기뿐이다. */
+    (seo.placeId ? `<meta name="galla-place-id" content="${esc(seo.placeId)}">` : "") +
     (seo.jsonld ? `<script type="application/ld+json">${seo.jsonld}</script>` : "") +
     (seo.h1 ? `<script type="application/ld+json">${breadcrumbLd(seo)}</script>` : "");
 
@@ -323,8 +419,12 @@ function rewrite(res, seo, linksHtml) {
      구글에 thin content로 잡히던 게 색인 실패의 한 축이었다.
      뉴스는 아래에서 #np-reader에 진짜로 보이게 SSR하므로 스냅샷을 중복으로 넣지 않는다. */
   const newsHtml = seo.k === "news" ? newsArticleHtml(seo) : null;
+  /* 여행지도 뉴스와 같이 **보이게** 서버렌더한다. 숨긴 텍스트(clip:rect)에는 구글이
+     가중치를 안 준다 — 뉴스에서 이미 겪은 일이다. travel-place.js 가 같은 자리를
+     innerHTML 로 덮으므로 사람 눈에 중복되지 않는다. */
+  const tvHtml = seo.k === "travel" ? travelArticleHtml(seo) : null;
   const snapParas = String(seo.body || "").split(/\n{2,}|\n/).map((t) => t.trim()).filter(Boolean);
-  const snapshot = (seo.h1 && !newsHtml)
+  const snapshot = (seo.h1 && !newsHtml && !tvHtml)
     ? `<div id="seo-snapshot" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">` +
       `<p>${esc(seo.kicker)}</p><h1>${esc(seo.h1)}</h1>` +
       snapParas.map((t) => `<p>${esc(clip(t, 1200))}</p>`).join("").slice(0, 8000) +
@@ -345,6 +445,7 @@ function rewrite(res, seo, linksHtml) {
     rw = rw.on("#np-reader", { element(el) { el.setInnerContent(newsHtml, { html: true }); } })
            .on("#np-title", { element(el) { el.setInnerContent(seo.h1); } });
   }
+  if (tvHtml) rw = rw.on("#tv-page", { element(el) { el.setInnerContent(tvHtml, { html: true }); } });
   if (linksHtml) rw = rw.on("#app", { element(el) { el.append(linksHtml, { html: true }); } });
   return rw.transform(res);
 }
@@ -413,16 +514,41 @@ export async function onRequest(context) {
        여기서 ?ref= 만 보고 일반 초대 카드로 덮어쓰면 훨씬 약한 카드로 바뀐다
        (예: «고집불통 요새» 궁합 카드 → "누가 초대했어요"). 초대 크레딧은 OG가 아니라
        목적지 페이지의 ?ref= 캡처로 붙으므로, 덮어쓰지 않아도 하나도 안 잃는다. */
+    /* 🧭 여행지 예쁜 주소 — /travel/기자의-피라미드-b29e54ae
+       실제 파일은 travel-place.html 이다. 여기서 내부적으로 갈아끼운다(리다이렉트가 아니라
+       재작성이라 주소창은 예쁜 주소 그대로 남는다 = 색인되는 주소와 사람이 보는 주소가 같다).
+       ⚠️ slug 가 다르면(이름이 한글화된 뒤 옛 링크) 301 로 새 주소에 몰아준다 —
+          같은 곳이 두 주소로 색인되면 서로 순위를 깎아먹는다. */
+    const tv = travelSid(url.pathname);
+    let tvRow = null;
+    if (tv) {
+      tvRow = await sbOne(`travel_places?sid=eq.${encodeURIComponent(tv.sid)}&select=id,slug,sid,name,name_en,name_local,country,country_code,admin1,city,category,scale,lat,lon,summary,summary_src,photo,created_at&limit=1`);
+      if (tvRow && (tvRow.slug || "") !== tv.slug) {
+        return Response.redirect(travelUrl(tvRow), 301);
+      }
+    }
+    /* ⚠️ 없는 여행지는 **진짜 404** 를 준다. 그냥 통과시키면 Pages 의 SPA 폴백이
+       앱 껍데기를 200 으로 내주는데(실측), 구글은 그걸 소프트 404 로 잡고
+       아무 문자열이나 200 이 되는 주소는 색인 품질을 통째로 깎는다. */
+    if (url.pathname.startsWith("/travel/") && !tvRow) {
+      return new Response("Not Found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": "noindex, nofollow" },
+      });
+    }
     const isShare = url.pathname.startsWith("/share/");
     const hasRef = !isShare && !!url.searchParams.get("ref");
-    const isContent = !!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn"));
+    const isContent = !!tvRow
+      || (!!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn")));
     /* 초대(?ref=) 또는 콘텐츠 상세일 때만 개입.
        ⚠️ 한때 목록 페이지(홈·검색·광장·예측)에도 링크 블록을 주입했는데, 앱 화면 끝에
           민짜 링크 수십 개가 쌓여 UI 를 망쳤다. 크롤러용 링크 그물은 앱 화면이 아니라
           전용 아카이브 페이지(/archive, functions/archive.js)가 맡는다. */
     if (!hasRef && !isContent) return next();
 
-    const res = await next();
+    const res = tvRow
+      ? await next(new Request(new URL(`/travel-place?id=${tvRow.id}`, url), request))
+      : await next();
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("text/html")) return res;
 
@@ -430,9 +556,11 @@ export async function onRequest(context) {
     // 메타 조회와 링크 조회는 병렬 — 상세 페이지 TTFB를 한 번 더 늘리지 않는다
     const [seo, linksHtml] = await Promise.all([
       (async () => (hasRef ? await resolveInvite(url.searchParams) : null)
+                || (tvRow ? travelSeo(tvRow, await travelExtras(tvRow.id)) : null)
                 || (isContent ? await resolveSeo(url.pathname, url.searchParams) : null))(),
       (async () => {
         try {
+          if (tvRow) return wrapLinks(await relatedLinks("travel", tvRow.id));
           if (isContent) return wrapLinks(await relatedLinks(kind(url.pathname), url.searchParams.get("id") || url.searchParams.get("gn")));
         } catch {}
         return "";

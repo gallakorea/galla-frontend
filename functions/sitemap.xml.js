@@ -42,6 +42,20 @@ async function newsForSitemap() {
   }
   return out;
 }
+/* 여행지는 1,000행 상한(Supabase 요청당)에 걸리므로 페이징한다.
+   뉴스에서 limit=5000 을 적어놓고 실제로는 1,000건만 들어가던 함정과 같은 자리다. */
+const TRAVEL_MAX = 6000;
+async function travelForSitemap() {
+  const out = [];
+  for (let off = 0; off < TRAVEL_MAX; off += PAGE) {
+    const rows = await sb(`travel_sitemap_v?select=slug,sid,updated_at,created_at&order=updated_at.desc&limit=${PAGE}&offset=${off}`);
+    if (!rows || !rows.length) break;
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 const u = (loc, lastmod, changefreq, priority) =>
   `<url><loc>${loc}</loc>` +
   (lastmod ? `<lastmod>${lastmod}</lastmod>` : "") +
@@ -64,15 +78,18 @@ export async function onRequest() {
   parts.push(u(`${HOST}/match`, now, "weekly", "0.8")); // 갈라 궁합 — 비로그인 유입 랜딩
   // 아카이브 — 로봇이 콘텐츠까지 걸어 들어가는 유일한 링크 경로(앱 목록은 전부 JS 버튼이라 <a>가 0개)
   parts.push(u(`${HOST}/archive`, now, "hourly", "0.9"));
-  ["issue", "news", "plaza", "predict", "gallari"].forEach(t =>
+  ["issue", "news", "plaza", "predict", "gallari", "travel"].forEach(t =>
     parts.push(u(`${HOST}/archive?t=${t}`, now, "hourly", "0.7")));
 
-  const [issues, plaza, markets, news, posts] = await Promise.all([
+  const [issues, plaza, markets, news, posts, travel] = await Promise.all([
     sb("issues?select=id,created_at&order=created_at.desc&limit=2000"),
     sb("plaza_posts?select=id,created_at&order=created_at.desc&limit=2000"),
     sb("markets?select=id,created_at&order=created_at.desc&limit=2000"),
     newsForSitemap(),
     sb("posts?select=id,created_at&is_published=eq.true&order=created_at.desc&limit=2000"),
+    /* ⚠️ travel_places 가 아니라 travel_sitemap_v 를 쓴다 — 뷰가 '색인 대상' 규칙을 들고 있고,
+       그 규칙이 페이지가 내보내는 robots 태그와 같아야 "제출됐지만 noindex" 오류가 안 쌓인다. */
+    travelForSitemap(),
   ]);
 
   // clean URL(= 실제 200 페이지, 미들웨어가 SEO 메타 주입). .html은 308 리다이렉트되므로 clean 사용.
@@ -82,6 +99,9 @@ export async function onRequest() {
   // 갈라뉴스는 AI가 여러 보도를 종합해 새로 쓴 오리지널 → 이슈와 같은 급으로 취급한다
   (news || []).forEach(r => parts.push(u(`${HOST}/news?gn=${r.id}`, iso(r.published_at), "weekly", "0.7")));
   (posts || []).forEach(r => parts.push(u(`${HOST}/gallari-post?id=${r.id}`, iso(r.created_at), "weekly", "0.6")));
+  /* 여행지 주소는 /travel/<한글이름>-<8자>. 앞은 장식이고 뒤 8자가 주소를 푼다. */
+  (travel || []).forEach(r => parts.push(
+    u(`${HOST}/travel/${encodeURIComponent(r.slug)}-${r.sid}`, iso(r.updated_at || r.created_at), "weekly", "0.7")));
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${parts.join("\n")}\n</urlset>`;

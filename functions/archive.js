@@ -6,7 +6,7 @@
  * → 크롤 경로는 앱이 아니라 여기가 맡는다. 페이지네이션 있는 진짜 목록 페이지 하나.
  *   사람이 봐도 쓸 만한 '전체 콘텐츠' 페이지이고, 홈 푸터에서 링크 한 줄로 들어온다.
  *
- *   /archive              5개 영역 최근 12건씩 + 각 영역 전체보기
+ *   /archive              영역별 최근 12건씩 + 각 영역 전체보기
  *   /archive?t=news&p=2   영역별 목록(60건/페이지) + 이전·다음
  *
  * ⚠️ 갈라뉴스는 출처 2곳 이상만 싣는다 — 단일 출처 기사는 미들웨어가 noindex 를 붙인다.
@@ -27,6 +27,9 @@ const TYPES = {
   plaza:   { label: "광장",     q: "plaza_posts?select=id,title,created_at&order=created_at.desc",                                   href: (r) => `/plaza_detail?id=${r.id}`,    t: (r) => r.title,    d: (r) => r.created_at },
   predict: { label: "갈라예측", q: "markets?select=id,question,created_at&order=created_at.desc",                                     href: (r) => `/predict-market?id=${r.id}`,  t: (r) => r.question, d: (r) => r.created_at },
   gallari: { label: "숏판·롱판", q: "posts?select=id,title,caption,created_at&is_published=eq.true&order=created_at.desc",            href: (r) => `/gallari-post?id=${r.id}`,    t: (r) => r.title || clip(r.caption, 60), d: (r) => r.created_at },
+  /* 여행지는 travel_places 가 아니라 travel_sitemap_v(색인 대상 뷰)에서 뽑는다.
+     여기에 링크를 걸면서 사이트맵에서는 빼면(또는 그 반대면) 로봇에게 앞뒤가 안 맞는 신호가 간다. */
+  travel:  { label: "여행",     q: "travel_sitemap_v?select=id,slug,sid,name,country,updated_at&order=updated_at.desc",              href: (r) => `/travel/${encodeURIComponent(r.slug || "place")}-${r.sid}`, t: (r) => r.country ? `${r.name} (${r.country})` : r.name, d: (r) => r.updated_at },
 };
 
 async function fetchPage(spec, offset, limit) {
@@ -132,14 +135,14 @@ export async function onRequest(context) {
   }));
   const body =
     `<h1>갈라 전체 콘텐츠</h1>` +
-    `<p class="lede">갈라에 올라온 이슈·갈라뉴스·광장 글·예측 마켓·숏판/롱판을 한 곳에서 훑어봅니다.</p>` +
+    `<p class="lede">갈라에 올라온 이슈·갈라뉴스·광장 글·예측 마켓·숏판/롱판·여행지를 한 곳에서 훑어봅니다.</p>` +
     navHtml(null) +
     packs.map(({ k, spec, rows, total }) =>
       `<h2>${esc(spec.label)}<a href="/archive?t=${k}">전체 ${total.toLocaleString("ko-KR")}건 ›</a></h2>` +
       `<ul>${rows.map((r) => row(spec, r)).join("")}</ul>`).join("");
   return html(shell(
     "갈라 전체 콘텐츠 아카이브",
-    "갈라의 이슈·갈라뉴스·광장·갈라예측·숏판/롱판 전체 목록. 대한민국 실시간 여론·예측 플랫폼 갈라.",
+    "갈라의 이슈·갈라뉴스·광장·갈라예측·숏판/롱판·여행지 전체 목록. 대한민국 실시간 여론·예측 플랫폼 갈라.",
     `${HOST}/archive`, body, ""));
 }
 
