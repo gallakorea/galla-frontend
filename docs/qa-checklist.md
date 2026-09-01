@@ -968,3 +968,24 @@ im.galla.app://cb#access_token=<공격자토큰>&refresh_token=<공격자토큰>
   익명 업로드는 세 버킷 모두 **403 RLS 거부**. 버킷 한도 issues 114MB·plaza-images 14MB·profiles 8MB.
 - ⚠️ 부수 발견: **`plaza-images`·`profiles` 에는 DELETE 정책이 아예 없다**(소유자도 못 지움).
   보안 구멍은 아니지만 글을 지워도 파일이 남아 **고아 파일이 계속 쌓인다**(issues 버킷 197파일 1.16GB 와 같은 계열).
+
+### 26-16. 정지(밴) 계정이 여전히 할 수 있던 것 — 고침
+
+`banned_no_write`(RESTRICTIVE·insert·authenticated·`NOT _me_banned()`)가 **14개 표에만** 걸려 있었다.
+정지 계정을 만들어 빠진 표를 직접 찔러봤다(전부 롤백).
+
+| 표 | 정지 상태에서 | 조치 |
+|---|---|---|
+| `votes` | **이슈 찬반 투표가 그대로 됐다** — 정지돼도 판을 흔들 수 있었다 | 정책 추가 ✅ |
+| `market_comments` | 예측 의견배틀 댓글 작성됨 | ✅ |
+| `galla_news_comments` | 갈라뉴스 댓글 작성됨 | ✅ |
+| `follows` | 팔로우됨(정지 중 스팸 팔로우) | ✅ |
+| `content_reports` | **신고 도배 가능** | ✅ |
+| `open_messages` | ⚠️ **오탐** — `open_rooms` 가 0행이라 검사가 헛돌았다. 방을 만들어 다시 하니 원래도 막혀 있었다 | 정책은 명시적으로 남김 |
+| `bookmarks` | 저장됨 | **일부러 안 막았다** — 본인만 보는 목록이라 실익이 없다 |
+
+막혀 있던 것(확인): 기존 14개 표(comments·plaza_posts·comment_likes·duel_votes 등)와
+SECURITY DEFINER RPC 8개 — `weather_say` 는 `{"ok":false,"reason":"banned"}` 를 돌려준다.
+
+검증: 정지 계정은 위 표 전부 `42501 banned_no_write`, **정지 아닌 계정은 그대로 통과**(팔로우 OK).
+마이그레이션 `20260901300000`.
