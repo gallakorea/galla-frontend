@@ -1331,13 +1331,13 @@ async function initTrendPage() {
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
     activateTab("hot", false);
-  } else if (["trending", "news", "hot", "weather", "food", "plaza"].includes(qs.get("tab"))) {
+  } else if (["trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(qs.get("tab"))) {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
   } else {
     // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
-    activateTab(["search", "trending", "news", "hot", "weather", "food", "plaza"].includes(saved) ? saved : "search", false);
+    activateTab(["search", "trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
 }

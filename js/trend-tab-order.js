@@ -14,7 +14,10 @@
          ORDER_V는 되돌리지 않는다 — 낮추면 이미 4를 받은 유저의 마이그레이션 상태가 꼬인다. */
   /* v5: '맛집' 탭 신설. 저장 순서가 있는 유저는 restore()가 새 탭을 맨 뒤(광장 뒤)에
          붙여버리므로, 여기서 '날씨' 바로 뒤로 옮겨준다. 둘 다 지역 기반이라 붙어 있어야 한다. */
-  const ORDER_V = 5;
+  /* v6: '여행' 탭 신설. 저장 순서가 있는 유저는 restore()가 새 탭을 맨 뒤(광장 뒤)에
+         붙여버리므로, 여기서 '맛집' 바로 뒤로 옮겨준다 — 둘 다 '가서 겪는 것'을 다루는 탭이라
+         붙어 있어야 한다. ⚠️ ORDER_V 는 절대 낮추지 않는다(이미 받은 유저의 상태가 꼬인다). */
+  const ORDER_V = 6;
   const header = () => document.querySelector('.tabs-header');
 
   function label(el) {
@@ -39,6 +42,12 @@
             const wi = saved.indexOf('weather');
             if (wi >= 0) saved.splice(wi + 1, 0, 'food');
             else saved.unshift('food');
+          }
+          // v6 — 여행을 맛집 바로 뒤에
+          if (!saved.includes('travel')) {
+            const fi = saved.indexOf('food');
+            if (fi >= 0) saved.splice(fi + 1, 0, 'travel');
+            else saved.push('travel');
           }
           localStorage.setItem(KEY, JSON.stringify(saved));
         }

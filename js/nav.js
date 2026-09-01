@@ -426,6 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
       "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage, .fd-map.open, .fd-cpick.open, .fd-cgpage.open, " +
+      ".tv-map.open, .tv-detail.open, " +
       ".gtour, .gt-stage, .trend-tour"   // 온보딩 투어가 떠 있으면 탭 스와이프 금지(투어가 카테고리 위를 덮어 스와이프를 가로챘다)
     ) || document.body.classList.contains("dm-detail");
 

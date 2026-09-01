@@ -1,0 +1,236 @@
+/* =========================================================
+   travel.css — 여행 탭
+   맛집(food.css)과 톤을 맞추되 클래스는 tv- 로 완전히 분리한다.
+   ⚠️ .tabs-body 의 좌우 패딩은 0 이다. 패널이 자체 패딩을 안 가지면 글자가
+      화면 가장자리에 붙는다(맛집에서 320px 실측으로 걸린 문제).
+   ========================================================= */
+.tab-panel[data-panel="travel"] { padding: 0 14px 28px; }
+
+.tv-head { padding: 4px 0 2px; }
+.tv-title { font-size: 19px; font-weight: 800; color: var(--text-hi); letter-spacing: -.03em; }
+.tv-lead { font-size: 12.5px; color: var(--text-low); margin: 5px 0 0; line-height: 1.55; }
+
+.tv-sec { margin-top: 14px; }
+
+/* ── 세그먼트 ─────────────────────────────────────── */
+.tv-seg { display: flex; gap: 6px; margin-bottom: 10px; }
+.tv-sg {
+  flex: 1 1 0; padding: 8px 0; border: 1px solid var(--line-1); border-radius: var(--r-md);
+  background: var(--surface-1); color: var(--text-mid); font-size: 13px; font-weight: 700;
+  cursor: pointer; letter-spacing: -.02em;
+}
+.tv-sg.on { background: var(--accent-grad); border-color: transparent; color: #fff; box-shadow: var(--accent-glow); }
+
+/* ── 칩 — .chip-scroll 이어야 nav.js 가 셸 스와이프에서 제외한다 ── */
+.tv-chips {
+  display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -14px; padding: 2px 14px 10px;   /* 패널 패딩 상쇄 — 가장자리까지 흐르게 */
+}
+.tv-chips::-webkit-scrollbar { display: none; }
+.tv-chip {
+  flex: 0 0 auto; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line-1); background: var(--surface-1);
+  color: var(--text-mid); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.tv-chip.on { background: var(--accent); border-color: transparent; color: #fff; }
+.tv-chip i { font-style: normal; opacity: .6; margin-left: 3px; font-size: 11px; }
+
+/* ── 카드 목록 ────────────────────────────────────── */
+.tv-list { display: flex; flex-direction: column; gap: 10px; }
+.tv-card {
+  display: flex; gap: 11px; padding: 9px; cursor: pointer;
+  background: var(--surface-1); border: 1px solid var(--line-1); border-radius: var(--r-md);
+}
+.tv-card:active { background: var(--surface-2); }
+.tv-thumb {
+  position: relative; flex: 0 0 auto; width: 92px; height: 92px; border-radius: var(--r-sm);
+  overflow: hidden; background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+}
+.tv-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.tv-ph { font-size: 30px; }
+.tv-badge {
+  position: absolute; left: 5px; top: 5px; padding: 2px 6px; border-radius: 999px;
+  background: rgba(0,0,0,.62); color: #fff; font-size: 10.5px; font-weight: 700;
+}
+.tv-body { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+.tv-name {
+  font-size: 15px; font-weight: 800; color: var(--text-hi); letter-spacing: -.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tv-sub { font-size: 12px; color: var(--text-low); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-meta { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.tv-v { font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
+.tv-v.hot { background: rgba(255,92,43,.14); color: #ff7a4d; }
+.tv-v.want { background: rgba(67,97,255,.16); color: #7d92ff; }
+.tv-vn { font-size: 11.5px; color: var(--text-low); }
+.tv-ch { font-size: 11.5px; color: var(--text-low); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-empty, .tv-none { padding: 26px 0; text-align: center; color: var(--text-low); font-size: 13px; }
+
+/* ── 누가 갔나 ────────────────────────────────────── */
+.tv-who { margin-bottom: 18px; }
+.tv-who-h { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.tv-who-h img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.tv-who-n { font-size: 14px; font-weight: 800; color: var(--text-hi); }
+.tv-who-s { font-size: 11.5px; color: var(--text-low); }
+.tv-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 0 14px 4px; }
+.tv-row::-webkit-scrollbar { display: none; }
+.tv-mini {
+  flex: 0 0 auto; width: 108px; border: 0; padding: 0; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px; text-align: left;
+}
+.tv-mini img, .tv-mini .tv-ph {
+  width: 108px; height: 108px; border-radius: var(--r-sm); object-fit: cover;
+  background: var(--surface-2); display: flex; align-items: center; justify-content: center;
+}
+.tv-mini-n {
+  font-size: 12px; color: var(--text-mid); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── 상세 오버레이 ────────────────────────────────────
+   ⚠️ body 직속 + 100vw/100dvh. transform 조상 밑에서 inset:0 이면 0×0 이 된다
+      (맛집 지도 오버레이에서 실제로 겪은 실패). z-index 는 nav.nav(9999) 위. */
+.tv-detail {
+  position: fixed; left: 0; top: 0; width: 100vw; height: 100dvh; z-index: 10000;
+  background: rgba(0,0,0,.62); display: none; align-items: flex-end; justify-content: center;
+}
+.tv-detail.open { display: flex; }
+body.tv-lock { overflow: hidden; }
+.tv-sheet {
+  position: relative; width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto;
+  background: var(--surface-1); border-radius: 18px 18px 0 0; -webkit-overflow-scrolling: touch;
+}
+.tv-x {
+  position: absolute; right: 10px; top: 10px; z-index: 2; width: 32px; height: 32px;
+  border: 0; border-radius: 50%; background: rgba(0,0,0,.5); color: #fff; font-size: 15px; cursor: pointer;
+}
+.tv-hero { position: relative; width: 100%; aspect-ratio: 16/10; background: var(--surface-2); }
+.tv-hero img { width: 100%; height: 100%; object-fit: cover; }
+.tv-hero.empty { display: flex; align-items: center; justify-content: center; font-size: 54px; }
+.tv-credit {
+  position: absolute; right: 8px; bottom: 6px; max-width: 70%; padding: 2px 7px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 10px; line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tv-d-body { padding: 14px 16px 22px; }
+.tv-d-name { margin: 0; font-size: 20px; font-weight: 800; color: var(--text-hi); letter-spacing: -.03em; }
+.tv-d-sub { margin-top: 4px; font-size: 12.5px; color: var(--text-mid); }
+.tv-d-alt { margin-top: 2px; font-size: 12px; color: var(--text-low); }
+.tv-warn {
+  margin-top: 10px; padding: 8px 10px; border-radius: var(--r-sm);
+  background: rgba(255,159,67,.12); color: #ffb056; font-size: 12px;
+}
+
+/* 판정 — 두 축을 시각적으로 갈라 놓는다(안 가본 사람이 '또 간다'를 누르면 축이 오염된다) */
+.tv-judge { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.tv-jrow { display: flex; align-items: center; gap: 6px; }
+.tv-jl { flex: 0 0 84px; font-size: 11.5px; color: var(--text-low); font-weight: 700; }
+.tv-vote {
+  flex: 1 1 0; padding: 10px 4px; border-radius: var(--r-md); cursor: pointer;
+  border: 1px solid var(--line-1); background: var(--surface-2);
+  color: var(--text-mid); font-size: 13px; font-weight: 800; letter-spacing: -.02em;
+}
+.tv-vote i { font-style: normal; margin-left: 5px; font-size: 11.5px; opacity: .7; }
+.tv-vote.hot.on  { background: #ff5c2b; border-color: transparent; color: #fff; }
+.tv-vote.cold.on { background: #5b6b8c; border-color: transparent; color: #fff; }
+.tv-vote.want.on { background: var(--accent); border-color: transparent; color: #fff; }
+.tv-vote.pass.on { background: #4a4f63; border-color: transparent; color: #fff; }
+
+.tv-gauge { margin-top: 12px; }
+.tv-gbar { height: 7px; border-radius: 999px; background: #5b6b8c; overflow: hidden; }
+.tv-gbar i { display: block; height: 100%; background: #ff5c2b; }
+.tv-gtx { margin-top: 6px; font-size: 11.5px; color: var(--text-low); }
+.tv-hype {
+  margin-top: 10px; padding: 9px 11px; border-radius: var(--r-sm);
+  background: rgba(255,92,43,.12); color: #ff7a4d; font-size: 12px; font-weight: 700;
+}
+
+.tv-h { font-size: 13.5px; font-weight: 800; color: var(--text-hi); margin: 18px 0 8px; }
+.tv-h i { font-style: normal; color: var(--text-low); font-weight: 600; margin-left: 4px; }
+.tv-vid { display: flex; gap: 9px; padding: 6px 0; text-decoration: none; }
+.tv-vid img { width: 96px; height: 54px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; }
+.tv-vid span { min-width: 0; font-size: 12px; color: var(--text-mid); line-height: 1.45; }
+.tv-vid b { display: block; color: var(--text-hi); font-size: 12.5px; }
+
+.tv-cmts { display: flex; flex-direction: column; gap: 7px; }
+.tv-cmt { font-size: 13px; color: var(--text-mid); line-height: 1.5; }
+.tv-cmt b { color: var(--text-hi); font-weight: 700; }
+.tv-cf {
+  display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800;
+}
+.tv-cmt.hot  .tv-cf { background: rgba(255,92,43,.16); color: #ff7a4d; }
+.tv-cmt.cold .tv-cf { background: rgba(91,107,140,.22); color: #9fb0d0; }
+.tv-cmt.want .tv-cf { background: rgba(67,97,255,.16); color: #7d92ff; }
+.tv-cmt.pass .tv-cf { background: rgba(120,120,140,.18); color: #a0a4b8; }
+
+.tv-write { display: flex; gap: 7px; margin-top: 12px; }
+.tv-write input {
+  flex: 1 1 auto; min-width: 0; padding: 11px 12px; border-radius: var(--r-md);
+  border: 1px solid var(--line-1); background: var(--surface-2); color: var(--text-hi);
+  font-size: 16px;   /* ⚠️ 16px 미만이면 iOS 가 입력 시 화면을 확대한다(영역검색에서 겪은 버그) */
+}
+.tv-write button {
+  flex: 0 0 auto; padding: 0 16px; border: 0; border-radius: var(--r-md);
+  background: var(--accent-grad); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.tv-src { margin-top: 16px; font-size: 10.5px; color: var(--text-low); }
+
+/* ── 상단 줄 — 세그먼트 + 지도 버튼 ─────────────────── */
+.tv-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.tv-top .tv-seg { flex: 1 1 auto; margin-bottom: 0; }
+.tv-mapbtn {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 13px; border: 0; border-radius: var(--r-md); cursor: pointer;
+  background: var(--accent-grad); color: #fff; font-size: 12.5px; font-weight: 700;
+  box-shadow: var(--accent-glow);
+}
+.tv-mapbtn svg { width: 15px; height: 15px; }
+
+/* ── 지도 오버레이 ────────────────────────────────────
+   ⚠️ body 직속 + 100vw/100dvh. transform 조상 밑에서 inset:0 이면 0×0 이 된다.
+      z-index 는 nav.nav(9999) 위. nav.js overlayOpen() 에 '.tv-map.open' 이 등록돼 있어야
+      지도 드래그가 셸 탭 스와이프로 새어나가지 않는다. */
+.tv-map {
+  position: fixed; left: 0; top: 0; width: 100vw; height: 100dvh; z-index: 10000;
+  display: none; background: var(--bg);
+}
+.tv-map.open { display: block; }
+/* ⚠️ maplibre-gl.css 는 지도를 열 때 **지연 주입**되므로 travel.css 뒤에 온다.
+   그 안의 `.maplibregl-map{position:relative}` 가 특이도 동점(0,1,0)에서 나중 것으로 이겨
+   내 `position:absolute`를 덮었다 → inset:0 이 무효가 되고 지도가 214px 로 쪼그라들었다(실측).
+   맛집에서 leaflet.css 가 마커를 240px 로 터뜨린 사고와 같은 함정이다. 특이도를 (0,2,0)으로 올린다. */
+.tv-map .tv-map-c,
+.tv-map .tv-map-c.maplibregl-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tv-map-x {
+  position: absolute; right: 12px; top: 12px; z-index: 3; width: 38px; height: 38px;
+  border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff;
+  font-size: 16px; cursor: pointer; backdrop-filter: blur(6px);
+}
+.tv-map-hint {
+  position: absolute; left: 12px; top: 14px; z-index: 3; padding: 7px 13px; border-radius: 999px;
+  background: rgba(0,0,0,.62); color: #fff; font-size: 12.5px; font-weight: 700;
+  backdrop-filter: blur(6px);
+}
+
+/* 핀 — 얼굴은 크리에이터 로고다(맛집 지도와 같은 문법: 핀만 봐도 누가 갔는지 안다).
+   ⚠️ MapLibre 가 자기 CSS 를 나중에 주입하므로 특이도를 이겨야 한다 —
+      leaflet 이 맛집 마커를 240px 원본으로 터뜨린 사고와 같은 함정. */
+.tv-map .tv-pin,
+.maplibregl-marker.tv-pin {
+  position: relative; width: 38px; height: 38px; padding: 0; cursor: pointer;
+  border: 2px solid #fff; border-radius: 50%; background: var(--surface-2);
+  box-shadow: 0 3px 10px rgba(0,0,0,.45); overflow: visible;
+  display: flex; align-items: center; justify-content: center;
+}
+.tv-map .tv-pin img, .maplibregl-marker.tv-pin img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+.tv-map .tv-pin span { font-size: 18px; }
+.tv-map .tv-pin.area { border-color: #38d6b0; width: 44px; height: 44px; }
+.tv-map .tv-pin-n {
+  position: absolute; right: -4px; top: -4px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: #ff5c2b; color: #fff;
+  font-size: 10.5px; font-weight: 800; font-style: normal; line-height: 17px; text-align: center;
+}
