@@ -56,8 +56,14 @@ async function verify(name: string, addr: string) {
   const u = new URL("https://openapi.naver.com/v1/search/local.json");
   u.searchParams.set("query", `${hint} ${name}`.trim());
   u.searchParams.set("display", "5");
+  /* 💰 네이버 몫을 한 건씩 받아 쓴다. 하루치가 없으면 아예 안 부른다 —
+     2026-09-01 에 크론·루프가 동시에 때려 25,000 을 다 태우고, 그 뒤 실패한 집들이
+     '물어봤음' 으로 박혀 영구 제외될 뻔했다. 장부가 429 전에 세운다. */
+  const { data: allow } = await supa.rpc("naver_take", { p_want: 1 });
+  if (Number(allow || 0) <= 0) throw new Error("naver_budget");
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
-  if (!r.ok) return null;
+  /* 못 찾은 것과 못 부른 것을 가른다 — 후자는 위로 올려 배치를 멈춘다 */
+  if (!r.ok) throw new Error(`naver_${r.status}`);
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -81,6 +87,7 @@ async function verify(name: string, addr: string) {
 }
 
 Deno.serve(async (req) => {
+  let naverHalt = "";
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
   if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
@@ -111,7 +118,9 @@ Deno.serve(async (req) => {
     const addr = String(r["업체주소"] || "").trim();
     if (name.length < 2 || !addr) continue;
     checked++;
-    const v = await verify(name, addr);
+    let v: any = null;
+    try { v = await verify(name, addr); }
+    catch (e) { naverHalt = String(e).slice(0, 60); break; }   // 몫 소진 — 다음 회차에 이어서
     if (!v) { notFood++; await new Promise((s) => setTimeout(s, 70)); continue; }
     kept++;
     items.push({ ...v, channel: "baengnyeon", origin: "gov" });
@@ -123,5 +132,6 @@ Deno.serve(async (req) => {
     const { data } = await supa.rpc("food_ingest", { p_items: items });
     res = data || res;
   }
-  return j({ ok: true, total: gd?.totalCount, offset, checked, kept, dropped: notFood, ...res });
+  return j({ ok: true, total: gd?.totalCount, offset, checked, kept, dropped: notFood,
+            halted: naverHalt || undefined, ...res });
 });

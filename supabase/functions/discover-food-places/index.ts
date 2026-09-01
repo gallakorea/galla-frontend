@@ -161,8 +161,14 @@ async function verify(name: string, hint: string) {
   const u = new URL("https://openapi.naver.com/v1/search/local.json");
   u.searchParams.set("query", (hint ? hint + " " : "") + name);
   u.searchParams.set("display", "5");
+  /* 💰 네이버 몫을 한 건씩 받아 쓴다. 하루치가 없으면 아예 안 부른다 —
+     2026-09-01 에 크론·루프가 동시에 때려 25,000 을 다 태우고, 그 뒤 실패한 집들이
+     '물어봤음' 으로 박혀 영구 제외될 뻔했다. 장부가 429 전에 세운다. */
+  const { data: allow } = await supa.rpc("naver_take", { p_want: 1 });
+  if (Number(allow || 0) <= 0) throw new Error("naver_budget");
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
-  if (!r.ok) return null;
+  /* 못 찾은 것과 못 부른 것을 가른다 — 후자는 위로 올려 배치를 멈춘다 */
+  if (!r.ok) throw new Error(`naver_${r.status}`);
   const items = (await r.json())?.items || [];
   const norm = (s: string) => s.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
@@ -256,6 +262,7 @@ Deno.serve(async (req) => {
     .select("slug,name,active,discover_wave").eq("active", true).order("sort");
 
   const report: any[] = [];
+  let naverHalt = "";
   let added = 0;
 
   for (const c of (chans || []) as any[]) {
@@ -312,7 +319,11 @@ Deno.serve(async (req) => {
       }
       const items: any[] = [];
       for (const cd of cands) {
-        const v = await verify(cd.name, cd.region || "");
+        /* 네이버 몫 소진·인프라 실패면 조용히 멈춘다 — 500 으로 죽으면 크론 이력만
+           지저분해지고, 계속 부르면 한도만 더 태운다. 다음 회차에 이어서 한다. */
+        let v: any = null;
+        try { v = await verify(cd.name, cd.region || ""); }
+        catch (e) { naverHalt = String(e).slice(0, 60); break; }
         if (v) items.push({ ...v, channel: c.slug, origin: "yt" });
         await new Promise((s) => setTimeout(s, 90));
       }
@@ -330,5 +341,5 @@ Deno.serve(async (req) => {
       report.push({ ch: c.slug, err: String(e).slice(0, 140) });
     }
   }
-  return j({ ok: true, added, report });
+  return j({ ok: true, added, report, halted: naverHalt || undefined });
 });
