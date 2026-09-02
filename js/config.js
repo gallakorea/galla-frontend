@@ -60,6 +60,6 @@ window.CONFIG = {
       실제 지급 권한은 서버(portone-webhook + PORTONE_API_SECRET)에만 있다.
    조회 위치: 포트원 관리자콘솔 > 결제연동 > 연동 정보 */
 window.GALLA_PORTONE = {
-  storeId: "",      // store-xxxxxxxx-xxxx-...
-  channelKey: "",   // channel-key-xxxxxxxx-... (NHN KCP 채널)
+  storeId: "store-1638c847-0fa6-42ee-9110-dc37c31ddf1b",
+  channelKey: "",   // channel-key-xxxxxxxx-... (KG이니시스 채널 — 본심사 후 발급)
 };
