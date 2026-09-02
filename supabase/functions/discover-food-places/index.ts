@@ -265,10 +265,14 @@ Deno.serve(async (req) => {
   let naverHalt = "";
 
   /* 🔎 진단용: 네이버의 **진짜** 남은 한도를 잰다. 장부(우리가 세는 숫자)와 실제가
-     어긋나면 수확이 공짜로 굶는다. 호출 1건이라 장부를 태우지 않고 그냥 부른다. */
+     어긋나면 수확이 공짜로 굶는다. 호출 1건이라 장부를 태우지 않고 그냥 부른다.
+     ?q= 로 임의 질의도 던져볼 수 있다 — 이걸로 '주소로 검색하면 찾아지나'를 재봤고
+     **안 된다**는 걸 확인했다(지역검색은 순수 상호 검색이다). 실측 2026-09-03:
+     '대구광역시 서구 문화로 308' 같은 멀쩡한 도로명 4건이 전부 결과 0. */
   if (new URL(req.url).searchParams.get("probe") === "1") {
+    const q = new URL(req.url).searchParams.get("q") || "김밥천국";
     const pu = "https://openapi.naver.com/v1/search/local.json?query=" +
-               encodeURIComponent("김밥천국") + "&display=1";
+               encodeURIComponent(q) + "&display=5";
     const pr = await fetch(pu, {
       headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC },
     });
