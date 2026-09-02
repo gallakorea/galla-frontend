@@ -1648,6 +1648,10 @@
                 (s.title ? '<span class="fs-t">' + esc(s.title) + '</span>' : '') +
               '</button>'
             : (s.title ? '<p class="fs-t only">' + esc(s.title) + '</p>' : '')) +
+          /* 이 영상이 이 집을 어떻게 소개했나 — **크리에이터마다 따로** 붙는다.
+             영상 제목은 "디저트 특집!" 같은 회차 제목이라 이 집 얘기가 아니다.
+             같은 집을 여러 명이 다녀갔으면 각자 자기 영상의 한 줄이 자기 카드에 붙는다. */
+          (s.blurb ? '<p class="fs-b">' + esc(s.blurb) + '</p>' : '') +
         '</div>';
       }).join("") + '</div>';
   }

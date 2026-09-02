@@ -434,6 +434,10 @@ body.fd-map-on #frOrb { display: none !important; }
 .fm-n { flex: 1; min-width: 0; font-size: 13px; color: var(--text-hi);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fm-src { font-style: normal; font-size: 10px; margin-left: 5px; opacity: .65; }
+/* 영상 한 줄 요약 — 재생 카드 바로 아래. 제목보다 조용하지만 읽히게 */
+.fs-b { margin: 6px 0 0; padding: 0 2px; font-size: 12.5px; line-height: 1.45;
+        color: #b9bfcc; letter-spacing: -.2px; }
+.fs-i.has-vid .fs-b { color: #c8cedb; }
 /* 정부 고시 '착한가격업소' 표식 — 메뉴판 제목 옆. 값의 출처를 밝히는 자리다 */
 .fm-gp { margin-left: 8px; font-size: 11px; font-weight: 700; color: #7ee0a5;
          background: rgba(29,185,84,.14); border: 1px solid rgba(29,185,84,.32);
