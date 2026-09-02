@@ -253,7 +253,7 @@
 | 일기토 진행·메시지(duel_messages) | ✅ | ❌ | ❌ |  <!-- 양쪽 duel_say → duel_messages 2행 -->
 | 일기토 AI 판정(duel-ai-judge) | ❌ | ❌ | ❌ |
 | 일기토 관전·투표 | ✅ | ❌ | ❌ |  <!-- 제3자 duel_vote → vote_challenger 1. 시간 만료 후 duel_resolve 2단계(live→voting→finished)·승자 GP ±500 -->
-| **나만의 이모티콘(AI 생성·GP 차감·환불)** | ❌ | ❌ | ❌ |
+| **나만의 이모티콘(AI 생성·GP 차감·환불)** | 🔶 | ❌ | ❌ |  <!-- 0902: 과금은 GC 150 차감 확인. 환불이 GP 로 나가던 결함 발견·수정(§26-19). 실제 이미지 생성은 AI 비용이라 미실행 -->
 | DM 스티커 사용 | ❌ | ❌ | ❌ |
 | **알림 목록·읽음 처리(notifications)** | ❌ | ❌ | ❌ |
 | 갈라 성향 테스트(/match) 공유 | ❌ | ❌ | ❌ |
@@ -1040,3 +1040,20 @@ SECURITY DEFINER RPC 8개 — `weather_say` 는 `{"ok":false,"reason":"banned"}`
 ⚠️ 남은 미세 불일치 1건: **market 340 의 `total_pool`(600) ≠ outcome `pool_gp` 합(620)**.
    이미 정산된 마켓이라 지금 영향은 없지만, 정산 경로가 outcome 만 갱신하고 total_pool 을
    안 맞추는 흔적일 수 있다 — 정산 코드 재확인 필요.
+
+### 26-19. 스티커 실패 환불이 **다른 지갑으로** 나갔다 — 고침
+
+`ai_sticker_charge(1)` 은 **GC 150** 을 깎는데(`gc_balances` 50,000 → 49,850),
+`ai_sticker_refund(...)` 는 **GP 150** 을 넣어줬다(`point_balances` +150, GC 는 그대로).
+
+GC 는 충전(현금성)이고 GP 는 활동 포인트다. **생성 실패는 우리 잘못인데 유저는 유료 재화를 잃고
+무상 재화를 받는다** — 결제 분쟁·심사에서 걸릴 자리다.
+
+같은 계열인 창작 대행은 이미 맞게 돼 있었다(`ai_creation_charge` GC 차감 → `ai_creation_refund` GC 환불 +
+`gc_ledger`). `point_ledger` 에 옛 `ai_creation:refund` 3건(600GP)이 남아 있는 걸 보면
+**창작 대행은 GP→GC 로 고쳤는데 스티커만 안 고쳤다.**
+
+고친 뒤 실측: 차감 150 → GC 49,850 → 환불 → **GC 50,000 복구**, GP 변화 없음,
+`gc_ledger` 에 `ai_sticker:refund` 기록. 마이그레이션 `20260902100000`.
+
+⚠️ 실제 이미지 생성(gpt-image-1 호출)은 AI 비용이 나가 실행하지 않았다 — 과금·환불 경로만 검증했다.
