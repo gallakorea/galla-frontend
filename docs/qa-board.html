@@ -468,7 +468,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </section>
 <section class="area">
   <h4>21. 데이터 정합성·비용<span class="ratio">6<i>/</i>6</span></h4>
-  <ul class="list"><li class="done"><span class="t">카운터 드리프트(like_count·comment_count vs 실제)</span><span class="n">44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료</span></li>
+  <ul class="list"><li class="done"><span class="t">카운터 드리프트(like_count·comment_count vs 실제)</span><span class="n">44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료. **0902 재대조**: 이슈 pro/con/like·광장 추천/비추천·댓글 좋아요·난장 </span></li>
 <li class="done"><span class="t">고아 레코드(삭제된 부모의 자식)</span><span class="n">FK 없는 참조 58개 분류(다형성·외부ID 제외). **`ai_news_jobs` 3행·`ai_trends` 3행이 이미 고아** — 정리 후 이슈 자식 7표에 FK(일기토만 SET NULL)</span></li>
 <li class="part"><span class="t">R2 고아 파일 vs DB 참조</span><span class="n">purge_orphan_media 크론은 있음</span></li>
 <li class="done"><span class="t">AI 예산 소진·상한 동작(ai_budget_usage·model_for 다운그레이드)</span><span class="n">ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가**</span></li>

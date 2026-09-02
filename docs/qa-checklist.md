@@ -597,7 +597,7 @@ api.anthropic.com                      (미국)
 
 | 항목 | 상태 |
 |---|---|
-| 카운터 드리프트(like_count·comment_count vs 실제) | 44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료 | ✅ |
+| 카운터 드리프트(like_count·comment_count vs 실제) | 44개 카운터 중 주요 12개 전수 대조. 이슈 pro/con/like 0건. **삭제 경로에 카운터 보정이 없어** 광장 1건·댓글 1건 드리프트 → DELETE 재계산 트리거 신설·보정 완료. **0902 재대조**: 이슈 pro/con/like·광장 추천/비추천·댓글 좋아요·난장 인원 전부 0건, `market_outcomes.bettor_count` 4행만 어긋나 재계산 보정(§26-18) | ✅ |
 | 고아 레코드(삭제된 부모의 자식) | FK 없는 참조 58개 분류(다형성·외부ID 제외). **`ai_news_jobs` 3행·`ai_trends` 3행이 이미 고아** — 정리 후 이슈 자식 7표에 FK(일기토만 SET NULL) | ✅ |
 | R2 고아 파일 vs DB 참조 | 🔶 purge_orphan_media 크론은 있음 |
 | **AI 예산 소진·상한 동작**(ai_budget_usage·model_for 다운그레이드) | ✅ ai_budget_take 검증(상한 도달→daily_cap · 0→disabled). **유저 트리거 3개에 상한이 없어 추가** |
@@ -1018,3 +1018,25 @@ SECURITY DEFINER RPC 8개 — `weather_say` 는 `{"ok":false,"reason":"banned"}`
 ⚠️ 다만 `point_ledger.delta`·`point_balances.balance` 가 **double precision** 이다.
 8/7 `reconcile:welcome` 보정 때 `43332.7384615385` 같은 값이 실제로 들어갔다(원장 8행).
 지금 잔액은 전부 정수라 피해는 없지만, **돈 성격 값에 부동소수점은 언젠가 어긋난다** — 정수형 전환 권고.
+
+### 26-18. 데이터 정합성 재대조 (2026-09-02)
+
+| 카운터 | 어긋난 행 |
+|---|---|
+| `issues.pro_count`·`con_count`·`like_count` | **0** |
+| `plaza_posts.up_count`·`down_count` | **0** |
+| `plaza_comments.like_count` | **0** |
+| `open_rooms.member_count` | **0** |
+| `market_outcomes.bettor_count` | **4** → 재계산 보정 완료(잔여 0) |
+
+⚠️ **내가 두 번 헛짚었다. 그대로 남긴다.**
+1. 처음엔 `votes.vote_type` 으로 세어 이슈 카운터가 22·13행 어긋난 줄 알았다. 그런데
+   `votes` 에는 `type` 과 `vote_type` 두 컬럼이 있고 **`vote_type` 은 48행 전부 null**(죽은 컬럼).
+   `type` 으로 다시 세니 0건이었다. → **죽은 컬럼 `votes.vote_type` 정리 대상.**
+2. 예측 마켓에 베팅 0건인데 `pool_gp` 가 700 이라 '유령 판돈'인 줄 알았다. 확인해보니
+   `admin_create_market` 이 `p_liquidity`(기본 300)를 `pool_yes/no` 에 시드로 넣는 **의도된 설계**다.
+   시드는 `bettor_count` 는 건드리지 않는다(0 으로 넣는다) — 그래서 4행의 bettor_count 만 진짜 드리프트였다.
+
+⚠️ 남은 미세 불일치 1건: **market 340 의 `total_pool`(600) ≠ outcome `pool_gp` 합(620)**.
+   이미 정산된 마켓이라 지금 영향은 없지만, 정산 경로가 outcome 만 갱신하고 total_pool 을
+   안 맞추는 흔적일 수 있다 — 정산 코드 재확인 필요.
