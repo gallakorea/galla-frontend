@@ -564,6 +564,19 @@
       ROUTE ? paintRoute() : refreshPins();
       loadRouteChips(); paintSubsChips();
     }
+
+    /* ⚠️ 이것만으로 부족했다. 프로덕션에서 지도가 **통째로 검게** 떴는데(실측 2026-09-02),
+       콘솔은 조용하고 스타일·레이어 111개도 다 로드돼 있었다. resize() 를 한 번 더
+       흔들자 그 자리에서 정상으로 그려졌다 — 캔버스가 확정된 크기를 못 받은 채 굳은 것이다.
+       위의 double rAF 와 ResizeObserver 로는 오버레이 트랜지션이 끝나는 시점을 못 잡는다
+       (크기가 '변하지' 않으면 옵저버는 안 울린다). 그래서 몇 박자 뒤에 다시 맞춘다.
+       공짜에 가까운 호출이고, 안 하면 지도가 아예 안 보인다. */
+    [60, 250, 600].forEach(function (ms) {
+      setTimeout(function () { if (MAP && box.classList.contains("open")) MAP.resize(); }, ms);
+    });
+    try {
+      box.addEventListener("transitionend", function () { if (MAP) MAP.resize(); }, { once: true });
+    } catch (_) {}
   }
 
   /* ── 크리에이터 여정 ───────────────────────────────────
@@ -616,7 +629,23 @@
     } catch (_) {}
   }
 
+  /* 스타일이 다 뜨기 전에 addSource/addLayer 를 부르면 maplibre 가
+     "Style is not done loading" 으로 던진다(실측 — 경로가 통째로 안 그려졌다).
+     openMap() 이 끝나도 스타일 로딩은 아직일 수 있어서 여기서 한 번 더 기다린다. */
+  function mapReady() {
+    return new Promise(function (res) {
+      if (!MAP) return res();
+      if (MAP.isStyleLoaded && MAP.isStyleLoaded()) return res();
+      var done = false, fin = function () { if (!done) { done = true; res(); } };
+      MAP.once("load", fin);
+      MAP.once("styledata", fin);
+      setTimeout(fin, 4000);          // 안전장치 — 영원히 안 뜨는 지도에 갇히지 않는다
+    });
+  }
+
   async function drawRoute(slug) {
+    if (!MAP) return;
+    await mapReady();
     if (!MAP) return;
     ROUTE = slug || null;
     loadRouteChips();
@@ -798,110 +827,14 @@
     } finally { pinBusy = false; }
   }
 
-  /* ── 크리에이터 상세 ──────────────────────────────────
-     '누가 갔나'는 가로 스크롤 몇 장이 끝이라 그 사람이 어디를 얼마나 다녔는지가 안 보인다.
-     여기서는 **나라 → 지역 → 장소(+그 영상)** 로 펼친다(사장님 지시).
-     ⚠️ 상세 시트(DETAIL)와 같은 오버레이를 재사용하면 장소를 열 때 서로 덮어쓴다.
-        크리에이터는 자기 오버레이를 갖는다. */
-  var CRE = null, CRE_DATA = null, CRE_CC = null;
-  function buildCre() {
-    if (CRE && document.body.contains(CRE)) return CRE;
-    CRE = document.createElement("div");
-    CRE.className = "tv-detail tv-cre";
-    document.body.appendChild(CRE);
-    CRE.addEventListener("click", function (e) {
-      if (e.target === CRE || e.target.closest("#tv-cre-x")) return closeCre();
-      var cc = e.target.closest("[data-cc2]");
-      if (cc) { CRE_CC = cc.dataset.cc2 || null; paintCre(); return; }
-      if (e.target.closest("#tv-cre-map")) {
-        closeCre();
-        openMap().then(function () { drawRoute(CRE_DATA.channel.slug); });
-        return;
-      }
-      var vb = e.target.closest("[data-vid]");
-      if (vb) { playVideo(vb.dataset.vid, vb.dataset.vt, (CRE_DATA && CRE_DATA.channel || {}).name); return; }
-      var pl = e.target.closest("[data-place]");
-      if (pl) openDetail(pl.dataset.place);
-    });
-    window.addEventListener("popstate", function () {
-      if (CRE.classList.contains("open")) closeCre(true);
-    });
-    return CRE;
-  }
-  function closeCre(fromPop) {
-    if (!CRE) return;
-    CRE.classList.remove("open"); CRE.innerHTML = "";
-    if (window.GALLA_stopInlineVideos) GALLA_stopInlineVideos();
-    if (!(MAPBOX && MAPBOX.classList.contains("open"))) document.body.classList.remove("tv-lock");
-    if (!fromPop) { try { if (history.state && history.state.tvCre) history.back(); } catch (_) {} }
-  }
-  async function openCreator(slug) {
-    var d = buildCre();
-    d.classList.add("open");
-    document.body.classList.add("tv-lock");
-    try { history.pushState({ tvCre: 1 }, ""); } catch (_) {}
-    d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오는 중…</div></div>';
-    CRE_DATA = await rpc("travel_creator", { p_slug: slug, p_limit: 200 });
-    CRE_CC = null;
-    if (!CRE_DATA || !CRE_DATA.ok) { d.innerHTML = '<div class="tv-sheet"><div class="tv-empty">불러오지 못했어요.</div></div>'; return; }
-    paintCre();
-  }
-  function paintCre() {
-    var d = buildCre(), c = CRE_DATA.channel || {};
-    var places = (CRE_DATA.places || []).filter(function (p) {
-      return !CRE_CC || p.country_code === CRE_CC;
-    });
-    /* 지역별로 묶는다. 지역을 모르는 건 '기타'로 몰지 않고 나라 이름을 쓴다 —
-       '기타'는 유저에게 아무 정보도 주지 않는다. */
-    var groups = [], idx = {};
-    places.forEach(function (p) {
-      var key = p.area || p.country || "그 외";
-      if (!(key in idx)) { idx[key] = groups.length; groups.push({ key: key, items: [] }); }
-      groups[idx[key]].items.push(p);
-    });
-
-    d.innerHTML =
-      '<div class="tv-sheet">' +
-        '<button type="button" class="tv-x" id="tv-cre-x" aria-label="닫기">✕</button>' +
-        '<div class="tv-cre-h">' +
-          (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" referrerpolicy="no-referrer">' : "") +
-          '<div><div class="tv-cre-n">' + esc(c.name || "") + "</div>" +
-            '<div class="tv-cre-s">' + (CRE_DATA.total || 0) + "곳 · 영상 " + (c.videos || 0) + "편</div></div>" +
-          '<button type="button" class="tv-cre-map" id="tv-cre-map">지도에서 경로 보기</button>' +
-        "</div>" +
-        '<div class="tv-chips chip-scroll tv-cre-cc">' +
-          '<button type="button" class="tv-chip' + (CRE_CC ? "" : " on") + '" data-cc2="">전체</button>' +
-          (CRE_DATA.countries || []).map(function (x) {
-            return '<button type="button" class="tv-chip' + (CRE_CC === x.code ? " on" : "") +
-              '" data-cc2="' + esc(x.code) + '">' + flag(x.code) + " " + esc(x.name || x.code) +
-              ' <i>' + x.n + "</i></button>";
-          }).join("") +
-        "</div>" +
-        '<div class="tv-cre-b">' +
-          (groups.length ? groups.map(function (g) {
-            return '<div class="tv-cre-g"><div class="tv-cre-gt">' + esc(g.key) +
-              ' <i>' + g.items.length + "곳</i></div>" +
-              /* 썸네일을 누르면 **영상이 재생**되고, 이름을 누르면 장소 상세로 간다.
-                 한 줄에 두 가지가 붙어 있으니 눌리는 자리를 갈라 놓는다. */
-              g.items.map(function (p) {
-                return '<div class="tv-cre-i">' +
-                  (p.video_id
-                    ? '<button type="button" class="tv-cre-th" data-vid="' + esc(p.video_id) +
-                      '" data-vt="' + esc(p.video_title || "") + '" aria-label="영상 재생">' +
-                      (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                               : '<span class="tv-ph">🌍</span>') +
-                      '<i class="tv-play"></i></button>'
-                    : '<span class="tv-cre-th">' +
-                      (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
-                               : '<span class="tv-ph">🌍</span>') + "</span>") +
-                  '<button type="button" class="tv-cre-t" data-place="' + esc(p.id) + '">' +
-                    '<b>' + esc(p.name) + (p.visited ? " ✓" : "") + "</b>" +
-                    '<i>' + esc(p.video_title || "") + "</i>" +
-                  "</button></div>";
-              }).join("") + "</div>";
-          }).join("") : '<div class="tv-empty">아직 정리된 곳이 없어요.</div>') +
-        "</div>" +
-      "</div>";
+  /* ── 크리에이터 여정 ──────────────────────────────────
+     사장님: "크리에이터 페이지도 왜 닫기야? 페이지로 만들라니까 뒤로가기 하게."
+     장소 상세와 같은 결론이라 오버레이를 통째로 걷어냈다. 여기서는 **보내기만** 한다
+     (travel-creator.html). 같은 화면을 두 곳에 두면 반드시 갈라진다. */
+  function openCreator(slug) {
+    if (!slug) return;
+    (window.GALLA_nav || function (u) { location.href = u; })(
+      "travel-creator.html?c=" + encodeURIComponent(slug));
   }
 
   /* 장소 상세는 독립 페이지다(travel-place.html). 오버레이는 걷어냈다 —
@@ -939,11 +872,20 @@
                      paintChips(); paintDash(); await load(); }
     } finally { booting = false; }
   }
-  /* 링크로 들어온 경우 — ?place=<id> 면 그 장소를 바로 연다. */
+  /* 링크로 들어온 경우.
+       ?place=<id>   그 장소를 바로 연다
+       ?route=<slug> 지도를 열고 그 크리에이터의 동선을 그린다
+                     — 크리에이터 페이지의 '지도에서 경로 보기'가 여기로 돌려보낸다.
+                       지도는 이 탭에만 있다(두 곳에 두면 갈라진다). */
   function openFromUrl() {
     try {
-      var id = new URLSearchParams(location.search).get("place");
-      if (id && /^[0-9a-f-]{36}$/i.test(id)) openDetail(id);
+      var q = new URLSearchParams(location.search);
+      var id = q.get("place");
+      if (id && /^[0-9a-f-]{36}$/i.test(id)) return openDetail(id);
+      var slug = q.get("route");
+      if (slug && /^[A-Za-z0-9_-]{1,64}$/.test(slug)) {
+        return openMap().then(function () { drawRoute(slug); });
+      }
     } catch (_) {}
   }
 

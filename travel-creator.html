@@ -9,7 +9,7 @@
   <base href="/">
 <meta name="galla-ver" content="0902112"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>어디 갈래 · 갈라 여행</title>
+  <title>크리에이터 여정 · 갈라 여행</title>
   <!-- OG / 공유 카드 기본값 (콘텐츠별은 /share/<type>/<id> 엣지 렌더) -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="GALLA 갈라">
@@ -26,7 +26,6 @@
 
   <!-- plaza_detail 전용 CSS만 -->
   <link rel="stylesheet" href="./css/travel.css?v=0902112">
-  <link rel="stylesheet" href="css/travel-vs.css?v=0902112">
   <link rel="stylesheet" href="./css/items.css?v=0809117">
   <link rel="stylesheet" href="./css/user-sheet.css?v=080412">
   <link rel="stylesheet" href="./css/owner-actions.css?v=080412">
@@ -61,7 +60,7 @@
   </header>
 
   <!-- 여행지 상세 — js/travel-place.js 가 채운다 -->
-  <main class="tvs" id="tvs-page"></main>
+  <main class="tv-page tv-cre-page" id="tv-cre-page"></main>
 
 </div>
 
@@ -69,7 +68,7 @@
 <script src="./vendor/supabase.js?v=0809131"></script>
 <script src="js/supabase.js?v=0830017"></script>
 <script src="js/share-sheet.js?v=081804"></script>
-<script src="./js/travel-vs.js?v=0902112"></script>
+<script src="./js/travel-creator.js?v=0902112"></script>
 <script src="js/nav.js?v=0901022"></script>
 <script src="js/desktop-pc.js?v=081603" defer></script>
 <script src="js/nav-jog.js?v=0828020" defer></script>

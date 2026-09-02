@@ -270,13 +270,20 @@ async function commonsCredits(files: string[]) {
 /* ── ① 국내: 한국관광공사 TourAPI ─────────────────────
    국내는 OSM 보다 관광공사가 압도적으로 정확하다(좌표+대표이미지+분류를 한 번에 준다).
    ⚖️ 공공누리. cpyrhtDivCd 가 Type1/Type3 인 사진만 쓴다 — 비어 있으면 권리관계가 불분명하다. */
+const TOUR_FAILS: string[] = [];
 async function tourapi(name: string) {
   if (!GOV) return null;
+  /* 한 회차에 여러 번 막히면 그 회차 내내 막힌 것이다 — 더 두들기지 않는다(429 를 키운다). */
+  if (TOUR_FAILS.length >= 3) return null;
   const u = `https://apis.data.go.kr/B551011/KorService2/searchKeyword2?serviceKey=${GOV}` +
             `&numOfRows=5&pageNo=1&MobileOS=ETC&MobileApp=GALLA&_type=json` +
             `&keyword=${encodeURIComponent(name)}`;
   const r = await fetch(u);
-  if (!r.ok) throw new Error(`tourapi_${r.status}`);
+  /* ⚠️ 던지지 않는다. 예전엔 throw 했는데, 그 예외가 바깥 catch 에 잡혀 **회차 전체를
+     중단**시켰다(실측: tourapi_429 하나에 12회차가 각각 1편만 처리하고 죽었다).
+     관광공사는 소스 셋 중 하나일 뿐이다 — 여기가 막히면 OSM·위키데이터로 넘어가면 된다.
+     '못 불렀다 vs 못 찾았다'를 가르는 관문은 그 다음 단계(OSM)가 계속 지킨다. */
+  if (!r.ok) { TOUR_FAILS.push(`tourapi_${r.status}`); return null; }
   const body: any = await r.json();
   const items = body?.response?.body?.items?.item;
   const list = Array.isArray(items) ? items : items ? [items] : [];
@@ -581,7 +588,7 @@ const DEADLINE = Date.now() + 90_000;
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
-             geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 90_000)) / 1000),
+             tourFails: TOUR_FAILS.length || undefined, geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 90_000)) / 1000),
              ...res, merged, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
 });
