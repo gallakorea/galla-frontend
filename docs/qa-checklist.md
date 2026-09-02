@@ -263,7 +263,7 @@
 | 항목 | 상태 |
 |---|---|
 | **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ✅ |
-| 기본 OG 이미지 폴백 | ✅ 존재하지 않는 id → 기본 문구 + og-default.png(332KB, 200) 확인 |
+| 기본 OG 이미지 폴백 | ✅ `/share/*` 는 없는 id 여도 기본 문구+og-default.png(200). ⚠️ **그런데 일반 페이지엔 OG 자체가 없었다**(quest·grade·wallet·match·plaza og:image 0개) → 미들웨어에 기본 카드 주입 추가(§26-24) |
 | **robots.txt · sitemap.xml.js 동적 생성** | ✅ robots 200 · sitemap 2,885 URL(523KB) 정상 생성 |
 | **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
 | 엣지 메타 주입(`_middleware.js`) | ✅ `/issue?id=` 에 og:title·description·image 주입 확인 |
