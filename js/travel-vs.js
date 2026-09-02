@@ -87,7 +87,7 @@
   function card(p, side) {
     var sub = where(p);
     return '<button type="button" class="tvs-card" data-side="' + side + '">' +
-      '<img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
+      '<img class="tvs-shot" src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
       (p.creators > 1 ? '<span class="tvs-who">유튜버 ' + p.creators + '명</span>' : "") +
       '<span class="tvs-nm"><b>' + esc(p.name) + "</b>" +
       "<span>" + flag(p.country_code) + " " + esc(sub) + "</span></span></button>";

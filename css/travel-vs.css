@@ -1,9 +1,13 @@
 /* 어디 갈래 — 여행지 16강
    사진이 주인공이다. 이름·나라는 사진 위에 얹고, 그 외 크롬은 최대한 지운다.
    ⚠️ 판정 버튼처럼 보이면 안 된다 — '카드를 고른다'는 동작이라 카드 전체가 버튼이다. */
-.tvs { min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg-0, #000); }
+/* 카드가 정사각이라 폰에서는 높이를 다 안 쓴다. 남는 공간을 위아래로 흘려보내지 말고
+   블록 전체를 가운데로 모은다 — 안 그러면 카드가 화면 밑에 붙은 것처럼 보인다. */
+.tvs { position: relative; min-height: 100dvh; display: flex; flex-direction: column;
+       background: var(--bg-0, #000); }
+.tvs-top { flex: 0 0 auto; }
 
-.tvs-top { padding: 10px 16px 0; }
+.tvs-top { padding: 10px 16px 0; flex: 0 0 auto; }
 .tvs-bar { height: 3px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
 .tvs-bar i { display: block; height: 100%; background: var(--brand, #6b7cff); border-radius: 2px;
              transition: width .28s ease; }
@@ -14,32 +18,35 @@
 .tvs-q { padding: 14px 16px 10px; font-size: 17px; font-weight: 700;
          letter-spacing: -.02em; color: var(--text-hi); text-align: center; }
 
-/* ⚠️ 높이 규칙을 두 번 틀렸다.
-     ① flex:1 로 남은 높이를 다 주면 → 이름이 화면 맨 밑에 걸리고 '모르겠다'가 접힌다.
-        앱 헤더(56px)가 100dvh 위에 얹혀서 페이지가 뷰포트를 넘기 때문이다.
-     ② 비율만 고정하면 → 카드가 쪼그라들어 아래로 몰린다(사진이 안 보인다).
-   높이를 뷰포트 비율로 **직접 못 박고** 카드가 그 안을 채우게 한다. */
-.tvs-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-            padding: 0 12px; width: 100%; height: 100%; align-items: stretch; }
+/* 가로 카드를 위아래로 쌓는다. 사장님 결정 — 네 번 돌아본 끝의 결론이다.
+   ⚠️ 시도한 것과 깨진 이유(전부 실제 화면에서 확인):
+     ① 3:4 세로 좌우 + cover → 가로 원본이 좌우로 잘려 장소가 사라졌다(선로만 남은 시장)
+     ② 1:1 정사각 좌우      → 잘림은 나아졌지만 폰에서 카드 폭이 화면 절반(≈171px)이라
+                              높이도 171px 이 되고 세로가 텅 빈다
+     ③ contain + 흐린 배경   → 안 잘리는 대신 사진이 손톱만 해졌다
+   폰에서 좌우 2단이면 카드 폭을 우리가 못 늘린다 = 사진을 크게 만들 방법이 없다.
+   위아래로 쌓으면 카드가 화면 폭을 다 쓰므로 가로 원본이 제 비율로 크게 들어간다. */
+.tvs-pair { display: grid; grid-template-rows: 1fr 1fr; gap: 10px;
+            padding: 0 12px; width: 100%; height: 100%; }
 .tvs-card {
   position: relative; display: block; padding: 0; border: 0; cursor: pointer;
   border-radius: 14px; overflow: hidden; background: var(--surface-2);
-  min-height: 0; -webkit-tap-highlight-color: transparent;
+  height: 100%; min-height: 0; -webkit-tap-highlight-color: transparent;
 }
-.tvs-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tvs-card .tvs-shot { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tvs-card::after {                      /* 글자가 사진에 묻히지 않게 */
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,0) 34%,
-                                       rgba(0,0,0,0) 42%, rgba(0,0,0,.82) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,.4) 0%, rgba(0,0,0,0) 30%,
+                                       rgba(0,0,0,0) 40%, rgba(0,0,0,.84) 100%);
 }
-.tvs-nm { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 1; text-align: left; }
-.tvs-nm b { display: block; color: #fff; font-size: 17px; font-weight: 700;
-            letter-spacing: -.02em; line-height: 1.25; text-shadow: 0 1px 8px rgba(0,0,0,.5); }
-.tvs-nm span { display: block; margin-top: 3px; color: rgba(255,255,255,.8); font-size: 11.5px; }
-.tvs-who { position: absolute; top: 10px; left: 10px; z-index: 1;
+.tvs-nm { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 1; text-align: left; }
+.tvs-nm b { display: block; color: #fff; font-size: 19px; font-weight: 700;
+            letter-spacing: -.02em; line-height: 1.25; text-shadow: 0 1px 8px rgba(0,0,0,.55); }
+.tvs-nm span { display: block; margin-top: 3px; color: rgba(255,255,255,.82); font-size: 12px; }
+.tvs-who { position: absolute; top: 10px; left: 12px; z-index: 1;
            background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
            border-radius: 999px; padding: 3px 9px; color: #fff; font-size: 10.5px; font-weight: 600; }
-.tvs-card:active { transform: scale(.985); }
+.tvs-card:active { transform: scale(.99); }
 .tvs-card.pick { outline: 3px solid var(--brand, #6b7cff); outline-offset: -3px; }
 .tvs-card.drop { opacity: .28; }
 @media (prefers-reduced-motion: no-preference) {
@@ -49,8 +56,13 @@
           z-index: 2; font-size: 12px; font-weight: 800; letter-spacing: .04em;
           color: var(--text-low); background: var(--bg-0, #000);
           border: 1px solid var(--line-1); border-radius: 999px; padding: 4px 9px; pointer-events: none; }
+/* 카드가 정사각이라 높이는 폭이 정한다. 남는 높이는 위아래로 나눠 카드를 가운데 둔다. */
+/* ⚠️ 높이는 **직접 못 박는다**. flex:1 + min-height:0 로 두면 자식이 height:100% 를
+   불확정 높이에 기대게 돼서 카드가 0 이 된다(실측 — 화면이 통째로 비었다). */
+/* ⚠️ 높이는 직접 못 박는다. flex:1 + min-height:0 로 두면 자식의 height:100% 가
+   불확정 높이에 기대게 돼서 카드가 0 이 된다(실측 — 화면이 통째로 비었다). */
 .tvs-pair-wrap { position: relative; flex: 0 0 auto; display: flex;
-                 height: min(62vh, 560px); padding: 4px 0; }
+                 height: min(66vh, 620px); padding: 6px 0; }
 
 .tvs-skip { padding: 0 16px calc(16px + env(safe-area-inset-bottom)); text-align: center; }
 .tvs-skip button { background: none; border: 0; color: var(--text-low); font-size: 12.5px;
@@ -87,7 +99,7 @@
 .tvs-empty { padding: 60px 20px; text-align: center; color: var(--text-mid); font-size: 14px; }
 
 @media (min-width: 640px) {
-  .tvs-pair { max-width: 720px; margin: 0 auto; width: 100%; }
+  .tvs-pair { max-width: 560px; margin: 0 auto; width: 100%; }
   .tvs-res  { max-width: 560px; margin: 0 auto; }
   .tvs-q { font-size: 19px; }
 }

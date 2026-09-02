@@ -363,7 +363,12 @@ Deno.serve(async (req) => {
      실측: n=45 회차가 그렇게 사라졌다. 편수로 조절하면 영상마다 걸리는 시간이 달라
      매번 아슬아슬하다(LLM 2~4초 + 지오코딩 1.1초씩). 그래서 편수가 아니라 **시계**로 끊는다.
      110초에 도달하면 하던 것까지 저장하고 정상 종료한다 — 남은 영상은 다음 회차가 가져간다. */
-  const DEADLINE = Date.now() + 110_000;
+  /* ⚠️ 90초다(예전 110초). 크론을 5분→2분으로 당겼기 때문에, 회차가 2분을 넘으면
+   다음 회차와 겹친다. 겹치면 두 회차가 **같은 채널의 같은 영상**을 집어(수확 표시는
+   회차 끝에 한다) AI 호출이 통째로 낭비되고, 무엇보다 Nominatim 정책(초당 1회)을
+   두 배로 두들기게 된다 — 차단당하면 수확이 통째로 멈춘다.
+   90초 + 마무리 여유 ≈ 100초 < 120초. */
+const DEADLINE = Date.now() + 90_000;
 
   const items: any[] = [];
   const done: string[] = [];
@@ -576,7 +581,7 @@ Deno.serve(async (req) => {
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
-             geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
+             geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 90_000)) / 1000),
              ...res, merged, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
 });
