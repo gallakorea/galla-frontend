@@ -129,31 +129,31 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <div class="scale">
   <div class="scale-head">
     <div class="side l">
-      <div class="num mono">233</div>
+      <div class="num mono">236</div>
       <div class="lab">된 것</div>
-      <div class="of">확인 111 · 부분 122</div>
+      <div class="of">확인 111 · 부분 125</div>
     </div>
     <div class="side r">
-      <div class="num mono">95</div>
+      <div class="num mono">92</div>
       <div class="lab">안 된 것</div>
-      <div class="of">미확인 75 · 막힘 20</div>
+      <div class="of">미확인 72 · 막힘 20</div>
     </div>
   </div>
-  <div class="bar" role="img" aria-label="된 것 233개, 안 된 것 95개">
+  <div class="bar" role="img" aria-label="된 것 236개, 안 된 것 92개">
     <span class="b-done" style="width:33.8415%"></span>
-    <span class="b-part" style="width:37.1951%"></span>
+    <span class="b-part" style="width:38.1098%"></span>
     <span class="b-block" style="width:6.0976%"></span>
-    <span class="b-todo" style="width:22.8659%"></span>
+    <span class="b-todo" style="width:21.9512%"></span>
   </div>
   <div class="keys">
     <span><i class="dot" style="background:var(--done)"></i><b>확인 111</b> — 실제로 눌러보고 DB까지 대조</span>
-    <span><i class="dot" style="background:var(--part)"></i><b>부분 122</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 125</b> — 한 플랫폼만, 또는 코드만</span>
     <span><i class="dot" style="background:var(--block)"></i><b>막힘 20</b> — 키·실기기·결제 등 외부 조건</span>
-    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 75</b> — 아직 손 못 댐</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 72</b> — 아직 손 못 댐</span>
   </div>
   <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
-  지금은 항목 328개 · 된 것 233(확인 111 · 부분 122) · 안 된 것 95(미확인 75 · 막힘 20).
-  <b>미확인 172 → 75.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  지금은 항목 328개 · 된 것 236(확인 111 · 부분 125) · 안 된 것 92(미확인 72 · 막힘 20).
+  <b>미확인 172 → 72.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
   ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
 </div>
 
@@ -189,7 +189,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>된 것 <span class="cnt">233</span></h2>
+  <h2>된 것 <span class="cnt">236</span></h2>
   <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -201,13 +201,14 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="done"><span class="t">세션 유지(앱 재시작)</span></li></ul>
 </section>
 <section class="area">
-  <h4>2. 콘텐츠 생성<span class="ratio">8<i>/</i>11</span></h4>
+  <h4>2. 콘텐츠 생성<span class="ratio">9<i>/</i>11</span></h4>
   <ul class="list"><li class="part"><span class="t">광장 글 (텍스트)</span></li>
 <li class="part"><span class="t">광장 글 — 사진·영상·링크 첨부</span><span class="n">Supabase Storage plaza-images 업로드, body 에 [IMAGE] 마커 + thumbnail 저장, 목록·상세 렌더 확인</span></li>
 <li class="part"><span class="t">숏판(세로) 업로드</span><span class="n">CDN 200·PNG→JPG·표지·태그</span></li>
 <li class="part"><span class="t">숏판 — 캐러셀 여러 장</span><span class="n">UI만</span></li>
 <li class="part"><span class="t">롱판(가로) 업로드</span><span class="n">post kind=horizontal, Cloudflare Stream HLS+자동썸네일 둘 다 200. ※ Stream 과금 확인 필요</span></li>
 <li class="part"><span class="t">제보하기 (+100 GP)</span><span class="n">tips + point_ledger tip:submit, 하루 3회 상한 서버강제</span></li>
+<li class="part"><span class="t">제보 — 미디어 첨부</span><span class="n">0902 롤백 시뮬: submit_tip(제목,본문,카테고리,media[],links[]) → ok·reward 100GP·tips.media 에 {url,kind:image} 저장·status pending. 실제 R2 업로드는 미실행</span></li>
 <li class="part"><span class="t">임시저장·복원</span><span class="n">광장만</span></li>
 <li class="part"><span class="t">수정·삭제(owner-actions)</span><span class="n">0901 롤백 시뮬: 본인 글 작성→수정→delete_plaza_post 삭제까지 정상. 남의 것은 delete_issue·delete_plaza_post 가 not_authorized 예외</span></li></ul>
 </section>
@@ -287,14 +288,16 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="part"><span class="t">친구 초대(ref 코드)</span><span class="n">공유 URL만</span></li></ul>
 </section>
 <section class="area">
-  <h4>8. 설정·프로필<span class="ratio">8<i>/</i>10</span></h4>
+  <h4>8. 설정·프로필<span class="ratio">10<i>/</i>10</span></h4>
   <ul class="list"><li class="part"><span class="t">프로필 편집(닉·소개)</span></li>
+<li class="part"><span class="t">프로필 사진 업로드</span><span class="n">0902 실업로드: profiles 버킷 PNG 업로드 → 공개 URL 200(image/png) → users.avatar_url 설정·원복. 테스트 파일 삭제까지 확인(정책 신설 후)</span></li>
 <li class="part"><span class="t">닉네임 중복·형식 검사</span><span class="n">nickname_available: 남의 닉 taken · 뒤 공백 붙여도 taken(정규화 동작) · 공백/특수문자 charset · 1글자 length · 내 닉은 ok</span></li>
 <li class="part"><span class="t">알림 설정 8종 토글</span></li>
 <li class="part"><span class="t">방해금지 시간</span><span class="n">notify_prefs(dnd_on/from/to/tz_off) 읽기·쓰기·원복 왕복 확인(웹 로그인)</span></li>
 <li class="part"><span class="t">보관(저장한 것) 목록</span><span class="n">북마크 왕복 실측: insert → 보관에 제목까지 렌더 → delete → 빈 상태. bookmarks 컬럼은 issue_id(target_type 아님)</span></li>
 <li class="part"><span class="t">내 등급·시즌 랭킹</span><span class="n">등급 화면 렌더·GI 진행도 정상. 시즌은 §26-6 결함(만료된 시즌이 계속 '진행중')</span></li>
 <li class="part"><span class="t">꾸미기(닉네임·프레임)</span><span class="n">user_cosmetics 행은 있으나 전부 null·user_frames 0개(심사계정이 아이템 미보유). 착용 동작은 미검증</span></li>
+<li class="part"><span class="t">내 글 통계</span><span class="n">0902: 전용 통계 화면은 없다. 프로필 상단 4지표(My Drop·팔로워·지지·반발)와 콘텐츠 탭(모아/갈라/예측/광장)이 전부. 조회수·글별 성과는 화면 없음</span></li>
 <li class="part"><span class="t">갈라 성향 4축</span><span class="n">렌더만</span></li></ul>
 </section>
 <section class="area">
@@ -535,7 +538,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="block"><span class="t">소셜 로그인 — 네이버</span></li></ul>
 </section>
 <section class="area">
-  <h4>2. 콘텐츠 생성<span class="ratio">8<i>/</i>11</span></h4>
+  <h4>2. 콘텐츠 생성<span class="ratio">9<i>/</i>11</span></h4>
   <ul class="list"><li class="block"><span class="t">이슈 발제</span><span class="n">잠김('곧 열려요')</span></li>
 <li class="block"><span class="t">예측 마켓 생성</span></li></ul>
 </section>
@@ -575,13 +578,9 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>아직 안 본 것 <span class="cnt">62</span></h2>
+  <h2>아직 안 본 것 <span class="cnt">59</span></h2>
   <p class="lede">위 '먼저 봐야 할 것'을 뺀 나머지입니다. 대부분 부가 기능·운영 도구·호환성이라 출시를 막지는 않지만, 하나씩은 봐야 합니다.</p>
   <section class="area">
-  <h4>2. 콘텐츠 생성<span class="ratio">8<i>/</i>11</span></h4>
-  <ul class="list"><li class="todo"><span class="t">제보 — 미디어 첨부</span></li></ul>
-</section>
-<section class="area">
   <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
   <ul class="list"><li class="todo"><span class="t">난장 나가기·방장 권한</span></li>
 <li class="todo"><span class="t">육성 난장(라이브)</span></li>
@@ -595,11 +594,6 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <section class="area">
   <h4>6. 트렌드<span class="ratio">8<i>/</i>9</span></h4>
   <ul class="list"><li class="todo"><span class="t">핫튜브 영상 실제 재생</span><span class="n">에뮬 GPU 한계</span></li></ul>
-</section>
-<section class="area">
-  <h4>8. 설정·프로필<span class="ratio">8<i>/</i>10</span></h4>
-  <ul class="list"><li class="todo"><span class="t">프로필 사진 업로드</span></li>
-<li class="todo"><span class="t">내 글 통계</span></li></ul>
 </section>
 <section class="area">
   <h4>10. 운영·백엔드<span class="ratio">7<i>/</i>9</span></h4>
