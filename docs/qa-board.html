@@ -129,31 +129,31 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <div class="scale">
   <div class="scale-head">
     <div class="side l">
-      <div class="num mono">266</div>
+      <div class="num mono">267</div>
       <div class="lab">된 것</div>
-      <div class="of">확인 122 · 부분 144</div>
+      <div class="of">확인 122 · 부분 145</div>
     </div>
     <div class="side r">
-      <div class="num mono">75</div>
+      <div class="num mono">74</div>
       <div class="lab">안 된 것</div>
-      <div class="of">미확인 53 · 막힘 22</div>
+      <div class="of">미확인 52 · 막힘 22</div>
     </div>
   </div>
-  <div class="bar" role="img" aria-label="된 것 266개, 안 된 것 75개">
+  <div class="bar" role="img" aria-label="된 것 267개, 안 된 것 74개">
     <span class="b-done" style="width:35.7771%"></span>
-    <span class="b-part" style="width:42.2287%"></span>
+    <span class="b-part" style="width:42.5220%"></span>
     <span class="b-block" style="width:6.4516%"></span>
-    <span class="b-todo" style="width:15.5425%"></span>
+    <span class="b-todo" style="width:15.2493%"></span>
   </div>
   <div class="keys">
     <span><i class="dot" style="background:var(--done)"></i><b>확인 122</b> — 실제로 눌러보고 DB까지 대조</span>
-    <span><i class="dot" style="background:var(--part)"></i><b>부분 144</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 145</b> — 한 플랫폼만, 또는 코드만</span>
     <span><i class="dot" style="background:var(--block)"></i><b>막힘 22</b> — 키·실기기·결제 등 외부 조건</span>
-    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 53</b> — 아직 손 못 댐</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 52</b> — 아직 손 못 댐</span>
   </div>
   <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
-  지금은 항목 341개 · 된 것 266(확인 122 · 부분 144) · 안 된 것 75(미확인 53 · 막힘 22).
-  <b>미확인 172 → 53.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  지금은 항목 341개 · 된 것 267(확인 122 · 부분 145) · 안 된 것 74(미확인 52 · 막힘 22).
+  <b>미확인 172 → 52.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
   ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
 </div>
 
@@ -189,7 +189,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>된 것 <span class="cnt">266</span></h2>
+  <h2>된 것 <span class="cnt">267</span></h2>
   <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -410,14 +410,15 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="done"><span class="t">뉴스 RSS(연합·조선·동아 등)</span><span class="n">뉴스 수집 기사 유입 news_articles_raw 0분 전 수집</span></li></ul>
 </section>
 <section class="area">
-  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">7<i>/</i>9</span></h4>
+  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">8<i>/</i>9</span></h4>
   <ul class="list"><li class="part"><span class="t">다국어(i18n · GALLA_t · locale 컬럼) — 번역 누락·깨짐</span><span class="n">인프라는 있다 — `js/i18n.js` 사전 **1,779키**, `translations` 표, `enabled_locales()` RPC. 다만 **활성 언어가 `ko` 하나**뿐이고 콘텐츠 locale 도 전부 ko 라 번역 깨짐을 실사용으로 볼 수 없다</span></li>
 <li class="done"><span class="t">성능 — 콜드스타트·LCP·이미지 용량</span><span class="n">홈 실측 144개 2.23MB(JS 1.66MB)·DOM 943ms·로드 1296ms. 로고가 표시 12배라 120KB→29KB. dm.js 는 이미 유휴 로딩 처리됨</span></li>
 <li class="part"><span class="t">접근성 — 대비·포커스 링·스크린리더·큰 글씨</span><span class="n">§24 에 실측 있음 — 하단 탭 aria-label 5개·aria-current 추가 , :focus-visible 전역 추가 . **대비 5종 미달(최저 2.59)·터치타깃 25개 24px 미만·콘텐츠 썸네일 alt 4개**는 디자인 변경이라 사장님 판단 대기</span></li>
 <li class="done"><span class="t">반응형 — 태블릿·좁은 PC창(481~1099px)</span><span class="n">481·768·900·1099·1280 전부 가로스크롤 없음. 1280 신규 로드 시 PC 좌측 레일(홈·예측·메시지·트렌드·마이) 정상 생성</span></li>
 <li class="part"><span class="t">빈 상태(콘텐츠 0개) 화면</span><span class="n">난장·숏판 비운 뒤 미확인</span></li>
 <li class="part"><span class="t">에러 상태(네트워크 실패·403·404)</span><span class="n">**여행지만 진짜 404**(`/travel/none-…` → 404). 임의 경로(`/xyz-not-exist`)와 **없는 이슈(`/issue?id=99999999`)는 200**(SPA 폴백=소프트 404) — 미들웨어 주석이 스스로 경고한 그 문제가 이슈엔 남아 있다. 403 은</span></li>
-<li class="part"><span class="t">긴 텍스트·이모지·RTL 깨짐</span><span class="n">운영 데이터 최장이 이슈 제목 56자·본문 611자·댓글 178자라 **깨짐을 볼 만한 길이가 없다**. 인위로 긴 문자열·이모지를 넣어 화면을 봐야 한다</span></li></ul>
+<li class="part"><span class="t">긴 텍스트·이모지·RTL 깨짐</span><span class="n">운영 데이터 최장이 이슈 제목 56자·본문 611자·댓글 178자라 **깨짐을 볼 만한 길이가 없다**. 인위로 긴 문자열·이모지를 넣어 화면을 봐야 한다</span></li>
+<li class="part"><span class="t">동시성(같은 계정 2기기)</span><span class="n">같은 계정 **2탭**: 한쪽이 토큰을 갱신하면 다른 쪽도 즉시 새 토큰을 쓰고 쿼리 정상 — **강제 로그아웃 없음**. A탭 알림 삽입 → **B탭 4초 뒤 조회 1건·뱃지 '1'**. ⚠️ 같은 브라우저는 storage 공유라 **진짜 2기기가 아니다** — 앱 로그인 뒤 웹+앱으</span></li></ul>
 </section>
 <section class="area">
   <h4>13. 페이지 대조표 (68개 — 고아 없는지 확인용)<span class="ratio">6<i>/</i>6</span></h4>
@@ -613,7 +614,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>아직 안 본 것 <span class="cnt">40</span></h2>
+  <h2>아직 안 본 것 <span class="cnt">39</span></h2>
   <p class="lede">위 '먼저 봐야 할 것'을 뺀 나머지입니다. 대부분 부가 기능·운영 도구·호환성이라 출시를 막지는 않지만, 하나씩은 봐야 합니다.</p>
   <section class="area">
   <h4>4. 소통 — 갈라톡<span class="ratio">13<i>/</i>16</span></h4>
@@ -677,9 +678,8 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="todo"><span class="t">GA</span><span class="n">통계 지표</span></li></ul>
 </section>
 <section class="area">
-  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">7<i>/</i>9</span></h4>
-  <ul class="list"><li class="todo"><span class="t">translate 엣지 함수</span></li>
-<li class="todo"><span class="t">동시성(같은 계정 2기기)</span></li></ul>
+  <h4>12. 품질 축 (기능 아님 — 놓치기 쉬움)<span class="ratio">8<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">translate 엣지 함수</span></li></ul>
 </section>
 <section class="area">
   <h4>17. 배포·복구<span class="ratio">3<i>/</i>8</span></h4>
