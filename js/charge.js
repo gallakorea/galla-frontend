@@ -128,21 +128,99 @@
           <span><span class="g">${gc(p.gc)}</span>${p.label ? `<span class="b">${p.label}</span>` : ""}</span>
           <span class="p">${won(p.krw)}</span>
         </button>`).join("")}</div>`,
-      ctx, NOTE_BASE + `<br>결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.`);
+      ctx, NOTE_BASE + payNote());
 
     sheet.querySelectorAll(".chg-pkg").forEach(b =>
       b.addEventListener("click", () => begin(b, ch)));
   }
 
-  // 웹 PG: 서버에 pending 충전 생성. 실제 카드/간편결제는 PG(토스) 연동 스위치 후 즉시 지급.
+  /* 결제 준비 여부는 채널키 유무로 판단한다 — PG 심사가 끝나 채널키가 꽂히면
+     별도 배포 없이 결제가 열린다(app_settings 가 아니라 config 상수라 캐시 이슈가 없다). */
+  function payReady() { return !!(window.GALLA_PORTONE && window.GALLA_PORTONE.channelKey); }
+  function payNote() {
+    return payReady()
+      ? `<br>카드·간편결제(카카오페이·네이버페이·토스페이 등)로 결제하면 <b>즉시</b> 지갑에 들어옵니다.`
+      : `<br>결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.`;
+  }
+
+  /* 웹 PG(포트원) 결제.
+     ① 서버가 pending 충전을 만들고 charge_id·금액을 정한다 — 클라가 금액을 정하지 않는다.
+     ② paymentId 를 charge_id 로 그대로 써서 결제한다 → 웹훅이 우리 건을 바로 찾는다.
+     ③ 지급은 클라가 아니라 portone-webhook 이 포트원 API 에 되물어 확인한 뒤에만 한다.
+        여기서 "성공"을 받아도 그건 화면 안내용일 뿐, 잔액의 근거가 아니다. */
   async function begin(btn, ch) {
     window.BattleFX?.haptic?.("tap");
     btn.disabled = true;
+
     const { data, error } = await sb().rpc("gc_charge_begin", { p_key: btn.dataset.key, p_channel: ch });
     if (error || !data?.ok) { alert("충전 준비에 실패했어요."); btn.disabled = false; return; }
-    sheet.innerHTML = doneHTML("💳", "충전이 준비되었습니다",
-      `${won(data.krw)} 결제로 <b>${gc(data.gc)}</b>가 충전됩니다.<br>
-       카드·간편결제 연동이 완료되면 결제 후<br>즉시 지갑에 들어옵니다. <b>(PG 연동 예정)</b>`);
+
+    if (!payReady()) {
+      sheet.innerHTML = doneHTML("💳", "충전이 준비되었습니다",
+        `${won(data.krw)} 결제로 <b>${gc(data.gc)}</b>가 충전됩니다.<br>
+         카드·간편결제 연동이 완료되면 결제 후<br>즉시 지갑에 들어옵니다. <b>(PG 연동 예정)</b>`);
+      bindClose();
+      return;
+    }
+    await pay(data);
+  }
+
+  /* 결제창 호출. 모바일에선 리다이렉트로 나갔다 돌아온다 —
+     iframe 으로 띄우면 카드사·간편결제사 도메인이 전부 CSP frame-src 에 걸린다.
+     (국내 PG 결제창은 도메인이 수십 개라 화이트리스트가 현실적으로 불가능하다.) */
+  async function pay(chg) {
+    const cfg = window.GALLA_PORTONE || {};
+    if (!window.PortOne) { alert("결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요."); return; }
+
+    sheet.innerHTML = doneHTML("💳", "결제창을 여는 중…", `${won(chg.krw)} · ${gc(chg.gc)}`);
+
+    const back = location.origin + "/charge-return.html?cid=" + encodeURIComponent(chg.charge_id);
+    let res;
+    try {
+      res = await window.PortOne.requestPayment({
+        storeId: cfg.storeId,
+        channelKey: cfg.channelKey,
+        paymentId: chg.charge_id,          // = gc_charges.id · 웹훅이 이걸로 찾는다
+        orderName: "갈라캐시 " + Number(chg.gc).toLocaleString() + "GC",
+        totalAmount: chg.krw,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
+        redirectUrl: back,
+      });
+    } catch (e) {
+      res = { code: "ERROR", message: String(e && e.message || e) };
+    }
+
+    /* 사용자가 창을 닫거나 카드사에서 실패한 경우. 지급은 애초에 웹훅 소관이라
+       여기서 할 일은 안내뿐이다. pending 행은 남지만 미결제로 만료된다. */
+    if (res && res.code) {
+      sheet.innerHTML = doneHTML("⚠️", "결제가 완료되지 않았어요",
+        (res.message || "결제가 취소되었습니다.") + "<br>다시 시도해 주세요.");
+      bindClose();
+      return;
+    }
+    await settle(chg);
+  }
+
+  /* 결제창이 성공으로 닫혀도 웹훅이 아직 안 왔을 수 있다.
+     잔액이 실제로 오를 때까지 짧게 폴링한다 — '결제했는데 잔액 그대로'를 막는다. */
+  async function settle(chg) {
+    sheet.innerHTML = doneHTML("⏳", "결제 확인 중…", "잠시만 기다려 주세요.");
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      const { data } = await Promise.resolve(sb().rpc("gc_charge_status", { p_charge_id: chg.charge_id }))
+        .catch(() => ({ data: null }));
+      if (data && data.status === "paid") {
+        document.dispatchEvent(new Event("galla:points-changed"));
+        sheet.innerHTML = doneHTML("✅", "충전 완료",
+          `<b>${gc(chg.gc)}</b>가 지갑에 들어왔어요.`);
+        bindClose();
+        return;
+      }
+    }
+    /* 웹훅이 늦을 뿐 결제는 됐을 수 있다 — 실패로 단정하지 않는다. */
+    sheet.innerHTML = doneHTML("⏳", "결제 확인이 지연되고 있어요",
+      "결제는 정상 접수되었어요.<br>잠시 후 지갑에서 잔액을 확인해 주세요.<br>계속 반영되지 않으면 고객센터로 알려주세요.");
     bindClose();
   }
 

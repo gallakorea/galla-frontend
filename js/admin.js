@@ -95,7 +95,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -329,6 +329,76 @@
   const SEV = { critical: ["치명", "#ff4d67"], high: ["높음", "#ff9a3c"], medium: ["보통", "#6f86ff"], low: ["낮음", "#8a8f9a"] };
   const CATLBL = { security: "🔒 보안", economy: "💰 경제", stuck: "⛔ 멈춤", errors: "🩺 에러", data: "🗂 데이터" };
   let bhResolved = false;
+
+  /* ── 여행 수확 현황 ───────────────────────────────────────────
+     사장님: "크리에이터 리스트에 완료 됐는지 남은거 만들어."
+     하루 종일 "어찌됨?" 을 물어보셔야 했다 — 볼 데가 없어서다.
+     ⚠️ 남은 편수는 90초 이상만 센다(쇼츠를 세면 '4편 남음'이 안 줄어드는 것처럼 보인다).
+        장소 수는 spot+city 만 센다(나라·도를 세면 '르완다 1곳'이 장소가 된다).
+        두 규칙 다 RPC(travel_harvest_status)가 지킨다 — 화면에서 다시 세지 않는다. */
+  const HV_LABEL = { running: "수확 중", queued: "대기", done: "완료",
+                     empty: "영상 없음", unresolved: "주소 못 찾음" };
+  const HV_COLOR = { running: "#6b7cff", queued: "#8a8f9a", done: "#35c48c",
+                     empty: "#e0a33a", unresolved: "#e3625f" };
+  let hvFilter = "all";
+
+  async function renderTravelHarvest() {
+    main().innerHTML = `<h1 class="ad-h1">🧳 여행 수확 <span style="font-size:12px;color:#8a8f9a;font-weight:600">크리에이터별 진행</span></h1>
+      <div id="hv-top"></div>
+      <div style="display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap" id="hv-tabs"></div>
+      <div id="hv-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    await hvLoad();
+  }
+
+  async function hvLoad() {
+    const d = await rpc("travel_harvest_status", {});
+    if (!d || !d.ok) { document.getElementById("hv-list").innerHTML = '<div class="ad-loading">불러오지 못했어요.</div>'; return; }
+    const ch = d.channels || [];
+    const n = (st) => ch.filter((c) => c.state === st).length;
+    const eta = d.rate ? (d.left / d.rate).toFixed(1) + "시간" : "계산 불가";
+
+    document.getElementById("hv-top").innerHTML =
+      `<div style="display:flex;gap:18px;flex-wrap:wrap;padding:14px 16px;background:#12151d;border:1px solid #1c2030;border-radius:10px">
+         ${[["남은 영상", d.left.toLocaleString("ko-KR") + "편"],
+            ["시간당", (d.rate || 0).toLocaleString("ko-KR") + "편"],
+            ["예상", eta],
+            ["완료", n("done") + " / " + ch.length + "채널"]]
+           .map(([k, v]) => `<div><div style="font-size:11px;color:#8a8f9a;letter-spacing:.06em">${k}</div>
+             <div style="font-size:19px;font-weight:700;font-variant-numeric:tabular-nums">${v}</div></div>`).join("")}
+       </div>`;
+
+    document.getElementById("hv-tabs").innerHTML =
+      [["all", "전체 " + ch.length], ["running", "수확 중 " + n("running")],
+       ["queued", "대기 " + n("queued")], ["done", "완료 " + n("done")],
+       ["unresolved", "주소 못 찾음 " + n("unresolved")], ["empty", "영상 없음 " + n("empty")]]
+      .map(([k, label]) => `<button class="ad-btn${hvFilter === k ? " primary" : ""}" data-hv="${k}">${label}</button>`).join("");
+    document.getElementById("hv-tabs").onclick = (e) => {
+      const b = e.target.closest("[data-hv]"); if (!b) return;
+      hvFilter = b.dataset.hv; hvLoad();
+    };
+
+    const rows = ch.filter((c) => hvFilter === "all" || c.state === hvFilter);
+    document.getElementById("hv-list").innerHTML = rows.length ? rows.map((c) => {
+      const col = HV_COLOR[c.state] || "#8a8f9a";
+      const subs = c.subs ? Math.round(c.subs / 10000) + "만" : "—";
+      return `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid #171b24">
+        ${c.thumb ? `<img src="${c.thumb}" alt="" referrerpolicy="no-referrer" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto">`
+                  : `<span style="width:34px;height:34px;border-radius:50%;background:#1c2030;flex:0 0 auto"></span>`}
+        <div style="min-width:0;flex:1 1 auto">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <b style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name || c.slug)}</b>
+            <span style="font-size:11px;color:${col};font-weight:700;white-space:nowrap">${HV_LABEL[c.state]}</span>
+          </div>
+          <div style="height:3px;background:#1c2030;border-radius:2px;margin:6px 0 5px;overflow:hidden">
+            <i style="display:block;height:100%;width:${c.pct}%;background:${col};border-radius:2px"></i></div>
+          <div style="font-size:11.5px;color:#8a8f9a;font-variant-numeric:tabular-nums">
+            영상 ${c.done.toLocaleString("ko-KR")}/${c.videos.toLocaleString("ko-KR")}
+            ${c.todo ? ` · <b style="color:#c9d1e0">${c.todo.toLocaleString("ko-KR")}편 남음</b>` : ""}
+            · 장소 ${c.places} · ${c.countries}개국 · 구독 ${subs}</div>
+        </div></div>`;
+    }).join("") : '<div class="ad-loading">해당하는 채널이 없어요.</div>';
+  }
+
   async function renderBugHunter() {
     main().innerHTML = `<h1 class="ad-h1">🤖 버그헌터 <span style="font-size:12px;color:#8a8f9a;font-weight:600">30분마다 자동 스캔</span></h1>
       <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">

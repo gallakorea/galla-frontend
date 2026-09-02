@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="galla-ver" content="0902160">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>결제 확인 중 - GALLA</title>
+<!-- 💳 모바일 결제는 결제창이 '페이지를 떠났다가' 돌아온다(리다이렉트).
+     그 착지점이 이 페이지다. 여기서 할 일은 지급이 아니라 '확인'뿐이다 —
+     지급은 portone-webhook 이 포트원 API 에 되물어 확인한 뒤에만 한다. -->
+<link rel="stylesheet" href="./css/theme.css?v=0901010">
+<style>
+  body{background:#000;color:#fff;margin:0;min-height:100dvh;display:flex;
+       align-items:center;justify-content:center;text-align:center;
+       font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}
+  .box{padding:32px 24px;max-width:340px}
+  .ic{font-size:44px;margin-bottom:14px}
+  h1{font-size:17px;margin:0 0 8px}
+  p{font-size:14px;line-height:1.7;color:#9aa0ab;margin:0 0 20px}
+  a.btn{display:block;padding:14px;border-radius:12px;background:#3d6bff;color:#fff;
+        text-decoration:none;font-weight:800;font-size:15px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ic" id="ic">⏳</div>
+  <h1 id="t">결제 확인 중…</h1>
+  <p id="d">잠시만 기다려 주세요.</p>
+  <a class="btn" href="/wallet.html">지갑으로 가기</a>
+</div>
+
+<script src="./vendor/supabase.js?v=0809131"></script>
+<script src="./js/config.js?v=0902113"></script>
+<script src="./js/supabase.js?v=0902113"></script>
+<script>
+(async function(){
+  var q = new URLSearchParams(location.search);
+  var cid = q.get("cid") || q.get("paymentId") || "";
+  var ic = document.getElementById("ic"), t = document.getElementById("t"), d = document.getElementById("d");
+
+  function show(i, title, desc){ ic.textContent=i; t.textContent=title; d.innerHTML=desc; }
+
+  /* 결제창이 실패/취소로 돌아온 경우 포트원이 code 를 붙여 보낸다. */
+  if (q.get("code")) {
+    show("⚠️","결제가 완료되지 않았어요", (q.get("message")||"결제가 취소되었습니다.")+"<br>다시 시도해 주세요.");
+    return;
+  }
+  if (!cid) { show("⚠️","확인할 결제 정보가 없어요","지갑에서 잔액을 확인해 주세요."); return; }
+
+  var sb = window.supabaseClient;
+  if (!sb) { show("⏳","결제 확인이 지연되고 있어요","잠시 후 지갑에서 잔액을 확인해 주세요."); return; }
+
+  /* 웹훅이 도착할 때까지 짧게 기다린다. 실패로 단정하지 않는다 —
+     결제는 됐는데 웹훅만 늦은 경우가 대부분이다. */
+  for (var i=0; i<12; i++) {
+    await new Promise(function(r){ setTimeout(r, 1000); });
+    var res = null;
+    try { res = await sb.rpc("gc_charge_status", { p_charge_id: cid }); } catch(e){}
+    var data = res && res.data;
+    if (data && data.status === "paid") {
+      show("✅","충전 완료", "<b>"+Number(data.gc).toLocaleString()+" GC</b>가 지갑에 들어왔어요.");
+      return;
+    }
+  }
+  show("⏳","결제 확인이 지연되고 있어요",
+       "결제는 정상 접수되었어요.<br>잠시 후 지갑에서 잔액을 확인해 주세요.");
+})();
+</script>
+</body>
+</html>

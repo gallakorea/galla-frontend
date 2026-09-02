@@ -53,3 +53,13 @@ window.CONFIG = {
         }
     }
 };
+/* 💳 포트원(PortOne) 결제 설정
+   ⚠️ 여기 값이 비어 있으면 결제 버튼이 '준비 중' 안내로 떨어진다(js/charge.js payReady).
+      PG 심사가 끝나 채널키를 받으면 이 두 줄만 채우면 결제가 열린다.
+   ⚠️ storeId·channelKey 는 공개돼도 되는 식별자다(비밀키가 아니다).
+      실제 지급 권한은 서버(portone-webhook + PORTONE_API_SECRET)에만 있다.
+   조회 위치: 포트원 관리자콘솔 > 결제연동 > 연동 정보 */
+window.GALLA_PORTONE = {
+  storeId: "",      // store-xxxxxxxx-xxxx-...
+  channelKey: "",   // channel-key-xxxxxxxx-... (NHN KCP 채널)
+};
