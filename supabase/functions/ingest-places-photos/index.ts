@@ -86,8 +86,17 @@ Deno.serve(async (req) => {
   const tried: any[] = [];
   const info: any[] = [];
 
+  /* ⏱ 시간 상자 — 엣지 함수는 150초에서 잘린다. 잘리면 그 회차가 통째로 날아간다:
+     받은 사진도 저장 못 하고, 선차감한 몫도 환불 못 하고(refund 가 함수 끝에 있다),
+     구글 호출은 이미 나갔으니 돈만 쓰고 아무것도 안 남는다.
+     실측 2026-09-02: n=300·200 두 번이 이렇게 죽어 500몫이 증발했다.
+     경로를 둘로 나눈 뒤(검색+상세) 한 곳당 시간이 배로 늘어 더 쉽게 닿는다.
+     110초에서 스스로 멈추고, 거기까지 받은 건 저장하고 남은 몫은 돌려준다. */
+  const t0 = Date.now();
+  let timeBoxed = false;
   for (const p of (targets || []) as any[]) {
     if (called >= budget) break;
+    if (Date.now() - t0 > 110_000) { timeBoxed = true; break; }
     called++;
     try {
       /* 🔎 1단계 — **무료** 검색. 필드마스크를 places.id 하나로 좁히면
@@ -196,5 +205,6 @@ Deno.serve(async (req) => {
     const { data } = await supa.rpc("food_place_info_set", { p_items: info.slice(i, i + 200) });
     infoN += (data?.n ?? 0);
   }
-  return j({ ok: true, budget, called, matched, inserted, info: infoN, tried: tried.length, quotaDead, errs });
+  return j({ ok: true, budget, called, matched, inserted, info: infoN, tried: tried.length,
+            quotaDead, timeBoxed: timeBoxed || undefined, errs });
 });
