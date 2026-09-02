@@ -123,42 +123,42 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 
 <header>
   <h1>갈라 런칭 QA 현황판</h1>
-  <p class="sub">항목 <b class="mono">328</b>개 · 2026-09-01 기준 · <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">scripts/qa-board.py</span> 로 자동 생성</p>
+  <p class="sub">항목 <b class="mono">328</b>개 · 2026-09-02 기준 · <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">scripts/qa-board.py</span> 로 자동 생성</p>
 </header>
 
 <div class="scale">
   <div class="scale-head">
     <div class="side l">
-      <div class="num mono">225</div>
+      <div class="num mono">229</div>
       <div class="lab">된 것</div>
-      <div class="of">확인 110 · 부분 115</div>
+      <div class="of">확인 111 · 부분 118</div>
     </div>
     <div class="side r">
-      <div class="num mono">103</div>
+      <div class="num mono">99</div>
       <div class="lab">안 된 것</div>
-      <div class="of">미확인 83 · 막힘 20</div>
+      <div class="of">미확인 79 · 막힘 20</div>
     </div>
   </div>
-  <div class="bar" role="img" aria-label="된 것 225개, 안 된 것 103개">
-    <span class="b-done" style="width:33.5366%"></span>
-    <span class="b-part" style="width:35.0610%"></span>
+  <div class="bar" role="img" aria-label="된 것 229개, 안 된 것 99개">
+    <span class="b-done" style="width:33.8415%"></span>
+    <span class="b-part" style="width:35.9756%"></span>
     <span class="b-block" style="width:6.0976%"></span>
-    <span class="b-todo" style="width:25.3049%"></span>
+    <span class="b-todo" style="width:24.0854%"></span>
   </div>
   <div class="keys">
-    <span><i class="dot" style="background:var(--done)"></i><b>확인 110</b> — 실제로 눌러보고 DB까지 대조</span>
-    <span><i class="dot" style="background:var(--part)"></i><b>부분 115</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--done)"></i><b>확인 111</b> — 실제로 눌러보고 DB까지 대조</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 118</b> — 한 플랫폼만, 또는 코드만</span>
     <span><i class="dot" style="background:var(--block)"></i><b>막힘 20</b> — 키·실기기·결제 등 외부 조건</span>
-    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 83</b> — 아직 손 못 댐</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 79</b> — 아직 손 못 댐</span>
   </div>
   <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
-  지금은 항목 328개 · 된 것 225(확인 110 · 부분 115) · 안 된 것 103(미확인 83 · 막힘 20).
-  <b>미확인 172 → 83.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  지금은 항목 328개 · 된 것 229(확인 111 · 부분 118) · 안 된 것 99(미확인 79 · 막힘 20).
+  <b>미확인 172 → 79.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
   ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
 </div>
 
 <div class="card warn">
-  <h2>먼저 봐야 할 것 <span class="cnt">20</span></h2>
+  <h2>먼저 봐야 할 것 <span class="cnt">16</span></h2>
   <p class="lede">출시를 실제로 막을 수 있는 것들. 심사에서 걸리거나(앱스토어·법정 표기), 사고가 나면 되돌리기 어려운 것(보안·가입 경로)입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -185,18 +185,11 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="todo"><span class="t">약관·개인정보·청소년보호 링크</span></li>
 <li class="todo"><span class="t">계정 삭제 동선(앱스토어 필수)</span></li></ul>
 </section>
-<section class="area">
-  <h4>16. 계정 상태·어뷰징<span class="ratio">4<i>/</i>8</span></h4>
-  <ul class="list"><li class="todo"><span class="t">삭제(탈퇴) 계정의 잔존 콘텐츠</span><span class="n">글·댓글이 어떻게 보이나</span></li>
-<li class="todo"><span class="t">미인증 이메일 상태</span><span class="n">어디까지 허용</span></li>
-<li class="todo"><span class="t">다계정·GP 파밍</span><span class="n">초대 보상·제보 보상 악용</span></li>
-<li class="todo"><span class="t">신고 처리 SLA·검열</span><span class="n">접수는 되는데 **처리 동선 미확인**</span></li></ul>
-</section>
   <p class="judge"><b>이건 데이터가 아니라 판단입니다.</b> 체크리스트에 '출시 차단' 표시가 따로 없어서, 앱스토어 필수 항목·전자상거래법 표기·보안 회귀·가입 경로를 기준으로 골랐습니다.</p>
 </div>
 
 <div class="card">
-  <h2>된 것 <span class="cnt">225</span></h2>
+  <h2>된 것 <span class="cnt">229</span></h2>
   <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -430,11 +423,15 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="done"><span class="t">연령등급·심사 메모·테스트 계정 제공</span><span class="n">심사 필수 docs/store-privacy-review.md (17+ · 영문 심사메모 · 비번은 사장님이 직접 입력)</span></li></ul>
 </section>
 <section class="area">
-  <h4>16. 계정 상태·어뷰징<span class="ratio">4<i>/</i>8</span></h4>
-  <ul class="list"><li class="done"><span class="t">정지·제재 계정 상태</span><span class="n">기계는 다 있었는데 **아무것도 안 막고 있었다**(PERMISSIVE 정책은 OR 로 묶인다 · RLS 는 SECURITY DEFINER 안에서 평가 안 됨) RESTRICTIVE 정책 14개 + 쓰기 RPC 7개 가드 · docs/ban-enforcement-20260831.md</span></li>
+  <h4>16. 계정 상태·어뷰징<span class="ratio">8<i>/</i>8</span></h4>
+  <ul class="list"><li class="done"><span class="t">정지·제재 계정 상태</span><span class="n">기계는 다 있었는데 **아무것도 안 막고 있었다**(PERMISSIVE 정책은 OR 로 묶인다 · RLS 는 SECURITY DEFINER 안에서 평가 안 됨) RESTRICTIVE 정책 14개 + 쓰기 RPC 8개 가드. **0901 재점검에서 구멍 5개 더 발견**(투표·신고·예측댓</span></li>
+<li class="part"><span class="t">삭제(탈퇴) 계정의 잔존 콘텐츠</span><span class="n">글·댓글이 어떻게 보이나 이슈·댓글·광장글·GP원장 고아 **0건**. 다만 **dm_messages 10건**은 삭제된 계정이 보낸 채로 남아 있다 — 상대방 대화 보존이 의도인지 사장님 판단</span></li>
 <li class="done"><span class="t">게스트(비로그인) 동선</span><span class="n">읽기 가능 범위 · 쓰기 차단 2026-08-30 — 이슈 읽기 O, 댓글·투표·숏판·제보 쓰기 전부 RLS 42501 차단. 투표 시도 시 로그인 화면으로 이동. 갈비스 2턴 후 가입 유도</span></li>
+<li class="done"><span class="t">미인증 이메일 상태</span><span class="n">어디까지 허용 auth.users 34명 중 미인증 1명, 그 계정은 `last_sign_in_at` 이 null — **한 번도 로그인 못 했다**(인증 전 로그인 차단 동작)</span></li>
+<li class="part"><span class="t">다계정·GP 파밍</span><span class="n">초대 보상·제보 보상 악용 `apply_referral` 가드 확인 — **자기초대 차단·1회 제한·가입 7일 이내만·초대자 일일 상한**. 출석·미션도 하루 1회(`already`). 남은 리스크는 **사람이 계정을 여러 개 파서 서로 초대**하는 것(IP·기기 지문이 없어 못 막는다</span></li>
 <li class="part"><span class="t">도배 방지</span><span class="n">cooldown(날씨·이슈댓글) · daily_limit(썸네일·영상) 존재 — **댓글·DM·광장엔 없음**</span></li>
-<li class="part"><span class="t">좀비 세션(삭제된 계정 토큰)</span><span class="n">supabase.js 에 정리 로직 있음</span></li></ul>
+<li class="part"><span class="t">좀비 세션(삭제된 계정 토큰)</span><span class="n">supabase.js 에 정리 로직 있음</span></li>
+<li class="part"><span class="t">신고 처리 SLA·검열</span><span class="n">접수는 되는데 **처리 동선 미확인** 처리 왕복은 확인(§26-17) — 신고 접수 → 관리자 알림 1건 → `admin_resolve_report(...,'delete')` → 대상 댓글 `deleted`. 비관리자는 `forbidden`. **다만 AI 사전 검열이 없다**(mod</span></li></ul>
 </section>
 <section class="area">
   <h4>17. 배포·복구<span class="ratio">3<i>/</i>8</span></h4>
