@@ -123,37 +123,37 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 
 <header>
   <h1>갈라 런칭 QA 현황판</h1>
-  <p class="sub">항목 <b class="mono">328</b>개 · 2026-09-02 기준 · <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">scripts/qa-board.py</span> 로 자동 생성</p>
+  <p class="sub">항목 <b class="mono">331</b>개 · 2026-09-02 기준 · <span class="mono">docs/qa-checklist.md</span> 에서 <span class="mono">scripts/qa-board.py</span> 로 자동 생성</p>
 </header>
 
 <div class="scale">
   <div class="scale-head">
     <div class="side l">
-      <div class="num mono">236</div>
+      <div class="num mono">242</div>
       <div class="lab">된 것</div>
-      <div class="of">확인 111 · 부분 125</div>
+      <div class="of">확인 113 · 부분 129</div>
     </div>
     <div class="side r">
-      <div class="num mono">92</div>
+      <div class="num mono">89</div>
       <div class="lab">안 된 것</div>
-      <div class="of">미확인 72 · 막힘 20</div>
+      <div class="of">미확인 69 · 막힘 20</div>
     </div>
   </div>
-  <div class="bar" role="img" aria-label="된 것 236개, 안 된 것 92개">
-    <span class="b-done" style="width:33.8415%"></span>
-    <span class="b-part" style="width:38.1098%"></span>
-    <span class="b-block" style="width:6.0976%"></span>
-    <span class="b-todo" style="width:21.9512%"></span>
+  <div class="bar" role="img" aria-label="된 것 242개, 안 된 것 89개">
+    <span class="b-done" style="width:34.1390%"></span>
+    <span class="b-part" style="width:38.9728%"></span>
+    <span class="b-block" style="width:6.0423%"></span>
+    <span class="b-todo" style="width:20.8459%"></span>
   </div>
   <div class="keys">
-    <span><i class="dot" style="background:var(--done)"></i><b>확인 111</b> — 실제로 눌러보고 DB까지 대조</span>
-    <span><i class="dot" style="background:var(--part)"></i><b>부분 125</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--done)"></i><b>확인 113</b> — 실제로 눌러보고 DB까지 대조</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 129</b> — 한 플랫폼만, 또는 코드만</span>
     <span><i class="dot" style="background:var(--block)"></i><b>막힘 20</b> — 키·실기기·결제 등 외부 조건</span>
-    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 72</b> — 아직 손 못 댐</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 69</b> — 아직 손 못 댐</span>
   </div>
   <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
-  지금은 항목 328개 · 된 것 236(확인 111 · 부분 125) · 안 된 것 92(미확인 72 · 막힘 20).
-  <b>미확인 172 → 72.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  지금은 항목 331개 · 된 것 242(확인 113 · 부분 129) · 안 된 것 89(미확인 69 · 막힘 20).
+  <b>미확인 172 → 69.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
   ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
 </div>
 
@@ -189,7 +189,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>된 것 <span class="cnt">236</span></h2>
+  <h2>된 것 <span class="cnt">242</span></h2>
   <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -242,7 +242,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="part"><span class="t">유령 모드(익명) — 유령권 게이팅</span></li></ul>
 </section>
 <section class="area">
-  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
+  <h4>4. 소통 — 갈라톡<span class="ratio">12<i>/</i>16</span></h4>
   <ul class="list"><li class="part"><span class="t">유저 검색</span></li>
 <li class="part"><span class="t">DM 대화방 생성·전송</span><span class="n">입력만</span></li>
 <li class="part"><span class="t">DM 수신·읽음</span><span class="n">2계정 롤백 시뮬: 발신 → 수신자 조회 1행 → read_at 갱신 1행 → 제3자 조회 0행. 수신자에게 보이는 건 자기 스레드 2개·메시지 20행뿐(전체 729행 중)</span></li>
@@ -252,16 +252,18 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="part"><span class="t">친구 추가·목록</span></li>
 <li class="part"><span class="t">난장(오픈챗) 개설</span></li>
 <li class="part"><span class="t">난장 입장·대화</span></li>
+<li class="part"><span class="t">난장 나가기·방장 권한</span><span class="n">0902: 본인 멤버 행 삭제로 퇴장 동작(잔여 0). 방장 강퇴·밴은 §26-16 에서 확인</span></li>
 <li class="part"><span class="t">난장 방장 권한(강퇴·밴)</span><span class="n">롤백 시뮬: 비방장 밴 시도 → RLS 차단 / 방장 밴 → ban 1행·밴된 유저 멤버에서 자동 제거(_openroom_ban_kick 트리거)</span></li>
 <li class="part"><span class="t">삐삐 개통(랜덤)</span></li></ul>
 </section>
 <section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
+  <h4>5. 갈비스(AI 친구)<span class="ratio">8<i>/</i>9</span></h4>
   <ul class="list"><li class="part"><span class="t">대화 응답·문맥 유지</span></li>
 <li class="done"><span class="t">감정 엔진 기록</span></li>
 <li class="part"><span class="t">인물·사실 기억(friend_memory)</span><span class="n">person/mkey=몽자 저장 + embedding. 과거 0건 결함 해소 확인</span></li>
 <li class="part"><span class="t">선톡(ping)</span><span class="n">free 티어 galla-friend-ambient n=0 — 유료 전용 게이트는 확인, 실제 발송 미확인</span></li>
 <li class="part"><span class="t">위기 감지 → 상담카드</span><span class="n">0902 실호출: '죽고 싶다는 생각' → term='죽고싶'·severity 2 기록 + 상담카드(109·1577-0199) 동봉. 관리자 실시간 알림이 없어 트리거 신설(§26-20)</span></li>
+<li class="part"><span class="t">컨시어지(택시·배달 딥링크)</span><span class="n">0902 배선 확인(AI 호출 0): open_external 도구 정의 + 가짜클레임 금지 문구, 프론트 매핑 kakaot://·baemin://·카카오맵, 미설치 시 https 폴백, iOS LSApplicationQueriesSchemes 4종 등록. 실제 앱 실행은 실기기 필요</span></li>
 <li class="done"><span class="t">원가 기록(ai_spend)</span><span class="n">2026-08-29 수정</span></li>
 <li class="part"><span class="t">턴 한도·게이트(무료 5턴)</span><span class="n">6번째 차단+리셋시각 안내. 게스트 2턴도 확인. pill 미갱신 결함은 0830007에서 수정</span></li></ul>
 </section>
@@ -326,11 +328,12 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="part"><span class="t">신고·차단 동선(앱스토어 필수)</span><span class="n">신고만</span></li></ul>
 </section>
 <section class="area">
-  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">6<i>/</i>8</span></h4>
+  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">7<i>/</i>8</span></h4>
   <ul class="list"><li class="part"><span class="t">일기토(1:1 논쟁) 신청·수락</span><span class="n">서버 경로 롤백 시뮬: 티켓 없으면 no_ticket 거부·티켓 소모·판돈 500GP 잠금·상대 알림·수락 시 status live</span></li>
 <li class="part"><span class="t">일기토 진행·메시지(duel_messages)</span><span class="n">양쪽 duel_say → duel_messages 2행</span></li>
 <li class="part"><span class="t">일기토 관전·투표</span><span class="n">제3자 duel_vote → vote_challenger 1. 시간 만료 후 duel_resolve 2단계(live→voting→finished)·승자 GP ±500</span></li>
 <li class="part"><span class="t">나만의 이모티콘(AI 생성·GP 차감·환불)</span><span class="n">0902: 과금은 GC 150 차감 확인. 환불이 GP 로 나가던 결함 발견·수정(§26-19). 실제 이미지 생성은 AI 비용이라 미실행</span></li>
+<li class="part"><span class="t">DM 스티커 사용</span><span class="n">0902 롤백 시뮬: my_stickers 보유 → DM 전송 1건. ⚠️ kind 는 'sticker' 가 아니라 'gif'(CHECK 제약에 sticker 없음) — 내 이모티콘과 GIF 가 같은 kind 를 쓴다</span></li>
 <li class="part"><span class="t">알림 목록·읽음 처리(notifications)</span><span class="n">0902: 알림 3건 넣고 화면 확인 — 목록·필터탭 렌더, '모두 읽음' 누르니 DB read=true 3건, 개별 삭제도 동작. 테스트 알림 삭제 완료(잔여 0)</span></li>
 <li class="part"><span class="t">갈라 성향 테스트(/match) 공유</span><span class="n">0902: 12문항→결과→공유 URL(/share/match/&lt;인코딩&gt;) 생성까지 확인. 복사 실패 시 안내가 틀려 있던 것 수정(§26-21). 실제 카톡 미리보기(OG)는 미확인</span></li></ul>
 </section>
@@ -514,7 +517,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="done"><span class="t">설정·등급·퀘스트·지갑·충전내역·로그인기록·비번변경</span><span class="n">여유 있음(원래 정상)</span></li></ul>
 </section>
 <section class="area">
-  <h4>26. 백엔드 전수 점검 (2026-09-01, 크론·버그헌터·신호층)<span class="ratio">10<i>/</i>10</span></h4>
+  <h4>26. 백엔드 전수 점검 (2026-09-01, 크론·버그헌터·신호층)<span class="ratio">13<i>/</i>13</span></h4>
   <ul class="list"><li class="done"><span class="t">email_probe_rate</span><span class="n">RLS off + anon 에 SELECT/INSERT/UPDATE/**DELETE** 8/31에 이메일 열거를 막으려 만든 IP·시간당 카운터다. **anon 이 지우면 제한이 초기화 = 방어 무력** RLS on · 권한 회수</span></li>
 <li class="done"><span class="t">places_tried</span><span class="n">〃 맛집 수집기 '이미 물어본 곳' 장부 — 통째로 채우면 수집이 조용히 멈춘다</span></li>
 <li class="done"><span class="t">places_usage</span><span class="n">〃 일일 사진 한도 장부 — '한도 소진'으로 조작 가능</span></li>
@@ -524,7 +527,10 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="done"><span class="t">market_comments</span><span class="n">예측 의견배틀 댓글 작성됨</span></li>
 <li class="done"><span class="t">galla_news_comments</span><span class="n">갈라뉴스 댓글 작성됨</span></li>
 <li class="done"><span class="t">follows</span><span class="n">팔로우됨(정지 중 스팸 팔로우)</span></li>
-<li class="done"><span class="t">content_reports</span><span class="n">**신고 도배 가능**</span></li></ul>
+<li class="done"><span class="t">content_reports</span><span class="n">**신고 도배 가능**</span></li>
+<li class="done"><span class="t">DM 스티커 사용</span><span class="n">`my_stickers` 보유 → DM 전송 1건</span></li>
+<li class="done"><span class="t">난장 나가기</span><span class="n">본인 멤버 행 삭제로 퇴장(잔여 0)</span></li>
+<li class="part"><span class="t">컨시어지 딥링크</span><span class="n">도구·매핑·스킴 등록·웹 폴백까지 코드로 확인 (실행은 실기기)</span></li></ul>
 </section>
 </div>
 
@@ -543,11 +549,11 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="block"><span class="t">예측 마켓 생성</span></li></ul>
 </section>
 <section class="area">
-  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
+  <h4>4. 소통 — 갈라톡<span class="ratio">12<i>/</i>16</span></h4>
   <ul class="list"><li class="block"><span class="t">면상톡·육성톡(1:1 통화)</span><span class="n">보류 기능</span></li></ul>
 </section>
 <section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
+  <h4>5. 갈비스(AI 친구)<span class="ratio">8<i>/</i>9</span></h4>
   <ul class="list"><li class="block"><span class="t">창작 대행(썸네일·영상)</span></li></ul>
 </section>
 <section class="area">
@@ -578,18 +584,13 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>아직 안 본 것 <span class="cnt">59</span></h2>
+  <h2>아직 안 본 것 <span class="cnt">56</span></h2>
   <p class="lede">위 '먼저 봐야 할 것'을 뺀 나머지입니다. 대부분 부가 기능·운영 도구·호환성이라 출시를 막지는 않지만, 하나씩은 봐야 합니다.</p>
   <section class="area">
-  <h4>4. 소통 — 갈라톡<span class="ratio">11<i>/</i>16</span></h4>
-  <ul class="list"><li class="todo"><span class="t">난장 나가기·방장 권한</span></li>
-<li class="todo"><span class="t">육성 난장(라이브)</span></li>
+  <h4>4. 소통 — 갈라톡<span class="ratio">12<i>/</i>16</span></h4>
+  <ul class="list"><li class="todo"><span class="t">육성 난장(라이브)</span></li>
 <li class="todo"><span class="t">삐삐 번호 골라 개통</span></li>
 <li class="todo"><span class="t">삐삐 음성 발신·수신</span><span class="n">마이크 필요</span></li></ul>
-</section>
-<section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
-  <ul class="list"><li class="todo"><span class="t">컨시어지(택시·배달 딥링크)</span></li></ul>
 </section>
 <section class="area">
   <h4>6. 트렌드<span class="ratio">8<i>/</i>9</span></h4>
@@ -601,9 +602,8 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="todo"><span class="t">RLS·컬럼권한 회귀</span></li></ul>
 </section>
 <section class="area">
-  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">6<i>/</i>8</span></h4>
-  <ul class="list"><li class="todo"><span class="t">일기토 AI 판정(duel-ai-judge)</span></li>
-<li class="todo"><span class="t">DM 스티커 사용</span></li></ul>
+  <h4>3-B. 대결·놀거리 (⚠️ 1차 목록에서 통째로 빠졌던 장)<span class="ratio">7<i>/</i>8</span></h4>
+  <ul class="list"><li class="todo"><span class="t">일기토 AI 판정(duel-ai-judge)</span></li></ul>
 </section>
 <section class="area">
   <h4>6-B. 공개·유입 (검색·공유·SEO)<span class="ratio">6<i>/</i>7</span></h4>
