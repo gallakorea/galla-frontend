@@ -77,6 +77,41 @@ async function chatJson(user: string): Promise<string | null> {
   } catch (e) { if (errs.length < 4) errs.push(`gemini ${String(e).slice(0, 70)}`); return null; }
 }
 
+/* 여러 곳이 나오는 영상: 곳마다 다른 한 줄을 받는다.
+   ⚠️ 같은 문장을 복사하지 말라고 못 박는다 — 안 그러면 세 장소에 같은 말이 붙어
+      영상 요약 하나 쓰는 것과 다를 게 없어진다. */
+const SYS_NOTE = [
+  "너는 여행 유튜브 영상 하나와 **그 영상에 나오는 장소 목록**을 받는다.",
+  "장소마다 '이 영상에서 그 장소에서 무엇을 했는지' 한국어 한 문장(50자 안쪽)을 쓴다.",
+  "규칙:",
+  "1) **장소마다 다른 얘기를 써라.** 같은 문장을 여러 장소에 복사하면 안 된다.",
+  "   좋은 예: 우치사르 성 → '성 위에 올라 괴레메 마을 전경을 내려다본다'",
+  "             트래블러스 케이브 펜션 → '동굴을 개조한 숙소에 묵는다'",
+  "2) 설명에 그 장소 얘기가 없으면 **빈 문자열**. 지어내지 않는다.",
+  "3) place_id 는 받은 값을 그대로 돌려준다.",
+  'JSON 만: {"results":[{"place_id":"<uuid>","note":"한 문장"}]}',
+].join("\n");
+
+async function chatJson2(user: string): Promise<string | null> {
+  if (DS && !dsDead) {
+    try {
+      const r = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${DS}` },
+        body: JSON.stringify({
+          model: MODEL, temperature: 0.2,
+          response_format: { type: "json_object" },
+          messages: [{ role: "system", content: SYS_NOTE }, { role: "user", content: user }],
+        }),
+      });
+      if (r.ok) return (await r.json())?.choices?.[0]?.message?.content || null;
+      if (r.status === 402 || r.status === 401) dsDead = true;
+      if (errs.length < 4) errs.push(`deepseek ${r.status}`);
+    } catch (e) { if (errs.length < 4) errs.push(`deepseek ${String(e).slice(0, 60)}`); }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
@@ -86,6 +121,56 @@ Deno.serve(async (req) => {
   if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);
 
   const url = new URL(req.url);
+
+  /* ── ?notes=1 : 여러 곳 나오는 영상의 장소별 한 줄 ─────────────
+     사장님: "영상에 장소가 다양하더라도 장소마다 다 뜨게 해야 함."
+     💰 한 곳짜리 영상(74%)은 AI 를 안 부른다 — 영상 요약을 그대로 복사하면 된다
+        (travel_note_from_gist). 비용은 여러 곳 나오는 26% 에만 붙는다. */
+  if (url.searchParams.get("notes") === "1") {
+    const dl = Date.now() + 110_000;
+    let vids = 0, saved = 0;
+    try {
+      /* 먼저 공짜부터: 한 곳짜리는 요약을 복사한다 */
+      const { data: cp } = await supa.rpc("travel_note_from_gist", { p_limit: 3000 });
+      const copied = Number(cp?.copied || 0);
+
+      while (Date.now() < dl) {
+        const { data: todo } = await supa.rpc("travel_sources_to_note", { p_limit: 4 });
+        const list = (todo || []) as any[];
+        if (!list.length) break;
+        for (const v of list) {
+          if (Date.now() > dl) break;
+          const places = (v.places || []) as any[];
+          if (!places.length) continue;
+          vids++;
+          const user = `제목: ${v.title}\n설명: ${String(v.description || "").slice(0, 900)}\n\n` +
+            "장소들:\n" + places.map((p: any) => `- place_id=${p.place_id} / ${p.name}`).join("\n");
+          const raw = await chatJson2(user);
+          let items: any[] = [];
+          if (raw) { try { items = JSON.parse(raw)?.results || []; } catch { items = []; } }
+          const ok = new Set(places.map((p: any) => String(p.place_id)));
+          const out = items.filter((x) => x && ok.has(String(x.place_id)))
+            .map((x) => ({ video_id: v.video_id, channel: v.channel,
+                           place_id: String(x.place_id), note: String(x.note || "").trim() }));
+          /* 빠진 장소도 빈 값으로 박는다 — 안 그러면 이 영상이 큐에 영원히 남는다 */
+          for (const p of places) {
+            if (!out.some((o) => o.place_id === String(p.place_id))) {
+              out.push({ video_id: v.video_id, channel: v.channel,
+                         place_id: String(p.place_id), note: "" });
+            }
+          }
+          const { data: r } = await supa.rpc("travel_source_note_save", { p_items: out });
+          saved += Number(r?.saved || 0);
+          if (!raw) break;
+        }
+      }
+      return j({ ok: true, mode: "notes", copiedFromGist: copied, videos: vids, saved,
+                 errors: errs.slice(0, 3) });
+    } catch (e) {
+      return j({ ok: false, mode: "notes", error: String(e).slice(0, 300), videos: vids, saved }, 500);
+    }
+  }
+
   const want = Math.min(Number(url.searchParams.get("n") || "200"), 600);
   const BATCH = 10;
   /* 엣지는 150초 놀면 흔적 없이 사라진다 — 시계를 안전장치로 둔다. */

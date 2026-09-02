@@ -99,13 +99,18 @@ const SYS = [
   "5) kind: 식당·카페·음식 = food, 숙소 = stay, 투어·액티비티 = activity, 그 외 = spot.",
   "6) 협찬사·항공사·보험·유심·카메라 장비·제휴 상품은 장소가 아니다. 제외한다.",
   "7) 한 영상에서 최대 5개. 확실하지 않으면 빈 배열.",
-  "8) gist: 이 영상이 **무슨 내용인지** 한국어 한 문장(60자 안쪽).",
+  "8) 장소마다 note 를 채운다 — **그 영상에서 그 장소에서 무엇을 했는지** 한국어 한 문장(50자 안쪽).",
+  "   한 영상이 여러 곳을 가면 곳마다 다른 얘기를 써야 한다. 같은 문장을 복사하지 마라.",
+  "   좋은 예: 우치사르 성 → '성 위에 올라 괴레메 마을 전경을 내려다본다'",
+  "             트래블러스 케이브 펜션 → '동굴을 개조한 숙소에 묵는다'",
+  "   근거가 없으면 빈 문자열.",
+  "9) gist: 이 영상이 **무슨 내용인지** 한국어 한 문장(60자 안쪽).",
   "   유튜브 제목은 낚시성이라 내용이 안 보인다. 제목을 옮겨 적지 말고, 실제로 뭘 하는 영상인지 써라.",
   "   좋은 예: '카이로 시내 시장을 걸으며 현지 길거리 음식을 사 먹는다'",
   "   나쁜 예: '이집트 여행 브이로그' (뭘 하는지가 없다) / '여행 난이도 최악 근황' (제목 복사)",
   "   근거가 부족하면 빈 문자열. 지어내지 않는다.",
   'JSON 만: {"gist":"한 문장","places":[{"scale":"spot","name":"한국어 표기","name_local":"현지 표기","name_en":"영문 표기",' +
-    '"city":"영문 도시명","country_code":"AF","country":"아프가니스탄","kind":"food"}]}',
+    '"city":"영문 도시명","country_code":"AF","country":"아프가니스탄","kind":"food","note":"이 장소에서 한 일"}]}',
 ].join("\n");
 
 /* 지도에 점으로 찍을 수 없는 것들 — 대륙·대양·극지방.
@@ -507,6 +512,9 @@ const DEADLINE = Date.now() + 110_000;
           kind: ["spot","food","stay","activity"].includes(p?.kind) ? p.kind : "spot",
           scale, status: "pending", origin: "yt", channel,
           video_id: v.video_id, video_title: v.title, aired_at: v.published_at,
+          /* 장소별 한 줄 — 한 영상이 여러 곳을 가면 곳마다 다른 얘기가 붙는다.
+             영상 한 줄(gist)만 있으면 괴레메 국립공원 페이지에 우치사르 성 얘기가 뜬다. */
+          note: String(p?.note || "").trim().slice(0, 160) || null,
         });
         continue;
       }
@@ -560,6 +568,7 @@ const DEADLINE = Date.now() + 110_000;
         origin: "yt",
         channel,
         video_id: v.video_id, video_title: v.title, aired_at: v.published_at,
+        note: String(p?.note || "").trim().slice(0, 160) || null,
       };
       items.push(item);
       if (hit._file) {
