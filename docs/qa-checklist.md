@@ -268,7 +268,7 @@
 | **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
 | 엣지 메타 주입(`_middleware.js`) | ✅ `/issue?id=` 에 og:title·description·image 주입 확인 |
 | imgproxy 외부 이미지 프록시 | 🔶 앱에서만 확인 |
-| PWA 설치 유도·오프라인 페이지 | ❌ |
+| PWA 설치 유도·오프라인 페이지 | 🔶 `/offline` 200 · `sw.js` 200. 실제 오프라인 전환 동작은 미확인 |
 
 ## 10-B. 데이터 파이프라인·추천
 
@@ -1132,3 +1132,21 @@ GC 는 충전(현금성)이고 GP 는 활동 포인트다. **생성 실패는 �
 - 매핑: `kakaot://` · `baemin://` · 카카오맵(navi/map), **미설치면 https 폴백**
 - iOS `LSApplicationQueriesSchemes` 에 kakaot·kakaomap·baemin·nmap 등록 — `canOpenUrl` 이 동작하려면 필수
 - ⚠️ 시뮬레이터엔 그 앱들이 없어 `canOpenUrl` 이 false → **실기기에서만 최종 확인 가능**
+
+### 26-24. 공개·유입 5건 (2026-09-02)
+
+| 항목 | 결과 |
+|---|---|
+| robots.txt | 200 · `User-agent: *` Allow, **AI 크롤러 다수 Disallow**(Amazonbot·Bytespider·CCBot·ClaudeBot…) + Content-Signal 고지 |
+| sitemap.xml | 200 · **URL 7,106개** · lastmod 실시간 |
+| 엣지 메타 주입 | 이슈 상세를 크롤러 UA·일반 UA 둘 다로 받아 og:title/description/image 주입 확인. `/share/*` 도 정상 |
+| IndexNow | 엔드포인트 200 (색인 반영 자체는 검색엔진 몫) |
+| 오프라인 | `/offline` 200 · `sw.js` 200 (실제 오프라인 전환은 미확인) |
+
+**🔴 기본 OG 폴백이 없었다 — 고침.**
+고유 메타가 붙는 건 콘텐츠 상세(`/issue?id=`·`/share/*`)뿐이고, **일반 페이지엔 OG 가 아예 없었다**:
+`quest`·`grade`·`wallet`·`match`·`plaza` 전부 `og:image` **0개**. 그 링크를 카톡·X 에 붙이면
+미리보기가 통째로 비어 나온다 — **바이럴 미끼로 만든 `/match` 도 그랬다.**
+
+→ 미들웨어의 '고유 SEO 없음' 경로에서 **기존 og:image 가 있으면 손대지 않고, 없을 때만** 기본 카드를 주입한다
+(HTMLRewriter `head` 의 `onEndTag`). 기본 이미지는 이미 있던 `assets/og/og-default.png`(200 확인).

@@ -13,6 +13,14 @@ const HOST = "https://galla.im";
 const DEF_IMG = `${HOST}/assets/og/og-default.png`;
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+/* OG 가 없는 페이지에 깔아주는 기본 카드(공유 미리보기 공백 방지). */
+const DEFAULT_OG =
+  '<meta property="og:type" content="website">' +
+  '<meta property="og:site_name" content="GALLA 갈라">' +
+  '<meta property="og:title" content="GALLA 갈라 · 무엇을 하든 판이 되는 곳">' +
+  '<meta property="og:description" content="뉴스·영상·이슈, 뭘 보든 내 편이 있다 — 여론·예측·숏폼이 한 판에.">' +
+  '<meta property="og:image" content="https://galla.im/assets/og/og-default.png">' +
+  '<meta name="twitter:card" content="summary_large_image">';
 const clip = (s, n) => { s = String(s ?? "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
 // 광장 본문 마커([IMAGE]·마크다운) 제거해 순수 텍스트만
 const plain = (s) => String(s ?? "")
@@ -392,9 +400,16 @@ function travelArticleHtml(seo) {
 }
 
 function rewrite(res, seo, linksHtml) {
-  // 목록 페이지: 메타는 원본 유지하고 링크 그물만 깐다
+  /* 목록·일반 페이지: 고유 메타는 원본 유지하고 링크 그물만 깐다.
+     ⚠️ 다만 원본에 OG 가 **아예 없는** 페이지가 대부분이었다(실측 2026-09-02:
+     quest·grade·wallet·match·plaza 전부 og:image 0개). 그 링크를 카톡·X 에 붙이면
+     미리보기가 통째로 안 뜬다 — 바이럴로 도는 /match 도 그랬다.
+     → 고유 OG 가 없을 때만 기본 카드를 깔아준다(있으면 손대지 않는다). */
   if (!seo) {
+    let hasOg = false;
     return new HTMLRewriter()
+      .on('meta[property="og:image"]', { element() { hasOg = true; } })
+      .on("head", { element(el) { el.onEndTag((end) => { if (!hasOg) end.before(DEFAULT_OG, { html: true }); }); } })
       .on("#app", { element(el) { el.append(linksHtml, { html: true }); } })
       .transform(res);
   }
