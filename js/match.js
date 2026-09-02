@@ -496,14 +496,36 @@
   function copy(s) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(s).then(function () { toast("링크를 복사했습니다"); },
-        function () { toast("복사 실패 — 주소창을 복사해 주세요"); });
+        function () { showLink(s); });
     } else {
       var ta = document.createElement("textarea");
       ta.value = s; document.body.appendChild(ta); ta.select();
       try { document.execCommand("copy"); toast("링크를 복사했습니다"); }
-      catch (e) { toast("복사 실패 — 주소창을 복사해 주세요"); }
+      catch (e) { showLink(s); }
       ta.remove();
     }
+  }
+  /* 복사가 막혔을 때(권한 거부·구형 웹뷰·제스처 밖 호출) 예전엔 "주소창을 복사해 주세요" 라고 안내했다.
+     그런데 **주소창엔 이 링크가 없다** — 공유 URL 은 /share/match/<결과> 인데 주소는 /match 그대로다.
+     안내대로 하면 결과가 빠진 맨 링크가 나간다(2026-09-02 실측: 복사 실패 토스트 + 주소창 /match).
+     → 링크 자체를 화면에 꺼내 보여주고 선택해 둔다. 길게 눌러 복사하면 된다. */
+  function showLink(s) {
+    var url = String(s).split("\n")[0];
+    var box = $("linkfall");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "linkfall";
+      box.style.cssText = "margin:10px 0;display:flex;gap:6px;align-items:center";
+      box.innerHTML = '<input readonly style="flex:1;min-width:0;font-size:13px;padding:9px 10px;' +
+        'border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit">';
+      var anchor = $("nick");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
+      else document.body.appendChild(box);
+    }
+    var inp = box.querySelector("input");
+    inp.value = url;
+    try { inp.focus(); inp.select(); inp.setSelectionRange(0, url.length); } catch (e) {}
+    toast("길게 눌러 링크를 복사해 주세요");
   }
 
   /* ── 궁합 결과 ── */
