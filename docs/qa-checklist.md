@@ -263,7 +263,7 @@
 | 항목 | 상태 |
 |---|---|
 | **공유 OG 카드**(`functions/share/` 엣지 렌더) — 카톡·X 미리보기 | ✅ |
-| 기본 OG 이미지 폴백 | ✅ `/share/*` 는 없는 id 여도 기본 문구+og-default.png(200). ⚠️ **그런데 일반 페이지엔 OG 자체가 없었다**(quest·grade·wallet·match·plaza og:image 0개) → 미들웨어에 기본 카드 주입 추가(§26-24) |
+| 기본 OG 이미지 폴백 | 🔶 `/share/*` 는 없는 id 여도 기본 문구+og-default.png(200). **일반 페이지는 루트 68개 중 12개만 og:image 보유**(56개 공백) → 미들웨어에 기본 카드 주입 추가, 배포 반영 확인 중(§26-24) |
 | **robots.txt · sitemap.xml.js 동적 생성** | ✅ robots 200 · sitemap 2,885 URL(523KB) 정상 생성 |
 | **IndexNow 색인 제출**(`functions/indexnow.js`) | ✅ 호스트 검증(URL 파서)·60초 스로틀 추가, 라이브 검증 (§22) |
 | 엣지 메타 주입(`_middleware.js`) | ✅ `/issue?id=` 에 og:title·description·image 주입 확인 |
@@ -447,11 +447,11 @@ comm -13 /tmp/used /tmp/set   # 설정만 있고 안 쓰는 죽은 키
 
 | 항목 | 상태 |
 |---|---|
-| **고객지원·문의(support)** 문의 등록·답변 | ❌ |
-| **리믹스 작성 흐름(write-remix → confirm.remix)** | ❌ |
-| **사회적 환원 내역(donation-usage)** 표시 | ❌ |
-| **GP 사용 이력(gp-history)** 정확성 | ❌ |
-| **관리자 로그인(admin-login)** 권한 게이트 | ❌ |
+| **고객지원·문의(support)** 문의 등록·답변 | ✅ `create_support_ticket(제목,본문)` → `{ok:true}`. 일반 유저가 `admin_tickets()` 호출하면 **forbidden**, 관리자만 목록 조회 (롤백 시뮬) |
+| **리믹스 작성 흐름(write-remix → confirm.remix)** | 🔶 진입로 존재 확인 — `issue.js:1019` 가 write-remix 로 보내고, `confirm.js` 가 `confirm.remix.html`·초안 복귀(`?draft=`)를 다룬다. 실제 발행까지는 미실행 |
+| **사회적 환원 내역(donation-usage)** 표시 | 🔶 **고아 페이지** — 어디서도 링크되지 않는다. 설정의 '사회적 환원' 섹션은 `donation.html` 을 가리키고 그 섹션 자체도 `hidden`(2단계 오픈). 중복/구버전 여부 판단 필요 |
+| **GP 사용 이력(gp-history)** 정확성 | ✅ 심사계정 `point_ledger` 7행 합계 **100,700 = 잔액 100,700** (전 지갑 드리프트 0은 §26-18) |
+| **관리자 로그인(admin-login)** 권한 게이트 | ✅ 로그인 후 `user_profiles.admin_flag` 검증, 없으면 '관리자 권한이 없는 계정입니다'. 서버쪽도 관리자 RPC 전부 `forbidden` 확인(§26-17) |
 | **shorts.html** — 아무 데서도 링크 안 되는 고아 페이지(삭제 검토) | 🔶 |
 
 
@@ -1145,8 +1145,36 @@ GC 는 충전(현금성)이고 GP 는 활동 포인트다. **생성 실패는 �
 
 **🔴 기본 OG 폴백이 없었다 — 고침.**
 고유 메타가 붙는 건 콘텐츠 상세(`/issue?id=`·`/share/*`)뿐이고, **일반 페이지엔 OG 가 아예 없었다**:
-`quest`·`grade`·`wallet`·`match`·`plaza` 전부 `og:image` **0개**. 그 링크를 카톡·X 에 붙이면
-미리보기가 통째로 비어 나온다 — **바이럴 미끼로 만든 `/match` 도 그랬다.**
+루트 HTML **68개 중 `og:image` 를 가진 건 12개뿐**이다(quest·grade·wallet 등 56개 공백).
+그 링크를 카톡·X 에 붙이면 미리보기가 통째로 비어 나온다.
 
 → 미들웨어의 '고유 SEO 없음' 경로에서 **기존 og:image 가 있으면 손대지 않고, 없을 때만** 기본 카드를 주입한다
 (HTMLRewriter `head` 의 `onEndTag`). 기본 이미지는 이미 있던 `assets/og/og-default.png`(200 확인).
+
+### 26-25. 페이지 고아 검사 + 미커버 5건 (2026-09-02)
+
+**고아 검사** — 루트 HTML 68개를 전체 HTML·JS 에서 역참조로 훑었다(테스트·실험 페이지 제외).
+**어디서도 안 걸리는 페이지 3개**:
+
+| 페이지 | 상태 |
+|---|---|
+| `withdraw-done.html` | **진짜 미연결** — `withdraw.js` 는 출금 요청 후 `alert("출금 요청 완료!")` 만 띄우고 이 페이지로 보내지 않는다 |
+| `revenue-settlement.html` | 참조 0. 설정 메뉴는 `settlement.html` 을 가리킨다 — 중복/구버전으로 보인다 |
+| `donation-usage.html` | 참조 0. 설정 메뉴는 `donation.html` 을 가리킨다 — 위와 같은 계열 |
+
+`company.html`(회사 소개, 별도 도메인 운영)·`offline.html`(`sw.js` 가 참조)은 **정상**이다.
+⚠️ 셋 다 지갑/정산·환원 계열이고 그 섹션은 지금 `hidden`(2단계 오픈)이다. **삭제할지 연결할지는 사장님 판단.**
+
+**미커버 5건**: 고객지원 문의 ✅ · GP 이력 정확성 ✅ · 관리자 로그인 게이트 ✅ ·
+리믹스 흐름 🔶(진입로만) · 환원 내역 🔶(고아).
+
+### 26-26. ⚠️ 위 OG 측정에서 내가 두 번 틀렸다 — 정정
+
+1. **`curl -s` 로 `.html` 을 찍었는데 Pages 가 `/quest` 로 308 리다이렉트한다.** `-L` 없이 세었더니
+   본문이 빈 응답이라 **모든 페이지가 og:image 0개로 보였다.** `match`·`plaza` 는 **원래 OG 가 있었다**
+   (match 는 전용 `assets/og/match/intro.png`). 바이럴 링크가 깨져 있다던 내 첫 보고는 틀렸다.
+2. 그래도 **문제 자체는 있다**: 리포 소스 기준 루트 HTML **68개 중 og:image 보유는 12개**,
+   나머지 56개(quest·grade·wallet 등)는 공백이다.
+3. 주입 지점도 한 번 틀렸다(조기 반환 뒤라 안 닿음) — 옮겨서 재배포했고 반영 확인 중이다.
+
+교훈: **리다이렉트를 따라가지 않고 잰 수치는 전부 0으로 보인다.** `curl -sL` 로 잰다.

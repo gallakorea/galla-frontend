@@ -563,7 +563,21 @@ export async function onRequest(context) {
        ⚠️ 한때 목록 페이지(홈·검색·광장·예측)에도 링크 블록을 주입했는데, 앱 화면 끝에
           민짜 링크 수십 개가 쌓여 UI 를 망쳤다. 크롤러용 링크 그물은 앱 화면이 아니라
           전용 아카이브 페이지(/archive, functions/archive.js)가 맡는다. */
-    if (!hasRef && !isContent) return next();
+    /* ⚠️ 여기서 그냥 통과시키면 **일반 페이지엔 OG 가 하나도 없다**(실측 2026-09-02:
+       quest·grade·wallet·match·plaza 전부 og:image 0개 → 카톡·X 미리보기 공백).
+       처음엔 아래 `if (!seo)` 쪽에 기본 카드를 넣었는데, 그 지점은 이 조기 반환 뒤라
+       **일반 페이지에서는 아예 도달하지 않았다**(배포 후 실측으로 확인). 여기서 깐다.
+       HTML 응답에만, 그리고 **고유 og:image 가 없을 때만** 붙인다(있으면 손대지 않는다). */
+    if (!hasRef && !isContent) {
+      const res0 = await next();
+      const ct0 = res0.headers.get("content-type") || "";
+      if (!/text\/html/i.test(ct0)) return res0;
+      let hasOg0 = false;
+      return new HTMLRewriter()
+        .on('meta[property="og:image"]', { element() { hasOg0 = true; } })
+        .on("head", { element(el) { el.onEndTag((end) => { if (!hasOg0) end.before(DEFAULT_OG, { html: true }); }); } })
+        .transform(res0);
+    }
 
     const res = tvRow
       ? await next(new Request(new URL(`/travel-place?id=${tvRow.id}`, url), request))
