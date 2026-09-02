@@ -76,6 +76,9 @@ export async function onRequest() {
   parts.push(u(`${HOST}/plaza`, now, "hourly", "0.8"));
   parts.push(u(`${HOST}/gallari`, now, "hourly", "0.8"));
   parts.push(u(`${HOST}/match`, now, "weekly", "0.8")); // 갈라 궁합 — 비로그인 유입 랜딩
+  /* 상품·가격 안내 — 전자상거래법 §13(재화 내용·가격 표시)과 PG 심사가 요구하는
+     '비로그인 상태에서 보이는' 상품 페이지. 크롤러가 반드시 닿아야 한다. */
+  parts.push(u(`${HOST}/products`, now, "monthly", "0.6"));
   // 아카이브 — 로봇이 콘텐츠까지 걸어 들어가는 유일한 링크 경로(앱 목록은 전부 JS 버튼이라 <a>가 0개)
   parts.push(u(`${HOST}/archive`, now, "hourly", "0.9"));
   ["issue", "news", "plaza", "predict", "gallari", "travel"].forEach(t =>
