@@ -168,9 +168,33 @@
   /* 결제창 호출. 모바일에선 리다이렉트로 나갔다 돌아온다 —
      iframe 으로 띄우면 카드사·간편결제사 도메인이 전부 CSP frame-src 에 걸린다.
      (국내 PG 결제창은 도메인이 수십 개라 화이트리스트가 현실적으로 불가능하다.) */
+  /* SDK(241KB)는 '결제할 때만' 받는다. 이슈 페이지처럼 자주 여는 화면에 항상 얹으면
+     결제를 안 하는 대다수가 그 무게를 대신 진다.
+     ⚠️ CDN 이 아니라 로컬 벤더링(vendor/portone.js) — script-src 'self' 를 뚫지 않기 위해서다
+        (supabase.js 와 같은 수법). */
+  let sdkP = null;
+  function loadSDK() {
+    if (window.PortOne) return Promise.resolve(true);
+    if (sdkP) return sdkP;
+    sdkP = new Promise(res => {
+      const el = document.createElement("script");
+      el.src = "/vendor/portone.js?v=0902113";
+      el.onload = () => res(!!window.PortOne);
+      el.onerror = () => res(false);
+      document.head.appendChild(el);
+    });
+    return sdkP;
+  }
+
   async function pay(chg) {
     const cfg = window.GALLA_PORTONE || {};
-    if (!window.PortOne) { alert("결제 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요."); return; }
+    sheet.innerHTML = doneHTML("💳", "결제 준비 중…", won(chg.krw) + " · " + gc(chg.gc));
+    if (!(await loadSDK())) {
+      sheet.innerHTML = doneHTML("⚠️", "결제 모듈을 불러오지 못했어요",
+        "네트워크를 확인하고 다시 시도해 주세요.");
+      bindClose();
+      return;
+    }
 
     sheet.innerHTML = doneHTML("💳", "결제창을 여는 중…", `${won(chg.krw)} · ${gc(chg.gc)}`);
 
