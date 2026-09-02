@@ -78,6 +78,10 @@
           : '<div class="tv-hero empty">' + flag(p.country_code) + "</div>") +
 
       '<div class="tv-d-body">' +
+        /* 사장님: "재생 중인 영상의 상세에 붙어야지."
+           유튜브 제목은 낚시성이라 뭘 하는 영상인지 안 보인다. 지금 재생 중인 영상의
+           채널·제목·한 줄 요약을 히어로 바로 아래에 둔다 — 영상을 바꾸면 여기도 바뀐다. */
+        '<div class="tv-now" id="tv-now"></div>' +
         '<h1 class="tv-d-name">' + esc(p.name) + "</h1>" +
         '<div class="tv-d-sub">' + flag(p.country_code) + " " + esc(sub) +
           (p.category ? " · " + esc(p.category) : "") + "</div>" +
@@ -141,6 +145,7 @@
       "</div>";
 
     wire();
+    if (vids.length) paintNow(vids[0].video_id);
     loadTalk();
     try { document.title = p.name + " · 여행 | GALLA"; } catch (_) {}
   }
@@ -183,6 +188,21 @@
     }
   }
 
+  /* 지금 재생 중인 영상의 채널·제목·요약. 요약이 없는 영상은 제목만 보여준다
+     (수확이 아직 안 닿은 영상은 gist 가 비어 있다 — 빈 줄을 만들지 않는다). */
+  function paintNow(vid) {
+    var box = ROOT && ROOT.querySelector("#tv-now");
+    if (!box) return;
+    var v = ((CUR && CUR.videos) || []).filter(function (x) { return x.video_id === vid; })[0];
+    if (!v) { box.innerHTML = ""; return; }
+    box.innerHTML =
+      '<div class="tv-now-c">' + esc(v.channel || "") +
+        (v.aired_at ? ' <i>' + esc(String(v.aired_at).slice(0, 10).replace(/-/g, ".")) + "</i>" : "") +
+      "</div>" +
+      '<div class="tv-now-t">' + esc(v.title || "") + "</div>" +
+      (v.gist ? '<p class="tv-now-g">' + esc(v.gist) + "</p>" : "");
+  }
+
   function playHere(vid) {
     if (!vid) return;
     var hero = ROOT.querySelector("#tv-hero");
@@ -213,6 +233,7 @@
     ROOT.querySelectorAll(".tv-vid").forEach(function (el) {
       el.classList.toggle("on", el.dataset.vid === vid);
     });
+    paintNow(vid);
     try { hero.scrollIntoView({ block: "nearest" }); } catch (_) {}
   }
 

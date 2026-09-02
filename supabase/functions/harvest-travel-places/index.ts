@@ -99,7 +99,12 @@ const SYS = [
   "5) kind: 식당·카페·음식 = food, 숙소 = stay, 투어·액티비티 = activity, 그 외 = spot.",
   "6) 협찬사·항공사·보험·유심·카메라 장비·제휴 상품은 장소가 아니다. 제외한다.",
   "7) 한 영상에서 최대 5개. 확실하지 않으면 빈 배열.",
-  'JSON 만: {"places":[{"scale":"spot","name":"한국어 표기","name_local":"현지 표기","name_en":"영문 표기",' +
+  "8) gist: 이 영상이 **무슨 내용인지** 한국어 한 문장(60자 안쪽).",
+  "   유튜브 제목은 낚시성이라 내용이 안 보인다. 제목을 옮겨 적지 말고, 실제로 뭘 하는 영상인지 써라.",
+  "   좋은 예: '카이로 시내 시장을 걸으며 현지 길거리 음식을 사 먹는다'",
+  "   나쁜 예: '이집트 여행 브이로그' (뭘 하는지가 없다) / '여행 난이도 최악 근황' (제목 복사)",
+  "   근거가 부족하면 빈 문자열. 지어내지 않는다.",
+  'JSON 만: {"gist":"한 문장","places":[{"scale":"spot","name":"한국어 표기","name_local":"현지 표기","name_en":"영문 표기",' +
     '"city":"영문 도시명","country_code":"AF","country":"아프가니스탄","kind":"food"}]}',
 ].join("\n");
 
@@ -384,6 +389,7 @@ const DEADLINE = Date.now() + 110_000;
   const wantCredit = new Map<string, any[]>();     // 커먼즈 파일명 → 그 파일을 쓰는 item 들
   let extracted = 0, verified = 0, dropped = 0, geoCalls = 0, cacheHits = 0;
   const dropSamples: string[] = [];   // 검증에 떨어진 이름 — 왜 안 들어오는지 눈으로 봐야 고친다
+  const gists: any[] = [];            // 영상 한 줄 요약 — 같은 AI 호출에서 덤으로 받는다(추가 비용 0)
   let halted = "";
 
   for (const v of list) {
@@ -394,7 +400,11 @@ const DEADLINE = Date.now() + 110_000;
     try {
       const raw = await chatJson(
         SYS, `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
-      places = raw ? (JSON.parse(raw)?.places || []) : [];
+      const parsed = raw ? JSON.parse(raw) : null;
+      places = parsed?.places || [];
+      /* 장소가 0개여도 요약은 남긴다 — 오히려 그런 영상일수록 제목만으론 뭔지 모른다. */
+      const g = String(parsed?.gist || "").trim();
+      if (g) gists.push({ video_id: v.video_id, channel, gist: g });
     } catch (_) { places = []; }
     extracted += places.length;
 
@@ -579,6 +589,14 @@ const DEADLINE = Date.now() + 110_000;
   for (let i = 0; i < done.length; i += 200) {
     await supa.rpc("travel_videos_mark_harvested", { p_ids: done.slice(i, i + 200) });
   }
+  /* 요약 저장은 실패해도 수확을 되돌리지 않는다 — 장소가 본체고 요약은 덤이다 */
+  let gistN = 0;
+  if (gists.length) {
+    try {
+      const { data: g } = await supa.rpc("travel_gist_save", { p_items: gists });
+      gistN = Number(g?.saved || 0);
+    } catch (_) {}
+  }
 
   /* 회차마다 조금씩 치운다 — 중복은 수확이 도는 한 계속 생기므로 한 번 청소로 끝나지 않는다.
      ⚠️ 자동으로 지우는 건 '이름이 완전히 같고 한쪽만 QID' 인 것뿐이다(RPC 안에서 상한 30). */
@@ -590,6 +608,7 @@ const DEADLINE = Date.now() + 110_000;
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
   return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
+             gists: gistN || undefined,
              tourFails: TOUR_FAILS.length || undefined, geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
              ...res, merged, halted: halted || undefined,
              misses: dropSamples, ai: aiErrors.slice(0, 3) });
