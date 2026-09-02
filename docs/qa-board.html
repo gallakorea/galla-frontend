@@ -129,31 +129,31 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <div class="scale">
   <div class="scale-head">
     <div class="side l">
-      <div class="num mono">230</div>
+      <div class="num mono">231</div>
       <div class="lab">된 것</div>
-      <div class="of">확인 111 · 부분 119</div>
+      <div class="of">확인 111 · 부분 120</div>
     </div>
     <div class="side r">
-      <div class="num mono">98</div>
+      <div class="num mono">97</div>
       <div class="lab">안 된 것</div>
-      <div class="of">미확인 78 · 막힘 20</div>
+      <div class="of">미확인 77 · 막힘 20</div>
     </div>
   </div>
-  <div class="bar" role="img" aria-label="된 것 230개, 안 된 것 98개">
+  <div class="bar" role="img" aria-label="된 것 231개, 안 된 것 97개">
     <span class="b-done" style="width:33.8415%"></span>
-    <span class="b-part" style="width:36.2805%"></span>
+    <span class="b-part" style="width:36.5854%"></span>
     <span class="b-block" style="width:6.0976%"></span>
-    <span class="b-todo" style="width:23.7805%"></span>
+    <span class="b-todo" style="width:23.4756%"></span>
   </div>
   <div class="keys">
     <span><i class="dot" style="background:var(--done)"></i><b>확인 111</b> — 실제로 눌러보고 DB까지 대조</span>
-    <span><i class="dot" style="background:var(--part)"></i><b>부분 119</b> — 한 플랫폼만, 또는 코드만</span>
+    <span><i class="dot" style="background:var(--part)"></i><b>부분 120</b> — 한 플랫폼만, 또는 코드만</span>
     <span><i class="dot" style="background:var(--block)"></i><b>막힘 20</b> — 키·실기기·결제 등 외부 조건</span>
-    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 78</b> — 아직 손 못 댐</span>
+    <span><i class="dot" style="background:var(--todo);opacity:.5"></i><b>미확인 77</b> — 아직 손 못 댐</span>
   </div>
   <p class="judge"><b>2026-08-31 첫 판(8차본) 대비.</b> 그때는 항목 298개 · 된 것 100(확인 67 · 부분 33) · 안 된 것 198(미확인 172 · 막힘 26)였습니다.
-  지금은 항목 328개 · 된 것 230(확인 111 · 부분 119) · 안 된 것 98(미확인 78 · 막힘 20).
-  <b>미확인 172 → 78.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
+  지금은 항목 328개 · 된 것 231(확인 111 · 부분 120) · 안 된 것 97(미확인 77 · 막힘 20).
+  <b>미확인 172 → 77.</b> 항목 수가 는 건 체크리스트에 장이 추가돼서입니다.
   ⚠️ 첫 판은 손으로 만들어 그날로 굳었고, 그 사이 상세 섹션에서 확인한 12행이 표에는 ❌ 로 남아 있었습니다. 그래서 이제 스크립트로만 만듭니다.</p>
 </div>
 
@@ -189,7 +189,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>된 것 <span class="cnt">230</span></h2>
+  <h2>된 것 <span class="cnt">231</span></h2>
   <p class="lede">'확인'은 화면에서 눌러보고 DB 행까지 대조한 것, '부분'은 한 플랫폼만 봤거나 코드만 확인한 것입니다. 각 줄 아래 회색 글씨가 근거입니다.</p>
   <section class="area">
   <h4>1. 인증·계정<span class="ratio">6<i>/</i>12</span></h4>
@@ -255,11 +255,12 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="part"><span class="t">삐삐 개통(랜덤)</span></li></ul>
 </section>
 <section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
+  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
   <ul class="list"><li class="part"><span class="t">대화 응답·문맥 유지</span></li>
 <li class="done"><span class="t">감정 엔진 기록</span></li>
 <li class="part"><span class="t">인물·사실 기억(friend_memory)</span><span class="n">person/mkey=몽자 저장 + embedding. 과거 0건 결함 해소 확인</span></li>
 <li class="part"><span class="t">선톡(ping)</span><span class="n">free 티어 galla-friend-ambient n=0 — 유료 전용 게이트는 확인, 실제 발송 미확인</span></li>
+<li class="part"><span class="t">위기 감지 → 상담카드</span><span class="n">0902 실호출: '죽고 싶다는 생각' → term='죽고싶'·severity 2 기록 + 상담카드(109·1577-0199) 동봉. 관리자 실시간 알림이 없어 트리거 신설(§26-20)</span></li>
 <li class="done"><span class="t">원가 기록(ai_spend)</span><span class="n">2026-08-29 수정</span></li>
 <li class="part"><span class="t">턴 한도·게이트(무료 5턴)</span><span class="n">6번째 차단+리셋시각 안내. 게스트 2턴도 확인. pill 미갱신 결함은 0830007에서 수정</span></li></ul>
 </section>
@@ -541,7 +542,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
   <ul class="list"><li class="block"><span class="t">면상톡·육성톡(1:1 통화)</span><span class="n">보류 기능</span></li></ul>
 </section>
 <section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
+  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
   <ul class="list"><li class="block"><span class="t">창작 대행(썸네일·영상)</span></li></ul>
 </section>
 <section class="area">
@@ -572,7 +573,7 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 </div>
 
 <div class="card">
-  <h2>아직 안 본 것 <span class="cnt">65</span></h2>
+  <h2>아직 안 본 것 <span class="cnt">64</span></h2>
   <p class="lede">위 '먼저 봐야 할 것'을 뺀 나머지입니다. 대부분 부가 기능·운영 도구·호환성이라 출시를 막지는 않지만, 하나씩은 봐야 합니다.</p>
   <section class="area">
   <h4>2. 콘텐츠 생성<span class="ratio">8<i>/</i>11</span></h4>
@@ -586,9 +587,8 @@ footer{color:var(--muted);font-size:12.5px;text-align:center;line-height:1.7}
 <li class="todo"><span class="t">삐삐 음성 발신·수신</span><span class="n">마이크 필요</span></li></ul>
 </section>
 <section class="area">
-  <h4>5. 갈비스(AI 친구)<span class="ratio">6<i>/</i>9</span></h4>
-  <ul class="list"><li class="todo"><span class="t">위기 감지 → 상담카드</span></li>
-<li class="todo"><span class="t">컨시어지(택시·배달 딥링크)</span></li></ul>
+  <h4>5. 갈비스(AI 친구)<span class="ratio">7<i>/</i>9</span></h4>
+  <ul class="list"><li class="todo"><span class="t">컨시어지(택시·배달 딥링크)</span></li></ul>
 </section>
 <section class="area">
   <h4>6. 트렌드<span class="ratio">8<i>/</i>9</span></h4>
