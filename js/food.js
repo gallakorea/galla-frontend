@@ -510,6 +510,8 @@
     }
     if (t.closest && t.closest("[data-gp]")) {
       gpOnly = !gpOnly;
+      paintSeg();   /* 🔴 칩을 다시 그려야 'on' 이 붙는다 — 안 부르면 목록만 바뀌고
+                       눌린 티가 안 나서 '안 먹히는데?' 로 읽힌다(실측). */
       loadList();
       /* 지도가 열려 있으면 같이 맞춘다 — 두 화면이 다른 걸 보여주면 그게 버그로 읽힌다 */
       if (MAP && MAP.classList.contains("on")) fetchBbox();
@@ -577,7 +579,7 @@
     }).join("") +
       /* 둘러보기에서만 — 랭킹·기록엔 의미가 없다 */
       (tab === "browse"
-        ? '<button type="button" class="fd-seg fd-gp' + (gpOnly ? " on" : "") + '" data-gp="1">' +
+        ? '<button type="button" class="fd-sg fd-gp' + (gpOnly ? " on" : "") + '" data-gp="1">' +
             '🏷 착한가격</button>'
         : "");
   }
