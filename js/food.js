@@ -495,6 +495,18 @@
       seg = (TABS.filter(function (x) { return x.t === tab; })[0].segs[0] || [])[0];
       listLimit = 40; paintTabs(); loadList(); return;
     }
+    /* 🔴 착한가격 토글을 **정렬 칩보다 먼저** 잡아야 한다.
+       이 칩도 같은 통(#fd-seg)에 같은 클래스(.fd-sg)로 서 있어서, 아래 정렬 핸들러가
+       먼저 잡으면 seg 를 undefined 로 만들고 return 해버린다 — 여기까지 오지도 못했다.
+       (실측: 스타일 맞추려고 fd-seg → fd-sg 로 바꾼 순간 기능이 죽었다.) */
+    if (t.closest && t.closest("[data-gp]")) {
+      gpOnly = !gpOnly;
+      paintSeg();          /* 칩을 다시 그려야 'on' 이 붙는다 */
+      loadList();
+      /* 지도가 열려 있으면 같이 맞춘다 — 두 화면이 다른 걸 보여주면 그게 버그로 읽힌다 */
+      if (MAP && MAP.classList.contains("on")) fetchBbox();
+      return;
+    }
     var sg = t.closest && t.closest("#fd-seg .fd-sg");
     if (sg) {
       seg = sg.dataset.g;
@@ -507,15 +519,6 @@
     if (chip) {
       chFilter = (chFilter === chip.dataset.slug) ? null : chip.dataset.slug;
       paintChips(); loadList(); return;
-    }
-    if (t.closest && t.closest("[data-gp]")) {
-      gpOnly = !gpOnly;
-      paintSeg();   /* 🔴 칩을 다시 그려야 'on' 이 붙는다 — 안 부르면 목록만 바뀌고
-                       눌린 티가 안 나서 '안 먹히는데?' 로 읽힌다(실측). */
-      loadList();
-      /* 지도가 열려 있으면 같이 맞춘다 — 두 화면이 다른 걸 보여주면 그게 버그로 읽힌다 */
-      if (MAP && MAP.classList.contains("on")) fetchBbox();
-      return;
     }
     var sb2 = t.closest && t.closest("#fd-list [data-sort]");
     if (sb2) {
