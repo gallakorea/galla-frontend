@@ -64,20 +64,35 @@ const SYS = [
   "'이 영상이 이 집을 어떻게 소개했는지'를 한 문장으로 요약하는 요약기다.",
   "규칙:",
   "1) 한 문장, 45자 이내. 마침표 없이 명사형으로 끝낸다. 예: '숯불에 구워 내는 생삼겹 전문'",
-  "2) 설명에 적힌 사실만 쓴다 — 대표 메뉴·조리 방식·특징·가격대. **지어내지 않는다.**",
+  "2) 설명과 제목에 적힌 사실만 쓴다 — 대표 메뉴·조리 방식·특징·가격대. **지어내지 않는다.**",
   "3) 근거가 없으면 그 집은 blurb 를 빈 문자열로 준다. 억지로 채우지 않는다.",
   "4) '맛있다'·'존맛'·'대박' 같은 감상은 쓰지 않는다. 무엇을 파는 집인지가 먼저다.",
-  "5) 영상 제목을 그대로 옮기지 않는다. 회차 제목은 그 집 얘기가 아니다.",
-  "6) 채널명·구독·협찬 문구는 넣지 않는다.",
-  /* 🔴 여기가 핵심이다. 이 규칙이 없으면 여러 집이 나온 영상에서 전부 같은 문장을 준다
-     (실측 2026-09-03: 여러 가게 영상 32편 중 14편, 44% 가 가게마다 똑같았다.
-      "초저가 식당 3곳 도장깨기" 에서 세 집이 다 '포장만 가능한 초저가 식당' 이었다).
-     같은 문장이면 미리보기로서 값어치가 0이다 — 어느 집을 고를지 못 정한다. */
+  /* 🔴 2026-09-03 실측: 한국 맛집 영상의 설명란은 대부분 링크·채널가입·이메일·주소뿐이라
+     가게 얘기가 없다(표본 2편 모두 빈 문자열). 정보는 **제목**에 있다
+     ("악명높은 수원의 수원칼국수", "미친 매운짬뽕집"). 그래서 제목을 근거로 허용하되,
+     낚시 표현을 걷어내고 명사형으로 **다시 쓰게** 한다. 그대로 옮기는 것과는 다르다. */
+  "5) 설명에 그 집 얘기가 없으면 **제목을 근거로 쓴다.** 단 그대로 옮기지 말고 다시 쓴다:",
+  "   '미친·대박·역대급·오지게·존맛·충격·소름·레전드·드디어·진짜로' 같은 과장어와",
+  "   '가봤습니다·다녀왔습니다' 같은 후기 말투를 걷어내고, 무엇을 파는 집인지 명사형으로 남긴다.",
+  "   예: '먹다가 뒤집힌다는 미친 매운짬뽕집을 가봤습니다' → '매운 짬뽕으로 알려진 중식당'",
+  "   예: '드디어 악명높은 수원의 수원칼국수를 다녀왔습니다' → '수원에서 이름난 칼국수집'",
+  "   제목에도 그 집이 무엇을 파는지 단서가 없으면 그때는 빈 문자열이다.",
+  "6) 채널명·구독·협찬·링크·이메일 문구는 넣지 않는다. 상호를 문장에 되풀이하지 않는다.",
+  /* 🔴 이 규칙이 없으면 여러 집이 나온 영상에서 전부 같은 문장을 준다
+     (실측 2026-09-03: 여러 가게 영상 32편 중 14편, 44% 가 가게마다 똑같았다). */
   "7) **가게마다 서로 다른 문장을 준다.** 같은 영상에 여러 집이 나오면 각 집의",
   "   **고유한** 메뉴·가격·특징을 잡아 쓴다. 영상 전체를 설명하는 공통 문장(예: '초저가 식당')은",
-  "   그 집 얘기가 아니므로 금지한다. 그 집만의 근거가 없으면 차라리 빈 문자열을 준다.",
+  "   그 집 얘기가 아니므로 금지한다. 가게가 둘 이상이면 제목은 영상 전체 얘기이므로",
+  "   **제목만으로 채우지 않는다** — 그 집만의 근거가 없으면 빈 문자열이다.",
   "8) 설명에 그 집의 메뉴·가격이 적혀 있으면 그걸 우선 쓴다 — 가장 잘 구별되는 정보다.",
   '   예: {"name":"성이네천원김밥","blurb":"김밥 1,000원 찐만두 10개 3,000원"}',
+  /* 🔴 2026-09-03 실측: 설명란 보일러플레이트를 요약이라고 내놓는다.
+     '팔선 본점' 이 '오전 11시 30분~저녁 8시 30분, 월요일 휴무' 를 받았다 —
+     영업시간은 상세 화면에 이미 따로 있고, 그 집이 무엇을 파는지는 여전히 알 수 없다. */
+  "9) **영업시간·휴무일·주차·카드·포장·예약·혼밥 가능 여부·전화번호·주소·좌석 수는 금지한다.**",
+  "   그건 요약이 아니라 시설 정보이고, 화면에 이미 따로 붙는다. 무엇을 파는 집인지만 쓴다.",
+  "   그런 것밖에 없으면 제목에서 음식 단서를 찾고, 그것도 없으면 빈 문자열이다.",
+  "10) 쉼표로 항목을 나열하지 않는다. 한 문장으로 읽혀야 한다.",
   'JSON 만: {"blurbs":[{"name":"상호","blurb":"한 문장"}]}',
 ].join("\n");
 
@@ -90,7 +105,7 @@ Deno.serve(async (req) => {
   if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);
 
   const url = new URL(req.url);
-  const n = Math.min(Number(url.searchParams.get("n") || "20"), 60);
+  const n = Math.min(Number(url.searchParams.get("n") || "20"), 200);
   const { data: vids } = await supa.rpc("food_videos_to_blurb", { p_limit: n });
   const list = (vids || []) as any[];
   if (!list.length) return j({ ok: true, picked: 0, note: "요약할 영상 없음" });
@@ -98,39 +113,54 @@ Deno.serve(async (req) => {
   const t0 = Date.now();
   const rows: any[] = [];
   let done = 0, empty = 0, halted = "";
+  /* ?debug=1 이면 첫 영상의 LLM 원문을 그대로 돌려준다.
+     빈 결과가 'AI 가 못 만들었다'인지 '상호 대조가 어긋났다'인지 눈으로 갈라야 한다. */
+  const DEBUG = url.searchParams.get("debug") === "1";
+  const dbg: any[] = [];
 
-  for (const v of list) {
-    if (Date.now() - t0 > 110_000) { halted = "시간 상자(110초) 도달"; break; }
-    const names = (v.places || []).map((p: any) => p.name).join(" · ");
+  /* ⚠️ 순차로 돌리면 한 편에 3초라 110초 상자 안에 35편밖에 못 넣는다.
+     큐가 1.4만 편이라 그 속도로는 60시간이다. 4편씩 동시에 태워 상자를 채운다.
+     동시성을 더 올리면 DeepSeek 쪽 429 를 부른다 — 4 가 실측 상한이다. */
+  const CONC = 4;
+  const norm = (x: string) => String(x || "").replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
+
+  async function one(v: any) {
     let out: any = null;
+    let raw: string | null = null;
     try {
-      const raw = await chatJson(
+      raw = await chatJson(
         SYS,
-        `제목: ${v.title}\n\n이 영상에 나온 가게: ${names}\n\n설명:\n${v.description || ""}`,
+        `제목: ${v.title}\n\n이 영상에 나온 가게(${(v.places || []).length}곳): ${(v.places || []).map((p: any) => p.name).join(" · ")}\n\n설명:\n${v.description || ""}`,
       );
       out = raw ? JSON.parse(raw) : null;
-    } catch (_) { out = null; }
+      if (DEBUG && dbg.length < 2) dbg.push({ title: v.title, raw: (raw || "").slice(0, 600) });
+    } catch (e) { out = null; if (DEBUG && dbg.length < 3) dbg.push({ err: String(e) }); }
     done++;
     const got: any[] = out?.blurbs || [];
-
-    /* 상호를 정규화해 맞춘다 — LLM 이 띄어쓰기·지점명을 조금씩 바꿔 돌려준다 */
-    const norm = (s: string) => String(s || "").replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
     for (const p of (v.places || [])) {
       const hit = got.find((b: any) => {
         const a = norm(b?.name), c = norm(p.name);
         return a && c && (a === c || a.includes(c) || c.includes(a));
       });
       const text = String(hit?.blurb || "").trim();
-      if (!text) { empty++; continue; }
+      /* ⚠️ 못 만든 것도 **빈 문자열로 표식을 남긴다.** 안 남기면 blurb 가 null 로 남아
+         큐(blurb is null)가 10분 뒤 같은 영상을 또 집는다 — 실측으로 큐가 20회 헛돌았다. */
+      if (!text) empty++;
       rows.push({ video_id: v.video_id, place_id: p.id, blurb: text });
     }
   }
 
-  let set = 0;
+  for (let i = 0; i < list.length; i += CONC) {
+    if (Date.now() - t0 > 105_000) { halted = "시간 상자(105초) 도달"; break; }
+    await Promise.all(list.slice(i, i + CONC).map(one));
+  }
+
+  let set = 0, marked = 0;
   for (let i = 0; i < rows.length; i += 200) {
     const { data } = await supa.rpc("food_blurb_set", { p_rows: rows.slice(i, i + 200) });
     set += Number(data?.set || 0);
+    marked += Number(data?.marked || 0);
   }
-  return j({ ok: true, picked: list.length, videos: done, set, empty,
-             halted: halted || undefined, ai: aiErrors });
+  return j({ ok: true, picked: list.length, videos: done, set, marked, empty,
+             halted: halted || undefined, ai: aiErrors, dbg: DEBUG ? dbg : undefined });
 });
