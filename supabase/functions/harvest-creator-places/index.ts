@@ -132,6 +132,54 @@ const SYS = [
   'JSON 만: {"shops":[{"name":"상호","address":"도로명 주소","menus":[{"name":"메뉴명","price":16000}]}]}',
 ].join("\n");
 
+
+/* 제목 경로 전용 프롬프트 — 주소가 없다. 상호와 '어느 동네인지'만 뽑는다.
+   ⚠️ 지역이 없으면 네이버가 같은 이름의 딴 동네 가게를 준다. 지역을 못 찾으면 버린다. */
+const SYS_TITLE = [
+  "너는 한국 음식 유튜브 영상의 제목·설명에서 '그 영상이 다녀온 음식점'을 뽑는 추출기다.",
+  "이 영상들은 설명에 주소가 없다. 그래서 **상호와 지역**만 뽑는다.",
+  "규칙:",
+  "1) 제목이나 설명에 **고유한 상호**가 있을 때만 뽑는다.",
+  "   '수원칼국수'·'8개월냉면'·'팔선' 처럼 검색되는 이름이어야 한다.",
+  "2) 상호가 아닌 것은 뽑지 않는다: '동네 중국집'·'노포'·'분식집'·'그 집' 같은 보통명사,",
+  "   '초저가 식당 3곳' 같은 기획 문구, 협찬사·굿즈·쿠팡·본인 채널.",
+  "3) region 에는 시·군·구나 널리 쓰이는 동네 이름을 넣는다(예: '수원', '서울 강남', '강릉').",
+  "   **제목이나 설명에 근거가 있을 때만** 넣는다. 없으면 그 가게는 뽑지 않는다.",
+  "4) 프랜차이즈 지점(빽다방·홍콩반점 등)은 지점명이 함께 있을 때만 뽑는다.",
+  "5) 한 영상에서 최대 3곳. 확실하지 않으면 빈 배열을 준다. **지어내지 않는다.**",
+  'JSON 만: {"shops":[{"name":"상호","region":"지역"}]}',
+].join("\n");
+
+/* 이름만으로 찾는다 — 주소가 없으니 검증 기준을 더 조인다.
+   ⚠️ 부분일치를 허용하면 '팔선' 이 '팔선생' 을 잡는다. 정규화 후 **완전일치**만 받는다. */
+async function verifyByName(name: string, region: string) {
+  const u = new URL("https://openapi.naver.com/v1/search/local.json");
+  u.searchParams.set("query", `${region} ${name}`.trim());
+  u.searchParams.set("display", "5");
+  const r = await fetch(u, { headers: { "X-Naver-Client-Id": S_ID, "X-Naver-Client-Secret": S_SEC } });
+  if (!r.ok) throw new Error(`naver_${r.status}:${(await r.text()).slice(0, 160)}`);
+  const items = (await r.json())?.items || [];
+  const norm = (x: string) => x.replace(/\s/g, "").toLowerCase();
+  const want = norm(name);
+  const best = items.find((it: any) => {
+    const t = norm(strip(it.title));
+    if (t !== want) return false;                       // 완전일치만
+    if (!isFood(strip(it.category))) return false;
+    const a = strip(it.roadAddress) || strip(it.address);
+    return !!a && regionOk(region, a);                  // 지역도 맞아야 한다
+  });
+  if (!best) return null;
+  const c = pickCoord(best.mapx, best.mapy);
+  return {
+    name: strip(best.title) || name,
+    address: strip(best.roadAddress) || strip(best.address) || "",
+    category: (strip(best.category).split(">").pop() || "").trim() || null,
+    phone: strip(best.telephone) || null,
+    lat: c.lat != null ? String(c.lat) : null,
+    lon: c.lon != null ? String(c.lon) : null,
+  };
+}
+
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
@@ -143,9 +191,15 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const channel = url.searchParams.get("channel") || "";
   const n = Math.min(Number(url.searchParams.get("n") || "20"), 60);
-  if (!channel) return j({ ok: false, reason: "no_channel" }, 400);
+  /* mode=title: 설명에 주소가 없는 영상을 제목의 상호로 찾는다(채널 지정 불필요).
+     dry=1 이면 **아무것도 쓰지 않고** 무엇이 들어갈지만 돌려준다 — 정밀도부터 눈으로 본다. */
+  const TITLE = url.searchParams.get("mode") === "title";
+  const DRY = url.searchParams.get("dry") === "1";
+  if (!channel && !TITLE) return j({ ok: false, reason: "no_channel" }, 400);
 
-  const { data: vids } = await supa.rpc("food_videos_to_harvest", { p_channel: channel, p_limit: n });
+  const { data: vids } = TITLE
+    ? await supa.rpc("food_videos_to_harvest_title", { p_limit: n, p_channel: channel || null })
+    : await supa.rpc("food_videos_to_harvest", { p_channel: channel, p_limit: n });
   const list = (vids || []) as any[];
   if (!list.length) return j({ ok: true, channel, picked: 0, note: "수확할 영상 없음" });
 
@@ -160,12 +214,19 @@ Deno.serve(async (req) => {
   let extracted = 0, verified = 0, dropped = 0, naverCalls = 0;
 
   let halted = "";
+  /* ⚠️ 엣지는 150초에 끊는다. 영상 하나에 LLM 3초 + 네이버 3회가 붙어
+     n 이 크면 상자를 넘긴다. 넘기면 그 회차가 통째로 날아간다. */
+  const t0 = Date.now();
   for (const v of list) {
     if (halted) break;
+    if (Date.now() - t0 > 110_000) { halted = "시간 상자(110초) 도달"; done.pop(); break; }
     done.push(v.video_id);                       // 결과와 무관하게 '물어봤다'를 남긴다
     let shops: any[] = [];
     try {
-      const raw = await chatJson(SYS, `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
+      const raw = await chatJson(
+        TITLE ? SYS_TITLE : SYS,
+        `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, TITLE ? 1200 : 2500)}`,
+      );
       shops = raw ? (JSON.parse(raw)?.shops || []) : [];
     } catch (_) { shops = []; }
     extracted += shops.length;
@@ -173,11 +234,14 @@ Deno.serve(async (req) => {
     for (const s of shops.slice(0, 3)) {         // 한 영상에서 셋까지만 — 그 이상은 광고 나열일 확률이 높다
       const name = String(s?.name || "").trim();
       const addr = String(s?.address || "").trim();
-      if (name.length < 2 || addr.length < 6) { dropped++; continue; }
+      const region = String(s?.region || "").trim();
+      if (TITLE ? (name.length < 2 || region.length < 2) : (name.length < 2 || addr.length < 6)) {
+        dropped++; continue;
+      }
       let ok: any = null;
       if (naverCalls >= budget) { halted = "budget"; done.pop(); break; }
       naverCalls++;
-      try { ok = await verify(name, addr); }
+      try { ok = TITLE ? await verifyByName(name, region) : await verify(name, addr); }
       catch (e) {
         /* 인프라 실패 — 이 영상은 도장을 빼고 중단한다(다음 회차에 다시 온다) */
         halted = String(e).slice(0, 60);
@@ -196,16 +260,33 @@ Deno.serve(async (req) => {
                                 && m.price > 0 && m.price < 1000000)
             .slice(0, 20)
         : [];
-      items.push({ ...ok, channel, origin: "yt", menus,
+      items.push({ ...ok, channel: v.channel || channel, origin: TITLE ? "yt-title" : "yt", menus,
                    video_id: v.video_id, video_title: v.title, aired_at: v.published_at });
     }
   }
 
   if (budget > naverCalls) await supa.rpc("naver_refund", { p_n: budget - naverCalls });
 
+  if (DRY) {
+    return j({ ok: true, dry: true, picked: list.length, extracted, verified, dropped,
+               would: items.map((x: any) => ({ name: x.name, addr: x.address, cat: x.category,
+                                               title: String(x.video_title || "").slice(0, 40) })),
+               halted: halted || undefined, ai: aiErrors.slice(0, 3) });
+  }
+
   let res: any = { new: 0, dup: 0 };
+  let ingestErr = "";
   if (items.length) {
-    const { data } = await supa.rpc("food_ingest", { p_items: items });
+    /* 🔴 오류를 삼키면 안 된다. 2026-09-04: origin 체크 제약이 'yt-title' 을 막아
+       food_ingest 가 통째로 예외로 돌아왔는데, 여기서 data 만 보고 기본값을 유지한 채
+       harvested_at 도장을 그대로 찍었다 — 검증 통과한 16곳이 사라지고 영상은 '처리됨'이 됐다.
+       이제 실패하면 도장을 찍지 않고 오류를 그대로 올린다(다음 회차에 다시 온다). */
+    const { data, error } = await supa.rpc("food_ingest", { p_items: items });
+    if (error) {
+      ingestErr = String(error.message || error).slice(0, 200);
+      return j({ ok: false, reason: "ingest_failed", detail: ingestErr,
+                 channel, picked: list.length, extracted, verified, dropped }, 500);
+    }
     res = data || res;
   }
   for (let i = 0; i < done.length; i += 200) {
