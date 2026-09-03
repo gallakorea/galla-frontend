@@ -268,6 +268,9 @@
   }
 
   var sb = null, CH = [], chFilter = null, onlyUnvisited = false;
+  /* 🏷 착한가격업소만 보기. 정렬(최신·가까운·화제)과 다른 축이라 별도 토글이다 —
+     정부가 가격·위생·서비스를 실사해 지정한 집이라 '가성비'를 고시로 보증한다. */
+  var gpOnly = false;
   var catFilter = null, minShows = null, CATS = [];   // 필터 시트 상태
   var myPos = null;                 // 내 위치(있으면 거리·가까운순이 열린다)
   var sortBy = "new";               // new | near | heat
@@ -505,6 +508,13 @@
       chFilter = (chFilter === chip.dataset.slug) ? null : chip.dataset.slug;
       paintChips(); loadList(); return;
     }
+    if (t.closest && t.closest("[data-gp]")) {
+      gpOnly = !gpOnly;
+      loadList();
+      /* 지도가 열려 있으면 같이 맞춘다 — 두 화면이 다른 걸 보여주면 그게 버그로 읽힌다 */
+      if (MAP && MAP.classList.contains("on")) fetchBbox();
+      return;
+    }
     var sb2 = t.closest && t.closest("#fd-list [data-sort]");
     if (sb2) {
       sortBy = sb2.dataset.sort;
@@ -564,7 +574,12 @@
     el.innerHTML = (cur.segs || []).map(function (g) {
       return '<button type="button" class="fd-sg' + (seg === g[0] ? " on" : "") + '" data-g="' + g[0] + '">' +
         g[1] + '</button>';
-    }).join("");
+    }).join("") +
+      /* 둘러보기에서만 — 랭킹·기록엔 의미가 없다 */
+      (tab === "browse"
+        ? '<button type="button" class="fd-seg fd-gp' + (gpOnly ? " on" : "") + '" data-gp="1">' +
+            '🏷 착한가격</button>'
+        : "");
   }
 
   function paintChips() {
@@ -935,7 +950,8 @@
     var ps, d;
     if (mode === "near") {
       d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: listLimit,
-                                  p_category: catFilter, p_min_shows: minShows });
+                                  p_category: catFilter, p_min_shows: minShows,
+                                  p_good_price: gpOnly });
       ps = (d && d.places) || [];
     } else {
       // 랭킹은 전국 기준. 최소 표수를 넘긴 집만 올라온다(표본이 적으면 우연이니까).
@@ -1180,7 +1196,7 @@
       p_sw_lat: b.swLat, p_sw_lon: b.swLon,
       p_ne_lat: b.neLat, p_ne_lon: b.neLon,
       p_channel: chFilter, p_only_unvisited: onlyUnvisited, p_limit: 400,
-      p_category: catFilter, p_min_shows: minShows,
+      p_category: catFilter, p_min_shows: minShows, p_good_price: gpOnly,
       /* 지도는 '최신 400개'가 아니라 '고르게 400개'여야 한다.
          수집이 늘자 전국 화면이 마지막에 훑은 채널 쪽으로 쏠렸다 — 나머지 지역은 텅 빈다.
          목록(둘러보기)은 최신순이 맞으므로 거기엔 안 켠다. */
