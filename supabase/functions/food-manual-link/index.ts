@@ -46,10 +46,19 @@ Deno.serve(async (req) => {
   const uid = u?.user?.id;
   if (!uid) return j({ ok: false, reason: "bad_token" }, 401);
   const { data: isAdmin } = await supa.rpc("is_admin", { p_uid: uid });
-  if (!isAdmin) return j({ ok: false, reason: "not_admin" }, 403);
 
   const url = new URL(req.url);
   const act = url.searchParams.get("act") || "search";
+  /* attach·skip 은 '누가 갔나'를 바로 쓴다 — 관리자만.
+     search·resolve 는 퀴즈 참여자도 쓴다(존재 확인용). 그래도 아무나는 아니다:
+     로그인 필수 + 하루 상한. 네이버 지역검색은 유한한 예산이다. */
+  if ((act === "attach" || act === "skip" || act === "done") && !isAdmin) {
+    return j({ ok: false, reason: "not_admin" }, 403);
+  }
+  if (!isAdmin) {
+    const { data: n } = await supa.rpc("food_lookup_take", { p_uid: uid });
+    if (!n) return j({ ok: false, reason: "daily_limit" }, 429);
+  }
 
   if (act === "search") {
     if (!S_ID) return j({ ok: false, reason: "no_naver_key" }, 500);
@@ -71,6 +80,21 @@ Deno.serve(async (req) => {
       };
     });
     return j({ ok: true, items });
+  }
+
+  /* 퀴즈 답 고르기 ② — 네이버로 확인하고 우리 DB에 넣은 뒤 id 를 돌려준다.
+     ⚠️ 여기서 출처(누가 갔나)는 만들지 않는다. 그건 두 사람이 합의해야 붙는다. */
+  if (act === "resolve") {
+    const b = await req.json().catch(() => ({}));
+    const p = b?.place || {};
+    if (!p.name || !p.address) return j({ ok: false, reason: "bad_input" }, 400);
+    const { data: id, error } = await supa.rpc("food_place_ensure", {
+      p_name: p.name, p_address: p.address,
+      p_lat: p.lat ? Number(p.lat) : null, p_lon: p.lon ? Number(p.lon) : null,
+      p_category: p.category || null, p_phone: p.phone || null,
+    });
+    if (error) return j({ ok: false, reason: String(error.message).slice(0, 160) }, 500);
+    return j({ ok: true, place_id: id });
   }
 
   if (act === "attach") {

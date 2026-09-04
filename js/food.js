@@ -434,6 +434,154 @@
     try { var r = await (await client()).rpc(fn, args || {}); return r && r.data; } catch (_) { return null; }
   }
   function toast(m) { window.GALLA_toast ? GALLA_toast(m) : 0; }
+
+  /* ─────────── 🍜 "이 식당은 어딜까요?" ───────────
+     자동 매칭의 한계선이 실측으로 확정됐다(2026-09-04):
+       이름 매칭 13,271건→135건 · 카탈로그 2.4배→+14건 · 웹 역추적→0건 + 거짓말 사고 1건.
+     설명에 상호도 주소도 없는 채널은 공식 API 로 못 푼다. 그렇다고 2만 편을 사람이 볼 수도 없다.
+     → 영상을 보여주고 묻는다. 노동이 아니라 놀이가 된다.
+
+     🔴 답을 그대로 믿지 않는다:
+       ① 네이버가 확인해준 실제 가게만 고를 수 있다(자유 입력이 아니다)
+       ② 서로 다른 두 사람이 같은 집을 대야 채택된다
+       ③ 채택 전까지 화면에 안 나온다 — 보상도 채택될 때만 준다 */
+  var QZ = null, QZ_ADDED = [];
+  var SUPA_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
+  var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
+
+  /* ⚠️ functions.invoke 는 유저 토큰을 안 실어 401 이 난다(agora-media 에서 겪은 것과 같다).
+     access_token 을 직접 Bearer 로 싣는다. */
+  async function fnCall(qs, body) {
+    var c = await client();
+    var ses = await c.auth.getSession();
+    var tok = ses && ses.data && ses.data.session ? ses.data.session.access_token : "";
+    try {
+      var r = await fetch(SUPA_URL + "/functions/v1/food-manual-link?" + qs, {
+        method: body ? "POST" : "GET",
+        headers: { "content-type": "application/json", authorization: "Bearer " + tok, apikey: SUPA_KEY },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, reason: String(e).slice(0, 80) }; }
+  }
+
+  async function openQuiz() {
+    if (!(await loggedIn())) return needLogin();
+    var el = document.getElementById("fq-wrap");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "fq-wrap"; el.className = "fq-wrap";
+      document.body.appendChild(el);
+      el.addEventListener("click", qzClick);
+    }
+    el.classList.add("on");
+    await qzNext();
+  }
+  function closeQuiz() {
+    var el = document.getElementById("fq-wrap");
+    if (el) { el.classList.remove("on"); el.innerHTML = ""; }
+    QZ = null; QZ_ADDED = [];
+  }
+
+  async function qzNext() {
+    var el = document.getElementById("fq-wrap");
+    el.innerHTML = '<div class="fq-box"><div class="fq-load">문제를 고르는 중…</div></div>';
+    var d = await rpc("food_quiz_next", { p_limit: 1 });
+    QZ = (d && d[0]) || null; QZ_ADDED = [];
+    if (!QZ) {
+      el.innerHTML = '<div class="fq-box"><button type="button" class="fq-x" data-qzclose>✕</button>' +
+        '<div class="fq-done">지금은 낼 문제가 없습니다.<br>새 영상이 들어오면 다시 열립니다.</div></div>';
+      return;
+    }
+    qzPaint();
+  }
+
+  function qzPaint() {
+    var el = document.getElementById("fq-wrap");
+    el.innerHTML =
+      '<div class="fq-box">' +
+        '<button type="button" class="fq-x" data-qzclose>✕</button>' +
+        '<div class="fq-title">이 식당은 어딜까요?</div>' +
+        '<div class="fq-sub">' + esc(QZ.channel_name || "") +
+          (QZ.region ? ' · ' + esc(QZ.region) : "") + '</div>' +
+        '<div class="fq-vid"><iframe src="https://www.youtube.com/embed/' + esc(QZ.video_id) +
+          '" allowfullscreen loading="lazy"></iframe></div>' +
+        '<p class="fq-vt">' + esc(QZ.title || "") + '</p>' +
+        /* 한 영상에 여러 집이 나오는 게 정상이다 — 아는 만큼 다 담게 한다 */
+        '<div class="fq-hint">이 영상에 나온 식당을 <b>아는 대로</b> 담아주세요. 여러 곳도 좋습니다.</div>' +
+        '<div class="fq-chips">' + QZ_ADDED.map(function (a, i) {
+          return '<span class="fq-chip">' + esc(a.name) +
+                 '<button type="button" data-qzdel="' + i + '">✕</button></span>';
+        }).join("") + '</div>' +
+        '<div class="fq-row">' +
+          '<input id="fq-q" placeholder="식당 이름" autocomplete="off">' +
+          '<button type="button" class="fq-go" id="fq-search">찾기</button>' +
+        '</div>' +
+        '<div id="fq-res" class="fq-res"></div>' +
+        '<div class="fq-foot">' +
+          '<button type="button" class="fq-skip" data-qzskip>모르겠어요 · 다음</button>' +
+          '<span class="fq-note">두 사람이 같은 답을 내면 채택되고 <b>+100 GP</b></span>' +
+        '</div>' +
+      '</div>';
+    var inp = document.getElementById("fq-q");
+    var run = function () { qzSearch(inp.value.trim()); };
+    document.getElementById("fq-search").addEventListener("click", run);
+    inp.addEventListener("keydown", function (e) { if (e.key === "Enter") run(); });
+  }
+
+  async function qzSearch(q) {
+    if (!q || q.length < 2) return;
+    var box = document.getElementById("fq-res");
+    box.innerHTML = '<div class="fq-load">찾는 중…</div>';
+    /* ① 우리가 가진 가게에서 먼저 — 외부 호출이 없어 공짜고 빠르다 */
+    var mine = (await rpc("food_place_search", { p_q: q, p_limit: 8 })) || [];
+    if (mine.length) { qzResults(mine, false); return; }
+    /* ② 없으면 네이버에 물어본다(하루 상한이 있다) */
+    var d = await fnCall("act=search&q=" + encodeURIComponent(q));
+    if (!d || !d.ok) {
+      box.innerHTML = '<div class="fq-none">' +
+        (d && d.reason === "daily_limit" ? "오늘 검색 한도를 다 썼어요." : "찾지 못했어요.") + '</div>';
+      return;
+    }
+    qzResults(d.items || [], true);
+  }
+
+  function qzResults(items, external) {
+    var box = document.getElementById("fq-res");
+    if (!items.length) { box.innerHTML = '<div class="fq-none">그런 이름의 식당을 찾지 못했어요.</div>'; return; }
+    box.innerHTML = items.map(function (it) {
+      return '<button type="button" class="fq-pick" data-qzpick=\'' +
+        esc(JSON.stringify(external ? { ext: 1, place: it } : { id: it.id, name: it.name })) + '\'>' +
+        '<b>' + esc(it.name) + '</b><span>' + esc(it.address || "") + '</span></button>';
+    }).join("");
+  }
+
+  async function qzClick(e) {
+    if (e.target.closest("[data-qzclose]") || e.target === e.currentTarget) { closeQuiz(); return; }
+    if (e.target.closest("[data-qzskip]")) { qzNext(); return; }
+    var del = e.target.closest("[data-qzdel]");
+    if (del) { QZ_ADDED.splice(Number(del.dataset.qzdel), 1); qzPaint(); return; }
+    var pk = e.target.closest("[data-qzpick]");
+    if (!pk) return;
+    var v = JSON.parse(pk.dataset.qzpick);
+    pk.disabled = true;
+    var pid = v.id, nm = v.name;
+    if (v.ext) {
+      var r = await fnCall("act=resolve", { place: v.place });
+      if (!r || !r.ok) { pk.disabled = false; toast("담지 못했어요"); return; }
+      pid = r.place_id; nm = v.place.name;
+    }
+    var s = await rpc("submit_food_quiz", { p_video_id: QZ.video_id, p_channel: QZ.channel, p_place_id: pid });
+    if (!s || !s.ok) {
+      pk.disabled = false;
+      toast(s && s.reason === "daily_limit" ? "오늘 참여 한도를 다 썼어요" : "담지 못했어요");
+      return;
+    }
+    QZ_ADDED.push({ id: pid, name: nm, accepted: !!s.accepted });
+    toast(s.accepted ? "채택됐어요! +100 GP" : "담았어요. 한 분만 더 같은 답을 내면 채택돼요");
+    qzPaint();
+  }
+
   function needLogin() {
     if (confirm("로그인이 필요해요. 로그인할까요?")) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
   }
@@ -510,6 +658,8 @@
        이 칩도 같은 통(#fd-seg)에 같은 클래스(.fd-sg)로 서 있어서, 아래 정렬 핸들러가
        먼저 잡으면 seg 를 undefined 로 만들고 return 해버린다 — 여기까지 오지도 못했다.
        (실측: 스타일 맞추려고 fd-seg → fd-sg 로 바꾼 순간 기능이 죽었다.) */
+    /* 🍜 "이 식당은 어딜까요?" — 영상 못 찾은 카드의 '아는 분?' 에서 들어온다 */
+    if (t.closest && t.closest("[data-quiz]")) { openQuiz(); return; }
     if (t.closest && t.closest("[data-gp]")) {
       gpOnly = !gpOnly;
       paintSeg();          /* 칩을 다시 그려야 'on' 이 붙는다 */
@@ -1679,6 +1829,8 @@
     rows.sort(function (a, b) {
       return (seen[b].video_id ? 1 : 0) - (seen[a].video_id ? 1 : 0);
     });
+    /* 서버가 근거 없는 방송 출처(어느 회차인지 모르는 것)를 아예 안 내려준다.
+       여기 남은 건 영상이 붙었거나, 인증(백년가게·블루리본)·공직자처럼 영상이 원래 없는 것뿐이다. */
     return '<div class="fs-wrap"><div class="fs-h">누가 다녀갔나' +
         '<span class="fs-n">' + rows.length + '</span></div>' +
       rows.map(function (slug) {
@@ -1686,7 +1838,7 @@
         var k = KINDCHIP[chKind(slug)] || null;
         var vid = s.video_id || "";
         var when = s.aired_at ? String(s.aired_at).slice(0, 10) : "";
-        return '<div class="fs-i' + (vid ? " has-vid" : "") + '">' +
+        return '<div class="fs-i' + (vid ? " has-vid" : " no-vid") + '">' +
           '<div class="fs-top">' +
             '<span class="fs-av' + (s.thumb ? "" : " none") + '">' +
               (s.thumb ? '<img src="' + esc(s.thumb) + '" alt="" loading="lazy">' : esc(initials(s.name))) +
@@ -1701,6 +1853,7 @@
                 '<i class="fs-play">▶</i>' +
                 (s.title ? '<span class="fs-t">' + esc(s.title) + '</span>' : '') +
               '</button>'
+            /* 인증·공직자는 영상이 원래 없다 — 아쉬운 소리를 붙이지 않는다 */
             : (s.title ? '<p class="fs-t only">' + esc(s.title) + '</p>' : '')) +
           /* 이 영상이 이 집을 어떻게 소개했나 — **크리에이터마다 따로** 붙는다.
              영상 제목은 "디저트 특집!" 같은 회차 제목이라 이 집 얘기가 아니다.
@@ -1729,6 +1882,12 @@
             이미 다 주는데 화면이 안 썼다. 로고를 세우고, 영상이 있으면 썸네일을 붙여
             그 자리에서 재생되게 한다(/yt 프록시 — 오류 153 회피 경로). */
       srcHtml(d.sources) +
+      /* 🍜 이 집에 '회차를 모르는 방송 주장'이 남아 있으면 퀴즈로 부른다.
+         근거 없는 이름을 띄우는 대신, 아는 사람에게 물어본다. */
+      (d.unknown_shows > 0
+        ? '<div class="fs-ask">방송에 나왔다는 얘기는 있는데 <b>어느 회차인지</b> 아직 못 찾았습니다' +
+          '<button type="button" class="fs-quiz" data-quiz="1">내가 안다</button></div>'
+        : '') +
       /* 국회의원이 정치자금으로 밥 먹은 집이면 여기에 명단이 붙는다.
          비어 있으면 렌더 자체를 안 한다 — 4,700곳 대부분은 해당 없다. */
       '<div class="fd-asm" id="fd-asm"></div>' +
