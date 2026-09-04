@@ -22,6 +22,7 @@
 //    조용히 아무것도 안 하는 상태가 된다 — 갈비스 크론 4개가 실제로 이 상태였다.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -127,8 +128,7 @@ const j = (o: unknown, s = 200) =>
 async function ytGet(path: string, params: Record<string, string>) {
   const u = new URL("https://www.googleapis.com/youtube/v3/" + path);
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  u.searchParams.set("key", YT);
-  const r = await fetch(u);
+  const r = await ytFetch(u);
   if (!r.ok) throw new Error(`yt ${path} ${r.status} ${(await r.text()).slice(0, 200)}`);
   return await r.json();
 }

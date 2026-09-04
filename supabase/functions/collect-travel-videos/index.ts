@@ -17,6 +17,7 @@
 //    영원히 남아 나머지를 굶기는 게 맛집에서 실제로 벌어진 일이다.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -44,8 +45,7 @@ const sane = (s: string) => String(s || "")
 async function ytGet(path: string, params: Record<string, string>) {
   const u = new URL("https://www.googleapis.com/youtube/v3/" + path);
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  u.searchParams.set("key", YT);
-  const r = await fetch(u);
+  const r = await ytFetch(u);
   if (!r.ok) throw new Error(`yt ${path} ${r.status} ${(await r.text()).slice(0, 200)}`);
   return await r.json();
 }

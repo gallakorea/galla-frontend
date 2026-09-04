@@ -7,6 +7,7 @@
 // 비용: channels.list 1유닛 + playlistItems 50편당 1유닛. 7채널 × 600편 ≈ 90유닛.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -20,8 +21,7 @@ const j = (o: unknown, s = 200) =>
 async function yt(path: string, params: Record<string, string>) {
   const u = new URL("https://www.googleapis.com/youtube/v3/" + path);
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  u.searchParams.set("key", YT);
-  const r = await fetch(u);
+  const r = await ytFetch(u);
   if (!r.ok) throw new Error(`${path} ${r.status} ${(await r.text()).slice(0, 140)}`);
   return await r.json();
 }

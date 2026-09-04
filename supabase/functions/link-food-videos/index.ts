@@ -9,6 +9,7 @@
 //    그마저도 채널이 일치하는 영상 안에서만 찾는다 — 다른 채널 영상이 붙으면 거짓말이 된다.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -24,8 +25,7 @@ const norm = (s: string) => String(s || "").replace(/[\s()\[\]<>·,.\-_'"`~!?·]
 async function ytGet(path: string, params: Record<string, string>) {
   const u = new URL("https://www.googleapis.com/youtube/v3/" + path);
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  u.searchParams.set("key", YT);
-  const r = await fetch(u);
+  const r = await ytFetch(u);
   if (!r.ok) throw new Error(`yt ${path} ${r.status} ${(await r.text()).slice(0, 160)}`);
   return await r.json();
 }

@@ -14,6 +14,7 @@
 // 비용: videos.list 는 id 50개까지 **1유닛**. 12,819편이면 257유닛(하루 무료 10,000의 3%).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -27,8 +28,7 @@ const j = (o: unknown, s = 200) =>
 async function yt(path: string, params: Record<string, string>) {
   const u = new URL("https://www.googleapis.com/youtube/v3/" + path);
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  u.searchParams.set("key", YT);
-  const r = await fetch(u);
+  const r = await ytFetch(u);
   if (!r.ok) throw new Error(`${path} ${r.status} ${(await r.text()).slice(0, 700)}`);
   return await r.json();
 }

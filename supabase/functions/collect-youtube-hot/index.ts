@@ -4,6 +4,7 @@
 // 피드(feed) = 방송 카테고리. 유튜브 카테고리 몇 개 + 키워드를 묶어 하나로 만든다.
 // PK가 (feed, video_id)라 같은 영상이 여러 피드에 들어갈 수 있고, rank는 피드 안에서 매긴다.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
+import { ytFetch } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -174,8 +175,7 @@ async function fetchChart(cat: string | null, max: number): Promise<any[]> {
     url.searchParams.set("maxResults", String(Math.min(50, max - out.length)));
     if (cat) url.searchParams.set("videoCategoryId", cat);
     if (pageToken) url.searchParams.set("pageToken", pageToken);
-    url.searchParams.set("key", KEY!);
-    const res = await fetch(url.toString());
+    const res = await ytFetch(url);
     const data = await res.json();
     if (!res.ok || !Array.isArray(data.items)) break;   // 카테고리 KR 차트가 비면 중단
     out.push(...data.items.filter(embeddable));          // 임베드 차단(디즈니·방송사·음원 Topic) 제외
@@ -193,8 +193,7 @@ async function resolveChannelId(nameOrHandle: string): Promise<string | null> {
     const u = new URL("https://www.googleapis.com/youtube/v3/channels");
     u.searchParams.set("part", "id");
     u.searchParams.set("forHandle", nameOrHandle);
-    u.searchParams.set("key", KEY!);
-    const r = await fetch(u.toString());
+    const r = await ytFetch(u);
     const d = await r.json();
     if (r.ok && Array.isArray(d.items) && d.items.length) return d.items[0].id || null;
     return null;
@@ -207,8 +206,7 @@ async function resolveChannelId(nameOrHandle: string): Promise<string | null> {
   url.searchParams.set("maxResults", "1");
   url.searchParams.set("regionCode", REGION);
   url.searchParams.set("relevanceLanguage", "ko");
-  url.searchParams.set("key", KEY!);
-  const res = await fetch(url.toString());
+  const res = await ytFetch(url);
   const data = await res.json();
   if (!res.ok || !Array.isArray(data.items) || !data.items.length) return null;
   return data.items[0]?.id?.channelId || data.items[0]?.snippet?.channelId || null;
@@ -220,8 +218,7 @@ async function playlistRecent(uploads: string, n: number): Promise<string[]> {
   url.searchParams.set("part", "contentDetails");
   url.searchParams.set("playlistId", uploads);
   url.searchParams.set("maxResults", String(n));
-  url.searchParams.set("key", KEY!);
-  const res = await fetch(url.toString());
+  const res = await ytFetch(url);
   const data = await res.json();
   if (!res.ok || !Array.isArray(data.items)) return [];
   return data.items.map((i: any) => i?.contentDetails?.videoId).filter(Boolean);
@@ -234,8 +231,7 @@ async function hydrate(ids: string[]): Promise<any[]> {
     const url = new URL("https://www.googleapis.com/youtube/v3/videos");
     url.searchParams.set("part", "snippet,statistics,contentDetails,status");
     url.searchParams.set("id", ids.slice(i, i + 50).join(","));
-    url.searchParams.set("key", KEY!);
-    const res = await fetch(url.toString());
+    const res = await ytFetch(url);
     const data = await res.json();
     if (res.ok && Array.isArray(data.items)) out.push(...data.items.filter(embeddable));
   }
