@@ -380,3 +380,27 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# 🔴 크론이 부르는 함수는 JWT 검증을 끈다(자체 x-cron-secret 으로 막는다).
+#    --no-verify-jwt 없이 배포하면 설정이 되돌아가 크론이 통째로 401 이 된다.
+#    실측 2026-09-04: collect-food-places 를 그냥 배포했다가 UNAUTHORIZED_NO_AUTH_HEADER.
+[functions.collect-food-places]
+verify_jwt = false
+[functions.fetch-video-i18n]
+verify_jwt = false
+[functions.link-food-videos]
+verify_jwt = false
+[functions.summarize-food-videos]
+verify_jwt = false
+[functions.geocode-good-price]
+verify_jwt = false
+[functions.geocode-cheap]
+verify_jwt = false
+[functions.probe-yt-channel]
+verify_jwt = false
+[functions.collect-travel-videos]
+verify_jwt = false
+[functions.collect-youtube-hot]
+verify_jwt = false
+[functions.portone-webhook]
+verify_jwt = false

@@ -57,6 +57,10 @@ async function appleToken(): Promise<string | null> {
   const iss = Deno.env.get("APPLE_ISSUER_ID");
   const kid = Deno.env.get("APPLE_KEY_ID");
   const pem = Deno.env.get("APPLE_PRIVATE_KEY");
+  /* ⚠️ APPLE_BUNDLE_ID 는 **`im.galla`** 다 (2026-09-04 변경, 구 `im.galla.app` 아님).
+     개인 계정 → 법인 계정 전환 때 im.galla.app 을 잃어 iOS 번들 ID 만 바뀌었다.
+     안드로이드 패키지는 im.galla.app 그대로다 — 아래 ANDROID_PACKAGE 기본값이 맞다.
+     둘을 헷갈려 넣으면 애플 JWT 의 bid 가 어긋나 **iOS 영수증 검증이 전부 실패**한다. */
   const bid = Deno.env.get("APPLE_BUNDLE_ID");
   if (!iss || !kid || !pem || !bid) return null;
   const now = Math.floor(Date.now() / 1000);
