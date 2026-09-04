@@ -22,7 +22,10 @@ const APNS = {
   keyId: Deno.env.get("APNS_KEY_ID") || "",
   teamId: Deno.env.get("APNS_TEAM_ID") || "",
   p8: Deno.env.get("APNS_KEY") || "",
-  bundle: Deno.env.get("APNS_BUNDLE_ID") || "im.galla.app",
+  /* ⚠️ APNs 토픽 = **iOS 번들 ID**다. 2026-09-04 에 im.galla.app → `im.galla` 로 바뀌었다
+     (법인 계정 전환 때 옛 번들을 잃었다). 안드로이드 패키지는 im.galla.app 그대로지만
+     여기는 iOS 전용이다 — 헷갈려 옛 값을 넣으면 애플이 BadTopic 으로 조용히 거부한다. */
+  bundle: Deno.env.get("APNS_BUNDLE_ID") || "im.galla",
   host: (Deno.env.get("APNS_ENV") || "production").toLowerCase() === "sandbox" ? "api.sandbox.push.apple.com" : "api.push.apple.com",
 };
 let _apnsJwt = { token: "", at: 0 };

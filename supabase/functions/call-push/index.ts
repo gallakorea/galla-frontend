@@ -6,7 +6,7 @@
      APNS_KEY_ID    — APNs 인증 키(.p8)의 Key ID
      APNS_TEAM_ID   — 494K4C92G6 (팀 ID)
      APNS_KEY       — .p8 파일 내용(-----BEGIN PRIVATE KEY----- ... 포함, 통째로)
-     APNS_BUNDLE_ID — im.galla.app  (VoIP 토픽은 <bundle>.voip)
+     APNS_BUNDLE_ID — im.galla  (iOS 번들. VoIP 토픽은 <bundle>.voip)
      APNS_ENV       — "production" | "sandbox" (개발 빌드는 sandbox)
    키가 없으면 { ok:false, reason:'not_configured' }를 돌려주고 조용히 넘어간다(통화 자체는 실시간 시그널로 진행). */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
@@ -64,7 +64,8 @@ Deno.serve(async (req) => {
   const keyId = Deno.env.get("APNS_KEY_ID");
   const teamId = Deno.env.get("APNS_TEAM_ID");
   const p8 = Deno.env.get("APNS_KEY");
-  const bundle = Deno.env.get("APNS_BUNDLE_ID") || "im.galla.app";
+  /* ⚠️ iOS 번들 ID(2026-09-04: im.galla.app → im.galla). VoIP 토픽은 <bundle>.voip 다. */
+  const bundle = Deno.env.get("APNS_BUNDLE_ID") || "im.galla";
   const env = (Deno.env.get("APNS_ENV") || "production").toLowerCase();
   if (!keyId || !teamId || !p8) return j({ ok: false, reason: "not_configured" });
 
