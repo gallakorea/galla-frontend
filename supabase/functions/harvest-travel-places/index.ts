@@ -31,7 +31,8 @@ const DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
    말없이 Gemini(구글 과금)로 붙는 구조였다 — 실측 2026-09-04 낮에 `deepseek 400` 이
    났고 그때마다 구글로 갔다. 같은 날 구글 클라우드에서 카드 결제 ₩200,000 이 나갔다.
    폴백은 이제 **명시적으로 켜야** 쓴다(GEMINI_FALLBACK=1). 기본은 꺼짐. */
-const GEM = (Deno.env.get("GEMINI_FALLBACK") === "1")
+const GOOGLE_PAID_OK = Deno.env.get("GOOGLE_PAID_OK") === "1";  /* 🔴 구글 유료 차단 (2026-09-04, 카드 ₩200,000). GCP 예산·쿼터를 먼저 걸고 열 것 */
+const GEM = (GOOGLE_PAID_OK && Deno.env.get("GEMINI_FALLBACK") === "1")
   ? (Deno.env.get("GEMINI_API_KEY") || "") : "";
 const GOV = Deno.env.get("DATA_GO_KR_KEY") || "";
 const NV_ID = Deno.env.get("NAVER_SEARCH_ID") || Deno.env.get("NAVER_CLIENT_ID") || "";

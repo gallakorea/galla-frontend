@@ -4,6 +4,13 @@
    외부 도구 데이터(실제 가게명·영상제목)가 필요한 자리는 지어내지 않고 skip.
    크론(매일 UTC 20:00, 보상 갱신 크론 19:30 뒤)이 호출. 원본엔 tags+='distilled'로 재처리 방지. */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+/* 🔴🔴 구글 유료 API 전면 차단 (2026-09-04). 실제 카드 결제 ₩200,000 이 나갔다.
+   Places 월 상한을 1,000 → 20,000 으로 올린 게 발단이고, 크레딧이 덮는다고 본 판단이 틀렸다.
+   크론만 끄면 누가 다시 켠다. **코드에서** 막는다.
+   다시 열 때: ① GCP 콘솔에서 예산·쿼터를 먼저 걸고 ② 크레딧 잔액을 눈으로 확인한 뒤
+   ③ 시크릿 GOOGLE_PAID_OK=1 을 넣는다. 그 전에는 어떤 경로로도 구글에 돈이 안 나간다. */
+const GOOGLE_PAID_OK = Deno.env.get("GOOGLE_PAID_OK") === "1";
+
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const CRON_KEY = Deno.env.get("CRON_SECRET") || "";
@@ -65,6 +72,12 @@ async function teachDS(convo: string, reward: number): Promise<any> {
 }
 
 Deno.serve(async (req) => {
+  /* 🔴 구글 유료 차단 — 이 함수는 Gemini 전용이라 열어두면 곧장 과금된다.
+     막히면 내부 증류 배치 가 선다. GOOGLE_PAID_OK=1 로 다시 연다. */
+  if (!GOOGLE_PAID_OK) {
+    return new Response(JSON.stringify({ ok: false, reason: "GOOGLE_KILL_2026_09_04" }),
+      { status: 503, headers: { "content-type": "application/json" } });
+  }
   if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) {
     const auth = req.headers.get("Authorization") || "";
     if (!auth.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "@@")) return new Response("forbidden", { status: 403 });

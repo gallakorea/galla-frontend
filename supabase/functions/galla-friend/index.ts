@@ -82,7 +82,16 @@ async function broadcastStep(uid: string, name: string, text: string) {
   } catch { /* best effort */ }
 }
 
-const GEMINI_EMBED_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+/* 🔴🔴 구글 유료 API 전면 차단 (2026-09-04). 실제 카드 결제 ₩200,000 이 나갔다.
+   Places 월 상한을 1,000 → 20,000 으로 올린 게 발단이고, 크레딧이 덮는다고 본 판단이 틀렸다.
+   크론만 끄면 누가 다시 켠다. **코드에서** 막는다.
+   다시 열 때: ① GCP 콘솔에서 예산·쿼터를 먼저 걸고 ② 크레딧 잔액을 눈으로 확인한 뒤
+   ③ 시크릿 GOOGLE_PAID_OK=1 을 넣는다. 그 전에는 어떤 경로로도 구글에 돈이 안 나간다. */
+const GOOGLE_PAID_OK = Deno.env.get("GOOGLE_PAID_OK") === "1";
+/* ⚠️ 여기서는 함수를 죽이지 않는다. 갈라 친구는 서비스의 얼굴이다.
+   키를 비우면 채팅은 DeepSeek 으로 자동 폴백하고 임베딩은 건너뛴다 — 친구는 그대로 산다.
+   (Gemini 경로는 전부 이 키의 유무로 갈린다: apiFor·geminiNativeStream·embed) */
+const GEMINI_EMBED_KEY = GOOGLE_PAID_OK ? (Deno.env.get("GEMINI_API_KEY") || "") : "";
 /* ⚠️ OpenAI 임베딩이 2026-08-02 를 끝으로 조용히 전부 실패했다(키 문제).
    그 뒤 기억 235건이 무임베딩 = 회상 검색이 반쪽으로 돌았는데 아무도 몰랐다 —
    embed() 가 null 을 조용히 삼키는 구조라 티가 안 났다.
