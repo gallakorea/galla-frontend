@@ -36,12 +36,14 @@
   }
   function go(u) { (window.GALLA_nav || function (x) { location.href = x; })(u); }
 
-  function playVideo(id, title, ch) {
-    if (!id) return;
-    if (window.GALLA_openVideoPage) return window.GALLA_openVideoPage(id, title || "", ch || "");
-    go("watch.html?v=" + encodeURIComponent(id) +
-       (title ? "&t=" + encodeURIComponent(title) : "") +
-       (ch ? "&c=" + encodeURIComponent(ch) : ""));
+  /* 🔴 여행 영상은 **여행 상세**에서 튼다. 핫튜브 시청 페이지로 보내면 안 된다.
+     사장님(2026-09-04): "여행 유튜버는 여행 상세를 써야지 핫튜브 상세를 쓰면 안 됨."
+     GALLA_openVideoPage 는 공용 헬퍼지만 목적지가 watch.html 로 고정이라 여기선 안 쓴다 —
+     그 화면엔 이 장소의 '누가 갔나'도, 다른 크리에이터도, 영상 요약도 없다. */
+  function playVideo(placeId, vid) {
+    if (!placeId) return;
+    go("travel-place.html?id=" + encodeURIComponent(placeId) +
+       (vid ? "&v=" + encodeURIComponent(vid) : ""));
   }
 
   function render() {
@@ -82,6 +84,7 @@
               return '<div class="tv-cre-i">' +
                 (p.video_id
                   ? '<button type="button" class="tv-cre-th" data-vid="' + esc(p.video_id) +
+                    '" data-vplace="' + esc(p.id) +
                     '" data-vt="' + esc(p.video_title || "") + '" aria-label="영상 재생">' +
                     (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                              : '<span class="tv-ph">🌍</span>') +
@@ -110,7 +113,7 @@
         return go("search.html?tab=travel&route=" + encodeURIComponent(SLUG));
       }
       var vb = e.target.closest("[data-vid]");
-      if (vb) return playVideo(vb.dataset.vid, vb.dataset.vt, (DATA && DATA.channel || {}).name);
+      if (vb) return playVideo(vb.dataset.vplace, vb.dataset.vid);
       var pl = e.target.closest("[data-place]");
       if (pl) return go("travel-place.html?id=" + encodeURIComponent(pl.dataset.place));
     });

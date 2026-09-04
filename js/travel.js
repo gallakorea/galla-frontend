@@ -65,18 +65,6 @@
   }
   function toast(m) { window.GALLA_toast ? GALLA_toast(m) : 0; }
 
-  /* 영상 재생은 **앱 공용 경로 하나만** 쓴다(js/supabase.js 의 GALLA_openVideoPage).
-     ⚠️ youtube.com 링크를 그대로 열면 앱(capacitor://localhost)에서 새 탭이 안 열리거나
-        임베드가 오류 153 으로 죽는다 — 핫튜브가 그래서 프록시 재생 페이지를 만들었다.
-        여기서 URL 을 따로 조립하면 화면마다 결과가 갈린다. */
-  function playVideo(id, title, ch) {
-    if (!id) return;
-    if (window.GALLA_openVideoPage) return window.GALLA_openVideoPage(id, title || "", ch || "");
-    var u = "watch.html?v=" + encodeURIComponent(id) +
-            (title ? "&t=" + encodeURIComponent(title) : "") +
-            (ch ? "&c=" + encodeURIComponent(ch) : "");
-    (window.GALLA_nav || function (x) { location.href = x; })(u);
-  }
   function needLogin() {
     if (confirm("로그인이 필요해요. 로그인할까요?")) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
   }

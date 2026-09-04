@@ -302,6 +302,13 @@
     if (!info || !info.ok) { ROOT.innerHTML = '<div class="tv-empty">없는 장소예요.</div>'; return; }
     CUR = info;
     render();
+    /* ?v=<영상> 로 들어오면 그 영상을 바로 튼다.
+       크리에이터 페이지에서 썸네일을 눌렀을 때 오는 길이다 —
+       예전엔 여기가 아니라 핫튜브 시청 페이지(watch.html)로 갔다. */
+    var want = (params && params.v) || new URLSearchParams(location.search).get("v") || "";
+    if (want && ((CUR.videos || []).some(function (x) { return x.video_id === want; }))) {
+      try { playHere(want); } catch (_) {}
+    }
   }
 
   /* SPA(스택 뷰)와 일반 페이지 양쪽에서 쓴다 — 광장 상세와 같은 계약. */

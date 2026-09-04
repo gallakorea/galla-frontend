@@ -225,6 +225,26 @@ Deno.serve(async (req) => {
   /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(100유닛). 0 이면 아예 안 한다. */
   let searchBudget = Math.min(Number(url.searchParams.get("resolve") || "1"), 3);
 
+  /* tagprobe: 영상의 유튜브 **태그**에 지명이 들어 있는지 본다(진단용).
+     왜: 설명란이 빈 채널이 있다(서재로36 은 159편 중 145편이 빈칸이고, 제목은
+     'OECD에서 가장 가난한 나라'처럼 일부러 나라를 감춘다). 그런 영상은 지금 파이프라인이
+     손댈 수가 없다. 크리에이터가 태그에 나라 이름을 넣어뒀다면 거기서 건질 수 있다.
+     💰 videos.list?part=snippet 은 id 50개당 1유닛 — 이미 길이 받으려고 부르는 그 호출이다. */
+  if (url.searchParams.get("tagprobe") === "1") {
+    const ch = url.searchParams.get("ch") || "";
+    const { data: vids } = await supa.from("travel_videos")
+      .select("video_id,title").eq("channel", ch).limit(50);
+    const ids = (vids || []).map((v: any) => v.video_id);
+    if (!ids.length) return j({ ok: true, note: "영상 없음" });
+    const d: any = await ytGet("videos", { part: "snippet", id: ids.join(",") });
+    const out = (d?.items || []).map((it: any) => ({
+      title: String(it?.snippet?.title || "").slice(0, 40),
+      tags: (it?.snippet?.tags || []).slice(0, 12),
+    }));
+    const withTags = out.filter((x: any) => x.tags.length).length;
+    return j({ ok: true, ch, n: out.length, withTags, sample: out.slice(0, 8) });
+  }
+
   /* sethandle: 사장님이 준 유튜브 URL 로 채널을 확정한다.
      ⚠️ 핸들만 믿고 바로 쓰지 않는다 — dry=1 로 **실제 채널명을 먼저 받아** 눈으로 맞춘 뒤 넣는다.
         (실측 2026-09-04, 맛집: 이름 확인 없이 검색 결과를 믿었다가 엉뚱한 채널 1,999편을 폐기했다)
