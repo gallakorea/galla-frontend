@@ -271,6 +271,10 @@
   /* 🏷 착한가격업소만 보기. 정렬(최신·가까운·화제)과 다른 축이라 별도 토글이다 —
      정부가 가격·위생·서비스를 실사해 지정한 집이라 '가성비'를 고시로 보증한다. */
   var gpOnly = false;
+  /* 🍚 혜자식당 — 만원 넘지 않는 집(8,000원 이하). 다이소·달러샵처럼 이름은 가격 보증이
+     아니라 카테고리 선언이다. 켜지면 **싼 순**으로 뒤집혀서 김밥 2,500원부터 뜬다. */
+  var cheapOnly = false;
+  var CHEAP_MAX = 8000;
   var catFilter = null, minShows = null, CATS = [];   // 필터 시트 상태
   var myPos = null;                 // 내 위치(있으면 거리·가까운순이 열린다)
   var sortBy = "new";               // new | near | heat
@@ -507,6 +511,12 @@
       if (MAP && MAP.classList.contains("on")) fetchBbox();
       return;
     }
+    if (t.closest && t.closest("[data-cheap]")) {
+      cheapOnly = !cheapOnly;
+      paintSeg(); loadList();
+      if (MAP && MAP.classList.contains("on")) fetchBbox();
+      return;
+    }
     var sg = t.closest && t.closest("#fd-seg .fd-sg");
     if (sg) {
       seg = sg.dataset.g;
@@ -583,7 +593,9 @@
       /* 둘러보기에서만 — 랭킹·기록엔 의미가 없다 */
       (tab === "browse"
         ? '<button type="button" class="fd-sg fd-gp' + (gpOnly ? " on" : "") + '" data-gp="1">' +
-            '🏷 착한가격</button>'
+            '🏷 착한가격</button>' +
+          '<button type="button" class="fd-sg fd-cheap' + (cheapOnly ? " on" : "") + '" data-cheap="1">' +
+            '🍚 혜자식당</button>'
         : "");
   }
 
@@ -660,6 +672,12 @@
      눈이 갈 곳이 없었다(사장님: 촌스럽다). 위계를 셋으로 줄인다:
        ① 썸네일  ② 상호(크게)  ③ 나머지는 한 줄로 눌러서 회색.
      사진은 출처 영상 썸네일을 쓴다 — 매장 사진이 없는 우리가 가진 유일한 이미지다. */
+  /* 혜자식당에서는 값이 주인공이다. 켜졌을 때만 카드에 최저가를 박는다 —
+     평소에도 띄우면 '메뉴 하나 값'이 그 집 대표가처럼 읽혀 오해를 만든다. */
+  function priceTag(p) {
+    if (!cheapOnly || p.min_price == null) return "";
+    return '<span class="fd-price">' + esc(won(p.min_price)) + '~</span>';
+  }
   function shortAddr(ad) {
     var t = String(ad || "").split(/\s+/);
     return t.length > 2 ? t.slice(1, 3).join(" ") : t.join(" ");
@@ -956,7 +974,8 @@
     if (mode === "near") {
       d = await rpc("food_map", { p_region: myRegion, p_channel: chFilter, p_limit: listLimit,
                                   p_category: catFilter, p_min_shows: minShows,
-                                  p_good_price: gpOnly });
+                                  p_good_price: gpOnly,
+                                  p_max_price: cheapOnly ? CHEAP_MAX : null });
       ps = (d && d.places) || [];
     } else {
       // 랭킹은 전국 기준. 최소 표수를 넘긴 집만 올라온다(표본이 적으면 우연이니까).
@@ -1202,6 +1221,7 @@
       p_ne_lat: b.neLat, p_ne_lon: b.neLon,
       p_channel: chFilter, p_only_unvisited: onlyUnvisited, p_limit: 400,
       p_category: catFilter, p_min_shows: minShows, p_good_price: gpOnly,
+      p_max_price: cheapOnly ? CHEAP_MAX : null,
       /* 지도는 '최신 400개'가 아니라 '고르게 400개'여야 한다.
          수집이 늘자 전국 화면이 마지막에 훑은 채널 쪽으로 쏠렸다 — 나머지 지역은 텅 빈다.
          목록(둘러보기)은 최신순이 맞으므로 거기엔 안 켠다. */

@@ -17,7 +17,7 @@
 //    영원히 남아 나머지를 굶기는 게 맛집에서 실제로 벌어진 일이다.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ytFetch } from "../_shared/ytkey.ts";
+import { ytFetch, ytKeyCount } from "../_shared/ytkey.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -224,6 +224,53 @@ Deno.serve(async (req) => {
   let only = url.searchParams.get("channel") || "";
   /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(100유닛). 0 이면 아예 안 한다. */
   let searchBudget = Math.min(Number(url.searchParams.get("resolve") || "1"), 3);
+
+  /* sethandle: 사장님이 준 유튜브 URL 로 채널을 확정한다.
+     ⚠️ 핸들만 믿고 바로 쓰지 않는다 — dry=1 로 **실제 채널명을 먼저 받아** 눈으로 맞춘 뒤 넣는다.
+        (실측 2026-09-04, 맛집: 이름 확인 없이 검색 결과를 믿었다가 엉뚱한 채널 1,999편을 폐기했다)
+     💰 channels.list?forHandle 은 1유닛이다.
+     쓰는 법: ?sethandle=1&pairs=<slug>:<handle>,<slug>:<handle>&dry=1 */
+  if (url.searchParams.get("sethandle") === "1") {
+    const dry = url.searchParams.get("dry") === "1";
+    const pairs = (url.searchParams.get("pairs") || "").split(",")
+      .map((x) => x.trim()).filter(Boolean)
+      .map((x) => { const i = x.indexOf(":"); return { slug: x.slice(0, i), handle: x.slice(i + 1) }; })
+      .filter((p) => p.slug && p.handle);
+    if (!pairs.length) return j({ ok: false, reason: "no_pairs" }, 400);
+    const res: any[] = [];
+    for (const p of pairs) {
+      const h = p.handle.replace(/^@/, "");
+      try {
+        const d: any = await ytGet("channels", {
+          part: "snippet,statistics,contentDetails", forHandle: "@" + h,
+        });
+        const it = (d?.items || [])[0];
+        if (!it) { res.push({ ...p, found: null, note: "그런 핸들 없음" }); continue; }
+        const row = {
+          ...p, found: it?.snippet?.title, id: it.id,
+          videos: Number(it?.statistics?.videoCount) || null,
+          subs: it?.statistics?.hiddenSubscriberCount ? null : (Number(it?.statistics?.subscriberCount) || null),
+        };
+        if (!dry) {
+          const { error } = await supa.from("travel_channels").update({
+            yt_handle: "@" + h, yt_channel_id: it.id, resolved: true, active: true,
+            name: it?.snippet?.title || undefined,
+            yt_video_count: row.videos, yt_count_at: new Date().toISOString(),
+            thumb: it?.snippet?.thumbnails?.medium?.url || it?.snippet?.thumbnails?.default?.url || undefined,
+            subs: row.subs ?? undefined, resolve_note: null, full_scanned_at: null,
+          }).eq("slug", p.slug);
+          if (error) return j({ ok: false, reason: "update_failed", slug: p.slug,
+                                detail: String(error.message).slice(0, 160) }, 500);
+        }
+        res.push(row);
+      } catch (e) { res.push({ ...p, found: null, note: String(e).slice(0, 90) }); }
+    }
+    return j({ ok: true, dry, res });
+  }
+
+  /* keys=1: 지금 몇 개의 유튜브 키를 들고 있는지만 알려준다(호출 0유닛).
+     스페어가 실제로 붙었는지 확인할 자가 없으면, 소진되고 나서야 안다. */
+  if (url.searchParams.get("keys") === "1") return j({ ok: true, keys: ytKeyCount() });
 
   /* 구독자 수 채우기 — 화면 정렬의 기준이다(사장님: 구독자 순으로 가야 하는 거 아닌가).
      💰 channels.list?part=statistics 도 **50개 id 당 1유닛**이라 86채널이 2유닛이다.
