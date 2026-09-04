@@ -68,7 +68,34 @@ async function koFromWikidata(name: string, cc: string) {
   return null;
 }
 
-async function koFromOsm(lat: number, lon: number, kind: string) {
+/* allowAny=true 면 한글이 아니어도 받는다.
+   🔴 광역 채우기에서는 이게 필요하다. 한글 이름이 있는 지역만 받으면 해외가 거의 다 탈락하고
+      (실측 2026-09-04: 5곳 중 0곳), 그 장소들은 화면에서 **나라로만** 묶인다.
+      'Kanagawa Prefecture' 라도 있는 게 없는 것보다 낫다 — 한글화는 다음 회차의 일이고
+      travel_names_to_localize 가 그 일을 이미 맡고 있다. */
+/* 좌표로 그 지점의 **광역**을 되묻는다.
+   🔴 state 를 쓰면 안 된다 — Nominatim 은 한국에 state 를 안 준다(실측 2026-09-04:
+      2,487곳을 되물어 state 는 0건). 대신 ISO3166-2 코드는 어디서나 나온다:
+      종로경찰서 KR-11 · 거제 KR-48 · 다낭 VN-DN · 교토 JP-26.
+   ⚠️ city 로 대신하면 거제가 '거제시'가 돼 경상남도가 시군 단위로 쪼개진다.
+      그래서 ISO 를 같이 올려보내고, 이름 결정은 DB(travel_admin1_save)에 맡긴다. */
+async function areaOf(lat: number, lon: number) {
+  const u = new URL("https://nominatim.openstreetmap.org/reverse");
+  u.searchParams.set("lat", String(lat));
+  u.searchParams.set("lon", String(lon));
+  u.searchParams.set("format", "jsonv2");
+  u.searchParams.set("addressdetails", "1");
+  u.searchParams.set("zoom", "8");
+  const r = await fetch(u, { headers: { "User-Agent": UA, "Accept-Language": "ko" } });
+  if (!r.ok) return null;
+  const a = (await r.json())?.address || {};
+  const iso = a["ISO3166-2-lvl4"] || a["ISO3166-2-lvl3"] || null;
+  const name = a.state || a.province || a.region || a.county || a.city || null;
+  if (!iso && !name) return null;
+  return { iso, name: name ? String(name) : null };
+}
+
+async function koFromOsm(lat: number, lon: number, kind: string, allowAny = false) {
   const u = new URL("https://nominatim.openstreetmap.org/reverse");
   u.searchParams.set("lat", String(lat));
   u.searchParams.set("lon", String(lon));
@@ -81,7 +108,33 @@ async function koFromOsm(lat: number, lon: number, kind: string) {
   const v = kind === "admin1"
     ? (a.state || a.province || a.region || a.county)
     : (a.city || a.town || a.village || a.municipality || a.county);
-  return v && hasHangul(v) ? String(v) : null;
+  if (!v) return null;
+  return (hasHangul(v) || allowAny) ? String(v) : null;
+}
+
+
+/* 광역이 빈 장소를 좌표로 되물어 채운다.
+   🔴 예전엔 이 코드가 한글화 루프 **뒤에** 있었다. 그런데 그 앞에
+      `if (!list.length) return`(한글화할 이름 없음) 이 있어서, 큐가 빈 순간부터
+      여기까지 **도달조차 못 했다.** 실측 2026-09-04: 광역이 빈 장소가 1,841곳(19%)이었고
+      크론은 매번 '없음'만 돌려주고 있었다. 두 일은 서로 독립이므로 따로 돌린다. */
+async function fillAdmin1(url: URL) {
+  const n = Math.min(Number(url.searchParams.get("a1") || "40"), 80);
+  const t0 = Date.now();
+  let filled = 0;
+  try {
+    const { data: miss } = await supa.rpc("travel_places_missing_admin1", { p_limit: n });
+    const rows: any[] = [];
+    for (const m of ((miss || []) as any[])) {
+      if (Date.now() - t0 > 100_000) break;        // 시간 상자 — 넘기면 회차가 통째로 날아간다
+      const a = await areaOf(Number(m.lat), Number(m.lon));
+      await sleep(1100);                            // Nominatim 정책: 초당 1회
+      if (a) { rows.push({ id: m.id, admin1: a.name, iso: a.iso }); filled++; }
+    }
+    /* 정본화는 travel_admin1_save 가 한다('경기도'와 '경기'가 다시 갈라지지 않게) */
+    if (rows.length) await supa.rpc("travel_admin1_save", { p_items: rows });
+  } catch (_) { /* 보강 실패가 한글화를 막지는 않는다 */ }
+  return filled;
 }
 
 Deno.serve(async (req) => {
@@ -95,7 +148,11 @@ Deno.serve(async (req) => {
 
   const { data: todo } = await supa.rpc("travel_names_to_localize", { p_limit: n });
   const list = (todo || []) as any[];
-  if (!list.length) return j({ ok: true, picked: 0, note: "한글화할 이름 없음" });
+  if (!list.length) {
+    /* 한글화할 이름이 없어도 **광역 채우기는 해야 한다** — 둘은 서로 다른 일이다 */
+    const a1only = await fillAdmin1(url);
+    return j({ ok: true, picked: 0, admin1Filled: a1only, note: "한글화할 이름 없음" });
+  }
 
   const items: any[] = [];
   const log: string[] = [];
@@ -119,19 +176,7 @@ Deno.serve(async (req) => {
 
   const { data: res } = await supa.rpc("travel_localize_apply", { p_items: items });
 
-  /* 광역이 아예 비어 있는 장소도 여기서 채운다.
-     수확 경로에서 뺀 일이다 — 거기선 장소마다 1.1초가 붙어 회차를 잡아먹었다. */
-  let a1 = 0;
-  try {
-    const { data: miss } = await supa.rpc("travel_places_missing_admin1", { p_limit: 12 });
-    const rows: any[] = [];
-    for (const m of ((miss || []) as any[])) {
-      const v = await koFromOsm(Number(m.lat), Number(m.lon), "admin1");
-      await sleep(1100);
-      if (v) { rows.push({ id: m.id, admin1: v }); a1++; }
-    }
-    if (rows.length) await supa.rpc("travel_admin1_save", { p_items: rows });
-  } catch (_) { /* 보강 실패가 한글화를 막지는 않는다 */ }
+  const a1 = await fillAdmin1(url);
 
   return j({ ok: true, picked: list.length, ...(res || {}), admin1Filled: a1,
              localized: items.filter((i) => i.ko).length, log });
