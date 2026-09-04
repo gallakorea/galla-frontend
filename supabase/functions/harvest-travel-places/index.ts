@@ -29,6 +29,12 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 const DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
 const GEM = Deno.env.get("GEMINI_API_KEY") || "";
 const GOV = Deno.env.get("DATA_GO_KR_KEY") || "";
+const NV_ID = Deno.env.get("NAVER_SEARCH_ID") || Deno.env.get("NAVER_CLIENT_ID") || "";
+const NV_SEC = Deno.env.get("NAVER_SEARCH_SECRET") || Deno.env.get("NAVER_CLIENT_SECRET") || "";
+/* 🇰🇷 여행 쪽 네이버 상한을 따로 낮춰 잡는다(전체는 20,000).
+   맛집 수확이 같은 원장을 쓰기 때문이다 — 여기서 다 태우면 그쪽이 굶는다.
+   naver_take 는 p_cap 을 받으므로, 우리는 10,000 에서 멈추고 나머지는 맛집 몫으로 남는다. */
+const NV_CAP = 10000;
 const CHAT_URL = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
 /* Nominatim 정책: 실명 연락처가 담긴 User-Agent 가 의무다. 없으면 차단된다. */
@@ -226,6 +232,43 @@ async function wikidataFull(qid: string) {
    실측: "Tokyo Station" 이 도쿄시(Q1490)로, "Hiroshima Station" 이 히로시마시로 들어왔다.
    역·명소를 찾는 자리에 도시가 앉으면 목록에 같은 도시가 여러 번 뜬다. */
 const CITYISH = new Set(["Q515","Q3957","Q532","Q486972","Q1549591","Q15284","Q6256","Q7930989","Q1637706"]);
+/* 국내 소상공인은 OSM 에도 관광공사에도 없다 — 네이버 지역검색이 답이다.
+   실측(2026-09-04): 좌표 못 찾은 5,042곳 중 국내가 2,976곳(59%)이고,
+   그 목록이 '장홍김밥'·'봉주르속초과자점'·'마카오박 에그타르트' 였다.
+   한글로 물어도 OSM 엔 없다.
+   ⚠️ 맛집 경로와 달리 **업종 필터를 걸지 않는다** — 여기 들어오는 건 식당만이 아니라
+      전망대·시장·해변도 있다. 이름과 지역만 맞추고 좌표를 가져온다. */
+async function naverFind(name: string, city: string) {
+  if (!NV_ID || !NV_SEC) return null;
+  const u = new URL("https://openapi.naver.com/v1/search/local.json");
+  u.searchParams.set("query", `${city} ${name}`.trim());
+  u.searchParams.set("display", "5");
+  const r = await fetch(u, { headers: { "X-Naver-Client-Id": NV_ID, "X-Naver-Client-Secret": NV_SEC } });
+  /* '못 찾았다'와 '못 불렀다'를 가른다 — 한도가 막힌 걸 '없음'으로 박으면 영구히 건너뛴다 */
+  if (!r.ok) throw new Error(`naver_${r.status}`);
+  const items = (await r.json())?.items || [];
+  const norm = (x: string) => String(x || "").replace(/\s/g, "").toLowerCase();
+  const want = norm(name);
+  const best = items.find((it: any) => {
+    const t = norm(strip(it.title));
+    return t && want && (t === want || t.includes(want) || want.includes(t));
+  });
+  if (!best) return null;
+  let lon = Number(best.mapx), lat = Number(best.mapy);
+  if (!isFinite(lon) || !isFinite(lat)) return null;
+  if (Math.abs(lon) > 1000) { lon /= 1e7; lat /= 1e7; }
+  if (lat < 33 || lat > 39.5 || lon < 124 || lon > 132) return null;   // 국내 범위 밖은 버린다
+  return {
+    name_ko: strip(best.title) || name,
+    address: strip(best.roadAddress) || strip(best.address) || null,
+    city: city || null, country_code: "KR",
+    lat, lon,
+    category: (strip(best.category).split(">").pop() || "").trim() || null,
+    kind: "spot", qid: null, osm_ref: null, geo_source: "naver",
+    photo: null, photo_credit: null, photo_source: null,
+  };
+}
+
 async function wikidataSearch(name: string, cc: string | null, scale = "spot") {
   const u = new URL("https://www.wikidata.org/w/api.php");
   u.searchParams.set("action", "wbsearchentities");
@@ -374,9 +417,16 @@ Deno.serve(async (req) => {
     const pBudget = Number(pAllow || 0);
     if (pBudget <= 0) return j({ ok: true, picked: 0, note: "지오코딩 하루 몫 소진" });
 
+    /* 🇰🇷 네이버 몫 — 맛집과 같은 원장이라 상한을 낮춰 잡는다(NV_CAP) */
+    const krN = plist.filter((x: any) => String(x.country_code || "").toUpperCase() === "KR").length;
+    const { data: nvAllow } = krN
+      ? await supa.rpc("naver_take", { p_want: krN, p_cap: NV_CAP })
+      : { data: 0 };
+    const nvBudget = Number(nvAllow || 0);
+
     const t0 = Date.now();
     const out: any[] = [];
-    let calls = 0, hits = 0, stop = "";
+    let calls = 0, hits = 0, stop = "", nvCalls = 0;
     const NL = /[^\u0000-\u02AF]/;
     for (const r0 of plist) {
       if (Date.now() - t0 > 105_000) { stop = "시간 상자(105초) 도달"; break; }
@@ -409,6 +459,15 @@ Deno.serve(async (req) => {
         const w = await wikidataSearch(native || en || ko, cc || null, scale);
         if (w) hit = { lat: w.lat, lon: w.lon, geo_source: "wikidata", wikidata_qid: w.qid };
       }
+      /* 국내는 여기서 끝내지 않는다 — 동네 가게는 네이버에만 있다 */
+      if (!hit && cc === "KR" && nvBudget > nvCalls) {
+        try {
+          nvCalls++;
+          const nv = await naverFind(ko, city);
+          if (nv) hit = nv;
+          await sleep(70);
+        } catch (e) { stop = String(e).slice(0, 40); }
+      }
       if (hit) hits++;
       out.push({ id: r0.id, lat: hit?.lat ?? null, lon: hit?.lon ?? null,
                  geo_source: hit?.geo_source || null, wikidata_qid: hit?.qid || hit?.wikidata_qid || null,
@@ -416,9 +475,10 @@ Deno.serve(async (req) => {
       if (stop) break;
     }
     if (pBudget > calls) await supa.rpc("travel_geo_refund", { p_n: pBudget - calls });
+    if (nvBudget > nvCalls) await supa.rpc("naver_refund", { p_n: nvBudget - nvCalls });
     const { data: res } = await supa.rpc("travel_pending_resolve", { p_items: out });
     return j({ ok: true, mode: "pending", picked: plist.length, tried: out.length,
-               found: hits, geoCalls: calls, ...(res || {}), halted: stop || undefined,
+               found: hits, geoCalls: calls, naverCalls: nvCalls, ...(res || {}), halted: stop || undefined,
                took: Math.round((Date.now() - t0) / 1000) });
   }
 
