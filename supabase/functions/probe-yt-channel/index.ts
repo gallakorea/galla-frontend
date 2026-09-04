@@ -34,6 +34,20 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
 
+  /* 🔎 해소 검증 — 자동 해소한 yt_channel_id 가 **진짜 그 채널인지** 사람이 눈으로 본다.
+     titleMatches 가 느슨해서(2글자 토큰 하나만 겹쳐도 통과) 엉뚱한 채널이 박힐 수 있다.
+     '누가 갔나'에 잘못 뜨면 서비스가 통째로 거짓말이 되므로 등록 전에 반드시 센다.
+     channels.list 는 50개까지 1유닛. */
+  const ids = url.searchParams.get("ids");
+  if (ids) {
+    const d: any = await yt("channels", { part: "snippet,statistics", id: ids });
+    return j({ ok: true, rows: (d.items || []).map((it: any) => ({
+      id: it.id, title: it.snippet?.title, handle: it.snippet?.customUrl,
+      subs: Number(it.statistics?.subscriberCount || 0),
+      videos: Number(it.statistics?.videoCount || 0),
+    })) });
+  }
+
   /* 🔎 고정 댓글 진단 — 설명에 주소를 안 쓰는 채널(또간집·쯔양·홍유)이 있다.
      한국 먹방은 가게 목록을 **고정 댓글**에 다는 일이 흔하다. 사실이면 수확 물량이
      크게 는다. commentThreads.list 는 1유닛이라 확인 비용이 사실상 0이다. */

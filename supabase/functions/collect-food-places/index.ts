@@ -158,7 +158,16 @@ function titleMatches(want: string, got: string) {
 
 async function resolveChannel(c: Chan, budget: { left: number }): Promise<string | null> {
   if (c.yt_channel_id) return c.yt_channel_id;
-  if (!c.yt_query || quotaDead || budget.left <= 0) return null;
+  /* 🔴 검색어가 없으면 **도장을 찍고** 나간다.
+     예전엔 그냥 return 해서 resolve_tried_at 이 영원히 null 로 남았고,
+     그 채널이 '가장 오래 안 해본 것' 큐의 맨 앞을 **영구 점거**했다.
+     실측 2026-09-04: yt_query 가 없는 공무원 채널 3개가 예산 3칸을 매 실행 다 먹어
+     나머지 28개 채널이 단 한 번도 해소를 시도받지 못했다(전부 resolve_tried_at = null). */
+  if (!c.yt_query) {
+    await supa.from("food_channels").update({ resolve_tried_at: new Date().toISOString() }).eq("slug", c.slug);
+    return null;
+  }
+  if (quotaDead || budget.left <= 0) return null;
   budget.left--;
   await supa.from("food_channels").update({ resolve_tried_at: new Date().toISOString() }).eq("slug", c.slug);
   let d: any;
@@ -173,7 +182,19 @@ async function resolveChannel(c: Chan, budget: { left: number }): Promise<string
   const hit = (d?.items || []).find((it: any) =>
     titleMatches(c.name, it?.snippet?.channelTitle || it?.snippet?.title || ""));
   const id = hit?.snippet?.channelId || hit?.id?.channelId || null;
-  if (id) await supa.from("food_channels").update({ yt_channel_id: id }).eq("slug", c.slug);
+  if (!id) return null;
+  /* 🔴 이름만 맞으면 안 된다. titleMatches 는 2글자 토큰 하나만 겹쳐도 통과라서
+     팬·재업로드 채널이 공식 채널 자리에 박힌다.
+     실측 2026-09-04: '2TV 생생정보' → [생정맛] 생생정보맛집(구독 448),
+                     '수요미식회'   → TCA수요미식회(구독 22·영상 12),
+                     '다이닝코드'   → 영상 0편, '백년가게' → 영상 1편.
+     '누가 갔나'에 잘못 뜨면 서비스가 통째로 거짓말이 되므로 영상 수로 한 번 더 거른다.
+     종영 프로그램은 공식 채널이 아예 없기도 하다 — 그럴 땐 안 넣는 게 맞다.
+     channels.list 는 1유닛이라 비용은 사실상 없다. */
+  const ck: any = await ytGet("channels", { part: "statistics", id });
+  const nvid = Number(ck?.items?.[0]?.statistics?.videoCount || 0);
+  if (nvid < 30) return null;
+  await supa.from("food_channels").update({ yt_channel_id: id }).eq("slug", c.slug);
   return id;
 }
 
@@ -378,12 +399,14 @@ Deno.serve(async (req) => {
   const rotN = Number(url.searchParams.get("n") || "8");
   const { data: chans } = await supa.from("food_channels")
     .select("slug,name,kind,yt_channel_id,yt_query,yt_title_re,thumb,last_video_at")
-    .eq("active", true)
+    .eq("active", true).neq("kind", "gov")   // gov 는 영상 채널이 아니다 — 회전 슬롯만 먹는다
     .order("last_synced_at", { ascending: true, nullsFirst: true })
     .limit(only ? 200 : rotN);
   /* 미해소 채널은 '오래 안 해본 것' 순으로 돌린다 — sort 순으로 두면 앞쪽만 계속 시도한다. */
   const { data: pend } = await supa.from("food_channels")
     .select("slug").eq("active", true).is("yt_channel_id", null)
+    .not("yt_query", "is", null)          // 검색어 없는 건 애초에 큐에 넣지 않는다
+    .neq("kind", "gov")                   // 업무추진비 출처지 유튜브 채널이 아니다
     .order("resolve_tried_at", { ascending: true, nullsFirst: true })
     .limit(Math.max(budget.left, 1));
   const resolveSet = new Set((pend || []).map((r: any) => r.slug));

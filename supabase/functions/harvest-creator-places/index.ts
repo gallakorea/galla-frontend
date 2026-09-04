@@ -45,6 +45,21 @@ function pickCoord(mapx: string, mapy: string) {
 function hintOf(addr: string) {
   return String(addr || "").trim().split(/\s+/).slice(0, 2).join(" ");
 }
+/* 🔴 국내인지 먼저 가른다. 네이버 지역검색은 국내 전용이다.
+   실측 2026-09-04: 버려진 것을 열어보니 오사카·청두·홍콩·도쿄·산세바스티안이 줄줄이 나왔다 —
+   여행 간 크리에이터의 해외 맛집이다. 못 찾는 게 당연한데 한 건마다 네이버 호출을 한 번씩
+   태우고 있었다(하루 예산이 유한하다). 부르기 전에 접는다.
+   ⚠️ 화이트리스트가 아니라 블랙리스트로 짠다 — 국내 지명은 읍·면·동까지 수만 개라
+      화이트리스트로 두면 멀쩡한 시골 맛집이 통째로 잘린다. */
+const OVERSEAS =
+  /(일본|도쿄|東京|오사카|교토|후쿠오카|삿포로|나고야|오키나와|긴자|신주쿠|중국|베이징|상하이|청두|시안|칭다오|홍콩|마카오|대만|타이베이|타이중|가오슝|베트남|하노이|호치민|다낭|나트랑|태국|방콕|치앙마이|푸켓|싱가포르|말레이시아|쿠알라룸푸르|필리핀|마닐라|세부|인도네시아|발리|자카르타|미국|뉴욕|la|엘에이|샌프란시스코|시애틀|하와이|괌|사이판|캐나다|밴쿠버|토론토|영국|런던|프랑스|파리|스페인|바르셀로나|마드리드|산세바스티안|이탈리아|로마|밀라노|나폴리|독일|베를린|뮌헨|스위스|네덜란드|암스테르담|체코|프라하|터키|튀르키예|이스탄불|호주|시드니|멜버른|뉴질랜드|인도|두바이|아랍|이집트|몽골|러시아|블라디보스토크|우즈베키스탄|카자흐|페루|멕시코|브라질|아르헨티나)/i;
+/* 상호가 통째로 로마자·한자·가나면 국내 검색으로 못 잡는다 */
+const NOT_KR_NAME = /^[^가-힣]*[A-Za-z\u3040-\u30ff\u4e00-\u9fff][^가-힣]*$/;
+function abroad(name: string, region: string) {
+  if (OVERSEAS.test(region || "")) return true;
+  if (NOT_KR_NAME.test(String(name || "").trim())) return true;
+  return false;
+}
 function regionOk(hint: string, addr: string) {
   const toks = (hint || "").split(/\s+/).filter((t) => t.length >= 2);
   if (!toks.length) return true;
@@ -73,7 +88,15 @@ async function verify(name: string, addr: string) {
     const a = strip(it.roadAddress) || strip(it.address);
     return !!a && regionOk(hint, a);
   });
-  if (!best) return null;
+  if (!best) {
+    /* 진단용 — 왜 떨어졌는지 남긴다. 추측으로 고치면 엉뚱한 곳을 만진다. */
+    (globalThis as any).__lastMiss = {
+      want: name, region,
+      got: items.slice(0, 3).map((it: any) =>
+        `${strip(it.title)}|${(strip(it.category).split(">").pop() || "").trim()}|${strip(it.roadAddress) || strip(it.address)}`),
+    };
+    return null;
+  }
   const c = pickCoord(best.mapx, best.mapy);
   return {
     name: strip(best.title) || name,
@@ -161,14 +184,39 @@ async function verifyByName(name: string, region: string) {
   const items = (await r.json())?.items || [];
   const norm = (x: string) => x.replace(/\s/g, "").toLowerCase();
   const want = norm(name);
+  /* 🔴 예전엔 완전일치만 받았다. 그런데 네이버는 지점명을 붙여서 준다 —
+     영상이 '본가설렁탕'이라 해도 네이버엔 '본가설렁탕 강남점'으로 있다.
+     실측 2026-09-04: 추출 59건 중 42건(71%)이 여기서 버려졌다.
+     → 뒤에 붙은 꼬리가 **지점 표기일 때만** 같은 집으로 본다. 지역·업종 검사는 그대로라
+       '김밥천국' 같은 흔한 이름이 엉뚱한 동네로 새지 않는다. */
+  const BRANCH = /^[가-힣A-Za-z0-9]{0,7}(점|본점|직영점|지점|스토어|store)$|^\(.{0,12}\)$/;
+  const sameShop = (t: string) => {
+    if (t === want) return true;
+    if (t.startsWith(want) && BRANCH.test(t.slice(want.length))) return true;
+    if (want.startsWith(t) && BRANCH.test(want.slice(t.length))) return true;
+    /* 영상은 지역을 상호 앞에 붙여 말한다 — '광양시장국밥' vs 네이버 '시장국밥'.
+       떼어낸 조각이 우리가 이미 알고 있는 그 지역명일 때만 인정한다. */
+    const rg = norm(region);
+    if (rg && want === rg + t) return true;
+    if (rg && t === rg + want) return true;
+    return false;
+  };
   const best = items.find((it: any) => {
     const t = norm(strip(it.title));
-    if (t !== want) return false;                       // 완전일치만
+    if (!sameShop(t)) return false;
     if (!isFood(strip(it.category))) return false;
     const a = strip(it.roadAddress) || strip(it.address);
     return !!a && regionOk(region, a);                  // 지역도 맞아야 한다
   });
-  if (!best) return null;
+  if (!best) {
+    /* 진단용 — 왜 떨어졌는지 남긴다. 추측으로 고치면 엉뚱한 곳을 만진다. */
+    (globalThis as any).__lastMiss = {
+      want: name, region,
+      got: items.slice(0, 3).map((it: any) =>
+        `${strip(it.title)}|${(strip(it.category).split(">").pop() || "").trim()}|${strip(it.roadAddress) || strip(it.address)}`),
+    };
+    return null;
+  }
   const c = pickCoord(best.mapx, best.mapy);
   return {
     name: strip(best.title) || name,
@@ -212,6 +260,7 @@ Deno.serve(async (req) => {
   const items: any[] = [];
   const done: string[] = [];
   let extracted = 0, verified = 0, dropped = 0, naverCalls = 0;
+  const misses: any[] = [];
 
   let halted = "";
   /* ⚠️ 엣지는 150초에 끊는다. 영상 하나에 LLM 3초 + 네이버 3회가 붙어
@@ -225,7 +274,7 @@ Deno.serve(async (req) => {
     try {
       const raw = await chatJson(
         TITLE ? SYS_TITLE : SYS,
-        `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, TITLE ? 1200 : 2500)}`,
+        `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2600)}`,
       );
       shops = raw ? (JSON.parse(raw)?.shops || []) : [];
     } catch (_) { shops = []; }
@@ -235,8 +284,15 @@ Deno.serve(async (req) => {
       const name = String(s?.name || "").trim();
       const addr = String(s?.address || "").trim();
       const region = String(s?.region || "").trim();
+      if (TITLE && abroad(name, region)) {      // 해외 — 네이버를 부르지 않는다
+        dropped++;
+        if (misses.length < 25) misses.push({ want: name, region, got: ["(해외)"] });
+        continue;
+      }
       if (TITLE ? (name.length < 2 || region.length < 2) : (name.length < 2 || addr.length < 6)) {
-        dropped++; continue;
+        dropped++;
+        if (misses.length < 25) misses.push({ want: name, region, got: ["(규격미달)"] });
+        continue;
       }
       let ok: any = null;
       if (naverCalls >= budget) { halted = "budget"; done.pop(); break; }
@@ -249,7 +305,11 @@ Deno.serve(async (req) => {
         break;
       }
       await new Promise((r) => setTimeout(r, 70));   // 네이버 호출 간격
-      if (!ok) { dropped++; continue; }
+      if (!ok) {
+        dropped++;
+        if (misses.length < 25) misses.push((globalThis as any).__lastMiss || { want: name, region, got: [] });
+        continue;
+      }
       verified++;
       /* 메뉴는 네이버 검증을 통과한 가게에만 딸려 보낸다 —
          존재가 확인 안 된 집에 메뉴까지 붙으면 거짓말이 두 겹이 된다. */
@@ -268,7 +328,7 @@ Deno.serve(async (req) => {
   if (budget > naverCalls) await supa.rpc("naver_refund", { p_n: budget - naverCalls });
 
   if (DRY) {
-    return j({ ok: true, dry: true, picked: list.length, extracted, verified, dropped,
+    return j({ ok: true, dry: true, misses, picked: list.length, extracted, verified, dropped,
                would: items.map((x: any) => ({ name: x.name, addr: x.address, cat: x.category,
                                                title: String(x.video_title || "").slice(0, 40) })),
                halted: halted || undefined, ai: aiErrors.slice(0, 3) });
