@@ -22,7 +22,12 @@ const supa = createClient(
 );
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 const DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
-const GEM = Deno.env.get("GEMINI_API_KEY") || "";
+/* 🔴 구글로 **조용히** 넘어가지 않는다. DeepSeek 이 한 번 실패했을 뿐인데
+   말없이 Gemini(구글 과금)로 붙는 구조였다 — 실측 2026-09-04 낮에 `deepseek 400` 이
+   났고 그때마다 구글로 갔다. 같은 날 구글 클라우드에서 카드 결제 ₩200,000 이 나갔다.
+   폴백은 이제 **명시적으로 켜야** 쓴다(GEMINI_FALLBACK=1). 기본은 꺼짐. */
+const GEM = (Deno.env.get("GEMINI_FALLBACK") === "1")
+  ? (Deno.env.get("GEMINI_API_KEY") || "") : "";
 const CHAT_URL = "https://api.deepseek.com/chat/completions";
 const MODEL = "deepseek-chat";
 

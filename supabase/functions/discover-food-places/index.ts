@@ -27,7 +27,12 @@ const MODEL = "deepseek-chat";
 /* 🔴 예비 공급자 — DeepSeek 잔액이 마르면(402 Insufficient Balance) 추출이 통째로 0건이 된다.
    실측 2026-08-31: 스니펫 3,560건을 모으고도 후보 0건이었다. 이유가 보이지 않아서
    '스윕이 안 먹힌다'로 오진하기 딱 좋은 실패다. 키가 이미 있는 Gemini 로 자동으로 넘어간다. */
-const GEM = Deno.env.get("GEMINI_API_KEY") || "";
+/* 🔴 구글로 **조용히** 넘어가지 않는다. DeepSeek 이 한 번 실패했을 뿐인데
+   말없이 Gemini(구글 과금)로 붙는 구조였다 — 실측 2026-09-04 낮에 `deepseek 400` 이
+   났고 그때마다 구글로 갔다. 같은 날 구글 클라우드에서 카드 결제 ₩200,000 이 나갔다.
+   폴백은 이제 **명시적으로 켜야** 쓴다(GEMINI_FALLBACK=1). 기본은 꺼짐. */
+const GEM = (Deno.env.get("GEMINI_FALLBACK") === "1")
+  ? (Deno.env.get("GEMINI_API_KEY") || "") : "";
 
 
 const j = (o: unknown, s = 200) =>
