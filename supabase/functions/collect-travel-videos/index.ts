@@ -274,6 +274,44 @@ Deno.serve(async (req) => {
                halted: halted || undefined, took: Math.round((Date.now() - t0) / 1000) });
   }
 
+  /* verify=1: 우리가 저장한 채널명과 **유튜브의 실제 채널명**을 대조한다(쓰기 없음).
+     왜: 검색으로 해석한 채널은 엉뚱한 데를 잡을 수 있다. 맛집에서 실제로 그랬고
+     (트래블튜브 1,999편 폐기), 여행에서도 쑈따리가 남의 채널 ID 를 달고 0편이었다.
+     💰 channels.list 는 50개 id 당 1유닛 — 110채널이 3유닛이다. */
+  if (url.searchParams.get("verify") === "1") {
+    const { data: rows } = await supa.from("travel_channels")
+      .select("slug,name,yt_channel_id,yt_handle,subs").not("yt_channel_id", "is", null).limit(300);
+    const list = (rows || []) as any[];
+    const byId = new Map(list.map((r: any) => [r.yt_channel_id, r]));
+    const ids = list.map((r: any) => r.yt_channel_id);
+    const out: any[] = [];
+    let u = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < ids.length; i += 50) {
+      const d: any = await ytGet("channels", {
+        part: "snippet,statistics", id: ids.slice(i, i + 50).join(","),
+      });
+      u++;
+      for (const it of (d?.items || [])) {
+        seen.add(it.id);
+        const ours = byId.get(it.id);
+        if (!ours) continue;
+        const real = String(it?.snippet?.title || "");
+        out.push({
+          slug: ours.slug, ours: ours.name, real,
+          same: sameChannelName(real, ours.name),
+          videos: Number(it?.statistics?.videoCount) || 0,
+          subs: it?.statistics?.hiddenSubscriberCount ? null : Number(it?.statistics?.subscriberCount) || 0,
+        });
+      }
+    }
+    /* 응답에 안 온 ID = 삭제·정지된 채널이다. 조용히 빼면 영원히 모른다. */
+    const gone = list.filter((r: any) => !seen.has(r.yt_channel_id))
+                     .map((r: any) => ({ slug: r.slug, ours: r.name, real: null, same: false, gone: true }));
+    return j({ ok: true, checked: out.length, units: u,
+               mismatch: out.filter((x: any) => !x.same), gone });
+  }
+
   /* tagprobe: 영상의 유튜브 **태그**에 지명이 들어 있는지 본다(진단용).
      왜: 설명란이 빈 채널이 있다(서재로36 은 159편 중 145편이 빈칸이고, 제목은
      'OECD에서 가장 가난한 나라'처럼 일부러 나라를 감춘다). 그런 영상은 지금 파이프라인이
