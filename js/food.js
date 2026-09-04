@@ -1666,6 +1666,12 @@
       if (seen[s.channel]) { if (!seen[s.channel].video_id && s.video_id) seen[s.channel] = s; continue; }
       seen[s.channel] = s; rows.push(s.channel);
     }
+    /* 🔴 영상 있는 크리에이터를 앞으로. 영상 없는 카드가 위에 섞여 있으면
+       '다녀갔다는데 볼 게 없다'로 읽힌다 — 실제로 그 제보를 받았다.
+       근거(영상)가 있는 것부터 보여주고, 나머지는 아래로 내린다. */
+    rows.sort(function (a, b) {
+      return (seen[b].video_id ? 1 : 0) - (seen[a].video_id ? 1 : 0);
+    });
     return '<div class="fs-wrap"><div class="fs-h">누가 다녀갔나' +
         '<span class="fs-n">' + rows.length + '</span></div>' +
       rows.map(function (slug) {

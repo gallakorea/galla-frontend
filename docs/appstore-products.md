@@ -7,17 +7,22 @@
 
 | 상품 ID | 이름(표시) | 가격 | 지급 GC | 천원당 | 배지 |
 |---|---|---|---|---|---|
-| `im.galla.app.gc.c1`   | GC 1,000     | 1,500원   | 1,000   | 667 | — |
-| `im.galla.app.gc.c5`   | GC 4,500     | 6,000원   | 4,500   | 750 | +12% |
-| `im.galla.app.gc.c10`  | GC 9,600     | 12,000원  | 9,600   | 800 | +20% |
-| `im.galla.app.gc.c30`  | GC 31,000    | 38,000원  | 31,000  | 816 | +22% |
-| `im.galla.app.gc.c50`  | GC 49,800    | 60,000원  | 49,800  | 830 | +25% |
-| `im.galla.app.gc.c100` | GC 100,800   | 120,000원 | 100,800 | 840 | +26% |
+| `im.galla.gc.c1`   | GC 1,000     | 1,500원   | 1,000   | 667 | — |
+| `im.galla.gc.c5`   | GC 4,500     | 6,000원   | 4,500   | 750 | +12% |
+| `im.galla.gc.c10`  | GC 9,600     | 12,000원  | 9,600   | 800 | +20% |
+| `im.galla.gc.c30`  | GC 31,000    | 38,000원  | 31,000  | 816 | +22% |
+| `im.galla.gc.c50`  | GC 49,800    | 60,000원  | 49,800  | 830 | +25% |
+| `im.galla.gc.c100` | GC 100,800   | 120,000원 | 100,800 | 840 | +26% |
 
 - **유형: 소모성(Consumable)** — 구독·비소모성 아님.
+- ⚠️ **상품 ID 는 한 번 만들면 삭제·재사용이 안 된다**(번들 ID 와 같은 함정).
+  2026-09-04 에 `im.galla.app.gc.*` → **`im.galla.gc.*`** 로 바꿨다. 앞의 것은 그날 잃은
+  옛 iOS 번들을 가리켜서, 그대로 두면 "이 `.app` 은 뭐지?"를 영원히 겪는다.
+  상품 ID 는 번들 ID 와 일치할 필요가 **없다** — 임의 문자열이라 바꿔도 아무 영향이 없었다.
+  아직 어느 스토어에도 등록 전이고 `gc_products` 도 0행이라 지금이 바꿀 수 있는 유일한 시점이었다.
 - 가격은 전부 애플 한국 가격대(`app_settings.store_price_points`)에 있는 값이다.
 - 안드로이드도 같은 표를 쓴다(Play 는 첫 100만 달러까지 15%, 신청 불필요).
-  상품 ID 는 `im.galla.app.gc.c1` 동일하게 맞추면 관리가 쉽다.
+  상품 ID 는 `im.galla.gc.c1` 동일하게 맞추면 관리가 쉽다.
 
 ## 설계 근거 — 왜 '가격 인하'가 아니라 '보너스 GC'인가
 
@@ -57,12 +62,12 @@ App Store Connect 에 등록하고 **실제 가격이 확정되면** 아래를 �
 
 ```sql
 insert into gc_products (channel, product_id, pkg, store_krw, gc, active) values
-  ('ios','im.galla.app.gc.c1',   'c1',     1500,   1000, true),
-  ('ios','im.galla.app.gc.c5',   'c5',     6000,   4500, true),
-  ('ios','im.galla.app.gc.c10',  'c10',   12000,   9600, true),
-  ('ios','im.galla.app.gc.c30',  'c30',   38000,  31000, true),
-  ('ios','im.galla.app.gc.c50',  'c50',   60000,  49800, true),
-  ('ios','im.galla.app.gc.c100', 'c100', 120000, 100800, true)
+  ('ios','im.galla.gc.c1',   'c1',     1500,   1000, true),
+  ('ios','im.galla.gc.c5',   'c5',     6000,   4500, true),
+  ('ios','im.galla.gc.c10',  'c10',   12000,   9600, true),
+  ('ios','im.galla.gc.c30',  'c30',   38000,  31000, true),
+  ('ios','im.galla.gc.c50',  'c50',   60000,  49800, true),
+  ('ios','im.galla.gc.c100', 'c100', 120000, 100800, true)
 on conflict (channel, product_id) do update
   set pkg = excluded.pkg, store_krw = excluded.store_krw,
       gc = excluded.gc, active = excluded.active, updated_at = now();

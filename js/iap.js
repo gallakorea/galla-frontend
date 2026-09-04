@@ -17,9 +17,11 @@
 (function () {
   const PRODUCTS = {
     ios: {
-      companion_sometimes: "im.galla.app.sub.sometimes",
-      companion_daily: "im.galla.app.sub.daily",
-      companion_always: "im.galla.app.sub.always",
+      /* ⚠️ 상품 ID 는 만들면 삭제·재사용 불가. 2026-09-04 에 im.galla.app.* → im.galla.*
+         (옛 iOS 번들을 가리키던 이름을 정리). 아직 미등록이라 지금이 유일한 기회였다. */
+      companion_sometimes: "im.galla.sub.sometimes",
+      companion_daily: "im.galla.sub.daily",
+      companion_always: "im.galla.sub.always",
     },
     android: {
       companion_sometimes: "sub_sometimes",
