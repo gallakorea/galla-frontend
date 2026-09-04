@@ -257,7 +257,11 @@ Deno.serve(async (req) => {
      다 긁은 채널은 100개 중 17개뿐이었다.
      💰 playlistItems 는 50편당 1유닛이라 3,454편이 70유닛이다 — 하루 10,000 중 푼돈이다. */
   if (url.searchParams.get("deficit") === "1") {
-    const { data: rows } = await supa.rpc("travel_channel_deficit", { p_limit: 1 });
+    const { data: rows, error: dErr } = await supa.rpc("travel_channel_deficit", { p_limit: 1 });
+    /* 🔴 '오류'와 '없음'을 가른다. 뭉개면 DB 가 한 번 딸꾹한 것을 '다 끝났다'로 읽고
+       배수 루프가 그대로 멈춘다(실측 2026-09-04: 8,755편을 남겨두고 끝났다고 보고했다). */
+    if (dErr) return j({ ok: false, reason: "deficit_rpc_failed",
+                         detail: String(dErr.message || dErr).slice(0, 160) }, 500);
     const top = (rows || [])[0];
     if (!top) return j({ ok: true, note: "덜 긁힌 채널 없음" });
     /* 아래 본 흐름이 only/full/pages 를 그대로 쓰도록 값만 갈아끼운다 */
@@ -450,9 +454,19 @@ Deno.serve(async (req) => {
         }
       }
 
-      const { data: have } = await supa.from("travel_videos")
-        .select("video_id").eq("channel", c.slug).limit(2000);
-      const known = new Set((have || []).map((v: any) => v.video_id));
+      /* 🔴 .limit(2000) 은 거짓말이었다. PostgREST 는 서버 설정(기본 1,000)에서 잘라 준다.
+         그래서 1,000편 넘는 채널은 '이미 가진 것'을 1,000개만 알았고, 나머지가 매 회차
+         **신규로 잡혔다**. 실측 2026-09-04: jotube 1,140편 중 정확히 140편이 매번 new 로
+         찍혔고(1,140-1,000), 실제로는 하나도 안 늘었다. 부족분 선택기는 그 채널을
+         영원히 다시 골랐다. 페이지로 나눠 끝까지 받는다. */
+      const known = new Set<string>();
+      for (let off = 0; off < 20000; off += 1000) {
+        const { data: page } = await supa.from("travel_videos")
+          .select("video_id").eq("channel", c.slug).range(off, off + 999);
+        const rows = page || [];
+        for (const v of rows) known.add(v.video_id);
+        if (rows.length < 1000) break;
+      }
 
       const got = await fetchUploads(chId!, pages, known, full || url.searchParams.get("deep") === "1");
       units += got.units;
