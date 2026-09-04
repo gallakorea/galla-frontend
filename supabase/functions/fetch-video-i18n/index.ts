@@ -44,22 +44,55 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const channel = url.searchParams.get("channel") || null;
   const rounds = Math.min(Number(url.searchParams.get("rounds") || "20"), 60);
+  /* 태그 모드 — 같은 videos.list 로 snippet.tags 를 받는다(part 를 늘려도 1유닛).
+     태그는 주소가 아니라 지역·업종 힌트라('#부산 #성수동맛집') 제목 기반 수확에서 값이 난다. */
+  const mode = url.searchParams.get("mode") === "tags" ? "tags" : "i18n";
 
   const t0 = Date.now();
   let seen = 0, saved = 0, withAddr = 0, halted = "";
 
   for (let i = 0; i < rounds; i++) {
     if (Date.now() - t0 > 110_000) { halted = "시간 상자(110초) 도달"; break; }
-    const { data: vs } = await supa.rpc("food_videos_need_i18n", { p_channel: channel, p_limit: 50 });
+    const { data: vs } = await supa.rpc(
+      mode === "tags" ? "food_videos_need_tags" : "food_videos_need_i18n",
+      { p_channel: channel, p_limit: 50 });
     const ids = ((vs || []) as any[]).map((v) => v.video_id);
     if (!ids.length) break;
 
     let d: any;
-    try { d = await yt("videos", { part: "localizations", id: ids.join(",") }); }
+    try {
+      d = await yt("videos", {
+        part: mode === "tags" ? "snippet" : "localizations",
+        id: ids.join(","),
+      });
+    }
     catch (e) { halted = String(e).slice(0, 800); break; }
     seen += ids.length;
 
     const got = new Map<string, string>();
+    if (mode === "tags") {
+      for (const it of (d.items || [])) {
+        const tg: string[] = it.snippet?.tags || [];
+        /* 채널 상투어를 턴다. '한국음식·먹방·mukbang·맛집' 은 그 채널 모든 영상에 붙어서
+           지역·메뉴 힌트를 묻어버린다(실측: 태그 15개 중 10개가 상투어). 남는 건
+           '백령도'·'물회'·'홍게라면' 처럼 그 영상에만 있는 말이다. */
+        const keep = tg.filter((t) => {
+          const x = String(t || "").trim();
+          if (x.length < 2 || x.length > 30) return false;
+          if (/^#?(shorts?|fyp|viral|trending|foryou)$/i.test(x)) return false;
+          if (/^(korean|asian|street)?\s*(food|mukbang|eating|show|recipe|cooking|vlog)$/i.test(x)) return false;
+          if (/^(먹방|맛집|한식|한국음식|음식|요리|맛있는|리뷰|브이로그|예능|클립|구독|좋아요)$/.test(x)) return false;
+          return true;
+        });
+        got.set(it.id, keep.join(" · ").slice(0, 900));
+      }
+      /* ⚠️ 응답에 없는 id 도 반드시 도장을 찍는다 — 안 그러면 태그 없는 영상이 큐 앞에 영원히 남는다 */
+      const rows = ids.map((id) => ({ video_id: id, tags: got.get(id) || "" }));
+      const { data: r } = await supa.rpc("food_video_tags_set", { p_rows: rows });
+      saved += Number(r?.saved || 0);
+      withAddr += Number(r?.withTags || 0);
+      continue;
+    }
     for (const it of (d.items || [])) {
       const locs: any = it.localizations || {};
       /* 언어별 설명을 전부 이어붙인다 — 어느 언어에 주소가 있을지 모른다.
@@ -81,5 +114,5 @@ Deno.serve(async (req) => {
     withAddr += Number(r?.withAddr || 0);
   }
 
-  return j({ ok: true, channel, seen, saved, withAddr, halted: halted || undefined });
+  return j({ ok: true, mode, channel, seen, saved, withAddr, halted: halted || undefined });
 });
