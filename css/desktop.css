@@ -48,6 +48,24 @@
     border-right: 1px solid rgba(255, 255, 255, .06);
   }
 
+  /* ── 맛집 오버레이도 센터 칼럼 안에 ──
+     food.css 에는 미디어쿼리가 하나도 없다. 시트·지도·선택기가 전부 position:fixed + inset:0 이라
+     데스크톱에서 뷰포트를 통째로 먹는다(실측 2026-09-04: 상세가 브라우저 전폭). 본문은 520px 인데
+     시트만 전폭이면 같은 앱으로 안 보인다. 좌우를 센터 칼럼에 맞춘다.
+     ⚠️ inset:0 을 그대로 두고 left/right 만 잡는다 — top/bottom 을 건드리면 시트 올라오는
+        transform(translateY) 기준이 틀어진다. */
+  .fd-detail, .fd-map, .fd-cpick, .fd-rpick {
+    left: calc(50% - var(--pc-col) / 2);
+    right: calc(50% - var(--pc-col) / 2);
+    width: var(--pc-col);
+    margin: 0 auto;
+  }
+  /* 어두운 배경은 화면 전체를 덮어야 한다 — 칼럼 안에만 깔리면 바깥이 그대로 눌린다 */
+  .fd-detail-bg {
+    position: fixed;
+    left: 0; right: 0; top: 0; bottom: 0;
+  }
+
   /* ── 모바일 전용 요소는 데스크톱에서 끈다 ── */
   .nav { display: none !important; }            /* 하단 네비 → 좌측 레일이 대신한다 */
   .a2hs-bar, .a2hs-dim { display: none !important; }   /* 홈 화면 추가 유도(모바일 전용) */

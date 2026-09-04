@@ -97,6 +97,12 @@ const SYS = [
   "   · scale='spot'   : 구체적인 장소(식당·사찰·전망대·시장·호텔·마을 등). 있으면 이게 제일 중요하다.",
   "   · scale='city'/'region'/'country' : 구체 장소가 없더라도, 그 영상이 다녀온 도시·지역·나라는 남긴다.",
   "     (영상 한 편에 지역은 최대 2개까지. 나라만 알면 country 하나로 충분하다)",
+  /* 🏷 2026-09-04: 태그를 붙이기 시작했다. 크리에이터가 직접 단 것이라 지명은 믿을 만하지만
+     '세계여행'·'브이로그' 같은 잡태그가 절반이다. 그걸 장소로 넣으면 쓰레기가 들어온다. */
+  "1-2) **태그**에 지명이 있으면 그것도 근거로 쓴다(예: '부룬디'·'타지키스탄'·'루마니아').",
+  "     설명이 비어 있고 제목이 나라를 감추는 영상이 많다 — 그럴 때 태그가 유일한 단서다.",
+  "     단 '세계여행'·'브이로그'·'여행'·'shorts'·채널명처럼 **지명이 아닌 태그는 버린다.**",
+  "     태그만으로는 구체 장소(spot)를 만들지 않는다 — 나라·도시까지만 인정한다.",
   "2) name_local 또는 name_en 을 **반드시** 채운다(清水寺, Bánh Mì Phượng, Super Shinwari Restaurant).",
   "   확실하지 않으면 그 항목을 아예 빼라. 지어내지 않는다.",
   "3) name 은 **한국어 표기**로 쓴다. 영어 설명이면 한국에서 통용되는 표기로 옮긴다",
@@ -535,7 +541,14 @@ const DEADLINE = Date.now() + 110_000;
     await Promise.all(slice.map(async (v: any) => {
       try {
         const raw = await chatJson(
-          SYS, `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
+          SYS,
+          /* 🏷 태그를 같이 준다. 설명이 빈 영상이 있고(서재로36 은 159편 중 145편),
+             제목은 'OECD에서 가장 가난한 나라'처럼 일부러 나라를 감춘다 —
+             그런데 태그엔 '부룬디'가 그대로 있다. 태그가 유일한 단서인 영상이 9,659편이다. */
+          `제목: ${v.title}` +
+          ((Array.isArray(v.tags) && v.tags.length)
+            ? `\n\n태그: ${v.tags.filter(Boolean).slice(0, 20).join(", ")}` : "") +
+          `\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
         const parsed = raw ? JSON.parse(raw) : null;
         llm.set(v.video_id, {
           places: parsed?.places || [],

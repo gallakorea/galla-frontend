@@ -156,16 +156,24 @@ function durSec(iso: string) {
 /* 영상 길이 채우기 — 50개당 1유닛이라 사실상 공짜다.
    ⚠️ 쇼츠엔 장소가 없다. 곽튜브 최근 300편의 상당수가 쇼츠였고, 그 20편을 LLM 에 태워
       4건이 나왔다(실측). 길이를 먼저 보고 버리면 LLM 비용과 지오코딩 몫이 안 샌다. */
-async function hydrateDurations(ids: string[]) {
-  const out = new Map<string, number>();
+/* 💰 길이와 **태그를 한 번에** 받는다. videos.list 는 id 50개당 1유닛이고
+   part 를 더해도 유닛이 안 늘어난다 — 태그를 따로 받으러 가면 그게 낭비다.
+   왜 태그가 필요한가: 설명란이 빈 채널이 있다(서재로36 159편 중 145편이 빈칸).
+   제목은 'OECD에서 가장 가난한 나라'처럼 일부러 나라를 감추는데, 태그엔 '부룬디'가 있다. */
+async function hydrateVideos(ids: string[]) {
+  const dur = new Map<string, number>();
+  const tags = new Map<string, string[]>();
   for (let i = 0; i < ids.length; i += 50) {
-    const d: any = await ytGet("videos", { part: "contentDetails", id: ids.slice(i, i + 50).join(",") });
+    const d: any = await ytGet("videos", {
+      part: "contentDetails,snippet", id: ids.slice(i, i + 50).join(","),
+    });
     for (const it of (d?.items || [])) {
       const s = durSec(it?.contentDetails?.duration);
-      if (s != null) out.set(it.id, s);
+      if (s != null) dur.set(it.id, s);
+      tags.set(it.id, (it?.snippet?.tags || []).slice(0, 30).map((t: any) => String(t).slice(0, 60)));
     }
   }
-  return out;
+  return { dur, tags };
 }
 
 /* 업로드 플레이리스트를 훑는다. UC… → UU… 는 유튜브가 보장하는 규칙이다.
@@ -224,6 +232,47 @@ Deno.serve(async (req) => {
   let only = url.searchParams.get("channel") || "";
   /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(100유닛). 0 이면 아예 안 한다. */
   let searchBudget = Math.min(Number(url.searchParams.get("resolve") || "1"), 3);
+
+  /* tags=1: 이미 가진 영상의 태그를 채운다(백필).
+     💰 videos.list 는 id 50개당 1유닛 — 40,000편이면 800유닛이다.
+     ⚠️ 태그가 없는 영상도 **빈 배열로 도장**을 남긴다. 안 남기면 큐(tags is null)가
+        같은 영상을 영원히 다시 물어본다(오늘 같은 함정을 다섯 번 잡았다). */
+  if (url.searchParams.get("tags") === "1") {
+    const want = Math.min(Number(url.searchParams.get("n") || "500"), 1000);
+    const { data: ids } = await supa.rpc("travel_videos_need_tags", { p_limit: want });
+    const list = (ids || []) as string[];
+    if (!list.length) return j({ ok: true, picked: 0, note: "태그 채울 영상 없음" });
+    const t0 = Date.now();
+    const rows: any[] = [];
+    let u = 0, halted = "";
+    for (let i = 0; i < list.length; i += 50) {
+      if (Date.now() - t0 > 100_000) { halted = "시간 상자(100초) 도달"; break; }
+      try {
+        const d: any = await ytGet("videos", {
+          part: "snippet", id: list.slice(i, i + 50).join(","),
+        });
+        u++;
+        const seen = new Set<string>();
+        for (const it of (d?.items || [])) {
+          seen.add(it.id);
+          rows.push({ video_id: it.id,
+                      tags: (it?.snippet?.tags || []).slice(0, 30).map((t: any) => String(t).slice(0, 60)) });
+        }
+        /* 응답에 안 온 id(삭제·비공개)도 도장을 찍는다 — 안 그러면 영원히 큐에 남는다 */
+        for (const id of list.slice(i, i + 50)) if (!seen.has(id)) rows.push({ video_id: id, tags: [] });
+      } catch (e) { halted = String(e).slice(0, 90); break; }
+    }
+    let set = 0;
+    for (let i = 0; i < rows.length; i += 300) {
+      const { data, error } = await supa.rpc("travel_video_tags_set", { p_items: rows.slice(i, i + 300) });
+      if (error) return j({ ok: false, reason: "tags_save_failed",
+                            detail: String(error.message).slice(0, 160) }, 500);
+      set += Number(data?.set || 0);
+    }
+    const withTags = rows.filter((r) => r.tags.length).length;
+    return j({ ok: true, picked: list.length, set, withTags, units: u,
+               halted: halted || undefined, took: Math.round((Date.now() - t0) / 1000) });
+  }
 
   /* tagprobe: 영상의 유튜브 **태그**에 지명이 들어 있는지 본다(진단용).
      왜: 설명란이 빈 채널이 있다(서재로36 은 159편 중 145편이 빈칸이고, 제목은
@@ -540,8 +589,12 @@ Deno.serve(async (req) => {
 
       /* 길이를 받아 쇼츠(90초 미만)를 버린다. 유닛은 50편당 1이라 부담이 없다. */
       let durs = new Map<string, number>();
-      try { durs = await hydrateDurations(got.rows.map((r: any) => r.video_id)); units += Math.ceil(got.rows.length / 50); }
-      catch (_) { /* 길이를 못 받으면 그냥 다 넣는다 — 수집이 멈추는 것보단 낫다 */ }
+      let vtags = new Map<string, string[]>();
+      try {
+        const h = await hydrateVideos(got.rows.map((r: any) => r.video_id));
+        durs = h.dur; vtags = h.tags;
+        units += Math.ceil(got.rows.length / 50);
+      } catch (_) { /* 길이를 못 받으면 그냥 다 넣는다 — 수집이 멈추는 것보단 낫다 */ }
       const kept = got.rows.filter((r: any) => {
         const d = durs.get(r.video_id);
         return d == null || d >= 90;
@@ -550,7 +603,11 @@ Deno.serve(async (req) => {
 
       let inserted = 0;
       if (kept.length) {
-        const payload = kept.map((r: any) => ({ ...r, channel: c.slug, duration_s: durs.get(r.video_id) ?? null }));
+        const payload = kept.map((r: any) => ({
+          ...r, channel: c.slug,
+          duration_s: durs.get(r.video_id) ?? null,
+          tags: vtags.get(r.video_id) ?? null,
+        }));
         for (let i = 0; i < payload.length; i += 100) {
           const chunk = payload.slice(i, i + 100);
           const { error } = await supa.from("travel_videos")
