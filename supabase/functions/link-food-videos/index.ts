@@ -96,6 +96,15 @@ Deno.serve(async (req) => {
     } catch (e) { r.addr_err = String(e).slice(0, 120); }
   }
 
+  /* 🔴 이름 기반 매칭은 DB 안으로 옮겼다(food_link_videos_by_name).
+     여기 자바스크립트 판은 영상 1.4만 편 + 대상 3만 건을 메모리로 다 올린 뒤
+     링크마다 UPDATE 를 따로 날려 **엣지 150초를 늘 넘겼다** — 한 번도 끝까지 간 적이 없다.
+     그런데 pg_cron 이력엔 성공으로 남아 아무도 몰랐다(실측 2026-09-04: 3회 호출 전부 timeout).
+     카탈로그를 깊이 받을 때는 이 구간을 건너뛴다. 안 그러면 동기화까지 같이 죽는다. */
+  if (url.searchParams.get("nolink") === "1") {
+    return j({ ok: true, report, skipped: "name_match" });
+  }
+
   /* ── 매칭 ② 이름 기반 ── 채널이 같은 영상 안에서만 상호를 찾는다 */
   /* ⚠️ 여기서도 PostgREST 1,000행 상한에 걸린다 — .limit(50000) 을 줘도 1,000편만 온다.
      카탈로그를 다 못 보면 매칭이 통째로 헛돈다(실측: linked 1~2건). range 로 끝까지 읽는다. */
