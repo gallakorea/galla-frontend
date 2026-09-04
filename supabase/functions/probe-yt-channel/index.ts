@@ -34,6 +34,76 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
 
+  /* 🔎 고정 댓글 진단 — 설명에 주소를 안 쓰는 채널(또간집·쯔양·홍유)이 있다.
+     한국 먹방은 가게 목록을 **고정 댓글**에 다는 일이 흔하다. 사실이면 수확 물량이
+     크게 는다. commentThreads.list 는 1유닛이라 확인 비용이 사실상 0이다. */
+  /* 🔎 번역 대량 진단 — 영상 50편씩 묶어 본다(videos.list 는 id 50개까지 1유닛).
+     ⚠️ 앞선 진단이 부실했다: **한국어 주소 정규식으로만** 봤다. 영어 번역은
+        "123 Jong-ro, Jongno-gu, Seoul" 처럼 로마자로 나오는데 그 패턴을 못 잡는다.
+        표본도 3편뿐이었다. 여러 언어·여러 패턴으로 다시 센다. */
+  const bulk = url.searchParams.get("locbulk");
+  if (bulk) {
+    const { data: vs } = await supa.rpc("food_videos_no_addr", { p_channel: bulk, p_limit: 50 });
+    const ids = ((vs || []) as any[]).map((v) => v.video_id);
+    if (!ids.length) return j({ ok: true, channel: bulk, note: "대상 없음" });
+    const d: any = await yt("videos", { part: "snippet,localizations", id: ids.join(",") });
+    const KO = /[가-힣]+(시|군|구)\s*[가-힣0-9]+(로|길)\s*[0-9]/;
+    /* 로마자 주소: 'Jong-ro', 'Gangnam-gu', 'Seoul' 같은 조각 */
+    const EN = /\b[A-Z][a-z]+(-(ro|gil|dong|gu|si|gun|eup|myeon))\b|\b(Seoul|Busan|Daegu|Incheon|Gwangju|Daejeon|Ulsan|Jeju)\b/;
+    let withLoc = 0, koHit = 0, enHit = 0, anyLonger = 0;
+    const samples: any[] = [];
+    for (const it of (d.items || [])) {
+      const base = String(it.snippet?.description || "");
+      const locs: any = it.localizations || {};
+      const keys = Object.keys(locs).filter((k) => String(locs[k]?.description || "").trim().length > 0);
+      if (!keys.length) continue;
+      withLoc++;
+      for (const k of keys) {
+        const t = String(locs[k].description || "");
+        const ko = KO.test(t), en = EN.test(t);
+        if (t.length > base.length) anyLonger++;
+        if (ko) koHit++;
+        if (en) enHit++;
+        if ((ko || en) && samples.length < 4) samples.push({ id: it.id, lang: k, ko, en, head: t.slice(0, 160) });
+      }
+    }
+    return j({ ok: true, channel: bulk, 영상수: ids.length, 번역있는영상: withLoc,
+               한국어주소_적중: koHit, 로마자주소_적중: enHit, 원문보다긴번역: anyLonger, samples });
+  }
+
+  /* 🔎 번역(localizations) 진단 — 제작자가 단 번역 제목·설명이다.
+     공식 API 로 받을 수 있는 유일한 '번역'이다(자막 다운로드는 채널 소유자 인증이 필요하고,
+     비공식 경로는 안 쓴다). 기본 설명에 없는 주소가 번역본에 있는지 본다. */
+  const lv = url.searchParams.get("loc");
+  if (lv) {
+    const d: any = await yt("videos", { part: "snippet,localizations", id: lv });
+    const it = (d.items || [])[0] || {};
+    const RE = /[가-힣]+(시|군|구)\s*[가-힣0-9]+(로|길)\s*[0-9]/;
+    const base = String(it.snippet?.description || "");
+    const locs = it.localizations || {};
+    return j({ ok: true, video: lv,
+      기본설명_주소: RE.test(base), 기본설명_길이: base.length,
+      번역언어: Object.keys(locs),
+      번역별: Object.entries(locs).map(([k, v]: any) => ({
+        lang: k, len: String(v?.description || "").length,
+        주소: RE.test(String(v?.description || "")),
+        head: String(v?.description || "").slice(0, 120) })) });
+  }
+
+  const cv = url.searchParams.get("comments");
+  if (cv) {
+    const d: any = await yt("commentThreads", {
+      part: "snippet", videoId: cv, order: "relevance", maxResults: "5", textFormat: "plainText",
+    });
+    return j({ ok: true, video: cv, comments: (d.items || []).map((i: any) => {
+      const c = i.snippet?.topLevelComment?.snippet || {};
+      const t = String(c.textDisplay || "");
+      return { author: c.authorDisplayName, likes: c.likeCount,
+               addr: /[가-힣]+(시|군|구)\s*[가-힣0-9]+(로|길)\s*[0-9]/.test(t),
+               head: t.slice(0, 220) };
+    }) });
+  }
+
   /* 검색 모드 — 프로그램 이름으로 후보 채널을 찾는다.
      ⚠️ search.list 는 100유닛이라(playlistItems 의 100배) 남발하면 안 된다. 프로그램당 1회.
         그리고 결과의 videoCount 는 search 가 안 주므로 channels.list 로 한 번 더 받는다(1유닛). */

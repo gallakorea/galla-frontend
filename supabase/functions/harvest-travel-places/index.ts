@@ -446,7 +446,18 @@ const DEADLINE = Date.now() + 110_000;
       const city = String(p?.city || "").trim();
       const cc = String(p?.country_code || "").trim().toUpperCase();
       const scale = ["country", "region", "city", "spot"].includes(p?.scale) ? p.scale : "spot";
-      const query = en || local;
+      /* 🔤 현지 문자 이름이 있으면 **그걸 먼저** 묻는다.
+         왜: 영어 이름은 대개 로마자 표기다. 실측(2026-09-04) 일본 미해결 518곳의 표본이
+         'Konyoku Rotenburo'·'Kotosankoku'·'Konpira Udon' 이었다 — OSM 에는 이런 표기가
+         없으므로 몇 번을 물어도 안 걸린다. 混浴露天風呂·琴参閣·こんぴらうどん 은 걸린다.
+         국내도 같다: 로마자로 물으면 안 나오고 한글로 물으면 나온다(미해결 2,976곳).
+         ⚠️ 라틴 문자권에서 한국어 이름('에펠탑')으로 묻는 건 오히려 나쁘다 —
+            native 는 **현지어가 비라틴일 때**와 **국내**로만 한정한다. */
+      const NONLATIN = /[^\u0000-\u02AF]/;
+      const native = (local && NONLATIN.test(local)) ? local
+                   : (cc === "KR" && NONLATIN.test(ko) ? ko : "");
+      const query = native || en || local;
+      const alt = native ? (en || "") : "";      // 현지어로 못 찾으면 영어로 한 번 더
       if (ko.length < 2 || !query) { dropped++; continue; }
       if (MACRO.test(ko.trim()) || MACRO.test(query.trim())) {
         dropped++;
@@ -503,7 +514,24 @@ const DEADLINE = Date.now() + 110_000;
             }
           }
         }
-        /* 2차 실패 — 위키데이터 검색(OSM 과 구멍이 다르다: OSM 은 가게에, 위키데이터는
+        /* 3차 — 현지어로 못 찾았으면 영어 이름으로 한 번 더 본다.
+           반대 구멍이 있다: 관광지는 OSM 에 영어 이름만 들어간 경우가 있다. */
+        if (!hit && alt && alt !== query && scale === "spot") {
+          const c3 = await geocodeCached(alt, cc || null, ko, scale);
+          if (c3.cached) {
+            cacheHits++;
+            if (c3.hit && c3.value) hit = { ...c3.value, name_ko: c3.value.name_ko || ko };
+          } else if (geoCalls < budget) {
+            geoCalls++;
+            const o3 = await nominatim(alt, cc || null);
+            await sleep(1100);
+            const v3 = (o3 && nameLooksSame(o3, alt)) ? fromOsm(o3, ko, scale) : null;
+            await geocacheSave(cc || null, alt, v3);
+            if (v3) hit = v3;
+          }
+        }
+
+        /* 4차 실패 — 위키데이터 검색(OSM 과 구멍이 다르다: OSM 은 가게에, 위키데이터는
            알려진 곳에 강하다). 무료 API 라 지오코딩 장부는 쓰지 않는다. */
         if (!hit) {
           const w = await wikidataSearch(query, cc || null, scale);
