@@ -29,7 +29,7 @@ async function yt(path: string, params: Record<string, string>) {
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
   u.searchParams.set("key", YT);
   const r = await fetch(u);
-  if (!r.ok) throw new Error(`${path} ${r.status} ${(await r.text()).slice(0, 140)}`);
+  if (!r.ok) throw new Error(`${path} ${r.status} ${(await r.text()).slice(0, 700)}`);
   return await r.json();
 }
 
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     let d: any;
     try { d = await yt("videos", { part: "localizations", id: ids.join(",") }); }
-    catch (e) { halted = String(e).slice(0, 120); break; }
+    catch (e) { halted = String(e).slice(0, 800); break; }
     seen += ids.length;
 
     const got = new Map<string, string>();
