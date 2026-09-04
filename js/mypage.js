@@ -1498,11 +1498,13 @@ async function GALLA_mypageInit(root, spaParams) {
         if (!ctabs.length) return;
         let on = false;
         try {
-            const [{ data: fl }, { data: prof }] = await Promise.all([
-                supabase.from("app_settings").select("v").eq("k", "gallari_enabled").maybeSingle(),
+            /* 🚦 통합 플래그(features.gallari)로 옮겼다 — 낱개 키 gallari_enabled 를 직접 읽던 코드다.
+               app_settings 는 {authenticated} 전용이라 여기선 동작했지만, 스위치가 흩어져 있으면
+               "무엇이 열려 있나"를 한눈에 못 본다. app_features() RPC 는 anon 도 읽는다. */
+            const [{ data: prof }] = await Promise.all([
                 supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle(),
             ]);
-            on = (fl && (fl.v === true || fl.v === "true")) || !!(prof && prof.admin_flag);
+            on = !!(window.GALLA_feature && window.GALLA_feature("gallari")) || !!(prof && prof.admin_flag);
         } catch (_) {}
         if (on) ctabs.forEach(t => t.hidden = false);
     })();

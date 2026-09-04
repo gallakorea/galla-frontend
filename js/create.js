@@ -67,14 +67,9 @@
     // 숏판·롱판(콘텐츠)은 아직 비공개 — 플래그(gallari_enabled) 켜졌거나 운영진일 때만 노출
     const glrCards = scope.querySelectorAll('.cr-card[data-type="short"], .cr-card[data-type="long"]');
     if (glrCards.length) {
-      let gallariOn = false;
-      try {
-        const sb = window.supabaseClient;
-        if (sb) {
-          const { data } = await sb.from("app_settings").select("v").eq("k", "gallari_enabled").maybeSingle();
-          gallariOn = !!data && (data.v === true || data.v === "true");
-        }
-      } catch (_) {}
+      /* 🚦 통합 플래그(features.gallari). 낱개 키 gallari_enabled 직접 읽기에서 옮겼다 —
+         스위치가 흩어져 있으면 "지금 뭐가 열려 있나"를 한 곳에서 못 본다. */
+      const gallariOn = !!(window.GALLA_feature && window.GALLA_feature("gallari"));
       if (admin || gallariOn) glrCards.forEach(c => { c.hidden = false; });
     }
 

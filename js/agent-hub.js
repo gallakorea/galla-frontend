@@ -16,9 +16,30 @@
   /* 🔒 창작 에이전트 — 앱 런칭 뒤 제1 개발 과제(사장님 결정 2026-08-27).
      그때까지 진입을 막는다. **코드는 지우지 않는다** — 지우면 다시 지어야 하고,
      반쯤 된 걸 열어두면 "되다 마는 기능"으로 기억된다. 스위치 하나만 내린다.
-     열 때: 아래 ENABLED 를 true 로. 그 한 줄이면 문·작업대·기획이 전부 살아난다. */
+
+     🚦 2026-09-04: 상수 → **서버 플래그**(app_settings.features.agent)로 옮겼다.
+        상수는 켜려면 배포가 필요하고, 배포는 PWA 캐시 전파까지 걸린다.
+        이제 관제센터에서 값만 바꾸면 배포 없이 열린다.
+        ⚠️ 플래그가 늦게 도착하면 그동안은 닫힌 상태다(fail-closed). 값이 오면
+           GALLA_onFeatures 가 문을 다시 그린다 — 잠긴 문이 열린 문으로 바뀐다. */
   var ENABLED = false;
   window.GALLA_AGENT_READY = ENABLED;
+
+  function applyFlag(on) {
+    ENABLED = !!on;
+    window.GALLA_AGENT_READY = ENABLED;
+    /* 이미 그려둔 '잠긴 문'을 갱신한다.
+       portal() 은 .ag-portal 이 있으면 조기 반환하므로, 지우고 다시 부르면 새 상태로 그려진다.
+       문이 아직 없으면(='새로 만들기'가 안 열린 페이지) 아무 일도 안 한다. */
+    try {
+      var b = document.querySelector(".ag-portal");
+      if (b) { b.remove(); portal(); }
+    } catch (_) {}
+  }
+  try {
+    if (window.GALLA_feature) applyFlag(window.GALLA_feature("agent"));
+    window.GALLA_onFeatures && window.GALLA_onFeatures(function (f) { applyFlag(f && f.agent); });
+  } catch (_) {}
 
   var FN = "/functions/v1/reel-agent";
 

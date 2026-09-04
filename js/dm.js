@@ -13,6 +13,14 @@
    2차(별도): E2E 비밀대화(WebCrypto ECDH), 차단/신고, 푸시
    ========================================================= */
 (function () {
+  /* 📞 통화(육성톡·면상톡) 게이트 — 1차 출시에선 닫는다.
+     콜드스타트 한방향 소리·링백이 아직 안 잡혔는데, 반쯤 되는 통화는
+     "이 앱 전화 안 됨"으로 기억된다. 서버 플래그(app_settings.features.calls)
+     하나로 배포 없이 연다. features.js 가 아직 안 실렸으면 false = 닫힘(fail-closed).
+     ⚠️ 버튼만 숨기면 안 된다 — 프로필·친구 메뉴·?dm= 딥링크가 별도 경로로 들어온다.
+        그래서 렌더·클릭핸들러·callFrom 세 곳을 모두 막는다. */
+  const CALLS_ON = () => !!(window.GALLA_feature && window.GALLA_feature('calls'));
+
   /* 라인 SVG 아이콘 — 옵시디언 콰이엇 (claude.ai/design apply/dm-js-patch.md) */
   const I = (w, inner) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
   const ICONS = {
@@ -807,8 +815,9 @@
               </span>
             </span>
             <span class="dm-head-btns">
+              ${CALLS_ON() ? `
               <button class="dm-gear" data-act="voicecall" aria-label="육성톡">${ICONS.phone}</button>
-              <button class="dm-gear" data-act="videocall" aria-label="면상톡">${ICONS.cam}</button>
+              <button class="dm-gear" data-act="videocall" aria-label="면상톡">${ICONS.cam}</button>` : ``}
               <button class="dm-gear" data-act="chatset" aria-label="대화 설정">${ICONS.menu}</button>
             </span>
           </div>
@@ -1037,7 +1046,8 @@
         window.GALLA_openBugReport?.(location.href);
       }
       else if (act === 'voicecall' || act === 'videocall') {
-        if (!window.GALLA_call?.supported()) toastMini('이 브라우저에선 통화를 지원하지 않아요');
+        if (!CALLS_ON()) toastMini('육성톡·면상톡은 준비 중이에요 — 곧 열어요 🙂');
+        else if (!window.GALLA_call?.supported()) toastMini('이 브라우저에선 통화를 지원하지 않아요');
         else { try { window.__callTrig = 'callbtn|trust=' + (e.isTrusted ? 1 : 0); } catch (_) {} window.GALLA_call.start(curPeer, nickCache[curPeer] || PROFILES[curPeer]?.nickname, act === 'videocall'); }
       }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
@@ -2155,6 +2165,7 @@
 
   /* 통화 진입 공용 — 지원 확인 + 이름 보정. 프로필·친구 메뉴·서랍이 모두 이리로 */
   function callFrom(peer, name, video) {
+    if (!CALLS_ON()) return toastMini('육성톡·면상톡은 준비 중이에요 — 곧 열어요 🙂');
     if (!window.GALLA_call?.supported()) return toastMini('이 브라우저에선 통화를 지원하지 않아요');
     try { window.__callTrig = 'callFrom'; } catch (_) {}
     window.GALLA_call.start(peer, name || nickCache[peer] || PROFILES[peer]?.nickname, !!video);

@@ -46,6 +46,7 @@
       if (css) { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = src + q; document.head.appendChild(l); }
       else { var s = document.createElement("script"); s.src = src + q; s.async = false; document.body.appendChild(s); }
     }
+    load("/js/features.js");                        // 🚦 피처 플래그 — 순차 오픈 스위치. 소비자(agent-hub 등)보다 먼저여야 한다
     load("/js/i18n.js");                            // 🌍 국제화 기반 — GALLA_t / GALLA_money / GALLA_when
     load("/js/android-back.js");                    // 🔙 안드로이드 하드웨어 뒤로가기(없으면 한 번에 앱 종료)
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
