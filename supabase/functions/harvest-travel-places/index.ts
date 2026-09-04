@@ -359,6 +359,69 @@ Deno.serve(async (req) => {
      이제는 **시계가 안전장치**라 편수를 크게 잡아도 위험하지 않다 — 못 끝내면 다음 회차가 잇는다. */
   const n = Math.min(Number(url.searchParams.get("n") || "8"), 120);
 
+  /* ── pending=1: 좌표를 못 찾아 지도에 못 올린 장소를 **다시 물어본다** ───────────────
+     왜 지금 다시 물어볼 가치가 있나: 1차 시도는 영어 이름으로만 물었는데 그 영어가
+     대개 로마자 표기라(‘Konyoku Rotenburo’) OSM 에 없다. 현지 표기(混浴露天風呂)로
+     물으면 걸린다. 그 고침이 들어간 지금, 이미 실패한 것들은 **다시 물어야** 이득이 생긴다.
+     ⚠️ 무한 재시도는 안 된다 — travel_pending_resolve 가 geo_tries 를 올리고
+        큐가 3회에서 끊는다. 실패도 도장이다. */
+  if (url.searchParams.get("pending") === "1") {
+    const { data: rows } = await supa.rpc("travel_pending_to_retry", { p_limit: Math.min(n, 40) });
+    const plist = (rows || []) as any[];
+    if (!plist.length) return j({ ok: true, picked: 0, note: "다시 물어볼 장소 없음" });
+
+    const { data: pAllow } = await supa.rpc("travel_geo_take", { p_want: plist.length * 2 });
+    const pBudget = Number(pAllow || 0);
+    if (pBudget <= 0) return j({ ok: true, picked: 0, note: "지오코딩 하루 몫 소진" });
+
+    const t0 = Date.now();
+    const out: any[] = [];
+    let calls = 0, hits = 0, stop = "";
+    const NL = /[^\u0000-\u02AF]/;
+    for (const r0 of plist) {
+      if (Date.now() - t0 > 105_000) { stop = "시간 상자(105초) 도달"; break; }
+      if (calls >= pBudget) { stop = "budget"; break; }
+      const ko = String(r0.name || "").trim();
+      const local = String(r0.name_local || "").trim();
+      const en = String(r0.name_en || "").trim();
+      const cc = String(r0.country_code || "").trim().toUpperCase();
+      const city = String(r0.city || "").trim();
+      const scale = ["country", "region", "city", "spot"].includes(r0.scale) ? r0.scale : "spot";
+      const native = (local && NL.test(local)) ? local : (cc === "KR" && NL.test(ko) ? ko : "");
+      /* 1차와 **다른 이름**으로 묻는 게 요점이다. 같은 걸 또 물으면 같은 답이 온다. */
+      const tries = [native, en, local].filter((x, i, a) => x && a.indexOf(x) === i);
+      let hit: any = null;
+      for (const t of tries) {
+        if (hit || calls >= pBudget) break;
+        const q1 = scale === "spot" && city ? [t, city].filter(Boolean).join(", ") : t;
+        try {
+          const c = await geocodeCached(q1, cc || null, ko, scale);
+          if (c.cached) { if (c.hit && c.value) hit = c.value; continue; }
+          calls++;
+          const o = await nominatim(q1, cc || null);
+          await sleep(1100);
+          const v = (o && nameLooksSame(o, t)) ? fromOsm(o, ko, scale) : null;
+          await geocacheSave(cc || null, q1, v);
+          if (v) hit = v;
+        } catch (e) { stop = String(e).slice(0, 60); break; }
+      }
+      if (!hit) {
+        const w = await wikidataSearch(native || en || ko, cc || null, scale);
+        if (w) hit = { lat: w.lat, lon: w.lon, geo_source: "wikidata", wikidata_qid: w.qid };
+      }
+      if (hit) hits++;
+      out.push({ id: r0.id, lat: hit?.lat ?? null, lon: hit?.lon ?? null,
+                 geo_source: hit?.geo_source || null, wikidata_qid: hit?.qid || hit?.wikidata_qid || null,
+                 admin1: hit?.admin1 || null, city: hit?.city || null });
+      if (stop) break;
+    }
+    if (pBudget > calls) await supa.rpc("travel_geo_refund", { p_n: pBudget - calls });
+    const { data: res } = await supa.rpc("travel_pending_resolve", { p_items: out });
+    return j({ ok: true, mode: "pending", picked: plist.length, tried: out.length,
+               found: hits, geoCalls: calls, ...(res || {}), halted: stop || undefined,
+               took: Math.round((Date.now() - t0) / 1000) });
+  }
+
   if (!channel) {
     const { data } = await supa.rpc("travel_channel_to_harvest");
     channel = (data || [])[0]?.slug || "";
