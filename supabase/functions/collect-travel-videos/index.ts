@@ -219,9 +219,9 @@ Deno.serve(async (req) => {
         1,000편짜리 채널이 20유닛이고, 86채널 전부여도 500유닛 남짓이다.
      ⚠️ 다만 엣지 유휴 150초가 진짜 상한이다. 한 회차에 한 채널씩 끝까지 훑는 게 안전하다
         (full=1 은 채널을 하나만 지정해서 쓴다). */
-  const full = url.searchParams.get("full") === "1";
-  const pages = Math.min(Number(url.searchParams.get("pages") || (full ? "40" : "2")), full ? 60 : 6);
-  const only = url.searchParams.get("channel") || "";
+  let full = url.searchParams.get("full") === "1";
+  let pages = Math.min(Number(url.searchParams.get("pages") || (full ? "40" : "2")), full ? 90 : 6);
+  let only = url.searchParams.get("channel") || "";
   /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(100유닛). 0 이면 아예 안 한다. */
   let searchBudget = Math.min(Number(url.searchParams.get("resolve") || "1"), 3);
 
@@ -244,6 +244,45 @@ Deno.serve(async (req) => {
         const n = Number(st.subscriberCount);
         if (!isFinite(n) || n <= 0) continue;
         await supa.from("travel_channels").update({ subs: n }).eq("yt_channel_id", it.id);
+        filled++;
+      }
+    }
+    return j({ ok: true, filled, units });
+  }
+
+  /* deficit=1: **가장 덜 긁힌 채널 하나를** 골라 끝까지 훑는다.
+     왜: 기존 크론은 채널을 순서대로 6개씩 돌며 앞 50편만 봤다(pages=1). 그러면
+     이미 다 가진 채널을 계속 다시 물어보고, 3,454편짜리 마카다TV 는 영영 안 찬다.
+     실측(2026-09-04): 유튜브 공개 49,453편 중 우리가 가진 건 38,516편(77.9%),
+     다 긁은 채널은 100개 중 17개뿐이었다.
+     💰 playlistItems 는 50편당 1유닛이라 3,454편이 70유닛이다 — 하루 10,000 중 푼돈이다. */
+  if (url.searchParams.get("deficit") === "1") {
+    const { data: rows } = await supa.rpc("travel_channel_deficit", { p_limit: 1 });
+    const top = (rows || [])[0];
+    if (!top) return j({ ok: true, note: "덜 긁힌 채널 없음" });
+    /* 아래 본 흐름이 only/full/pages 를 그대로 쓰도록 값만 갈아끼운다 */
+    only = top.slug; full = true; pages = 90;
+  }
+
+  /* 채널별 '유튜브가 말하는 영상 수'를 적어 둔다 — 우리가 다 긁었는지 대조하는 자다.
+     💰 channels.list?part=statistics 는 50개 id 당 1유닛이라 100채널이 2유닛이다.
+     ⚠️ videoCount 는 공개 업로드 수다. 비공개·삭제·멤버십 전용은 안 세므로
+        우리 숫자가 이걸 조금 넘길 수도 있다 — 부족분만 의미가 있다. */
+  if (url.searchParams.get("count") === "1") {
+    const { data: rows } = await supa.from("travel_channels")
+      .select("yt_channel_id").not("yt_channel_id", "is", null).limit(300);
+    const ids = (rows || []).map((r: any) => r.yt_channel_id);
+    if (!ids.length) return j({ ok: true, filled: 0 });
+    let filled = 0, units = 0;
+    for (let i = 0; i < ids.length; i += 50) {
+      const d: any = await ytGet("channels", { part: "statistics", id: ids.slice(i, i + 50).join(",") });
+      units++;
+      for (const it of (d?.items || [])) {
+        const n = Number(it?.statistics?.videoCount);
+        if (!isFinite(n)) continue;
+        await supa.from("travel_channels")
+          .update({ yt_video_count: n, yt_count_at: new Date().toISOString() })
+          .eq("yt_channel_id", it.id);
         filled++;
       }
     }
@@ -457,6 +496,13 @@ Deno.serve(async (req) => {
       }).eq("slug", c.slug);
 
       row.seen = got.rows.length; row.new = inserted;
+      /* 끝까지 훑었는데 새 게 하나도 없으면 도장을 찍는다 — 부족분 선택기가 일주일 쉰다.
+         ⚠️ 이게 없으면 유튜브 카운트(쇼츠·멤버십 포함)와 우리 수의 차이 때문에
+         '영원히 부족한' 채널을 계속 다시 훑는다(실측: 23회 갇혀 460유닛 낭비). */
+      if (full && inserted === 0) {
+        await supa.rpc("travel_channel_full_scanned", { p_slug: c.slug });
+        row.fullScanned = true;
+      }
       out.push(row);
     } catch (e) {
       row.err = String(e).slice(0, 160);

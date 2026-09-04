@@ -397,20 +397,46 @@ const DEADLINE = Date.now() + 110_000;
   const gists: any[] = [];            // 영상 한 줄 요약 — 같은 AI 호출에서 덤으로 받는다(추가 비용 0)
   let halted = "";
 
+  /* ── LLM 을 미리 겹쳐 돌린다 ─────────────────────────────────────────────
+     왜: 한 편을 처리하는 데 LLM 3초 + 지오코딩(Nominatim 정책 초당 1회) 이 붙는데,
+     둘을 줄세우면 110초 상자 안에 스무 편 남짓이다(실측: n=100 을 주고 상자에서 잘렸다).
+     LLM 은 우리 쪽 대기시간일 뿐이라 겹쳐도 되는 자원이고, 지오코딩만 줄세우면 된다.
+     그래서 다음 덩어리의 LLM 을 **지금 덩어리를 지오코딩하는 동안** 미리 던져 둔다.
+     ⚠️ 동시성을 더 올리면 딥시크 429 를 부른다 — 4 가 실측 상한이다(맛집 요약과 같은 값). */
+  const PRE = 4;
+  const llm = new Map<string, { places: any[]; gist: string }>();
+  let preIdx = 0;
+  const fetchChunk = async () => {
+    const slice = list.slice(preIdx, preIdx + PRE);
+    preIdx += slice.length;
+    await Promise.all(slice.map(async (v: any) => {
+      try {
+        const raw = await chatJson(
+          SYS, `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
+        const parsed = raw ? JSON.parse(raw) : null;
+        llm.set(v.video_id, {
+          places: parsed?.places || [],
+          gist: String(parsed?.gist || "").trim(),
+        });
+      } catch (_) { llm.set(v.video_id, { places: [], gist: "" }); }
+    }));
+  };
+  let inflight: Promise<void> | null = fetchChunk();
+
   for (const v of list) {
     if (halted) break;
     if (Date.now() > DEADLINE) { halted = "시간 상자(110초) 도달"; break; }
+    if (!llm.has(v.video_id)) {
+      if (inflight) { await inflight; inflight = null; }
+      /* 다음 덩어리는 기다리지 않고 던져만 둔다 — 이번 덩어리를 지오코딩하는 사이에 익는다 */
+      if (preIdx < list.length && Date.now() < DEADLINE) inflight = fetchChunk();
+      if (!llm.has(v.video_id)) { llm.set(v.video_id, { places: [], gist: "" }); }
+    }
     done.push(v.video_id);                        // 결과와 무관하게 '물어봤다'를 남긴다
-    let places: any[] = [];
-    try {
-      const raw = await chatJson(
-        SYS, `제목: ${v.title}\n\n설명:\n${String(v.description || "").slice(0, 2500)}`);
-      const parsed = raw ? JSON.parse(raw) : null;
-      places = parsed?.places || [];
-      /* 장소가 0개여도 요약은 남긴다 — 오히려 그런 영상일수록 제목만으론 뭔지 모른다. */
-      const g = String(parsed?.gist || "").trim();
-      if (g) gists.push({ video_id: v.video_id, channel, gist: g });
-    } catch (_) { places = []; }
+    const cached = llm.get(v.video_id) || { places: [], gist: "" };
+    const places: any[] = cached.places;
+    /* 장소가 0개여도 요약은 남긴다 — 오히려 그런 영상일수록 제목만으론 뭔지 모른다. */
+    if (cached.gist) gists.push({ video_id: v.video_id, channel, gist: cached.gist });
     extracted += places.length;
 
     for (const p of places.slice(0, 5)) {         // 한 영상에서 다섯까지 — 그 이상은 나열일 확률이 높다
@@ -616,7 +642,7 @@ const DEADLINE = Date.now() + 110_000;
   } catch (_) { /* 청소 실패가 수확을 되돌리지는 않는다 */ }
   await supa.from("travel_channels").update({ last_harvest_at: new Date().toISOString() }).eq("slug", channel);
 
-  return j({ ok: true, channel, picked: list.length, extracted, verified, dropped,
+  return j({ ok: true, channel, picked: list.length, processed: done.length, extracted, verified, dropped,
              gists: gistN || undefined,
              tourFails: TOUR_FAILS.length || undefined, geoCalls, cacheHits, took: Math.round((Date.now() - (DEADLINE - 110_000)) / 1000),
              ...res, merged, halted: halted || undefined,
