@@ -60,7 +60,11 @@
   Content-Type: application/json
   Cache-Control: no-cache
 
-# Android Digital Asset Links — 패스키(get_login_creds)용. 앱 패키지 im.galla.app + 서명 SHA-256.
+# Android Digital Asset Links — 패스키(get_login_creds)용. 앱 패키지 im.galla + 서명 SHA-256.
+# 🔴 지문 주의: Play 앱 서명(Play App Signing)에 동의했으므로 구글이 **자기 키로 다시 서명**한다.
+#    assetlinks.json 의 sha256_cert_fingerprints 는 로컬 업로드 키가 아니라
+#    **Play Console > 설정 > 앱 서명의 '앱 서명 키 인증서' SHA-256** 이어야 한다.
+#    안 맞으면 패스키가 에러 없이 그냥 동작 안 한다. 첫 AAB 업로드 후 콘솔에서 확인해 갱신할 것.
 /.well-known/assetlinks.json
   Content-Type: application/json
   Cache-Control: no-cache

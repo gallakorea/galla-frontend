@@ -58,8 +58,8 @@ async function appleToken(): Promise<string | null> {
   const kid = Deno.env.get("APPLE_KEY_ID");
   const pem = Deno.env.get("APPLE_PRIVATE_KEY");
   /* ⚠️ APPLE_BUNDLE_ID 는 **`im.galla`** 다 (2026-09-04 변경, 구 `im.galla.app` 아님).
-     개인 계정 → 법인 계정 전환 때 im.galla.app 을 잃어 iOS 번들 ID 만 바뀌었다.
-     안드로이드 패키지는 im.galla.app 그대로다 — 아래 ANDROID_PACKAGE 기본값이 맞다.
+     개인 계정 → 법인 계정 전환 때 im.galla.app 을 잃었다. 같은 날 안드로이드 패키지도
+     im.galla 로 통일했으므로 아래 ANDROID_PACKAGE 기본값도 im.galla 다(양쪽 동일).
      둘을 헷갈려 넣으면 애플 JWT 의 bid 가 어긋나 **iOS 영수증 검증이 전부 실패**한다. */
   const bid = Deno.env.get("APPLE_BUNDLE_ID");
   if (!iss || !kid || !pem || !bid) return null;
@@ -133,7 +133,7 @@ export type GoogleTx = {
 /** 소모성 상품 1건 조회. purchaseState 가 진실이다 — 클라이언트 말은 믿지 않는다. */
 export async function googleGetPurchase(productId: string, token: string): Promise<GoogleTx | null> {
   const tok = await googleToken();
-  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla";
   if (!tok) return null;
   const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
     `${encodeURIComponent(pkg)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
@@ -157,7 +157,7 @@ export type GoogleSub = {
  *  진실은 expiryTimeMillis 다 — 클라가 보낸 만료일은 믿지 않는다. */
 export async function googleGetSubscription(productId: string, token: string): Promise<GoogleSub | null> {
   const tok = await googleToken();
-  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla";
   if (!tok) return null;
   const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
     `${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
@@ -169,7 +169,7 @@ export async function googleGetSubscription(productId: string, token: string): P
 /** 구독 확인(acknowledge) — 3일 안에 안 하면 구글이 자동 환불한다. */
 export async function googleAckSubscription(productId: string, token: string): Promise<boolean> {
   const tok = await googleToken();
-  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla";
   if (!tok) return false;
   const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
     `${encodeURIComponent(pkg)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
@@ -180,7 +180,7 @@ export async function googleAckSubscription(productId: string, token: string): P
 /** 지급 후 소비 처리 — 안 하면 같은 상품을 다시 못 산다. */
 export async function googleConsume(productId: string, token: string): Promise<boolean> {
   const tok = await googleToken();
-  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla.app";
+  const pkg = Deno.env.get("ANDROID_PACKAGE") || "im.galla";
   if (!tok) return false;
   const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
     `${encodeURIComponent(pkg)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:consume`;

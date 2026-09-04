@@ -58,7 +58,8 @@
           다만 **앱에서 이 폴백이 실제로 돌면 라이선스 위반**이다(OSM 재단이 앱 배포 사용을 금지).
           그러니 이 폴백이 도는 것 자체가 사고 신호다.
        🔴 **NCP 콘솔에 번들 ID 를 등록해야 인증이 난다.** 2026-09-04 에 iOS 번들이
-          im.galla.app → im.galla 로 바뀌어 `im.galla` 를 추가했다(안드로이드는 im.galla.app 그대로).
+          im.galla.app → im.galla 로 바뀌어 `im.galla` 를 추가했다. 같은 날 안드로이드도 im.galla 로 통일했으니
+          **NCP 콘솔의 Android 패키지에도 im.galla 를 추가해야 한다**(안 하면 안드로이드 지도가 조용히 폴백).
           번들을 또 바꾸면 여기부터 등록할 것 — 안 하면 인증이 조용히 실패하고 OSM 으로 떨어진다. */
     if (isNativeOrigin()) MAPCFG.provider = "leaflet";
   }
