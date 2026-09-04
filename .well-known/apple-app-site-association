@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["494K4C92G6.im.galla.app"],
+        "appIDs": ["6ZSL3MKSM6.im.galla"],
         "components": [
           { "/": "/share/*",  "comment": "공유 카드 링크 — 앱으로 연다" },
           { "/": "/issue*",   "comment": "이슈" },
@@ -19,6 +19,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["494K4C92G6.im.galla.app"]
+    "apps": ["6ZSL3MKSM6.im.galla"]
   }
 }
