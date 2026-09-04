@@ -51,9 +51,15 @@
        앱 origin 은 capacitor:// 다. iosScheme 을 https 로 돌려 origin 을 바꿔보려 했지만
        **iOS 에서 불가능**하다 — WKWebView 는 http/https 에 커스텀 스킴 핸들러를 못 걸어서
        Capacitor 가 조용히 무시한다(2026-09-01 실측, 지도는 그대로 Leaflet 으로 떨어졌다).
-       ⚠️ 지금 쓰는 tile.openstreetmap.org 는 **OSM 재단이 앱 배포에 쓰는 걸 금지**한다.
-          출시 전에 반드시 갈아야 한다 — galla.im 에 올린 지도 페이지를 iframe 으로
-          띄우거나(핫튜브 /yt 프록시와 같은 수법), 앱 사용이 허용되는 타일로 옮긴다. */
+       ✅ **해결됨(2026-08-31 플러그인 + 09-04 검증)** — 아래 nativeBackend 가 네이티브 네이버 SDK 를
+          쓴다. NCP 는 앱을 **번들 ID·패키지명**으로 등록받아 origin 벽이 없다.
+          2026-09-04 시뮬레이터 실측: 앱에서 NAVER 로고가 뜨고 **OSM 타일 요청 0건**.
+       ⚠️ 그래도 tile.openstreetmap.org 는 지우지 않는다 — 네이버가 죽었을 때의 마지막 폴백이다.
+          다만 **앱에서 이 폴백이 실제로 돌면 라이선스 위반**이다(OSM 재단이 앱 배포 사용을 금지).
+          그러니 이 폴백이 도는 것 자체가 사고 신호다.
+       🔴 **NCP 콘솔에 번들 ID 를 등록해야 인증이 난다.** 2026-09-04 에 iOS 번들이
+          im.galla.app → im.galla 로 바뀌어 `im.galla` 를 추가했다(안드로이드는 im.galla.app 그대로).
+          번들을 또 바꾸면 여기부터 등록할 것 — 안 하면 인증이 조용히 실패하고 OSM 으로 떨어진다. */
     if (isNativeOrigin()) MAPCFG.provider = "leaflet";
   }
 

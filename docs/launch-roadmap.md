@@ -141,16 +141,30 @@ Capability 3종(Associated Domains·Push Notifications·Sign In with Apple) 활�
 ⚠️ **Play·애플 등록 폼은 좌표 클릭 금지.** 값이 미리 차 있고 스크롤이 튀어 엉뚱한 칸에 들어간다
 (9/2에 실제로 `시/군/구=seoul211-102`, `주/도=Gangwon-do`로 오염됨). `find`→`form_input` 참조 방식만 쓴다.
 
-### 🔴 C-2. 지도 타일 라이선스 — 앱 배포 금지 타일을 쓰고 있다
+### 🟢 C-2. ~~지도 타일 라이선스~~ — **블로커 아님으로 판명(2026-09-04 실측)**
 
-`js/food.js` 주석에 이미 적혀 있다: 현재 맛집·날씨 지도가 쓰는 **`tile.openstreetmap.org`는
-OSM 재단이 앱 배포 용도로 쓰는 걸 금지한다.** 스토어에 올리는 순간 라이선스 위반이다.
-게다가 네이버 지도(NCP Maps)는 **네이티브에서 원천적으로 안 된다** — 콘솔이 http/https origin만
-받는데 앱 origin은 `capacitor://`이고, iOS WKWebView는 https에 커스텀 스킴 핸들러를 못 걸어
-`iosScheme` 우회도 불가(2026-09-01 실측). 그래서 앱은 무조건 Leaflet + 그 금지된 타일로 떨어진다.
+**9/2에 이 항목을 🔴 블로커로 적은 건 오진이었다.** `js/food.js` 주석 한 문단만 읽고
+"네이버는 네이티브에서 원천 불가 → 앱은 무조건 OSM 타일 → 라이선스 위반"으로 결론냈는데,
+같은 파일 아래쪽에 **그걸 이미 우회한 코드**가 있었다.
 
-→ **Phase 2 이전에 해결 필수.** 선택지: ⓐ galla.im의 지도 페이지를 iframe으로(핫튜브 `/yt` 프록시와 같은 수법)
-ⓑ 앱 사용이 허용된 타일 제공자로 교체(MapTiler·Mapbox 무료티어 등).
+**실제 구조** — 앱 지도는 3단 폴백이다.
+1. **네이티브 네이버 SDK** (`packages/naver-map`, iOS·Android 둘 다 구현). NCP 는 앱을
+   **번들 ID·패키지명**으로 등록받으므로 `capacitor://` origin 벽이 없다. ← 여기서 끝난다
+2. 웹 네이버 SDK — 앱에선 건너뜀(origin 문제. 9/2에 인용한 건 **이것 하나**였다)
+3. Leaflet + OSM 타일 — 마지막 폴백
+
+**2026-09-04 실측**
+- 웹(galla.im/search?tab=food): `naverSdk=true`, 네이버 타일 렌더, **OSM 타일 0**
+- 앱(시뮬레이터, 번들 `im.galla`): NAVER 로고 표시, `NMapsMap` 정상, **OSM 요청 0건**
+- `app_settings.food_map.naver_client_id` = `4gi0pcw6xj` (8/31부터 설정돼 있었다)
+
+**단 하나 실제로 필요했던 조치** — NCP 콘솔에 **iOS Bundle ID `im.galla` 추가**.
+오늘 번들이 바뀌었는데 콘솔엔 `im.galla.app` 만 있었다. 안 했으면 다음 iOS 빌드부터
+**인증이 조용히 실패하고 OSM 폴백으로 떨어졌을 것**이다(에러가 안 난다).
+→ 번들 ID 를 또 바꾸면 NCP 콘솔부터 갱신할 것.
+
+⚠️ OSM 폴백은 코드에 남겨 둔다(네이버가 죽었을 때의 안전망). 다만 **앱에서 이 폴백이
+실제로 도는 것 자체가 사고 신호**다 — OSM 재단은 앱 배포 사용을 금지한다.
 
 ### 🟠 D. 반쯤 켜진 기능이 지금 그대로 노출 중
 
