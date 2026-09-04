@@ -68,14 +68,14 @@
 | 연회비 | ✅ ₩129,000 결제 완료, 갱신 2027-09-04 |
 | ADP 사용권 계약(PLA) | ✅ 2026-09-03 수락 |
 | **무료 앱 계약** | ✅ 활성화됨 |
-| **유료 앱 계약** | ⏳ **처리 중** (2026.9.2~2027.9.3) ← 지금 모든 게 여기 걸려 있다 |
-| 은행 계좌 | ⏳ Woori Bank(2860) · KRW / 로열티 USD — **처리 중(24시간)** |
+| **유료 앱 계약** | ✅ **활성화됨** (2026.9.2~2027.9.3) |
+| 은행 계좌 | ✅ Woori Bank(2860) · KRW / 로열티 USD — 활성화됨 |
 | 세금: U.S. Certificate of Foreign Status | ✅ 활성화됨 |
 | 세금: **U.S. Substitute Form W-8BEN-E** | ✅ 활성화됨 |
-| 세금: 대한민국 | ⏳ 대기 중 |
+| 세금: 대한민국 | ✅ 활성화됨 |
 | 규정준수: **EU 디지털 서비스법(DSA)** | ✅ 활성화됨 (27개국, 거래자 자격 = 거래자임) |
-| 규정준수: 대한민국 전자상거래법 | ⏳ **심사 중** |
-| **Small Business Program** | 🔴 **아직 신청 불가** — enroll 페이지가 `Unauthorized`. 유료 앱 계약 활성화가 전제 |
+| 규정준수: 대한민국 전자상거래법 | ✅ **활성화됨** — 레터헤드 공문 통과 |
+| **Small Business Program** | ✅ **신청 제출 완료**(2026-09-04) — 연결 계정 1건 신고(개인 계정 `494K4C92G6`). 승인 회계월 종료 **+15일**부터 15% 적용 |
 | 배포 설정 | 175개 국가 또는 지역 |
 
 **W-8BEN-E에 넣은 값(재제출 시 동일하게)** — 제출 후 수정 불가라 기록해 둔다.
@@ -90,10 +90,33 @@ Chapter 3 Status `Corporation` / Foreign TIN `1628603935`(사업자등록번호)
 갈라랩스는 레터헤드 공문(대표 권한 명시 + 한국 배포 의사 명시 + 성명·직함·서명 + 조직 전화·이메일)으로 제출했다.
 생성 스크립트는 세션 스크래치패드에 있고, 재발급이 필요하면 같은 3요건만 지키면 된다.
 
+**🔴 번들 ID를 잃었다 — `im.galla.app` → `im.galla` (2026-09-04 확정)**
+
+개인 계정에서 번들 ID를 빼내 법인 계정에 재등록하려 했으나 **불가능했다.**
+App ID 삭제가 `The App ID 'im.galla.app' appears to be in use by the App Store` 로 거부됐고,
+App Store Connect 의 앱 레코드(빌드 0·스크린샷 0·미제출)를 지운 뒤에도 **같은 메시지로 거부**됐다.
+법인 팀에서 직접 등록을 시도하니 `An App ID with Identifier 'im.galla.app' is not available`.
+
+근거 — 애플 DTS 엔지니어: *"Once App Store has a record of your App ID, it cannot be deleted."*
+공식 문서(`Developer Account Help > Delete an App ID`): *"you cannot delete an explicit App ID
+for an app you uploaded to App Store Connect."* **시간이 지나면 풀린다는 언급은 어디에도 없다** —
+배치 지연이 아니라 설계상 영구 제약이다. App Transfer 는 「1회 이상 출시」가 조건이라 미출시 앱엔 못 쓴다.
+
+| | 값 | 비고 |
+|---|---|---|
+| iOS 번들 ID | **`im.galla`** | 법인 팀에 등록 완료 |
+| 알림 확장 | **`im.galla.GallaNSE`** | 등록 완료 |
+| Team ID | **`6ZSL3MKSM6`** | Xcode 4곳 갱신 |
+| Android 패키지 | `im.galla.app` **유지** | Play 에 앱이 없어 안 막혔다. 바꾸면 Java 패키지 디렉터리 이동까지 딸려온다 |
+| 딥링크 스킴 | `im.galla.app://` **유지** | 번들 ID 와 무관한 임의 문자열. 바꾸면 Supabase `uri_allow_list`·`social-auth.js`·`AndroidManifest` 를 동시에 맞춰야 하고 **하나만 어긋나도 OAuth 가 에러 없이 조용히 죽는다** |
+
+Capability 3종(Associated Domains·Push Notifications·Sign In with Apple) 활성화.
+`apple-app-site-association` 는 `6ZSL3MKSM6.im.galla` 로 배포·라이브 검증 완료.
+
 **남은 실비용/작업**
-- **APNs 키 재발급** — 구 `RS6468X83A`는 개인 팀 스코프라 무효
-- **Team ID 변경 반영** → `apple-app-site-association`(패스키 associated domains) 갱신
-- 번들 ID `im.galla.app` 개인 계정에서 삭제 → 법인 계정 재등록
+- 🔴 **APNs 키 재발급** — 구 `RS6468X83A`는 개인 팀 스코프라 무효. `.p8` 다운로드가 필요해 **사장님만** 가능
+- 🔴 **패스키 재등록** — 번들 ID가 바뀌어 기존 기기 저장 패스키는 무효(미출시라 실사용자 영향 0, 테스트 기기만)
+- Xcode Signing 팀이 Galla Labs Inc. 로 잡히는지 확인
 - `aps-environment=production` + `APNS_ENV=production`
 - **TestFlight 설치 실패 미해결** → 외부 테스터·심사자 배포 경로는 여전히 막혀 있다
 
@@ -102,10 +125,15 @@ Chapter 3 Status `Corporation` / Foreign TIN `1628603935`(사업자등록번호)
 - ✅ **법인 조직 계정 생성** — 개발자 ID `8263260661319647137`, Google 계정 `admin@galla.im`
   개발자 표시명 `Galla Labs Inc.` / 조직 (주)갈라랩스 / D-U-N-S 696493115 / 결제 프로필 연결 / $25 납부 완료
   공개 프로필 연락처 = `+82 70-8095-2724`, `admin@galla.im` / 수익 창출 = 앱 내 구매·정기 결제
-- ⏳ **게시 전 남은 인증 3종** (9/3 실측) — **순차 잠금이라 ①이 안 풀리면 나머지는 열리지도 않는다**
-  1. **본인 확인** 🔓 24시간 잠금 해제됨. 주민등록번호+이동통신사 본인확인 → 공문서(신분증) 업로드 — **사장님만**
-  2. **조직 웹사이트 인증** — ①통과 후 열림
-  3. **전화번호 인증** — ①②통과 후 열림
+- ✅ **게시 전 인증 3종 전부 완료 (2026-09-04)** — 「개발자 계정 설정 완료」 배너 사라지고 **앱 생성 가능** 상태
+  1. 본인 확인 ✅ (주민등록번호+통신사 → 공문서 업로드)
+  2. 조직 웹사이트 인증 ✅
+  3. 전화번호 인증 ✅
+
+  ⚠️ **웹사이트 인증의 함정** — Play 는 사이트를 직접 긁지 않는다. **Google Search Console 에 등록된
+  소유자에게 승인 요청을 보내는 구조**라, 소유권이 없으면 요청이 갈 곳이 없다. `admin@galla.im` 계정의
+  Search Console 은 속성이 0개였다 → `company.html` 에 메타태그를 넣어 `https://company.galla.im`
+  소유권을 먼저 잡으니 요청·승인 없이 즉시 통과했다. **그 메타태그를 지우면 소유권이 풀린다.**
 - 앱 생성·AAB 업로드 미착수 (`versionCode 1`, 산출물은 apk만)
 - 스크린샷 3장뿐(`assets/store-screens/`: home·predict·news) — 권장 8장
 - 피처그래픽 1024×500 **없음**
@@ -251,18 +279,20 @@ Play를 먼저 하는 이유: 등록비 싸고, 심사 짧고, TestFlight 블로
 - [x] ~~EU DSA 거래자 자격~~ → **활성화됨**
 - [x] ~~대한민국 전자상거래법 정보 제출~~ → 심사 중 (레터헤드 공문 제출)
 
+**애플 — 9/4에 끝난 것**
+- [x] ~~유료 앱 계약·은행·세금 3종·DSA·전자상거래법~~ → **전부 활성화됨**
+- [x] ~~Small Business Program 신청~~ → **제출 완료**(연결 계정 1건 신고)
+- [x] ~~번들 ID 정리~~ → **`im.galla` 로 전환**(재등록 불가 확인), AASA 배포 검증 완료
+
 **애플 — 남은 것**
-- [ ] **유료 앱 계약 활성화 대기** (은행 24시간 + 한국 세금양식 심사)
-- [ ] → 풀리면 **즉시 Small Business Program 신청** ⚠️ 수수료 15%/30%가 갈린다
-- [ ] App Store Connect 상품 6개 등록 + 스토어 서버 알림 URL
-- [ ] 번들 ID `im.galla.app` 개인 계정에서 삭제 → 법인 계정 재등록
-- [ ] APNs 키 재발급 + `apple-app-site-association` Team ID 갱신
+- [ ] 🔴 **APNs 키 재발급**(법인 팀) — `.p8` 다운로드라 **사장님만**
+- [ ] App Store Connect 앱 생성(번들 `im.galla`) + 상품 6개 + 스토어 서버 알림 URL
+- [ ] Xcode Signing 팀 확인 + 테스트 기기 패스키 재등록
 - [ ] TestFlight 재시도 (새 빌드번호)
 
 **구글 Play**
 - [x] ~~개발자 등록~~ → 법인, ID `8263260661319647137`, $25 납부 완료
-- [ ] **본인 확인** — 주민등록번호·통신사 인증 → 공문서 업로드 (**사장님만**)
-- [ ] 조직 웹사이트 소유권 확인 · 전화번호 인증 (본인 확인 통과 후)
+- [x] ~~게시 전 인증 3종~~ → **전부 완료(9/4)**, 앱 생성 가능
 - [ ] Play 서비스 계정 키 발급 (`GOOGLE_SA_EMAIL`/`GOOGLE_SA_KEY`)
 
 **결제·법무**
