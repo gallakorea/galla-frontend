@@ -93,6 +93,14 @@ async function search(q: string, lat: number | null, lon: number | null) {
 }
 
 Deno.serve(async (req) => {
+  /* 🔴🔴 전면 중지 (2026-09-04). 구글 클라우드에서 실제 카드 결제가 나갔다 —
+     ₩200,000. 무료 크레딧으로 덮인다고 보고 월 상한을 1,000 → 20,000 으로 올린 게 원인이다.
+     크레딧이 남았는지 **확인하지 않았고**, 구글 쪽에 결제 상한(budget/quota)도 안 걸어뒀다.
+     크론만 끄면 누가 다시 켤 수 있으므로 코드에서 막는다.
+     다시 열 때는 반드시 ① GCP 콘솔에서 결제 한도·API 쿼터를 먼저 걸고
+     ② 남은 크레딧을 눈으로 확인한 뒤 ③ 이 가드를 지운다. */
+  return new Response(JSON.stringify({ ok: false, reason: "GOOGLE_KILL_2026_09_04" }),
+    { status: 503, headers: { "content-type": "application/json" } });
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
   if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
