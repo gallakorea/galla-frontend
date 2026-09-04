@@ -125,16 +125,46 @@
         <span style="font-size:12px;color:#8a8f9a;font-weight:600">영상 보고 상호만 치면 나머지는 자동</span></h1>
       <div id="fm-chs" class="ad-loading">채널 불러오는 중…</div>
       <div id="fm-body"></div>`;
-    const d = await rpc("food_manual_channels");
-    const list = Array.isArray(d) ? d : [];
-    document.getElementById("fm-chs").outerHTML =
-      `<div id="fm-chs" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px">` +
-      list.map(c => `<button type="button" class="ad-mm" data-fmch="${esc(c.slug)}">${esc(c.name)}
-        <b style="opacity:.6">${c.left}</b></button>`).join("") + `</div>`;
-    main().addEventListener("click", fmClick);
+    /* 🔴 조용히 멈추지 않게 한다. 응답이 안 오면 '불러오는 중…'에 영원히 앉아 있고
+       사용자는 뭐가 잘못됐는지 알 길이 없다 — 이 세션에서 겪은 결함이 전부 이 부류였다
+       (엣지 150초 침묵사, 크론 거짓 성공, 오류를 삼킨 '대상 없음').
+       실패는 실패라고 말하고 다시 시도할 수단을 준다. */
+    let list = [];
+    try {
+      const d = await Promise.race([
+        rpc("food_manual_channels"),
+        new Promise((_, rj) => setTimeout(() => rj(new Error("응답 없음(15초)")), 15000)),
+      ]);
+      list = Array.isArray(d) ? d : [];
+    } catch (e) {
+      document.getElementById("fm-chs").outerHTML =
+        `<div id="fm-chs" class="ad-soon">채널을 못 불러왔습니다 — ${esc(String(e.message || e))}
+         <div style="margin-top:10px"><button type="button" class="ad-fmb" data-fmretry>다시 시도</button></div></div>`;
+      if (!main().__fmWired) { main().__fmWired = true; main().addEventListener("click", fmClick); }
+      return;
+    }
+    /* 두 갈래로 나눠 보여준다. 섞어놓으면 사람이 헛일을 한다 —
+       자동이 아직 안 간 것에 손을 대면 그 시간이 통째로 낭비다. */
+    const need = list.filter(c => !c.auto), wait = list.filter(c => c.auto);
+    const chips = (arr) => arr.map(c => `<button type="button" class="ad-fmb" data-fmch="${esc(c.slug)}">${esc(c.name)}
+        <b style="opacity:.55;margin-left:5px">${c.left}</b></button>`).join("");
+    document.getElementById("fm-chs").outerHTML = list.length
+      ? `<div id="fm-chs">
+          ${need.length ? `<div style="margin:0 0 6px;font-size:13px;font-weight:800;color:#e7e9ee">✋ 사람이 봐야 하는 곳
+              <span style="font-weight:600;color:#8a8f9a">— 설명에 상호도 주소도 없어 자동이 못 합니다</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px">${chips(need)}</div>` : ""}
+          ${wait.length ? `<details style="margin:0 0 14px">
+              <summary style="cursor:pointer;font-size:13px;color:#8a8f9a">🤖 자동 수확이 아직 안 간 곳 (${wait.length}채널) — 손대면 낭비입니다</summary>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0">${chips(wait)}</div>
+            </details>` : ""}
+         </div>`
+      : `<div id="fm-chs" class="ad-soon">남은 영상이 없습니다.</div>`;
+    /* 라우팅으로 다시 들어와도 핸들러가 겹치지 않게 한 번만 건다 */
+    if (!main().__fmWired) { main().__fmWired = true; main().addEventListener("click", fmClick); }
   }
 
   async function fmClick(e) {
+    if (e.target.closest("[data-fmretry]")) { renderFoodManual(); return; }
     const b = e.target.closest("[data-fmch]");
     if (b) {
       document.querySelectorAll("[data-fmch]").forEach(x => x.classList.toggle("on", x === b));
@@ -183,14 +213,14 @@
       <div style="display:flex;gap:6px;margin:0 0 10px">
         <input id="fm-q" placeholder="상호를 치세요 — 예: ${esc(v.region || "평택")} 진미통닭"
           style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid #2a2e37;background:#14161b;color:#e7e9ee;font-size:15px">
-        <button type="button" class="ad-mm" id="fm-go">찾기</button>
+        <button type="button" class="ad-fmb" id="fm-go">찾기</button>
       </div>
       <div id="fm-res" style="margin:0 0 14px"></div>
       ${v.description ? `<details style="margin:0 0 14px"><summary style="cursor:pointer;color:#8a8f9a;font-size:13px">영상 설명 보기</summary>
         <pre style="white-space:pre-wrap;font-size:12px;color:#a8adb8;margin:8px 0 0">${esc(v.description)}</pre></details>` : ""}
       <div style="display:flex;gap:8px">
-        <button type="button" class="ad-mm on" data-fmnext>다음 영상 →</button>
-        <button type="button" class="ad-mm" data-fmskip>건질 것 없음</button>
+        <button type="button" class="ad-fmb on" data-fmnext>다음 영상 →</button>
+        <button type="button" class="ad-fmb" data-fmskip>건질 것 없음</button>
       </div>`;
     const inp = document.getElementById("fm-q");
     const go = async () => {
@@ -206,7 +236,7 @@
             <div style="font-weight:600">${esc(it.name)}</div>
             <div style="font-size:12px;color:#8a8f9a">${esc(it.address)}${it.category ? " · " + esc(it.category) : ""}</div>
           </div>
-          <button type="button" class="ad-mm" data-fmpick='${esc(JSON.stringify(it))}'>이 집</button>
+          <button type="button" class="ad-fmb on" data-fmpick='${esc(JSON.stringify(it))}'>이 집</button>
         </div>`).join("");
     };
     document.getElementById("fm-go").addEventListener("click", go);
