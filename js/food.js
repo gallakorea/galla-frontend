@@ -445,7 +445,7 @@
        ① 네이버가 확인해준 실제 가게만 고를 수 있다(자유 입력이 아니다)
        ② 서로 다른 두 사람이 같은 집을 대야 채택된다
        ③ 채택 전까지 화면에 안 나온다 — 보상도 채택될 때만 준다 */
-  var QZ = null, QZ_ADDED = [];
+  var QZ = null, QZ_ADDED = [], QZ_OPT = null;
   var SUPA_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
   var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
@@ -465,8 +465,9 @@
     } catch (e) { return { ok: false, reason: String(e).slice(0, 80) }; }
   }
 
-  async function openQuiz() {
+  async function openQuiz(opt) {
     if (!(await loggedIn())) return needLogin();
+    QZ_OPT = opt || null;
     var el = document.getElementById("fq-wrap");
     if (!el) {
       el = document.createElement("div");
@@ -486,7 +487,8 @@
   async function qzNext() {
     var el = document.getElementById("fq-wrap");
     el.innerHTML = '<div class="fq-box"><div class="fq-load">문제를 고르는 중…</div></div>';
-    var d = await rpc("food_quiz_next", { p_limit: 1 });
+    var d = await rpc("food_quiz_next", { p_limit: 1,
+      p_channel: (QZ_OPT && QZ_OPT.channel) || null, p_video: (QZ_OPT && QZ_OPT.video) || null });
     QZ = (d && d[0]) || null; QZ_ADDED = [];
     if (!QZ) {
       el.innerHTML = '<div class="fq-box"><button type="button" class="fq-x" data-qzclose>✕</button>' +
@@ -558,7 +560,7 @@
 
   async function qzClick(e) {
     if (e.target.closest("[data-qzclose]") || e.target === e.currentTarget) { closeQuiz(); return; }
-    if (e.target.closest("[data-qzskip]")) { qzNext(); return; }
+    if (e.target.closest("[data-qzskip]")) { if (QZ_OPT) QZ_OPT.video = null; qzNext(); return; }
     var del = e.target.closest("[data-qzdel]");
     if (del) { QZ_ADDED.splice(Number(del.dataset.qzdel), 1); qzPaint(); return; }
     var pk = e.target.closest("[data-qzpick]");
@@ -659,7 +661,10 @@
        먼저 잡으면 seg 를 undefined 로 만들고 return 해버린다 — 여기까지 오지도 못했다.
        (실측: 스타일 맞추려고 fd-seg → fd-sg 로 바꾼 순간 기능이 죽었다.) */
     /* 🍜 "이 식당은 어딜까요?" — 영상 못 찾은 카드의 '아는 분?' 에서 들어온다 */
-    if (t.closest && t.closest("[data-quiz]")) { openQuiz(); return; }
+    var qv = t.closest && t.closest("[data-quizv]");
+    if (qv) { openQuiz({ video: qv.dataset.quizv, channel: qv.dataset.quizc }); return; }
+    var qd = t.closest && t.closest("[data-quiz]");
+    if (qd) { openQuiz(qd.dataset.quizch ? { channel: qd.dataset.quizch } : null); return; }
     if (t.closest && t.closest("[data-gp]")) {
       gpOnly = !gpOnly;
       paintSeg();          /* 칩을 다시 그려야 'on' 이 붙는다 */
@@ -1540,12 +1545,21 @@
   var CHPAGE = null, CG = null;      // CG: 열려 있는 채널의 상태(탭·오프셋·총계)
 
   function cgVideoCard(v) {
-    return '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
-      '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
-      '<i class="fs-play">▶</i>' +
-      '<span class="cg-vt">' + esc(v.title || "") + '</span>' +
-      (v.at ? '<span class="cg-vd">' + esc(String(v.at).slice(0, 10)) + '</span>' : '') +
-    '</button>';
+    /* 🍜 퀴즈는 **크리에이터 페이지에만** 둔다. 지도·둘러보기는 가게를 보는 자리다.
+       이 회차에 나온 집을 아는지 여기서 묻는다 — 물어볼 만한 회차(askable)일 때만.
+       쇼츠 클립은 봐도 가게가 안 나오니 묻지 않는다. */
+    var ask = !v.shops && v.askable;
+    return '<div class="cg-vwrap">' +
+      '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
+        '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
+        '<i class="fs-play">▶</i>' +
+        (v.shops ? '<span class="cg-vs">🍜 ' + v.shops + '</span>' : '') +
+        '<span class="cg-vt">' + esc(v.title || "") + '</span>' +
+        (v.at ? '<span class="cg-vd">' + esc(String(v.at).slice(0, 10)) + '</span>' : '') +
+      '</button>' +
+      (ask ? '<button type="button" class="cg-ask" data-quizv="' + esc(v.video_id) +
+             '" data-quizc="' + esc(CG ? CG.slug : "") + '">이 식당 어디게? +100 GP</button>' : '') +
+    '</div>';
   }
   function cgPlaceRow(p) {
     var th = p.cover || ytThumb(p.video_id) || "";
@@ -1886,7 +1900,8 @@
          근거 없는 이름을 띄우는 대신, 아는 사람에게 물어본다. */
       (d.unknown_shows > 0
         ? '<div class="fs-ask">방송에 나왔다는 얘기는 있는데 <b>어느 회차인지</b> 아직 못 찾았습니다' +
-          '<button type="button" class="fs-quiz" data-quiz="1">내가 안다</button></div>'
+          '<button type="button" class="fs-quiz" data-quiz="1" data-quizch="' +
+            esc(d.unknown_channel || "") + '">내가 안다</button></div>'
         : '') +
       /* 국회의원이 정치자금으로 밥 먹은 집이면 여기에 명단이 붙는다.
          비어 있으면 렌더 자체를 안 한다 — 4,700곳 대부분은 해당 없다. */
