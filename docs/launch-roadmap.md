@@ -43,9 +43,9 @@
 | `gc_products` | **0행** — 서버 카탈로그가 비어 IAP가 상품을 못 찾는다 |
 | 앱 StoreKit/Billing | **플러그인 자체가 없음** (`galla-app/package.json`에 결제 플러그인 0개). 앱 충전 UI는 "다음 업데이트에서 열려요" 안내만 렌더 |
 | 웹 PG | 🟡 **코드는 완성, 계약만 남음.** 포트원 V2 SDK 로컬 vendoring(`vendor/portone.js`), `js/charge.js` 결제 호출·`charge-return.html` 리다이렉트 수신·`portone-webhook` 엣지 함수까지 작성 완료. **`js/config.js`의 `channelKey` 한 줄**만 채우면 열린다 (KG이니시스 본심사 후 발급) |
-| 구글 검증 | 코드는 로컬에 작성됨(uncommitted). **배포된 v21은 여전히 `google_not_configured` 501** |
-| 환불 회수 | `revoke_gc_topup` **DB 미적용**, `store-notify` **미배포** |
-| 스토어 시크릿 | `STORE_NOTIFY_KEY`·`APPLE_IAP_SHARED_SECRET`·`APPLE_ISSUER_ID`·`APPLE_KEY_ID`·`APPLE_PRIVATE_KEY`·`APPLE_BUNDLE_ID`·`GOOGLE_SA_EMAIL`·`GOOGLE_SA_KEY` — **8개 전부 없음** |
+| 구글 검증 | `verify-iap` **ACTIVE v30**(9/2 기록의 v21은 낡음). 다만 `GOOGLE_SA_EMAIL`/`GOOGLE_SA_KEY` 미등록이라 실제 검증은 아직 불가 |
+| 환불 회수 | ✅ `revoke_gc_topup` DB 적용됨 · `store-notify` **ACTIVE v9** — 9/2 로드맵의 '미적용/미배포'는 오진이었다(9/4 실측) |
+| 스토어 시크릿 | **8개 전부 없음**(9/4 재확인) + 포트원 2개(`PORTONE_API_SECRET`·`PORTONE_WEBHOOK_KEY`)도 없음. ⚠️ **`APPLE_BUNDLE_ID` 는 이제 `im.galla`** 다 — `im.galla.app`(안드로이드용)을 넣으면 iOS 영수증 검증이 조용히 전부 실패한다 |
 | Apple Small Business | 🔴 **신청 불가 상태**(유료 앱 계약 활성화 대기). 30% 구간이면 `c1` 빼고 **전 패키지 적자**(`docs/appstore-products.md` 참조) — 계약 풀리는 즉시 최우선 |
 
 → 후원·창작 과금·아이템이 전부 GC 위에 있으므로 **이게 막히면 수익 전부가 0이다.**
@@ -154,14 +154,26 @@ OSM 재단이 앱 배포 용도로 쓰는 걸 금지한다.** 스토어에 올�
 
 ### 🟠 D. 반쯤 켜진 기능이 지금 그대로 노출 중
 
-| 기능 | 상태 | 조치 |
-|---|---|---|
-| 육성톡/면상톡 (`dm.js` 프로필 버튼) | **플래그 없이 노출**인데 P2P 통화는 보류 상태(콜드스타트 한방향·링백 등 미해결) | 1차에선 숨긴다 |
-| 라이브 난장 | `CF_CALLS_APP_ID/SECRET` 존재 → 배선은 됨, **실기기 음성 검증 미완** | 검증 후 2차 |
-| 갈비스 창작 에이전트 | 2차 범위인데 **현재 전 SPA 유저에게 라이브**(GP 과금 미부착·워터마크) | 1차엔 잠근다 |
-| 숏판·롱판 | `gallari_enabled` 플래그로 이미 잠김 ✅ | 유지 |
+✅ **2026-09-04 해결 — 범용 피처 플래그로 통일했다.**
 
-⚠️ **순차 오픈용 플래그가 `gallari_enabled` 하나뿐이다.** 아래 Phase 0에서 범용 플래그를 먼저 깐다.
+`app_settings.features` 한 행 + `app_features()` RPC + `js/features.js`(`GALLA_feature('calls')`).
+
+| 기능 | 플래그 | 현재 |
+|---|---|---|
+| 육성톡·면상톡 | `features.calls` | **off** — 렌더·클릭핸들러·`callFrom` 3곳 모두 차단(버튼만 숨기면 프로필·친구메뉴·`?dm=` 딥링크로 새어 들어온다) |
+| 라이브 난장 | `features.live` | off |
+| 갈비스 창작 에이전트 | `features.agent` | off — 9/2 기록의 "전 SPA 유저에게 라이브"는 낡은 정보였다. 이미 `agent-hub.js` 상수로 잠겨 있었고, 이제 서버 플래그로 옮겼다 |
+| 숏판·롱판 | `features.gallari` | off (관리자는 예외 노출 — 설계대로) |
+
+**설계 원칙 두 가지**
+1. 🚨 `app_settings` 의 SELECT 는 `{authenticated}` 전용이라 **테이블을 직접 읽으면 게스트에게만 기능이 안 보인다.**
+   에러가 안 나서 못 잡는 종류다(`food_map` 에서 실제로 겪었다). → 플래그만 내리는 SECURITY DEFINER RPC.
+   anon·authenticated 양쪽으로 검증했다.
+2. **fail-closed** — 못 읽으면 전부 꺼진 것으로 본다. 반대로 하면 서버가 잠깐 삐끗한 사이
+   반쯤 된 기능이 열리고, 한 번 본 사용자는 그걸로 기억한다.
+
+**켜는 법**(배포 불필요): `update app_settings set v = v || '{"calls":true}'::jsonb where k='features';`
+왕복 검증 완료 — `true`→버튼 2개, `false`→0개.
 
 ### 🟡 E. 운영·법무
 
@@ -200,17 +212,17 @@ OSM 재단이 앱 배포 용도로 쓰는 걸 금지한다.** 스토어에 올�
 
 목표: **돈 받을 수 있는 상태 + 순차 오픈 스위치**
 
-1. **범용 피처 플래그** — `app_settings`에 `features` 한 행(jsonb)으로 통합.
-   클라 공용 헬퍼 `GALLA_feature('calls')` → 통화·창작에이전트·라이브·숏판을 한 스위치로.
+1. ~~**범용 피처 플래그**~~ ✅ **완료(9/4)** — `app_settings.features` + `app_features()` RPC + `js/features.js`.
 2. **결제 배관 마감**
-   - `20260825100000_iap_refund_revoke.sql` 적용 → `revoke_gc_topup` 생성
-   - `verify-iap`(구글 분기) 재배포 + `store-notify` 최초 배포
-   - 스토어 시크릿 8개 등록 (사장님 계정 작업)
+   - ~~`revoke_gc_topup` 생성~~ ✅ 이미 적용돼 있었다
+   - ~~`store-notify` 배포~~ ✅ ACTIVE v9
+   - ~~`portone-webhook` 배포~~ ✅ **완료(9/4)** — 위조 알림 거부(`verify_failed`)까지 검증
+   - 🔴 **스토어 시크릿 10개 등록** (애플 6 + 구글 2 + 포트원 2) — 전부 콘솔 발급 자격증명이라 **사장님만**
    - **Apple Small Business Program** — 유료 앱 계약이 활성화되는 즉시 신청(수수료 15% vs 30%). 승인된 회계월 종료 **+15일**부터 적용되므로 하루라도 빨리
 3. **웹 PG 개통** — 포트원 경유 **KG이니시스 본심사 통과 → MID 발급 → `js/config.js`의 `channelKey` 입력**.
    이어서 `portone-webhook` 배포 + 시크릿 2개(`PORTONE_API_SECRET`, `PORTONE_WEBHOOK_KEY`) 등록.
    웹 결제는 스토어 심사와 무관하게 먼저 열 수 있는 **유일한 수익 경로**다.
-4. **반쯤 켜진 기능 잠금** — 통화·창작에이전트 플래그 off
+4. ~~**반쯤 켜진 기능 잠금**~~ ✅ **완료(9/4)** — 통화·라이브·창작에이전트·숏판 전부 off
 
 ### Phase 1 — 웹 소프트런칭 (9/8 ~ 9/21, 2주) · **여기가 진짜 승부처**
 
