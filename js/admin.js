@@ -95,12 +95,123 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
     document.querySelectorAll(".ad-navitem").forEach(x => x.classList.toggle("active", x.dataset.mod === mod));
     route(mod);
+  }
+
+  /* ─────────── 🍜 맛집 수기 등록 ───────────
+     자동 매칭의 한계선이 실측으로 확정됐다(2026-09-04):
+       이름 매칭 13,271건→135건 · 카탈로그 2.4배(14,506→34,485편)→+14건 · 웹문서 역추적→0건.
+     영상이 없어서가 아니라 채널이 상호도 주소도 안 적어서다.
+     밖에서 메우려다 거짓말이 박혔다(서촌 편에 남양주 3곳). 그러면 사람이 보고 넣는 게 맞다.
+     ⚠️ 대신 사람이 치는 건 **상호뿐**이다. 주소·좌표·업종·전화는 네이버가 채우고,
+        없는 집은 애초에 고를 수가 없다. 사람 시간이 제일 비싸다. */
+  let fmQ = [], fmI = 0, fmCh = null, fmAdded = 0, fmDone = 0;
+
+  /* invoke 는 관리자 세션 토큰을 알아서 실어 보낸다 — 함수 쪽에서 is_admin 으로 다시 검사한다 */
+  async function fmCall(qs, body) {
+    const { data, error } = await sb.functions.invoke("food-manual-link?" + qs,
+      body ? { body } : { method: "GET" });
+    if (error) return { ok: false, reason: String(error.message || error).slice(0, 120) };
+    return data || { ok: false };
+  }
+
+  async function renderFoodManual() {
+    main().innerHTML = `<h1 class="ad-h1">🍜 맛집 수기 등록
+        <span style="font-size:12px;color:#8a8f9a;font-weight:600">영상 보고 상호만 치면 나머지는 자동</span></h1>
+      <div id="fm-chs" class="ad-loading">채널 불러오는 중…</div>
+      <div id="fm-body"></div>`;
+    const d = await rpc("food_manual_channels");
+    const list = Array.isArray(d) ? d : [];
+    document.getElementById("fm-chs").outerHTML =
+      `<div id="fm-chs" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px">` +
+      list.map(c => `<button type="button" class="ad-mm" data-fmch="${esc(c.slug)}">${esc(c.name)}
+        <b style="opacity:.6">${c.left}</b></button>`).join("") + `</div>`;
+    main().addEventListener("click", fmClick);
+  }
+
+  async function fmClick(e) {
+    const b = e.target.closest("[data-fmch]");
+    if (b) {
+      document.querySelectorAll("[data-fmch]").forEach(x => x.classList.toggle("on", x === b));
+      fmCh = b.dataset.fmch; fmI = 0; fmAdded = 0; fmDone = 0;
+      fmQ = (await rpc("food_manual_queue", { p_channel: fmCh, p_limit: 60 })) || [];
+      fmPaint();
+      return;
+    }
+    const pk = e.target.closest("[data-fmpick]");
+    if (pk) {
+      const v = fmQ[fmI]; const it = JSON.parse(pk.dataset.fmpick);
+      pk.disabled = true; pk.textContent = "붙이는 중…";
+      const r = await fmCall("act=attach", { video_id: v.video_id, channel: v.channel,
+        video_title: v.title, published_at: v.published_at, place: it });
+      if (r.ok) { fmAdded++; pk.textContent = "✔ 붙었습니다"; pk.style.opacity = ".5";
+                  document.getElementById("fm-cnt").textContent = fmAdded; }
+      else { pk.disabled = false; pk.textContent = "실패 — " + (r.reason || ""); }
+      return;
+    }
+    if (e.target.closest("[data-fmnext]")) { await fmAdvance(true); return; }
+    if (e.target.closest("[data-fmskip]")) { await fmAdvance(false); return; }
+  }
+
+  /* 다음으로 넘길 때만 도장을 찍는다 — 중간에 창을 닫아도 큐에 남아 있어야 한다 */
+  async function fmAdvance(hadShops) {
+    const v = fmQ[fmI];
+    if (v) { await fmCall("act=skip", { ids: [v.video_id] }); fmDone++; }
+    fmI++; fmPaint();
+  }
+
+  function fmPaint() {
+    const box = document.getElementById("fm-body");
+    const v = fmQ[fmI];
+    if (!v) { box.innerHTML = `<div class="ad-soon">이 채널은 다 봤습니다. 붙인 가게 ${fmAdded}곳.</div>`; return; }
+    box.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center;margin:0 0 10px;font-size:13px;color:#8a8f9a">
+        <span>${fmI + 1} / ${fmQ.length}</span>
+        <span>붙인 곳 <b id="fm-cnt" style="color:#e7e9ee">${fmAdded}</b></span>
+        ${v.region ? `<span>지역 힌트 <b style="color:#e7e9ee">${esc(v.region)}</b></span>` : ""}
+      </div>
+      <div style="font-weight:700;margin:0 0 8px;line-height:1.4">${esc(v.title)}</div>
+      <div style="position:relative;padding-top:52%;margin:0 0 12px;border-radius:10px;overflow:hidden;background:#000">
+        <iframe src="https://www.youtube.com/embed/${esc(v.video_id)}" allowfullscreen
+          style="position:absolute;inset:0;width:100%;height:100%;border:0"></iframe>
+      </div>
+      <div style="display:flex;gap:6px;margin:0 0 10px">
+        <input id="fm-q" placeholder="상호를 치세요 — 예: ${esc(v.region || "평택")} 진미통닭"
+          style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid #2a2e37;background:#14161b;color:#e7e9ee;font-size:15px">
+        <button type="button" class="ad-mm" id="fm-go">찾기</button>
+      </div>
+      <div id="fm-res" style="margin:0 0 14px"></div>
+      ${v.description ? `<details style="margin:0 0 14px"><summary style="cursor:pointer;color:#8a8f9a;font-size:13px">영상 설명 보기</summary>
+        <pre style="white-space:pre-wrap;font-size:12px;color:#a8adb8;margin:8px 0 0">${esc(v.description)}</pre></details>` : ""}
+      <div style="display:flex;gap:8px">
+        <button type="button" class="ad-mm on" data-fmnext>다음 영상 →</button>
+        <button type="button" class="ad-mm" data-fmskip>건질 것 없음</button>
+      </div>`;
+    const inp = document.getElementById("fm-q");
+    const go = async () => {
+      const q = inp.value.trim(); if (q.length < 2) return;
+      const res = document.getElementById("fm-res");
+      res.innerHTML = `<div class="ad-loading">찾는 중…</div>`;
+      const d = await fmCall("act=search&q=" + encodeURIComponent(q));
+      const items = d.items || [];
+      if (!items.length) { res.innerHTML = `<div class="ad-soon">네이버에 없는 상호입니다. 철자를 확인해 주세요.</div>`; return; }
+      res.innerHTML = items.map(it => `
+        <div style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid #2a2e37;border-radius:9px;margin:0 0 6px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${esc(it.name)}</div>
+            <div style="font-size:12px;color:#8a8f9a">${esc(it.address)}${it.category ? " · " + esc(it.category) : ""}</div>
+          </div>
+          <button type="button" class="ad-mm" data-fmpick='${esc(JSON.stringify(it))}'>이 집</button>
+        </div>`).join("");
+    };
+    document.getElementById("fm-go").addEventListener("click", go);
+    inp.addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
+    inp.focus();
   }
 
   // ─────────── 대시보드 ───────────
