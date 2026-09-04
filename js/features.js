@@ -44,11 +44,30 @@
     }
   }
 
+  /* ⚠️ 이 파일이 supabase.js 보다 **먼저** 실행될 수 있다.
+     app.html(SPA 셸)에서 실제로 그랬고, waitForSupabaseClient 가 아직 undefined 라
+     조용히 return 해서 **플래그가 영영 안 읽혔다**(2026-09-04 실측, 에러도 안 났다).
+     로드 순서에 기대지 않고 클라가 나타날 때까지 기다린다. */
+  function clientSoon() {
+    return new Promise(function (resolve) {
+      if (window.supabaseClient) return resolve(window.supabaseClient);
+      var tries = 0;
+      var t = setInterval(function () {
+        if (window.supabaseClient) { clearInterval(t); return resolve(window.supabaseClient); }
+        if (window.waitForSupabaseClient) {
+          clearInterval(t);
+          try { return window.waitForSupabaseClient().then(resolve, function () { resolve(null); }); }
+          catch (_) { return resolve(null); }
+        }
+        if (++tries > 100) { clearInterval(t); resolve(null); }   // 10초면 포기(= 전부 꺼짐)
+      }, 100);
+    });
+  }
+
   async function load() {
     try {
-      var sb = window.supabaseClient ||
-        (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
-      if (!sb) return;                                   // 클라가 없으면 캐시/false 유지
+      var sb = await clientSoon();
+      if (!sb) return;                                   // 클라가 끝내 없으면 캐시/false 유지
       var res = await sb.rpc("app_features");
       if (res.error || !res.data || typeof res.data !== "object") return;
       var before = JSON.stringify(CACHE);
