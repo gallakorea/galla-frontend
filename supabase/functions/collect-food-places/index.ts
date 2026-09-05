@@ -164,6 +164,20 @@ function titleMatches(want: string, got: string) {
 
 async function resolveChannel(c: Chan, budget: { left: number }): Promise<string | null> {
   if (c.yt_channel_id) return c.yt_channel_id;
+  /* 🔴 자동 해소를 끈다. 이름만 보고 **팬·재업로드 채널**을 공식 채널 자리에 박았다.
+     실측 2026-09-05: 사장님이 눈으로 확인하니 10개가 가짜였다 —
+       식객 허영만·생활의 달인·전현무계획·골목식당·흑백요리사·풍자·식신로드·
+       허영만의 백반기행·동네 한 바퀴·나도미식가.
+     그 가짜들이 만든 '누가 다녀갔나'가 **2,263건**이었다. 전부 거짓말이었다.
+     영상 30편 미만을 걸러도 소용없었다(가짜 채널도 30편은 넘는다).
+     → 채널 ID 는 **사람이 확인해서 넣는다.** 자동으로 찍지 않는다.
+     넣는 법: probe-yt-channel?search=<이름> 으로 후보를 보고,
+              food_channels.yt_channel_id 에 직접 UPDATE. */
+  if (Deno.env.get("FOOD_AUTO_RESOLVE") !== "1") {
+    await supa.from("food_channels")
+      .update({ resolve_tried_at: new Date().toISOString() }).eq("slug", c.slug);
+    return null;
+  }
   /* 🔴 검색어가 없으면 **도장을 찍고** 나간다.
      예전엔 그냥 return 해서 resolve_tried_at 이 영원히 null 로 남았고,
      그 채널이 '가장 오래 안 해본 것' 큐의 맨 앞을 **영구 점거**했다.
