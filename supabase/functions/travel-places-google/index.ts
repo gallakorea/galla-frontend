@@ -65,14 +65,18 @@ async function toR2(photoName: string, id: string): Promise<string | null> {
   return `${R2_PUBLIC_URL}/${key}`;
 }
 
-/* editorialSummary 는 상위 SKU 필드다. 계정에 안 열려 있으면 400 이 온다 —
-   그때는 그 필드를 빼고 한 번 더 부른다(사진만이라도 건진다). 한 번 겪으면 계속 뺀다. */
-let noEditorial = false;
+/* 🔴 필드마스크가 곧 요금 등급이다. 이 사실을 모르고 짜서 ₩281,968 이 나갔다.
+   실측 2026-09-04 청구서:
+     places.editorialSummary 를 넣으면 **Text Search Enterprise + Atmosphere** 로 올라간다
+       → 6,096건 × 약 ₩46 = ₩281,968 (그날 정가의 58%)
+     places.id 만 요청하면 **Essentials** 등급이라 사실상 공짜다.
+   장소 소개문 한 줄의 값이 ₩28만이면 안 사는 게 맞다. 뺀다.
+   ⚠️ 이 마스크에 필드를 더할 때는 **반드시 요금 등급을 먼저 확인**할 것.
+      https://developers.google.com/maps/documentation/places/web-service/usage-and-billing */
 async function search(q: string, lat: number | null, lon: number | null) {
   const mask = [
     "places.id", "places.displayName", "places.location",
     "places.formattedAddress", "places.photos",
-    ...(noEditorial ? [] : ["places.editorialSummary"]),
   ].join(",");
   const body: any = { textQuery: q, languageCode: "ko", maxResultCount: 3 };
   if (lat != null && lon != null) {
@@ -83,11 +87,7 @@ async function search(q: string, lat: number | null, lon: number | null) {
     headers: { "content-type": "application/json", "X-Goog-Api-Key": KEY, "X-Goog-FieldMask": mask },
     body: JSON.stringify(body),
   });
-  if (r.status === 400 && !noEditorial) {
-    const t = await r.text();
-    if (t.includes("editorialSummary")) { noEditorial = true; return search(q, lat, lon); }
-    throw new Error(`places_400:${t.slice(0, 120)}`);
-  }
+  if (r.status === 400) throw new Error(`places_400:${(await r.text()).slice(0, 120)}`);
   if (!r.ok) throw new Error(`places_${r.status}:${(await r.text()).slice(0, 120)}`);
   return (await r.json())?.places || [];
 }
@@ -113,14 +113,16 @@ Deno.serve(async (req) => {
   const cap = Number(url.searchParams.get("cap") || "4000");
   const DRY = url.searchParams.get("dry") === "1";
 
-  const { data: allow } = await supa.rpc("places_take", { p_want: want, p_cap: cap });
+  /* 💰 원화 예산. 여기 Text Search 는 places.id 외 필드를 요구하므로 Details 급으로 계량한다.
+     (editorialSummary 를 빼서 Enterprise 등급은 벗어났다 — 그 필드 하나가 ₩281,968 이었다) */
+  const { data: allow } = await supa.rpc("places_spend", { p_kind: "details", p_want: want });
   const budget = Number(allow || 0);
-  if (budget <= 0) return j({ ok: true, picked: 0, note: "구글 Places 몫 소진" });
+  if (budget <= 0) return j({ ok: true, picked: 0, note: "예산 소진" });
 
   const { data: rows } = await supa.rpc("travel_places_for_places_api", { p_limit: budget });
   const list = (rows || []) as any[];
   if (!list.length) {
-    await supa.rpc("places_refund", { p_n: budget });
+    await supa.rpc("places_refund", { p_kind: "details", p_n: budget });
     return j({ ok: true, picked: 0, note: "채울 장소 없음" });
   }
 
@@ -204,7 +206,9 @@ Deno.serve(async (req) => {
     out.push(row);
   }
 
-  if (budget > called) await supa.rpc("places_refund", { p_n: budget - called });
+  if (budget > called) await supa.rpc("places_refund", { p_kind: "details", p_n: budget - called });
+  /* 받은 사진 수만큼 사진 SKU 도 계량한다 */
+  if (photos > 0) await supa.rpc("places_spend", { p_kind: "photos", p_want: photos });
   let res: any = {};
   if (!DRY && out.length) {
     const { data, error } = await supa.rpc("travel_place_media_set", { p_items: out });

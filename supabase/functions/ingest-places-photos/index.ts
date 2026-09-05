@@ -77,10 +77,14 @@ Deno.serve(async (req) => {
   const want = Math.min(Number(url.searchParams.get("n") || "150"), 400);
   const cap = Number(url.searchParams.get("cap") || "1200");
 
-  /* 💰 오늘 몫을 먼저 받는다 — 이걸 넘기면 아예 부르지 않는다 */
-  const { data: allowed } = await supa.rpc("places_take", { p_want: want, p_cap: cap });
+  /* 💰 예산을 **원화로** 먼저 받는다. 콜 수가 아니라 돈을 센다.
+     어제 사고의 기술적 뿌리가 이거다 — '20,000콜' 상한을 뒀는데 그게 얼마인지 아무도 몰랐고
+     실제로 정가 ₩643,180 이 나왔다. 콜마다 값이 다르기 때문이다.
+     여기서 무는 건 Place Details(건당 약 ₩12) + Photos(약 ₩9) 두 종류다.
+     Text Search 는 places.id 만 요청해 Essentials(무료) 등급이라 예산을 안 먹는다. */
+  const { data: allowed } = await supa.rpc("places_spend", { p_kind: "details", p_want: want });
   const budget = Number(allowed || 0);
-  if (budget <= 0) return j({ ok: true, reason: "daily_cap_reached", budget: 0 });
+  if (budget <= 0) return j({ ok: true, reason: "budget_exhausted", budget: 0 });
 
   /* 🔴 '사진 없는 곳'을 그냥 앞에서부터 가져오면 **실패한 곳이 매번 다시 온다** —
      구글에 사진이 없던 집은 계속 사진이 없으니 영원히 큐 맨 앞이다.
@@ -207,6 +211,10 @@ Deno.serve(async (req) => {
      calls 는 누적인데 photos 만 아니어서, 650장 받은 날이 장부엔 21장으로 찍혔다.
      한도를 올릴지 판단할 때 보는 숫자가 30분의 1이었다. 누적으로 더한다. */
   await supa.rpc("places_photos_add", { p_day: laDay, p_n: inserted });
+  /* 안 쓴 몫은 돌려준다 — 시간 상자에 걸려 중간에 끊겨도 예산이 새면 안 된다 */
+  if (budget > called) await supa.rpc("places_refund", { p_kind: "details", p_n: budget - called });
+  /* 실제로 받은 사진 수만큼 사진 SKU 도 계량한다 */
+  if (inserted > 0) await supa.rpc("places_spend", { p_kind: "photos", p_want: inserted });
 
   let infoN = 0;
   for (let i = 0; i < info.length; i += 200) {
