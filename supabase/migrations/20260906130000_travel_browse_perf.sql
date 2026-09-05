@@ -67,14 +67,20 @@ begin
         'visited', uid is not null and exists (select 1 from travel_visits v
                      where v.place_id = p.id and v.user_id = uid)) x,
         p.created_at
+      /* 🔴 `select distinct p2.*` 는 travel_places 의 **38개 컬럼 전부로 정렬**한다 —
+         채널 하나에 9,781블록을 먹었다(실측).
+         ⚠️ 그렇다고 exists 로 바꾸면 더 나빠진다(136,494블록) — travel_places 를 훑는다.
+         → **id 만 먼저 추려** 중복을 없애고, 그 몇 개만 본체와 조인한다. */
       from (
-        select distinct p2.* from travel_place_sources ts2
-          join travel_places p2 on p2.id = ts2.place_id
-                               and p2.status = 'live' and p2.scale = 'spot'
-         where ts2.channel = ch.slug
+        select p2.* from travel_places p2
+         join (select distinct ts2.place_id pid
+                 from travel_place_sources ts2 where ts2.channel = ch.slug) k
+           on k.pid = p2.id
+        where p2.status = 'live' and p2.scale = 'spot'
+        order by p2.created_at desc
+        limit least(coalesce(p_per, 10), 30)
       ) p
       order by p.created_at desc
-      limit least(coalesce(p_per, 10), 30)
     ) z) pl on true;
   return v;
 end $fn$;
