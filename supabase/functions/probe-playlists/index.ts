@@ -44,7 +44,8 @@ Deno.serve(async (req) => {
       samples: (items.items || []).map((it: any) => String(it.snippet?.title || "").slice(0, 70)) });
   }
   const slug = url.searchParams.get("channel") || "";
-  const { data: ch } = await supa.from("travel_channels")
+  const tbl = url.searchParams.get("kind") === "food" ? "food_channels" : "travel_channels";
+  const { data: ch } = await supa.from(tbl)
     .select("slug,name,yt_channel_id").eq("slug", slug).maybeSingle();
   if (!ch?.yt_channel_id) return j({ ok: false, reason: "no_channel_id" });
 
