@@ -31,6 +31,18 @@ Deno.serve(async (req) => {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);
+
+  /* 재생목록 하나를 직접 들여다본다 — 제목이 지역·나라를 알려주는지 눈으로 본다 */
+  const pl = url.searchParams.get("list");
+  if (pl) {
+    const meta: any = await yt("playlists", { part: "snippet,contentDetails", id: pl });
+    const m = (meta.items || [])[0];
+    const items: any = await yt("playlistItems", { part: "snippet", playlistId: pl, maxResults: "12" });
+    return j({ ok: true,
+      title: m?.snippet?.title, channel: m?.snippet?.channelTitle,
+      count: m?.contentDetails?.itemCount,
+      samples: (items.items || []).map((it: any) => String(it.snippet?.title || "").slice(0, 70)) });
+  }
   const slug = url.searchParams.get("channel") || "";
   const { data: ch } = await supa.from("travel_channels")
     .select("slug,name,yt_channel_id").eq("slug", slug).maybeSingle();
