@@ -40,14 +40,19 @@ Deno.serve(async (req) => {
   const maxPages = Math.min(Number(url.searchParams.get("pages") || "40"), 100);
   const t0 = Date.now();
 
+  /* 맛집·여행 둘 다 같은 구조를 쓴다 — kind 로 가른다 */
+  const kind = url.searchParams.get("kind") === "travel" ? "travel" : "food";
+  const T = { pl: `${kind}_playlists`, vid: `${kind}_videos`,
+              due: `${kind}_playlists_due`, done: `${kind}_playlist_done` };
+
   let lists: any[];
   if (only) {
-    const { data } = await supa.from("food_playlists")
+    const { data } = await supa.from(T.pl)
       .select("playlist_id,channel,title").eq("playlist_id", only).maybeSingle();
     if (!data) return j({ ok: false, reason: "unknown_playlist" });
     lists = [data];
   } else {
-    const { data } = await supa.rpc("food_playlists_due", { p_limit: n });
+    const { data } = await supa.rpc(T.due, { p_limit: n });
     lists = (data || []) as any[];
   }
   if (!lists.length) return j({ ok: true, note: "대상 없음" });
@@ -79,10 +84,10 @@ Deno.serve(async (req) => {
         if (!token) break;
       }
       for (let i = 0; i < rows.length; i += 500) {
-        await supa.from("food_videos")
+        await supa.from(T.vid)
           .upsert(rows.slice(i, i + 500), { onConflict: "channel,video_id" });
       }
-      await supa.rpc("food_playlist_done", { p_id: L.playlist_id, p_n: got });
+      await supa.rpc(T.done, { p_id: L.playlist_id, p_n: got });
       report.push({ list: L.title, fetched: got, saved: rows.length, pages });
     } catch (e) {
       report.push({ list: L.title, err: String(e).slice(0, 120) });
