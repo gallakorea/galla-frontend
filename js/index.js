@@ -604,7 +604,10 @@ async function toggleLike(btn) {
     const next = Math.max(0, base + (on ? -1 : 1));
     // 낙관적 토글 (모든 동일 id 카드 동기화)
     if (on) set.delete(id); else set.add(id);
-    IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"][data-kind="${btn.dataset.kind || ''}"]`).forEach(b => {
+    /* ⚠️ 이슈 버튼엔 data-kind 속성이 아예 없다 — [data-kind=""] 로 찾으면 하나도 안 잡혀
+       이슈 좋아요의 화면 갱신이 통째로 죽는다(내가 넣은 회귀). 있을 때만 조건을 붙인다. */
+    const kindSel = isPost ? '[data-kind="post"]' : ':not([data-kind])';
+    IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]${kindSel}`).forEach(b => {
         b.dataset.likes = next;
         b.classList.toggle('on', !on);
         const c = b.querySelector('.lk-count'); if (c) c.textContent = next ? formatK(next) : '';
@@ -618,7 +621,7 @@ async function toggleLike(btn) {
         : await supabase.from(tbl).insert({ user_id: social.userId, [col]: Number(id) });
     if (error && error.code !== '23505') {
         if (on) set.add(id); else set.delete(id);
-        IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"][data-kind="${btn.dataset.kind || ''}"]`).forEach(b => {
+        IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]${kindSel}`).forEach(b => {
             b.dataset.likes = base;
             b.classList.toggle('on', on);
             const c = b.querySelector('.lk-count'); if (c) c.textContent = base ? formatK(base) : '';
@@ -728,7 +731,14 @@ function attachEvents() {
             const stance = await window.GALLA_VOTE(id, type);
             if (gv && window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === 'function') {
                 const s = await window.GALLA_GET_VOTE_STATS(id);
-                if (s) window.GALLA_VoteBar.update(gv, s, { myStance: stance || type, animate: false });
+                if (s) {
+                    window.GALLA_VoteBar.update(gv, s, { myStance: stance || type, animate: false });
+                    /* ⚠️ 화면만 고치면 소용없다 — 피드는 window.cards 로 다시 그린다.
+                       여기를 안 고치면 스크롤 한 번에 바가 50/50 으로 되돌아간다
+                       (실측: 서버 pro 1/con 0 인데 cards 는 0/0 이라 화면이 50%|50%). */
+                    const c = (window.cards || []).find(x => String(x.id) === String(id));
+                    if (c) { c.pro = s.pro; c.con = s.con; }
+                }
             }
         };
     });
