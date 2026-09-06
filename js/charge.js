@@ -219,6 +219,22 @@ window.GALLA_PORTONE = {
 
     sheet.innerHTML = doneHTML("💳", "결제창을 여는 중…", `${won(chg.krw)} · ${gc(chg.gc)}`);
 
+    /* 🧾 구매자 이메일은 이니시스 V2 일반결제의 **필수값**이다.
+       빠뜨리면 결제창이 아예 안 뜨고 "구매자 이메일은 필수 입력입니다"로 끝난다(실측 2026-09-06).
+       소셜 로그인이 이메일을 안 주면 우리가 만든 합성 주소(naver_*@galla.social)가 들어가는데,
+       형식이 유효해 결제는 통과한다 — 영수증이 그 주소로 갈 뿐이다. */
+    let buyerEmail = "";
+    try {
+      const { data: u } = await sb().auth.getUser();
+      buyerEmail = (u && u.user && u.user.email) || "";
+    } catch (_) {}
+    if (!buyerEmail) {
+      sheet.innerHTML = doneHTML("⚠️", "결제를 시작할 수 없어요",
+        "계정 이메일을 확인하지 못했어요.<br>다시 로그인한 뒤 시도해 주세요.");
+      bindClose();
+      return;
+    }
+
     const back = location.origin + "/charge-return.html?cid=" + encodeURIComponent(chg.charge_id);
     let res;
     try {
@@ -230,6 +246,7 @@ window.GALLA_PORTONE = {
         totalAmount: chg.krw,
         currency: "CURRENCY_KRW",
         payMethod: "CARD",
+        customer: { email: buyerEmail },
         redirectUrl: back,
       });
     } catch (e) {
