@@ -1455,7 +1455,7 @@ function renderGallariCard(p) {
         <div class="card-footer">
             <div class="footer-icons">
                 <button type="button" class="fi-btn like-btn" data-kind="post" data-id="${p.id}" data-likes="${p.like_count || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${p.like_count ? formatK(p.like_count) : ''}</span></button>
-                <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}<span class="lk-count">${p.comment_count ? formatK(p.comment_count) : ''}</span></button>
+                <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                 <button type="button" class="fi-btn bookmark-btn" data-kind="post" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
                 <button type="button" class="fi-btn share-btn" data-kind="post" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
