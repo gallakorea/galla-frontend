@@ -217,11 +217,22 @@ async function GALLA_mypageInit(root, spaParams) {
                 if (tierChip) { tierChip.textContent = tierIcon; tierChip.title = `${t.name} Lv.${sl}`; }
                 /* 왕관 — 이번 시즌 이 사람이 쥐고 있는 왕좌.
                    프로필에서 바로 보여야 "저 사람 숏판왕이네"가 성립한다. */
-                const crowns = (g?.domains || []).filter(d => d.isKing);
+                /* 👑 왕관 — 이번 시즌 이 사람이 쥔 왕좌.
+                   ⚠️ insertAdjacentHTML 로 '덧붙이기만' 했다. SPA 에선 같은 DOM 위에 프로필이
+                      다시 mount 되므로 볼 때마다 쌓이고, 남의 프로필을 봤다 오면 **그 사람 왕관까지**
+                      내 프로필에 남는다(실측: 서버는 ['short'] 하나인데 화면엔 숏판왕 5·이슈왕 2).
+                      그릴 때마다 기존 것을 먼저 걷어낸다. */
+                D.querySelectorAll(".mp-crowns").forEach(el => el.remove());
+                const seen = new Set();
+                const crowns = (g?.domains || []).filter(d => d.isKing && d.king && !seen.has(d.king) && seen.add(d.king));
                 if (crowns.length && levelEl) {
-                    levelEl.insertAdjacentHTML("afterend",
-                        `<span class="mp-crowns">${crowns.map(d =>
-                            `<span class="mp-crown" title="${d.king}">👑 ${d.king}</span>`).join("")}</span>`);
+                    /* 왕관이 많아도 이름줄을 잡아먹지 않게 3개까지만 — 나머지는 +N */
+                    const SHOW = 3;
+                    const head = crowns.slice(0, SHOW).map(d =>
+                        `<span class="mp-crown" title="${d.king}">👑 ${d.king}</span>`).join("");
+                    const rest = crowns.length > SHOW
+                        ? `<span class="mp-crown mp-crown-more" title="${crowns.slice(SHOW).map(d => d.king).join(', ')}">+${crowns.length - SHOW}</span>` : "";
+                    levelEl.insertAdjacentHTML("afterend", `<span class="mp-crowns">${head}${rest}</span>`);
                 }
             } catch (_) { if (levelEl) levelEl.textContent = "눈팅러 Lv.1"; }
         })();

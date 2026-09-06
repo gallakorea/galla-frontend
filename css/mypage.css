@@ -940,3 +940,11 @@ body{
 /* 🪙 GP 칩 — 마이페이지에서 잔액을 바로 보고 누르면 지갑으로 */
 .mp-gp{ cursor:pointer; }
 .mp-gp:active{ transform:scale(.96); }
+
+/* ⚠️ .mp-idline 은 flex 한 줄이다. 왕관·전투력 칩이 늘어나면 닉네임이 최소폭까지
+   찌그러져 **한 글자씩 세로로 쪼개졌다**(사장님 스크린샷). 이름은 절대 줄이지 않고,
+   넘치는 칩은 다음 줄로 흘린다. */
+.mp-idline{ flex-wrap: wrap; row-gap: 6px; }
+.profile-name{ flex: 0 0 auto; white-space: nowrap; min-width: 0; }
+.mp-crowns{ flex: 1 1 auto; min-width: 0; }
+.mp-crown-more{ opacity: .75; }
