@@ -25,6 +25,22 @@ SESS_PATH = os.path.join(HOME_DIR, "upload-session.json")  # refresh_token 만(�
 SEEN_PATH = os.path.join(HOME_DIR, "upload-seen.json")     # 중복 발행 방지
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm"}
+
+# ⚠️ launchd 로 돌면 PATH 가 /usr/bin:/bin:/usr/sbin:/sbin 뿐이다 — 홈브루가 안 잡힌다.
+#    실측: 백그라운드 감시기가 새 영상을 잡고도 전부 "No such file: 'ffmpeg'" 로 실패했다.
+#    터미널에서 손으로 돌리면 멀쩡해서 더 안 보인다. 경로를 직접 찾는다.
+def _which(name):
+    for d in ("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"):
+        p = os.path.join(d, name)
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    found = shutil.which(name)
+    if found:
+        return found
+    sys.exit(f"{name} 을 찾을 수 없습니다. `brew install ffmpeg` 후 다시 실행하세요.")
+
+FFMPEG = _which("ffmpeg")
+FFPROBE = _which("ffprobe")
 MAX_VIDEO_MB = 900          # R2 직접 PUT. 이보다 크면 사람이 판단하게 남긴다.
 STABLE_CHECKS = 3           # 크기가 이만큼 연속 동일해야 "다운로드 끝"으로 본다
 STABLE_GAP = 2.0
@@ -160,7 +176,7 @@ def parse_name(path):
 
 
 def _duration(path):
-    p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+    p = subprocess.run([FFPROBE, "-v", "error", "-show_entries", "format=duration",
                         "-of", "default=nw=1:nk=1", path],
                        capture_output=True, text=True)
     try: return float(p.stdout.strip())
@@ -169,7 +185,7 @@ def _duration(path):
 
 def _brightness(path):
     """1×1 로 뭉갠 회색값 = 그 프레임의 평균 밝기(0~255)."""
-    p = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", path,
+    p = subprocess.run([FFMPEG, "-nostdin", "-v", "error", "-i", path,
                         "-vf", "scale=1:1", "-f", "rawvideo", "-pix_fmt", "gray", "-"],
                        capture_output=True)
     return p.stdout[0] if p.stdout else 0
@@ -214,7 +230,7 @@ def make_thumb(video_path, out_path):
     for i, ss in enumerate(spots):
         cand = f"{out_path}.{i}.jpg"
         p = subprocess.run(
-            ["ffmpeg", "-nostdin", "-y", "-ss", f"{ss:.2f}", "-i", video_path,
+            [FFMPEG, "-nostdin", "-y", "-ss", f"{ss:.2f}", "-i", video_path,
              "-frames:v", "1", "-vf", "scale='min(720,iw)':-2", "-q:v", "3", cand],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if p.returncode != 0 or not os.path.exists(cand) or os.path.getsize(cand) == 0:
