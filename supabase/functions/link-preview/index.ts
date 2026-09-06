@@ -10,9 +10,15 @@ const json = (b: unknown, s = 200) =>
 
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 const abs = (u: string | null, base: string) => { if (!u) return null; try { return new URL(u, base).href; } catch { return null; } };
+/* ⚠️ 이름 엔티티만 풀면 한글이 통째로 깨진다 — 인스타 OG 제목은 한글을 전부
+   숫자 엔티티로 준다(실측: "Instagram&#xc758; PapaB&#xb2d8;" 이 그대로 글 제목이 됐다).
+   10진(&#48156;)·16진(&#xc758;) 둘 다 푼다. &amp; 는 이중 이스케이프를 위해 마지막에. */
 const decode = (s: string) => s
-  .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-  .replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&nbsp;/g, " ").trim();
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return _; } })
+  .replace(/&#(\d+);/g, (_, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch { return _; } })
+  .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+  .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, " ")
+  .replace(/&amp;/g, "&").trim();
 
 function metaTag(html: string, key: string): string | null {
   // property 또는 name = key 인 meta 태그의 content (순서 무관)
