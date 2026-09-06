@@ -219,21 +219,32 @@ window.GALLA_PORTONE = {
 
     sheet.innerHTML = doneHTML("💳", "결제창을 여는 중…", `${won(chg.krw)} · ${gc(chg.gc)}`);
 
-    /* 🧾 구매자 이메일은 이니시스 V2 일반결제의 **필수값**이다.
-       빠뜨리면 결제창이 아예 안 뜨고 "구매자 이메일은 필수 입력입니다"로 끝난다(실측 2026-09-06).
-       소셜 로그인이 이메일을 안 주면 우리가 만든 합성 주소(naver_*@galla.social)가 들어가는데,
-       형식이 유효해 결제는 통과한다 — 영수증이 그 주소로 갈 뿐이다. */
-    let buyerEmail = "";
-    try {
-      const { data: u } = await sb().auth.getUser();
-      buyerEmail = (u && u.user && u.user.email) || "";
-    } catch (_) {}
+    /* 🧾 이니시스 V2 일반결제는 구매자 **이메일과 휴대폰 번호가 둘 다 필수**다.
+       하나씩 빠뜨릴 때마다 결제창이 아예 안 뜨고 그 필드를 요구하며 끝난다(실측 2026-09-06:
+       "구매자 이메일은 필수 입력입니다" → 넣으니 "구매자 휴대폰 번호는 필수 입력입니다").
+       이메일: 소셜이 안 주면 우리 합성 주소(naver_*@galla.social)가 들어가는데 형식이 유효해 통과한다.
+       전화: 온보딩에서 선택값이라 **32명 중 28명이 비어 있다**(실측). 프로필에 기대면
+             대다수가 결제를 못 하므로, 없으면 이 시트에서 직접 받는다. */
+    let acct = null;
+    try { const { data } = await sb().rpc("get_my_account"); acct = data || null; } catch (_) {}
+
+    let buyerEmail = (acct && acct.email) || "";
+    if (!buyerEmail) {
+      try { const { data: u } = await sb().auth.getUser(); buyerEmail = (u && u.user && u.user.email) || ""; } catch (_) {}
+    }
     if (!buyerEmail) {
       sheet.innerHTML = doneHTML("⚠️", "결제를 시작할 수 없어요",
         "계정 이메일을 확인하지 못했어요.<br>다시 로그인한 뒤 시도해 주세요.");
       bindClose();
       return;
     }
+
+    let buyerPhone = onlyDigits((acct && acct.phone) || "");
+    if (!validPhone(buyerPhone)) {
+      buyerPhone = await askPhone(chg);
+      if (!buyerPhone) return;              // 취소 — 안내는 askPhone 이 이미 그렸다
+    }
+    const buyerName = (acct && acct.nickname) || "";
 
     const back = location.origin + "/charge-return.html?cid=" + encodeURIComponent(chg.charge_id);
     let res;
@@ -246,7 +257,7 @@ window.GALLA_PORTONE = {
         totalAmount: chg.krw,
         currency: "CURRENCY_KRW",
         payMethod: "CARD",
-        customer: { email: buyerEmail },
+        customer: Object.assign({ email: buyerEmail, phoneNumber: buyerPhone }, buyerName ? { fullName: buyerName } : {}),
         redirectUrl: back,
       });
     } catch (e) {
@@ -299,6 +310,46 @@ window.GALLA_PORTONE = {
     if (out.ok) document.dispatchEvent(new Event("galla:points-changed"));
     return out;
   };
+
+  /* 📱 전화번호 — PG 필수값인데 온보딩에선 선택이라 대부분 비어 있다.
+     결제 흐름을 끊지 않도록 여기서 받는다. 받은 값은 이 결제 건에만 쓰고 저장하지 않는다
+     (PII 를 결제 부수효과로 조용히 쌓지 않는다 — 저장은 설정 화면에서 본인이 하는 일이다). */
+  function onlyDigits(s) { return String(s || "").replace(/\D/g, ""); }
+  function validPhone(d) { return /^01[016789]\d{7,8}$/.test(d); }
+
+  function askPhone(chg) {
+    return new Promise((resolve) => {
+      sheet.innerHTML =
+        `<div class="chg-grip"></div>
+         <div class="chg-done">
+           <div class="ic">📱</div>
+           <h4>휴대폰 번호를 알려주세요</h4>
+           <p>카드사 결제에 필요한 정보예요.<br>${won(chg.krw)} · ${gc(chg.gc)}</p>
+         </div>
+         <input id="chg-phone" type="tel" inputmode="numeric" autocomplete="tel"
+                placeholder="01012345678" maxlength="13"
+                style="width:100%;height:52px;margin:4px 0 8px;padding:0 14px;border-radius:12px;
+                       border:1px solid rgba(255,255,255,.16);background:#12141a;color:#fff;
+                       font-size:16px;text-align:center;letter-spacing:.5px">
+         <div id="chg-phone-err" style="min-height:18px;color:#ff7a7a;font-size:12px;text-align:center"></div>
+         <button class="chg-close" id="chg-phone-go" style="background:linear-gradient(135deg,#3d6bff,#5a86ff);color:#fff">결제 계속하기</button>
+         <button class="chg-close" id="chg-close">취소</button>`;
+
+      const input = sheet.querySelector("#chg-phone");
+      const err = sheet.querySelector("#chg-phone-err");
+      // 16px 미만이면 iOS 사파리가 화면을 확대해 버린다 — 위 style 의 font-size:16px 은 그 방어다.
+      setTimeout(() => input && input.focus(), 60);
+
+      function submit() {
+        const d = onlyDigits(input.value);
+        if (!validPhone(d)) { err.textContent = "번호를 다시 확인해 주세요 (예: 01012345678)"; return; }
+        resolve(d);
+      }
+      sheet.querySelector("#chg-phone-go").addEventListener("click", submit);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+      sheet.querySelector("#chg-close").addEventListener("click", () => { close(); resolve(""); });
+    });
+  }
 
   function doneHTML(ic, title, body) {
     return `<div class="chg-grip"></div><div class="chg-done"><div class="ic">${ic}</div><h4>${title}</h4><p>${body}</p></div><button class="chg-close" id="chg-close">닫기</button>`;
