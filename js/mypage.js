@@ -1392,7 +1392,14 @@ async function GALLA_mypageInit(root, spaParams) {
        그래서 두 번째 잠금 — **지금 활성인 탭과 다른 화면은 아예 그리지 않는다.**
        모아 화면이 숏판 탭 자리에 그려지던 사고의 직접적인 불변식이다. */
     const activeTab = () => (D.querySelector(".tabs .tab.active") || {}).dataset?.tab || "all";
-    const stale = (t, forTab) => t !== mpTok || (forTab && activeTab() !== forTab);
+    /* ⚠️ 두 잠금을 다 걸었더니 서로를 막아 **아무도 안 그리는** 상태가 됐다 —
+          릴스에서 뒤로 오면 숏판 렌더(옛 세대)와 부팅의 모아 렌더(활성탭 아님)가
+          둘 다 취소돼 스피너가 영원히 남았다(사장님 "무한 로딩").
+          → 탭 조건은 '남의 자리를 침범하는' renderAll 에만 건다.
+            renderContent 는 세대 번호만 본다. 그리고 부팅이 애초에 활성 탭을
+            그리도록 고쳐서(아래) 이 충돌 자체가 생기지 않게 한다. */
+    const stale = (t) => t !== mpTok;
+    const wrongTab = (forTab) => activeTab() !== forTab;
 
     const renderContent = async (kind) => {
         const tok = newTok();
@@ -1424,7 +1431,7 @@ async function GALLA_mypageInit(root, spaParams) {
         else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
-        if (stale(tok, myTab)) return;
+        if (stale(tok)) return;
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
             // 숏판 단일 = 릴스로(이 사람 숏판만 순차), 캐러셀 숏판·롱판 = 상세로
@@ -1472,7 +1479,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const longs = pdata.filter(r => r.kind === "horizontal").slice(0, 6);
         const issues = iss.data || [], markets = mkt.data || [], plazas = plz.data || [];
         if (!(issues.length + pdata.length + markets.length + plazas.length)) {
-            if (stale(tok, "all")) return;
+            if (stale(tok) || wrongTab("all")) return;
             tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
         }
 
@@ -1523,7 +1530,12 @@ async function GALLA_mypageInit(root, spaParams) {
         const sections = [];
         // 순서: 갈라 → 숏판 → 롱판 → 예측 → 광장 (각 최신 6개)
         if (issues.length) sections.push(vGrid("갈라", "galla", "issue", issues, r => r.title));
-        if (shorts.length) sections.push(vGrid("숏판", "short", r => mediaCount(r) > 1 ? "short-carousel" : "short", shorts, r => r.title || r.caption, r => views(r.view_count)));
+        /* ⚠️ 숏판의 본문은 caption 이다 — title 은 보조다(사용자 작성 숏판은 title 이 아예 null).
+           예전엔 title 우선이라, ⋯ 관리로 내용을 고쳐도(수정은 caption 만 바꾼다) 모아에는
+           옛 title 이 그대로 남았다("숏판 수정한 게 모아에 반영이 안 된다"). 홈 카드·상세는
+           이미 caption 우선이라 거기만 바뀌어 더 헷갈렸다. 캡션을 정본으로 통일한다.
+           롱판은 진짜 제목이 있으므로 title 우선 그대로 둔다. */
+        if (shorts.length) sections.push(vGrid("숏판", "short", r => mediaCount(r) > 1 ? "short-carousel" : "short", shorts, r => r.caption || r.title, r => views(r.view_count)));
         if (longs.length) {
             const rows = longs.map(r =>
                 `<div class="mp-lv" data-t="long" data-id="${r.id}">
@@ -1536,7 +1548,7 @@ async function GALLA_mypageInit(root, spaParams) {
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
 
-        if (stale(tok, "all")) return;
+        if (stale(tok) || wrongTab("all")) return;
         tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
         // 섹션 헤더 탭 → 해당 탭으로 전환
         tabContent.querySelectorAll("[data-gototab]").forEach(el => el.addEventListener("click", () => {
@@ -1598,7 +1610,12 @@ async function GALLA_mypageInit(root, spaParams) {
     let pending = null;
     try { pending = sessionStorage.getItem("galla_mypage_tab"); if (pending) sessionStorage.removeItem("galla_mypage_tab"); } catch (_) {}
     const pendEl = pending && pending !== "all" ? D.querySelector('.tabs .tab[data-tab="' + pending + '"]') : null;
+    /* 🔑 부팅은 '눈에 보이는 활성 탭'을 그린다. 예전엔 무조건 renderAll() 이라,
+       스냅샷 복원으로 숏판이 활성인 채 들어와도 모아를 그렸다(숏판 6개 사고의 뿌리). */
+    const actEl = D.querySelector(".tabs .tab.active");
+    const actTab = actEl && !actEl.hidden ? actEl.dataset.tab : "all";
     if (pendEl && !pendEl.hidden) pendEl.click();
+    else if (actTab && actTab !== "all") actEl.click();
     else renderAll();
 }
 
