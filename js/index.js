@@ -1449,9 +1449,10 @@ function renderGallariCard(p) {
 
         <div class="card-body">
             ${text ? `<div class="card-title">${escHtml(text)}</div>` : ''}
-        </div>
 
-        <!-- 액션 바 — 이슈 카드와 같은 문법(같은 클래스·같은 순서). data-kind 로만 갈린다. -->
+        <!-- 액션 바 — 이슈 카드와 같은 문법(같은 클래스·순서·위치). data-kind 로만 갈린다.
+             ⚠️ 반드시 .card-body **안**이다. 밖에 두면 본문 좌우 여백(14px)을 못 받아
+                첫 아이콘이 카드 밖으로 7px 삐져나가고 ⋯ 가 오른쪽에 딱 붙는다(실측). -->
         <div class="card-footer">
             <div class="footer-icons">
                 <button type="button" class="fi-btn like-btn" data-kind="post" data-id="${p.id}" data-likes="${p.like_count || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${p.like_count ? formatK(p.like_count) : ''}</span></button>
@@ -1461,6 +1462,7 @@ function renderGallariCard(p) {
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
             </div>
             <button class="more-btn card-more" data-kind="post" data-id="${p.id}" data-uid="${escHtml(p.user_id || '')}" aria-label="더보기">${moreIcon}</button>
+        </div>
         </div>
     </div>`;
 }
