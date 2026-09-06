@@ -974,10 +974,9 @@ body.shorts-open .header { display: none !important; }
 /* ⚡ 숏판 · 🎬 롱판 카드 — 이슈 카드와 같은 문법, 미디어 비율만 다르다 */
 .glr-feed-card{ cursor:pointer; }
 .glr-feed-card:active{ transform:scale(.995); }
-/* 세로 영상을 9:16 그대로 세우면 카드 하나가 화면을 통째로 먹는다 → 4:5 로 자른다 */
-.glr-media{ position:relative; width:100%; aspect-ratio:4/5; background:#15161c; overflow:hidden; }
-.glr-media.is-long{ aspect-ratio:16/9; }
-.glr-media img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* 숏판은 .card-media 기본값(4:5)을 그대로 쓴다 — 이슈 영상 카드와 같은 비율.
+   롱판만 16:9 로 눕힌다. */
+.card-media.glr-long{ aspect-ratio:16/9; }
 .glr-play{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
   width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;

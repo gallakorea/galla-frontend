@@ -1315,6 +1315,34 @@ function gallariAgo(ts) {
     return Math.floor(d / 2592000) + '개월 전';
 }
 
+/* 스크롤을 내리면 이슈 카드처럼 그 자리에서 자동재생돼야 한다.
+   ⚠️ 처음엔 포스터 이미지만 깔았다가 "왜 자동재생 안 되냐"를 들었다(사장님).
+      재생/버퍼는 .card-media video 를 훑는 공용 배선(videoPreloader·sweep)이 맡으므로
+      **클래스와 data-src 규약을 그대로 따르는 것**이 전부다.
+   ⚠️ 영상 id 는 vid-p<id> — 이슈와 글은 id 시퀀스가 달라서 vid-<id> 로 쓰면
+      같은 번호의 이슈 영상과 충돌한다(릴스가 엉뚱한 지점에서 시작된다). */
+function gallariMedia(p, isLong, thumb) {
+    const T = (u, w) => (window.GALLA_thumb ? window.GALLA_thumb(u, w || 1080) : u);
+    const vid = `vid-p${p.id}`, mid = `mute-p${p.id}`;
+    if (p.video_url && !gallariIsCarousel(p)) {
+        return `
+        <div class="card-media card-media--video${isLong ? ' glr-long' : ''}">
+            <video id="${vid}" class="vp-fade" data-src="${escHtml(p.video_url)}"
+                ${thumb ? `poster="${escHtml(T(thumb))}"` : ''}
+                autoplay loop playsinline webkit-playsinline muted preload="none"></video>
+            <div class="vid-dur" id="dur-p${p.id}">-:--</div>
+            <button class="vid-mute" id="${mid}"
+                    onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
+            <span class="vid-reels-badge">${isLong ? '▶︎ 영상 보기' : '▶︎ 릴스로 보기'}</span>
+        </div>`;
+    }
+    return `
+    <div class="card-media${isLong ? ' glr-long' : ''}">
+        ${thumb ? `<img src="${escHtml(T(thumb))}" loading="lazy" alt="" onerror="this.remove()">` : '<span class="card-media-empty">이미지 없음</span>'}
+        ${gallariIsCarousel(p) ? '<span class="glr-multi">⧉</span>' : '<span class="glr-play">▶</span>'}
+    </div>`;
+}
+
 function renderGallariCard(p) {
     const isLong = p.kind === 'horizontal';
     const u = p._u || {};
@@ -1342,11 +1370,7 @@ function renderGallariCard(p) {
             ${p.user_id ? `<button class="follow-btn" data-uid="${p.user_id}">+ 팔로우</button>` : ''}
         </div>
 
-        <div class="glr-media${isLong ? ' is-long' : ''}">
-            ${thumb ? `<img src="${escHtml(window.GALLA_thumb ? window.GALLA_thumb(thumb, 1080) : thumb)}" loading="lazy" alt="" onerror="this.remove()">` : ''}
-            <span class="glr-play">▶</span>
-            ${gallariIsCarousel(p) ? '<span class="glr-multi">⧉</span>' : ''}
-        </div>
+        ${gallariMedia(p, isLong, thumb)}
 
         <div class="card-body">
             ${text ? `<div class="card-title">${escHtml(text)}</div>` : ''}

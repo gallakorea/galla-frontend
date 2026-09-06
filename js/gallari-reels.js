@@ -40,8 +40,14 @@
     ME = sess?.session?.user?.id || null;
 
     const st = getStart();
-    // 진입 구분(사장님 지시): user 파라미터 있으면 마이페이지/프로필 진입(‹ 뒤로), 없으면 갈라리 피드 진입(+ 올리기)
-    ENTRY = st.user ? 'profile' : 'feed';
+    /* 진입 구분 — 좌상단 버튼이 갈린다.
+       ⚠️ 예전엔 'user 없으면 갈라리 피드'로 뭉갰다. 그 바람에 홈·검색·알림에서 들어와도
+          + (숏판 올리기) 가 떠서 **나갈 방법이 없었다**(PC 에서 전체화면으로 덮이고 뒤로가기 없음).
+          기본은 '뒤로'다. + 는 갈라리 피드가 스스로 from=gallari 를 붙였을 때만. */
+    let from = null;
+    try { from = new URLSearchParams(location.search).get('from'); } catch (_) {}
+    if (!from && st && st.from) from = st.from;
+    ENTRY = st.user ? 'profile' : (from === 'gallari' ? 'feed' : 'back');
     // 🎠 캐러셀형(사진·영상 여러 개) 숏판은 릴스에서 제외 — 릴스는 '단일 미디어(주로 영상)'만.
     //    미디어가 2개 이상이면 캐러셀 → 상세/그리드에서 본다.
     const mediaCount = (p) => {
@@ -341,6 +347,19 @@
       if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;
       if (history.length > 1) history.back(); else nav('index.html');
     };
+    /* ⌨️ PC 탈출구 — 릴스는 화면을 통째로 덮는다. 마우스로 누를 곳을 못 찾아도 Esc 로 나간다. */
+    if (!window.__grlEscBound) {
+      window.__grlEscBound = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const back = document.querySelector('#grl-chrome #grl-back');
+        if (!back) return;
+        navHide(false);
+        document.getElementById('grl-chrome')?.remove();
+        if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;
+        if (history.length > 1) history.back(); else nav('index.html');
+      });
+    }
     bar.querySelector('#grl-mute').onclick = () => {
       MUTED = !MUTED;
       document.querySelectorAll('.grl-slide video').forEach(v => v.muted = MUTED);

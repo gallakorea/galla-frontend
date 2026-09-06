@@ -112,7 +112,7 @@
         el.addEventListener('click', () => {
           if (window.GALLA_signal) window.GALLA_signal.act(KIND, el.dataset.id, 'open', 'gallari');
           // 숏판 단일(세로) = 릴스로 / 숏판 캐러셀·롱판 = 상세로
-          if (KIND === 'vertical' && el.dataset.car !== '1') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post');
+          if (KIND === 'vertical' && el.dataset.car !== '1') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post&from=gallari');
           else nav('gallari-post.html?id=' + el.dataset.id);
         });
       });
