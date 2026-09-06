@@ -1,9 +1,13 @@
 /* 🚪 로그아웃 흐름 — 네이티브 alert 폐지, 우리 톤 팝업.
-   · 앱(네이티브): 인스타처럼 로그아웃 불가 → "계속 함께해요" 팝업만.
-   · 웹: 최대한 만류(머무르기 강조 / 로그아웃 약하게) → 로그아웃 시 "또 오세요" 인사 후 이동.
-   window.GALLA_logout() */
+   · 만류는 하되 나가는 길은 앱·웹 모두 연다.
+   · 웹: 만류(머무르기 강조 / 로그아웃 약하게) → 로그아웃 시 "또 오세요" 인사 후 이동.
+   window.GALLA_logout()
+
+   ⚠️ 2026-09-06 이전엔 앱에서 isApp() 이면 팝업만 띄우고 return 해 signOut 에 닿지도 못했다
+   ("인스타처럼 로그아웃 없음"). 전제가 틀렸고(인스타에도 있다) 결과가 나빴다 —
+   계정 전환이 불가능하고, 기기를 공유하면 남의 계정에서 빠져나올 방법이 없었다.
+   스토어 심사에서도 계정 관리 부재로 걸릴 수 있는 자리다. 앱도 같은 흐름을 탄다. */
 (function () {
-  function isApp() { return !!(window.GALLA_isApp && window.GALLA_isApp()); }
 
   function css() {
     if (document.getElementById("lo-css")) return;
@@ -39,28 +43,24 @@
 
   async function doLogout(dim) {
     try { await (window.supabaseClient && window.supabaseClient.auth.signOut()); } catch (_) {}
+    /* signOut 이 네트워크로 실패해도 로컬 세션은 반드시 지운다 — 안 그러면
+       "로그아웃했는데 그대로 로그인 상태"가 된다(비행기모드·지하철에서 재현). */
+    try { localStorage.removeItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) {}
     try { sessionStorage.clear(); } catch (_) {}
     // "또 오세요" 인사로 교체 후 홈으로
     if (dim) dim.querySelector(".lo-card").innerHTML =
       '<div class="lo-emoji">👋</div><div class="lo-title">또 만나요!</div>' +
       '<div class="lo-body">언제든 다시 로그인해서<br>이어서 즐겨주세요 💜</div>';
-    setTimeout(function () { location.href = "index.html"; }, 1100);
+    setTimeout(function () {
+      /* 앱(SPA 셸)에서 location.href 로 문서를 갈아치우면 셸·라우터가 통째로 죽는다
+         — social-auth 의 로그인 복귀에서 이미 물렸던 함정이다. 셸이면 라우터로 간다. */
+      if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
+      if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
+      location.href = "index.html";
+    }, 1100);
   }
 
   function logout() {
-    // 앱: 인스타처럼 로그아웃 없음
-    if (isApp()) {
-      var d = open(
-        '<div class="lo-emoji">💜</div>' +
-        '<div class="lo-title">앱에서는 로그아웃이 없어요</div>' +
-        '<div class="lo-body">껐다 켜도 바로 이어집니다.<br>계속 함께해요!</div>' +
-        '<div class="lo-btns"><button class="lo-stay" id="lo-ok">계속하기</button></div>'
-      );
-      d.querySelector("#lo-ok").onclick = function () { close(d); };
-      d.addEventListener("click", function (e) { if (e.target === d) close(d); });
-      return;
-    }
-    // 웹: 최대한 만류
     var dim = open(
       '<div class="lo-emoji">🥺</div>' +
       '<div class="lo-title">정말 나가시게요?</div>' +

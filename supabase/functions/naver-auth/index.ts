@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (!NAVER_ID || !NAVER_SECRET) return j({ error: "naver_not_configured" }, 503);
 
-  let body: { action?: string; code?: string; state?: string; redirect_uri?: string; reprompt?: boolean };
+  let body: { action?: string; code?: string; state?: string; redirect_uri?: string; reprompt?: boolean; native?: boolean };
   try { body = await req.json(); } catch { return j({ error: "bad json" }, 400); }
 
   // 🔗 1단계: 인가 URL 발급 — client_id를 프론트에 박지 않기 위해 서버가 만들어 준다.
@@ -36,7 +36,16 @@ Deno.serve(async (req) => {
   if (body.action === "authorize") {
     const redirect = String(body.redirect_uri || "");
     if (!/^https?:\/\//.test(redirect)) return j({ error: "redirect_uri required" }, 400);
-    const state = crypto.randomUUID().replace(/-/g, "");
+    /* 🏷️ state 에 출처 표식을 박는다 — 접두 nvw(웹) / nvn(네이티브 앱).
+       이유 두 가지:
+       ① 콜백 페이지가 '이 ?code= 가 네이버 것인지 Supabase(PKCE) 것인지'를 구분해야 한다.
+          예전엔 code 만 보고 전부 네이버로 넘겨 **구글·애플 로그인이 통째로 죽었다**
+          (실측 2026-09-06: /auth-callback.html?code=… → /login?err=naver).
+       ② 네이티브는 인앱 브라우저에서 돌아 sessionStorage 가 앱과 분리돼 있다.
+          그래서 콜백 페이지가 세션을 직접 만들지 않고 token_hash 를 앱으로 넘겨야 하는데,
+          그 판단을 state 만으로 할 수 있어야 한다.
+       네이버는 state 를 그대로 돌려주므로 서버 저장소가 필요 없다. */
+    const state = (body.native ? "nvn" : "nvw") + crypto.randomUUID().replace(/-/g, "");
     // auth_type=reprompt — 이미 연동한 유저에게 '동의 항목이 늘었을 때' 재동의를 강제한다.
     // (네이버는 기존 연동자에게 새 scope 동의를 자동으로 다시 묻지 않아 이메일이 계속 안 넘어옴)
     const url = "https://nid.naver.com/oauth2.0/authorize?response_type=code"

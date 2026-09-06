@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-<meta name="galla-ver" content="0905120"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0906010"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>로그인 중 · GALLA</title>
   <meta name="robots" content="noindex">
@@ -21,7 +21,7 @@
 
   <script src="./vendor/supabase.js?v=0809131"></script>
   <script src="js/supabase.js?v=0830017"></script>
-  <script src="js/social-auth.js?v=0901220"></script>
+  <script src="js/social-auth.js?v=0906010"></script>
   <script>
     (async function () {
       const T = document.getElementById("cbT");
@@ -30,12 +30,17 @@
       for (let i = 0; i < 40 && !sb; i++) { sb = window.supabaseClient; if (!sb) await new Promise(r => setTimeout(r, 100)); }
       if (!sb) { location.replace("login.html"); return; }
 
-      // 🟢 네이버 복귀(?code=&state=) — Supabase OAuth(해시 토큰)와 달리 code 교환이 필요
-      if (new URLSearchParams(location.search).get("code")) {
+      /* 🟢 네이버 복귀 — state 접두(nvw/nvn)가 있을 때만이다.
+         ⚠️ 예전엔 "?code= 가 있으면 네이버"로 봤다. 그런데 우리는 flowType:"pkce" 라
+         구글·애플도 ?code= 로 돌아온다 → **구글·애플 로그인이 전부 여기서 납치돼
+         login?err=naver 로 떨어졌다**(실측 2026-09-06). 표식 없으면 Supabase 가 처리한다. */
+      if (window.GALLA_isNaverCallback && window.GALLA_isNaverCallback()) {
         T.textContent = "네이버 계정 확인 중…";
         try {
-          const ok = window.GALLA_handleNaverCallback && await window.GALLA_handleNaverCallback();
-          if (!ok) { location.replace("login.html?err=naver"); return; }
+          const res = await window.GALLA_handleNaverCallback();
+          // 앱: token_hash 를 딥링크로 넘겼다 — 여기서 더 진행하면 인앱 브라우저가 홈으로 튄다
+          if (res === "handoff") { T.textContent = "앱으로 돌아가는 중…"; return; }
+          if (!res) { location.replace("login.html?err=naver"); return; }
         } catch (_) { location.replace("login.html?err=naver"); return; }
       }
 

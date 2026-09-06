@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
     if (arr.length < 1000) break;
   }
   const rows: any[] = [];
+  const miss: any[] = [];
   let seen = 0;
   for (const p of places) {
     const la = Number(p.lat), lo = Number(p.lon);
@@ -113,7 +114,12 @@ Deno.serve(async (req) => {
         const tb = baseName(t.title);
         return tb.length >= 3 && (tb.includes(pb) || pb.includes(tb));
       }) : null);
-    if (!hit) continue;
+    if (!hit) {
+      /* 진단 — 왜 안 붙는지 남긴다. 추측으로 반경을 넓히면 엉뚱한 집 사진이 붙는다. */
+      if (miss.length < 12) miss.push({ p: p.name,
+        near: cands.slice(0, 3).map((t: any) => t.title) });
+      continue;
+    }
     seen++;
     /* ⚠️ 관광공사가 주는 URL 은 http:// 다. food_photos 는 https 만 받고(CHECK),
        앱 CSP 도 img-src 가 https: 라 그대로 넣으면 저장도 표시도 안 된다.
@@ -138,5 +144,5 @@ Deno.serve(async (req) => {
     else inserted += chunk.length;
   }
   return j({ ok: true, tour: tour.length, usable: usable.length,
-             targets: places.length, name_hit: seen, matched: rows.length, inserted, errs });
+             targets: places.length, name_hit: seen, matched: rows.length, inserted, errs, miss });
 });

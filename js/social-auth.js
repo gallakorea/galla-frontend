@@ -70,6 +70,27 @@
          출처를 여기서 막아야 한다. */
       const fromOurCallback = url.indexOf("auth-callback") >= 0 || /^https:\/\/galla\.im\//i.test(url);
       if (!fromOurCallback) return;
+      /* 🟢 네이버 핸드오프 — 콜백 페이지가 token_hash+state 를 딥링크로 넘겨준다.
+         state 는 이 앱이 로그인을 시작할 때 저장해 둔 값과 반드시 일치해야 한다.
+         (대조 없이 받으면 아무 앱이나 자기 token_hash 를 던져 남의 앱을 자기 계정으로
+          로그인시킬 수 있다 — access_token 경로에서 이미 한 번 물렸던 세션 고정이다.) */
+      const th = pick("token_hash"), thState = pick("state");
+      if (th) {
+        let saved = null;
+        try { saved = localStorage.getItem(NAVER_STATE_KEY); } catch (_) {}
+        if (!saved || !thState || saved !== thState) return;
+        try { localStorage.removeItem(NAVER_STATE_KEY); } catch (_) {}
+        try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
+        try {
+          const { error } = await sb().auth.verifyOtp({ token_hash: th, type: "magiclink" });
+          if (error) throw error;
+          try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
+          if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
+          if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
+          location.replace("index.html");
+        } catch (e) { alert("네이버 로그인 처리 실패 — " + (e?.message || "다시 시도해 주세요.")); }
+        return;
+      }
       if (!code && !at) return;
       try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
       try {
@@ -140,16 +161,25 @@
     });
     return await res.json();
   }
+  /* ⚠️ 네이버는 커스텀 스킴 리다이렉트를 등록할 수 없다(웹 애플리케이션 등록만 가능).
+     예전엔 앱에서 redirect_uri 로 im.galla.app:// 를 보냈고, 엣지 함수가 https 만 받아
+     {"error":"redirect_uri required"} 로 튕겼다 → **앱에서 네이버 로그인이 시작조차 안 됐다**
+     (실측 2026-09-06, curl 로 재현). 앱도 https 콜백으로 돌아온 뒤 token_hash 를 딥링크로 넘긴다. */
+  const WEB_CALLBACK = "https://galla.im/auth-callback.html";
+
   async function signInNaver() {
     try {
-      const redirect = isNativeApp() ? NATIVE_REDIRECT : CALLBACK;
-      const r = await naverFetch({ action: "authorize", redirect_uri: redirect });
+      const native = isNativeApp();
+      const redirect = native ? WEB_CALLBACK : CALLBACK;
+      const r = await naverFetch({ action: "authorize", redirect_uri: redirect, native });
       if (!r || !r.url) {
         alert(r && r.error === "naver_not_configured" ? "네이버 로그인은 준비 중이에요." : "네이버 로그인을 시작하지 못했어요.");
         return;
       }
-      try { sessionStorage.setItem(NAVER_STATE_KEY, r.state); } catch (_) {}
-      if (isNativeApp()) {
+      /* 앱: 인앱 브라우저와 저장소가 분리돼 세션 저장소로는 못 넘긴다. 돌아온 딥링크의
+         state 를 대조해 세션 고정을 막아야 하므로 localStorage 에 남긴다. */
+      try { (native ? localStorage : sessionStorage).setItem(NAVER_STATE_KEY, r.state); } catch (_) {}
+      if (native) {
         setupNativeAuthListener();
         await window.Capacitor.Plugins.Browser.open({ url: r.url, presentationStyle: "popover" });
         return;
@@ -159,18 +189,43 @@
   }
   window.GALLA_signInNaver = signInNaver;
 
-  /* 콜백에서 호출: ?code=&state= 있으면 세션까지 확립하고 true 반환 */
+  /* 이 복귀가 네이버 것인가? — state 접두(nvw/nvn)로만 판단한다.
+     예전엔 콜백 페이지가 "?code= 가 있으면 네이버"로 봤는데, Supabase 는 flowType:"pkce" 라
+     구글·애플도 ?code= 로 돌아온다. 그래서 **구글·애플 로그인이 전부 네이버 핸들러로 끌려가
+     login?err=naver 로 떨어졌다**(실측 2026-09-06). 표식이 없으면 Supabase 몫으로 넘긴다. */
+  function isNaverCallback() {
+    try { return /^nv[wn]/.test(new URLSearchParams(location.search).get("state") || ""); }
+    catch (_) { return false; }
+  }
+  window.GALLA_isNaverCallback = isNaverCallback;
+
+  /* 콜백에서 호출.
+     반환: true(세션 확립) / "handoff"(앱으로 넘김 — 이 페이지는 그대로 둔다) / false(실패) */
   async function handleNaverCallback() {
     const q = new URLSearchParams(location.search);
     const code = q.get("code"), state = q.get("state");
-    if (!code || !state) return false;
-    // 구글 등 Supabase OAuth는 해시 토큰으로 오므로 code가 있으면 네이버 경로
-    let saved = null;
-    try { saved = sessionStorage.getItem(NAVER_STATE_KEY); } catch (_) {}
-    if (saved && saved !== state) { alert("로그인 검증에 실패했어요. 다시 시도해 주세요."); return false; }
-    try { sessionStorage.removeItem(NAVER_STATE_KEY); } catch (_) {}
-    const r = await naverFetch({ code, state, redirect_uri: CALLBACK });
+    if (!code || !state || !isNaverCallback()) return false;
+    const native = state.charAt(2) === "n";
+
+    if (!native) {
+      /* CSRF 대조. 예전 조건은 `if (saved && saved !== state)` 라 저장값이 없으면 그냥 통과했다
+         — 즉 아무 데서나 만든 code/state 를 그대로 먹었다. 저장값 없으면 거절로 바꾼다. */
+      let saved = null;
+      try { saved = sessionStorage.getItem(NAVER_STATE_KEY); } catch (_) {}
+      if (!saved || saved !== state) { alert("로그인 검증에 실패했어요. 다시 시도해 주세요."); return false; }
+      try { sessionStorage.removeItem(NAVER_STATE_KEY); } catch (_) {}
+    }
+
+    const r = await naverFetch({ code, state });
     if (!r || !r.ok || !r.token_hash) return false;
+
+    if (native) {
+      /* 인앱 브라우저에서 세션을 만들어봐야 앱에는 없다. token_hash 를 앱으로 넘기고 끝낸다.
+         state 를 같이 실어 앱이 대조하게 한다(세션 고정 방어). */
+      location.replace(NATIVE_REDIRECT + "?token_hash=" + encodeURIComponent(r.token_hash) +
+                       "&state=" + encodeURIComponent(state));
+      return "handoff";
+    }
     const c = sb();
     if (!c) return false;
     const { error } = await c.auth.verifyOtp({ token_hash: r.token_hash, type: "magiclink" });
