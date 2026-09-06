@@ -1,7 +1,7 @@
 /* =========================================================
    📊 프로필 통계 인터랙션 — 숫자를 누르면 뭐라도 나온다
    ---------------------------------------------------------
-   · My Drop  → 갈라 탭으로 이동(내 발제 목록) + 설명 토스트
+   · My Drop  → 모아 탭으로 이동(내가 올린 것 전부) + 설명 토스트
    · 팔로워   → 팔로워/팔로잉 목록 시트(행 탭 = 그 사람 프로필,
                 팔로우 버튼은 공용 .js-follow가 알아서 칠한다)
    · 지지/반발 → 이 숫자가 뭔지 설명 + 갈라 목록 바로가기
@@ -161,11 +161,14 @@
     open();
   }
 
-  function goGallaTab() {
-    const tab = document.querySelector('.tab[data-tab="galla"]');
+  function goTab(name) {
+    const tab = document.querySelector(`.tab[data-tab="${name}"]`);
     tab?.click();
     document.querySelector(".tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+  const goAllTab = () => goTab("all");
+  /* 지지·반발은 '발제한 갈라가 받은 표'라 갈라 탭이 맞다 — My Drop 만 모아로 간다 */
+  const goGallaTab = () => goTab("galla");
 
   /* ── 배선 ── */
   async function boot() {
@@ -181,7 +184,8 @@
       unit.classList.add("ps-clickable");
       unit.addEventListener("click", fn);
     };
-    bind("statDrop", () => { goGallaTab(); toast("📝 My Drop — 이 계정이 발제한 갈라 수예요"); });
+    /* My Drop = 갈라만이 아니라 올린 콘텐츠 전부(모아 탭과 같은 기준) → 모아로 보낸다 */
+    bind("statDrop", () => { goAllTab(); toast("📝 My Drop — 이 계정이 올린 콘텐츠 수예요 (갈라·숏판·롱판·예측·광장)"); });
     bind("statFollowers", () => openFollowSheet("followers"));
     bind("statSupports", openVoteExplain);
     bind("statOppose", openVoteExplain);

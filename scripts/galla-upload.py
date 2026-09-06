@@ -177,6 +177,31 @@ def _brightness(path):
 
 DARK = 26          # 이보다 어두우면 사실상 검은 화면으로 본다(실측: 페이드인 구간 0x0b)
 
+HANGUL = (0xAC00, 0xD7A3)      # 완성형 음절
+JAMO   = (0x3130, 0x318F)      # 낱자(ㄱ, ㅏ …)
+
+def is_korean(text):
+    """한 글자라도 한글이 섞였으면 한국어 제목으로 본다.
+       '2006년 이 노래를…' 처럼 숫자·영문이 섞인 제목까지 번역해 버리면 원문이 망가진다."""
+    for ch in text:
+        o = ord(ch)
+        if HANGUL[0] <= o <= HANGUL[1] or JAMO[0] <= o <= JAMO[1]:
+            return True
+    return False
+
+
+def to_korean(token, text):
+    """한글이 아니면 번역해서 올린다. 실패하면 원문 그대로 — 번역 때문에 발행을 막지는 않는다."""
+    st, d = _json(f"{SB_URL}/functions/v1/translate", "POST",
+                  {"apikey": SB_ANON, "Authorization": f"Bearer {token}"},
+                  {"text": text, "to": "ko", "field": "title"}, timeout=90)
+    if st == 200 and isinstance(d, dict) and d.get("ok") and d.get("text"):
+        return d["text"].strip()
+    reason = (d or {}).get("reason", st)
+    print(f"   ! 번역 실패({reason}) — 원문 그대로 올립니다")
+    return None
+
+
 def make_thumb(video_path, out_path):
     """대표 프레임 한 장.
        ⚠️ 예전엔 '1초 지점' 한 방이었다. 요즘 영상은 앞이 페이드인이라 검은 장을 뽑는다
@@ -319,6 +344,12 @@ def process(path, token, user_id, seen, dry):
     if dry:
         print("   (dry-run — 올리지 않음)")
         return None
+
+    if not is_korean(title):
+        ko = to_korean(token, title)
+        if ko:
+            print(f"   번역: {ko}")
+            title = ko
 
     mod = moderate(token, title, title)
     if mod == "blocked":

@@ -338,11 +338,17 @@ async function GALLA_mypageInit(root, spaParams) {
     // Load My Stats
     // =====================================================
     async function loadMyStats() {
-        // 1) My Drop: count of issues where user_id = viewUserId
-        const { count: dropCount, error: dropError } = await supabase
-            .from("issues")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", viewUserId);
+        /* 1) My Drop = 이 계정이 올린 콘텐츠 전부.
+           ⚠️ 예전엔 issues 만 셌다 — 숏판을 6개 올려도 0으로 남아서
+              "왜 반영이 안 되냐"가 됐다(사장님 2026-09-06).
+              모아 탭이 보여주는 다섯 가지와 같은 기준으로 센다. */
+        const [ci, cp, cm, cz] = await Promise.all([
+            supabase.from("issues").select("id", { count: "exact", head: true }).eq("user_id", viewUserId),
+            supabase.from("posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId).eq("is_published", true),
+            supabase.from("markets").select("id", { count: "exact", head: true }).eq("created_by", viewUserId),
+            supabase.from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId),
+        ]);
+        const dropCount = (ci.count || 0) + (cp.count || 0) + (cm.count || 0) + (cz.count || 0);
 
         // 2) Followers: count of follows where following = viewUserId
         const { count: followerCount, error: followerError } = await supabase
