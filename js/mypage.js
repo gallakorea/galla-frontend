@@ -1479,7 +1479,8 @@ async function GALLA_mypageInit(root, spaParams) {
         const longs = pdata.filter(r => r.kind === "horizontal").slice(0, 6);
         const issues = iss.data || [], markets = mkt.data || [], plazas = plz.data || [];
         if (!(issues.length + pdata.length + markets.length + plazas.length)) {
-            if (stale(tok) || wrongTab("all")) return;
+            if (stale(tok)) return;
+            if (wrongTab("all")) return renderFor(activeTab());
             tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
         }
 
@@ -1548,7 +1549,10 @@ async function GALLA_mypageInit(root, spaParams) {
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
 
-        if (stale(tok) || wrongTab("all")) return;
+        if (stale(tok)) return;
+        /* 물러서기만 하면 스피너가 남는다 — 그 자리 주인을 대신 부른다(재귀 없음:
+           renderFor 가 다시 renderAll 을 부르는 건 활성탭이 all 일 때뿐이다). */
+        if (wrongTab("all")) return renderFor(activeTab());
         tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
         // 섹션 헤더 탭 → 해당 탭으로 전환
         tabContent.querySelectorAll("[data-gototab]").forEach(el => el.addEventListener("click", () => {
@@ -1579,21 +1583,25 @@ async function GALLA_mypageInit(root, spaParams) {
     // ---------------------------
     // 탭 클릭 이벤트
     // ---------------------------
+    /* 탭 → 렌더 한 곳으로. 탭 클릭·부팅·안전망이 전부 이걸 쓴다
+       (세 군데가 각자 분기를 갖고 있으면 한 곳만 고쳐져 화면이 어긋난다). */
+    function renderFor(menu) {
+        switch (menu) {
+            case "galla": return renderGalla();          // 내가 만든 이슈
+            case "short": return renderContent("vertical");
+            case "long":  return renderContent("horizontal");
+            case "predict": return renderPredict();
+            case "plaza": return renderPlaza();
+            default: return renderAll();                  // 모아 — 전체 통합 그리드
+        }
+    }
+
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
             tabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
 
-            const menu = tab.dataset.tab;
-
-            switch (menu) {
-                case "all": renderAll(); break;                              // 모아 — 전체 통합 그리드
-                case "galla": renderGalla(); break;                          // 내가 만든 이슈
-                case "short": renderContent("vertical"); break;              // 숏판
-                case "long":  renderContent("horizontal"); break;            // 롱판
-                case "predict": renderPredict(); break;                      // 내가 만든 예측
-                case "plaza": renderPlaza(); break;                          // 내가 쓴 광장
-            }
+            renderFor(tab.dataset.tab);
         });
     });
 
@@ -1612,11 +1620,14 @@ async function GALLA_mypageInit(root, spaParams) {
     const pendEl = pending && pending !== "all" ? D.querySelector('.tabs .tab[data-tab="' + pending + '"]') : null;
     /* 🔑 부팅은 '눈에 보이는 활성 탭'을 그린다. 예전엔 무조건 renderAll() 이라,
        스냅샷 복원으로 숏판이 활성인 채 들어와도 모아를 그렸다(숏판 6개 사고의 뿌리). */
+    /* ⚠️ 숏판·롱판 탭은 HTML 에 hidden 으로 시작하고, 기능 플래그를 확인한 뒤
+       비동기로 열린다. 그래서 부팅 시점에 !hidden 으로 거르면 뒤로 왔을 때
+       '활성 탭 없음'으로 보고 모아를 그리려 하고, 모아는 활성탭이 숏판이라
+       취소되어 **아무도 안 그리는** 무한 로딩이 된다. hidden 은 보이기의
+       문제일 뿐 무엇을 그릴지와는 상관없다 — active 면 그린다. */
     const actEl = D.querySelector(".tabs .tab.active");
-    const actTab = actEl && !actEl.hidden ? actEl.dataset.tab : "all";
     if (pendEl && !pendEl.hidden) pendEl.click();
-    else if (actTab && actTab !== "all") actEl.click();
-    else renderAll();
+    else renderFor(actEl ? actEl.dataset.tab : "all");
 }
 
 /* ═══ 모드 부트스트랩 ═══
