@@ -525,6 +525,8 @@ const social = {
     userId: null,
     follows: new Set(),     // 내가 팔로우한 user_id
     bookmarks: new Set(),   // 내가 북마크한 issue_id (문자열)
+    postLikes: new Set(),   // 내가 좋아요한 post_id (숏판·롱판)
+    postBookmarks: new Set(),
     likes: new Set(),       // 내가 좋아요한 issue_id (문자열)
     loaded: false
 };
@@ -535,13 +537,19 @@ async function initSocial() {
     const user = data?.session?.user;
     if (user) {
         social.userId = user.id;
-        const [f, b, l] = await Promise.all([
+        /* ⚠️ 순서와 이름을 반드시 맞춰서 받는다 — 쿼리를 끼워 넣고 구조 분해를 그대로 두면
+              이슈 좋아요 자리에 숏판 좋아요가 들어와 조용히 뒤바뀐다. */
+        const [f, b, pl, pb, l] = await Promise.all([
             supabase.from('follows').select('following').eq('follower', user.id),
             supabase.from('bookmarks').select('issue_id').eq('user_id', user.id),
+            supabase.from('post_likes').select('post_id').eq('user_id', user.id),
+            supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id),
             supabase.from('issue_likes').select('issue_id').eq('user_id', user.id)
         ]);
         f.data?.forEach(r => social.follows.add(r.following));
         b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
+        pl.data?.forEach(r => social.postLikes.add(String(r.post_id)));
+        pb.data?.forEach(r => social.postBookmarks.add(String(r.post_id)));
         l.data?.forEach(r => social.likes.add(String(r.issue_id)));
     }
     social.loaded = true;
@@ -563,10 +571,12 @@ function applySocialState() {
         setFollowUI(btn, social.follows.has(btn.dataset.uid));
     });
     IDXROOT.querySelectorAll('.bookmark-btn').forEach(img => {
-        img.classList.toggle('active', social.bookmarks.has(img.dataset.id));
+        const set = img.dataset.kind === 'post' ? social.postBookmarks : social.bookmarks;
+        img.classList.toggle('active', set.has(img.dataset.id));
     });
     IDXROOT.querySelectorAll('.like-btn').forEach(btn => {
-        btn.classList.toggle('on', social.likes.has(btn.dataset.id));
+        const set = btn.dataset.kind === 'post' ? social.postLikes : social.likes;
+        btn.classList.toggle('on', set.has(btn.dataset.id));
     });
 }
 
@@ -574,25 +584,31 @@ async function toggleLike(btn) {
     if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
     const supabase = window.supabaseClient;
     const id = btn.dataset.id;
-    const on = social.likes.has(id);
+    /* 이슈와 숏판은 좋아요 테이블이 다르다(issue_likes / post_likes).
+       버튼 모양·클래스는 같게 두고 data-kind 로만 갈린다. */
+    const isPost = btn.dataset.kind === 'post';
+    const set = isPost ? social.postLikes : social.likes;
+    const on = set.has(id);
     const cEl = btn.querySelector('.lk-count');
     const base = Number(btn.dataset.likes) || 0;
     const next = Math.max(0, base + (on ? -1 : 1));
     // 낙관적 토글 (모든 동일 id 카드 동기화)
-    if (on) social.likes.delete(id); else social.likes.add(id);
-    IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+    if (on) set.delete(id); else set.add(id);
+    IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"][data-kind="${btn.dataset.kind || ''}"]`).forEach(b => {
         b.dataset.likes = next;
         b.classList.toggle('on', !on);
         const c = b.querySelector('.lk-count'); if (c) c.textContent = next ? formatK(next) : '';
     });
     if (!on) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
 
+    const tbl = isPost ? 'post_likes' : 'issue_likes';
+    const col = isPost ? 'post_id' : 'issue_id';
     const { error } = on
-        ? await supabase.from('issue_likes').delete().eq('user_id', social.userId).eq('issue_id', Number(id))
-        : await supabase.from('issue_likes').insert({ user_id: social.userId, issue_id: Number(id) });
+        ? await supabase.from(tbl).delete().eq('user_id', social.userId).eq(col, Number(id))
+        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: Number(id) });
     if (error && error.code !== '23505') {
-        if (on) social.likes.add(id); else social.likes.delete(id);
-        IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+        if (on) set.add(id); else set.delete(id);
+        IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"][data-kind="${btn.dataset.kind || ''}"]`).forEach(b => {
             b.dataset.likes = base;
             b.classList.toggle('on', on);
             const c = b.querySelector('.lk-count'); if (c) c.textContent = base ? formatK(base) : '';
@@ -626,21 +642,37 @@ async function toggleBookmark(img) {
     if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
     const supabase = window.supabaseClient;
     const id = img.dataset.id;
-    const on = social.bookmarks.has(id);
+    const isPost = img.dataset.kind === 'post';
+    const set = isPost ? social.postBookmarks : social.bookmarks;
+    const on = set.has(id);
 
-    if (on) social.bookmarks.delete(id); else social.bookmarks.add(id);
+    if (on) set.delete(id); else set.add(id);
     applySocialState();
 
+    const tbl = isPost ? 'post_bookmarks' : 'bookmarks';
+    const col = isPost ? 'post_id' : 'issue_id';
     const { error } = on
-        ? await supabase.from('bookmarks').delete()
-            .eq('user_id', social.userId).eq('issue_id', Number(id))
-        : await supabase.from('bookmarks').insert({ user_id: social.userId, issue_id: Number(id) });
+        ? await supabase.from(tbl).delete()
+            .eq('user_id', social.userId).eq(col, Number(id))
+        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: Number(id) });
 
     if (error && error.code !== '23505') {
-        if (on) social.bookmarks.add(id); else social.bookmarks.delete(id);
+        if (on) set.add(id); else set.delete(id);
         applySocialState();
         openModal('처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
+}
+
+/* 숏판·롱판 공유 — OG 엣지 렌더 링크(/share/post/<id>). 상세 페이지와 같은 규약이다. */
+function sharePost(btn) {
+    const id = btn.dataset.id;
+    const card = btn.closest('.card');
+    const title = card?.querySelector('.card-title')?.textContent?.trim() || 'GALLA 숏판';
+    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('post', id)
+        : ((window.GALLA_SITE || location.origin) + '/share/post/' + id);
+    if (window.GALLA_share) return window.GALLA_share({ url, title, text: '갈라에서 보기' });
+    if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
+    navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
 }
 
 function shareIssue(id) {
@@ -727,6 +759,7 @@ function attachEvents() {
     IDXROOT.querySelectorAll('.share-btn').forEach(img => {
         img.onclick = e => {
             e.stopPropagation();
+            if (img.dataset.kind === 'post') return sharePost(img);
             shareIssue(img.dataset.id);
         };
     });
@@ -736,8 +769,32 @@ function attachEvents() {
         btn.onclick = async e => {
             e.stopPropagation();
             const id = btn.dataset.id, uid = btn.dataset.uid || null;
-            const card = window.cards?.find(c => String(c.id) === String(id));
+            const isPost = btn.dataset.kind === 'post';
             const canManage = window.GALLA_canManage ? await window.GALLA_canManage(uid) : false;
+            if (isPost) {
+                /* 숏판·롱판 — 상세·릴스와 같은 계약(posts 테이블, 본문=caption). */
+                const cardEl = btn.closest('.card');
+                const cap = cardEl?.querySelector('.card-title')?.textContent?.trim() || '';
+                if (canManage && window.GALLA_openOwnerMenu) {
+                    return window.GALLA_openOwnerMenu({
+                        table: 'posts', id: Number(id), ownerId: uid, label: '숏판',
+                        editFields: [{ key: 'caption', label: '내용', type: 'textarea', value: cap }],
+                        onSaved: (patch) => {
+                            const t = cardEl?.querySelector('.card-title');
+                            if (t && patch.caption != null) t.textContent = patch.caption;
+                        },
+                        onDeleted: () => { cardEl?.remove(); },
+                    });
+                }
+                if (window.GALLA_openReportMenu) {
+                    return window.GALLA_openReportMenu({
+                        contentType: 'post', contentId: id, authorId: uid,
+                        onBlocked: () => { cardEl?.remove(); },
+                    });
+                }
+                return;
+            }
+            const card = window.cards?.find(c => String(c.id) === String(id));
             if (canManage && window.GALLA_openOwnerMenu) {
                 window.GALLA_openOwnerMenu({
                     table: 'issues', id: Number(id), ownerId: uid, label: '갈라',
@@ -761,6 +818,11 @@ function attachEvents() {
         el.onclick = e => {
             e.stopPropagation();
             const card = el.closest('.card');
+            /* 숏판 댓글은 상세 페이지에 있다 — 릴스로 보내면 댓글 시트를 또 열어야 한다. */
+            if (card.dataset.kind === 'post') {
+                window.GALLA_goto(`gallari-post.html?id=${card.dataset.id}#comments`);
+                return;
+            }
             window.GALLA_goto(`issue.html?id=${card.dataset.id}#battle-zone`);
         };
     });
@@ -1367,7 +1429,7 @@ function renderGallariCard(p) {
         ? window.GALLA_avatarImg(u.avatar_url, 'mah-avatar-img')
         : `<div class="mah-avatar">${escHtml((u.nickname || '익').trim().charAt(0))}</div>`;
     return `
-    <div class="card glr-feed-card" data-id="${p.id}"${isLink
+    <div class="card glr-feed-card" data-id="${p.id}" data-kind="post" data-uid="${escHtml(p.user_id || '')}"${isLink
         ? ` onclick="GALLA_openLink('${escHtml(p.link_url)}')"` : ""}>
         <div class="media-author-head">
             <div class="mah-left">
@@ -1387,12 +1449,18 @@ function renderGallariCard(p) {
 
         <div class="card-body">
             ${text ? `<div class="card-title">${escHtml(text)}</div>` : ''}
-            <div class="glr-foot">
-                <span>♥ ${formatK(p.like_count || 0)}</span>
-                <span>💬 ${formatK(p.comment_count || 0)}</span>
+        </div>
+
+        <!-- 액션 바 — 이슈 카드와 같은 문법(같은 클래스·같은 순서). data-kind 로만 갈린다. -->
+        <div class="card-footer">
+            <div class="footer-icons">
+                <button type="button" class="fi-btn like-btn" data-kind="post" data-id="${p.id}" data-likes="${p.like_count || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${p.like_count ? formatK(p.like_count) : ''}</span></button>
+                <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}<span class="lk-count">${p.comment_count ? formatK(p.comment_count) : ''}</span></button>
+                <button type="button" class="fi-btn bookmark-btn" data-kind="post" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
+                <button type="button" class="fi-btn share-btn" data-kind="post" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
-                <span class="glr-go"${isLink ? '' : ` onclick="event.stopPropagation();GALLA_goto('${dest}')"`}>${isLink ? '원본 보기' : (isLong ? '영상 보기' : '릴스로 보기')} ›</span>
             </div>
+            <button class="more-btn card-more" data-kind="post" data-id="${p.id}" data-uid="${escHtml(p.user_id || '')}" aria-label="더보기">${moreIcon}</button>
         </div>
     </div>`;
 }
