@@ -131,15 +131,20 @@
         <div class="glp-cr-info"><div class="glp-nick">${esc(author?.nickname || '익명')}</div><div class="glp-cr-sub">GALLA 크리에이터</div></div>
         ${me && post.user_id !== me ? `<button class="glp-follow-btn js-follow" data-uid="${esc(post.user_id)}">+ 팔로우</button>` : ''}
       </div>`;
+      /* 🔗 링크 카드 — 갈라에 파일이 없다. 원본으로 보내는 버튼이 이 글의 본체다.
+         앱에서 location.href 로 열면 웹뷰가 통째로 갈아타므로 GALLA_openLink 를 쓴다. */
+      const linkHost = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '원본'; } };
+      const linkHtml = post.link_url
+        ? `<button type="button" class="glp-origin" id="glp-origin">🔗 원본 보기 <span>${esc(linkHost(post.link_url))}</span></button>` : '';
       const descHtml = post.caption
         ? `<div class="glp-desc collapsed" id="glp-desc"><div class="glp-desc-body">${esc(post.caption)}</div><button type="button" class="glp-desc-more" id="glp-desc-more">…더보기</button></div>` : '';
       body = mediaHtml
         + '<div class="glp-watch">'
         + (post.title ? `<div class="glp-title">${esc(post.title)}</div>` : '')
-        + metaRow + actionsHtml + creatorRow + donationsHtml + descHtml + tagsHtml
+        + metaRow + actionsHtml + creatorRow + donationsHtml + linkHtml + descHtml + tagsHtml
         + '</div>';
     } else {
-      body = headHtml + mediaHtml + actionsHtml + donationsHtml
+      body = headHtml + mediaHtml + actionsHtml + donationsHtml + linkHtml
         + (post.caption ? `<div class="glp-caption"><b>${esc(author?.nickname || '')}</b>  ${esc(post.caption)}</div>` : '')
         + tagsHtml;
     }
@@ -157,6 +162,9 @@
     });
 
     // 캐러셀 도트
+    const originBtn = root.querySelector('#glp-origin');
+    if (originBtn && post.link_url) originBtn.onclick = () => (window.GALLA_openLink || function (u) { window.open(u, '_blank', 'noopener'); })(post.link_url);
+
     const slides = root.querySelector('.glp-slides');
     if (slides) {
       const dots = root.querySelectorAll('.glp-dots i');

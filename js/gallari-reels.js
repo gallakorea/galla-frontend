@@ -63,6 +63,7 @@
       // 👤 특정 유저의 숏판만 순차 (마이페이지/프로필에서 진입) — 이슈 섞지 않음
       const { data: posts } = await sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
         .eq('kind', 'vertical').eq('user_id', st.user).eq('is_published', true).neq('moderation_status', 'blocked')
+        .is('link_url', null)   // 🔗 링크 카드 제외 — 재생할 파일이 없다(정지 화면이 된다)
         .order('created_at', { ascending: false }).limit(60);
       feed = (posts || []).filter(notCarousel).map(p => ({ _type: 'post', ...p }));
     } else {
@@ -70,6 +71,7 @@
       const [{ data: posts }, { data: issues }] = await Promise.all([
         (window.GALLA_lfilter || function (q) { return q; })(sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
           .eq('kind', 'vertical').eq('is_published', true).neq('moderation_status', 'blocked')
+          .is('link_url', null)   // 🔗 링크 카드 제외 — 위와 같은 이유
           .order('created_at', { ascending: false }).limit(24)),
         (window.GALLA_lfilter || function (q) { return q; })(sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
           .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24)),

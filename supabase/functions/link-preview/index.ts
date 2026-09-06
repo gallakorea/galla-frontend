@@ -24,6 +24,48 @@ function metaTag(html: string, key: string): string | null {
   return c ? decode(c[1]) : null;
 }
 
+/* 🔗 공식 oEmbed 우선 — OG 스크레이핑은 요즘 대형 플랫폼에서 전부 빈손이다.
+   실측 2026-09-06: 인스타·유튜브·틱톡 모두 og:image 를 안 준다(로그인 없는 봇 차단·JS 렌더).
+   유튜브·틱톡은 키 없이 쓰는 공식 oEmbed 가 제목·작성자·썸네일을 정확히 준다.
+   ⚠️ 인스타는 oEmbed 에 메타 앱 토큰이 필요하다(토큰 없으면 400) — 여기서는 못 뚫는다.
+      IG_OEMBED_TOKEN 이 설정되면 그때 함께 탄다. */
+const OEMBED: Array<[RegExp, (u: string) => string]> = [
+  [/(^|\.)youtube\.com$|(^|\.)youtu\.be$/i,
+    (u) => `https://www.youtube.com/oembed?url=${encodeURIComponent(u)}&format=json`],
+  [/(^|\.)tiktok\.com$/i,
+    (u) => `https://www.tiktok.com/oembed?url=${encodeURIComponent(u)}`],
+];
+
+async function viaOembed(url: string, host: string) {
+  const hit = OEMBED.find(([re]) => re.test(host));
+  let endpoint: string | null = hit ? hit[1](url) : null;
+
+  if (!endpoint && /(^|\.)instagram\.com$/i.test(host)) {
+    const tok = Deno.env.get("IG_OEMBED_TOKEN");
+    if (tok) endpoint = `https://graph.facebook.com/v18.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=${tok}&fields=title,author_name,thumbnail_url`;
+  }
+  if (!endpoint) return null;
+
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(endpoint, { signal: ctl.signal, headers: { "User-Agent": UA } });
+    clearTimeout(timer);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || (!j.title && !j.thumbnail_url)) return null;
+    return {
+      ok: true,
+      url,
+      title: decode(String(j.title || j.author_name || host)),
+      source: j.author_name ? `${j.provider_name || host} · ${j.author_name}` : (j.provider_name || host),
+      image: j.thumbnail_url || null,
+      description: null,
+      via: "oembed",
+    };
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   let url = new URL(req.url).searchParams.get("url") || "";
@@ -32,6 +74,11 @@ Deno.serve(async (req) => {
   if (!/^https?:\/\//i.test(url)) return json({ ok: false, error: "invalid_url" }, 400);
 
   const host = (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+
+  // ① 공식 oEmbed 가 있으면 그게 정본이다(스크레이핑보다 정확하고 막히지 않는다)
+  const oe = await viaOembed(url, host);
+  if (oe) return json(oe);
+
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 10000);

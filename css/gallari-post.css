@@ -130,3 +130,14 @@
 .glp-cbar button[disabled] { opacity: .5; }
 
 .glp-loading { text-align: center; color: #8b8b93; padding: 80px 20px; }
+
+/* 🔗 원본 보기 — 링크 카드의 본체. 갈라엔 파일이 없고 이 버튼이 전부다. */
+.glp-origin{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:calc(100% - 28px); margin:12px 14px 4px; padding:13px 16px;
+  border-radius:12px; border:1px solid rgba(127,157,255,.35);
+  background:rgba(127,157,255,.10); color:#a9bcff;
+  font-size:14px; font-weight:800; font-family:inherit; cursor:pointer;
+}
+.glp-origin span{ color:#8a8f9c; font-weight:700; }
+.glp-origin:active{ transform:scale(.985); }

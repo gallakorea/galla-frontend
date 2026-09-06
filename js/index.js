@@ -1280,11 +1280,11 @@ async function loadGallariCards() {
     const supabase = window.supabaseClient;
     const { data: posts } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('posts')
-        .select('id, kind, caption, title, thumbnail_url, video_url, images, media, like_count, comment_count, view_count, user_id, created_at')
+        .select('id, kind, caption, title, thumbnail_url, video_url, images, media, like_count, comment_count, view_count, user_id, created_at, link_url')
         .eq('is_published', true)
         .order('created_at', { ascending: false })
         .limit(20));
-    const rows = (posts || []).filter(p => p.thumbnail_url || p.video_url || (Array.isArray(p.images) && p.images.length));
+    const rows = (posts || []).filter(p => p.thumbnail_url || p.video_url || p.link_url || (Array.isArray(p.images) && p.images.length));
     if (!rows.length) return [];
     /* 작성자 — users 는 컬럼 권한이 잠겨 있어 임베드(select=*,users(...)) 로 끌면
        목록이 통째로 비어버린다. 별도 조회가 정본이다(마이페이지·일기토와 같은 방식). */
@@ -1321,8 +1321,17 @@ function gallariAgo(ts) {
       **클래스와 data-src 규약을 그대로 따르는 것**이 전부다.
    ⚠️ 영상 id 는 vid-p<id> — 이슈와 글은 id 시퀀스가 달라서 vid-<id> 로 쓰면
       같은 번호의 이슈 영상과 충돌한다(릴스가 엉뚱한 지점에서 시작된다). */
+function gallariHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '원본'; } }
+
 function gallariMedia(p, isLong, thumb) {
-    const T = (u, w) => (window.GALLA_thumb ? window.GALLA_thumb(u, w || 1080) : u);
+    /* 링크 카드 썸네일은 남의 CDN 이다 — 인스타 등은 핫링크를 막는다. /imgproxy 를 태운다.
+       (galla 자체 CDN 은 GALLA_thumb 리사이즈가 붙으므로 그대로 둔다) */
+    const T = (u, w) => {
+        if (p.link_url && u && !/^https?:\/\/cdn\.galla\.im\//.test(u)) {
+            return gallaEdgeBase() + '/imgproxy?u=' + encodeURIComponent(u);
+        }
+        return window.GALLA_thumb ? window.GALLA_thumb(u, w || 1080) : u;
+    };
     const vid = `vid-p${p.id}`, mid = `mute-p${p.id}`;
     if (p.video_url && !gallariIsCarousel(p)) {
         return `
@@ -1347,6 +1356,8 @@ function renderGallariCard(p) {
     const isLong = p.kind === 'horizontal';
     const u = p._u || {};
     const thumb = p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || '';
+    /* 🔗 링크 카드는 갈라 안에 영상이 없다 — 릴스로 보내면 빈 화면이다. 원본으로 내보낸다. */
+    const isLink = !!p.link_url && !p.video_url;
     const dest = gallariIsCarousel(p) || isLong
         ? `gallari-post.html?id=${p.id}`
         : `gallari-reels.html?start=${p.id}&t=post`;
@@ -1355,7 +1366,9 @@ function renderGallariCard(p) {
         ? window.GALLA_avatarImg(u.avatar_url, 'mah-avatar-img')
         : `<div class="mah-avatar">${escHtml((u.nickname || '익').trim().charAt(0))}</div>`;
     return `
-    <div class="card glr-feed-card" data-id="${p.id}" onclick="GALLA_goto('${dest}')">
+    <div class="card glr-feed-card" data-id="${p.id}" onclick="${isLink
+        ? `GALLA_openLink('${escHtml(p.link_url)}')`
+        : `GALLA_goto('${dest}')`}">
         <div class="media-author-head">
             <div class="mah-left">
                 <div class="mah-avatar"${p.user_id ? ` data-profile-uid="${p.user_id}"` : ''}>${avatarImg}</div>
@@ -1364,7 +1377,7 @@ function renderGallariCard(p) {
                         <span class="author-name"${p.user_id ? ` data-profile-uid="${p.user_id}"` : ''}>${escHtml(u.nickname || '익명')}</span>
                         <span class="level-badge">Lv.${u.level || 1}</span>
                     </div>
-                    <div class="mah-line2">${isLong ? '🎬 롱판' : '⚡ 숏판'} · ${gallariAgo(p.created_at)} · 조회 ${formatK(p.view_count || 0)}</div>
+                    <div class="mah-line2">${isLink ? `🔗 ${escHtml(gallariHost(p.link_url))}` : (isLong ? '🎬 롱판' : '⚡ 숏판')} · ${gallariAgo(p.created_at)} · 조회 ${formatK(p.view_count || 0)}</div>
                 </div>
             </div>
             ${p.user_id ? `<button class="follow-btn" data-uid="${p.user_id}">+ 팔로우</button>` : ''}
@@ -1378,7 +1391,7 @@ function renderGallariCard(p) {
                 <span>♥ ${formatK(p.like_count || 0)}</span>
                 <span>💬 ${formatK(p.comment_count || 0)}</span>
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
-                <span class="glr-go">${isLong ? '영상 보기' : '릴스로 보기'} ›</span>
+                <span class="glr-go">${isLink ? '원본 보기' : (isLong ? '영상 보기' : '릴스로 보기')} ›</span>
             </div>
         </div>
     </div>`;

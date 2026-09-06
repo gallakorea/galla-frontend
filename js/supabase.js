@@ -594,6 +594,22 @@
     return url;
   };
 
+  /* 🔗 외부 링크 열기 — 링크 카드(원본 보기)의 단일 통로.
+     ⚠️ 앱(Capacitor)에서 location.href / target=_blank 로 외부 URL 을 열면 웹뷰가 그 URL 로
+        통째로 갈아타 앱에서 빠져나올 수 없다. 네이티브는 반드시 시스템 브라우저로 넘긴다. */
+  window.GALLA_openLink = function (url) {
+    if (!/^https?:\/\//i.test(String(url || ""))) return;
+    try {
+      var cap = window.Capacitor;
+      var native = !!(cap && (cap.isNativePlatform ? cap.isNativePlatform() : cap.isNative));
+      if (native && cap.Plugins && cap.Plugins.Browser) {
+        cap.Plugins.Browser.open({ url: url });
+        return;
+      }
+    } catch (_) {}
+    try { window.open(url, "_blank", "noopener"); } catch (_) { location.href = url; }
+  };
+
   /* 🎠 이슈 미디어 정규화 — 혼합 캐러셀(사진+영상)의 단일 진실.
      새 스키마(row.media[])가 있으면 그대로, 없으면 레거시(images[] + video_url)를 순서 있는
      항목으로 승격. 반환: [{ type:'image'|'video', url, thumb? }]. 모든 렌더러가 이걸 쓴다. */

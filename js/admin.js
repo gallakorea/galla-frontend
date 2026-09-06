@@ -95,7 +95,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -825,6 +825,135 @@
   let upTab = "issue";
   const IN = (id, label, ph, val) => `<label>${label}</label><input id="${id}" class="ad-input" placeholder="${ph || ""}" value="${val || ""}">`;
   const TA = (id, label, ph, rows) => `<label>${label}</label><textarea id="${id}" class="ad-input" rows="${rows || 4}" placeholder="${ph || ""}"></textarea>`;
+  /* ─────────── 🔗 링크 발행 ───────────
+     원본을 내려받아 재업로드하는 대신, 원본으로 보내는 링크 카드로 낸다.
+     · 사장님 동작: URL 붙여넣기 → 발행. (다운로더 사이트·광고 클릭 없음)
+     · R2 에 영상을 복사하지 않는다 — 저장비 0, 조회는 원작자에게.
+     · 썸네일(OG 이미지)은 남의 CDN 이라 핫링크가 막히는 곳이 많다 → /imgproxy 경유. */
+  let lpDone = [];              // 이번 세션에 발행한 것들(연속 작업용 기록)
+  let lpPrev = null;            // 현재 미리보기
+
+  function lpProxy(u) {
+    if (!u) return "";
+    if (/^https?:\/\/cdn\.galla\.im\//.test(u)) return u;
+    return "/imgproxy?u=" + encodeURIComponent(u);
+  }
+
+  function renderLinkPost() {
+    main().innerHTML = `<h1 class="ad-h1">🔗 링크 발행</h1>
+      <div class="ad-card ad-form">
+        <label>원본 URL</label>
+        <div style="display:flex;gap:8px">
+          <input id="lp-url" class="ad-input" placeholder="https://www.instagram.com/reel/… 붙여넣기" style="flex:1">
+          <button class="ad-btn" id="lp-load">불러오기</button>
+        </div>
+        <div class="ad-note">인스타·틱톡·유튜브 등 URL 을 붙여넣으면 제목과 썸네일을 가져옵니다.
+          영상 파일은 복사하지 않고 <b>원본으로 보내는 카드</b>로 발행됩니다.</div>
+        <div id="lp-prev" style="margin-top:12px"></div>
+      </div>
+      <div class="ad-card" id="lp-done-card" ${lpDone.length ? "" : "hidden"}>
+        <label>이번에 발행한 것</label>
+        <div id="lp-done"></div>
+      </div>`;
+
+    const load = async () => {
+      const u = $("#lp-url").value.trim();
+      if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");
+      const b = $("#lp-load"); b.disabled = true; b.textContent = "불러오는 중…";
+      try {
+        const { data } = await sb.functions.invoke("link-preview", { body: { url: u } });
+        lpPrev = {
+          url: data?.url || u,
+          title: data?.title || u,
+          source: data?.source || "",
+          image: data?.image || null,
+          description: data?.description || "",
+        };
+        paintPrev();
+      } catch (e) {
+        alert("미리보기를 못 가져왔습니다: " + (e?.message || e));
+      }
+      b.disabled = false; b.textContent = "불러오기";
+    };
+    $("#lp-load").onclick = load;
+    $("#lp-url").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); load(); } };
+    paintDone();
+  }
+
+  function paintPrev() {
+    const box = $("#lp-prev"); if (!box || !lpPrev) return;
+    box.innerHTML = `
+      <div class="ad-link-card" style="margin-bottom:12px">
+        ${lpPrev.image ? `<span class="ad-link-thumb" style="background-image:url('${esc(lpProxy(lpPrev.image))}')"></span>` : `<span class="ad-link-thumb none">🔗</span>`}
+        <span class="ad-link-mid"><span class="ad-link-src">${esc(lpPrev.source)}</span><span class="ad-link-title">${esc(lpPrev.title)}</span></span>
+      </div>
+      ${TA("lp-caption", "본문 (숏판에 그대로 노출)", "비우면 위 제목을 씁니다", 3)}
+      ${IN("lp-tags", "🔖 해시태그", "#릴스 #웃긴영상 — 공백으로 구분")}
+      ${lpPrev.image ? "" : `
+        <hr class="ad-hr">
+        <div class="ad-note" style="margin-top:0">⚠️ 이 사이트는 썸네일을 안 내줍니다(인스타는 메타 앱 토큰이 있어야 뚫립니다).
+          그림 없는 카드는 피드에서 죽습니다 — 아래에서 직접 넣어주세요.</div>
+        <label>🖼 썸네일 직접 지정</label>
+        <input id="lp-thumb-file" type="file" accept="image/*" class="ad-file">
+        <div class="ad-file-n" id="lp-thumb-n"></div>`}
+      <button class="ad-btn primary" id="lp-go" style="margin-top:12px">🚀 숏판으로 발행</button>`;
+    const cap = $("#lp-caption"); if (cap) cap.value = lpPrev.title || "";
+    const tf = $("#lp-thumb-file");
+    if (tf) tf.onchange = () => { $("#lp-thumb-n").textContent = tf.files[0] ? tf.files[0].name : ""; };
+    $("#lp-go").onclick = publish;
+  }
+
+  async function publish() {
+    const btn = $("#lp-go"); btn.disabled = true; btn.textContent = "발행 중…";
+    try {
+      const caption = ($("#lp-caption").value || "").trim() || lpPrev.title;
+      const tags = adCollectTags($("#lp-tags") ? $("#lp-tags").value : "", caption);
+      /* 썸네일 자동 수집이 실패한 사이트(인스타 등)는 사람이 직접 올린다.
+         그림 없는 링크 카드는 피드에서 아무도 안 누른다 — 없느니만 못하다. */
+      const tfile = $("#lp-thumb-file") && $("#lp-thumb-file").files[0];
+      if (tfile) {
+        btn.textContent = "썸네일 올리는 중…";
+        lpPrev.image = await window.GALLA_UPLOAD_MEDIA(tfile, "image");
+      }
+      if (!lpPrev.image && !confirm("썸네일 없이 발행할까요? 피드에서 회색 칸으로 보입니다.")) {
+        btn.disabled = false; btn.textContent = "🚀 숏판으로 발행"; return;
+      }
+      const r = await rpc("admin_publish_post", {
+        p_kind: "vertical",
+        p_title: caption.slice(0, 200) || null,
+        p_caption: caption || null,
+        p_images: null, p_video: null, p_media: null,
+        p_thumbnail: lpPrev.image || null,
+        p_tags: tags.length ? tags : null,
+        p_link: lpPrev.url,
+      });
+      if (!r?.ok) throw new Error(r?.reason || "알 수 없음");
+      lpDone.unshift({ id: r.id, title: caption, url: lpPrev.url, image: lpPrev.image });
+      toast("링크 카드 발행됨");
+      /* 연속 작업 — 폼을 비우고 URL 칸에 커서를 돌려준다. 한 건 올릴 때마다
+         페이지를 옮기면 여러 개 붙여넣는 흐름이 끊긴다. */
+      lpPrev = null;
+      $("#lp-prev").innerHTML = "";
+      $("#lp-url").value = "";
+      $("#lp-url").focus();
+      $("#lp-done-card").hidden = false;
+      paintDone();
+    } catch (e) {
+      alert("발행 실패: " + (e?.message || e));
+      btn.disabled = false; btn.textContent = "🚀 숏판으로 발행";
+    }
+  }
+
+  function paintDone() {
+    const box = $("#lp-done"); if (!box) return;
+    box.innerHTML = lpDone.length ? lpDone.map(d => `
+      <div class="ad-link-card">
+        ${d.image ? `<span class="ad-link-thumb" style="background-image:url('${esc(lpProxy(d.image))}')"></span>` : `<span class="ad-link-thumb none">🔗</span>`}
+        <span class="ad-link-mid"><span class="ad-link-src">#${d.id}</span><span class="ad-link-title">${esc(d.title)}</span></span>
+        <a class="ad-btn" href="gallari-post.html?id=${d.id}" target="_blank" rel="noopener">보기</a>
+      </div>`).join("") : "";
+  }
+
   function renderUpload() {
     const tabs = [["issue", "📝 이슈"], ["short", "📱 숏판"], ["long", "🖥 롱판"], ["plaza", "💬 광장"], ["market", "📈 예측"], ["news", "📰 뉴스"]];
     main().innerHTML = `<h1 class="ad-h1">⬆️ 직접 업로드</h1>
