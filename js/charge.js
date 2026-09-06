@@ -14,6 +14,24 @@
    레거시 GP 충전(charge_begin/charge_confirm/charge_packages)은 서버에서 실행 권한을
    회수해 봉인했다 — 되살리려면 정책 재결정이 먼저다.
    ========================================================= */
+
+/* 💳 포트원(PortOne) 결제 설정 — 여기가 단일 출처다.
+   ⚠️ 2026-09-06 이전엔 js/config.js 에 있었는데, config.js 를 로드하는 HTML 은
+      charge-return.html 뿐이었다. 정작 충전 시트가 뜨는 mypage·wallet·issue·settings 에는
+      안 실려서 window.GALLA_PORTONE 이 undefined → payReady() false →
+      **채널키를 넣어도 계속 '준비 중'으로 떨어질 구조였다.** 유일한 소비자인 이 파일로 옮겨
+      로드 순서 함정을 없앤다. (config.js 의 window.CONFIG 는 어디서도 쓰지 않는 사문이다.)
+   ⚠️ storeId·channelKey 는 공개돼도 되는 식별자다(비밀키가 아니다).
+      실제 지급 권한은 서버(portone-webhook + PORTONE_API_SECRET)에만 있다.
+   ⚠️ 아래는 KG이니시스 **테스트** 채널(inicis_v2, 포트원 공용 MID INIpayTest)이다.
+      포트원은 심사 전에 테스트 연동이 도는 걸 요구한다 — 계약 없이 콘솔에서 채널만 추가하면 된다.
+      실계약이 끝나면 실연동 채널을 만들어 channelKey 한 줄만 갈아끼운다.
+   조회 위치: 포트원 관리자콘솔 > 결제연동 > 연동 정보 */
+window.GALLA_PORTONE = {
+  storeId: "store-1638c847-0fa6-42ee-9110-dc37c31ddf1b",
+  channelKey: "channel-key-2f10aadc-7c38-4a11-a167-a919dcd21f19",  // KG이니시스 테스트(inicis_v2)
+};
+
 (function () {
   const sb = () => window.supabaseClient;
   const gc = (n) => (n || 0).toLocaleString() + " GC";

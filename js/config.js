@@ -53,13 +53,7 @@ window.CONFIG = {
         }
     }
 };
-/* 💳 포트원(PortOne) 결제 설정
-   ⚠️ 여기 값이 비어 있으면 결제 버튼이 '준비 중' 안내로 떨어진다(js/charge.js payReady).
-      PG 심사가 끝나 채널키를 받으면 이 두 줄만 채우면 결제가 열린다.
-   ⚠️ storeId·channelKey 는 공개돼도 되는 식별자다(비밀키가 아니다).
-      실제 지급 권한은 서버(portone-webhook + PORTONE_API_SECRET)에만 있다.
-   조회 위치: 포트원 관리자콘솔 > 결제연동 > 연동 정보 */
-window.GALLA_PORTONE = {
-  storeId: "store-1638c847-0fa6-42ee-9110-dc37c31ddf1b",
-  channelKey: "",   // channel-key-xxxxxxxx-... (KG이니시스 채널 — 본심사 후 발급)
-};
+/* 💳 포트원(PortOne) 결제 설정은 여기 없다 → js/charge.js 상단으로 옮겼다(2026-09-06).
+   이 파일은 charge-return.html 한 곳에서만 로드돼서, 정작 충전 시트가 뜨는
+   mypage·wallet·issue·settings 에는 window.GALLA_PORTONE 이 실리지 않았다.
+   유일한 소비자(charge.js)가 스스로 들고 있는 게 맞다. */
