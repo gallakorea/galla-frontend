@@ -832,6 +832,10 @@
      · 썸네일(OG 이미지)은 남의 CDN 이라 핫링크가 막히는 곳이 많다 → /imgproxy 경유. */
   let lpDone = [];              // 이번 세션에 발행한 것들(연속 작업용 기록)
   let lpPrev = null;            // 현재 미리보기
+  /* 🎭 발행 계정 — 비우면 관리자 본인. 채널 성격의 계정('재밌는영상')으로 내보내려고 둔다.
+     한 번 정하면 브라우저에 기억한다(매번 다시 치게 하면 안 쓴다). */
+  let lpAs = null;              // { id, nickname } | null
+  const LP_AS_KEY = "galla_admin_post_as";
 
   function lpProxy(u) {
     if (!u) return "";
@@ -842,6 +846,13 @@
   function renderLinkPost() {
     main().innerHTML = `<h1 class="ad-h1">🔗 링크 발행</h1>
       <div class="ad-card ad-form">
+        <label>🎭 발행 계정</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="lp-as" class="ad-input" placeholder="닉네임 (비우면 관리자 본인으로 발행)" style="flex:1">
+          <button class="ad-btn" id="lp-as-go">확인</button>
+        </div>
+        <div class="ad-note" id="lp-as-note" style="margin-top:6px"></div>
+        <hr class="ad-hr">
         <label>원본 URL</label>
         <div style="display:flex;gap:8px">
           <input id="lp-url" class="ad-input" placeholder="https://www.instagram.com/reel/… 붙여넣기" style="flex:1">
@@ -877,7 +888,43 @@
     };
     $("#lp-load").onclick = load;
     $("#lp-url").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); load(); } };
+
+    // 저장해 둔 발행 계정 복원
+    try {
+      const saved = JSON.parse(localStorage.getItem(LP_AS_KEY) || "null");
+      if (saved && saved.id) { lpAs = saved; $("#lp-as").value = saved.nickname || ""; }
+    } catch (_) {}
+    paintAs();
+
+    const resolveAs = async () => {
+      const nick = ($("#lp-as").value || "").trim();
+      if (!nick) {   // 비우면 '나'로 되돌린다
+        lpAs = null; try { localStorage.removeItem(LP_AS_KEY); } catch (_) {}
+        return paintAs();
+      }
+      const b = $("#lp-as-go"); b.disabled = true; b.textContent = "찾는 중…";
+      const r = await rpc("admin_user_by_nickname", { p_nickname: nick });
+      b.disabled = false; b.textContent = "확인";
+      if (!r || !r.ok) {
+        lpAs = null;
+        $("#lp-as-note").innerHTML = `<span style="color:#ff8080">그런 닉네임의 계정이 없습니다 (${esc(r?.reason || "not_found")})</span>`;
+        return;
+      }
+      lpAs = { id: r.id, nickname: r.nickname };
+      try { localStorage.setItem(LP_AS_KEY, JSON.stringify(lpAs)); } catch (_) {}
+      paintAs();
+    };
+    $("#lp-as-go").onclick = resolveAs;
+    $("#lp-as").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); resolveAs(); } };
+
     paintDone();
+  }
+
+  function paintAs() {
+    const n = $("#lp-as-note"); if (!n) return;
+    n.innerHTML = lpAs
+      ? `이 계정으로 발행됩니다 → <b>${esc(lpAs.nickname)}</b> <span style="opacity:.6">(${esc(String(lpAs.id).slice(0, 8))}…)</span>`
+      : "관리자 본인 계정으로 발행됩니다. 다른 계정으로 내보내려면 닉네임을 넣고 확인을 누르세요.";
   }
 
   function paintPrev() {
@@ -926,10 +973,11 @@
         p_thumbnail: lpPrev.image || null,
         p_tags: tags.length ? tags : null,
         p_link: lpPrev.url,
+        p_as_user: lpAs ? lpAs.id : null,
       });
       if (!r?.ok) throw new Error(r?.reason || "알 수 없음");
       lpDone.unshift({ id: r.id, title: caption, url: lpPrev.url, image: lpPrev.image });
-      toast("링크 카드 발행됨");
+      toast("링크 카드 발행됨" + (lpAs ? ` · ${lpAs.nickname}` : ""));
       /* 연속 작업 — 폼을 비우고 URL 칸에 커서를 돌려준다. 한 건 올릴 때마다
          페이지를 옮기면 여러 개 붙여넣는 흐름이 끊긴다. */
       lpPrev = null;
