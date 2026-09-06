@@ -1388,10 +1388,15 @@ async function GALLA_mypageInit(root, spaParams) {
        상태가 그것이다(사장님 스크린샷). 자기 세대가 아니면 화면에 손대지 않는다. */
     let mpTok = 0;
     const newTok = () => ++mpTok;
-    const stale = (t) => t !== mpTok;
+    /* 세대 번호만으로는 '늦게 시작해서 늦게 끝난' 렌더를 못 막는다.
+       그래서 두 번째 잠금 — **지금 활성인 탭과 다른 화면은 아예 그리지 않는다.**
+       모아 화면이 숏판 탭 자리에 그려지던 사고의 직접적인 불변식이다. */
+    const activeTab = () => (D.querySelector(".tabs .tab.active") || {}).dataset?.tab || "all";
+    const stale = (t, forTab) => t !== mpTok || (forTab && activeTab() !== forTab);
 
     const renderContent = async (kind) => {
         const tok = newTok();
+        const myTab = kind === "horizontal" ? "long" : "short";
         kind = kind === "horizontal" ? "horizontal" : "vertical";
         clearSubBar();
         tabContent.className = "content-area";
@@ -1419,7 +1424,7 @@ async function GALLA_mypageInit(root, spaParams) {
         else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
-        if (stale(tok)) return;
+        if (stale(tok, myTab)) return;
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
             // 숏판 단일 = 릴스로(이 사람 숏판만 순차), 캐러셀 숏판·롱판 = 상세로
@@ -1467,7 +1472,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const longs = pdata.filter(r => r.kind === "horizontal").slice(0, 6);
         const issues = iss.data || [], markets = mkt.data || [], plazas = plz.data || [];
         if (!(issues.length + pdata.length + markets.length + plazas.length)) {
-            if (stale(tok)) return;
+            if (stale(tok, "all")) return;
             tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
         }
 
@@ -1531,7 +1536,7 @@ async function GALLA_mypageInit(root, spaParams) {
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
 
-        if (stale(tok)) return;
+        if (stale(tok, "all")) return;
         tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
         // 섹션 헤더 탭 → 해당 탭으로 전환
         tabContent.querySelectorAll("[data-gototab]").forEach(el => el.addEventListener("click", () => {
