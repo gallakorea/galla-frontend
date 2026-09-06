@@ -25,10 +25,12 @@
   };
 
   let MUTED = true, ME = null, sb = null, PROF = {}, ENTRY = 'feed';
+  let START_AT = 0;   // 홈 카드에서 보던 지점(초) — 첫 슬라이드에 한 번만 적용
 
   function getStart() {
     const g = (k) => { let v = new URLSearchParams(location.search).get(k); if (!v) { const h = location.hash || ''; const qi = h.indexOf('?'); if (qi >= 0) v = new URLSearchParams(h.slice(qi + 1)).get(k); } return v; };
-    return { id: g('start') || null, type: g('t') || 'post', user: g('user') || null };
+    return { id: g('start') || null, type: g('t') || 'post', user: g('user') || null,
+             at: parseFloat(g('at') || '0') || 0, from: g('from') || null };
   }
 
   async function initReels() {
@@ -40,6 +42,7 @@
     ME = sess?.session?.user?.id || null;
 
     const st = getStart();
+    START_AT = st.at || 0;
     /* 진입 구분 — 좌상단 버튼이 갈린다.
        ⚠️ 예전엔 'user 없으면 갈라리 피드'로 뭉갰다. 그 바람에 홈·검색·알림에서 들어와도
           + (숏판 올리기) 가 떠서 **나갈 방법이 없었다**(PC 에서 전체화면으로 덮이고 뒤로가기 없음).
@@ -262,6 +265,13 @@
           /* 📊 신호 — 숏판은 '완주율'이 랭킹의 핵심이다(첫 3초 이탈이 지배적).
              재생 시작 시 한 번만 붙이고, 멈추거나 끝날 때 최대 시청률·머문 시간이 기록된다. */
           if (window.GALLA_signal) window.GALLA_signal.video(v, { kind: 'vertical', id: en.target.dataset.id || '', surface: 'reels' });
+          /* ⏱ 이어보기 — 홈 카드에서 보던 지점부터. 시작 항목은 맨 앞으로 옮겨지므로
+             첫 슬라이드에 한 번만 적용하고 값을 비운다(다음 영상까지 건너뛰면 안 된다). */
+          if (START_AT > 0 && en.target === root.querySelector('.grl-slide')) {
+            const at = START_AT; START_AT = 0;
+            const seek = () => { try { if (at < (v.duration || Infinity)) v.currentTime = at; } catch (_) {} };
+            if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
+          }
           v.muted = MUTED; v.play().catch(() => {});
           en.target.querySelector('.grl-playpause')?.classList.remove('show');
         } else { v.pause(); try { v.currentTime = v.currentTime; } catch (_) {} }

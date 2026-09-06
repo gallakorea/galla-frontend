@@ -454,6 +454,16 @@ function toggleMute(vidId, btnId) {
 }
 
 /* 인라인 영상 탭 → 전체화면 릴스 모드 */
+/* 숏판·롱판 카드 탭 → 릴스. 이슈의 openReels 와 '스킴'만 같고 엔진은 다르다
+   (이슈=배틀 숏츠, 숏판=gallari-reels 페이지). 보던 지점을 at= 로 넘겨 이어본다. */
+window.GALLA_openPostReels = function (vidId, dest) {
+    const v = document.getElementById(vidId);
+    const at = v && !isNaN(v.currentTime) ? Math.max(0, v.currentTime) : 0;
+    // 인라인 미리보기 정지 — 안 끄면 릴스와 소리가 겹친다
+    IDXROOT.querySelectorAll('.card-media video').forEach(x => { try { x.pause(); } catch (e) {} });
+    window.GALLA_goto(dest + (at > 0.3 ? '&at=' + at.toFixed(1) : ''));
+};
+
 window.openReels = function (startId) {
     const vids = (window.cards || [])
         .filter(c => c.video_url)
@@ -1398,7 +1408,7 @@ function gallariMedia(p, isLong, thumb, dest) {
     if (p.video_url && !gallariIsCarousel(p)) {
         return `
         <div class="card-media card-media--video${isLong ? ' glr-long' : ''}"
-             onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">
+             onclick="event.stopPropagation();GALLA_openPostReels('${vid}','${dest}')">
             <video id="${vid}" class="vp-fade" data-src="${escHtml(p.video_url)}"
                 ${thumb ? `poster="${escHtml(T(thumb))}"` : ''}
                 autoplay loop playsinline webkit-playsinline muted preload="none"></video>
