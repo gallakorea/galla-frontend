@@ -1323,7 +1323,7 @@ function gallariAgo(ts) {
       같은 번호의 이슈 영상과 충돌한다(릴스가 엉뚱한 지점에서 시작된다). */
 function gallariHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '원본'; } }
 
-function gallariMedia(p, isLong, thumb) {
+function gallariMedia(p, isLong, thumb, dest) {
     /* 링크 카드 썸네일은 남의 CDN 이다 — 인스타 등은 핫링크를 막는다. /imgproxy 를 태운다.
        (galla 자체 CDN 은 GALLA_thumb 리사이즈가 붙으므로 그대로 둔다) */
     const T = (u, w) => {
@@ -1335,18 +1335,19 @@ function gallariMedia(p, isLong, thumb) {
     const vid = `vid-p${p.id}`, mid = `mute-p${p.id}`;
     if (p.video_url && !gallariIsCarousel(p)) {
         return `
-        <div class="card-media card-media--video${isLong ? ' glr-long' : ''}">
+        <div class="card-media card-media--video${isLong ? ' glr-long' : ''}"
+             onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">
             <video id="${vid}" class="vp-fade" data-src="${escHtml(p.video_url)}"
                 ${thumb ? `poster="${escHtml(T(thumb))}"` : ''}
                 autoplay loop playsinline webkit-playsinline muted preload="none"></video>
             <div class="vid-dur" id="dur-p${p.id}">-:--</div>
             <button class="vid-mute" id="${mid}"
                     onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-            <span class="vid-reels-badge">${isLong ? '▶︎ 영상 보기' : '▶︎ 릴스로 보기'}</span>
+            <span class="vid-reels-badge" onclick="event.stopPropagation();GALLA_goto('${dest}')">${isLong ? '▶︎ 영상 보기' : '▶︎ 릴스로 보기'}</span>
         </div>`;
     }
     return `
-    <div class="card-media${isLong ? ' glr-long' : ''}">
+    <div class="card-media${isLong ? ' glr-long' : ''}"${p.link_url ? '' : ` onclick="event.stopPropagation();GALLA_goto('${dest}')"`}>
         ${thumb ? `<img src="${escHtml(T(thumb))}" loading="lazy" alt="" onerror="this.remove()">` : '<span class="card-media-empty">이미지 없음</span>'}
         ${gallariIsCarousel(p) ? '<span class="glr-multi">⧉</span>' : '<span class="glr-play">▶</span>'}
     </div>`;
@@ -1366,9 +1367,8 @@ function renderGallariCard(p) {
         ? window.GALLA_avatarImg(u.avatar_url, 'mah-avatar-img')
         : `<div class="mah-avatar">${escHtml((u.nickname || '익').trim().charAt(0))}</div>`;
     return `
-    <div class="card glr-feed-card" data-id="${p.id}" onclick="${isLink
-        ? `GALLA_openLink('${escHtml(p.link_url)}')`
-        : `GALLA_goto('${dest}')`}">
+    <div class="card glr-feed-card" data-id="${p.id}"${isLink
+        ? ` onclick="GALLA_openLink('${escHtml(p.link_url)}')"` : ""}>
         <div class="media-author-head">
             <div class="mah-left">
                 <div class="mah-avatar"${p.user_id ? ` data-profile-uid="${p.user_id}"` : ''}>${avatarImg}</div>
@@ -1383,7 +1383,7 @@ function renderGallariCard(p) {
             ${p.user_id ? `<button class="follow-btn" data-uid="${p.user_id}">+ 팔로우</button>` : ''}
         </div>
 
-        ${gallariMedia(p, isLong, thumb)}
+        ${gallariMedia(p, isLong, thumb, dest)}
 
         <div class="card-body">
             ${text ? `<div class="card-title">${escHtml(text)}</div>` : ''}
@@ -1391,7 +1391,7 @@ function renderGallariCard(p) {
                 <span>♥ ${formatK(p.like_count || 0)}</span>
                 <span>💬 ${formatK(p.comment_count || 0)}</span>
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
-                <span class="glr-go">${isLink ? '원본 보기' : (isLong ? '영상 보기' : '릴스로 보기')} ›</span>
+                <span class="glr-go"${isLink ? '' : ` onclick="event.stopPropagation();GALLA_goto('${dest}')"`}>${isLink ? '원본 보기' : (isLong ? '영상 보기' : '릴스로 보기')} ›</span>
             </div>
         </div>
     </div>`;

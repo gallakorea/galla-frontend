@@ -1382,7 +1382,16 @@ async function GALLA_mypageInit(root, spaParams) {
     // 갈라리(콘텐츠) 탭 — 세로 3열 그리드 / 가로 유튜브 리스트 분배
     // ---------------------------
     // 숏판/롱판 = 각각 독립 탭. 저장 서브탭 없이 '내가 올린 것'만, 단일 kind 렌더.
+    /* 🔒 렌더 세대 번호 — 탭 내용은 전부 같은 #tabContent 에 그린다. 각 렌더가 비동기라
+       **늦게 끝난 쪽이 나중에 덮어쓴다**. 부팅의 renderAll() 이 뒤늦게 끝나면서 방금 그린
+       숏판 그리드를 모아 화면으로 갈아치웠다 — 탭은 숏판인데 내용은 모아(숏판 6개로 잘린)
+       상태가 그것이다(사장님 스크린샷). 자기 세대가 아니면 화면에 손대지 않는다. */
+    let mpTok = 0;
+    const newTok = () => ++mpTok;
+    const stale = (t) => t !== mpTok;
+
     const renderContent = async (kind) => {
+        const tok = newTok();
         kind = kind === "horizontal" ? "horizontal" : "vertical";
         clearSubBar();
         tabContent.className = "content-area";
@@ -1410,6 +1419,7 @@ async function GALLA_mypageInit(root, spaParams) {
         else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
+        if (stale(tok)) return;
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
             // 숏판 단일 = 릴스로(이 사람 숏판만 순차), 캐러셀 숏판·롱판 = 상세로
@@ -1434,6 +1444,7 @@ async function GALLA_mypageInit(root, spaParams) {
     // ── 모아 = 유튜브 채널 페이지식 섹션 레이아웃 ──
     // 숏판=Shorts 그리드(세로 썸네일), 롱판=동영상 리스트(16:9), 갈라·예측·광장=리스트 행.
     const renderAll = async () => {
+        const tok = newTok();
         clearSubBar();
         tabContent.className = "content-area";
         tabContent.innerHTML = MP_SPINNER;
@@ -1456,6 +1467,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const longs = pdata.filter(r => r.kind === "horizontal").slice(0, 6);
         const issues = iss.data || [], markets = mkt.data || [], plazas = plz.data || [];
         if (!(issues.length + pdata.length + markets.length + plazas.length)) {
+            if (stale(tok)) return;
             tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
         }
 
@@ -1519,6 +1531,7 @@ async function GALLA_mypageInit(root, spaParams) {
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
 
+        if (stale(tok)) return;
         tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
         // 섹션 헤더 탭 → 해당 탭으로 전환
         tabContent.querySelectorAll("[data-gototab]").forEach(el => el.addEventListener("click", () => {

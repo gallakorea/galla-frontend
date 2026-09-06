@@ -988,3 +988,7 @@ body.shorts-open .header { display: none !important; }
 .glr-foot{ display:flex; align-items:center; gap:14px; margin-top:11px;
   font-size:12px; color:#8b8b93; font-weight:700; }
 .glr-go{ margin-left:auto; color:#7f9dff; }
+
+/* 미디어 탭 = 소리 토글(그 자리 재생 유지). 전체화면은 '릴스로 보기'로만 간다. */
+.glr-feed-card .card-media{ cursor:pointer; }
+.glr-feed-card .vid-reels-badge, .glr-feed-card .glr-go{ cursor:pointer; }
