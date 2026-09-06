@@ -936,3 +936,7 @@ body{
   background: linear-gradient(90deg, #ffd166, #ff8a3d);
   box-shadow: 0 0 12px rgba(255,209,102,.35);
 }
+
+/* 🪙 GP 칩 — 마이페이지에서 잔액을 바로 보고 누르면 지갑으로 */
+.mp-gp{ cursor:pointer; }
+.mp-gp:active{ transform:scale(.96); }

@@ -20,6 +20,7 @@
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
     plus: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
     // 인스타식 공유(종이비행기) — 숏판 전용(이슈는 기존 share 유지)
+    more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>',
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
   };
 
@@ -133,6 +134,7 @@
         <button class="grl-act grl-share">${IC.send}<b>공유</b></button>
         <button class="grl-act" data-galvis data-gv-type="shorts" data-gv-id="${x.id}" data-gv-title="${String(x.caption || '숏판 영상').replace(/"/g, '&quot;').slice(0, 120)}" aria-label="갈비스와 얘기"><span class="ic"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span><b>갈비스</b></button>
         <button class="grl-act support grl-support">${IC.gift}<b>후원</b></button>
+        <button class="grl-act grl-more" hidden aria-label="관리">${IC.more}<b>관리</b></button>
       </div>
       <div class="grl-bottom">
         <div class="grl-userrow">
@@ -209,6 +211,36 @@
       if (window.openDonatePost) window.openDonatePost(x.id, nick(x.user_id));
       else (window.GALLA_toast || alert)('후원 준비 중');
     });
+    /* ⋯ 관리(수정·삭제) — 공용 owner-actions 재사용.
+       릴스에만 이게 없어서, 마이페이지 숏판 타일 → 릴스로 열린 단일 영상은
+       지울 방법이 사실상 없었다(상세 URL 을 손으로 쳐야 했다). */
+    const moreBtn = el.querySelector('.grl-more');
+    if (moreBtn && x._type !== 'issue' && window.GALLA_canManage) {
+      window.GALLA_canManage(x.user_id).then((can) => {
+        if (!can) return;
+        moreBtn.hidden = false;
+        moreBtn.addEventListener('click', () => window.GALLA_openOwnerMenu({
+          table: 'posts', id: x.id, ownerId: x.user_id, label: '숏판',
+          editFields: [{ key: 'caption', label: '내용', type: 'textarea', value: x.caption || '' }],
+          onSaved: (patch) => {
+            if (patch.caption == null) return;
+            x.caption = patch.caption;
+            const cap = el.querySelector('.grl-cap');
+            if (cap) cap.textContent = patch.caption;
+          },
+          /* 삭제하면 그 슬라이드만 걷어낸다 — 페이지를 통째로 되돌리면
+             여러 개 훑던 중에 맥락이 끊긴다. 마지막 한 장이면 뒤로. */
+          onDeleted: () => {
+            const nx = el.nextElementSibling || el.previousElementSibling;
+            el.remove();
+            if (!document.querySelector('.grl-slide')) {
+              if (history.length > 1) history.back(); else nav('gallari.html');
+            } else if (nx && nx.scrollIntoView) nx.scrollIntoView();
+          },
+        }));
+      }).catch(() => {});
+    }
+
     // 팔로우 버튼(공용 follow.js가 바인딩)
     if (window.GALLA_bindFollow) setTimeout(() => window.GALLA_bindFollow(el), 0);
   }

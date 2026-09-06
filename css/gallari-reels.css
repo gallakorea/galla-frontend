@@ -125,3 +125,7 @@
 .grl-cbar button { border: none; background: #3b82f6; color: #fff; font-weight: 800; font-size: 14px;
   padding: 11px 18px; border-radius: 999px; cursor: pointer; }
 .grl-cbar button[disabled] { opacity: .5; }
+
+/* ⚠️ .grl-act 가 display:flex 라 [hidden] 의 기본 display:none 을 이긴다.
+   그래서 숨겨 둔 관리(⋯) 버튼이 비로그인 사용자에게도 그대로 보였다(실측). */
+.grl-act[hidden]{ display:none !important; }

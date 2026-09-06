@@ -240,6 +240,24 @@ async function GALLA_mypageInit(root, spaParams) {
             if (isMyPage) badgeEl.textContent = "🎯 오늘의 미션";
             else badgeEl.hidden = true; // 미션 배지는 본인 전용
         }
+        /* 🪙 내 GP — 프로필에 잔액이 없어서 '상점에 들어가야 내 돈을 아는' 상태였다.
+           지갑 진입은 설정 안에만 있었다. 본인 프로필에서만, 누르면 지갑으로. */
+        if (isMyPage) (async () => {
+            const row = D.querySelector(".level-row");
+            if (!row || D.querySelector("#mpGp")) return;
+            const chip = document.createElement("span");
+            chip.id = "mpGp";
+            chip.className = "badge mp-gp";
+            chip.textContent = "🪙 …";
+            chip.onclick = () => (window.GALLA_nav || function (u) { location.href = u; })("wallet.html");
+            row.appendChild(chip);
+            try {
+                const { data } = await supabase.rpc("gp_wallet");
+                // 실패하면 숫자를 지어내지 않고 칩을 걷는다 — '0 GP'로 잘못 보이는 게 더 나쁘다
+                if (!data || !data.ok) { chip.remove(); return; }
+                chip.textContent = `🪙 ${Number(data.total || 0).toLocaleString()} GP`;
+            } catch (_) { chip.remove(); }
+        })();
 
         if (profileImg) {
             window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true);
@@ -1286,8 +1304,10 @@ async function GALLA_mypageInit(root, spaParams) {
     // 탭 카운트 뱃지 (Save/뉴스/팔로워)
     // =====================================================
     async function loadTabCounts() {
+        /* ⚠️ 셀렉터에 tabName 이 안 박혀 있었다(`.tab[data-tab=""]` 리터럴) —
+           그래서 탭 개수 배지가 단 한 번도 붙지 않았다. 에러도 안 나서 안 보였다. */
         const setCount = (tabName, n) => {
-            const el = D.querySelector(`.tab[data-tab=""]`);
+            const el = D.querySelector(`.tab[data-tab="${tabName}"]`);
             if (el && typeof n === "number") {
                 el.innerHTML = el.innerHTML.replace(/ <span class="tab-count">.*<\/span>/, "")
                     + ` <span class="tab-count">${n}</span>`;

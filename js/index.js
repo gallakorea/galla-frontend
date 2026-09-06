@@ -921,7 +921,8 @@ async function loadData() {
         loadPlazaCards(),
         loadNewsCards(),
         loadVideoCards(),
-        loadDuelCards()
+        loadDuelCards(),
+        loadShortCards()
     ]);
 
     // 🌍 읽기 필터 — 내 언어 콘텐츠만. 언어가 하나뿐이면 아무것도 하지 않는다(오늘은 no-op).
@@ -1031,10 +1032,10 @@ async function loadData() {
     GALLA_signalReady();
 
     // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
-    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards]) => {
+    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards, shortCards]) => {
         feed = interleave(cards, {
             predict: predictionCards, plaza: plazaCards,
-            news: newsCards, video: videoCards, duel: duelCards
+            news: newsCards, video: videoCards, duel: duelCards, short: shortCards
         });
         window.feed = feed;
         // 그 사이 카테고리 칩을 골랐다면 새 피드 기준으로 필터 재적용
@@ -1080,8 +1081,8 @@ function shuffle(arr) {
 function interleave(issues, ex = {}) {
     const queue = [];
     (ex.duel || []).forEach(d => queue.push({ type: 'duel', data: d }));
-    const order = shuffle(['news', 'predict', 'video', 'plaza']);
-    const idx = { news: 0, predict: 0, video: 0, plaza: 0 };
+    const order = shuffle(['news', 'predict', 'video', 'plaza', 'short']);
+    const idx = { news: 0, predict: 0, video: 0, plaza: 0, short: 0 };
     let added = true;
     while (added) {
         added = false;
@@ -1269,6 +1270,61 @@ function renderVideoCard(v) {
     </div>`;
 }
 
+
+/* ⚡ 숏판 선반 — 세로 영상은 카드 한 장으로 세우면 피드가 통째로 세로로 늘어난다.
+   유튜브 Shorts 처럼 가로로 훑는 선반 하나로 묶어 한 자리만 차지하게 한다.
+   ⚠️ 반환값은 '선반 1개'짜리 배열이다 — interleave 가 배열에서 하나씩 꺼내 끼우므로
+      이래야 피드에 딱 한 번 들어간다. */
+async function loadShortCards() {
+    const supabase = window.supabaseClient;
+    const { data: posts } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
+        .from('posts')
+        .select('id, caption, title, thumbnail_url, video_url, images, media, like_count, view_count, user_id, created_at')
+        .eq('kind', 'vertical').eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(24));
+    // 볼 게 두어 개뿐이면 선반이 초라하다 — 최소 2개는 있어야 띄운다
+    const rows = (posts || []).filter(p => p.thumbnail_url || p.video_url);
+    if (rows.length < 2) return [];
+    if (window.GALLA_userMap) await window.GALLA_userMap(rows.map(p => p.user_id));
+    return [{ posts: rows.slice(0, 12) }];
+}
+
+/* 🎠 미디어 2개 이상(캐러셀)은 릴스가 아니라 상세로 — 릴스는 단일 미디어만 태운다.
+   마이페이지·갈라리 피드와 같은 규칙이다(어긋나면 같은 글이 화면마다 다른 데로 열린다). */
+function shortIsCarousel(p) {
+    try { const m = window.GALLA_issueMedia ? window.GALLA_issueMedia(p) : null; if (m && m.length) return m.length > 1; } catch (e) {}
+    if (Array.isArray(p.media)) return p.media.length > 1;
+    if (Array.isArray(p.images)) return p.images.length + (p.video_url ? 1 : 0) > 1;
+    return false;
+}
+
+function renderShortShelf(shelf) {
+    const tiles = (shelf.posts || []).map(p => {
+        const thumb = p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || '';
+        const dest = shortIsCarousel(p)
+            ? `gallari-post.html?id=${p.id}`
+            : `gallari-reels.html?start=${p.id}&t=post`;
+        const cap = p.caption || p.title || '';
+        return `
+        <div class="sh-tile" onclick="GALLA_goto('${dest}')">
+          <div class="sh-thumb">
+            ${thumb ? `<img src="${escHtml(window.GALLA_thumb ? window.GALLA_thumb(thumb, 480) : thumb)}" loading="lazy" alt="" onerror="this.remove()">` : ''}
+            <span class="sh-play">▶</span>
+          </div>
+          <div class="sh-cap">${escHtml(cap)}</div>
+          <div class="sh-meta">♥ ${p.like_count || 0}</div>
+        </div>`;
+    }).join('');
+    return `
+    <div class="card short-shelf">
+      <div class="sh-head">
+        <span class="sh-badge">⚡ 숏판</span>
+        <span class="sh-go" onclick="GALLA_goto('gallari.html')">전체 보기 ›</span>
+      </div>
+      <div class="sh-strip">${tiles}</div>
+    </div>`;
+}
 
 /* ── 일기토(듀얼) 카드 — 라이브/투표중 우선, 없으면 최근 종전 ── */
 async function loadDuelCards() {
@@ -1471,6 +1527,7 @@ function renderFeedItem(item){
     if (item.type === 'news') return renderNewsCard(item.data);
     if (item.type === 'video') return renderVideoCard(item.data);
     if (item.type === 'duel') return renderDuelCard(item.data);
+    if (item.type === 'short') return renderShortShelf(item.data);
     return renderCard(item.data);
 }
 
