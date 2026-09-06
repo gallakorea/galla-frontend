@@ -732,12 +732,13 @@ function attachEvents() {
             if (gv && window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === 'function') {
                 const s = await window.GALLA_GET_VOTE_STATS(id);
                 if (s) {
-                    window.GALLA_VoteBar.update(gv, s, { myStance: stance || type, animate: false });
-                    /* ⚠️ 화면만 고치면 소용없다 — 피드는 window.cards 로 다시 그린다.
-                       여기를 안 고치면 스크롤 한 번에 바가 50/50 으로 되돌아간다
-                       (실측: 서버 pro 1/con 0 인데 cards 는 0/0 이라 화면이 50%|50%). */
+                    /* ⚠️ 순서가 중요하다 — 데이터를 먼저 고치고 화면을 그린다.
+                       피드는 window.cards 로 카드를 다시 그리는데, 갱신이 늦으면
+                       그 사이 재렌더가 옛 수치(0/0)로 새 노드를 만들어 바가
+                       50%|50% 로 되돌아간다(실측: cards 는 1인데 화면은 50%). */
                     const c = (window.cards || []).find(x => String(x.id) === String(id));
                     if (c) { c.pro = s.pro; c.con = s.con; }
+                    window.GALLA_VoteBar.update(gv, s, { myStance: stance || type, animate: false });
                 }
             }
         };
