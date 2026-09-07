@@ -74,25 +74,57 @@ Deno.serve(async (req) => {
     p_reason: (body.reason || "").trim() || null,
   });
   if (reqErr) return j({ ok: false, reason: "request_failed", detail: reqErr.message }, 400);
-  if (!reqRes?.ok) return j(reqRes, 200);      // 사유 문자열은 프론트가 이미 사람 말로 바꾼다
 
-  const refundId = reqRes.id as string;
-  const autoEligible = reqRes.within_7d === true && reqRes.partial === false;
-  if (!autoEligible) {
-    return j({ ...reqRes, auto: false, queued: true });
+  const admin = createClient(SB_URL, SERVICE);
+
+  let refundId: string;
+  let info: Record<string, unknown>;
+
+  if (!reqRes?.ok) {
+    /* 🔁 이미 접수된 건 이어받기.
+       옛 경로(RPC 직접 호출)로 신청된 건이나, 취소 실패로 'requested' 에 멈춘 건은
+       다시 눌러도 'already_requested' 로 튕겨 영원히 안 끝난다 — 유저는 신청했는데
+       아무 일도 안 일어나는 상태에 갇힌다. 그래서 그 경우 새로 만들지 않고 **이어서 실행**한다. */
+    if (reqRes?.reason !== "already_requested") return j(reqRes, 200);
+
+    const { data: who } = await asUser.auth.getUser();
+    const uid = who?.user?.id;
+    if (!uid) return j({ ok: false, reason: "auth" }, 200);
+
+    const { data: rows } = await admin
+      .from("gc_refunds")
+      .select("id,user_id,charge_id,gc,krw,status")
+      .eq("charge_id", body.charge_id).eq("user_id", uid).eq("status", "requested").limit(1);
+    const r = rows && rows[0];
+    if (!r) return j(reqRes, 200);            // 승인 대기(approved) 등 — 손대지 않는다
+
+    const { data: chg } = await admin
+      .from("gc_charges").select("id,gc,paid_at,channel,status").eq("id", r.charge_id).maybeSingle();
+    const within7d = !!chg?.paid_at && (Date.now() - new Date(chg.paid_at).getTime()) < 7 * 864e5;
+    const full = !!chg && Number(r.gc) === Number(chg.gc);
+    if (chg?.channel !== "web" || !within7d || !full) {
+      return j({ ok: true, id: r.id, gc: r.gc, krw: r.krw, auto: false, queued: true, resumed: true });
+    }
+    refundId = r.id;
+    info = { ok: true, id: r.id, gc: r.gc, krw: r.krw, resumed: true };
+  } else {
+    refundId = reqRes.id as string;
+    info = reqRes;
+    if (!(reqRes.within_7d === true && reqRes.partial === false)) {
+      return j({ ...reqRes, auto: false, queued: true });
+    }
   }
 
   // 2) 포트원 취소
   const cancel = await cancelPayment(body.charge_id, "청약철회(7일 이내 미사용분)");
   if (!cancel.ok) {
     /* 취소 실패 — 신청은 'requested' 로 남는다. 돈은 안 나갔고 GC 는 잠긴 상태라
-       유저 잔액이 새지 않는다. 관리자가 이어받으면 된다. */
+       유저 잔액이 새지 않는다. 다시 눌러도 위의 '이어받기'로 재시도된다. */
     console.error("refund_cancel_failed", refundId, cancel.detail);
-    return j({ ...reqRes, auto: false, queued: true, cancel_failed: cancel.detail });
+    return j({ ...info, auto: false, queued: true, cancel_failed: cancel.detail });
   }
 
   // 3) 장부 닫기 — service_role 전용 RPC
-  const admin = createClient(SB_URL, SERVICE);
   const { data: settled, error: setErr } = await admin.rpc("gc_refund_settle", {
     p_refund_id: refundId, p_pg_ref: "auto",
   });
@@ -100,8 +132,8 @@ Deno.serve(async (req) => {
     /* ⚠️ 여기까지 왔으면 **돈은 이미 돌려줬는데** 장부만 안 닫힌 상태다.
        유저에게는 성공으로 보이지만 GC 가 잠긴 채 남는다 — 반드시 사람이 봐야 한다. */
     console.error("refund_settle_failed_after_cancel", refundId, setErr?.message || JSON.stringify(settled));
-    return j({ ...reqRes, auto: true, settle_failed: true });
+    return j({ ...info, auto: true, settle_failed: true });
   }
 
-  return j({ ...reqRes, auto: true, status: "done" });
+  return j({ ...info, auto: true, status: "done" });
 });

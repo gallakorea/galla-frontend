@@ -57,8 +57,55 @@ Deno.serve(async (req) => {
   const paymentId = String(body?.data?.paymentId || body?.paymentId || "");
   if (!paymentId) return j({ ok: true, skipped: "no_payment_id" });
 
-  /* 결제 완료 계열만 처리한다. 취소·실패는 gc_charges 를 건드리지 않는다
-     (환불 회수는 별도 경로 — 지급 안 한 건을 되돌릴 일이 없다). */
+  /* 🔻 취소 계열 — 2026-09-07 추가.
+     예전엔 Paid 계열만 보고 나머지를 전부 skip 했다. 그래서 **포트원 콘솔에서 직접 취소하면
+     갈라는 아무것도 모른 채 GC 를 그대로 뒀다**(실측: 콘솔 취소 후 charge=paid·held=1000 그대로,
+     내가 손으로 맞춰야 했다). 이대로 오픈하면 "환불받고 GC 도 그대로"인 구멍이 된다. */
+  if (type && /^Transaction\.(Cancelled|Canceled|PartialCancelled)$/i.test(type)) {
+    const pay = await fetchPayment(paymentId);
+    if (!pay) return j({ ok: false, reason: "verify_failed" }, 400);
+    const st = String(pay.status).toUpperCase();
+    if (st !== "CANCELLED" && st !== "PARTIAL_CANCELLED") {
+      return j({ ok: true, skipped: "not_cancelled", status: pay.status });
+    }
+    /* 부분취소는 얼마를 회수할지가 정책 문제다(어느 GC 를 먼저 깎을지·잔액 부족 처리).
+       지금은 전액취소만 자동 처리하고 부분취소는 사람이 보게 남긴다 — 조용히 틀리는 것보다 낫다. */
+    if (st === "PARTIAL_CANCELLED") {
+      console.error("partial_cancel_needs_human", paymentId);
+      return j({ ok: true, skipped: "partial_cancel", note: "manual" });
+    }
+
+    const { data: c } = await sb
+      .from("gc_charges").select("id,user_id,gc,status").eq("id", paymentId).maybeSingle();
+    if (!c) return j({ ok: true, skipped: "unknown_charge" });
+    if (c.status !== "paid") return j({ ok: true, already: true, status: c.status });
+
+    /* 유저가 갈라에서 신청한 건이면 그 환불을 닫는 게 맞다(잠긴 GC 소멸 + 이력 일치).
+       신청 없이 콘솔에서 바로 취소한 건이면 회수(clawback)로 간다 — 이미 쓴 GC 까지
+       고려해 부족분을 기록하고 결제를 막는 로직이 거기 들어 있다. */
+    const { data: openRef } = await sb
+      .from("gc_refunds").select("id").eq("charge_id", paymentId)
+      .in("status", ["requested", "approved"]).limit(1);
+
+    if (openRef && openRef[0]) {
+      const { data: st2, error: e2 } = await sb.rpc("gc_refund_settle", {
+        p_refund_id: openRef[0].id, p_pg_ref: "pg_cancel_webhook",
+      });
+      if (e2) return j({ ok: false, reason: "settle_error", detail: e2.message }, 500);
+      console.log("refund_settled_by_webhook", paymentId, JSON.stringify(st2));
+      return j(st2);
+    }
+
+    const { data: cb, error: e3 } = await sb.rpc("gc_clawback", {
+      p_user: c.user_id, p_charge_id: paymentId, p_source: "pg_cancel",
+      p_gc: c.gc, p_note: "포트원 결제취소 웹훅",
+    });
+    if (e3) return j({ ok: false, reason: "clawback_error", detail: e3.message }, 500);
+    console.log("gc_clawed_back", paymentId, JSON.stringify(cb));
+    return j(cb);
+  }
+
+  /* 그 밖(실패 등)은 gc_charges 를 건드리지 않는다 — 지급 안 한 건을 되돌릴 일이 없다. */
   if (type && !/^Transaction\.(Paid|Confirmed)$/i.test(type) && !/paid/i.test(type)) {
     return j({ ok: true, skipped: type });
   }
