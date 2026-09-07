@@ -410,3 +410,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.travel-places-google]
 verify_jwt = false
+[functions.harvest-travel-places]
+verify_jwt = false

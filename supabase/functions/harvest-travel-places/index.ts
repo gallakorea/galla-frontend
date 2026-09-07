@@ -20,6 +20,7 @@
 //    지오코딩 대기다. 영상 수(n)를 작게 잡고 자주 도는 게 맞다.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { krCity } from "../_shared/krcity.ts";
 
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -253,7 +254,11 @@ const CITYISH = new Set(["Q515","Q3957","Q532","Q486972","Q1549591","Q15284","Q6
 async function naverFind(name: string, city: string) {
   if (!NV_ID || !NV_SEC) return null;
   const u = new URL("https://openapi.naver.com/v1/search/local.json");
-  u.searchParams.set("query", `${city} ${name}`.trim());
+  /* 🔴 도시명이 로마자면 네이버는 못 알아듣는다 — "Seogwipo 천리식당" 은 0건이다.
+     국내 pending 4,306곳 중 3,062곳이 이 꼴이었고, 그게 여행 탭이 막힌 진짜 원인이었다.
+     한글로 바꿔 붙이고, 사전에 없으면 **아예 빼고** 상호만 묻는다. */
+  const ko = krCity(city);
+  u.searchParams.set("query", (ko ? `${ko} ${name}` : name).trim());
   u.searchParams.set("display", "5");
   const r = await fetch(u, { headers: { "X-Naver-Client-Id": NV_ID, "X-Naver-Client-Secret": NV_SEC } });
   /* '못 찾았다'와 '못 불렀다'를 가른다 — 한도가 막힌 걸 '없음'으로 박으면 영구히 건너뛴다 */
@@ -421,7 +426,7 @@ Deno.serve(async (req) => {
      ⚠️ 무한 재시도는 안 된다 — travel_pending_resolve 가 geo_tries 를 올리고
         큐가 3회에서 끊는다. 실패도 도장이다. */
   if (url.searchParams.get("pending") === "1") {
-    const { data: rows } = await supa.rpc("travel_pending_to_retry", { p_limit: Math.min(n, 40) });
+    const { data: rows } = await supa.rpc("travel_pending_to_retry", { p_limit: Math.min(n, 120) });
     const plist = (rows || []) as any[];
     if (!plist.length) return j({ ok: true, picked: 0, note: "다시 물어볼 장소 없음" });
 
@@ -453,7 +458,21 @@ Deno.serve(async (req) => {
       /* 1차와 **다른 이름**으로 묻는 게 요점이다. 같은 걸 또 물으면 같은 답이 온다. */
       const tries = [native, en, local].filter((x, i, a) => x && a.indexOf(x) === i);
       let hit: any = null;
+      /* 🇰🇷 국내는 네이버를 **먼저** 묻는다. 순서가 뒤집혀 있어서 느렸다.
+         OSM 은 요청당 1.1초를 쉬어야 해서(Nominatim 예의) 105초 상자에 45콜이면 벌써 끝난다 —
+         실측 2026-09-07: 120건을 받아 30건밖에 못 돌았다. 그런데 국내 pending 의 정체는
+         펜션·카페·동네 가게라 OSM 엔 애초에 없다(직접 재보니 적중 21%, 그나마 마을 이름 오답 포함).
+         네이버는 70ms 면 되고 이런 걸 제일 잘 안다. 싸고 정확한 쪽을 먼저 문다. */
+      if (cc === "KR" && nvBudget > nvCalls) {
+        try {
+          nvCalls++;
+          const nv = await naverFind(ko, city);
+          if (nv) hit = nv;
+          await sleep(70);
+        } catch (e) { stop = String(e).slice(0, 40); }
+      }
       for (const t of tries) {
+        if (hit) break;
         if (hit || calls >= pBudget) break;
         const q1 = scale === "spot" && city ? [t, city].filter(Boolean).join(", ") : t;
         try {
@@ -471,15 +490,7 @@ Deno.serve(async (req) => {
         const w = await wikidataSearch(native || en || ko, cc || null, scale);
         if (w) hit = { lat: w.lat, lon: w.lon, geo_source: "wikidata", wikidata_qid: w.qid };
       }
-      /* 국내는 여기서 끝내지 않는다 — 동네 가게는 네이버에만 있다 */
-      if (!hit && cc === "KR" && nvBudget > nvCalls) {
-        try {
-          nvCalls++;
-          const nv = await naverFind(ko, city);
-          if (nv) hit = nv;
-          await sleep(70);
-        } catch (e) { stop = String(e).slice(0, 40); }
-      }
+      /* (국내 네이버 조회는 위로 올렸다 — 같은 걸 두 번 묻지 않는다) */
       if (hit) hits++;
       out.push({ id: r0.id, lat: hit?.lat ?? null, lon: hit?.lon ?? null,
                  geo_source: hit?.geo_source || null, wikidata_qid: hit?.qid || hit?.wikidata_qid || null,
@@ -488,9 +499,13 @@ Deno.serve(async (req) => {
     }
     if (pBudget > calls) await supa.rpc("travel_geo_refund", { p_n: pBudget - calls });
     if (nvBudget > nvCalls) await supa.rpc("naver_refund", { p_n: nvBudget - nvCalls });
-    const { data: res } = await supa.rpc("travel_pending_resolve", { p_items: out });
+    /* ⚠️ 여기서 에러를 삼키면 '찾았는데 승격 0' 이 조용히 반복된다 — 실제로 밟았다.
+       응답에 그대로 실어 보낸다. */
+    const { data: res, error: rErr } = await supa.rpc("travel_pending_resolve", { p_items: out });
     return j({ ok: true, mode: "pending", picked: plist.length, tried: out.length,
-               found: hits, geoCalls: calls, naverCalls: nvCalls, ...(res || {}), halted: stop || undefined,
+               found: hits, geoCalls: calls, naverCalls: nvCalls, ...(res || {}),
+               resolveErr: rErr ? String(rErr.message || rErr).slice(0, 200) : undefined,
+               halted: stop || undefined,
                took: Math.round((Date.now() - t0) / 1000) });
   }
 
