@@ -152,14 +152,27 @@ Deno.serve(async (req) => {
                   : p.scale === "city" ? 60
                   : p.scale === "region" ? 400
                   : 2000;
+      /* 이름이 겹치는가. 한국어 상호 ↔ 영문 표기는 안 겹치는 게 정상이라(호텔 카푸치노 ↔
+         Hotel Cappuccino) 이것만으로 자르면 멀쩡한 매칭이 죽는다. 거리와 **함께** 쓴다. */
+      const nameAgrees = (c: any) => {
+        const a = norm(c?.displayName?.text || ""), b = norm(name), c2 = norm(ko);
+        return !!a && (a === b || a.includes(b) || b.includes(a) || a === c2 ||
+                       (!!c2 && (a.includes(c2) || c2.includes(a))));
+      };
       hit = cands.find((c: any) => {
         const cl = c?.location;
         if (lat != null && lon != null && cl) {
-          return km(lat, lon, Number(cl.latitude), Number(cl.longitude)) <= maxKm;
+          const d = km(lat, lon, Number(cl.latitude), Number(cl.longitude));
+          /* 🔴 spot 은 거리만으로 받으면 엉뚱한 사진이 박힌다 —
+             실측 2026-09-07: '하옥계곡' 에 5km 안의 '마두교' 사진이 붙었다.
+             장소 카드의 사진이 딴 곳이면 그건 거짓말이다. 그래서 spot 은
+             **이름이 겹치거나, 1km 안**일 때만 같은 곳으로 본다.
+             city 이상은 표기가 언어마다 갈리고 중심점 정의도 달라 거리로만 본다. */
+          if (p.scale === "spot") return d <= 1 || (d <= maxKm && nameAgrees(c));
+          return d <= maxKm;
         }
         /* 좌표가 없으면 이름으로만 판단한다 — 느슨하면 딴 나라 동명 장소가 박힌다 */
-        const a = norm(c?.displayName?.text || ""), b = norm(name), c2 = norm(ko);
-        return !!a && (a === b || a.includes(b) || b.includes(a) || a === c2);
+        return nameAgrees(c);
       }) || null;
     } catch (e) {
       halted = String(e).slice(0, 90);
@@ -212,9 +225,19 @@ Deno.serve(async (req) => {
     if (error) return j({ ok: false, reason: "save_failed", detail: String(error.message).slice(0, 200) }, 500);
     res = data || {};
   }
-  if (!DRY && photos) await supa.rpc("places_photos_add", { p_n: photos });
+  /* ⚠️ places_photos_add(p_day date, p_n integer) 다 — p_day 를 빼고 부르면 PostgREST 가
+     함수를 못 찾아 장부에 사진 수가 아예 안 쌓인다(조용히 실패한다).
+     하루는 구글 할당량과 같은 태평양시다. KST 를 쓰면 엉뚱한 행을 건드린다. */
+  if (!DRY && photos) {
+    const laDay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    await supa.rpc("places_photos_add", { p_day: laDay, p_n: photos });
+  }
 
   return j({ ok: true, picked: list.length, called, photos, summaries: sums, geo: geos,
-             missed, ...res, sample, halted: halted || undefined, noEditorial,
+             /* ⚠️ 여기 있던 noEditorial 은 **선언 없이 남은 참조**였다. editorialSummary 를
+                필드마스크에서 뺄 때 변수만 지우고 이 줄을 안 고쳐서, 대상이 하나라도 있는
+                회차는 전부 ReferenceError → 500 이었다. 대상이 0이면 위에서 일찍 돌아가
+                이 줄에 닿지 않아 몇 달간 안 드러났다. 이 마스크는 이제 고정이라 상수로 둔다. */
+             missed, ...res, sample, halted: halted || undefined, noEditorial: true,
              took: Math.round((Date.now() - t0) / 1000) });
 });
