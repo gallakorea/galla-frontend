@@ -198,8 +198,10 @@ Deno.serve(async (req) => {
     if (error) { if (errs.length < 5) errs.push(String(error.message).slice(0, 160)); }
     else inserted += chunk.length;
   }
-  /* 받아놓고 못 쓴 몫을 돌려준다 — 429 로 일찍 멈췄을 때가 대부분이다 */
-  if (budget > called) await supa.rpc("places_refund", { p_n: budget - called });
+  /* 🔴 여기 있던 두 번째 환급을 지웠다. 아래 211줄에서 같은 `budget - called` 를 이미
+     돌려주고 있어서, 안 쓴 몫이 **두 번** 환급됐다 — 장부가 실제보다 적게 찍힌 원인이다.
+     (blackid 크레딧이 미터보다 훨씬 빨리 마른 이유가 이것으로 설명된다.)
+     환급은 반드시 한 곳에서만 한다. */
   /* ⚠️ 장부의 하루는 구글 할당량과 같은 태평양시다(KST 아님). 여기서 KST 를 쓰면
         하루가 어긋나 엉뚱한 행의 photos 를 덮어쓴다. */
   const laDay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });

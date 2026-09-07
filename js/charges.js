@@ -269,9 +269,19 @@ function openRefund(c) {
   sheet.querySelector("#cgDoRefund").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     btn.disabled = true; btn.textContent = "신청 중…";
-    const { data } = await supa.rpc("gc_refund_request", {
-      p_charge_id: c.id, p_reason: sheet.querySelector("#cgReason").value.trim() || null,
+    /* ⚠️ 예전엔 gc_refund_request 를 직접 불렀다. 그러면 '신청 접수'까지만 되고
+       실제 환급은 사람이 포트원 콘솔에서 손으로 눌러야 했다(admin_gc_refund_decide 가
+       'PG 콘솔에서 환급 후 done 처리' 를 todo 로 반환했다 — 관리자 화면조차 없었다).
+       이제 엣지 함수 gc-refund 가 같은 RPC 를 부른 뒤, 청약철회 7일 이내 전액이면
+       포트원 취소까지 실행하고 장부를 닫는다. 금액·검증은 여전히 서버 RPC 소관이다. */
+    const { data, error: fnErr } = await supa.functions.invoke("gc-refund", {
+      body: { charge_id: c.id, reason: sheet.querySelector("#cgReason").value.trim() || null },
     });
+    if (fnErr) {
+      alert("환불 신청에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      btn.disabled = false; btn.textContent = "환불 신청하기";
+      return;
+    }
     if (!data?.ok) {
       const MSG = {
         already_requested: "이미 환불을 신청한 결제예요.",
@@ -287,15 +297,25 @@ function openRefund(c) {
       btn.disabled = false; btn.textContent = "환불 신청하기";
       return;
     }
-    sheet.innerHTML = `
-      <div class="cg-grip"></div>
-      <div class="cg-sheet-t">✅ 환불 신청이 접수됐어요</div>
-      <div class="cg-sheet-s">${won(data.krw)} · ${fmt(data.gc)} GC 회수</div>
-      <div class="cg-rc-issuer" style="margin:14px 0">
-        확인 후 결제하신 수단으로 환급됩니다 (영업일 3~5일).<br>
-        진행 상황은 <b>환불 탭</b>에서 볼 수 있어요.
-      </div>
-      <button class="cg-close" id="cgSheetClose">닫기</button>`;
+    /* 자동 환불(청약철회 7일 이내 전액)과 접수만 된 경우는 안내가 달라야 한다 —
+       "3~5일 걸린다"고 해놓고 이미 끝나 있으면 환불이 안 된 줄 알고 또 문의한다. */
+    sheet.innerHTML = data.auto
+      ? `<div class="cg-grip"></div>
+         <div class="cg-sheet-t">✅ 환불이 완료됐어요</div>
+         <div class="cg-sheet-s">${won(data.krw)} · ${fmt(data.gc)} GC 회수</div>
+         <div class="cg-rc-issuer" style="margin:14px 0">
+           결제하신 수단으로 취소 처리했어요.<br>
+           카드사·은행에 따라 실제 반영까지 <b>영업일 2~5일</b> 걸릴 수 있어요.
+         </div>
+         <button class="cg-close" id="cgSheetClose">닫기</button>`
+      : `<div class="cg-grip"></div>
+         <div class="cg-sheet-t">✅ 환불 신청이 접수됐어요</div>
+         <div class="cg-sheet-s">${won(data.krw)} · ${fmt(data.gc)} GC 회수</div>
+         <div class="cg-rc-issuer" style="margin:14px 0">
+           확인 후 결제하신 수단으로 환급됩니다 (영업일 3~5일).<br>
+           진행 상황은 <b>환불 탭</b>에서 볼 수 있어요.
+         </div>
+         <button class="cg-close" id="cgSheetClose">닫기</button>`;
     bindClose();
     refreshAll();
   });

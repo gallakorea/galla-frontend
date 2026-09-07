@@ -404,3 +404,9 @@ verify_jwt = false
 verify_jwt = false
 [functions.portone-webhook]
 verify_jwt = false
+# 구글 사진 수집 두 개. 26.9.7 에 계정을 갈아타며 재배포했다가 같은 401 을 또 밟았다 —
+# 목록에 없으면 배포가 verify_jwt 를 되살린다. 크론은 x-cron-secret 으로만 인증한다.
+[functions.ingest-places-photos]
+verify_jwt = false
+[functions.travel-places-google]
+verify_jwt = false
