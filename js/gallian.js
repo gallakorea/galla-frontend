@@ -31,7 +31,7 @@
     { key: "arena",   emoji: "🎪", name: "광장", king: "광장왕", hint: "광장 · 난장 · 라이브 · 갈라뉴스",   color: "#06d6a0" },
     { key: "short",   emoji: "📱", name: "숏판", king: "숏판왕", hint: "세로 영상 · AI 창작 · 조회수",      color: "#c77dff" },
     { key: "long",    emoji: "🎞", name: "롱판", king: "롱판왕", hint: "가로 영상 · 오래 붙잡는 힘",        color: "#4fc3f7" },
-    { key: "predict", emoji: "🔮", name: "예측", king: "예측왕", hint: "베팅 · 적중 · 연승",                color: "#ffd166" },
+    { key: "predict", emoji: "🔮", name: "예측", king: "예측왕", hint: "예측 참여 · 적중 · 연승",                color: "#ffd166" },
   ];
 
   /* 판별 등급 — 서버 domain_tiers() 의 거울. 상대% 없이 절대 GI 만 본다.
