@@ -13,16 +13,17 @@
   const MIN_WITHDRAW = 200000;
 
   // 슈퍼챗 티어 (소액 중심 · 금액↑ = 강조↑)
+  /* 프리셋 4개 — 2026-09-08 에 7개에서 줄였다.
+     500원은 결제 수수료(카드 ~3% + 인앱 15~30%)를 빼면 크리에이터 몫이 300원 아래로 떨어져
+     후원으로서 의미가 약하고, 2만원은 프리셋 없이 직접 입력으로 받으면 된다.
+     선택지가 4개면 한 줄(grid 4칸)에 정확히 들어차 스크롤 없이 한눈에 비교된다. */
   const TIERS = [
-    { key: "blue",   amount: 500,   color: "#3b82f6", emoji: "💙" },
     { key: "sky",    amount: 1000,  color: "#22b8ff", emoji: "🩵" },
-    { key: "teal",   amount: 2000,  color: "#17c3b2", emoji: "💠" },
     { key: "green",  amount: 3000,  color: "#2fbf71", emoji: "💚" },
     { key: "yellow", amount: 5000,  color: "#f5c518", emoji: "💛" },
     { key: "orange", amount: 10000, color: "#ff9f1c", emoji: "🧡" },
-    { key: "red",    amount: 20000, color: "#ff4d6d", emoji: "❤️" },
   ];
-  const MIN = 500;
+  const MIN = 1000;
   const tierLabel = (a) => a < 1000 ? a + "원" : a < 10000 ? (a / 1000) + "천" : (a / 10000) + "만";
   const COLOR = Object.fromEntries(TIERS.map(t => [t.key, t.color]));
   const tierColor = (k) => COLOR[k] || "#3b82f6";
