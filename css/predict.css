@@ -433,6 +433,10 @@
 .wl-big.pink{ color:#ff7a9c; text-shadow:0 0 16px rgba(255,122,156,.25); }
 .wl-big.green{ color:#38d27a; text-shadow:0 0 16px rgba(56,210,122,.25); }
 .wl-split{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:#9aa3b8; margin:4px 0 2px; }
+/* ⚠️ display:flex 는 [hidden] 의 기본 display:none 을 이긴다(특정도 동률 → 나중 규칙 승).
+   그래서 wallet.js 가 hidden=true 로 둔 분리표시가 계속 보였고, 화면에
+   «충전 0 · 창작 크레딧 0» 이 떠 있었다. 숨김 로직은 처음부터 맞았고 CSS 가 무력화했다. */
+.wl-split[hidden]{ display:none; }
 .wl-split b{ color:#dfe5f1; }
 .wl-desc{ font-size:12px; color:#9aa3b8; line-height:1.6; margin:8px 0 12px; }
 .wl-btns{ display:flex; gap:8px; flex-wrap:wrap; }

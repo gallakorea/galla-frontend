@@ -87,7 +87,7 @@ function gpLabel(r){ for(const [re,v] of GP_LABELS){ if(re.test(r.reason||'')) r
 function gcLabel(r){
   const x = r.reason || '';
   if(x==='gc:charge') return ['💳','코인 충전'];
-  if(x.startsWith('gc:sub_credit')) return ['🎟','이용권 포함 크레딧'];
+  if(x.startsWith('gc:sub_credit')) return ['🎟','창작 크레딧'];
   if(x==='gc:refund_hold') return ['🔒','환불 신청(잠금)'];
   if(x==='gc:refund_unhold') return ['🔓','환불 신청 취소'];
   if(x==='gc:refund') return ['↩️','환불'];
@@ -123,7 +123,9 @@ async function loadGc(){
   const total = w?.ok ? w.total : 0;
   $('wlGcBal').innerHTML = `0<small> GC</small>`;
   countUp($('wlGcBal'), total);
-  /* 🎟 이용권 포함분은 성격이 다르다 — 환불 불가·이월 없음·먼저 소진.
+  /* 🎟 창작 크레딧(이용권 포함분)은 성격이 다르다 — 환불 불가·이월 없음·먼저 소진.
+     이름을 GC 와 분리한 이유: «이용권 포함 GC» 는 GC 와 같은 것처럼 읽혀
+     «충전한 GC 인데 왜 후원이 안 되지?» 를 만든다(2026-09-08).
      합쳐서 보여주면 "환불해달라"는 문의가 반드시 온다. 보유 중일 때만 갈라서 보여준다. */
   if(w?.ok && w.sub > 0){
     $('wlGcSplit').hidden = false;
