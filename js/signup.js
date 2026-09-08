@@ -129,7 +129,11 @@ async function waitForClient() {
             try { window.turnstile && window.turnstile.reset(); } catch (e) {}
 
             if (signUpError) {
-                alert("회원가입 실패: " + signUpError.message);
+                /* ⚠️ Supabase 에러는 영문이다. 그대로 alert 하면 가입 마지막 단계에서
+                   영어 문장을 만나 이탈한다(실측 2026-09-08: 약한 비밀번호 거부 문구가
+                   "Password is known to be weak..." 로 노출). 아는 것만 한글로 바꾸고
+                   모르는 건 원문을 남긴다 — 조용히 뭉개면 원인 파악이 안 된다. */
+                alert("회원가입 실패: " + signupErrorKo(signUpError.message));
                 return;
             }
 
@@ -161,3 +165,23 @@ async function waitForClient() {
         }
     });
 })();
+
+/* Supabase Auth 영문 에러 → 한글. 매칭 안 되면 원문을 그대로 돌려준다. */
+function signupErrorKo(msg) {
+    const m = String(msg || "");
+    if (/known to be weak|easy to guess|pwned|leaked/i.test(m))
+        return "너무 흔한 비밀번호예요. 12자 이상으로, 사전에 있는 단어나 연속된 숫자는 피해서 다시 만들어 주세요.";
+    if (/at least .* characters|password should be/i.test(m))
+        return "비밀번호가 너무 짧아요. 조금 더 길게 만들어 주세요.";
+    if (/already registered|already been registered|User already/i.test(m))
+        return "이미 가입된 이메일이에요. 로그인하거나 다른 이메일을 써 주세요.";
+    if (/invalid.*email|email.*invalid/i.test(m))
+        return "이메일 형식이 올바르지 않아요.";
+    if (/rate limit|too many/i.test(m))
+        return "요청이 너무 잦아요. 잠시 뒤에 다시 시도해 주세요.";
+    if (/captcha/i.test(m))
+        return "보안 확인에 실패했어요. 페이지를 새로고침하고 다시 시도해 주세요.";
+    if (/network|fetch|failed to fetch/i.test(m))
+        return "네트워크가 불안정해요. 연결을 확인하고 다시 시도해 주세요.";
+    return m;
+}
