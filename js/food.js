@@ -199,6 +199,15 @@
       console.warn("[food] 네이티브 지도 create 실패:", e);
     });
     /* 지도가 웹뷰 **뒤**에 있으므로 캔버스는 비어 있어야 보인다 */
+    /* ⚠️ 뒤에 있으면 터치는 전부 웹뷰가 먹는다 — 헤더 아래를 지도로 넘기라고 알려준다.
+       이걸 안 하면 지도는 그려지는데 팬·핀 클릭이 통째로 죽는다(2026-09-09 실측). */
+    function pushTouchTop() {
+      if (!P.setTouchTop) return;
+      var top = document.querySelector(".fd-map-top");
+      var y = top ? Math.round(top.getBoundingClientRect().bottom) : 0;
+      P.setTouchTop({ y: y }).catch(function () {});
+    }
+    setTimeout(pushTouchTop, 0);
     el.classList.add("fd-canvas-native");
     document.body.classList.add("fd-native-map");
     document.documentElement.classList.add("fd-native-map");
@@ -217,6 +226,7 @@
       refresh: function () {
         var f = rect();
         P.setFrame({ x: f.x, y: f.y, width: f.width, height: f.height }).catch(function () {});
+        pushTouchTop();                              // 헤더 높이가 바뀌면 경계선도 따라가야 한다
         /* 첫 진입엔 idle 이 아직 안 와서 경계가 없다 — 한 번 물어서 채워둔다 */
         P.getBounds().then(function (b) {
           if (!b || !b.ok) return;
