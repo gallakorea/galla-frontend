@@ -802,6 +802,12 @@
   window.GALLA_SPA = {
     go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; while (stack.length) pop({ silent: true }); activateTab(i); },
     push, pop, compose, openOverlay, pushView,
+    /* 🔙 안드로이드 하드웨어 뒤로가기가 이걸 본다(js/android-back.js ③번 분기).
+       없으면 그쪽은 '더 갈 데가 없다'고 판단해 ④(두 번 눌러 종료)로 떨어진다 —
+       실측 2026-09-09: /#/watch 같은 스택 뷰에서 뒤로가기를 눌러도 목록으로
+       안 돌아가고 아무 일도 안 일어났다. 대체 경로였던 document.referrer 는
+       앱(capacitor origin)에선 늘 빈 문자열이라 그것도 안 걸린다. */
+    canBack: () => stack.length > 0,
     navMini: (on) => { const n = document.querySelector(".nav"); if (n) n.classList.toggle("nav--mini", !!on); },
     navHide: (on) => { const n = document.querySelector(".nav"); if (n) n.style.display = on ? "none" : ""; },
   };
