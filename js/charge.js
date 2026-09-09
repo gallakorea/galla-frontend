@@ -121,6 +121,83 @@ window.GALLA_PORTONE = {
      게임 재화인 <b>갈라포인트(GP)는 판매하지 않아요</b> — 출석·미션·활동으로만 모으고, 예측·일기토·가챠·아이템은 GP로만 참여합니다.<br>
      GC와 GP는 서로 바꿀 수 없습니다.`;
 
+  /* 🍎 앱 안내문은 웹과 달라야 한다.
+     "1원 = 1GC" 같은 원화 환산은 스토어 표시가와 어긋나 보이고, 앱 안에서 외부 가격을
+     말하는 모양이 되어 anti-steering 소지가 있다. 앱에서는 가격을 스토어만 말한다. */
+  const NOTE_APP =
+    `갈라코인(GC)은 서비스 내 재화로 <b>환전·양도가 불가</b>합니다. 쓰고 남은 GC는 잔액으로 남아요.<br>
+     충전한 GC의 <b>유효기간은 지급일로부터 1년</b>이에요(소멸 30일 전 알려드려요).<br>
+     게임 재화인 <b>갈라포인트(GP)는 판매하지 않아요</b> — 출석·미션·활동으로만 모으고, 예측·일기토·가챠·아이템은 GP로만 참여합니다.<br>
+     GC와 GP는 서로 바꿀 수 없습니다.`;
+
+  /* 📱 앱 충전 — 스토어 결제(IAP)로만 간다.
+     ⚠️ 가격은 스토어가 준 표시가(offer.price)를 그대로 쓴다. 우리가 원화를 찍으면
+        통화·지역이 어긋나고 심사에서도 문제가 된다.
+     ⚠️ 지급량(gc)은 서버 카탈로그가 준 값이다 — 여기서 계산하지 않는다. */
+  async function renderApp(ctx) {
+    if (ctx && ctx.bal == null) {
+      const b = await Promise.resolve(sb().rpc("gc_balance")).catch(() => ({ data: null }));
+      if (b?.data != null) ctx.bal = b.data;
+    }
+    sheet.innerHTML = shell(`<div class="chg-soon">패키지 불러오는 중…</div>`, ctx, NOTE_APP);
+
+    const offers = window.GALLA_ensureGcProducts ? await window.GALLA_ensureGcProducts() : [];
+    if (!offers.length) {
+      /* 스토어에 상품이 아직 안 붙었거나(심사 전) 카탈로그를 못 받은 상태.
+         눌러도 안 되는 버튼을 보여주느니 아무것도 안 보여주는 게 낫다. */
+      sheet.innerHTML = shell(
+        `<div class="chg-soon">지금은 충전을 열 수 없어요.<br>잠시 후 다시 시도해 주세요.</div>`,
+        ctx, NOTE_APP);
+      return;
+    }
+
+    sheet.innerHTML = shell(
+      `<div class="chg-grid">${offers.map(o => `
+        <button class="chg-pkg" data-pkg="${o.pkg}">
+          <span><span class="g">${gc(o.gc)}</span></span>
+          <span class="p">${o.price}</span>
+        </button>`).join("")}</div>`,
+      ctx, NOTE_APP);
+
+    sheet.querySelectorAll(".chg-pkg").forEach(b =>
+      b.addEventListener("click", () => beginApp(b)));
+  }
+
+  /* 스토어 결제 → 영수증 검증(verify-iap) → 서버가 지급. 클라는 결과만 본다.
+     ⚠️ ok 는 '주문이 접수됐다'는 뜻이지 지급됐다는 뜻이 아니다. 지급은 approved 훅에서
+        서버 검증을 통과한 뒤 일어나므로, 잔액을 다시 물어 확인한다. */
+  async function beginApp(btn) {
+    window.BattleFX?.haptic?.("tap");
+    btn.disabled = true;
+    const before = await Promise.resolve(sb().rpc("gc_balance")).catch(() => ({ data: null }));
+    const r = await window.GALLA_buyGC(btn.dataset.pkg);
+    if (!r || !r.ok) {
+      btn.disabled = false;
+      if (r && r.reason === "canceled") return;          // 유저가 창을 닫은 것 — 조용히 넘긴다
+      sheet.innerHTML = doneHTML("⚠️", "결제를 시작하지 못했어요",
+        "잠시 후 다시 시도해 주세요.<br>계속 안 되면 고객센터로 알려주세요.");
+      bindClose();
+      return;
+    }
+    sheet.innerHTML = doneHTML("⏳", "결제 확인 중", "잠시만 기다려 주세요…");
+
+    /* 검증·지급은 스토어 훅을 타고 오므로 잔액으로 확인한다(최대 12초). */
+    const b0 = before?.data ?? null;
+    for (let i = 0; i < 12; i++) {
+      await new Promise(r2 => setTimeout(r2, 1000));
+      const now = await Promise.resolve(sb().rpc("gc_balance")).catch(() => ({ data: null }));
+      const b1 = now?.data ?? null;
+      if (b1 != null && b0 != null && b1 > b0) {
+        sheet.innerHTML = doneHTML("✅", "충전 완료", `<b>${gc(b1 - b0)}</b>가 지갑에 들어왔어요.`);
+        bindClose();
+        return;
+      }
+    }
+    sheet.innerHTML = doneHTML("⏳", "확인이 지연되고 있어요",
+      "결제는 정상 접수되었어요.<br>잠시 후 지갑에서 잔액을 확인해 주세요.<br>계속 반영되지 않으면 고객센터로 알려주세요.");
+    bindClose();
+  }
+
   async function render(ctx) {
     // 🍎 앱스토어/플레이 anti-steering: 네이티브에선 원화 가격·패키지를 절대 렌더하지 않는다(IAP 붙기 전까지).
     //    실제 결제만 막는 게 아니라 '원화 표시' 자체가 외부결제 유도로 거절 사유가 된다.
@@ -129,12 +206,7 @@ window.GALLA_PORTONE = {
 
     sheet.innerHTML = shell(`<div class="chg-soon">패키지 불러오는 중…</div>`, ctx, NOTE_BASE);
 
-    if (isApp) {
-      sheet.innerHTML = shell(
-        `<div class="chg-soon">📱 앱 내 충전은 <b>다음 업데이트</b>에서 열려요.</div>`,
-        ctx, NOTE_BASE + `<br>앱스토어 결제 연동은 준비 중이에요.`);
-      return;
-    }
+    if (isApp) { await renderApp(ctx); return; }
 
     /* ⚠️ supabase-js의 rpc()는 thenable이지 Promise가 아니다 — .catch()가 없다.
        Promise.resolve()로 감싸야 실패를 삼킬 수 있다. */

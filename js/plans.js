@@ -20,12 +20,14 @@
   /* ⚠️ 이용권 키는 서버(app_settings.ai_tiers)가 진실이다. 여기 목록은 '보여줄 순서'일 뿐인데,
      2026-08-26 개명(라이트/프렌드/프로 → 컴패니언) 때 이걸 안 고쳐서 카드가 통째로 안 나왔다.
      서버에서 온 plans 에만 있고 여기 없는 키도 뒤에 붙여 렌더한다 — 다시는 통째로 사라지지 않게. */
-  var ORDER = ["free", "companion_sometimes", "companion_daily", "companion_plus", "companion_always"];
+  /* 2026-09-08 에 4티어 → 2티어로 줄였다(`docs/appstore-products.md`).
+     `companion_sometimes`(999원)는 스토어 사다리에 999원이 없어 1,100원이 되면 「매일」과 800원 차이였고,
+     `companion_plus`(3,400원)는 대화 한도가 「매일」과 똑같아 더 낼 이유가 없었다.
+     서버 ai_tiers·sub_products 에서 이미 빠졌으므로 목록에서도 지운다. */
+  var ORDER = ["free", "companion_daily", "companion_always"];
   var PITCH = {
     free:                "가볍게 써보기",
-    companion_sometimes: "가끔 말 걸기",
     companion_daily:     "매일 수다 떨기",
-    companion_plus:      "앱을 대신 조작해 주는 친구",
     companion_always:    "종일 붙어 있기"
   };
   var FEAT_LABEL = {

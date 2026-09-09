@@ -96,3 +96,59 @@ on conflict (channel, product_id) do update
 
 ⚠️ `gc_packages.gc` 는 **웹 기준(1원=1GC)** 이라 건드리지 않는다.
    스토어 지급량은 `gc_products.gc` 가 결정한다(`grant_gc_topup` 이 그걸 읽는다).
+
+---
+
+## 클라이언트 배선 (2026-09-09)
+
+App Store Connect 에 상품을 만든 날, 앱이 그 상품을 **실제로 살 수 있게** 배선했다.
+상품 등록과 배선은 별개다 — 등록만 해두면 심사자가 충전 버튼을 눌러도 아무 일이 없다.
+
+### 고친 것
+
+| 파일 | 문제 | 조치 |
+|---|---|---|
+| `js/iap.js` | 소모성(GC) 상품이 `store.register` 에 **아예 없었다** — 구독만 등록. 앱에서 GC 충전이 원천 불가 | 서버 `gc_charge_packages(ios/android)` 로 카탈로그를 받아 `CONSUMABLE` 로 등록. `GALLA_ensureGcProducts`/`GALLA_gcOffers`/`GALLA_buyGC` 신설 |
+| `js/iap.js` | 안드로이드 구독 ID 가 `sub_daily`인데 서버 `sub_products` 는 `im.galla.sub.daily` | iOS 와 같은 ID 로 통일. **그대로 뒀으면 Play 결제 성공 후 verify-iap 가 상품을 못 찾아 돈만 내고 등급이 안 켜졌다** |
+| `js/iap.js` · `js/plans.js` | 폐기 티어 `companion_sometimes`·`companion_plus` 잔재 | 삭제(서버 `ai_tiers`·`sub_products` 는 이미 2티어) |
+| `js/charge.js` | 앱에서 "앱 내 충전은 다음 업데이트에서 열려요" 만 렌더 | `renderApp`/`beginApp` 신설 — 스토어 표시가로 패키지를 그리고 IAP 로 결제 |
+
+**GC 수량·상품 ID 를 클라에 적지 않는다.** 서버 카탈로그(`gc_products`)가 유일한 출처다.
+손으로 옮겨 적으면 표에서 한 번, 코드에서 또 한 번 어긋난다(이번에 실제로 그랬다).
+
+### anti-steering
+
+앱 충전 시트는 **원화를 절대 렌더하지 않는다.** 가격은 스토어가 준 표시가(`offer.pricingPhases[0].price`)뿐이고,
+웹 안내문의 `1원 = 1GC` 문구는 앱 전용 `NOTE_APP` 에서 뺐다(유효기간 1년 고지는 그대로 유지).
+스토어에 상품이 안 붙었거나 카탈로그를 못 받으면 **패키지를 아예 안 보여준다** — 눌러도 안 되는 버튼보다 낫다.
+
+### 검증 (로컬, 가짜 스토어 물려서)
+
+- 등록: 구독 2(`sub`) + 소모성 3(`consumable`) — 정확히 5개
+- 오퍼: c1/c5/c10 이 각각 1,000·5,000·10,000 GC + 스토어 표시가로 렌더
+- 구매: `c5` 클릭 → `im.galla.gc.c5` 로 주문 → "결제 확인 중" → 잔액 폴링
+- 폴백: 스토어 플러그인이 없으면 "지금은 충전을 열 수 없어요"(원화 노출 0)
+- 웹 경로 회귀 없음(콘솔 에러 0)
+
+### 버전 전파 — 네 갈래를 다 올려야 한다
+
+이번 수정은 `iap.js`·`charge.js`·`plans.js` 세 파일인데 전달 경로가 갈린다. 하나만 빼먹으면 그 경로만 옛 코드로 남는다.
+
+1. `app.html` 의 `<meta name="galla-ver">` (SPA 뷰 모듈이 `GALLA_V` 로 주입 → `charge.js` 등)
+2. `app.html` 의 직접 참조 `iap.js?v=` · `plans.js?v=`
+3. MPA 4개(issue·mypage·settings·wallet)의 `charge.js?v=`
+4. 52개 HTML 의 `nav.js?v=` (nav 가 `iap.js`·`plans.js` 를 자기 버전으로 상속 로드)
+
+→ 전부 `0909020` 으로 맞췄다.
+
+### 🚨 배포 전에 반드시 확인할 시크릿 이름
+
+- 애플 영수증 검증 키의 이름은 **`APPLE_IAP_SHARED_SECRET`** 이다(`verify-iap/index.ts:47`).
+  인계 메모에 적힌 `APPLE_SHARED_SECRET` 로 넣으면 **에러 없이 검증만 전부 실패한다**(빈 문자열로 조회 → status≠0).
+- `ANDROID_PACKAGE` 기본값은 `im.galla` 이고 이게 맞다 — Android `applicationId` 도 2026-09-04 에 `im.galla` 로 통일됐다.
+  `docs/launch-roadmap.md` 의 "Android 패키지 `im.galla.app` 유지" 는 낡은 기록이다.
+
+### 아직 남은 것
+
+- 5개 상품 전부 **심사용 스크린샷 0장** — 빌드를 올린 뒤 앱 충전·구독 화면을 찍어야 제출이 된다.
+- Play 쪽은 앱·상품 미생성. 만들 때 상품 ID 를 **`im.galla.gc.*` / `im.galla.sub.*`** 로 해야 서버 표와 맞는다.
