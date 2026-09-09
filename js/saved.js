@@ -22,7 +22,7 @@
     long:    { table: 'post_bookmarks',        fk: 'post_id',   ctable: 'posts',       cols: 'id,kind,title,caption,thumbnail_url,images', icon: '🎬', kind: 'horizontal', wide: true,
       map: (c) => ({ title: c.title || c.caption, thumb: c.thumbnail_url || (Array.isArray(c.images) && c.images[0]) || '', kicker: '롱판', dest: `gallari-post.html?id=${c.id}` }) },
     /* 맛집은 전용 문서가 없다 — 트렌드 맛집 탭의 상세 시트를 연다(웹은 ?fp=, 앱은 라우터 파라미터). */
-    food:    { table: 'food_saves',            fk: 'place_id',  ctable: 'food_places', cols: 'id,name,address,category,region,cover_url', icon: '🍜',
+    food:    { table: 'food_saves',            fk: 'place_id',  ctable: 'food_places', cols: 'id,name,address,category,region,cover_url', icon: '🍜', rpc: 'food_places_by_ids',
       map: (c) => ({ title: c.name, thumb: c.cover_url || '', kicker: c.category || c.region || '맛집', dest: `search.html?tab=food&fp=${c.id}` }) },
     travel:  { table: 'travel_saves',          fk: 'place_id',  ctable: 'travel_places', cols: 'id,name,city,country,category,photo', icon: '✈️',
       map: (c) => ({ title: c.name, thumb: c.photo || '', kicker: [c.city, c.country].filter(Boolean).join(', ') || '여행', dest: `travel-place.html?id=${c.id}` }) },
@@ -56,9 +56,18 @@
       const { data: bms } = await sb.from(cfg.table).select(`${cfg.fk}, created_at`).eq('user_id', ME).order('created_at', { ascending: false }).limit(100);
       const ids = [...new Set((bms || []).map(b => b[cfg.fk]))];
       if (!ids.length) { cache[type] = []; render(type, []); return; }
-      let q = sb.from(cfg.ctable).select(cfg.cols).in('id', ids);
-      if (cfg.kind) q = q.eq('kind', cfg.kind);      // 숏판·롱판은 한 표를 나눠 쓴다
-      const { data: rows } = await q;
+      /* ⚠️ food_places 는 RLS 켜짐 + 정책 0개라 PostgREST 직접 조회가 전부 0행이다
+         (목록·상세는 전부 SECURITY DEFINER RPC 로 읽는 구조). 여기만 직접 select 를 해서
+         찜한 가게가 보관 탭에 하나도 안 떴다(QA 0909). 전용 RPC 로 읽는다. */
+      let rows;
+      if (cfg.rpc) {
+        const { data } = await sb.rpc(cfg.rpc, { p_ids: ids });
+        rows = data;
+      } else {
+        let q = sb.from(cfg.ctable).select(cfg.cols).in('id', ids);
+        if (cfg.kind) q = q.eq('kind', cfg.kind);      // 숏판·롱판은 한 표를 나눠 쓴다
+        ({ data: rows } = await q);
+      }
       const byId = {}; (rows || []).forEach(r => byId[r.id] = r);
       // 저장 순서(북마크 순) 보존
       const items = ids.map(id => byId[id]).filter(Boolean).map(cfg.map);
