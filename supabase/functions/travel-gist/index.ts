@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
   /* 엣지는 150초 놀면 흔적 없이 사라진다 — 시계를 안전장치로 둔다. */
   const DEADLINE = Date.now() + 110_000;
 
-  let picked = 0, saved = 0, rounds = 0;
+  let picked = 0, saved = 0, rounds = 0, failed = 0, misses = 0;
   const sample: string[] = [];
 
   try {
@@ -217,14 +217,27 @@ Deno.serve(async (req) => {
 
       const { data: res } = await supa.rpc("travel_gist_mark", { p_items: out });
       saved += Number(res?.marked || 0);
-      if (!raw) break;                    // 공급자가 죽었으면 더 물어봐야 소용없다
+
+      /* 🔴 예전엔 여기서 `if (!raw) break;` 였다 — 한 배치만 실패해도 회차 전체가 끝났다.
+         딥시크는 제목·설명에 걸리는 게 하나만 있어도 배치를 통째로 400 으로 돌려준다
+         ("Content Exists Risk"). 실측 2026-09-09: n=200 을 요청했는데 picked 10 —
+         첫 배치가 걸려 그대로 종료됐다. 그 속도면 6,083편에 100시간이 걸린다.
+         실패한 10편은 빈 gist 로 도장이 찍혀 큐에서 빠지므로 무한 재시도가 아니다.
+         그러니 멈출 이유가 없다 — 다음 배치로 넘어간다.
+         단 연속 3회 실패는 공급자가 죽은 것으로 보고 그때 멈춘다(잔액·키 문제). */
+      if (!raw) {
+        failed++; misses++;
+        if (failed >= 3) { errs.push("연속 3회 실패 — 공급자 이상으로 보고 중단"); break; }
+      } else {
+        failed = 0;
+      }
     }
   } catch (e) {
     return j({ ok: false, error: String(e).slice(0, 300), picked, saved }, 500);
   }
 
   const { data: left } = await supa.rpc("travel_videos_to_gist", { p_limit: 1 });
-  return j({ ok: true, picked, saved, rounds,
+  return j({ ok: true, picked, saved, rounds, failedBatches: misses,
              remaining: (left || []).length ? "남음" : "없음",
              sample, errors: errs.slice(0, 3) });
 });

@@ -412,3 +412,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.harvest-travel-places]
 verify_jwt = false
+[functions.travel-gist]
+verify_jwt = false
