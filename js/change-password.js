@@ -31,7 +31,15 @@
         const { error } = await c.auth.updateUser({ password: np });
         if (error) throw error;
         alert("비밀번호가 변경되었습니다.");
-        history.length > 1 ? history.back() : ((window.GALLA_nav||function(u){location.href=u})("settings.html"));
+        /* ⚠️ 비번 재설정 링크로 들어온 경우 history.back() 은 "재설정 링크 보내기"
+           화면(reset.html)으로 되돌린다 — 바꿨는데 실패한 것처럼 보였다(QA 0909).
+           재설정 흐름이면 이미 로그인된 상태이므로 홈으로 보낸다. */
+        var __ref = document.referrer || "";
+        var __fromReset = /reset\.html|auth\/confirm/.test(__ref);
+        var __go = (window.GALLA_nav||function(u){location.href=u});
+        if (__fromReset) __go("index.html");
+        else if (history.length > 1) history.back();
+        else __go("settings.html");
       } catch (e) {
         const msg = (e && e.message) || "";
         if (/same/i.test(msg)) alert("기존 비밀번호와 동일합니다. 다른 비밀번호를 입력해주세요.");

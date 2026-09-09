@@ -112,7 +112,7 @@
                     }
                     return;
                 }
-                alert("로그인 실패: " + msg);
+                alert("로그인 실패: " + loginErrorKo(msg));
                 return;
             }
 
@@ -335,3 +335,23 @@
 
     if (!IS_SPA) bootMPA();
 })();
+
+/* Supabase Auth 영문 에러 → 한글. 매칭 안 되면 원문을 돌려준다.
+   ⚠️ 가입(signup.js)은 signupErrorKo 로 번역하는데 로그인만 원문을 그대로 띄워
+   "로그인 실패: Invalid login credentials" 가 나왔다(QA 0909). */
+function loginErrorKo(msg) {
+    const m = String(msg || "");
+    if (/invalid login credentials|invalid credentials/i.test(m))
+        return "이메일 또는 비밀번호가 맞지 않아요.";
+    if (/email not confirmed|not confirmed/i.test(m))
+        return "아직 이메일 인증 전이에요. 메일함(스팸함도) 확인해 주세요.";
+    if (/rate limit|too many/i.test(m))
+        return "요청이 너무 잦아요. 잠시 뒤에 다시 시도해 주세요.";
+    if (/captcha/i.test(m))
+        return "보안 확인에 실패했어요. 새로고침하고 다시 시도해 주세요.";
+    if (/network|fetch|failed to fetch/i.test(m))
+        return "네트워크가 불안정해요. 연결을 확인하고 다시 시도해 주세요.";
+    if (/user not found/i.test(m))
+        return "가입되지 않은 이메일이에요.";
+    return m;
+}
