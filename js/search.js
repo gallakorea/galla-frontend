@@ -55,6 +55,9 @@ const SEC = {
   issue: secIc('<path d="M12 3l7 4v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V7l7-4z"/><path d="M9.2 12.2l1.9 1.9 3.7-3.9"/>'),
   predict: secIc('<path d="M3.5 17l5.5-5.5 3.5 3.5L21 6.5"/><path d="M15.5 6.5H21V12"/>'),
   plaza: secIc('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
+  // 숏판 = 세로 프레임 + 재생, 롱판 = 가로 프레임 + 재생 (탭 아이콘과 같은 도형 규칙)
+  shorts: secIc('<rect x="7.5" y="3" width="9" height="18" rx="2"/><path d="M11 9.5l4 2.5-4 2.5v-5z"/>'),
+  longform: secIc('<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5v-5z"/>'),
 };
 
 /* ═══ 이중 모드(웹 MPA + 단일문서 SPA 뷰) ═══════════════════════
@@ -712,6 +715,20 @@ async function initTrendPage() {
       </a>`;
     });
   }
+  /* 숏판(세로)·롱판(가로) 카드 — 썸네일이 곧 콘텐츠라 이미지 비중을 크게 둔다.
+     숏판은 9:16, 롱판은 16:9 라 클래스로 비율만 갈라준다. */
+  function postCards(list, kind, ranked = true) {
+    const tag = kind === "vertical" ? "숏판" : "롱판";
+    return list.map((p, i) => {
+      const th = p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
+      return `<a class="tt-card tt-post ${kind === "vertical" ? "tt-post-v" : "tt-post-h"}" href="gallari-post.html?id=${p.id}">
+        ${ttThumb(th, (ranked ? rankBadge(i) : "") + `<span class="sr-badge-vid">▶</span>`)}
+        <span class="tt-tag">갈라 ${tag}</span>
+        <span class="tt-title">${esc(p.title || p.caption || "")}</span>
+        <span class="tt-meta"><span>${ST.like} ${p.like_count || 0}</span><span>${ST.comment} ${p.comment_count || 0}</span></span>
+      </a>`;
+    });
+  }
   function marketCards(list, ranked = true) {
     return list.map((m, i) =>
       `<a class="tt-card tt-predict" href="predict-market.html?id=${m.id}">
@@ -842,6 +859,17 @@ async function initTrendPage() {
       })(),
     ]);
 
+    /* 뜨는 숏판 · 뜨는 롱판 — 다른 선반과 같은 규칙(hot_score 우선, 없으면 최신).
+       ⚠️ 위 Promise.all 에 섞지 않는다. 실패해도 나머지 선반은 그려야 한다. */
+    const [shortRes, longRes] = await Promise.all(["vertical", "horizontal"].map(kind =>
+      (window.GALLA_lfilter || function (q) { return q; })(supabase.from("posts")
+        .select("id,kind,title,caption,thumbnail_url,images,like_count,comment_count,hot_score,created_at")
+        .eq("kind", kind).eq("is_published", true).neq("moderation_status", "blocked")
+        .order("hot_score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(12))
+        .then(r => r.data || []).catch(() => [])
+    ));
+
     // 인기 뉴스: 참여도(좋아요+댓글) 상위, 없으면 최신 (썸네일 있는 것만)
     let gnews = (gnRes.data || []).filter(n => isValidThumbnail(n.hero_image));
     if (gnews.length) {
@@ -875,6 +903,8 @@ async function initTrendPage() {
       ttShelf(SEC.news, "인기 갈라뉴스", gnewsItems)
       + ttShelf(SEC.issue, "뜨는 갈라 이슈", issueItems)
       + ttShelf(SEC.predict, "뜨는 갈라예측", marketItems)
+      + ttShelf(SEC.shorts, "뜨는 갈라 숏판", postCards(shortRes, "vertical"))
+      + ttShelf(SEC.longform, "뜨는 갈라 롱판", postCards(longRes, "horizontal"))
       + ttShelf(SEC.plaza, "뜨는 갈라 광장", plazaItems)
       || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
@@ -1317,6 +1347,25 @@ async function initTrendPage() {
     if (nearBottom && active === "news" && newsMode === "raw") loadTopNews();
   });
 
+  /* 맛집 상세 딥링크(?fp=<place uuid>) — food.js 가 아직 안 실렸을 수 있어 잠깐 기다린다.
+     GALLA_openFoodPlace 는 buildDetail 을 스스로 부르므로 목록 부팅과 무관하게 뜬다. */
+  function openFoodPlaceDeep(id) {
+    if (!id) return;
+    let tries = 0;
+    (function go() {
+      if (window.GALLA_openFoodPlace) { try { window.GALLA_openFoodPlace(id); } catch (_) {} return; }
+      if (++tries > 40) return;               // 4초까지만 — 없으면 맛집 탭만 열린 채 끝난다
+      setTimeout(go, 100);
+    })();
+  }
+  /* 라우터가 트렌드 판으로 보낼 때 파라미터를 넘겨주는 통로(SPA 전용). */
+  window.GALLA_trendApplyParams = function (p) {
+    if (!p) return;
+    if (p.tab) activateTab(p.tab, false);
+    else if (p.fp) activateTab("food", false);
+    if (p.fp) openFoodPlaceDeep(p.fp);
+  };
+
   /* ================= INIT ================= */
   renderRecent();
   showSource("galla");
@@ -1325,6 +1374,7 @@ async function initTrendPage() {
 
   // 옛 딥링크: search.html?gn=<id> → 이제 기사는 news.html 이 담당 (마이페이지 '저장한 뉴스' 등 호환)
   const qs = new URLSearchParams(location.search);
+  const PEND = (function () { const p = window.GALLA_TREND_PARAMS; window.GALLA_TREND_PARAMS = null; return p || null; })();
   const gnParam = qs.get("gn");
   if (gnParam) {
     goNews(`news.html?gn=${encodeURIComponent(gnParam)}`);
@@ -1334,6 +1384,11 @@ async function initTrendPage() {
   } else if (["trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(qs.get("tab"))) {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
+    if (qs.get("fp")) openFoodPlaceDeep(qs.get("fp"));
+  } else if (PEND && (PEND.tab || PEND.fp)) {
+    // SPA: 라우터가 넘겨준 파라미터(보관 → 맛집 상세 등). location.search 는 앱에서 비어 있다.
+    if (PEND.tab) activateTab(PEND.tab, false); else activateTab("food", false);
+    if (PEND.fp) openFoodPlaceDeep(PEND.fp);
   } else {
     // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}

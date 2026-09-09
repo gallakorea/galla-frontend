@@ -1,5 +1,5 @@
 /* ============================================================
-   보관(저장 허브) — 이슈·예측·광장·뉴스 저장을 한 곳에서
+   보관(저장 허브) — 이슈·예측·광장·뉴스·숏판·롱판·맛집·여행 저장을 한 곳에서
    이중모드: 웹=MPA / 앱=SPA(로더 DCL 캡처). 탐색은 GALLA_nav.
    FK 임베드 의존 없이 2단계(북마크 id → 콘텐츠 조회)로 안전하게.
    ============================================================ */
@@ -16,7 +16,18 @@
       map: (c) => ({ title: c.title, thumb: c.thumbnail || c.cover_image || '', kicker: c.category || '광장', dest: `plaza_detail.html?id=${c.id}` }) },
     news:    { table: 'galla_news_bookmarks', fk: 'news_id',   ctable: 'galla_news',  cols: 'id,title,hero_image,category', icon: '📰', wide: true,
       map: (c) => ({ title: c.title, thumb: c.hero_image || '', kicker: c.category || '뉴스', dest: `search.html?gn=${c.id}` }) },
+    /* 숏판·롱판은 같은 표(post_bookmarks·posts)를 kind 로 나눠 쓴다 — 탭은 둘, 저장은 하나. */
+    short:   { table: 'post_bookmarks',        fk: 'post_id',   ctable: 'posts',       cols: 'id,kind,title,caption,thumbnail_url,images', icon: '⚡', kind: 'vertical',
+      map: (c) => ({ title: c.title || c.caption, thumb: c.thumbnail_url || (Array.isArray(c.images) && c.images[0]) || '', kicker: '숏판', dest: `gallari-post.html?id=${c.id}` }) },
+    long:    { table: 'post_bookmarks',        fk: 'post_id',   ctable: 'posts',       cols: 'id,kind,title,caption,thumbnail_url,images', icon: '🎬', kind: 'horizontal', wide: true,
+      map: (c) => ({ title: c.title || c.caption, thumb: c.thumbnail_url || (Array.isArray(c.images) && c.images[0]) || '', kicker: '롱판', dest: `gallari-post.html?id=${c.id}` }) },
+    /* 맛집은 전용 문서가 없다 — 트렌드 맛집 탭의 상세 시트를 연다(웹은 ?fp=, 앱은 라우터 파라미터). */
+    food:    { table: 'food_saves',            fk: 'place_id',  ctable: 'food_places', cols: 'id,name,address,category,region,cover_url', icon: '🍜',
+      map: (c) => ({ title: c.name, thumb: c.cover_url || '', kicker: c.category || c.region || '맛집', dest: `search.html?tab=food&fp=${c.id}` }) },
+    travel:  { table: 'travel_saves',          fk: 'place_id',  ctable: 'travel_places', cols: 'id,name,city,country,category,photo', icon: '✈️',
+      map: (c) => ({ title: c.name, thumb: c.photo || '', kicker: [c.city, c.country].filter(Boolean).join(', ') || '여행', dest: `travel-place.html?id=${c.id}` }) },
   };
+  const LABEL = { issue: '이슈', predict: '예측', plaza: '광장 글', news: '뉴스', short: '숏판', long: '롱판', food: '맛집', travel: '여행지' };
 
   function initSaved() {
     const sb = window.supabaseClient;
@@ -45,7 +56,9 @@
       const { data: bms } = await sb.from(cfg.table).select(`${cfg.fk}, created_at`).eq('user_id', ME).order('created_at', { ascending: false }).limit(100);
       const ids = [...new Set((bms || []).map(b => b[cfg.fk]))];
       if (!ids.length) { cache[type] = []; render(type, []); return; }
-      const { data: rows } = await sb.from(cfg.ctable).select(cfg.cols).in('id', ids);
+      let q = sb.from(cfg.ctable).select(cfg.cols).in('id', ids);
+      if (cfg.kind) q = q.eq('kind', cfg.kind);      // 숏판·롱판은 한 표를 나눠 쓴다
+      const { data: rows } = await q;
       const byId = {}; (rows || []).forEach(r => byId[r.id] = r);
       // 저장 순서(북마크 순) 보존
       const items = ids.map(id => byId[id]).filter(Boolean).map(cfg.map);
@@ -61,7 +74,7 @@
       else if (tab) tab.querySelector('.sv-cnt').textContent = items.length;
 
       if (!items.length) {
-        listBox.innerHTML = `<div class="sv-empty"><b>저장한 ${type === 'issue' ? '이슈' : type === 'predict' ? '예측' : type === 'plaza' ? '광장 글' : '뉴스'}가 없어요.</b><br>마음에 드는 콘텐츠에서 🔖 저장을 눌러보세요.</div>`;
+        listBox.innerHTML = `<div class="sv-empty"><b>저장한 ${LABEL[type] || '콘텐츠'}가 없어요.</b><br>마음에 드는 콘텐츠에서 ${type === 'food' || type === 'travel' ? '☆ 찜' : '🔖 저장'}을 눌러보세요.</div>`;
         return;
       }
       listBox.innerHTML = '<div class="sv-list">' + items.map((it, i) => `
@@ -84,7 +97,7 @@
         const idx = Number(btn.dataset.idx);
         const dest = items[idx].dest;
         // dest에서 id 추출
-        const m = dest.match(/[?&](?:id|gn)=([^&]+)/);
+        const m = dest.match(/[?&](?:id|gn|fp)=([^&]+)/);
         const cid = m ? decodeURIComponent(m[1]) : null;
         if (cid == null) return;
         btn.disabled = true;

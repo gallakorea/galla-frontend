@@ -459,7 +459,17 @@
     params = params || {};
     if (name === "mypage" && params.user) return push("mypage", params);
     if (TABS.indexOf(name) !== -1) return activateTab(TABS.indexOf(name));
-    if (name === "search") return activateTab(TABS.indexOf("trend"));
+    if (name === "search") {
+      /* ⚠️ 여기서 params 를 버리면 보관 → 맛집 상세(?tab=food&fp=) 같은 딥링크가
+         "트렌드 판만 열리고 끝"이 된다(웹은 location.search 로 살고 앱만 죽던 자리).
+         트렌드가 아직 마운트 전일 수 있으므로 값을 걸어두고, 마운트된 뒤면 즉시 적용한다. */
+      const r = activateTab(TABS.indexOf("trend"));
+      if (params && Object.keys(params).length) {
+        try { window.GALLA_TREND_PARAMS = params; } catch (_) {}
+        try { if (window.GALLA_trendApplyParams) window.GALLA_trendApplyParams(params); } catch (_) {}
+      }
+      return r;
+    }
     return push(name, params);
   }
 

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0908040"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0909010"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>갈라 광장 글 - GALLA</title>
   <!-- OG / 공유 카드 기본값 (콘텐츠별은 /share/<type>/<id> 엣지 렌더) -->
@@ -136,18 +136,12 @@
     </svg>
   </button>
 
-  <!-- 🧡 갈비스 — 이 글로 말 걸기(내 편 AI가 편들어줌) -->
-  <button class="circle-btn galvis-btn" aria-label="갈비스와 얘기">
-    <svg class="gv-galvis icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/>
-      <circle cx="12" cy="12" r="4.7" stroke-width="1.3"/>
-      <circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/>
-    </svg>
-  </button>
-
-  <!-- 🤖 갈비스 — 이 글 맥락으로 대화 -->
-  <button class="circle-btn" id="plazaGalvisBtn" data-galvis data-gv-type="plaza" data-gv-id="" data-gv-title="" aria-label="갈비스와 얘기">
-    <svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>
+  <!-- 🤖 갈비스 — 이 글 맥락으로 대화
+       ⚠️ 여기 갈비스 버튼이 **둘** 있었다(.galvis-btn + #plazaGalvisBtn). 아이콘도 동작도 같아
+          액션바에 같은 단추가 나란히 두 개 보였다. 표준인 data-galvis 쪽만 남긴다 —
+          이쪽은 friend.js 의 전역 위임이 받아 웹에서는 '앱 받기'로 분기까지 해준다. -->
+  <button class="circle-btn galvis-btn" id="plazaGalvisBtn" data-galvis data-gv-type="plaza" data-gv-id="" data-gv-title="" aria-label="갈비스와 얘기">
+    <svg class="gv-galvis icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>
   </button>
 
 </div>
@@ -214,7 +208,7 @@
 <script src="js/ghost.js?v=080412"></script>
 <script src="js/items.js?v=0811102"></script>
 <script src="js/donate.js?v=0908040"></script>
-<script type="module" src="js/plaza_detail.js?v=0830017"></script>
+<script type="module" src="js/plaza_detail.js?v=0909010"></script>
 <script src="js/nav.js?v=0904160"></script>
 <script src="js/desktop-pc.js?v=081603" defer></script>
 <script src="js/nav-jog.js?v=0828020" defer></script>

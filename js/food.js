@@ -2496,4 +2496,7 @@
   else start();
 
   window.GALLA_openFoodMap = openMap;
+  /* 보관(저장 허브) 등 다른 화면에서 맛집 상세를 바로 열 때 쓴다.
+     openDetail 은 buildDetail 을 스스로 부르므로 목록이 아직 안 붙어 있어도 뜬다. */
+  window.GALLA_openFoodPlace = openDetail;
 })();

@@ -862,13 +862,8 @@ async function initPlazaBookmark() {
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => alert("링크가 복사되었습니다."));
   });
-  // 🧡 갈비스 — 이 광장 글로 말 걸기(내 편 AI가 편들어줌). 실시간 제목으로 시드.
-  D.querySelector(".galvis-btn")?.addEventListener("click", (e) => {
-    e.preventDefault(); e.stopPropagation();
-    const t = (postTitleEl && postTitleEl.textContent || "광장 글").slice(0, 120);
-    if (window.GALLA_askGalvis) window.GALLA_askGalvis({ type: "plaza", id: postId, title: t });
-    else if (window.GALLA_openFriend) window.GALLA_openFriend();
-  });
+  /* 갈비스 버튼은 friend.js 의 전역 [data-galvis] 위임이 받는다 —
+     여기서 또 붙이면 한 번 눌러 두 번 열린다(중복 버튼을 없애며 같이 정리). */
 }
 
 /* =========================

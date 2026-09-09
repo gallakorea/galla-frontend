@@ -1696,6 +1696,12 @@ body[data-page="news"] .news-viewer-fallback {
 }
 .tt-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tt-card:active .tt-th { transform: scale(.97); }
+
+/* 숏판은 세로(9:16), 롱판은 가로(16:9) — 썸네일 비율이 곧 콘텐츠 형태다.
+   세로 카드는 가로폭을 줄여야 한 화면에 같은 개수가 들어온다. */
+.tt-card.tt-post-v { flex-basis: 132px; }
+.tt-card.tt-post-v .tt-th { aspect-ratio: 9/16; }
+.tt-card.tt-post-h .tt-th { aspect-ratio: 16/9; }
 .tt-rk {
   position: absolute; top: 6px; left: 6px;
   min-width: 20px; height: 20px; padding: 0 5px; border-radius: 6px;
