@@ -119,6 +119,8 @@
 
     ov.appendChild(sheet);
     requestAnimationFrame(() => sheet.classList.add('show'));
+    /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
+    setTimeout(() => sheet.classList.add('show'), 60);
     return true;
   }
 
@@ -192,6 +194,8 @@
 
     ov.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('show'));
+    /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
+    setTimeout(() => modal.classList.add('show'), 60);
   }
 
   function confirmDelete(cfg) {
@@ -233,6 +237,8 @@
     modal.appendChild(row);
     ov.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('show'));
+    /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
+    setTimeout(() => modal.classList.add('show'), 60);
   }
 
   function toLocalDT(iso) {
@@ -246,6 +252,8 @@
     const t = el('div', 'oa-toast', msg);
     document.body.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
+    /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
+    setTimeout(() => t.classList.add('show'), 60);
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 1800);
   }
 
