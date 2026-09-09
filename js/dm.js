@@ -1968,7 +1968,13 @@
           toastMini(secs ? `${EXP_LABEL[secs]} 뒤 메시지가 자동으로 사라져요 — 서버에서도 지워져요` : '사라지는 메시지를 껐어요');
         }), 0);
       }
-      else if (k === 'duel') { location.href = 'duel.html?challenge=' + encodeURIComponent(curPeer); }
+      else if (k === 'duel') {
+        /* ⚔️ 일기토는 '논쟁 중인 이슈'가 있어야 성립한다 — 주제를 이슈 제목에서 가져오기 때문이다.
+           여기서 issue 없이 duel.html?challenge= 로 보내면 duel.js:225 가
+           「일기토는 논쟁 중인 이슈 댓글에서만 신청할 수 있어요」 alert 를 띄우고 곧장 되돌아온다.
+           즉 **절대 성공할 수 없는 메뉴**였다(QA 0909). 막다른 길로 보내는 대신 여기서 안내한다. */
+        toastMini('일기토는 이슈 댓글에서 상대를 지목해 신청해요 — 논쟁 중인 이슈로 가볼까요?');
+      }
       else if (k === 'block') {
         const before = PREF.blocks.size;
         await doFriendAct('block', curPeer, p.nickname || '');
