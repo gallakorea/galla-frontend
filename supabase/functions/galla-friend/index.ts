@@ -2008,8 +2008,16 @@ function bubbleize(t: string): string {
     if (cur) out.push(cur);
     return out;
   };
-  const splitOne = (s: string): string[] => {
-    if (s.length <= 46) return [s];
+  /* ⚠️ 소수점을 문장 끝으로 보면 숫자가 두 동강 난다 —
+     "어제보다 +1.02% 올랐네" → "어제보다 +1." / "02% 올랐네" (QA 0909 실측).
+     시세·확률·배당을 말하는 도구 응답에서 상시 재현됐다. 숫자 사이의 점만 잠시 가려두고
+     문장을 나눈 뒤 되돌린다(약어 'a.m.' 같은 건 우리 말투에 없어 대상 아님). */
+  const DOT = "\u0000";
+  const maskDots = (s: string): string => s.replace(/(\d)\.(?=\d)/g, "$1" + DOT);
+  const unmaskDots = (s: string): string => s.split(DOT).join(".");
+  const splitOne = (raw: string): string[] => {
+    if (raw.length <= 46) return [raw];
+    const s = maskDots(raw);
     const sents = s.match(/[^.!?…\n]+[.!?…]*\s*/g) || [s];
     const out: string[] = []; let cur = "";
     for (const sen of sents) {
@@ -2017,7 +2025,7 @@ function bubbleize(t: string): string {
       else cur += sen;
     }
     if (cur.trim()) out.push(cur.trim());
-    return out.flatMap(hardWrap);
+    return out.flatMap(hardWrap).map(unmaskDots);
   };
   // 모델이 이미 나눈 덩이도 각각 재분할 → 긴 문단 버블 금지. 최대 4버블(초과분은 마지막에 합치지 말고 버림 방지 위해 4번째에 흡수).
   const parts = (t || "").trim().split(/\n{2,}/).flatMap((c) => splitOne(c.trim())).filter(Boolean);
