@@ -247,11 +247,14 @@
     btn.addEventListener("click", () => {
       const st = window.__GHOST_ST;
       if (!st?.active) {
+        /* 🛒 askShop 규약 — 문구로 한 번 더 묻지 않고 그 자리에서 상점을 연다.
+           여기만 네이티브 confirm() 을 써서 (1) 토스트 + 확인창 2단 확인이 되고
+           (2) 앱 톤과 전혀 다른 시스템 다이얼로그가 떴다(QA 0909).
+           다른 미보유 경로 6곳은 전부 askShop/즉시 openShop 이다. */
         ghToast(`👻 <b>유령권이 필요해요</b><br><small>상점에서 3일권(800GP)부터 구매할 수 있어요</small>`);
         setTimeout(() => {
-          if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요? (3일 800GP~)")) {
-            if (window.openShop) window.openShop(); else (window.GALLA_nav||function(u){location.href=u})("settings.html");
-          }
+          if (window.openShop) window.openShop();
+          else (window.GALLA_nav || function (u) { location.href = u; })("settings.html");
         }, 350);
         return;
       }
@@ -274,9 +277,9 @@
     if (String(error?.message || "").includes("no_ghost_pass")) {
       btn?.classList.remove("on");
       window.__GHOST_ST = { active: false };
-      if (confirm("👻 유령권이 만료됐어요. 상점에서 다시 구매할까요?")) {
-        if (window.openShop) window.openShop(); else (window.GALLA_nav||function(u){location.href=u})("settings.html");
-      }
+      ghToast(`👻 <b>유령권이 만료됐어요</b><br><small>상점에서 다시 구매할 수 있어요</small>`);
+      if (window.openShop) window.openShop();
+      else (window.GALLA_nav || function (u) { location.href = u; })("settings.html");
       return true;
     }
     return false;
