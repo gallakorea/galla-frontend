@@ -1408,6 +1408,11 @@
   /* 그리드 클러스터링 — 마커 수백 개를 그대로 뿌리면 모바일에서 버벅인다.
      줌이 낮을수록 격자를 크게 잡아 묶고, 15줌부터는 낱개로 보여준다. */
   function drawMarkers() {
+    /* 🗺 지도가 아직 없으면 조용히 넘어간다 — 「갔다옴」·「찜」 같은 상세 시트 액션이
+       지도를 안 연 상태에서도 drawMarkers() 를 부른다(onSheetClick).
+       그때 MB 가 null 이라 `Cannot read properties of null (reading 'getZoom')` 로
+       예외가 터졌다(QA 0909, 콘솔 실측 2회). 마커는 지도를 열 때 다시 그려진다. */
+    if (!MB) return;
     markers.forEach(function (m) { MB.drop(m); });
     markers = [];
     var z = MB.getZoom();
