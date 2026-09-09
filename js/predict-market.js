@@ -308,7 +308,16 @@ function renderPanel(closed){
   });
   el.querySelectorAll('.pb-chip').forEach(b=>b.onclick=()=>{
     const inp=$('pbAmt');
-    if(b.dataset.amt==='allin'){ if(needLogin())return; inp.value=Math.floor(MY_BAL); }
+    if(b.dataset.amt==='allin'){
+      if(needLogin())return;
+      /* ⚠️ '최대'가 보유 전액을 넣으면 place_bet 이 stake_cap(보유 GP의 30%)으로 반드시 거부한다 —
+         누르면 100% 실패하는 버튼이었다(QA 0909 실측: 10,500 넣고 거부, GP 그대로).
+         서버와 같은 식으로 계산한다: greatest(10, floor(bal*0.30)), 마켓 상한도 함께 적용. */
+      var cap = Math.max(10, Math.floor((Number(MY_BAL)||0) * 0.30));
+      var mmax = MARKET && Number(MARKET.max_stake);
+      if (mmax > 0) cap = Math.min(cap, mmax);
+      inp.value = Math.min(Math.floor(Number(MY_BAL)||0), cap);
+    }
     else inp.value=Number(inp.value||0)+Number(b.dataset.amt);
     if(window.GALLA_FX){ const r=b.getBoundingClientRect(); window.GALLA_FX.burst(r.left+r.width/2,r.top,{emojis:['🪙'],count:5,spread:34,up:30}); }
     updateEst();
