@@ -22,9 +22,11 @@
 2. §12-2 돈·권한 — 차감·환불이 같은 지갑인지, 하루 상한, 남의 글 수정·삭제 차단
 3. §9-3 갈비스 안전망 + 신고·차단
 4. §2 인덱스 → §3 이슈 상세 → §5 예측 → §7 트렌드 → §8 설정 → §9 갈비스 나머지
-5. 앱은 **전수로 돌지 마라.** 앱에서만 깨진 자리는 패턴이 있다 —
-   SPA 어댑터 없는 페이지, `fixed`/`transform` 레이아웃, SPA 스크립트 화이트리스트,
-   재방문 초기화, 네이티브 지도. 그 패턴에 걸리는 행만 본다(약 40행).
+5. **iOS 전수 → 안드로이드 전수.** 표본으로 돌지 마라.
+   앱에서만 죽은 버튼이 반복해서 나왔다(패스키 버튼 가림, SPA 여백 증발, 맛집 탭 4종,
+   네이티브 지도 백지, 핀 클릭 무반응). 웹이 통과했다는 건 앱 근거가 못 된다.
+   특히 눈여겨볼 자리: SPA 어댑터 없는 페이지, `fixed`/`transform` 레이아웃,
+   SPA 스크립트 화이트리스트, 재방문 초기화, 네이티브 지도, 키보드 리프트.
 
 ## 절대 규칙
 
@@ -88,13 +90,36 @@ begin;
 rollback;
 ```
 
-## 지금 막혀 있는 것 (사장님 손이 필요하다)
+## 플랫폼 셋 다 네가 직접 돌린다
 
-1. **앱에 심사계정 로그인** — 이게 없으면 iOS·AOS 칸 대부분이 첫 행부터 막힌다
-2. **Resend 메일 승인** — 가입 인증·비번 재설정·위기 야간통보
-3. 실기기 — 카메라·마이크·위치·푸시·통화·핫튜브 재생·육성난장
-4. 소셜 로그인 provider 키(구글·애플·네이버)
-5. 법정 표기 6종 / UGC 사전 검열 정책
+**웹** — 포트 8788 + Browser pane 도구. `browser_batch` 로 5~8동작씩 묶어라.
+
+**iOS** — 시뮬레이터 `galla-shot` (iOS 26.5). `mcp__Claude_Code_iOS_Simulator__control` 로
+`attach`(사장님이 보게 패널 먼저) → `launch` → `tap`/`swipe`/`text`/`screenshot`.
+좌표는 **디바이스 포인트**다(스크린샷 픽셀 ÷ 2.286). 하단 탭은 y≈795.
+빌드 후 시뮬 검증은 **uninstall 먼저** — 안 그러면 옛 번들이 남아 헛검사가 된다.
+
+**안드로이드** — AVD `galla-test`. 지금은 안 떠 있으니 부팅부터.
+```sh
+~/Library/Android/sdk/emulator/emulator -avd galla-test -no-snapshot-load &
+ADB=~/Library/Android/sdk/platform-tools/adb
+$ADB wait-for-device; $ADB shell input tap <x> <y>; $ADB exec-out screencap -p > /tmp/s.png
+```
+`adb` 는 PATH 에 없다 — 위 절대경로를 써라.
+
+**로그인 계정** — `appreview@galla.im` 은 **건드리지 마라**(앱 심사 중일 수 있다).
+QA 전용 계정을 따로 만들어 쓴다. Resend 미승인이라 메일 인증이 안 오므로,
+service_role Admin API 로 `email_confirm: true` 인 계정을 만든다
+(선례: `redteam-pool-*`, `simtest@galla.test`). 만든 계정은 **끝나고 지운다** —
+`auth.users` 지우기 전에 `public.users`·`public.user_profiles` 행을 먼저 지워야 한다(FK no cascade).
+
+## 그래도 사람 손이 필요한 것
+
+1. **Resend 메일 승인** — 가입 인증 메일·비번 재설정·위기 야간통보는 에뮬로도 못 본다
+2. **실기기** — 카메라·마이크·GPS·푸시 수신·핫튜브 재생·육성난장(SFU).
+   에뮬로 되는 건 에뮬로 다 하고, **정말 실기기여야만 하는 것만** 목록으로 모아 올려라
+3. 소셜 로그인 provider 키(구글·애플·네이버)
+4. 법정 표기 6종 / UGC 사전 검열 정책
 
 ## 알려진 상태
 
