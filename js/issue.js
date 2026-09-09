@@ -786,6 +786,8 @@ function countUpText(el, target, suffix = "") {
     if (p < 1) requestAnimationFrame(step); else el.dataset.cv = String(target);
   };
   requestAnimationFrame(step);
+  /* rAF 가 안 도는 환경(백그라운드 탭·앱)에서 0 으로 굳는 것 방지 — 최종값 보장(QA 0909) */
+  setTimeout(() => { el.innerText = `${target}${suffix}`; el.dataset.cv = String(target); }, dur + 150);
 }
 window.GALLA_countUp = countUpText;
 

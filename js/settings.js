@@ -220,6 +220,8 @@ async function GALLA_settingsInit(root) {
       el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString("ko-KR");
       if (p < 1) requestAnimationFrame(step);
     })(t0);
+    /* rAF 가 안 도는 환경(백그라운드 탭·앱)에서 0 으로 굳는 것 방지 — 최종값 보장(QA 0909) */
+    setTimeout(() => { el.textContent = Math.round(target).toLocaleString("ko-KR"); }, dur + 150);
   };
   countUp(powerEl, power);
   D.querySelectorAll(".rec-num").forEach(el => {

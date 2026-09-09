@@ -23,8 +23,13 @@ function ago(ts){
 /* 숫자 카운트업 (easeOutCubic) — <el>의 첫 텍스트노드만 갱신 */
 function countUp(el, to, prefix='', suffix=''){
   if(!el) return;
-  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){
-    el.childNodes[0].textContent = prefix+fmt(to); return;
+  const settle = () => { el.childNodes[0].textContent = prefix+fmt(to); };
+  /* ⚠️ 이 함수는 0 부터 세어 올린다 — rAF 가 안 돌면 화면에 0 이 그대로 남는다.
+     탭·앱이 백그라운드면 rAF 는 아예 발화하지 않으므로 **지갑이 잔액 0 으로 보인다**
+     (QA 0909 실측: gp_wallet 은 9,640 을 주는데 화면은 0 GP · 0 GC).
+     지갑에서 0 은 사용자가 가장 놀라는 숫자다 — 애니메이션보다 값이 먼저다. */
+  if(document.hidden || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    settle(); return;
   }
   const t0=performance.now(), dur=800;
   (function tick(t){
@@ -32,6 +37,7 @@ function countUp(el, to, prefix='', suffix=''){
     el.childNodes[0].textContent = prefix+fmt(Math.round(to*e));
     if(k<1) requestAnimationFrame(tick);
   })(t0);
+  setTimeout(settle, dur + 150);          // 애니메이션이 멈춰도 최종값은 반드시 찍힌다
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

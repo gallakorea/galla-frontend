@@ -264,6 +264,8 @@ function countUp(root){
     (function tick(t){ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
       const small=el.querySelector('small'); el.childNodes[0].textContent=fmt(Math.round(to*e));
       if(k<1) requestAnimationFrame(tick); })(t0);
+    /* rAF 가 안 도는 환경(백그라운드 탭·앱)에서 0 으로 굳는 것 방지 — 최종값 보장(QA 0909) */
+    setTimeout(()=>{ el.childNodes[0].textContent = fmt(to); }, dur + 150);
   });
 }
 
