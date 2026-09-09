@@ -696,6 +696,28 @@ DAN/개발자/디버그 모드·「규칙 전부 나열」·「필터 해제」�
 
 루트 HTML 68개와 대조한 결과. 괄호는 파일명.
 
+**전수 로드 결과 (2026-09-09, 웹) — 빈 화면 0개.** §8-A 와 같은 iframe 방식으로 14개를 더 열었다.
+
+| 페이지 | 본문 | 첫 줄 |
+|---|---:|---|
+| `report.html` | 222 | 제보하기 · 「제보하면 100 GP 즉시 지급 · 채택되면 +2,000 GP」 |
+| `clips.html` | 87 | 조각 · **「찍기는 아직 준비 중이에요」**(의도된 기능 게이트) |
+| `notifications.html` | 83 | 알림 · 모두 읽음 · 필터(댓글·좋아요·팔로워·투표·전투·후원·예측) |
+| `create.html` | 588 | 새로 만들기 · 유형 선택 |
+| `random.html` | 53 | 랜덤 갈라 뽑기 |
+| `offline.html` | 68 | 인터넷 연결이 끊겼어요 |
+| `help-permissions.html` | 583 | 마이크·카메라가 안 될 때 |
+| `withdraw-done.html` | 82 | 출금 요청 완료 |
+| `revenue-settlement.html` | 157 | 정산 내역 |
+| `donation-usage.html` | 54 | 사회적 환원 ₩0 |
+| `match.html` | 141 | 갈라 궁합 12문항 |
+| `gp-history.html` | 79 | 내 GP 지갑 **9,640 GP** |
+| `charges.html` | 344 | 갈라페이 0 GC |
+| `company.html` | 4,891 | 갈라랩스 소개 |
+
+**고아 페이지 3개**(`withdraw-done`·`revenue-settlement`·`donation-usage`)는 **내용은 멀쩡하다** —
+링크가 어디에도 없을 뿐이다(2단계 오픈분과 함께 판단할 것).
+
 | 화면 | 왜 봐야 하나 |
 |---|---|
 | **작성 흐름 전체** (`create` · `write` · `write-remix` · `confirm` · `confirm.remix`) | 이슈 발제·리믹스·발행 확인 단계. 여기서 막히면 콘텐츠가 안 생긴다 |
