@@ -575,7 +575,13 @@
       } else {
         var why=(d&&d.error)||"fail";
         if(why==="insufficient"||why==="charge_failed"){
-          addMsg("a","GC가 모자라서 못 그렸어 ㅜ 썸네일 한 장에 200 GC거든 — 후원받거나 충전하고 다시 가자");
+          /* 💸 금액은 서버가 준 값만 쓴다 — 하드코딩이 가격표와 어긋나 있었다
+             (문구 200 GC / 실제 gc_prices.thumbnail 60 GC, QA 0909).
+             틀린 금액을 말하면 상대가 헛돈을 충전한다. 모르면 숫자 없이 말한다. */
+          var _cost = d && d.detail && Number(d.detail.cost);
+          addMsg("a", _cost > 0
+            ? ("GC가 모자라서 못 그렸어 ㅜ 썸네일 한 장에 " + _cost + " GC거든 — 후원받거나 충전하고 다시 가자")
+            : "GC가 모자라서 못 그렸어 ㅜ 후원받거나 충전하고 다시 가자");
           try{ window.openShop && window.openShop(); }catch(e){}
           return;
         }
@@ -632,7 +638,11 @@
       if(!sub || !sub.ok || !sub.id){
         clearProgress();
         if(sub && (sub.error==="insufficient" || sub.error==="charge_failed")){
-          addMsg("a","GC가 모자라서 영상은 못 만들었어 ㅜ 자동편집 영상 한 편에 1000 GC거든 — 후원받거나 충전하고 다시 가자");
+          /* 💸 위와 같은 이유 — 문구 1000 GC / 실제 gc_prices.video 80 GC 였다(QA 0909) */
+          var _vcost = sub && sub.detail && Number(sub.detail.cost);
+          addMsg("a", _vcost > 0
+            ? ("GC가 모자라서 영상은 못 만들었어 ㅜ 영상 한 편에 " + _vcost + " GC거든 — 후원받거나 충전하고 다시 가자")
+            : "GC가 모자라서 영상은 못 만들었어 ㅜ 후원받거나 충전하고 다시 가자");
           try{ window.openShop && window.openShop(); }catch(e){}
           return;
         }
