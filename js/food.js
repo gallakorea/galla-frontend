@@ -2340,7 +2340,7 @@
       '<div class="fd-sido chip-scroll" id="fd-sido"></div>' +
       '<div class="fd-rlist" id="fd-rlist"><div class="fm-empty">불러오는 중…</div></div>';
     RPICK.classList.add("open");
-    requestAnimationFrame(function () { FS.classList.add("open"); });
+    (void FS.offsetWidth, FS.classList.add("open"));
     paintSido();
 
     var i = FS.querySelector("#fd-rq");

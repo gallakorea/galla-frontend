@@ -118,7 +118,7 @@
       setProgress(opts.progress || 0);
       // 리플로우 후 표시(트랜지션)
       root.classList.remove('done');
-      requestAnimationFrame(() => root.classList.add('on'));
+      (void root.offsetWidth, root.classList.add('on'));
       document.body.classList.add('gup-lock');
     },
     label(t) { build(); if (labelEl) labelEl.textContent = t; },
@@ -157,7 +157,7 @@
       </div>`;
     document.body.appendChild(wrap);
     document.body.classList.add('gup-lock');
-    requestAnimationFrame(() => wrap.classList.add('on'));
+    (void wrap.offsetWidth, wrap.classList.add('on'));
 
     function close() {
       wrap.classList.remove('on');

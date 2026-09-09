@@ -332,6 +332,6 @@
   window.openShop = async function () {
     build();
     await refresh();
-    requestAnimationFrame(() => sheet.classList.add("open"));
+    (void sheet.offsetWidth, sheet.classList.add("open"));
   };
 })();

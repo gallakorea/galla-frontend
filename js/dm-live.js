@@ -129,7 +129,7 @@
       </div>`;
     document.body.appendChild(sheet);
     navHide(true);   // 셸 하단 nav가 시트(취소·열기 버튼)를 가리지 않게
-    requestAnimationFrame(() => sheet.classList.add("on"));
+    (void sheet.offsetWidth, sheet.classList.add("on"));
     const titleIn = sheet.querySelector("#lv-new-title");
     const topicIn = sheet.querySelector("#lv-new-topic");
     const go = sheet.querySelector("#lv-new-go");
@@ -209,7 +209,7 @@
       <div class="lv-bar" id="lv-bar"></div>`;
     document.body.appendChild(ov);
     navHide(true);
-    requestAnimationFrame(() => ov.classList.add("on"));
+    (void ov.offsetWidth, ov.classList.add("on"));
     ov.querySelector("#lv-x").onclick = () => leave();
     // 실시간 채팅(open_messages 재사용)
     const cin = ov.querySelector("#lv-chat-in");
@@ -426,7 +426,7 @@
       </div>
       <iframe class="lv-view-if" src="${esc(url + (url.indexOf("?") >= 0 ? "&" : "?") + "lvembed=1")}" allow="autoplay"></iframe>`;
     stage.appendChild(v);
-    requestAnimationFrame(() => v.classList.add("on"));
+    (void v.offsetWidth, v.classList.add("on"));
     v.querySelector("#lv-view-x").onclick = () => { v.classList.remove("on"); setTimeout(() => v.remove(), 200); };
     // 읽기 전용 — 스크롤(읽기)은 되지만 진영선택·투표·버튼 등 모든 조작 차단.
     // 동일 출처 iframe이라 로드 후 캡처 단계에서 클릭/입력을 삼킨다(스크롤=touchmove는 건드리지 않음).

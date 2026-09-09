@@ -293,7 +293,7 @@
         <button id="grl-csend" ${ME ? '' : 'disabled'}>게시</button>
       </div></div>`;
     document.body.appendChild(dim);
-    requestAnimationFrame(() => dim.classList.add('on'));
+    (void dim.offsetWidth, dim.classList.add('on'));
     const close = () => { dim.classList.remove('on'); setTimeout(() => dim.remove(), 220); };
     dim.addEventListener('click', (e) => { if (e.target === dim) close(); });
     dim.querySelector('#grl-cx').onclick = close;

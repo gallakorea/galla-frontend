@@ -200,7 +200,7 @@ function buildSheet() {
   document.body.appendChild(dim); document.body.appendChild(sheet);
   dim.addEventListener("click", closeSheet);
 }
-function openSheet() { dim.classList.add("open"); requestAnimationFrame(() => sheet.classList.add("open")); }
+function openSheet() { dim.classList.add("open"); (void sheet.offsetWidth, sheet.classList.add("open")); }
 function closeSheet() { sheet?.classList.remove("open"); dim?.classList.remove("open"); }
 function bindClose() { sheet.querySelector("#cgSheetClose")?.addEventListener("click", closeSheet); }
 

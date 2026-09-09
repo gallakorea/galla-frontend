@@ -100,7 +100,7 @@
     ).join("") + (restN ? `<span class="npi more">+${restN}</span>` : "");
     p.hidden = false;
     p.classList.remove("show");
-    requestAnimationFrame(() => p.classList.add("show"));
+    (void p.offsetWidth, p.classList.add("show"));
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
       p.classList.remove("show");

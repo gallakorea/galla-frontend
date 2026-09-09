@@ -60,7 +60,7 @@
       '<div class="galwel-tx"><div class="galwel-tt">' + m.title + '</div>' +
       '<div class="galwel-bd">' + m.body + '</div></div></div>';
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
+    (void t.offsetWidth, t.classList.add("show"));
     setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 450); }, 4800);
   }
 

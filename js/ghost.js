@@ -166,7 +166,7 @@
     bub.style.left = Math.min(Math.max(x, 80), innerWidth - 80) + "px";
     bub.style.top = (y - 54) + "px";
     document.body.appendChild(bub);
-    requestAnimationFrame(() => bub.classList.add("on"));
+    (void bub.offsetWidth, bub.classList.add("on"));
     setTimeout(() => { bub.classList.remove("on"); setTimeout(() => bub.remove(), 320); }, 1400);
     if (reduce) return;
     // 유령이 떠올라 사라짐
@@ -221,7 +221,7 @@
     t.id = "gh-toast"; t.className = "gh-toast";
     t.innerHTML = html;
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("on"));
+    (void t.offsetWidth, t.classList.add("on"));
     setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 300); }, ms);
   }
   window.GALLA_ghostToast = ghToast;

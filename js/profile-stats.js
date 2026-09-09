@@ -50,7 +50,7 @@
     card.addEventListener("pointercancel", end);
     return sheet;
   }
-  function open() { ensureSheet(); requestAnimationFrame(() => sheet.classList.add("open")); }
+  function open() { ensureSheet(); (void sheet.offsetWidth, sheet.classList.add("open")); }
   function close() { sheet?.classList.remove("open"); }
 
   function toast(msg) {

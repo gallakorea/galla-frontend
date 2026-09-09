@@ -176,7 +176,7 @@
     var bar = ov.querySelector(".dch-bar i");
     if (bar) bar.style.animationDuration = CHALLENGE_SECS + "s";
 
-    requestAnimationFrame(function () { ov.classList.add("on"); });
+    (void ov.offsetWidth, ov.classList.add("on"));
     haptic("warn");
     setTimeout(function () { haptic("hit"); }, 340);   // VS가 꽂히는 순간
 
@@ -216,7 +216,7 @@
           '<button class="dal-later">나중에</button></div>'
         : "");
     wrap().appendChild(el);
-    requestAnimationFrame(function () { el.classList.add("show"); });
+    (void el.offsetWidth, el.classList.add("show"));
     haptic("warn");
     var t = setTimeout(close, 12000);
     function close() { clearTimeout(t); el.classList.remove("show"); setTimeout(function () { el.remove(); }, 400); }

@@ -128,7 +128,7 @@
     function flash(color) {
       if (reduce) return; const f = document.createElement("div"); f.className = "dfx-flash";
       f.style.background = `radial-gradient(circle at 50% 36%, ${color}, transparent 66%)`; L().appendChild(f);
-      requestAnimationFrame(() => f.classList.add("on"));
+      (void f.offsetWidth, f.classList.add("on"));
       setTimeout(() => { f.classList.remove("on"); setTimeout(() => f.remove(), 340); }, 140);
     }
     function shake(hard) { if (reduce) return; document.body.classList.add(hard ? "dfx-shake-hard" : "dfx-shake"); setTimeout(() => document.body.classList.remove("dfx-shake", "dfx-shake-hard"), hard ? 620 : 460); }
@@ -157,7 +157,7 @@
       b.innerHTML = `<span class="dfx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[icon] || ""}</svg></span>`
         + `<span class="dfx-tx">${text}${sub ? `<em>${sub}</em>` : ""}</span>`;
       L().appendChild(b);
-      requestAnimationFrame(() => b.classList.add("show"));
+      (void b.offsetWidth, b.classList.add("show"));
       setTimeout(() => { b.classList.add("out"); setTimeout(() => b.remove(), 440); }, 1500);
       return b;
     }
@@ -730,7 +730,7 @@
   /* 옥타곤 상단 짧은 토스트(연장/안내) — 배너보다 가벼운 알림 */
   function finisherToast(msg) {
     const t = document.createElement("div"); t.className = "duel-toast"; t.textContent = msg;
-    document.body.appendChild(t); requestAnimationFrame(() => t.classList.add("show"));
+    document.body.appendChild(t); (void t.offsetWidth, t.classList.add("show"));
     setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 1800);
   }
   /* 아이템이 없을 때 상점으로 유도 — askShop 패턴(문구 금지·즉시 열기) */
@@ -756,7 +756,7 @@
         <button class="roar-x" id="roar-x">닫기</button>
       </div>`;
     document.body.appendChild(ov);
-    requestAnimationFrame(() => ov.classList.add("on"));
+    (void ov.offsetWidth, ov.classList.add("on"));
     const $$ = (s) => ov.querySelector(s);
     const close = () => { try { rec && rec.state !== "inactive" && rec.stop(); } catch (e) {} stopStream(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 220); };
     const stopStream = () => { try { stream?.getTracks().forEach(t => t.stop()); } catch (e) {} stream = null; };

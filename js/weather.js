@@ -132,7 +132,7 @@
       el = document.createElement("div"); el.id = "wx-room"; el.className = "wx-room";
       document.body.appendChild(el);
       el.addEventListener("click", onRoomClick);
-      requestAnimationFrame(function () { el.classList.add("on"); });
+      (void el.offsetWidth, el.classList.add("on"));
     }
     paintRoom(el, d);
     clearInterval(roomTimer);

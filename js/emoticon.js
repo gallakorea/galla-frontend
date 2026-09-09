@@ -112,7 +112,7 @@
     if (panel.classList.contains("open") && curInput === input) { closePanel(); return; }
     curInput = input; positionPanel(btn);
     await renderPanel();
-    requestAnimationFrame(() => panel.classList.add("open"));
+    (void panel.offsetWidth, panel.classList.add("open"));
   }
 
   function attach(row, input) {

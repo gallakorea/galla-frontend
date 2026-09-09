@@ -69,7 +69,7 @@
         '<div class="obd-note">' + (loggedIn ? "선택하면 바로 참전합니다" : "선택하면 가입 후 자동으로 참전 처리돼요") + '</div>' +
       '</div>';
     document.body.appendChild(ov);
-    requestAnimationFrame(function () { ov.classList.add("show"); });
+    (void ov.offsetWidth, ov.classList.add("show"));
     // ✅ 뜨는 즉시 '봤음' 표시 — 선택/닫기 안 하고 나가도 다시는 안 뜬다.
     try { localStorage.setItem(DONE, "1"); } catch (e) {}
 

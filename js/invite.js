@@ -106,7 +106,7 @@
       rows +
       '<button class="gv-inv-x" type="button">닫기</button></div>';
     document.body.appendChild(ov);
-    requestAnimationFrame(function () { ov.classList.add("on"); });
+    (void ov.offsetWidth, ov.classList.add("on"));
 
     var close = function () { ov.classList.remove("on"); setTimeout(function () { ov.remove(); }, 240); };
     ov.querySelector(".dim").addEventListener("click", close);

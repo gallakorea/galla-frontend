@@ -221,7 +221,7 @@
     t.innerHTML = '<span>😵 문제가 있었나요?</span><button type="button">🐞 신고하기</button>' +
                   '<button type="button" class="no" aria-label="닫기">✕</button>';
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
+    (void t.offsetWidth, t.classList.add("show"));
     const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
     const bs = t.querySelectorAll("button");
     bs[0].onclick = () => { kill(); window.GALLA_openBugReport(); };
@@ -267,7 +267,7 @@
     t.innerHTML = '<span>⚠️ ' + String(message || "문제가 발생했어요").slice(0, 60) + "</span>" +
                   '<button type="button">🐞 신고</button><button type="button" class="no" aria-label="닫기">✕</button>';
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
+    (void t.offsetWidth, t.classList.add("show"));
     const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
     const bs = t.querySelectorAll("button");
     bs[0].onclick = () => { kill(); window.GALLA_openBugReport(); };

@@ -434,7 +434,7 @@ window.GALLA_PORTONE = {
     return `<div class="chg-grip"></div><div class="chg-done"><div class="ic">${ic}</div><h4>${title}</h4><p>${body}</p></div><button class="chg-close" id="chg-close">닫기</button>`;
   }
   function bindClose() { sheet.querySelector("#chg-close")?.addEventListener("click", close); }
-  function open() { dim.classList.add("open"); requestAnimationFrame(() => sheet.classList.add("open")); }
+  function open() { dim.classList.add("open"); (void sheet.offsetWidth, sheet.classList.add("open")); }
   function close() { sheet?.classList.remove("open"); dim?.classList.remove("open"); }
 
   window.GALLA_openCharge = function (ctx) { build(); render(ctx || {}); open(); };

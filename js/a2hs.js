@@ -101,7 +101,7 @@
     document.body.appendChild(bar);
     bar.querySelector("#a2hs-x").addEventListener("click", () => { cooldown(30); close(); });
     bar.querySelector("#a2hs-go").addEventListener("click", onAdd);
-    requestAnimationFrame(() => bar.classList.add("open"));
+    (void bar.offsetWidth, bar.classList.add("open"));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => bar.classList.add("open"), 60);
   }
@@ -141,7 +141,7 @@
     const finish = () => { st.installed = true; save(); dim.classList.remove("open"); setTimeout(() => dim.remove(), 200); };
     dim.addEventListener("click", (e) => { if (e.target === dim) finish(); });
     dim.querySelector("#a2hs-done").addEventListener("click", finish);
-    requestAnimationFrame(() => dim.classList.add("open"));
+    (void dim.offsetWidth, dim.classList.add("open"));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => dim.classList.add("open"), 60);
   }

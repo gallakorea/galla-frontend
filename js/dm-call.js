@@ -432,7 +432,7 @@
   /* 실패를 소리 없이 삼키지 않는다 — 이유가 적힌 화면을 남긴다 */
   function paintErr(name, msg, retry) {
     let box = document.getElementById('dm-call');
-    if (!box) { box = document.createElement('div'); box.id = 'dm-call'; document.body.appendChild(box); requestAnimationFrame(() => box.classList.add('on')); }
+    if (!box) { box = document.createElement('div'); box.id = 'dm-call'; document.body.appendChild(box); (void box.offsetWidth, box.classList.add('on')); }
     clearTimeout(box._rm);   // ★ endCall이 예약한 제거 취소 — 안 하면 에러 화면이 250ms 만에 증발
     box.classList.add('on'); box.classList.remove('video');
     box.dataset.state = 'error';
@@ -1249,7 +1249,7 @@
       box = document.createElement('div');
       box.id = 'dm-call';
       document.body.appendChild(box);
-      requestAnimationFrame(() => box.classList.add('on'));
+      (void box.offsetWidth, box.classList.add('on'));
     }
     const video = !!CUR?.video;
     const name = esc(CUR?.name || '');

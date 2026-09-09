@@ -156,7 +156,7 @@
     document.body.appendChild(overlay);
     const list = overlay.querySelector('.tabord-list');
     buildRows(list, keys, labels);
-    requestAnimationFrame(() => overlay.classList.add('on'));
+    (void overlay.offsetWidth, overlay.classList.add('on'));
 
     const close = () => {
       if (!overlay) return;

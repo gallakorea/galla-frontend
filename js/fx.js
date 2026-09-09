@@ -95,7 +95,7 @@
     if (reduce) return;
     const f = document.createElement("div"); f.className = "fx-flash";
     document.body.appendChild(f);
-    requestAnimationFrame(() => f.classList.add("on"));
+    (void f.offsetWidth, f.classList.add("on"));
     setTimeout(() => { f.classList.remove("on"); setTimeout(() => f.remove(), 500); }, 200);
   }
 

@@ -35,7 +35,7 @@
     let c = document.getElementById('galla-draft-chip');
     if (!c) { c = document.createElement('div'); c.id = 'galla-draft-chip'; document.body.appendChild(c); }
     c.innerHTML = accent ? `<b>${msg}</b>` : msg;
-    requestAnimationFrame(() => c.classList.add('on'));
+    (void c.offsetWidth, c.classList.add('on'));
     clearTimeout(c._h);
     c._h = setTimeout(() => c.classList.remove('on'), accent ? 2400 : 1400);
   }

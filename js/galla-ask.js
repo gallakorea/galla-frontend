@@ -64,7 +64,7 @@
       m.querySelector(".ga-cancel")?.addEventListener("click", () => done(false));
       m.querySelector(".ga-ok").addEventListener("click", () => done(true));
       document.addEventListener("keydown", onKey);
-      requestAnimationFrame(() => m.classList.add("on"));
+      (void m.offsetWidth, m.classList.add("on"));
       window.BattleFX?.haptic?.("tap");
     });
   };

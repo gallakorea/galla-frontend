@@ -1992,7 +1992,7 @@
       document.body.appendChild(lb);
     }
     lb.innerHTML = `<img src="${esc(url)}" alt="">`;
-    requestAnimationFrame(() => lb.classList.add('on'));
+    (void lb.offsetWidth, lb.classList.add('on'));
   }
 
   /* ---------- ⬇️ 당겨서 새로고침 ----------
@@ -3911,7 +3911,7 @@
         <div class="dm-pm-btns"><button type="button" class="dm-pm-cancel">취소</button><button type="button" class="dm-pm-go">만들기</button></div>
       </div>`;
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('on'));
+    (void el.offsetWidth, el.classList.add('on'));
     const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 200); };
     el.addEventListener('click', ev => { if (ev.target === el) close(); });
     el.querySelector('.dm-pm-cancel').onclick = close;
@@ -5142,7 +5142,7 @@
       else if (k === 'location') shareLocation();
       else if (k === 'sticker') toggleStk();
     }));
-    requestAnimationFrame(() => sh.classList.add('open'));
+    (void sh.offsetWidth, sh.classList.add('open'));
   }
 
   /* 📁 임의 파일 전송 — 이미지 외 문서·음악 등 */
@@ -5617,7 +5617,7 @@
       if (PAGE_MODE()) startDM(peer, p.nickname);
       else location.href = 'dm.html?dm=' + encodeURIComponent(peer);
     };
-    requestAnimationFrame(() => el.classList.add('on'));
+    (void el.offsetWidth, el.classList.add('on'));
     try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
     clearTimeout(toastTimer);
     function hide() { el.classList.remove('on'); }

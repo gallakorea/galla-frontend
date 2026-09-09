@@ -102,7 +102,7 @@
       );
     } catch (e) { /* 저장 실패해도 UI는 유지 */ }
   }
-  function open() { dim.classList.add("open"); requestAnimationFrame(() => sheet.classList.add("open")); }
+  function open() { dim.classList.add("open"); (void sheet.offsetWidth, sheet.classList.add("open")); }
   function close() { sheet.classList.remove("open"); dim.classList.remove("open"); }
 
   window.GALLA_openNotifySettings = async function () {

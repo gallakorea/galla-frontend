@@ -36,7 +36,7 @@
     dim.className = "lo-dim";
     dim.innerHTML = '<div class="lo-card">' + html + "</div>";
     document.body.appendChild(dim);
-    requestAnimationFrame(function () { dim.classList.add("on"); });
+    (void dim.offsetWidth, dim.classList.add("on"));
     return dim;
   }
   function close(dim) { if (!dim) return; dim.classList.remove("on"); setTimeout(function () { dim.remove(); }, 200); }

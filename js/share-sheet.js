@@ -29,7 +29,7 @@
   function close() { document.querySelector(".ssh-overlay")?.remove(); }
   function toast(m) {
     const t = el("div", "ssh-toast", m); document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
+    (void t.offsetWidth, t.classList.add("show"));
     setTimeout(() => t.classList.add("show"), 60);
     setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 1800);
   }
@@ -200,7 +200,7 @@
     /* ⚠️ rAF 는 탭·앱이 백그라운드면 아예 안 돈다 — 그 사이 공유를 누르면 돌아왔을 때
        "어두운 배경만 있고 시트는 화면 밖"에 남는다(QA 0909 실측). 타임아웃으로 이중화한다.
        classList.add 는 멱등이라 둘 다 돌아도 무해하다. */
-    requestAnimationFrame(() => sheet.classList.add("show"));
+    (void sheet.offsetWidth, sheet.classList.add("show"));
     setTimeout(() => sheet.classList.add("show"), 60);
   };
 })();

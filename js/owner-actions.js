@@ -118,7 +118,7 @@
     sheet.appendChild(cancel);
 
     ov.appendChild(sheet);
-    requestAnimationFrame(() => sheet.classList.add('show'));
+    (void sheet.offsetWidth, sheet.classList.add('show'));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => sheet.classList.add('show'), 60);
     return true;
@@ -193,7 +193,7 @@
     modal.appendChild(row);
 
     ov.appendChild(modal);
-    requestAnimationFrame(() => modal.classList.add('show'));
+    (void modal.offsetWidth, modal.classList.add('show'));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => modal.classList.add('show'), 60);
   }
@@ -236,7 +236,7 @@
     row.appendChild(cancel); row.appendChild(del);
     modal.appendChild(row);
     ov.appendChild(modal);
-    requestAnimationFrame(() => modal.classList.add('show'));
+    (void modal.offsetWidth, modal.classList.add('show'));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => modal.classList.add('show'), 60);
   }
@@ -251,7 +251,7 @@
   function toast(msg) {
     const t = el('div', 'oa-toast', msg);
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add('show'));
+    (void t.offsetWidth, t.classList.add('show'));
     /* rAF 는 앱·탭이 백그라운드면 안 돈다 — 그 사이 열면 시트가 화면 밖에 멈춘다(QA 0909). classList.add 는 멱등이라 타임아웃으로 이중화한다. */
     setTimeout(() => t.classList.add('show'), 60);
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 1800);

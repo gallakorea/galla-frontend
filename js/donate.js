@@ -254,7 +254,7 @@
     await loadGc();
     renderForm();
     dim.classList.add("open");
-    requestAnimationFrame(() => sheet.classList.add("open"));
+    (void sheet.offsetWidth, sheet.classList.add("open"));
   }
   async function open(issueId, creatorName) { return openWith({ issueId, creatorName }); }
   function close() {

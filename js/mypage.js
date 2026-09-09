@@ -309,7 +309,7 @@ async function GALLA_mypageInit(root, spaParams) {
                   (isSelf ? '<button class="av-act" data-act="edit"><span class="av-act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><b>사진 변경</b></button>' : '') +
                 '</div>';
             document.body.appendChild(ov);
-            requestAnimationFrame(() => ov.classList.add("on"));
+            (void ov.offsetWidth, ov.classList.add("on"));
             // 셸(네이티브) 하단 nav를 숨긴다 — 뷰어 하단 액션이 nav와 겹치던 문제(사장님 제보)
             const navHide = (on) => { try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on }, location.origin); } catch (_) {} };
             navHide(true);

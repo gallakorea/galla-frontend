@@ -396,7 +396,7 @@
     }
     const t = document.createElement("div"); t.className = "galla-toast"; t.textContent = msg;
     document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("on"));
+    (void t.offsetWidth, t.classList.add("on"));
     setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 260); }, ms || 1900);
   };
 
@@ -969,7 +969,7 @@
       m.querySelector(".glm-go").addEventListener("click", () => { (window.GALLA_nav||function(u){location.href=u})("login.html"); });
     }
     m.querySelector(".glm-msg").textContent = msg || "이 기능은 로그인 후 이용할 수 있어요.";
-    requestAnimationFrame(() => m.classList.add("open"));
+    (void m.offsetWidth, m.classList.add("open"));
   };
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
