@@ -1490,10 +1490,21 @@
   };
   var CITY_RE = /^(busan|daegu|incheon|gwangju|daejeon|ulsan|gyeonggi|sejong|jeju)/;
   function govMark(slug) {
-    var m = GOVMARK[slug] ||
-            (/^seoul/.test(slug || "") ? GOVMARK.seoul
-             : CITY_RE.test(slug || "") ? GOVMARK.city : GOVMARK.gov);
-    return { html: m.svg, bg: m.bg, ring: m.ring };
+    /* 어느 마크인지 '한 곳에서만' 정한다. 예전엔 마크는 여기서 고르고 글자는
+       바깥에서 GOVMARK_CHAR[slug] 로 따로 찾았는데, 여기선 /^seoul/ 같은
+       패턴으로 느슨하게 잡고 저기선 정확한 키만 봐서 어긋났다 —
+       seoul_junggu 같은 실제 slug 가 '서' 대신 '관'으로 떨어졌다(실측: 화면 6개). */
+    var key = GOVMARK[slug] ? slug
+            : (/^seoul/.test(slug || "") ? "seoul"
+             : CITY_RE.test(slug || "") ? "city" : "gov");
+    var m = GOVMARK[key];
+    /* ⚠️ 글자색을 함께 돌려준다. 웹은 svg 를 그대로 박아서 상관없지만,
+       **네이티브 지도(앱)는 글자를 직접 그린다** — 예전엔 spec.fg 가 항상
+       흰색이라 bg 가 흰색인 마크(gov·seoul)에서 흰 글씨/흰 배경이 됐다.
+       지도에 정체불명의 빈 흰 동그라미로 떠 있던 게 이것이다(2026-09-09 실측).
+       ring 이 곧 그 마크의 주색이니 글자도 거기 맞춘다. */
+    return { html: m.svg, bg: m.bg, ring: m.ring, fg: m.fg || m.ring,
+             ch: GOVMARK_CHAR[key] || "관" };
   }
 
   /* 마커에 '어느 방송에 나왔는지'를 띄운다 — 지도만 봐도 또간집인지 쯔양인지 안다.
@@ -1538,9 +1549,9 @@
       kind: "pin",
       bg: gm ? gm.bg : (p.visited ? "#1db954" : "#4361ff"),
       ring: gm ? gm.ring : "#ffffff",
-      fg: "#ffffff",
+      fg: gm ? gm.fg : "#ffffff",     // 공직자 마크는 자기 색을 쓴다(흰 배경에 흰 글씨 방지)
       logo: (!gm && thumb) ? thumb : "",
-      text: gm ? (GOVMARK_CHAR[gov] || "관") : (thumb ? "" : (p.visited ? "✓" : "🍜")),
+      text: gm ? gm.ch : (thumb ? "" : (p.visited ? "✓" : "🍜")),
       badge: p.visited ? "✓" : "",
       count: more || 0
     };
