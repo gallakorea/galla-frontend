@@ -753,7 +753,8 @@ function isBlockedHost(u: string): boolean {
 }
 async function fetchSource(url: string): Promise<{ title?: string; text?: string; ok: boolean }> {
   try {
-    if (!/^https?:\/\//.test(url) || isBlockedHost(url)) return { ok: false };
+    /* 스킴은 대소문자를 가리지 않는다 — iOS 자동수정이 「HTTPS://」로 바꿔 보낸 링크를 「읽기 실패」로 떨궜다(2026-09-10 QA). */
+    if (!/^https?:\/\//i.test(url) || isBlockedHost(url)) return { ok: false };
     if (/youtube\.com|youtu\.be|vimeo\.com/.test(url)) {
       const oe = /vimeo/.test(url) ? `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}` : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
       try { const ry = await fetch(oe); if (ry.ok) { const y = await ry.json(); return { ok: true, title: y.title, text: `영상 "${y.title}" (채널: ${y.author_name || "?"})` }; } } catch { /* */ }
@@ -767,7 +768,7 @@ async function fetchSource(url: string): Promise<{ title?: string; text?: string
       const loc = r.headers.get("location");
       if (!loc) break;
       cur = new URL(loc, cur).toString();
-      if (!/^https?:\/\//.test(cur) || isBlockedHost(cur) || hop === 3) { clearTimeout(to); return { ok: false }; }
+      if (!/^https?:\/\//i.test(cur) || isBlockedHost(cur) || hop === 3) { clearTimeout(to); return { ok: false }; }
     }
     clearTimeout(to);
     if (!r || !r.ok) return { ok: false };

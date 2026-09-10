@@ -240,7 +240,7 @@
         // 📎 근거 창구 — 콘텐츠 만들 때 기사·링크·글·이미지를 근거로 넣는 칩/입력
         '<div class="fr-srcchips"></div>'+
         '<div class="fr-srcadd" hidden>'+
-          '<input class="fr-src-inp" placeholder="기사 링크나 글을 붙여넣어">'+
+          '<input class="fr-src-inp" placeholder="기사 링크나 글을 붙여넣어" autocapitalize="off" autocorrect="off" spellcheck="false">'+
           '<button class="fr-src-img" aria-label="이미지 첨부">🖼</button>'+
           '<button class="fr-src-ok">담기</button>'+
           '<input type="file" class="fr-src-file" accept="image/*" hidden>'+
@@ -277,6 +277,8 @@
     if(clip) clip.addEventListener("click", function(){ if(srcAdd){ srcAdd.hidden=!srcAdd.hidden; if(!srcAdd.hidden){ srcInp&&srcInp.focus(); } } });
     function commitSrcText(){
       var v=(srcInp&&srcInp.value||"").trim(); if(!v) return;
+      /* 스킴은 소문자로 — iOS 자동수정이 「HTTPS://」로 바꾸면 서버가 링크를 못 읽고 「읽기 실패」로 떨궜다(2026-09-10 QA) */
+      v=v.replace(/^https?:/i, function(m){ return m.toLowerCase(); });
       if(/^https?:\/\/\S+$/i.test(v)){ var host=v; try{ host=new URL(v).hostname.replace(/^www\./,""); }catch(e){} addSource({type:"link", value:v, label:host}); }
       else addSource({type:"text", value:v, label:"글 "+v.slice(0,12)+(v.length>12?"…":"")});
       if(srcInp) srcInp.value=""; if(srcAdd) srcAdd.hidden=true;
