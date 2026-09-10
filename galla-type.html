@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0910140"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0910110"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>갈라 성향 분석 - GALLA</title>
 
@@ -45,23 +45,20 @@
 
     <!-- TOP SUMMARY -->
     <section class="top-section" id="typeSummary">
-        <div class="type-badge" id="typeName">🔥 논리적 개척자형</div>
+        <div class="type-badge" id="typeName">성향 분석 중…</div>
 
         <div class="ratio-box">
             <div class="ratio-item">
                 <div class="ratio-label">찬성</div>
-                <div class="ratio-value pro" id="proRatio">62%</div>
+                <div class="ratio-value pro" id="proRatio">–</div>
             </div>
             <div class="ratio-item">
                 <div class="ratio-label">반대</div>
-                <div class="ratio-value con" id="conRatio">38%</div>
+                <div class="ratio-value con" id="conRatio">–</div>
             </div>
         </div>
 
-        <div class="sub-desc" id="typeDesc">
-            당신은 새로운 이슈에 도전하고,<br>
-            논리로 상대를 설득하는 타입입니다.
-        </div>
+        <div class="sub-desc" id="typeDesc">행동 기록을 불러오는 중이에요.</div>
     </section>
 
 
@@ -72,25 +69,25 @@
         <div class="axis-box">
             <div class="axis-label">토론 온도</div>
             <div class="axis-bar"><div id="axisHot" class="axis-fill hot"></div></div>
-            <div class="axis-detail" id="axisHotText">🔥 뜨겁게 토론하는 편</div>
+            <div class="axis-detail" id="axisHotText">–</div>
         </div>
 
         <div class="axis-box">
             <div class="axis-label">의견 방향성</div>
             <div class="axis-bar"><div id="axisProSide" class="axis-fill pro-side"></div></div>
-            <div class="axis-detail" id="axisProSideText">찬성 의견이 다소 우세</div>
+            <div class="axis-detail" id="axisProSideText">–</div>
         </div>
 
         <div class="axis-box">
             <div class="axis-label">이슈 탐색 성향</div>
             <div class="axis-bar"><div id="axisExplore" class="axis-fill explore"></div></div>
-            <div class="axis-detail" id="axisExploreText">새로운 주제에 적극적</div>
+            <div class="axis-detail" id="axisExploreText">–</div>
         </div>
 
         <div class="axis-box">
             <div class="axis-label">판단 기준</div>
             <div class="axis-bar"><div id="axisLogic" class="axis-fill logic"></div></div>
-            <div class="axis-detail" id="axisLogicText">감정보다 논리를 중시</div>
+            <div class="axis-detail" id="axisLogicText">–</div>
         </div>
     </section>
 
@@ -136,48 +133,14 @@
 </div>
 
 
-<script>
-/* ===============================
-   Supabase 준비 확인
-=============================== */
-function waitSupabase() {
-    return new Promise(resolve => {
-        const timer = setInterval(() => {
-            if (window.supabaseClient) {
-                clearInterval(timer);
-                resolve(window.supabaseClient);
-            }
-        }, 20);
-    });
-}
 
-(async () => {
-    const supabase = await waitSupabase();
-
-    /* 로그인 체크 */
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    if (!sessionData.session?.user) {
-        alert("로그인이 필요합니다.");
-        location.href = "login.html";
-        return;
-    }
-
-    const user = sessionData.session.user;
-
-    // 실제 행동 기반 성향 계산 → 화면 채우기 (행동 바뀌면 매번 재계산됨)
-    try {
-        const data = await window.GALLA_computeType(supabase, user.id);
-        window.GALLA_renderTypePage(data);
-    } catch (e) { console.error("[galla-type]", e); }
-})();
-</script>
 
 <script src="/js/error-logger.js?v=080412"></script>
   <script src="./vendor/supabase.js?v=0909100"></script>
 <script src="js/supabase.js?v=0910090"></script>
 <script src="js/back.js?v=080412"></script>
-<script src="js/galla-type.js?v=0828020"></script>
+<script src="js/galla-type.js?v=0910110"></script>
+<script src="js/galla-type-page.js?v=0910110"></script>
 
 <!-- ============================= -->
 <!-- ⭐ BOTTOM NAVIGATION (COMMON) -->

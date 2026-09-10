@@ -22,7 +22,7 @@
 
   window.GALLA_computeType = async function (supabase, userId) {
     const [
-      votesRes, actsRes, cmtRes, ppRes, pcRes, trRes
+      votesRes, actsRes, cmtRes, ppRes, pcRes, trRes, pbRes
     ] = await Promise.all([
       supabase.from("votes").select("type, issue_id").eq("user_id", userId),
       supabase.from("comment_actions").select("action_type").eq("user_id", userId),
@@ -30,6 +30,9 @@
       supabase.from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
       supabase.from("plaza_comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
       supabase.from("market_trades").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      /* 🎯 예측은 파리뮤추얼 전환 뒤 predict_bets 에 쌓인다. market_trades 는 CPMM 시절 테이블로
+         3행·마지막 2026-07-15 에서 멈췄다 — 이것만 세면 실제 베팅한 사람도 예측파로 안 잡힌다(2026-09-10 QA). */
+      supabase.from("predict_bets").select("id", { count: "exact", head: true }).eq("user_id", userId),
     ]);
 
     const votes = votesRes.data || [];
@@ -44,7 +47,7 @@
     const cmts = cmtRes.data || [];
     const commentCount = cmts.length;
     const plazaN = (ppRes.count || 0) + (pcRes.count || 0);
-    const betN = trRes.count || 0;
+    const betN = (trRes.count || 0) + ((pbRes && pbRes.count) || 0);
 
     const total = pro + con + attack + defend + support + commentCount + plazaN + betN;
 
@@ -82,7 +85,10 @@
     const code = L1 + L2 + L3 + L4;
 
     const core = CORE[L1 + L2];
-    const stageTag = L3 === "T" ? "#토론파" : "#예언가";
+    /* 광장·예측 활동이 둘 다 0 이면 무대 축엔 신호가 없다. 예전엔 +1 스무딩 때문에 0/1=0 → 「예측」 극으로
+       떨어져, 예측을 한 번도 안 한 사람에게 「#예언가 · 예측 마켓에서 적중으로 증명」이라고 단정했다. */
+    const stageKnown = (plazaN + betN) > 0;
+    const stageTag = !stageKnown ? null : (L3 === "T" ? "#토론파" : "#예언가");
     const sideTag = L4 === "P"
       ? (pro >= con ? "#찬성확신" : "#반대확신")
       : "#균형감각";
@@ -90,7 +96,7 @@
     const styleTag = L2 === "A" ? "#공격형" : "#수비형";
 
     // 설명 문장
-    const stageDesc = L3 === "T" ? "광장에서 말로 승부하고" : "예측 마켓에서 적중으로 증명하며";
+    const stageDesc = !stageKnown ? "주 무대는 아직 정해지지 않았고" : (L3 === "T" ? "광장에서 말로 승부하고" : "예측 마켓에서 적중으로 증명하며");
     const sideDesc = L4 === "P"
       ? (pro >= con ? "한쪽(찬성) 진영을 확실히 미는" : "한쪽(반대) 진영을 확실히 미는")
       : "양쪽을 저울질하는 균형잡힌";
@@ -118,7 +124,7 @@
       name: core.name,
       desc,
       proPct, conPct: 100 - proPct,
-      tags: [heatTag, styleTag, stageTag, sideTag],
+      tags: [heatTag, styleTag, stageTag, sideTag].filter(Boolean),
       axes: [
         {
           label: "토론 온도", pct: heat,
@@ -133,8 +139,9 @@
               : "🛡️ 방어·지원에 강한 편",
         },
         {
-          label: "주 무대", pct: talkPct,
-          text: talkPct >= 60 ? "🗣️ 광장 토론 중심"
+          label: "주 무대", pct: stageKnown ? talkPct : 50,
+          text: !stageKnown ? "아직 분석 전"
+              : talkPct >= 60 ? "🗣️ 광장 토론 중심"
               : talkPct >= 40 ? "🎭 광장·예측 병행"
               : "📈 예측 마켓 중심",
         },
