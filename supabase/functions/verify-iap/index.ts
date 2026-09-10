@@ -63,6 +63,15 @@ async function verifyApple(receipt: string): Promise<{ ok: boolean; iosProductId
 /* 🎟 구독 상품인가? 상품ID → 등급 매핑은 서버(sub_products)만 안다.
    ⚠️ 클라가 "이건 구독이야" 라고 말하는 걸 믿으면 안 된다 — 소모품 값을 내고 구독을
       받아가는 길이 열린다. 우리 표에 있으면 구독, 없으면 아니다. */
+/* 💝 후원 상품인가? 앱 후원은 GC 를 거치지 않고 스토어에서 바로 결제한다.
+   ⚠️ 순서가 중요하다 — 구독 → 후원 → GC 순으로 본다. 우리 표에 있으면 그 종류다.
+      클라가 "이건 후원이야" 라고 말하는 걸 믿으면 싼 상품 내고 비싼 걸 받아간다. */
+async function tipProduct(channel: "ios" | "android", productId: string) {
+  const { data } = await sb.from("tip_products").select("product_id,krw")
+    .eq("channel", channel).eq("product_id", productId).eq("active", true).maybeSingle();
+  return data as { product_id: string; krw: number } | null;
+}
+
 async function subProduct(channel: "ios" | "android", productId: string) {
   const { data } = await sb.from("sub_products").select("tier,days")
     .eq("channel", channel).eq("product_id", productId).eq("active", true).maybeSingle();
@@ -96,6 +105,14 @@ Deno.serve(async (req) => {
         p_auto_renew: pend.auto_renew_status !== "0",
       });
       if (error) return j({ ok: false, reason: "sub_error", detail: error.message }, 500);
+      return j(data);
+    }
+
+    if (await tipProduct("ios", v.iosProductId)) {
+      const { data, error } = await sb.rpc("tip_confirm", {
+        p_user: uid, p_channel: "ios", p_product_id: v.iosProductId, p_tx_id: v.txid,
+      });
+      if (error) return j({ ok: false, reason: "tip_error", detail: error.message }, 500);
       return j(data);
     }
 
@@ -145,10 +162,21 @@ Deno.serve(async (req) => {
     if (!real) return j({ ok: false, reason: "verify_failed" }, 400);
     if (real.purchaseState !== 0) return j({ ok: false, reason: "not_purchased", state: real.purchaseState }, 400);
 
+    const txid = real.orderId || tok;
+
+    /* 💝 후원 — GC 를 거치지 않는 직접결제. 소모성이라 소비 처리까지 같이 해야
+       사용자가 다시 후원할 수 있다(소비 안 하면 같은 상품을 못 산다). */
+    if (await tipProduct("android", pid)) {
+      const { data, error } = await sb.rpc("tip_confirm", {
+        p_user: uid, p_channel: "android", p_product_id: pid, p_tx_id: txid,
+      });
+      if (error) return j({ ok: false, reason: "tip_error", detail: error.message }, 500);
+      try { await googleConsume(pid, tok); } catch (_) { /* 지급은 이미 유효하다 */ }
+      return j(data);
+    }
+
     const pkey = await pkgByStoreProduct("android", pid);
     if (!pkey) return j({ ok: false, reason: "unknown_product" }, 400);
-
-    const txid = real.orderId || tok;
     const { data, error } = await sb.rpc("grant_gc_topup", {
       p_user: uid, p_store: "google", p_txid: txid, p_product: pkey, p_raw: real as any,
     });
