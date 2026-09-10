@@ -95,16 +95,26 @@ async function loadGp(){
      (gp_wallet은 여전히 free/paid를 돌려주지만 paid는 0으로 고정된다) */
   renderMini($('wlGp'), led.data||[], gpLabel);
 }
+/* ⚠️ gp-history.js 의 REASONS 와 같은 목록을 유지한다 — 두 벌이 어긋나 활동 보상(act_*)·환영·등급 보너스가
+   「act_issue」 같은 내부 코드로 보였다(2026-09-10 QA: 최근 30일 원장 122행 중 109행). 모르는 사유도 코드는 안 보인다. */
 const GP_LABELS = [
   [/^predict:bet$/,['🎯','예측 참여']],[/^predict:win$/,['🏆','예측 적중']],
   [/^predict:combo$/,['🔥','연승 보너스']],[/^predict:refund$/,['↩️','예측 환불']],
-  [/^daily/,['🪙','출석 보상']],[/^mission:/,['✅','미션 보상']],
+  [/^daily_chest/,['🎁','출석 상자']],[/^daily/,['🪙','출석 보상']],[/^mission:/,['✅','미션 보상']],
   [/^shop:/,['🛒','상점 구매']],
-  [/^support:/,['⚔️','진영 밀어주기']],[/^gacha_win/,['🎁','뽑기 대성공']],[/^gacha/,['🎰','갈라 뽑기']],
-  [/^issue_win/,['🏅','이슈 승리']],[/^duel/,['🥊','일기토']],
+  [/^support:|^faction|^push/,['⚔️','진영 밀어주기']],[/^gacha_win/,['🎁','뽑기 대성공']],[/^gacha/,['🎰','갈라 뽑기']],
+  [/^tier_bonus:/,['⭐','등급 보너스']],[/^issue_win/,['🏅','이슈 승리']],[/^battle:/,['⚔️','댓글 배틀']],
+  [/^duel_stake/,['🥊','일기토 참여']],[/^duel_refund/,['↩️','일기토 환불']],[/^duel_win/,['🏆','일기토 승리']],[/^duel/,['🥊','일기토']],
+  [/^act_issue$/,['📝','이슈 발의']],[/^act_market$/,['🎯','예측 문제 만들기']],[/^act_comment$/,['💬','댓글 활동']],
+  [/^act_vote$/,['🗳️','투표 참여']],[/^act_follow$/,['👥','팔로우']],
+  [/^welcome/,['🎉','가입 환영']],[/^tour_bonus$/,['🎉','투어 완주 보너스']],[/^referral:/,['🎁','친구 초대']],
+  [/^ai_creation:refund/,['↩️','AI 창작 환불']],[/^ai_creation/,['🎨','AI 창작']],[/^ai_sticker/,['🩹','나만의 이모티콘']],
+  [/^ghost_pass/,['👻','유령권']],[/^title:/,['🏷️','칭호']],
   [/^tip:/,['📸','제보 보상']],[/^boost:/,['🚀','부스트']],[/^nickstyle:/,['🎨','닉 스타일']],
+  [/^reconcile/,['🧮','잔액 정산']],[/^admin:/,['🛠️','운영 조정']],
+  [/^trade$/,['🎯','예측 참여(구)']],[/^payout$/,['🏆','예측 정산(구)']],
 ];
-function gpLabel(r){ for(const [re,v] of GP_LABELS){ if(re.test(r.reason||'')) return v; } return ['🪙', r.reason||'기타']; }
+function gpLabel(r){ for(const [re,v] of GP_LABELS){ if(re.test(r.reason||'')) return v; } return ['🪙','기타 활동']; }
 function gcLabel(r){
   const x = r.reason || '';
   if(x==='gc:charge') return ['💳','코인 충전'];
@@ -115,6 +125,7 @@ function gcLabel(r){
   if(x.startsWith('gc:clawback')) return ['⚠️','스토어 환불 회수'];
   if(x.startsWith('ai_creation')) return ['🎨','AI 창작'];
   if(x.startsWith('ai_sticker')) return ['🩹','AI 스티커'];
+  if(x.startsWith('gc:appreview') || x.startsWith('admin')) return ['🛠️','운영 지급'];
   return ['💝','크리에이터 후원'];
 }
 
