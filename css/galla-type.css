@@ -7,7 +7,12 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', Helvetica, Arial, sans-serif;
   max-width: 480px; margin: 0 auto;
 }
-section { padding: 0 16px; }
+/* ⚠️ 이 페이지 안의 section 에만 — 예전엔 `section { padding: 0 16px; }` 전역 규칙이었다.
+   SPA 는 페이지 <link> CSS 를 문서 전역에 남기므로, 성향 상세를 한 번 열면 **다른 화면의 모든 <section>**
+   (설정 「성장·도전」 그리드 `section.tile-grid` 등)에 좌우 16px 가 붙었다(2026-09-10 QA 8-V: x 36–888 → 70–853).
+   앱에선 뷰 컨테이너가 `data-spa-view="galla-type"`, 웹에선 <body class="gtype-page"> 가 범위다.
+   :where 는 우선순위 0 이라 이 페이지 안의 기존 캐스케이드는 그대로다. */
+:where(body.gtype-page, [data-spa-view="galla-type"]) section { padding: 0 16px; }
 .section-title, .axis-title {
   font-size: 12px; font-weight: 900; letter-spacing: .5px; color: #8b8b93;
   margin: 28px 4px 12px;

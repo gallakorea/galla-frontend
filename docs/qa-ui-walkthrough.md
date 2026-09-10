@@ -1064,6 +1064,25 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
   - 같은 회귀로 `nickstyle_all`(모든 닉 스타일)도 **아무 등급에도 없다** — `equip_nickstyle`·`nickstyle_effective` 가 이 기능을 본다. 앱이 이걸 구독 혜택으로 안내하는 문구는 없어(검색 0) 「약속 위반」은 아니고 조용히 사라진 혜택. `badge` 를 보는 DB 함수는 없음
 - 어느 등급에 통계를 줄지는 요금제 판단이라 이 창에서 안 고친다. 고칠 때 같이: 잠금 문구의 「프렌드 이용권」·`need_tier:'friend'` → 현재 등급명, 설정 타일은 이미 「갈비스 구독」으로 바뀌어 시트의 「이용권」과도 어긋난다
 
+### 8-V. ❌ **결함 — 성향 상세를 한 번 열면 설정 「성장·도전」 그리드가 좌우 16px 씩 들어간다 (CSS 누수, 8-I·8-N 과 같은 계열)**
+
+- 재현(앱, 새 웹 계층 0910260): 설정 → 「나의 갈라 성향」 상세(12:58) → 뒤로 → 설정 스크롤 → 성장·도전 타일이 **x 70–853**(12:59). 같은 세션에서 성향 상세를 열기 전(12:40·12:48·12:55)엔 **x 36–888** 전폭. 크리에이터 센터(index.css)·트렌드(search.css)·내 등급(grade.css)을 거친 뒤에도 전폭이었다 → 성향 상세가 원인
+- 원인: `css/galla-type.css:10` **`section { padding: 0 16px; }`** — 클래스 없이 요소 전체에 거는 규칙. SPA 는 페이지 `<link>` CSS 를 문서 전역에 남기므로(뷰 로더는 `#app` 의 **내용만** 옮긴다 — `view-loader.js:74 app: app.innerHTML`), 한 번 들어오면 설정의 `<section class="tile-grid">` 에 좌우 16px(= 캡처 34px)가 붙는다. 저장소 전체 CSS 에서 클래스 없는 `section` 규칙은 **이 한 줄뿐**
+- 조치: `:where(body.gtype-page, [data-spa-view="galla-type"]) section { padding: 0 16px; }` + `galla-type.html` `<body class="gtype-page">`. 앱에선 뷰 컨테이너가 `data-spa-view="galla-type"`(`router.js:204·231` — `name + ".html"`), 웹에선 body 클래스가 범위. `:where` 는 우선순위 0 이라 페이지 안 캐스케이드 불변(`:is` 였다면 리셋이 페이지 클래스 규칙을 이겨 여백을 지웠을 것)
+- 검증(실제 CSS 로 브라우저 계측, localhost 로 서빙)
+
+| 경우 | 설정 그리드 section 좌우 패딩 | 첫 타일 위치 | 뜻 |
+|---|---|---|---|
+| A 설정 CSS 만 | 0 | 0 | 기준 |
+| B + **옛** galla-type.css | **16px** | **16** | 누수 재현 |
+| C + **새** galla-type.css | **0** | **0** | **누수 사라짐** |
+| D 성향 웹(`body.gtype-page`) `.top-section` | 20px | — | 옛 CSS 도 20px(Dold) — `.top-section` 자체 규칙이 이김, 변화 없음 |
+| D2 성향 웹 `.axis-section` | 16px | — | 웹에서 새 범위 규칙 적용 |
+| E 성향 앱 모양(`data-spa-view="galla-type"`) `.axis-section` | 16px | — | 앱에서 새 범위 규칙 적용 |
+
+- 전달: `css/galla-type.css?v=0910270`, 배포 도장 **0910270**. 앱 재확인은 설치본 웹 계층을 다시 갈아 끼운 뒤
+- ⚠️ **구조 메모(범위 밖, 결함으로 안 셈)**: 페이지 CSS 29개가 최상위 `*`·`body`·`html` 규칙을 갖고, 그중 20개는 `body` 에 레이아웃 속성(`max-width`·`margin`·`width`·`overflow`·`display`·`height`)을 준다 — SPA 에선 그 페이지를 한 번 연 뒤 **셸 body 에 그대로 걸린다**. 대부분 같은 리셋·같은 배경이라 폰에선 드러난 깨짐이 없었지만(설정 자신도 `body{max-width}`), 태블릿·데스크톱 SPA 에선 폭이 방문 순서에 따라 바뀔 수 있다. 원칙(`view-loader.js:57` 「페이지 CSS 는 그 페이지 클래스에 걸려 있는 게 원칙」)대로 페이지 범위로 옮기는 정리가 필요 — 29개 파일 일괄 수정이라 이 창에선 안 한다
+
 ### 8-B. ⚠️ **취소된 결함 보고 — 「지갑 0 GP」는 결함이 아니었다**
 
 > **2026-09-09 정정.** 아래를 한때 결함으로 올렸으나 **오진이다.**
