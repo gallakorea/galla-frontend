@@ -5222,7 +5222,12 @@
         const url = `https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`;
         sendMessage({ kind: 'text', body: `📍 내 위치를 공유했어요\n${url}` });
       },
-      () => toastMini('위치 권한이 필요해요 (설정에서 허용)'),
+      /* 실패 이유를 가른다 — 예전엔 어떤 실패든 「위치 권한이 필요해요」라서, 권한을 허용했는데
+         위치를 못 잡은 경우(실내·시간초과·시뮬 위치 없음)에도 권한 탓으로 안내했다(2026-09-11 QA 6-2-8, iOS 시뮬:
+         iOS·WebKit 권한 창 둘 다 허용 → 60초 동안 전송 없음). 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT */
+      (err) => toastMini(err && err.code === 1
+        ? '위치 권한이 필요해요 (설정에서 허용)'
+        : '현재 위치를 찾지 못했어요. 잠시 후 다시 시도해 주세요'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
