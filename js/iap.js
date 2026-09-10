@@ -99,14 +99,7 @@
       _gcCat = await loadGcCatalog(plat);
       if (_gcCat.length) { try { await st.update(); } catch (_) {} }
     }
-    const _out = window.GALLA_gcOffers();
-    try {
-      window.__gcDiag = { plat, hasStore: !!st, cat: _gcCat.length,
-        ids: _gcCat.map(x => x.id), reg: [..._registered],
-        got: _out.length,
-        probe: (_gcCat.length ? _gcCat : []).map(x => { try { const p = st.get(x.id); const o = p && p.getOffer && p.getOffer(); return x.id.slice(-3) + ":" + (!p ? "noProduct" : (!o ? "noOffer" : "ok")); } catch (e) { return x.id.slice(-3) + ":err"; } }) };
-    } catch (_) {}
-    return _out;
+    return window.GALLA_gcOffers();
   };
 
   /* 스토어에 실제로 붙은 것만 돌려준다 — 가격은 스토어 표시가 그대로(원화 하드코딩 금지). */
