@@ -65,9 +65,29 @@ async function syncNavAvatar() {
   } catch (_) { /* 실패 시 캐시/기본 아이콘 유지 */ }
 }
 
+/* 남의 프로필(mypage?user=…)은 탭이 아니라 **스택 뷰**로 뜬다(router applyRoute asStack).
+   그런데 헤더는 마이 탭용(＋ · GALLA · ♡ · ≡)이라 ‹ 가 없어, 엣지 스와이프를 모르면 돌아갈 길이 안 보였다
+   (2026-09-11 QA 6-4-4, iOS 시뮬: DM 친구 → 프로필 → 「프로필 홈」). 스택일 때만 ＋ 자리에 ‹ 를 둔다 —
+   data-back 이라 라우터의 캡처 핸들러가 스택 pop 을 한다(MPA 는 이 어댑터를 안 거쳐 불변). */
+function ensureStackBack(root, params) {
+  if (!params || !params.user || !root) return;
+  const inner = root.querySelector(".header-inner");
+  if (!inner || inner.querySelector(".hdr-back")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "hdr-btn hdr-back";
+  btn.setAttribute("data-back", "");
+  btn.setAttribute("aria-label", "뒤로");
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  const write = inner.querySelector(".hdr-write");
+  if (write) { write.style.display = "none"; inner.insertBefore(btn, write); }
+  else inner.insertBefore(btn, inner.firstChild);
+}
+
 export async function mount(root, params) {
   for (const src of SCRIPTS) await loadScriptOnce(src);   // 순서 보존(직렬)
   await window.GALLA_PAGE_MYPAGE.mount(root, params);
+  ensureStackBack(root, params);
   syncNavAvatar();   // 프로필 로드와 병행 — 대기 불필요
 }
 
