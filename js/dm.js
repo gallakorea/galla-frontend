@@ -168,7 +168,7 @@
         <div class="dm-view" data-view="inbox">
           <div class="dm-head has-btns dm-head-brand">
             <button class="dm-x" data-write-hub="galla" aria-label="글쓰기">${ICONS.plus}</button>
-            <span class="dm-title"><span class="dm-wordmark"><img src="assets/logo.png" class="dm-wm-g" alt="GALLA"><span class="dm-wm-t">TALK</span></span></span>
+            <span class="dm-title"><span class="dm-wordmark" data-act="home" role="link" aria-label="홈으로"><img src="assets/logo.png" class="dm-wm-g" alt="GALLA"><span class="dm-wm-t">TALK</span></span></span>
             <span class="dm-head-btns">
               <button class="dm-gear" data-act="settings" aria-label="메시지 설정">${ICONS.sliders}</button>
               <button class="dm-compose" data-act="compose" aria-label="새 메시지">${ICONS.edit}</button>
@@ -982,6 +982,9 @@
       else if (act === 'chatset') { openChatSet(); }
       else if (act === 'toThread') { if (DEPTH > 0) history.back(); else showView('thread'); }
       else if (act === 'toInbox') { goBack(); }
+      /* 헤더 워드마크 = 홈. 웹 dm.html 은 페이지 헤더 로고가 GALLA_nav('index.html') 을 들고 있지만,
+         앱 SPA 는 셸 규약상 그 헤더를 걷어내 이 워드마크만 남아 눌러도 아무 일이 없었다(2026-09-11 QA 6-1-2). */
+      else if (act === 'home') { (window.GALLA_nav || ((u) => { location.href = u; }))('index.html'); }
       else if (act === 'newRoom') { roomFormShow(true); }
       else if (act === 'roomToList') { goBack('rooms'); }
       else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
