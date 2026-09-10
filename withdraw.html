@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0910180"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0910190"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>출금 요청 - GALLA</title>
 
@@ -46,48 +46,24 @@
         </div>
     </header>
 
-    <!-- GUIDE -->
+    <!-- GUIDE
+         🔴 여기 있던 「주민등록증 사진 업로드 → OCR → 주민등록번호·발급일자 · 실제 거주지 주소」는 **가짜 데모**였다
+            (파일만 고르면 「홍길동 / 900101-1234567」이 채워지고, 「출금 요청하기」는 아무것도 보내지 않고
+             「출금 요청 완료! 2~3일 내 처리」라고 떴다 — 수익 0 계정도 20만원을 적으면 완료). 2026-09-10 QA.
+            개인정보처리방침은 정산 시 「실명·본인확인기관 연계정보(CI/DI)·휴대폰 본인인증·정산 계좌」만 적고 있어
+            주민등록번호·신분증 사진을 받는 화면은 방침과도 어긋났다 → 걷어내고 실제 request_withdrawal() 로 잇는다. -->
     <div class="withdraw-guide">
-        출금은 <strong>본인 인증</strong>이 필요합니다.<br>
-        주민등록증을 업로드하면 자동으로 정보가 인식됩니다.
+        지금은 <strong>신청까지만 접수</strong>되고, 실제 송금은 결제(PG) 연동 후 시작됩니다.<br>
+        본인 확인은 송금 전에 <strong>휴대폰 본인인증</strong>으로 따로 진행합니다.
     </div>
 
     <!-- FORM SECTION -->
     <section class="section">
 
-        <!-- ID IMAGE -->
+        <!-- AVAILABLE -->
         <div class="input-group">
-            <div class="input-label">주민등록증 사진 업로드</div>
-            <input type="file" accept="image/*" id="idImage" class="input-file">
-            <div class="file-hint">정면, 글자 선명하게 촬영해주세요.</div>
-        </div>
-
-        <!-- OCR BOX -->
-        <div class="ocr-box">
-            <div class="ocr-title">인식된 정보</div>
-
-            <div class="ocr-field">
-                <label>이름</label>
-                <input type="text" id="ocrName" disabled>
-            </div>
-
-            <div class="ocr-field">
-                <label>주민등록번호</label>
-                <input type="text" id="ocrRRN" disabled>
-            </div>
-
-            <div class="ocr-field">
-                <label>발급일자</label>
-                <input type="text" id="ocrIssue" disabled>
-            </div>
-
-            <div class="ocr-status" id="ocrStatus">OCR 대기중...</div>
-        </div>
-
-        <!-- ADDRESS -->
-        <div class="input-group">
-            <div class="input-label">실제 거주지 주소</div>
-            <input type="text" id="address" class="input-field" placeholder="실제 거주지 입력">
+            <div class="input-label">출금 가능 금액</div>
+            <div class="input-field" id="wdAvail">불러오는 중…</div>
         </div>
 
         <!-- BANK -->
@@ -176,29 +152,7 @@
   <script src="./vendor/supabase.js?v=0909100"></script>
 <script src="./js/supabase.js?v=0910090"></script>
 
-<script>
-function waitForSupabaseClient() {
-    return new Promise(resolve => {
-        const t = setInterval(() => {
-            if (window.supabaseClient) {
-                clearInterval(t);
-                resolve(window.supabaseClient);
-            }
-        }, 20);
-    });
-}
-
-/* 로그인 안 되어 있으면 접근 차단 */
-(async () => {
-    const supabase = await waitForSupabaseClient();
-    const { data } = await supabase.auth.getSession();
-
-    if (!data.session?.user) {
-        alert("로그인이 필요한 서비스입니다.");
-        location.href = "login.html";
-    }
-})();
-</script>
+<!-- 로그인 가드는 js/withdraw.js 로 옮겼다(인라인은 SPA 에서 버려진다 · 여기 두면 웹에서 알림이 두 번 뜬다) -->
 
 
 <!-- ========================================== -->
@@ -227,7 +181,7 @@ window.addEventListener("scroll", () => {
 
 
 <!-- 실제 출금 로직 -->
-<script src="./js/withdraw.js?v=080412"></script>
+<script src="./js/withdraw.js?v=0910190"></script>
 
 <script src="./js/nav.js?v=0910140"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>

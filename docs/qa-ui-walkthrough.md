@@ -880,6 +880,41 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
 - 내 지갑 GC 카드 — **결함 아님(빌드 차이)**: 설치된 앱의 문구는 「갈라페이로 충전하는 코인이에요」인데 저장소는 「충전해서 쓰는 코인이에요」. 「1코인 = 1원」 감춤은 `402471cd0`(09-10 13:24), 충전 버튼 감춤은 `068ad7157`(09-10 16:00, `features.gc_topup`)으로 이미 들어가 있고, 둘 다 b0909120 보다 뒤다. 서버 `app_features()` = `{live:false, agent:false, calls:false, gallari:true}` — `gc_topup` 이 **없어서** `get()` 이 false(닫힘)다. 동기화 번들(도장 0910110)에도 두 코드가 있다 → **재빌드 후 버튼·환산 문구가 없어야 정상**
 - 메모: 지갑을 스크롤하면 고정된 「← 뒤로」가 헤더 배경 없이 GP 숫자 위에 겹친다(9,340 의 「9」 위)
 
+| 타일 | 앱 화면 | DB 대조 |
+|---|---|---|
+| 크리에이터 센터 | 「받은 후원의 **75%**가 창작자 몫」 · 플랫폼 **20%** · 사회 환원 **5%** · 「10,000 GC로 후원하면 내 수익 **7,500원** · 플랫폼 **2,000원** · 사회 환원 **500원**」 · 최소 출금 **20만원** · 링크 「내 지갑에서 수익 보기」·「정산 내역」·「출금 신청」·이슈/난장/광장 만들기 · 기부처 카드 | `revenue_share_v2`: `floor(×0.20)`·`floor(×0.05)`·나머지 → 7,500/2,000/500 **일치**, `request_withdrawal` 의 `min_200000` **일치**, 이 계정 `my_creator_earnings` 전부 0. 페이지 인라인 `<script>` 0개 |
+| └ 출금 신청 | **가짜 데모였다 → 8-Q 에서 수정** | `withdrawals` 0행 |
+
+- ⚠️ 넘길 것(문구 판단, 사장님/IAP 창): 크리에이터 센터가 앱 안에서도 「후원 결제와 출금은 **결제(PG) 연동 전**」·「**10,000 GC로** 후원하면」이라고 쓴다. 앱의 후원은 App Store 인앱 결제(`im.galla.tip.*`)이고 1차는 GC 비노출 방침이라, 앱에서는 PG·GC 문구가 사실과 어긋난다. 원화 금액은 **받는 쪽 정산** 설명이라 결제 유도(anti-steering)는 아니라고 봤다
+
+### 8-Q. ❌ **결함 — 「출금 신청」이 가짜 데모였고, 출금 테이블에 직접 넣으면 모든 검사를 건너뛰었다** (돈·권한)
+
+**① 화면이 거짓 완료를 띄웠다 + 주민등록번호를 받는 모양**
+- 재현(앱, 옛 빌드 b0909120): 설정 → 「크리에이터 센터」 → 「💸 출금 신청」 → 「출금 요청」 화면: 「주민등록증을 업로드하면 자동으로 정보가 인식됩니다」 · 주민등록증 사진 업로드 · 인식된 정보(이름·**주민등록번호**·발급일자) · 실제 거주지 주소 · 은행·예금주·계좌·금액
+- 코드(`js/withdraw.js`, 첫 줄 `// OCR Demo`): 파일을 고르면 1.5초 뒤 **「홍길동 / 900101-1234567 / 2020-08-12」를 채우고 「OCR 성공」**. 「출금 요청하기」는 칸만 확인하고 **서버에 아무것도 보내지 않은 채** 「출금 요청 완료! 영업일 기준 2~3일 내 처리됩니다」 — 수익 0 인 이 계정도 20만원만 적으면 완료가 뜬다(잔액 검사 없음). `withdrawals` **전체 0행**, 서버의 진짜 경로 `request_withdrawal()`(최소 20만원·출금 가능액·계좌 검사)을 **아무 화면도 부르지 않았다**
+- 개인정보처리방침(`privacy.html:156`)은 정산 시 「실명·본인확인기관 연계정보(CI/DI)·휴대폰 본인인증·정산 계좌」만 적는다 — `주민등록`·`신분증` **0회**. 즉 방침에 없는 주민등록번호·신분증 사진을 받는 화면이었다(실제 저장은 안 됐다: 업로드 코드·버킷 없음, `withdrawals` 에 주민번호 칸 없음)
+- 크리에이터 센터는 「지금은 **신청까지만 접수**되고」라고 안내하는데, 실제로는 접수도 안 됐다
+- 곁가지: 같은 가짜 흐름을 `revenue-settlement.html:44` 주석이 08-30 에 이미 적어 두었다(그땐 목업 금액만 걷어냄)
+
+**② 출금 테이블에 직접 INSERT 가 열려 있었다 (RLS 느슨)**
+- `withdrawals` INSERT 정책 두 개(`User inserts withdrawal`·`Users create their own withdrawals`, 둘 다 PERMISSIVE)가 `auth.uid() = user_id` 만 확인 + anon·authenticated 에 INSERT·UPDATE·DELETE 권한
+- 실측(QA 계정 가장, DO 블록 끝 예외로 **무조건 취소**): **999,999,999원 pending 행이 들어갔다(id=4 발급)**, 잔존 0 확인. `request_withdrawal()` 의 최소액·잔액 검사를 전부 건너뛴다. `admin_process_withdrawal()` 은 승인 때 **잔액을 다시 보지 않으므로** 관리자 관제센터엔 진짜 신청처럼 뜬다 — PG 가 열리면 없는 돈을 송금하는 경로
+
+**조치**
+- 마이그레이션 `20260910201000_withdrawals_insert_lock.sql`(적용 + `schema_migrations` 기록): 느슨한 INSERT 정책 2개 삭제 + **`as restrictive` INSERT `with check (false)`** + anon·authenticated 의 INSERT·UPDATE·DELETE 회수, anon SELECT 회수. `request_withdrawal()` 은 SECURITY DEFINER(소유 postgres = 테이블 소유, FORCE RLS 꺼짐)라 영향 없음. 클라이언트의 직접 쓰기 **0곳** 확인 후
+- `withdraw.html`: 신분증 업로드·가짜 OCR·주민등록번호·주소 칸 **삭제**, 안내를 「지금은 신청까지만 접수되고, 실제 송금은 결제(PG) 연동 후 · 본인 확인은 송금 전에 휴대폰 본인인증」(방침과 일치)으로, 「출금 가능 금액」 칸 추가. 인라인 로그인 가드 제거(SPA 에서 버려지고, 웹에선 알림이 두 번 뜬다)
+- `js/withdraw.js` 재작성: `my_creator_earnings().available` 표시 → `request_withdrawal()` 로 실제 접수, 사유별 안내(`min_200000`·`insufficient`(가능액 표시)·`need_bank`), 계좌번호 숫자만, 중복 탭 방지, 성공 시 정산 내역으로. **DOMContentLoaded 등록**(SPA 재방문) + 로그인 가드·`goBackWithScroll` 을 여기로. `?v=0910190`, 배포 도장 **0910190**(최댓값 0910180 확인 후, 75개 HTML)
+
+**검증**
+- 직접 INSERT 재시험(같은 가장·같은 행): **`42501 permission denied for table withdrawals`**
+- 정식 경로는 산다: 같은 가장으로 `request_withdrawal(200000,…)` → `{"ok":false,"reason":"insufficient","available":0}`(권한 오류 아님), `my_creator_earnings` → `{ok:true, available:0, pending:0, total_net:0, withdrawn:0}`
+- 정책 결과: INSERT 는 `withdrawals_no_direct_insert`(RESTRICTIVE) 하나, 권한은 `authenticated:SELECT` 만, `withdrawals` 0행
+- 문법 OK(node --check). 남은 인라인 `<script>` 1개(뒤로가기 스크롤 복원 — 앱에선 없어도 무해)
+- 새 `withdraw.js` **실파일을 node 하네스(가짜 DOM·가짜 Supabase)로 7경우 실행** — 전부 기대대로: 비로그인 → 「로그인이 필요한 서비스입니다」 + `login.html` / 은행 빈칸 → 안내, RPC 0 / 19만원 → 「20만원 이상」, RPC 0 / 가능액 0 에 20만원 → 「출금 가능 금액(₩0)보다 많아요」, RPC 0 / 가능 50만·30만 → `request_withdrawal {p_amount:300000, p_account:"123456"(「123-45 6」에서 숫자만)}` → 접수 안내 → `settlement.html` / 서버 `insufficient` → 서버가 준 가능액(₩1,000)으로 안내 / earnings 실패 → 「불러오지 못했어요」(서버 검사에 맡김). 모든 경우 버튼 연결됨
+- 브라우저: `file://` 로 연 페이지에서 새 칸 6개 있음·가짜 칸 0·「주민등록」 문구 0·새 안내문 확인. (그 탭은 `data:` 스냅샷이라 스크립트 실행 확인은 불가 → 위 하네스로 대신)
+- ⚠️ **앱 확인은 재빌드 후**(옛 빌드 b0909120 엔 가짜 화면 그대로). DB 차단은 **즉시 적용**(빌드 무관)
+- ⚠️ 남은 것(범위 밖, 메모): `admin_process_withdrawal()` 은 승인 때 잔액을 다시 확인하지 않는다 — 직접 INSERT 가 막혀 지금은 경로가 없지만, 방어 겹으로는 승인 시 재검사가 낫다
+
 ### 8-P. ❌ **결함 — 지갑·GP 내역에 원장 사유가 내부 코드 그대로 보였다 (act_issue 등)**
 
 - 재현(앱, 옛 빌드 b0909120): 설정 → 「내 지갑」 → 갈라포인트 카드 「최근 내역」 → **「🪙 act_issue +120」·「🪙 act_comment +20」**
