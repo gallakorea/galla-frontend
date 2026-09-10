@@ -1672,6 +1672,16 @@ body.dm-kb-anim .dm-panel { transition: height .25s cubic-bezier(.38,.7,.125,1);
 .dm-jump b { font-weight: 700; }
 .dm-jump b:empty { display: none; }
 .dm-jump svg { width: 16px; height: 16px; }
+/* 📱 말풍선 길게 누르기 = 우리 메뉴(답장·복사·보내기 취소·신고) + 리액션 바. 터치 기기에선 브라우저 기본
+   텍스트 선택·콜아웃(iOS 「Copy · Look Up · Translate」)을 끈다 — 그게 우리 메뉴 첫 줄 「답장」을 덮어
+   누를 수 없었다(2026-09-11 QA 6-2-11, iOS 시뮬 실측). 복사는 메뉴의 「복사」가 한다. 데스크톱(마우스)은 선택 유지. */
+@media (hover: none) and (pointer: coarse) {
+  .dm-bubble, .dm-bubble * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
 
 /* 📐 폰 폭 압축 — 실기기(iOS WKWebView)에서 미지의 수평 시프트로 전송버튼이 잘리던 문제.
    버튼·간격을 줄여 어떤 시프트에도 물리적으로 잘릴 수 없게 ~28pt 여유 확보(사장님 재현 종결). */
