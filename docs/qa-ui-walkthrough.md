@@ -770,6 +770,27 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
 - 시뮬레이터 앱은 옛 빌드 `b0909120` 이라 그 시점 로더에 스코프가 있었는지 모른다 → **재빌드 후 같은 순서로 재확인**. 결함으로 세지 않는다
 - **추가(11:16) — 원인 후보가 바뀌었다(유력, 미검증)**: 인라인 `<style>` 은 스코프되지만 **페이지 `<link>` CSS 는 전역에 한 번 들어가고 지워지지 않는다**(8-N 과 같은 계열). 스코프 없는 범용 규칙 `css/index.css:65 .card { margin: 0 16px 24px }` 가 설정의 `card single-link`·`card wallet-card` 에 그대로 걸린다. **16pt × 2.16(캡처 배율) = 35px → 35 + 35 = 70**, 6:34 캡처의 안쪽 x 70 과 정확히 맞는다. index.css 를 링크하는 페이지는 21개로, 6:12~6:34 사이에 연 **이용약관·비밀번호 변경·로그인 기록이 전부 포함**된다. `css/galla-ui.css`(14개 페이지)도 `.card`·`.st-label` 을 `!important` 로 덮는다. 앞 가설(인라인 style)이 웹에서 재현 안 된 것도 이걸로 설명된다
 - 남은 모순: 11:16 캡처에서 「성장·도전」 그리드는 x 70–853 인데, 같은 화면의 성향 카드(`card report-card`)는 x 36–888 로 안 들어갔다 → **아직 결론 아님**. 재빌드 후 「이용약관 → 설정」 전후로 `.single-link` 의 computed margin 을 Safari 웹 인스펙터로 재서 판정한다
+- **✅ 판정(11:40) — 결함 확정 · 수정.** 11:35 에 「내 지갑 → 크리에이터 센터(index.css 링크) → 출금 요청」을 거쳐 설정을 여니 보관·알림 줄의 「>」가 **또 둘째 줄로** 떨어졌다. 브라우저에서 실제 CSS 로 재현(설정 마크업 원문 + `settings.css` 단독 / + `index.css` / + 고친 `settings.css`, localhost 로 서빙)
+
+| 경우 | flex-direction | 좌측 들어감 | 폭 | 높이 | 「>」 줄바꿈 |
+|---|---|---|---|---|---|
+| settings.css 만 | row | 0 | 428 | 49 | 없음 |
+| + index.css(누수) | **column** | **16** | **396** | **67** | **있음** |
+| + index.css, 고친 뒤 | row | 0 | 428 | 50 | 없음 |
+
+- 원인: `index.css` 의 `.card { display:flex; flex-direction:column; margin:0 16px 24px }`. 설정의 `.single-link` 는 `flex-direction` 을 **아예 안 정해서** index.css 가 들어오는 순간 방문 순서와 무관하게 세로 배치가 된다(margin 은 나중에 들어온 쪽이 이김 → 6:34 캡처의 좌우 16pt=35px 들어감과 일치). 아까 브라우저 SPA 에서 재현이 안 됐던 건 **index.css 를 링크하는 페이지를 거치지 않았기** 때문
+- 조치: `css/settings.css` 에 한 단계 높은 선택자(0,2,0) — `.card.single-link { display:flex; flex-direction:row; margin:10px 0 0 }` · `.card.report-card { display:block; margin:18px 0 0 }` · `.card.wallet-card { display:block; margin:0 }`. `?v=0910200`, 배포 도장 **0910200**. `galla-ui.css`(14개 페이지)의 `!important` 색 규칙은 색만 바꾸므로 이번 범위 밖(메모)
+- 교훈(8-N 과 같은 계열): SPA 에선 **다른 페이지의 범용 클래스(`.card`·`.section`)가 전역에 산다**. 새 페이지 CSS 는 범용 클래스에 레이아웃을 걸지 말 것
+- ⚠️ 앱 확인은 재빌드 후 「크리에이터 센터 → 설정」 순서로
+
+### 8-R. ❌ **결함 — 설정 프로필 카드가 모든 사용자에게 「최고 레벨」·빈 경험치 막대를 보였다**
+
+- 재현(앱, 옛 빌드): 설정 맨 위 프로필 카드 — 「🌱 큐에이9999 · 🌱 눈팅러 Lv.3 · ⚡ 전투력 0」 아래 막대가 **비어 있고** 오른쪽에 **「최고 레벨」**
+- DB: `gallian_of(이 계정)` = `level 3 · level_progress 44 · to_next_level 14 · gi_life 31` → 정답은 「다음 레벨까지 14 GI」 · 막대 44%
+- 원인: `js/settings.js:221-222` 가 `g.goal?.remaining`·`g.progress` 를 읽는데 `GALLA_gallianOf`(`js/gallian.js:132-151`)의 반환에는 **`goal` 도 최상위 `progress` 도 없다**(`toNextLevel`·`levelProgress` 다). undefined > 0 은 거짓 → **모든 사용자에게 「최고 레벨」**, 막대 0%
+- 조치: `toNextLevel`·`levelProgress` 로 교체. `js/settings.js?v=0910200`
+- 같은 모양 전수: `GALLA_gallianOf` 결과를 쓰는 grade·mypage·dm 에서 **반환에 없는 필드를 읽는 곳 0**(각 15·3·15개 필드 대조). 「다음 레벨까지」 문구는 설정 한 곳뿐
+- 검증: 문법 OK. 앱 화면은 재빌드 후(기대값 「다음 레벨까지 14 GI」·44%)
 
 ### 8-J. ❌ **결함 — 「나의 갈라 성향」 상세가 앱에서 모두에게 같은 가짜 결과를 보였다** (+ 무대 축 오류 2건)
 

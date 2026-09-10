@@ -122,6 +122,13 @@ body {
 
 /* ===== 성향 카드 (기존 구조 재스킨) ===== */
 .card { border-radius: 16px; }
+/* ⚠️ SPA 는 다른 페이지의 <link> CSS 를 문서 전역에 남기고 지우지 않는다. css/index.css 의
+   `.card { display:flex; flex-direction:column; margin:0 16px 24px }` (크리에이터 센터·이용약관·로그인 기록 등 21개 페이지가 링크)가
+   한 번 들어오면 이 페이지의 `card single-link` 줄이 세로 배치가 돼 「>」가 둘째 줄로 떨어지고 좌우가 16px 씩 들어갔다
+   (2026-09-10 QA 8-I). 선택자를 한 단계 높여(0,2,0) 방문 순서와 무관하게 이 페이지 값으로 고정한다. */
+.card.single-link { display: flex; flex-direction: row; margin: 10px 0 0; }
+.card.report-card { display: block; margin: 18px 0 0; }
+.card.wallet-card { display: block; margin: 0; }
 .report-card {
     position: relative; margin-top: 18px;
     padding: 18px 16px;

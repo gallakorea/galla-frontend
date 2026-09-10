@@ -218,8 +218,10 @@ async function GALLA_settingsInit(root) {
     const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, userId) : null;
     if (g) {
       if (levelEl) levelEl.textContent = `${g.tier.name} Lv.${g.level}`;
-      if (xpLabel) xpLabel.textContent = g.goal?.remaining > 0 ? `다음 레벨까지 ${g.goal.remaining.toLocaleString()} GI` : "최고 레벨";
-      requestAnimationFrame(() => { if (xpFill) xpFill.style.width = (g.progress || 0) + "%"; });
+      /* ⚠️ GALLA_gallianOf 는 goal·progress 를 돌려주지 않는다 — toNextLevel·levelProgress 다.
+         예전엔 g.goal?.remaining·g.progress 를 읽어 **모든 사용자**에게 「최고 레벨」·빈 막대가 보였다(2026-09-10 QA). */
+      if (xpLabel) xpLabel.textContent = g.toNextLevel > 0 ? `다음 레벨까지 ${g.toNextLevel.toLocaleString()} GI` : "최고 레벨";
+      requestAnimationFrame(() => { if (xpFill) xpFill.style.width = (g.levelProgress || 0) + "%"; });
     }
   } catch (_) {}
   // 전투력 = 전투 액션(공격·방어·지원) 총량 — 마이페이지와 동일 정의(전투지수)
