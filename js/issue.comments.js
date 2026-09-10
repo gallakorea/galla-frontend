@@ -1092,12 +1092,20 @@ async function initBattleFeed(issueId) {
       const row = allRows.find(r => r.id === c.id);
       if (!row) return; // 다른 이슈
       const oldHp = row.hp;
+      /* ⚠️ 카운터 동기화를 hp 변동 안에 두면 안 된다 — **풀피 유닛을 지원하면 hp 가 그대로**라
+         (healed 만 늘고 _hp_of 가 100 에서 잘린다) 이 분기가 통째로 스킵됐다.
+         그 결과 전황판(총 교전·💥·💣·🛡·동진영/적진)이 전투에 반응하지 않고
+         '새 댓글이 달려 전체 리로드될 때'만 맞는 숫자가 됐다.
+         실측 2026-09-10: 지원 1회 후 DB support_count=1 인데 UI 💣 0 / 총 교전 1(정답 2). */
+      row.attack_count = c.attack_count;
+      row.defense_count = c.defense_count;
+      row.support_count = c.support_count;
       if (typeof c.hp === "number" && c.hp !== oldHp) {
         row.hp = c.hp;
-        row.attack_count = c.attack_count; row.defense_count = c.defense_count; row.support_count = c.support_count;
         syncUnitHp(c.id, oldHp, c.hp);
-        renderMorale();
       }
+      renderMorale();
+      renderWarDashboard();
     })
     // 새 댓글/답글 실시간 부분 삽입 — 남의 참전·전투 답글이 그 자리에 바로 나타난다
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: "issue_id=eq." + issueId }, async payload => {
