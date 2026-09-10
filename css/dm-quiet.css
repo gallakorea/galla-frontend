@@ -1360,6 +1360,16 @@ body[data-page="dm"] {
   width: 100%; padding: 11px; border-radius: 11px; cursor: pointer; font-size: 14px; font-weight: 800;
   border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: #e7ebf3;
 }
+/* 폴더 시트 하단 버튼(「폴더에서 빼기 · + 새 폴더」) — 스타일이 아예 없어 브라우저 기본 흰 알약으로 떴다
+   (2026-09-11 QA 6-1-6, iOS 시뮬). 목록 버튼과 같은 톤으로 맞추고 「+ 새 폴더」(.pri)만 강조색. */
+.dm-pin-btns { display: flex; gap: 8px; margin-top: 12px; }
+.dm-pin-btns button {
+  flex: 1 1 0; min-height: 44px; padding: 11px 12px; border-radius: 11px; cursor: pointer;
+  font: 800 14px/1.2 inherit; color: #e7ebf3;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+  -webkit-appearance: none; appearance: none;
+}
+.dm-pin-btns button.pri { background: #4361ff; border-color: #4361ff; color: #fff; }
 
 /* 🚪 대기 중인 그룹 초대 */
 .dm-invites { padding: 8px 12px 2px; }
