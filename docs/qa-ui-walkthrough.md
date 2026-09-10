@@ -29,7 +29,7 @@
 | 대상 | 식별 | 비고 |
 |---|---|---|
 | QA 계정 이메일 원복 | `qa0909b2galla.test` → `qa0909b@galla.test` (`auth.users`·`auth.identities`) | 삭제 전에 원복할 필요는 없지만 기록상 남긴다 |
-| 공유 기록 | `share_events` id **26–33** (qa0909b, 8행) — 26·27·30 issue 376, 28 trend, 29 link(`localhost:8788` 대상, 로컬 서버 QA), 31 post 66(2-2-7), 32 predict 402(5-9), 33 trend(7-1-6) | 계정 삭제로 따라 지워지는지(FK) 확인 후 남으면 직접 |
+| 공유 기록 | `share_events` id **26–35** (qa0909b, 10행) — 26·27·30 issue 376, 28 trend, 29 link(`localhost:8788` 대상, 로컬 서버 QA), 31 post 66(2-2-7), 32 predict 402(5-9), 33 trend(7-1-6), 34·35 news 6ac5559a(7-3-2 카드 시트·7-3-3 상세 시트) | 계정 삭제로 따라 지워지는지(FK) 확인 후 남으면 직접 |
 | 마켓 북마크 | `market_bookmarks` (373, qa0909b) — 09-09 웹 QA 잔여 | 5-9 에서 새로 넣은 건 그 자리에서 원복 |
 | 뉴스 북마크·반응 | `galla_news_bookmarks` (a3965640…, qa0909b, 09-09 13:57:58) · `galla_news_reactions` (a3965640…, value −1, 09-09 13:57:55) — 09-09 웹 QA 잔여(「이재명 대통령, 프랑스 하원의장 면담」) | 7-3-2 에서 새로 넣는 건 그 자리에서 원복 |
 | DM GIF 메시지 | qa0909 ↔ qa0909b 대화 | 계정과 함께 |
