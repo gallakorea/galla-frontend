@@ -455,11 +455,21 @@
   }, true);
 
   /* ── 상대 .html 이름을 SPA 라우트로 — 탭이면 탭전환, 남프로필은 스택, 그 외 push ── */
+  /* 탭으로 가기 전에 쌓인 스택(상세 뷰)을 걷는다 — 네비 탭 버튼·applyRoute 와 같은 규칙.
+     예전엔 navTo 가 activateTab 만 불러, 상세 화면의 로고(→index.html)·「검색」 링크를 눌러도
+     스택이 그대로 덮고 있어 아무 일도 안 일어난 것처럼 보였다(2026-09-11 QA, 이슈 상세 로고). */
+  function clearStackFor(tab) {
+    if (!stack.length) return;
+    while (stack.length) pop({ silent: true });
+    try { history.replaceState(null, "", "#/" + tab); } catch (_) {}
+  }
+
   function navTo(name, params) {
     params = params || {};
     if (name === "mypage" && params.user) return push("mypage", params);
-    if (TABS.indexOf(name) !== -1) return activateTab(TABS.indexOf(name));
+    if (TABS.indexOf(name) !== -1) { clearStackFor(name); return activateTab(TABS.indexOf(name)); }
     if (name === "search") {
+      clearStackFor("trend");
       /* ⚠️ 여기서 params 를 버리면 보관 → 맛집 상세(?tab=food&fp=) 같은 딥링크가
          "트렌드 판만 열리고 끝"이 된다(웹은 location.search 로 살고 앱만 죽던 자리).
          트렌드가 아직 마운트 전일 수 있으므로 값을 걸어두고, 마운트된 뒤면 즉시 적용한다. */
