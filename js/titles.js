@@ -11,46 +11,49 @@
     { k: "royal", n: "👑 로열", p: 8000 }, { k: "rainbow", n: "🌈 레인보우", p: 12000 },
   ];
 
+  /* ⚠️ 클래스 접두사 dco-(decor) — 예전엔 tt- 였다. 트렌드 탭의 css/search.css 가 같은 .tt-card·.tt-title 을 쓰고,
+     SPA 는 페이지 CSS 를 전역에 남겨 두므로 트렌드를 한 번 연 뒤엔 그 규칙이 꾸미기 시트에 걸려
+     카드가 화면 폭의 44%(약 189pt)로 쪼그라들고 제목이 「꾸미/기」로 꺾였다(2026-09-10 QA, 앱). */
   function css() {
     if (document.getElementById("titles-css")) return;
     const s = document.createElement("style"); s.id = "titles-css";
     s.textContent = `
-      .tt-sheet{position:fixed;inset:0;z-index:99997;display:flex;align-items:flex-end;justify-content:center}
-      .tt-sheet .dim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-      .tt-card{position:relative;width:100%;max-width:480px;max-height:82vh;overflow:auto;background:#14151a;
-        border-radius:20px 20px 0 0;padding:16px 14px max(14px,env(safe-area-inset-bottom));animation:ttUp .24s ease}
-      @keyframes ttUp{from{transform:translateY(100%)}}
-      .tt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-      .tt-title{font-weight:900;font-size:17px;color:#f5f5f2}
-      .tt-bal{font-weight:900;color:#c9d1e0;font-size:14px}
-      .tt-tabs{display:flex;gap:6px;margin-bottom:10px}
-      .tt-tab{flex:1;border:none;background:rgba(255,255,255,.05);color:#c9d1e0;font-weight:800;font-size:13px;padding:9px 0;border-radius:10px;cursor:pointer}
-      .tt-tab.on{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
-      .tt-note{color:#8a8f9a;font-size:12px;margin:-2px 0 12px;line-height:1.5}
-      .tt-sub{font-size:11px;font-weight:900;color:#8b8b93;margin:10px 2px 6px;letter-spacing:.5px}
-      .tt-grid{display:flex;flex-direction:column;gap:8px}
-      .tt-item{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#16171c,#101116);
+      .dco-sheet{position:fixed;inset:0;z-index:99997;display:flex;align-items:flex-end;justify-content:center}
+      .dco-sheet .dim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+      .dco-card{position:relative;width:100%;max-width:480px;max-height:82vh;overflow:auto;background:#14151a;
+        border-radius:20px 20px 0 0;padding:16px 14px max(14px,env(safe-area-inset-bottom));animation:dcoUp .24s ease}
+      @keyframes dcoUp{from{transform:translateY(100%)}}
+      .dco-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+      .dco-title{font-weight:900;font-size:17px;color:#f5f5f2}
+      .dco-bal{font-weight:900;color:#c9d1e0;font-size:14px}
+      .dco-tabs{display:flex;gap:6px;margin-bottom:10px}
+      .dco-tab{flex:1;border:none;background:rgba(255,255,255,.05);color:#c9d1e0;font-weight:800;font-size:13px;padding:9px 0;border-radius:10px;cursor:pointer}
+      .dco-tab.on{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
+      .dco-note{color:#8a8f9a;font-size:12px;margin:-2px 0 12px;line-height:1.5}
+      .dco-sub{font-size:11px;font-weight:900;color:#8b8b93;margin:10px 2px 6px;letter-spacing:.5px}
+      .dco-grid{display:flex;flex-direction:column;gap:8px}
+      .dco-item{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#16171c,#101116);
         border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px}
-      .tt-item.eq{border-color:rgba(201,209,224,.5);box-shadow:0 0 14px rgba(201,209,224,.15)}
-      .tt-item.locked{opacity:.55}
-      .tt-name{flex:1;font-weight:800;color:#f0f0f2;font-size:15px}
-      .tt-btn{flex:0 0 auto;border:none;border-radius:10px;padding:9px 14px;font-weight:900;font-size:13px;cursor:pointer}
-      .tt-btn.buy{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
-      .tt-btn.buy.no{background:#2a2d36;color:#6c7280}
-      .tt-btn.equip{background:rgba(201,209,224,.16);color:#c9d1e0;border:1px solid rgba(201,209,224,.4)}
-      .tt-btn.on{background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b}
-      .tt-lock{flex:0 0 auto;font-size:11px;font-weight:800;color:#8b8b93}
-      .tt-preview{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      .dco-item.eq{border-color:rgba(201,209,224,.5);box-shadow:0 0 14px rgba(201,209,224,.15)}
+      .dco-item.locked{opacity:.55}
+      .dco-name{flex:1;font-weight:800;color:#f0f0f2;font-size:15px}
+      .dco-btn{flex:0 0 auto;border:none;border-radius:10px;padding:9px 14px;font-weight:900;font-size:13px;cursor:pointer}
+      .dco-btn.buy{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
+      .dco-btn.buy.no{background:#2a2d36;color:#6c7280}
+      .dco-btn.equip{background:rgba(201,209,224,.16);color:#c9d1e0;border:1px solid rgba(201,209,224,.4)}
+      .dco-btn.on{background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b}
+      .dco-lock{flex:0 0 auto;font-size:11px;font-weight:800;color:#8b8b93}
+      .dco-preview{display:flex;align-items:center;justify-content:space-between;gap:10px;
         padding:13px 14px;border-radius:14px;margin-bottom:2px;
         background:rgba(106,123,255,.07);border:1px solid rgba(106,123,255,.2);
         color:#8a90a3;font-size:12px;font-weight:800}
-      .tt-preview-nick{font-size:17px;font-weight:900;color:#fff}
-      .tt-fprev{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
+      .dco-preview-nick{font-size:17px;font-weight:900;color:#fff}
+      .dco-fprev{flex:0 0 auto;width:26px;height:26px;border-radius:50%;
         background:linear-gradient(135deg,#2a2d36,#1a1c22);border:1px solid rgba(255,255,255,.1)}
-      .tt-bal-gc{color:#f2c14e;margin-left:6px;padding-left:6px;border-left:1px solid rgba(255,255,255,.18)}
-      .tt-bysub{font-style:normal;font-size:10px;font-weight:900;color:#a78bfa;
+      .dco-bal-gc{color:#f2c14e;margin-left:6px;padding-left:6px;border-left:1px solid rgba(255,255,255,.18)}
+      .dco-bysub{font-style:normal;font-size:10px;font-weight:900;color:#a78bfa;
         background:rgba(167,139,250,.14);border-radius:5px;padding:2px 5px;margin-left:5px;vertical-align:middle}
-      .tt-close{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
+      .dco-close{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
     `;
     document.head.appendChild(s);
   }
@@ -88,32 +91,32 @@
     render();
   }
 
-  const eqBtn = (isEq) => isEq ? `<button class="tt-btn on" disabled>✓ 사용 중</button>` : "";
+  const eqBtn = (isEq) => isEq ? `<button class="dco-btn on" disabled>✓ 사용 중</button>` : "";
   function tierRow(t) {
     const isEq = t.name === equipT;
     const label = `<span class="nick-title" style="font-size:13px">${t.name}</span>`;
     let right;
-    if (isEq) right = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
-    else if (t.unlocked) right = `<button class="tt-btn equip" data-tier="${t.key}">선택</button>`;
-    else right = `<span class="tt-lock">🔒 ${t.min.toLocaleString()} GI 필요</span>`;
-    return `<div class="tt-item${isEq ? " eq" : ""}${t.unlocked ? "" : " locked"}"><span class="tt-name">${label}</span>${right}</div>`;
+    if (isEq) right = `<button class="dco-btn on" disabled>✓ 사용 중</button>`;
+    else if (t.unlocked) right = `<button class="dco-btn equip" data-tier="${t.key}">선택</button>`;
+    else right = `<span class="dco-lock">🔒 ${t.min.toLocaleString()} GI 필요</span>`;
+    return `<div class="dco-item${isEq ? " eq" : ""}${t.unlocked ? "" : " locked"}"><span class="dco-name">${label}</span>${right}</div>`;
   }
   function awardRow(a) {
     const isEq = a.name === equipT;
     const label = `<span class="nick-title" style="font-size:13px">${a.name}</span>`;
-    const right = isEq ? `<button class="tt-btn on" disabled>✓ 사용 중</button>` : `<button class="tt-btn equip" data-award="${a.key}">선택</button>`;
-    return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">🏆 ${label}</span>${right}</div>`;
+    const right = isEq ? `<button class="dco-btn on" disabled>✓ 사용 중</button>` : `<button class="dco-btn equip" data-award="${a.key}">선택</button>`;
+    return `<div class="dco-item${isEq ? " eq" : ""}"><span class="dco-name">🏆 ${label}</span>${right}</div>`;
   }
   function styleRow(t) {
     const isEq = (t.k === "none" && (!equipS || equipS === "none")) || (t.k === equipS && t.k !== "none");
     const own = t.p === 0 || ownedS.has(t.k);
     const cls = t.k === "none" ? "" : (t.k === "gold" ? "nick-gold" : "ns-" + t.k);
-    const label = `<span class="tt-name ${cls}" style="flex:0 0 auto;font-size:16px">${t.n}</span>`;
+    const label = `<span class="dco-name ${cls}" style="flex:0 0 auto;font-size:16px">${t.n}</span>`;
     let btn;
-    if (isEq) btn = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
-    else if (own) btn = `<button class="tt-btn equip" data-style="${t.k}">선택</button>`;
-    else btn = `<button class="tt-btn buy${bal >= t.p ? "" : " no"}" data-buystyle="${t.k}" ${bal >= t.p ? "" : "disabled"}>${t.p.toLocaleString()} GP</button>`;
-    return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">${label}</span>${btn}</div>`;
+    if (isEq) btn = `<button class="dco-btn on" disabled>✓ 사용 중</button>`;
+    else if (own) btn = `<button class="dco-btn equip" data-style="${t.k}">선택</button>`;
+    else btn = `<button class="dco-btn buy${bal >= t.p ? "" : " no"}" data-buystyle="${t.k}" ${bal >= t.p ? "" : "disabled"}>${t.p.toLocaleString()} GP</button>`;
+    return `<div class="dco-item${isEq ? " eq" : ""}"><span class="dco-name">${label}</span>${btn}</div>`;
   }
 
   /* 프레임 한 줄 — 미리보기 원 + 구매(GC)/선택.
@@ -122,25 +125,25 @@
     const isEq = (f.k === "none" && (!equipF || equipF === "none")) || (f.k === equipF && f.k !== "none");
     const own = f.p === 0 || ownedF.has(f.k);
     const usable = own || frameBySub;
-    const prev = `<span class="tt-fprev ${f.k === "none" ? "" : "pf-frame pf-" + f.k}"></span>`;
+    const prev = `<span class="dco-fprev ${f.k === "none" ? "" : "pf-frame pf-" + f.k}"></span>`;
     let btn;
-    if (isEq) btn = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
-    else if (usable) btn = `<button class="tt-btn equip" data-frame="${f.k}">선택</button>`;
-    else btn = `<button class="tt-btn buy${gcBal >= f.p ? "" : " no"}" data-buyframe="${f.k}" ${gcBal >= f.p ? "" : "disabled"}>${f.p.toLocaleString()} GC</button>`;
-    const sub = (!own && frameBySub && f.p > 0) ? ` <i class="tt-bysub">이용권</i>` : "";
-    return `<div class="tt-item${isEq ? " eq" : ""}">${prev}<span class="tt-name">${f.n}${sub}</span>${btn}</div>`;
+    if (isEq) btn = `<button class="dco-btn on" disabled>✓ 사용 중</button>`;
+    else if (usable) btn = `<button class="dco-btn equip" data-frame="${f.k}">선택</button>`;
+    else btn = `<button class="dco-btn buy${gcBal >= f.p ? "" : " no"}" data-buyframe="${f.k}" ${gcBal >= f.p ? "" : "disabled"}>${f.p.toLocaleString()} GC</button>`;
+    const sub = (!own && frameBySub && f.p > 0) ? ` <i class="dco-bysub">이용권</i>` : "";
+    return `<div class="dco-item${isEq ? " eq" : ""}">${prev}<span class="dco-name">${f.n}${sub}</span>${btn}</div>`;
   }
 
   function render() {
-    sheet.querySelector("#tt-bal").innerHTML =
-      `${bal.toLocaleString()} GP <span class="tt-bal-gc">${gcBal.toLocaleString()} GC</span>`;
-    const note = sheet.querySelector("#tt-note");
-    const grid = sheet.querySelector("#tt-grid");
-    const tabs = sheet.querySelector("#tt-tabs");
+    sheet.querySelector("#dco-bal").innerHTML =
+      `${bal.toLocaleString()} GP <span class="dco-bal-gc">${gcBal.toLocaleString()} GC</span>`;
+    const note = sheet.querySelector("#dco-note");
+    const grid = sheet.querySelector("#dco-grid");
+    const tabs = sheet.querySelector("#dco-tabs");
     if (tabs) {
       tabs.innerHTML =
-        `<button class="tt-tab${tab === "style" ? " on" : ""}" data-tab="style" type="button">✨ 닉네임</button>` +
-        `<button class="tt-tab${tab === "frame" ? " on" : ""}" data-tab="frame" type="button">🖼 프레임</button>`;
+        `<button class="dco-tab${tab === "style" ? " on" : ""}" data-tab="style" type="button">✨ 닉네임</button>` +
+        `<button class="dco-tab${tab === "frame" ? " on" : ""}" data-tab="frame" type="button">🖼 프레임</button>`;
       tabs.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
     }
     if (tab === "frame") {
@@ -156,15 +159,15 @@
     if (false) {
       note.innerHTML = `칭호는 <b style="color:#c9d1e0">활동·등급·시즌으로만 획득</b>돼요 (구매 불가) · 내 갈라 지수 <b>${gi.toLocaleString()} GI</b>`;
       grid.innerHTML =
-        `<div class="tt-sub">🏅 등급 칭호</div>` + tiers.map(tierRow).join("") +
-        (awards.length ? `<div class="tt-sub">🏆 시즌·업적 칭호</div>` + awards.map(awardRow).join("") : "") +
-        `<div class="tt-item" style="opacity:.6"><span class="tt-name none"><span style="color:#8a8f9a;font-weight:700">칭호 없음</span></span>${equipT ? `<button class="tt-btn equip" data-tier="none">해제</button>` : `<button class="tt-btn on" disabled>기본</button>`}</div>`;
+        `<div class="dco-sub">🏅 등급 칭호</div>` + tiers.map(tierRow).join("") +
+        (awards.length ? `<div class="dco-sub">🏆 시즌·업적 칭호</div>` + awards.map(awardRow).join("") : "") +
+        `<div class="dco-item" style="opacity:.6"><span class="dco-name none"><span style="color:#8a8f9a;font-weight:700">칭호 없음</span></span>${equipT ? `<button class="dco-btn equip" data-tier="none">해제</button>` : `<button class="dco-btn on" disabled>기본</button>`}</div>`;
     } else {
       note.innerHTML = `닉네임 색/이펙트 — 순수 꾸밈이라 구매할 수 있어요`;
       const curCls = (equipS && equipS !== "none") ? (equipS === "gold" ? "nick-gold" : "ns-" + equipS) : "";
       grid.innerHTML =
-        `<div class="tt-preview">내 닉네임 미리보기
-           <b class="tt-preview-nick ${curCls}">${myNick}</b></div>` +
+        `<div class="dco-preview">내 닉네임 미리보기
+           <b class="dco-preview-nick ${curCls}">${myNick}</b></div>` +
         STYLES.map(styleRow).join("");
     }
     wire(grid);
@@ -210,9 +213,9 @@
 
   let ttT = null;
   function ttToast(msg) {
-    let el = document.getElementById("tt-toast");
+    let el = document.getElementById("dco-toast");
     if (!el) {
-      el = document.createElement("div"); el.id = "tt-toast";
+      el = document.createElement("div"); el.id = "dco-toast";
       el.style.cssText = "position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%);" +
         "z-index:99999;padding:10px 16px;border-radius:999px;background:#173a22;border:1px solid #2fd07a55;color:#8ff0b4;" +
         "font-size:12.5px;font-weight:800;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none";
@@ -227,17 +230,17 @@
     const { data: s } = await sb().auth.getSession();
     if (!s?.session) { (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
     css();
-    document.getElementById("tt-sheet")?.remove();
-    sheet = document.createElement("div"); sheet.id = "tt-sheet"; sheet.className = "tt-sheet";
-    sheet.innerHTML = `<div class="dim"></div><div class="tt-card">
-      <div class="tt-head"><span class="tt-title">🎨 꾸미기</span><span class="tt-bal" id="tt-bal">– GP</span></div>
-      <div class="tt-tabs" id="tt-tabs"></div>
-      <div class="tt-note" id="tt-note"></div>
-      <div class="tt-grid" id="tt-grid"></div>
-      <button class="tt-close">닫기</button></div>`;
+    document.getElementById("dco-sheet")?.remove();
+    sheet = document.createElement("div"); sheet.id = "dco-sheet"; sheet.className = "dco-sheet";
+    sheet.innerHTML = `<div class="dim"></div><div class="dco-card">
+      <div class="dco-head"><span class="dco-title">🎨 꾸미기</span><span class="dco-bal" id="dco-bal">– GP</span></div>
+      <div class="dco-tabs" id="dco-tabs"></div>
+      <div class="dco-note" id="dco-note"></div>
+      <div class="dco-grid" id="dco-grid"></div>
+      <button class="dco-close">닫기</button></div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".dim").onclick = () => sheet.remove();
-    sheet.querySelector(".tt-close").onclick = () => sheet.remove();
+    sheet.querySelector(".dco-close").onclick = () => sheet.remove();
     await refresh();
   };
 })();
