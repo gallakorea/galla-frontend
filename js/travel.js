@@ -327,10 +327,20 @@
      띠(가로 밴드)로 만들었더니 '목록'처럼 읽혀서 고르는 층이라는 느낌이 약했다(사장님 지적).
      나라는 2:1 와이드 + 글자가 사진 **아래**, 지역은 1:1 + 글자가 사진 **위** —
      비율과 글자 위치 두 가지가 동시에 달라서 층이 헷갈리지 않는다. */
+  function cssUrl(u) {
+    return String(u || "").replace(/[()'"\\\s]/g, function (ch) {
+      return "%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0");
+    });
+  }
   function areaHTML(a) {
     return '<button type="button" class="tv-tile" data-area="' + esc(a.name) + '"' +
-      (a.cover ? ' style="background-image:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.78)),url(' +
-                 esc(a.cover).replace(/"/g, "%22") + ')"' : "") + ">" +
+      /* ⚠️ CSS url() 안에 URL 을 **따옴표 없이** 넣으면 괄호가 든 주소에서 첫 `)` 가 url( 을
+         닫아 버려 background-image 전체가 무효 → **백지 타일**이 된다.
+         실측 2026-09-10(앱): 베트남 「닌빈성」 커버 `…Tam Coc … (8888350545).jpg` 는 curl 로
+         200 image/jpeg 인데 타일은 빈칸. 위키미디어 파일명엔 괄호가 흔하다.
+         괄호·따옴표를 퍼센트 인코딩하고 작은따옴표로 감싼다(나라 카드는 <img src> 라 무관). */
+      (a.cover ? ' style="background-image:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.78)),url(&#39;' +
+                 esc(cssUrl(a.cover)) + '&#39;)"' : "") + ">" +
       '<span class="tv-tile-n">' + esc(a.name) + "</span>" +
       '<span class="tv-tile-s">' + a.spots + "곳" +
         (a.creators ? " · 크리에이터 " + a.creators + "명" : "") + "</span></button>";
