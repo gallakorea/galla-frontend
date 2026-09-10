@@ -5924,10 +5924,6 @@ ${parts.join("\n")}`;
         reply = "어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?";
     }
 
-    // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
-    settleCraft(reply, actions);
-    runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
-
     // ✂️ 후처리 — 위기 턴은 '입 막는 첫마디'부터 제거(모델이 뒤에서 정정해도 첫마디는 이미 상처다)
     // 위기뿐 아니라 자기비하·과의존 턴도 같은 처방이 필요하다(속마음을 꺼낸 순간이라는 점에서 같다).
     // ⚠️ 위기 턴에만 적용한다. 자기비하·과의존에서도 지웠더니 "그렇게 말하지 마, 너한테 너무 심한 말이야"
@@ -5985,6 +5981,14 @@ ${parts.join("\n")}`;
     /* 🔢 마지막 관문 — 번호 선택지를 줄로 편다. 중간 단계에 넣었더니 뒤따르는 정리 처리가
        줄바꿈을 다시 합쳐 버튼이 안 떴다(실측 2회). 응답 직전이 유일하게 안전한 자리. */
     reply = normalizeChoices(reply);
+
+    // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
+    /* ⚠️ 반드시 관문(enforceContract·normalizeChoices) **뒤**에서 부른다 — 스트림 경로(runPersist(sreply))와 같은 자리.
+       예전엔 관문 앞에서 불러 chat_log 에 날것(<ms>마음읽기</ms>·합치기 전 말풍선)이 저장됐고,
+       실시간 미러링(applyRemoteChat)이 '내 에코가 아니다'로 보고 화면을 그 날것으로 다시 그렸다
+       → 혼잣말 태그가 유저에게 노출되고, 방금 붙은 카드·칩도 재렌더에 지워졌다(2026-09-11 QA 9-2-7 실측). */
+    settleCraft(reply, actions);
+    runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages) } : {}),
                   ...(isRedteam ? { guards } : {}) });
