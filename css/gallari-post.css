@@ -128,6 +128,11 @@
   padding: 10px 16px; border-radius: 999px; cursor: pointer;
 }
 .glp-cbar button[disabled] { opacity: .5; }
+/* 앱(SPA 셸)엔 하단 탭바가 떠 있다(fixed: bottom 14px + safe-area, 높이 ~48px) — bottom:0 이면
+   탭바가 입력줄 가운데를 덮었다(2026-09-11 QA). plaza_detail 의 .comment-write 와 같은 높이로 띄운다.
+   웹(MPA) 문서엔 탭바가 없으므로 셸에서만. */
+body[data-page="spa"] .glp-cbar { bottom: calc(78px + env(safe-area-inset-bottom, 0)); padding-bottom: 10px; }
+body[data-page="spa"] .glp { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0)); }
 
 .glp-loading { text-align: center; color: #8b8b93; padding: 80px 20px; }
 
