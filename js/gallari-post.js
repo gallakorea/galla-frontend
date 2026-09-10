@@ -123,6 +123,13 @@
     // ---- kind별 조립 ----
     let body;
     const donationsHtml = '<div id="glp-donations" class="glp-donations"></div>';
+    /* 🔗 링크 카드 — 갈라에 파일이 없다. 원본으로 보내는 버튼이 이 글의 본체다.
+       앱에서 location.href 로 열면 웹뷰가 통째로 갈아타므로 GALLA_openLink 를 쓴다.
+       ⚠️ 두 갈래(롱판·숏판)가 다 쓰므로 if 밖에 둔다 — 롱판 블록 안에 있을 땐 숏판 상세가 전부
+       「linkHtml 없음」 ReferenceError 로 「불러오는 중…」에 멈췄다(0c40fb9a5 ~ 2026-09-11 QA). */
+    const linkHost = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '원본'; } };
+    const linkHtml = post.link_url
+      ? `<button type="button" class="glp-origin" id="glp-origin">🔗 원본 보기 <span>${esc(linkHost(post.link_url))}</span></button>` : '';
     if (post.kind === 'horizontal') {
       // 유튜브 watch식: 영상(상단 고정) → 제목 → 조회·시간 → 액션 → 크리에이터(팔로우) → 후원자 → 설명(접기) → 태그 → 댓글 → 다음 영상
       const metaRow = `<div class="glp-vmeta">조회 ${(post.view_count || 0).toLocaleString()}회 · ${timeago(post.created_at)}</div>`;
@@ -131,11 +138,6 @@
         <div class="glp-cr-info"><div class="glp-nick">${esc(author?.nickname || '익명')}</div><div class="glp-cr-sub">GALLA 크리에이터</div></div>
         ${me && post.user_id !== me ? `<button class="glp-follow-btn js-follow" data-uid="${esc(post.user_id)}">+ 팔로우</button>` : ''}
       </div>`;
-      /* 🔗 링크 카드 — 갈라에 파일이 없다. 원본으로 보내는 버튼이 이 글의 본체다.
-         앱에서 location.href 로 열면 웹뷰가 통째로 갈아타므로 GALLA_openLink 를 쓴다. */
-      const linkHost = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '원본'; } };
-      const linkHtml = post.link_url
-        ? `<button type="button" class="glp-origin" id="glp-origin">🔗 원본 보기 <span>${esc(linkHost(post.link_url))}</span></button>` : '';
       const descHtml = post.caption
         ? `<div class="glp-desc collapsed" id="glp-desc"><div class="glp-desc-body">${esc(post.caption)}</div><button type="button" class="glp-desc-more" id="glp-desc-more">…더보기</button></div>` : '';
       body = mediaHtml
