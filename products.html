@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0910050"><!-- 배포 도장 -->
+<meta name="galla-ver" content="0910080"><!-- 배포 도장 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>갈라캐시(GC) 안내 · 가격 - GALLA</title>
   <meta name="description" content="갈라(GALLA) 유료 재화 갈라캐시(GC)의 가격, 지급 방식, 사용처, 환불 정책 안내.">
@@ -156,25 +156,6 @@
 </div>
 
 <script src="./js/back.js?v=080412"></script>
-<script>
-  /* 🍎 anti-steering — 이 페이지는 웹 PG(포트원) 심사 요건으로 만든 원화 가격 안내다.
-     앱 안에서 외부 결제 가격·수단을 보여주면 거절 사유이므로, 앱이면 가격 구역을 감춘다.
-     설정 화면의 진입로도 감추지만(js/settings.js), 딥링크·뒤로가기로도 들어올 수 있어
-     페이지 자체에 한 겹 더 둔다. GALLA_isApp 은 js/supabase.js 가 정의한다. */
-  (function () {
-    try {
-      var isApp = (window.GALLA_isApp && window.GALLA_isApp())
-        || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
-        || /GallaApp/i.test(navigator.userAgent || "");
-      if (!isApp) return;
-      var web = document.getElementById("prWebPricing");
-      var app = document.getElementById("prAppNotice");
-      /* ⚠️ hidden 만으론 부족할 수 있다 — CSS 의 display 규칙이 이기면 그대로 보인다.
-         설정 항목에서 실제로 그랬다(.st-item{display:flex}). display 를 직접 지정한다. */
-      if (web) { web.hidden = true; web.style.display = "none"; }
-      if (app) { app.hidden = false; app.style.display = ""; }
-    } catch (_) {}
-  })();
-</script>
+<script src="./js/products-guard.js?v=0910080"></script>
 </body>
 </html>
