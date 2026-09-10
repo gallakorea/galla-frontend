@@ -1656,6 +1656,22 @@ body.dm-kb-anim .dm-panel { transition: height .25s cubic-bezier(.38,.7,.125,1);
 .dm-ptt:not([hidden]), .dm-stk:not([hidden]) { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; }
 /* 배경 테마 있는 방(dm-bg-host)에선 유리 뒤로 배경도 비침 */
 .dm-bg-host > .dm-inputbar { z-index: 8; }
+/* ⬇ 새 메시지 점프 — 위로 올려 읽는 중에 상대 메시지가 오면 입력바 바로 위 오른쪽에 뜬다(2026-09-11 QA 6-2-15).
+   예전엔 조용히 아래에 붙기만 해 새 메시지가 온 줄 몰랐다. 이모지 금지 원칙 → ICONS.down 라인 SVG. */
+.dm-jump:not([hidden]) {
+  position: absolute; right: 14px; z-index: 8;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 36px; padding: 0 12px 0 14px; border-radius: 18px;
+  background: rgba(38,41,52,.86); color: #e8ebff;
+  border: 1px solid rgba(140,165,255,.35);
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  font: 600 13px/1 inherit; cursor: pointer;
+}
+.dm-jump b { font-weight: 700; }
+.dm-jump b:empty { display: none; }
+.dm-jump svg { width: 16px; height: 16px; }
 
 /* 📐 폰 폭 압축 — 실기기(iOS WKWebView)에서 미지의 수평 시프트로 전송버튼이 잘리던 문제.
    버튼·간격을 줄여 어떤 시프트에도 물리적으로 잘릴 수 없게 ~28pt 여유 확보(사장님 재현 종결). */

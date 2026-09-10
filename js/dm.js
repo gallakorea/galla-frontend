@@ -822,6 +822,7 @@
             </span>
           </div>
           <div class="dm-msgs" id="dm-msgs"></div>
+          <button type="button" class="dm-jump" id="dm-jump" hidden aria-label="새 메시지로 이동"><b id="dm-jump-n"></b>${ICONS.down}</button>
           <div class="dm-reply-strip" id="dm-reply-strip" hidden>
             <span class="dm-reply-info"><b>답장</b> <span id="dm-reply-preview"></span></span>
             <button type="button" class="dm-reply-x" id="dm-reply-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -4248,6 +4249,7 @@
   }
   async function openThread(tid, peer, name) {
     curThread = tid; curPeer = peer;
+    hideJump();   // 다른 방에서 세던 새 메시지 개수를 들고 오지 않게
     paintSecretUI();
     curExpire = null; paintExpBanner();
     supabase.from('dm_threads').select('expire_secs').eq('id', tid).maybeSingle()
@@ -4555,8 +4557,32 @@
     wrap.insertAdjacentHTML('beforeend', bubbleHTML(m));
     wrap.lastElementChild?.classList.add('new');   // 새 메시지는 튀어 들어온다
     if (near || m.sender_id === ME) wrap.scrollTop = wrap.scrollHeight;
+    else bumpJump();   // ⬇ 위로 올려 읽는 중에 온 상대 메시지 — 예전엔 조용히 아래에 붙기만 했다(2026-09-11 QA 6-2-15)
     paintReceipts();
     if (m.kind === 'e2e') decryptPass();
+  }
+  /* ⬇ 새 메시지 점프 필 — 개수를 세다가 바닥 근처로 내려오거나 누르면 사라진다.
+     스크롤·클릭 리스너는 처음 필요할 때 한 번만 붙인다(#dm-msgs·#dm-jump 는 스레드 뷰에 고정된 요소). */
+  let JUMP_N = 0;
+  function hideJump() {
+    JUMP_N = 0;
+    const j = ROOT?.querySelector('#dm-jump'); if (!j) return;
+    j.hidden = true;
+    const n = j.querySelector('#dm-jump-n'); if (n) n.textContent = '';
+  }
+  function bumpJump() {
+    const j = ROOT.querySelector('#dm-jump'), wrap = ROOT.querySelector('#dm-msgs');
+    if (!j || !wrap) return;
+    if (!j.__bound) {
+      j.__bound = true;
+      j.addEventListener('click', () => { wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' }); hideJump(); });
+      wrap.addEventListener('scroll', () => {
+        if (!j.hidden && wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80) hideJump();
+      }, { passive: true });
+    }
+    JUMP_N += 1;
+    j.querySelector('#dm-jump-n').textContent = `새 메시지 ${JUMP_N > 99 ? '99+' : JUMP_N}`;
+    j.hidden = false;
   }
   /* 리스트 폭포 등장 — 행마다 28ms씩 시차 */
   function staggerRows(container, selector) {
