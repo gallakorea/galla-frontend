@@ -29,7 +29,7 @@
 | 대상 | 식별 | 비고 |
 |---|---|---|
 | QA 계정 이메일 원복 | `qa0909b2galla.test` → `qa0909b@galla.test` (`auth.users`·`auth.identities`) | 삭제 전에 원복할 필요는 없지만 기록상 남긴다 |
-| 공유 기록 | `share_events` id 31 (token 56734ba28527, 2-2-7) | |
+| 공유 기록 | `share_events` id **26–32** (qa0909b, 7행) — 26·27·30 issue 376, 28 trend, 29 link(`localhost:8788` 대상, 로컬 서버 QA), 31 post 66(2-2-7), 32 predict 402(5-9) | 계정 삭제로 따라 지워지는지(FK) 확인 후 남으면 직접 |
 | 마켓 북마크 | `market_bookmarks` (373, qa0909b) — 09-09 웹 QA 잔여 | 5-9 에서 새로 넣은 건 그 자리에서 원복 |
 | DM GIF 메시지 | qa0909 ↔ qa0909b 대화 | 계정과 함께 |
 | QA 계정 2개 | qa0909 `00000000-0000-4000-8000-000000000909` · qa0909b `865b6843-cd8d-4ba9-a7b5-d234bbbff2ec` | **FK no cascade** — `public.users`·`public.user_profiles` 먼저, 그다음 `auth.users` |
@@ -360,6 +360,7 @@
 | 5-6·5-9 | 상세에서 「팔로잉」 상태 표시, 「저장」 → `.pb-act.on` |
 | 5-10·5-11 | 「👍 예」 입장 선택 → 입력창이 「[예] 의견을 남기세요…」로 잠금 해제 → 게시 시 `market_comments` id 59 (`side=yes`, `outcome_id=678`) |
 | 5-13 | 「💰 참여 랭킹」 탭 전환됨. 빈 상태 문구 「아직 참여자가 없습니다.」(검증 베팅을 되돌려 0명인 게 맞다) |
+| 5-9 (iOS) | 마켓 402(애플 '아이폰 듀오', 보너스) 상세 하단 바. **저장**: 탭 → 「저장됨」(금색) + `market_bookmarks` (402, qa0909b) 17:34:49 생성 → 다시 탭 → 「저장」 + 행 삭제, 기존 373 행은 그대로(원복 완료). **공유**: 자체 시트 11종, 외부 대상은 안 누름. 「링크 복사」 → 클립보드 `https://galla.im/share/predict/402?ref=E46C24&s=a475234cb4ac`, `share_events` id 32(kind predict, token = 링크의 `s`). 쿼리 없는 `/share/predict/402` GET → 200, `og:title` 「🔮 애플 '아이폰 듀오' …」·`og:url` 일치·`twitter:card` summary_large_image(이미지는 마켓 이미지가 없어 기본 OG). **갈비스**: 아래 행에서. 베팅 UI(예/아니오·금액 칩·확정)는 건드리지 않았다 |
 | 5-14 (iOS) | ⛔ 정산 뱃지·연승 콤보는 **내 베팅이 정산된 뒤에만** 뜬다. QA 두 계정의 `predict_bets` **0건**이고, 이번 QA 는 베팅 금지 조건이라 정산 대상을 만들 수 없다. 백엔드(`predict_resolve`·`predict_streaks`)는 메모 「예측 파리뮤추얼 재설계」의 검증 기록 참고 — UI 는 운영자가 테스트 마켓을 열고 정산해 주면 확인 |
 | 5-8 | 프리셋은 **누적식**(칩을 더하는 방식) — 100→600→1,600→6,600. 의도된 설계로 판단 |
 
