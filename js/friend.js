@@ -59,6 +59,7 @@
         if(j&&j.ok&&Array.isArray(j.history)&&j.history.length){
           var d={ v:1, name:(j.friend_name||friendName), history:j.history.slice(-30), t:Date.now() };
           try{ localStorage.setItem(chatKey(u), JSON.stringify(d)); }catch(e){}   // 로컬 캐시 갱신
+          _srvSig=chatSig(j.history);   // 서버 chat_log 서명 — 다른 칸만 바뀐 실시간 이벤트를 걸러낸다(applyRemoteChat)
           return d;
         }
         // 서버에 로그 없음(첫 사용/구계정) → 로컬에 있으면 그걸로(다음 턴에 서버로 올라감)
@@ -69,7 +70,11 @@
 
   // 🔄 실시간 미러링 — 다른 기기서 대화가 이어지면(친구 답 포함) 켜져있는 이 기기에도 즉시 반영.
   //    Supabase realtime으로 내 friend_relationship.chat_log 변경 구독(RLS로 본인 행만 수신).
-  var _syncChan=null, _lastSig="";
+  /* ⚠️ _srvSig — 이 행의 UPDATE 는 chat_log 가 안 바뀌어도 온다(pending_ping·감정·기억 칸 등). 예전엔 그걸 전부
+     '원격 대화'로 받아, 내 화면에만 있는 말(방금 받은 선톡)과 다르다고 로그를 통째로 다시 그렸다 → 선톡을 받는
+     consume_ping 자신의 UPDATE 가 되돌아와 **방금 띄운 선톡·구분선을 지웠다**(2026-09-10 QA). chat_log 서명이
+     마지막으로 본 서버 것과 같으면 다른 칸 변경이므로 무시한다. */
+  var _syncChan=null, _lastSig="", _srvSig="";
   function chatSig(log){                 // 마지막 유저·친구 발화 내용으로 시그니처(길이 무관 — 에코 오탐 방지)
     if(!log||!log.length) return "0";
     var a=log[log.length-1]||{}, b=log[log.length-2]||{};
@@ -90,6 +95,8 @@
       if(!Array.isArray(remoteLog)||!remoteLog.length) return;
       if(busy) return;                                     // 이 기기가 전송 중 = 곧 내 것으로 정리됨(에코)
       var sig=chatSig(remoteLog);
+      if(sig===_srvSig) return;                            // 서버 chat_log 그대로 = 다른 칸만 바뀐 UPDATE(선톡 수령 등) → 무시
+      _srvSig=sig;
       if(sig===chatSig(history)){ _lastSig=sig; return; }   // 내가 이미 가진 것과 동일(내 에코) → 무시
       if(sig===_lastSig) return;
       _lastSig=sig;
