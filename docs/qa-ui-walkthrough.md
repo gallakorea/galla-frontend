@@ -416,7 +416,7 @@
 ### 6-1. 목록 화면
 | # | 요소 | 기대 동작 | 웹 | iOS | AOS | 메모 |
 |---|---|---|---|---|---|---|
-| 6-1-1 | `+` 글작성 | 글쓰기 허브 | ⬜ | ✅ | ⬜ | **앱(2026-09-11)**: DM 헤더 `+` → 「새로 만들기 · 무엇을 만들까요?」 허브(가이드: 갈라 발제·예측 마켓·광장 글·제보하기 / 카드: 갈비스랑 만들기 곧 열려요·갈라 발제 곧 열려요·숏판·롱판) — 게시는 안 함. **곁가지 결함·수정**: 허브의 「‹」가 DM 이 아니라 **홈으로 떨어짐**(DM 탭 → ＋ → ‹, 2회 재현). 웹 SPA(`app#/create`) DOM 실측: `.cr-back` 1개 = create.html 원본 버튼, 인라인 `onclick`(same-origin referrer 면 back(), 아니면 `location.href='index.html'`) 그대로 → 앱은 referrer 가 없어 홈행. 어댑터 `ensureHead` 는 `.cr-head` 가 있으면 그냥 return 해 pop 핸들러가 안 붙었다. 수정: `js/spa/views/create.js` 가 원본 「‹」의 인라인을 떼고 스택 pop 을 붙인다(MPA create.html 은 불변). 같은 인라인 패턴은 create.html 1곳뿐(shorts.html 의 `history.back()` 은 SPA popstate 로 정상). 도장 0910360 |
+| 6-1-1 | `+` 글작성 | 글쓰기 허브 | ⬜ | ✅ | ⬜ | **앱(2026-09-11)**: DM 헤더 `+` → 「새로 만들기 · 무엇을 만들까요?」 허브(가이드: 갈라 발제·예측 마켓·광장 글·제보하기 / 카드: 갈비스랑 만들기 곧 열려요·갈라 발제 곧 열려요·숏판·롱판) — 게시는 안 함. **곁가지 결함·수정**: 허브의 「‹」가 DM 이 아니라 **홈으로 떨어짐**(DM 탭 → ＋ → ‹, 2회 재현). 웹 SPA(`app#/create`) DOM 실측: `.cr-back` 1개 = create.html 원본 버튼, 인라인 `onclick`(same-origin referrer 면 back(), 아니면 `location.href='index.html'`) 그대로 → 앱은 referrer 가 없어 홈행. 어댑터 `ensureHead` 는 `.cr-head` 가 있으면 그냥 return 해 pop 핸들러가 안 붙었다. 수정: `js/spa/views/create.js` 가 원본 「‹」의 인라인을 떼고 스택 pop 을 붙인다(MPA create.html 은 불변). 같은 인라인 패턴은 create.html 1곳뿐(shorts.html 의 `history.back()` 은 SPA popstate 로 정상). 도장 0910360. **재검증(시뮬 웹 레이어 0910360 교체 → 앱 PID 종료 → 아이콘 콜드스타트)**: DM 탭 → ＋ → 「새로 만들기」 → ‹ = **DM 목록으로 복귀** ✅ |
 | 6-1-2 | 로고 | 홈으로 | ⬜ | ⬜ | ⬜ | |
 | 6-1-3 | 설정 | DM 설정 | 🔶 | ✅ | ⬜ | 「메시지 설정」 버튼은 눌리는데 설정 시트가 화면에 안 나타났다 — 재확인 필요 |
 | 6-1-4 | 새 메시지 | 상대 고르기 → 방 생성 | ✅ | ✅ | ⬜ | `dm_search` RPC 로 「큐에이구공구」 검색 → 방 생성 |
