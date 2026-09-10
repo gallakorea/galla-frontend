@@ -10,6 +10,7 @@
    키: SHOTSTACK_API_KEY(필수), SHOTSTACK_ENV(stage=무료·워터마크 / v1=유료·무워터마크, 기본 stage). */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
+import { logSpendUnits } from "../_shared/spend.ts";
 
 // 🎟 등급 게이트 — app_settings.ai_tiers 의 롤링 윈도우. 장애 시 통과(게이트가 서비스를 죽이면 안 된다).
 async function aiGate(subject: string, fn: string, n = 1): Promise<any> {
@@ -168,6 +169,11 @@ Deno.serve(async (req) => {
     if (!r.ok) return j({ error: "status_failed", detail: `http_${r.status}` }, 502);
     const status = d?.response?.status;
     if (status === "done") {
+      /* 💰 영상 렌더 원가 — 2026-09-10 까지 이 경로만 계측이 통째로 없었다.
+         GC 는 선차감하므로 수익은 잡히는데 원가가 안 잡혀 **마진을 알 수 없었다**.
+         Shotstack 단가는 아직 청구서로 확인 안 했으므로 0 으로 두고 건수만 남긴다 —
+         단가가 확정되면 과거 건수에 곱해 소급 계산된다(_shared/spend.ts 방침). */
+      logSpendUnits("generate-video", "shotstack", me, 1, 0);
       try {
         const url = await copyToR2(d.response.url, me);
         try { await sb.from("my_thumbnails").insert({ user_id: me, url, kind: "video" }); } catch (_) {}

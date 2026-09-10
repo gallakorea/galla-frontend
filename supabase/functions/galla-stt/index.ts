@@ -25,7 +25,7 @@ function toB64(bytes: Uint8Array): string {
 }
 // Cloudflare Workers AI whisper — base64 오디오 → 텍스트(+단어 타임스탬프). 실패 시 null(→OpenAI 폴백).
 type SttWord = { w: string; s: number; e: number };
-async function cfWhisper(bytes: Uint8Array): Promise<{ text: string; words: SttWord[] } | null> {
+async function cfWhisper(bytes: Uint8Array, uid: string | null): Promise<{ text: string; words: SttWord[] } | null> {
   if (!CF_AI_TOKEN || !CF_ACCOUNT) return null;
   try {
     const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${CF_STT_MODEL}`, {
@@ -36,7 +36,7 @@ async function cfWhisper(bytes: Uint8Array): Promise<{ text: string; words: SttW
     const d = await r.json().catch(() => null);
     /* 💰 CF 음성인식 — 단가를 아직 안 재봐서 0 으로 두고 '몇 번 돌았나'만 남긴다.
        청구서가 오면 이 0 을 초당·건당 단가로 바꾸면 과거 건수에 곱해 소급 계산된다. */
-    if (r.ok) logSpendUnits("galla-stt", CF_STT_MODEL, null, 1, 0);
+    if (r.ok) logSpendUnits("galla-stt", CF_STT_MODEL, uid, 1, 0);
     const text = d?.result?.text;
     if (!r.ok || text == null) { console.error("[stt] cf", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
     // 🎬 릴스 자막 정렬용 — 모델에 따라 result.words 또는 segments[].words에 단어 타임스탬프가 있다.
@@ -75,6 +75,9 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization") || "";
     const { data: u } = await supa.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
     if (!u || !u.user) return json({ ok: false, reason: "auth" }, 401);
+    /* 💰 원가는 '누가 썼는지'까지 적어야 개인 예산(model_for)에서 깎인다.
+       uid 를 null 로 두면 플랫폼 비용으로 잡혀 예산 가드가 이 사람을 못 막는다. */
+    const uid = u.user.id;
 
     if (!(await aiBudgetOk("galla-stt"))) return json({ ok: false, reason: "daily_cap" }, 429);
 
@@ -87,7 +90,7 @@ Deno.serve(async (req) => {
     const wantWords = (req.headers.get("x-stt-words") || "") === "1";
 
     // 1순위: Cloudflare Workers AI whisper(near-free). 실패 시 OpenAI 폴백.
-    const cf = await cfWhisper(new Uint8Array(buf));
+    const cf = await cfWhisper(new Uint8Array(buf), uid);
     if (cf != null && (!wantWords || cf.words.length)) {
       return json({ ok: true, text: cf.text, ...(wantWords ? { words: cf.words } : {}), via: "cf" });
     }
@@ -103,6 +106,10 @@ Deno.serve(async (req) => {
       body: form,
     });
     if (!r.ok) return json({ ok: false, reason: "stt_" + r.status, detail: (await r.text()).slice(0, 200) }, 200);
+    /* 💰 OpenAI whisper 폴백 — CF 보다 훨씬 비싼데 2026-09-10 까지 아무 데도 안 적혔다.
+       whisper-1 은 분당 $0.006. 길이를 모르므로 건당 1분으로 보수적으로 잡는다
+       (짧게 잡아 과소계상하면 예산 가드가 늦게 걸린다). */
+    logSpendUnits("galla-stt", STT_MODEL, uid, 1, 0.006);
     const j = await r.json();
     const oaWords = wantWords && Array.isArray(j?.words)
       ? j.words.map((w: any) => ({ w: String(w?.word || "").trim(), s: Number(w?.start), e: Number(w?.end) })).filter((w: any) => w.w && isFinite(w.s) && isFinite(w.e))
