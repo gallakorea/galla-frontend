@@ -1043,8 +1043,13 @@
       try {
         window.supabaseClient.auth.onAuthStateChange(function (ev, sess) {
           if (ev !== "SIGNED_IN" || !sess) return;
+          /* ⚠️ supabase-js v2 의 rpc() 는 **게으른 빌더**다 — await 하거나 .then() 을 붙여야
+             요청이 나간다. 예전엔 결과를 안 쓴다고 호출만 해 뒀더니 **요청 자체가 한 번도 안 나갔다**
+             (실측 2026-09-10: 같은 모양으로 호출 → /rpc/log_login 요청 0건, .then() 붙이면 1건.
+              login_logs 는 전 유저 합쳐 1행, 마지막 기록 08-30 — 11일간 로그인 기록 0).
+             결과는 안 쓰지만 .then() 은 반드시 붙인다. */
           try {
-            window.supabaseClient.rpc("log_login", { p_ua: navigator.userAgent });
+            window.supabaseClient.rpc("log_login", { p_ua: navigator.userAgent }).then(function () {}, function () {});
           } catch (e) {}
         });
       } catch (e) {}
