@@ -31,6 +31,7 @@
 | QA 계정 이메일 원복 | `qa0909b2galla.test` → `qa0909b@galla.test` (`auth.users`·`auth.identities`) | 삭제 전에 원복할 필요는 없지만 기록상 남긴다 |
 | 공유 기록 | `share_events` id **26–33** (qa0909b, 8행) — 26·27·30 issue 376, 28 trend, 29 link(`localhost:8788` 대상, 로컬 서버 QA), 31 post 66(2-2-7), 32 predict 402(5-9), 33 trend(7-1-6) | 계정 삭제로 따라 지워지는지(FK) 확인 후 남으면 직접 |
 | 마켓 북마크 | `market_bookmarks` (373, qa0909b) — 09-09 웹 QA 잔여 | 5-9 에서 새로 넣은 건 그 자리에서 원복 |
+| 뉴스 북마크·반응 | `galla_news_bookmarks` (a3965640…, qa0909b, 09-09 13:57:58) · `galla_news_reactions` (a3965640…, value −1, 09-09 13:57:55) — 09-09 웹 QA 잔여(「이재명 대통령, 프랑스 하원의장 면담」) | 7-3-2 에서 새로 넣는 건 그 자리에서 원복 |
 | DM GIF 메시지 | qa0909 ↔ qa0909b 대화 | 계정과 함께 |
 | QA 계정 2개 | qa0909 `00000000-0000-4000-8000-000000000909` · qa0909b `865b6843-cd8d-4ba9-a7b5-d234bbbff2ec` | **FK no cascade** — `public.users`·`public.user_profiles` 먼저, 그다음 `auth.users` |
 | 이미 원복함 | follows 행(트리거 끄고 복원·알림 0) · 댓글 331 지원 2 · 뉴스 view_count 0 · `pending_ping` null · 이슈 387 오탭 투표(votes 1283·알림 1 삭제, pro 0·조회 1) | 참고용 |
