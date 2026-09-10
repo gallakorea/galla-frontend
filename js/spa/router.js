@@ -502,6 +502,11 @@
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href]");
     if (!a) return;
+    /* 링크 안에 든 버튼(광장 카드의 추천·저장·공유·갈비스)을 누르면 링크로 가지 않는다 —
+       이 가로채기가 먼저 등록돼 버튼 처리기보다 먼저 돌아서, 저장·공유를 누르면 그 일을 하면서
+       상세로도 넘어갔다(2026-09-11 QA 7-8-3). 전파는 막지 않는다 — 버튼 처리기는 그대로 돈다. */
+    const nb = e.target.closest("button, [role='button']");
+    if (nb && a.contains(nb)) { e.preventDefault(); return; }
     const href = a.getAttribute("href") || "";
     if (/^([a-z]+:)?\/\//i.test(href) || href.startsWith("#") || a.target === "_blank") return;
     const m = href.match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?(.*))?$/i);
