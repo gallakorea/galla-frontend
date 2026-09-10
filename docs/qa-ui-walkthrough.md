@@ -34,7 +34,7 @@
 | `dm_messages` 6-2-11 답장 1건(qa0909b 발신, `reply_to`=c9fd7c15) + `notifications` qa0909 `dm` 1건(id > 2724, 기준 5건) + `dm_threads` b30e7c45 `last_*` 원복 | thread b30e7c45 | 6-2-11 답장 시험용(앱에서 실제 전송). 원복값은 위 6-1-7 행과 같음. **✅ 정리 끝(2026-09-11)**: 메시지 3173b616·알림 2749 id 지정 삭제(DO 가드 각 n=1)·스레드 last_* 원복 → 메시지 3건, qa0909 알림 5건(기준값) |
 | `dm_thread_prefs` (qa0909b, thread b30e7c45) `pinned` + `dm_folders`·`dm_thread_folders` (qa0909b) | 6-1-6 고정·폴더 시험 | 기준값: `pinned=false`·`left_at=null`, 폴더 0건·스레드-폴더 0건. 시험 후 이 값으로 되돌린다. **✅ 정리 끝(2026-09-11)**: 고정은 앱에서 해제(pinned false), 시험 폴더 QAF(9418803a)·스레드-폴더 1행 DO 가드 삭제(각 n=1) → 폴더 0·스레드-폴더 0 |
 | `dm_threads` qa0909b ↔ 갈라(96bf8931) + 그 스레드의 `dm_thread_prefs` | 6-4-4 프로필 「메시지」 시험 | 기준값: 스레드 **0개**. 「메시지」가 `dm_thread_with` 로 새 스레드를 만들면 세고(n=1) 지운다. **✅ 정리 끝(2026-09-11)**: 새 스레드 37a5e8f1(메시지 0·prefs 0) DO 가드 삭제(n=1) → 0개 |
-| `dm_thread_prefs` (qa0909b, thread b30e7c45) `left_at` | 6-3-10 채팅방 나가기 시험 | 기준값: `pinned=false`·`left_at=null`. 「나가기」가 `left_at=now`·`pinned=false` 로 upsert(`js/dm.js:2130`) → 시험 뒤 `left_at` 을 null 로 되돌린다(가드: 그 스레드·그 유저 1행) |
+| `dm_thread_prefs` (qa0909b, thread b30e7c45) `left_at` | 6-3-10 채팅방 나가기 시험 | 기준값: `pinned=false`·`left_at=null`. 「나가기」가 `left_at=now`·`pinned=false` 로 upsert(`js/dm.js:2130`) → 시험 뒤 `left_at` 을 null 로 되돌린다(가드: 그 스레드·그 유저 1행). **✅ 정리 끝(2026-09-11)**: `left_at` 21:30:41.005 → null(DO 가드 n=1), pinned=false 그대로 |
 | `follows` qa0909b ↔ qa0909 | 6-4-7 팔로우 시험 | 기준값: 양방향 **0행**(follower/following 둘 다 없음). 시험 후 0행으로 되돌린다. **✅ 정리 끝(2026-09-11)**: 두 번 팔로우(id 78·79) 모두 앱 「언팔로우」로 해제 → 양방향 0행 |
 | R2 `images/865b6843…/<uuid>.*` (qa0909b) | 9-2-3 갈비스 🖼 첨부(시뮬 샘플 폭포 사진) | upload-media 가 올린 1개. R2 목록에서 prefix 로 세고 지운다 |
 | QA 계정 이메일 원복 | `qa0909b2galla.test` → `qa0909b@galla.test` (`auth.users`·`auth.identities`) | 삭제 전에 원복할 필요는 없지만 기록상 남긴다 |
@@ -465,7 +465,7 @@
 | 6-3-7 | 비밀대화(E2E) | 🔶 | 🔶 | ⬜ |
 | 6-3-8 | 알림 끄기 | ✅ | ✅ | ⬜ |
 | 6-3-9 | 신고 / 차단 | ✅ | 🔶 | ⬜ |
-| 6-3-10 | 채팅방 나가기 | ⬜ | ⬜ | ⬜ |
+| 6-3-10 | 채팅방 나가기 | ⬜ | ⬜ | ⬜ | **앱(2026-09-11) 진행 중**: 기준 `dm_thread_prefs`(qa0909b, b30e7c45) pinned=false·left_at=null. 채팅 목록 스레드 길게 누르기 → 「상단 고정 · 폴더로 옮기기 · 나가기(빨강)」 → 「나가기」 → 네이티브 확인창 「이 대화를 나갈까요? 목록에서 사라지고, 새 메시지가 오면 다시 나타납니다.」 + Cancel·Ok(`js/dm.js:2130` 문구와 일치) → Ok → 스레드가 목록에서 **즉시 사라지고** 빈 상태 「아직 대화가 없어요. 오른쪽 위 연필을 눌러 새 메시지를 시작하세요.」, DB `left_at` = 21:30:41.005·pinned=false |
 
 **웹 실측 (2026-09-09)** — 목록 탭 4종(채팅·친구·난장·삐삐), 「새 메시지」 → `#dm-search`
 → `dm_search` RPC 결과(`#dm-results`) → 방 생성 → 전송까지 통과(`dm_messages` 1행).
