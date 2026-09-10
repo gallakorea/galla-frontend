@@ -4063,6 +4063,10 @@
         <button type="button" data-new="1" class="pri">+ 새 폴더</button>
       </div></div>`;
     document.body.appendChild(dim);
+    /* ⚠️ .dm-pin-dim 은 opacity:0 에서 .on 으로 페이드인하는 전체화면 레이어(z 2000002)다(화면 잠금과 공용).
+       .on 을 안 붙이면 시트가 **안 보이는 채로 화면 전체를 덮어** 모든 터치를 삼키고, 가운데의 안 보이는
+       「폴더에서 빼기·+ 새 폴더」가 눌릴 수 있었다(2026-09-11 QA 6-1-6, iOS 시뮬 2회 재현). 화면 잠금(3109)과 같은 방식. */
+    void dim.getBoundingClientRect(); dim.classList.add('on');
     dim.onclick = async e => {
       if (e.target === dim) return dim.remove();
       const nw = e.target.closest('[data-new]');
