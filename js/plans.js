@@ -67,6 +67,36 @@
   }
   window.GALLA_planNext = function (tier) { return nextTier(tier, null); };
 
+  /* 📱 결제 채널 — 실수령이 달라 같은 등급도 한 달 예산이 다르다(ladder 가 채널별로 온다). */
+  function channel() {
+    if (!isNativeApp()) return "web";
+    try { if (window.Capacitor && Capacitor.getPlatform && Capacitor.getPlatform() === "android") return "android"; } catch (_) {}
+    return "ios";
+  }
+  /* 배수 표기 — 부풀리지 않게 내림한다. 10배 미만은 소수 한 자리(2.3배), 이상은 정수(33배). */
+  function xText(x) {
+    x = Number(x);
+    if (!(x > 0)) return "";
+    var v = x < 10 ? Math.floor(x * 10) / 10 : Math.floor(x);
+    return String(v).replace(/\.0$/, "") + "배";
+  }
+  /* ⏳ 클로드식 초기화 표기 — 'N시간 M분 후 초기화'. 문장 끝(돼요)은 쓰는 쪽이 붙인다. */
+  function untilText(iso) {
+    var t = new Date(iso);
+    if (isNaN(t)) return "";
+    var mins = Math.round((t - Date.now()) / 60000);
+    if (mins <= 0) return "곧 초기화";
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return (h ? h + "시간 " : "") + (m ? m + "분 " : "") + "후 초기화";
+  }
+  /* 조사 '로/으로' — 받침이 있으면 '으로'(찐친으로), 없거나 ㄹ이면 '로'(베프로). */
+  function ro(word) {
+    var c = String(word || "").charCodeAt(String(word || "").length - 1) - 0xAC00;
+    if (!(c >= 0 && c <= 11171)) return "로";
+    var j = c % 28;
+    return j === 0 || j === 8 ? "로" : "으로";
+  }
+
   /* 🛒 지금 실제로 살 수 있나 — 앱은 스토어에 상품이 떠 있어야, 웹은 결제가 연결돼 있어야.
      못 사는 등급을 '추천'하면 눌러도 안 되는 버튼으로 보내는 꼴이다. */
   function buyable(key) {
@@ -170,19 +200,22 @@
   }
 
   var OFFERS = {};
+  var LADDER = {};   // 등급별 '한 달 대화량 = 무료의 N배'(web/ios/android) — my_entitlement.ladder
+  var PLANS = {};    // 등급표(라벨) — 카드에서 '바로 아래 등급 대비' 를 쓰려고
 
   function planCard(key, plan, curTier, native, rec) {
     var cur = key === curTier;
     var feats = (plan.features || []).map(function (f) {
       return FEAT_LABEL[f] ? '<span class="gpl-f">' + esc(FEAT_LABEL[f]) + "</span>" : "";
     }).join("");
-    /* ⚠️ 화면에 보이는 숫자와 실제로 막는 숫자가 같아야 한다.
-       실제로 막는 건 5시간 창이다(ai_gate). 월 한도는 아무도 안 막으므로 보여주지 않는다 —
-       보이는 것과 겪는 것이 다른 게 제일 나쁘다. 조작만 월 한도가 진짜다(대화보다 23배 비싸서). */
-    var w = (plan.windows && plan.windows["galla-friend"]) || {};
-    var chatLine =
-      (w.n ? '<span class="gpl-f">대화 ' + w.n + "턴 / " + (w.hours || 5) + "시간</span>" : "") +
-      (plan.tool_turns ? '<span class="gpl-f">앱 조작 월 ' + plan.tool_turns + "턴</span>" : "");
+    /* 📈 클로드식(「Pro 대비 5배」) — 바로 아래 등급 대비 사용량 배수만 적는다. 턴 수는 적지 않는다:
+       대화 길이마다 원가가 달라 약속할 수 없고, 막는 건 예산이다(세션 창·한 달 예산 둘 다 % 로 '현재' 칸에 보인다).
+       배수는 서버 예산 계산식(_tier_month_budget_krw) 비율 그대로라 부풀림이 없다(내림 표기). */
+    var prev = ORDER[ORDER.indexOf(key) - 1];
+    var ch = channel();
+    var lx = prev && LADDER[key] && LADDER[prev] ? Number(LADDER[key][ch]) / Number(LADDER[prev][ch]) : 0;
+    var prevLabel = prev && PLANS[prev] ? (PLANS[prev].label || prev) : "";
+    var chatLine = lx > 1 && prevLabel ? '<span class="gpl-f">' + esc(prevLabel) + " 대비 약 " + xText(lx) + " 사용량</span>" : "";
     /* 💳 가격·결제 버튼
        · 웹: 우리 원화 정가.
        · 앱: **스토어가 준 표시가만** 쓴다. 우리가 ₩ 를 적으면 통화·세율·지역이 어긋나고
@@ -215,6 +248,8 @@
     try { (window.GALLA_subOffers ? window.GALLA_subOffers() : []).forEach(function (o) { OFFERS[o.tier] = o; }); }
     catch (_) {}
     var ent = await fetchEnt(true);
+    LADDER = (ent && ent.ladder) || {};
+    PLANS = (ent && ent.plans) || {};
 
     var body;
     if (!ent || ent.tier === "guest") {
@@ -233,17 +268,26 @@
       var bpct = bud && bud.pct != null ? Math.max(0, Math.min(100, Number(bud.pct))) : null;
       var over = !!(bud && bud.over) || reason === "budget";
       var near = !over && bpct != null && bpct >= 80;
+      var hit = !unlimited && remain === 0 && !over;          // 세션(5시간) 한도에 막힘
       var nxt = nextTier(ent.tier, plans);
-      var rec = (over || near || reason === "nudge") && buyable(nxt) ? nxt : null;
+      var rec = (over || near || hit || reason === "nudge" || reason === "limit") && buyable(nxt) ? nxt : null;
       var when = bud && bud.resets_on ? mdText(bud.resets_on) : "";
       var banner = "";
-      if (over || near) {
+      if (over || near || hit) {
         var nl = rec ? (plans[rec].label || rec) : "";
-        banner = '<div class="gpl-alert' + (over ? " over" : "") + '">' +
-          "<b>" + esc(over ? "이번 주기 대화량을 다 썼어요" : "이번 주기 대화량을 " + bpct + "% 썼어요") + "</b>" +
+        // ⬆️ 올리면 몇 배가 되는지 — 같은 채널끼리의 예산 비율(서버 계산식 그대로)
+        var ch = channel();
+        var upx = rec && LADDER[rec] && LADDER[ent.tier] ? Number(LADDER[rec][ch]) / Number(LADDER[ent.tier][ch]) : 0;
+        /* 클로드식 — 한도 도달 알림 + 올리면 몇 배 + 기다리면 언제. 조르지 않고 사실만. */
+        var title = over ? "한 달 사용량을 다 썼어요" : hit ? "세션 한도에 도달했어요" : "한 달 사용량의 " + bpct + "%를 썼어요";
+        var waitTxt = (over || near) ? (when ? when + "에 초기화돼요." : "")
+                                     : (ent.resets_at ? untilText(ent.resets_at) + "돼요." : "");
+        banner = '<div class="gpl-alert' + (over || hit ? " over" : "") + '">' +
+          "<b>" + esc(title) + "</b>" +
           "<span>" + esc(nl
-            ? "「" + nl + "」로 올리면 더 넉넉하게 이어갈 수 있어요." + (when ? " 기다리면 " + when + "에 새로 채워져요." : "")
-            : (when ? when + "에 새로 채워져요." : "곧 새로 채워져요.")) + "</span></div>";
+            ? "「" + nl + "」" + ro(nl) + " 올리면 사용량이 " + (upx > 1 ? "지금의 약 " + xText(upx) + "예요." : "더 넉넉해져요.") +
+              (waitTxt ? " 기다리면 " + waitTxt : "")
+            : (waitTxt || "곧 초기화돼요.")) + "</span></div>";
       }
       var known = ORDER.filter(function (k) { return plans[k]; });
       var extra = Object.keys(plans).filter(function (k) {
@@ -255,15 +299,15 @@
       body = banner +
         '<div class="gpl-now">' +
           '<div class="gpl-now-t">현재 <span class="gpl-badge">' + esc(ent.label || ent.tier) + "</span></div>" +
-          (unlimited ? '<div class="gpl-cnt">대화 제한 없음</div>'
-            : '<div class="gpl-cnt">남은 대화 ' + remain + "<span style=\"color:#7d8798;font-weight:600\"> / " + lim + "턴</span></div>" +
+          /* 📊 클로드식 — 턴 수 대신 '몇 % 썼고 언제 초기화되나'. 세션(5시간)과 한 달, 두 줄. */
+          (unlimited ? ""
+            : '<div class="gpl-bline"><span>현재 세션</span><b>' + pct + "% 사용</b></div>" +
               '<div class="gpl-bar' + (low ? " low" : "") + '"><i style="width:' + pct + '%"></i></div>' +
-              '<div class="gpl-sub">' + esc(ent.hours ? (ent.hours + "시간마다 새로 채워져요") : "") +
-              (ent.resets_at && remain === 0 ? " · " + esc(resetText(ent.resets_at)) : "") + "</div>") +
+              '<div class="gpl-sub">' + esc(used > 0 && ent.resets_at ? untilText(ent.resets_at) : (ent.hours || 5) + "시간 단위로 초기화돼요") + "</div>") +
           (bpct != null || over
-            ? '<div class="gpl-bline"><span>이번 주기 대화량</span><b>' + (over ? 100 : bpct) + "%</b></div>" +
+            ? '<div class="gpl-bline"><span>한 달 사용량</span><b>' + (over ? 100 : bpct) + "% 사용</b></div>" +
               '<div class="gpl-bar' + (over || near ? " low" : "") + '"><i style="width:' + (over ? 100 : bpct) + '%"></i></div>' +
-              (when ? '<div class="gpl-sub">' + esc(when) + "에 새로 채워져요</div>" : "")
+              (when ? '<div class="gpl-sub">' + esc(when) + " 초기화</div>" : "")
             : "") +
           (function () {
             var m = ent.month; if (!m) return "";
@@ -354,7 +398,7 @@
       if (localStorage.getItem(key)) return null;
       localStorage.setItem(key, "1");
     } catch (_) { return null; }
-    return { label: "대화량 " + Math.round(Number(bud.pct)) + "% 썼어요 · 등급 보기" };
+    return { label: "한 달 사용량 " + Math.round(Number(bud.pct)) + "% · 등급 보기" };
   };
 
   /* 🔢 잔여 대화 pill — 갈비스 헤더 등에 붙여 쓴다. 탭하면 이용권 시트. */
@@ -372,8 +416,11 @@
     var b = document.createElement("button");
     b.className = "gpl-pill" + (bover || bnear || remain <= Math.max(1, Math.round(lim * 0.2)) ? " low" : "");
     b.type = "button";
-    b.textContent = bover ? "💬 소진" : "💬 " + remain;
-    b.title = bover ? "이번 주기 대화량을 다 썼어요" : "남은 대화 " + remain + "턴";
+    // 클로드식 — 평소엔 세션 %, 끝이 가까우면 '몇 번 남음', 한 달이 80%를 넘으면 그걸 먼저.
+    var spct = Math.min(100, Math.round(used / Math.max(lim, 1) * 100));
+    var nearEnd = remain <= Math.max(1, Math.round(lim * 0.2));
+    b.textContent = bover ? "💬 소진" : nearEnd ? "💬 " + remain + "번 남음" : bnear ? "💬 한 달 " + Math.round(Number(bud.pct)) + "%" : "💬 " + spct + "%";
+    b.title = bover ? "한 달 사용량을 다 썼어요" : "현재 세션 " + spct + "% 사용";
     b.addEventListener("click", function (e) { e.stopPropagation(); window.GALLA_openPlans(bover ? { reason: "budget" } : null); });
     mount.appendChild(b);
     return b;

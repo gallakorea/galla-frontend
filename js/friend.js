@@ -1702,13 +1702,15 @@
       busy=false; sendEl.disabled=false; refreshPill(); return;
     }
     if(history.length>30) history=history.slice(-30);
-    // 💰 주기 대화량 소진 — 서버 칩('지금 더 얘기하기')을 '다음 등급 보기'로 바꾼다.
-    //    맨 위 등급(소울메이트)이면 올릴 데가 없으니 칩을 뺀다(답에 이미 '언제 채워지는지'가 있다).
-    if(r.gate && r.gate.reason==="budget" && r.actions){
+    // 💰 한도 도달(클로드식) — 서버 칩에 '왜 막혔나'를 실어 시트가 알맞은 안내·추천을 띄우게 한다.
+    //    · budget(한 달 사용량 소진): 칩을 '더 넉넉한 등급 보기'로. 맨 위(소울메이트)면 올릴 데가 없으니 뺀다.
+    //    · rate_limit(세션 5시간 한도): 칩은 그대로 두고 reason 만 싣는다(시트가 초기화 시각+다음 등급을 보여준다).
+    if(r.gate && (r.gate.reason==="budget" || r.gate.reason==="rate_limit") && r.actions){
       var upNext = window.GALLA_planNext ? window.GALLA_planNext(r.gate.tier) : null;
+      var why = r.gate.reason==="budget" ? "budget" : "limit";
       r.actions = r.actions
-        .filter(function(a){ return a.kind!=="plans" || !!upNext; })
-        .map(function(a){ return a.kind==="plans" ? { kind:"plans", label:"더 넉넉한 등급 보기", reason:"budget" } : a; });
+        .filter(function(a){ return a.kind!=="plans" || !!upNext || why==="limit"; })
+        .map(function(a){ return a.kind==="plans" ? { kind:"plans", label: why==="budget" ? "더 넉넉한 등급 보기" : (a.label || "지금 더 얘기하기"), reason: why } : a; });
     }
     // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
     var acts=r.actions||[];
