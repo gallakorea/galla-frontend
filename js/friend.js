@@ -1383,7 +1383,7 @@
         var pc = el('<button class="fr-chip"><span></span></button>');
         pc.querySelector("span").textContent = a.label || "갈비스 구독 보기";
         pc.addEventListener("click", function(){
-          if (window.GALLA_openPlans) window.GALLA_openPlans();
+          if (window.GALLA_openPlans) window.GALLA_openPlans({ reason: a.reason || "" });
         });
         wrap.appendChild(pc);
         return;
@@ -1702,6 +1702,14 @@
       busy=false; sendEl.disabled=false; refreshPill(); return;
     }
     if(history.length>30) history=history.slice(-30);
+    // 💰 주기 대화량 소진 — 서버 칩('지금 더 얘기하기')을 '다음 등급 보기'로 바꾼다.
+    //    맨 위 등급(소울메이트)이면 올릴 데가 없으니 칩을 뺀다(답에 이미 '언제 채워지는지'가 있다).
+    if(r.gate && r.gate.reason==="budget" && r.actions){
+      var upNext = window.GALLA_planNext ? window.GALLA_planNext(r.gate.tier) : null;
+      r.actions = r.actions
+        .filter(function(a){ return a.kind!=="plans" || !!upNext; })
+        .map(function(a){ return a.kind==="plans" ? { kind:"plans", label:"더 넉넉한 등급 보기", reason:"budget" } : a; });
+    }
     // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
     var acts=r.actions||[];
     acts.filter(function(a){return a.kind==="editdraft";}).forEach(function(a){ applyDraftEdit(a.fields); });
@@ -1712,6 +1720,10 @@
     acts.filter(function(a){return a.kind==="script";}).forEach(function(a){ renderScript(a.text); });
     acts.filter(function(a){return a.kind==="reelScript";}).forEach(function(a){ renderReelScript(a.text, a.place); });
     addActions(m, acts.filter(function(a){return ["editdraft","genThumbnail","genVideo","plan","titles","script","reelScript"].indexOf(a.kind)<0;}));
+    // 🔔 대화량 80% — 주기당 한 번, 칩 하나로만. 조건·중복 판단은 plans.js 가 한다.
+    if(!(r.gate && r.gate.ok===false) && window.GALLA_budgetNudge){
+      window.GALLA_budgetNudge().then(function(n){ if(n) addActions(m, [{ kind:"plans", label:n.label, reason:"nudge" }]); }).catch(function(){});
+    }
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈

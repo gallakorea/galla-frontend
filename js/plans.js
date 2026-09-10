@@ -50,6 +50,34 @@
   }
   function won(n) { return Number(n || 0).toLocaleString("ko-KR") + "원"; }
 
+  /* 📅 'YYYY-MM-DD' → '9월 30일'. Date 로 파싱하면 UTC 로 읽혀 하루 밀린다 — 글자로 자른다. */
+  function mdText(d) {
+    var p = String(d || "").slice(0, 10).split("-");
+    return p.length === 3 ? Number(p[1]) + "월 " + Number(p[2]) + "일" : "";
+  }
+
+  /* ⬆️ 바로 위 등급 — ORDER 순서. 맨 위(소울메이트)면 null. plans 를 주면 서버에 있는 등급만 고른다. */
+  function nextTier(cur, plans) {
+    var i = ORDER.indexOf(cur);
+    if (i < 0) return null;
+    for (var j = i + 1; j < ORDER.length; j++) {
+      if (!plans || plans[ORDER[j]]) return ORDER[j];
+    }
+    return null;
+  }
+  window.GALLA_planNext = function (tier) { return nextTier(tier, null); };
+
+  /* 🛒 지금 실제로 살 수 있나 — 앱은 스토어에 상품이 떠 있어야, 웹은 결제가 연결돼 있어야.
+     못 사는 등급을 '추천'하면 눌러도 안 되는 버튼으로 보내는 꼴이다. */
+  function buyable(key) {
+    if (!key) return false;
+    if (isNativeApp()) {
+      try { return (window.GALLA_subOffers ? window.GALLA_subOffers() : []).some(function (o) { return o.tier === key; }); }
+      catch (_) { return false; }
+    }
+    return !!window.GALLA_startCheckout;
+  }
+
   /* 리셋 시각은 '몇 시 몇 분'으로 — "잠시 후"처럼 뭉개면 유저가 언제 돌아올지 모른다. */
   function resetText(iso) {
     if (!iso) return "";
@@ -125,6 +153,15 @@
       ".gpl-go{display:block;width:100%;margin-top:11px;padding:12px;border:0;border-radius:12px;cursor:pointer;",
       "background:linear-gradient(135deg,#4361ff,#6d5bff);color:#fff;font-size:14.5px;font-weight:800}",
       ".gpl-note{font-size:12px;color:#7d8798;line-height:1.6;margin-top:12px;text-align:center}",
+      ".gpl-alert{border-radius:14px;padding:12px 14px;margin-bottom:12px;background:#1f1a12;border:1px solid #4a3a1c}",
+      ".gpl-alert b{display:block;font-size:14px;font-weight:800;color:#ffd08a;margin-bottom:3px}",
+      ".gpl-alert span{display:block;font-size:12.5px;color:#c7b9a0;line-height:1.55}",
+      ".gpl-alert.over{background:#241418;border-color:#5a2632}",
+      ".gpl-alert.over b{color:#ff9fac}",
+      ".gpl-bline{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:#8f98a8;margin-top:13px}",
+      ".gpl-bline b{font-size:13px;color:#f3f4f6;font-weight:800}",
+      ".gpl-card.rec{border-color:#7a5bfa;background:#161430}",
+      ".gpl-badge.rec{background:#3a2d6e;color:#cdbdff}",
       ".gpl-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;",
       "background:rgba(255,255,255,.08);color:#cfd6e4;font-size:11.5px;font-weight:700;border:0;cursor:pointer}",
       ".gpl-pill.low{background:rgba(255,120,90,.18);color:#ffb098}"
@@ -134,7 +171,7 @@
 
   var OFFERS = {};
 
-  function planCard(key, plan, curTier, native) {
+  function planCard(key, plan, curTier, native, rec) {
     var cur = key === curTier;
     var feats = (plan.features || []).map(function (f) {
       return FEAT_LABEL[f] ? '<span class="gpl-f">' + esc(FEAT_LABEL[f]) + "</span>" : "";
@@ -161,14 +198,16 @@
       : native
         ? (offer ? '<button class="gpl-go" data-buy="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "")
         : (plan.price ? '<button class="gpl-go" data-plan="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "");
-    return '<div class="gpl-card' + (cur ? " cur" : "") + '">' +
+    return '<div class="gpl-card' + (cur ? " cur" : "") + (rec ? " rec" : "") + '">' +
       '<div class="gpl-card-h"><span class="gpl-name">' + esc(plan.label || key) + "</span>" +
-      (cur ? '<span class="gpl-badge">이용 중</span>' : "") + price + "</div>" +
+      (cur ? '<span class="gpl-badge">이용 중</span>' : "") + (rec ? '<span class="gpl-badge rec">추천</span>' : "") + price + "</div>" +
       '<div class="gpl-pitch">' + esc(PITCH[key] || "") + "</div>" +
       '<div class="gpl-feats">' + chatLine + feats + "</div>" + cta + "</div>";
   }
 
-  window.GALLA_openPlans = async function () {
+  /* opts.reason — "budget"(주기 대화량 소진으로 막힘) · "nudge"(80% 안내). 클릭 이벤트가 들어와도 무시된다. */
+  window.GALLA_openPlans = async function (opts) {
+    var reason = opts && typeof opts.reason === "string" ? opts.reason : "";
     injectStyle();
     var native = isNativeApp();
     // 스토어가 준 상품·표시가를 tier 로 색인. 비어 있으면 결제 버튼을 안 띄운다.
@@ -189,14 +228,31 @@
       var pct = unlimited ? 0 : Math.min(100, Math.round(used / Math.max(lim, 1) * 100));
       var low = !unlimited && remain <= Math.max(1, Math.round(lim * 0.2));
       var plans = ent.plans || {};
+      /* 💰 이번 주기 대화량 — 서버가 실제로 막는 식(_ai_budget)과 같은 숫자다. 원가가 아니라 % 만 온다. */
+      var bud = ent.budget || null;
+      var bpct = bud && bud.pct != null ? Math.max(0, Math.min(100, Number(bud.pct))) : null;
+      var over = !!(bud && bud.over) || reason === "budget";
+      var near = !over && bpct != null && bpct >= 80;
+      var nxt = nextTier(ent.tier, plans);
+      var rec = (over || near || reason === "nudge") && buyable(nxt) ? nxt : null;
+      var when = bud && bud.resets_on ? mdText(bud.resets_on) : "";
+      var banner = "";
+      if (over || near) {
+        var nl = rec ? (plans[rec].label || rec) : "";
+        banner = '<div class="gpl-alert' + (over ? " over" : "") + '">' +
+          "<b>" + esc(over ? "이번 주기 대화량을 다 썼어요" : "이번 주기 대화량을 " + bpct + "% 썼어요") + "</b>" +
+          "<span>" + esc(nl
+            ? "「" + nl + "」로 올리면 더 넉넉하게 이어갈 수 있어요." + (when ? " 기다리면 " + when + "에 새로 채워져요." : "")
+            : (when ? when + "에 새로 채워져요." : "곧 새로 채워져요.")) + "</span></div>";
+      }
       var known = ORDER.filter(function (k) { return plans[k]; });
       var extra = Object.keys(plans).filter(function (k) {
         return k !== "guest" && ORDER.indexOf(k) < 0;
       });
       var cards = known.concat(extra)
-        .map(function (k) { return planCard(k, plans[k], ent.tier, native); }).join("");
+        .map(function (k) { return planCard(k, plans[k], ent.tier, native, k === rec); }).join("");
 
-      body =
+      body = banner +
         '<div class="gpl-now">' +
           '<div class="gpl-now-t">현재 <span class="gpl-badge">' + esc(ent.label || ent.tier) + "</span></div>" +
           (unlimited ? '<div class="gpl-cnt">대화 제한 없음</div>'
@@ -204,6 +260,11 @@
               '<div class="gpl-bar' + (low ? " low" : "") + '"><i style="width:' + pct + '%"></i></div>' +
               '<div class="gpl-sub">' + esc(ent.hours ? (ent.hours + "시간마다 새로 채워져요") : "") +
               (ent.resets_at && remain === 0 ? " · " + esc(resetText(ent.resets_at)) : "") + "</div>") +
+          (bpct != null || over
+            ? '<div class="gpl-bline"><span>이번 주기 대화량</span><b>' + (over ? 100 : bpct) + "%</b></div>" +
+              '<div class="gpl-bar' + (over || near ? " low" : "") + '"><i style="width:' + (over ? 100 : bpct) + '%"></i></div>' +
+              (when ? '<div class="gpl-sub">' + esc(when) + "에 새로 채워져요</div>" : "")
+            : "") +
           (function () {
             var m = ent.month; if (!m) return "";
             /* 대화는 위의 '남은 대화 N/N턴'(5시간 창)이 이미 진실을 보여준다 — 월로 또 쓰면 중복이고,
@@ -247,6 +308,9 @@
     function bye() { scrim.classList.remove("on"); setTimeout(function () { scrim.remove(); }, 220); }
     scrim.addEventListener("click", function (e) { if (e.target === scrim) bye(); });
     scrim.querySelector(".gpl-x").addEventListener("click", bye);
+    // ⬆️ 추천 등급이 있으면 그 카드까지 내려서 보여준다(시트가 길어 첫 화면엔 안 보인다).
+    var rc = scrim.querySelector(".gpl-card.rec");
+    if (rc) setTimeout(function () { try { rc.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {} }, 300);
 
     var lg = scrim.querySelector("[data-login]");
     if (lg) lg.addEventListener("click", function () {
@@ -278,6 +342,21 @@
     });
   };
 
+  /* 🔔 80% 안내 — 주기(등급)당 딱 한 번, 칩 하나만. 조르지 않는다.
+     올릴 데가 없거나(맨 위) 지금 살 수 없으면 안 띄운다. 저장소를 못 쓰면 매 턴 뜰 수 있으니 아예 안 띄운다. */
+  window.GALLA_budgetNudge = async function () {
+    var ent = await fetchEnt();
+    var bud = ent && ent.budget;
+    if (!bud || bud.over || !(Number(bud.pct) >= 80)) return null;
+    if (!buyable(nextTier(ent.tier, ent.plans))) return null;
+    var key = "gpl-n80:" + ent.tier + ":" + (bud.resets_on || "");
+    try {
+      if (localStorage.getItem(key)) return null;
+      localStorage.setItem(key, "1");
+    } catch (_) { return null; }
+    return { label: "대화량 " + Math.round(Number(bud.pct)) + "% 썼어요 · 등급 보기" };
+  };
+
   /* 🔢 잔여 대화 pill — 갈비스 헤더 등에 붙여 쓴다. 탭하면 이용권 시트. */
   window.GALLA_planPill = async function (mount) {
     if (!mount) return null;
@@ -286,13 +365,16 @@
     var lim = Number(ent.limit), used = Number(ent.used || 0);
     if (!(lim >= 0)) return null;                       // 제한 없음이면 굳이 표시하지 않는다
     var remain = Math.max(lim - used, 0);
+    // 💰 주기 대화량이 바닥이면 5시간 창이 남아 있어도 막힌다 — 숫자 대신 '소진'을 보여준다(보이는 것 = 겪는 것).
+    var bud = ent.budget || {};
+    var bover = !!bud.over, bnear = !bover && Number(bud.pct) >= 80;
     injectStyle();
     var b = document.createElement("button");
-    b.className = "gpl-pill" + (remain <= Math.max(1, Math.round(lim * 0.2)) ? " low" : "");
+    b.className = "gpl-pill" + (bover || bnear || remain <= Math.max(1, Math.round(lim * 0.2)) ? " low" : "");
     b.type = "button";
-    b.textContent = "💬 " + remain;
-    b.title = "남은 대화 " + remain + "턴";
-    b.addEventListener("click", function (e) { e.stopPropagation(); window.GALLA_openPlans(); });
+    b.textContent = bover ? "💬 소진" : "💬 " + remain;
+    b.title = bover ? "이번 주기 대화량을 다 썼어요" : "남은 대화 " + remain + "턴";
+    b.addEventListener("click", function (e) { e.stopPropagation(); window.GALLA_openPlans(bover ? { reason: "budget" } : null); });
     mount.appendChild(b);
     return b;
   };
