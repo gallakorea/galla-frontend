@@ -4588,11 +4588,17 @@
     j.querySelector('#dm-jump-n').textContent = `새 메시지 ${JUMP_N > 99 ? '99+' : JUMP_N}`;
     j.hidden = false;
   }
-  /* 리스트 폭포 등장 — 행마다 28ms씩 시차 */
+  /* 리스트 폭포 등장 — 행마다 28ms씩 시차
+     ⚠️ `.in` 은 opacity:0 에서 시작하는 애니메이션이다(dm.css:299). 조상 뷰가 숨겨진 채(예: 「친구 추가」 화면이
+        떠 있는 동안 팔로우 realtime 이 친구 목록을 다시 그림) `.in` 을 붙이면 애니메이션이 멈춰 **행이 영영 안 보였다**
+        (2026-09-11 QA 6-4-7, iOS 시뮬: 「친구 2」 헤더만 보이고 행 전부 공백, 탭을 다시 눌러야 보임).
+        ① 화면에 안 떠 있으면 등장 연출을 건너뛰고(기본 opacity 1 로 그대로 보임)
+        ② 떠 있어도 최대 연출 시간이 지나면 `.in` 을 걷어 — 어떤 이유로 멈춰도 결국 보이게 한다. */
   function staggerRows(container, selector) {
-    [...container.querySelectorAll(selector)].slice(0, 14).forEach((el, i) => {
-      el.style.setProperty('--i', i); el.classList.add('in');
-    });
+    if (!container || !container.getClientRects().length) return;
+    const els = [...container.querySelectorAll(selector)].slice(0, 14);
+    els.forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
+    if (els.length) setTimeout(() => els.forEach(el => el.classList.remove('in')), 380 + els.length * 28 + 120);
   }
   /* '읽음'은 내 마지막 읽힌 메시지에만 — 전부 달면 소음이다(카톡과 같은 문법) */
   function paintReceipts() {
