@@ -10,6 +10,18 @@ async function GALLA_settingsInit(root) {
 
   console.log("[settings.js] Loaded");
 
+  /* 🍎 anti-steering — 앱에서는 '갈라캐시 안내·가격'(원화 가격표) 진입로를 감춘다.
+     그 페이지는 웹 PG 심사용이라 6티어 원화 정가와 외부 결제수단(카카오페이·토스페이 등)을
+     그대로 싣고 있다. 앱 안에서 외부 결제 가격·수단을 보여주는 건 거절 사유이고,
+     스토어 표시가(₩1,500·7,500·15,000)와도 어긋나 보인다.
+     ⚠️ products.html 자체에도 같은 가드가 있다(딥링크·뒤로가기로도 들어올 수 있으므로). */
+  try {
+    if (window.GALLA_isApp && window.GALLA_isApp()) {
+      const pr = byId("stProducts");
+      if (pr) pr.hidden = true;
+    }
+  } catch (_) {}
+
   /* 📦 버전 표시 — 배포 빌드번호(GALLA_V) 노출. 웹/앱 공통. '안 보인다' 제보 시 이 값으로 최신 여부 확인.
      GALLA_V는 SPA 셸(app.html)이 정의. MPA 단독 문서면 스크립트 ?v= 쿼리에서 추출. */
   try {

@@ -54,6 +54,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function bind(){
+  /* 🍎 anti-steering — 앱에서는 "1코인 = 1원" 같은 원화 환산을 지운다.
+     앱 충전은 App Store 결제(₩1,500·7,500·15,000)라 웹 환산과 숫자가 다르고,
+     앱 안에서 외부 결제 가격을 말하는 모양이 되어 거절 사유가 된다.
+     환전·양도 불가 고지는 그대로 남는다(그건 소비자 고지라 빼면 안 된다). */
+  try {
+    if (window.GALLA_isApp && window.GALLA_isApp()) {
+      const rate = $('wlGcRate'); if (rate) rate.hidden = true;
+    }
+  } catch (_) {}
+
   /* 🪙 GP는 판매하지 않는다 — 충전 대신 "모으는 법"으로 보낸다. */
   $('wlChargeBtn').onclick = () => {
     if(window.GALLA_needGP) window.GALLA_needGP(0, 'GP는 모아서 써요');

@@ -75,6 +75,7 @@
         결제 완료 즉시 계정에 지급되며, 실물 배송은 없습니다.
       </div>
 
+      <div id="prWebPricing">
       <h2>판매 상품 및 가격</h2>
       <table class="pr-tbl">
         <caption>부가세 포함 · 1원 = 1GC</caption>
@@ -94,6 +95,16 @@
         가격은 모두 부가가치세를 포함한 최종 결제 금액입니다.
         결제 수단은 신용·체크카드 및 간편결제(카카오페이·네이버페이·토스페이·페이코·삼성페이·애플페이 등)를 지원합니다.
       </p>
+      </div>
+
+      <!-- 🍎 앱에서는 위 원화 가격표 대신 이 안내가 보인다(anti-steering) -->
+      <div id="prAppNotice" hidden>
+        <h2>판매 상품 및 가격</h2>
+        <p class="pr-note">
+          앱에서는 <b>App Store 결제</b>로 갈라캐시를 충전합니다.
+          상품과 가격은 충전 화면에서 확인하실 수 있습니다.
+        </p>
+      </div>
 
       <h2>이용 조건</h2>
       <ul>
@@ -145,5 +156,23 @@
 </div>
 
 <script src="./js/back.js?v=080412"></script>
+<script>
+  /* 🍎 anti-steering — 이 페이지는 웹 PG(포트원) 심사 요건으로 만든 원화 가격 안내다.
+     앱 안에서 외부 결제 가격·수단을 보여주면 거절 사유이므로, 앱이면 가격 구역을 감춘다.
+     설정 화면의 진입로도 감추지만(js/settings.js), 딥링크·뒤로가기로도 들어올 수 있어
+     페이지 자체에 한 겹 더 둔다. GALLA_isApp 은 js/supabase.js 가 정의한다. */
+  (function () {
+    try {
+      var isApp = (window.GALLA_isApp && window.GALLA_isApp())
+        || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+        || /GallaApp/i.test(navigator.userAgent || "");
+      if (!isApp) return;
+      var web = document.getElementById("prWebPricing");
+      var app = document.getElementById("prAppNotice");
+      if (web) web.hidden = true;
+      if (app) app.hidden = false;
+    } catch (_) {}
+  })();
+</script>
 </body>
 </html>

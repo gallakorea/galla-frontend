@@ -233,7 +233,7 @@ async function openReceipt(id) {
     </div>
     <div class="cg-rc-issuer">
       갈라페이 (GALLA)<br>
-      부가세 포함 금액입니다 · 1 GC = 1원<br>
+      부가세 포함 금액입니다${(window.GALLA_isApp && window.GALLA_isApp()) ? "" : " · 1 GC = 1원"}<br>
       본 영수증은 거래 확인용이며 세금계산서가 아닙니다.<br>
       문의 <a href="support.html">고객센터</a>
     </div>
