@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0910270"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0910280"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <!-- ⚠️ MPA/SPA 완전 분리: index.html = 순수 MPA(웹 홈피드·SEO). 네이티브 앱은 index.html이 아니라
          app.html(SPA)을 바로 로드한다(번들 sync가 index.html을 app.html로 대체, 원본 피드는 home.html로 보존).
          과거의 index→app 리다이렉트는 부팅 이중로드 깜빡임을 만들어 제거함. 여기엔 어떤 SPA 리다이렉트도 두지 않는다. -->
@@ -76,7 +76,8 @@
           <button class="hdr-btn hdr-write" id="hdrWrite" aria-label="글쓰기">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
-          <button class="hdr-btn hdr-search" aria-label="검색" onclick="(window.GALLA_nav||function(u){location.href=u})('search.html')">
+          <!-- 🔍 는 「검색 탭」으로 — 인자 없이 열면 트렌드가 마지막에 보던 하위 탭(날씨 등)을 복원해 검색하려는 사람을 딴 데로 보냈다(2026-09-10 QA) -->
+          <button class="hdr-btn hdr-search" aria-label="검색" onclick="(window.GALLA_nav||function(u){location.href=u})('search.html?tab=search')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>
           </button>
         </span>

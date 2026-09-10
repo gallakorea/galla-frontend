@@ -1381,7 +1381,8 @@ async function initTrendPage() {
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
     activateTab("hot", false);
-  } else if (["trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(qs.get("tab"))) {
+  } else if (["search", "trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(qs.get("tab"))) {
+    // 🔍 검색 버튼은 ?tab=search 로 온다 — 예전엔 목록에 search 가 없어 아래 「마지막 탭 복원」으로 떨어졌다(2026-09-10 QA)
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
     if (qs.get("fp")) openFoodPlaceDeep(qs.get("fp"));
