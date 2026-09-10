@@ -907,6 +907,30 @@ anti-steering 관점에서 charge 와 동급의 자리다.
 
 ---
 
+## 14-B. 크론 건강 점검 (2026-09-09, 서버)
+
+**❌ 결함 — 5분마다 400 만 받던 죽은 크론을 껐다**
+
+`fetch_article_thumbnail_job` 은 **24시간에 288회 실행되고 288회 모두 「succeeded」** 로 기록됐지만,
+실제 HTTP 응답은 전부 **400 `{"error":"missing article_id or url"}`** 였다.
+`fetch_article_thumbnail` 은 본문에 `article_id`·`url` 을 **필수**로 요구하는데 크론은 본문 없이 POST 한다.
+게다가 대상 표 `news_articles` 는 **2026-01-12 이후 멈춘 옛 파이프라인**이다
+(현재는 `news_articles_raw` 34만 행 + `galla_news` 가 살아 있다).
+
+→ `cron.alter_job(active := false)` 로 **비활성화**(삭제 아님 — 되돌릴 수 있게).
+배치용 `fetch_missing_thumbnails_job` 은 그대로 둔다. 현재 경로는 건강하다: 최근 24시간 갈라뉴스 269건 중
+**hero_image 269건(100%)**.
+
+**같이 확인한 것 — Authorization 없는 크론 34개는 정상이다.**
+HTTP 호출 크론 53개 중 34개에 `Authorization` 헤더가 없어 [[크론 인증 함정]]을 의심했으나,
+최근 6시간 응답에 **401 이 0건**이고 결과도 쌓인다(24시간 내 `travel_places` +2,721 · `food_places` +545).
+`--no-verify-jwt` 로 배포된 함수들이라 헤더가 필요 없다 — **헤더 감사만으로 판정하면 오진한다.**
+
+⚠️ 남은 관찰: `food_videos` 가 **5일째 정체**(마지막 2026-09-05, 총 28,358행)인데
+`food_places` 는 계속 는다. 수집 경로가 갈린 것인지 확인 필요.
+
+---
+
 ## 15. 앱(iOS·AOS) 검증 — 눈여겨볼 자리
 
 웹이 통과했다는 건 앱 근거가 못 된다. 과거에 **앱에서만 죽은** 자리가 반복해서 나왔다.
