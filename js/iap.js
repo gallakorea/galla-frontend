@@ -35,10 +35,12 @@
     ios: {
       companion_daily: "im.galla.sub.daily",
       companion_always: "im.galla.sub.always",
+      companion_soul: "im.galla.sub.soul",
     },
     android: {
       companion_daily: "im.galla.sub.daily",
       companion_always: "im.galla.sub.always",
+      companion_soul: "im.galla.sub.soul",
     },
   };
 

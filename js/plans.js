@@ -24,11 +24,12 @@
      `companion_sometimes`(999원)는 스토어 사다리에 999원이 없어 1,100원이 되면 「매일」과 800원 차이였고,
      `companion_plus`(3,400원)는 대화 한도가 「매일」과 똑같아 더 낼 이유가 없었다.
      서버 ai_tiers·sub_products 에서 이미 빠졌으므로 목록에서도 지운다. */
-  var ORDER = ["free", "companion_daily", "companion_always"];
+  var ORDER = ["free", "companion_daily", "companion_always", "companion_soul"];
   var PITCH = {
     free:                "가볍게 써보기",
     companion_daily:     "매일 수다 떨기",
-    companion_always:    "종일 붙어 있기"
+    companion_always:    "종일 붙어 있기",
+    companion_soul:      "끝까지 함께"
   };
   var FEAT_LABEL = {
     memory: "나를 기억함",
