@@ -280,6 +280,12 @@
 - 실측: `follows` 에서 행이 실제로 지워진 걸 확인한 뒤에도(내 팔로우 **1행**, 그 작성자 아님) 홈 카드 칩은 **「팔로잉」** 그대로. 확대 캡처로 글자 확인
 - 원인: 피드 카드의 팔로우 버튼만 **공용 모듈을 안 쓴다**. 다른 화면은 `js/follow.js` 의 `.js-follow` + `follows` realtime 구독으로 전 화면이 즉시 동기화되는데, `js/index.js` 는 자체 `.follow-btn` + `social.follows` 캐시를 쓰고 그 캐시는 `initSocial()` 에서 **딱 한 번만** 채워진다. SPA 에선 홈 뷰가 다시 초기화되지 않아 **세션 내내 옛 상태**로 남는다
 - 조치: `js/index.js` 에 `follows` realtime 구독(`subscribeSocialRealtime`)을 붙여 캐시를 맞추고 `applySocialState()` 재실행. `js/index.js?v=0910020`, 배포 도장 `0910020`
+- **⚠️ 정정(2026-09-10 13:16, 새 웹 계층에서 재확인) — 위 조치는 이 결함(언팔)을 고치지 못했다. 미해결 ❌**
+  - 재확인: 홈 피드 갈라 카드 「팔로잉」(13:15) → DB 에서 QA 계정의 갈라 팔로우 행(`follows.id` 75)을 지움(16:15:45 UTC) → 20초 넘게 지나도 **「팔로잉」 그대로**(13:16). 재현 조건(언팔)이 원래 보고와 같다
+  - 원인: 구독이 `filter: 'follower=eq.<나>'` 로 걸려 있고, DELETE 때 `payload.old.following` 을 읽는다. `follows` 는 **RLS 켜짐**(정책: 공개 SELECT·본인 INSERT/DELETE·banned_no_write) — Supabase Realtime 은 DELETE 에 필터를 적용하지 못하고, RLS 테이블의 DELETE 옛 행엔 **기본키(id)만** 싣는다 → `following` 이 비어 핸들러가 바로 빠진다. 팔로우(INSERT)만 동기화되고 **언팔은 안 된다**. 캐시도 `.select('following')` 로만 채워 행 id 가 없어 id 로 되짚을 수도 없다
+  - 같은 모양 전수: **`js/follow.js:51-55`**·**`js/dm.js:5638-5644`(`onFollowsRT`)** 도 같은 필터 + `payload.old.<칸>` — 위 원인 설명의 「다른 화면은 follow.js realtime 으로 즉시 동기화」도 **언팔에 대해선 사실이 아닐 가능성이 크다**(이 창에선 두 곳을 앱으로 재현하지 않음)
+  - 시험 뒷정리: 지운 행을 같은 id·follower·following·created_at 으로 되돌림 — `session_replication_role = replica` 로 `notify_follow` 트리거를 꺼서 갈라에게 팔로우 알림이 안 가게 했다. 되돌린 뒤 `notifications`(type follow·QA→갈라·최근 10분) **0행** 확인
+  - 넘김: 세 파일 수정은 Realtime DELETE 동작을 먼저 실측해야 해서 별도 작업으로 뺐다(「Fix unfollow realtime sync (3 files)」 — 내 팔로우 행 id→상대 맵 + 필터 없는 DELETE 구독, 또는 DELETE 수신 시 목록 재조회). 영향: 다른 화면·다른 기기에서 언팔하면 떠 있는 피드가 **새로고침 전까지** 옛 상태(새로고침하면 맞아진다)
 
 ---
 
