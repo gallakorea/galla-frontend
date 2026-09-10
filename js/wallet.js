@@ -69,8 +69,13 @@ function bind(){
     if(window.GALLA_needGP) window.GALLA_needGP(0, 'GP는 모아서 써요');
     else alert('GP는 출석·미션·활동으로 모을 수 있어요.');
   };
-  /* 💳 GC 충전 = 갈라페이 공용 시트(charge.js). 지갑 전용 시트는 폐지 — 두 벌 유지하다 문구가 어긋났다. */
-  $('wlGcChargeBtn').onclick = () => {
+  /* 💳 GC 충전 = 갈라페이 공용 시트(charge.js). 지갑 전용 시트는 폐지 — 두 벌 유지하다 문구가 어긋났다.
+     🚦 1차에는 GC 를 쓸 곳이 없어 버튼 자체를 감춘다(후원은 스토어 직접결제, 창작은 2차).
+        ⚠️ hidden 만으론 부족할 수 있다 — CSS display 가 이기면 그대로 보인다(설정 타일에서 겪었다). */
+  const gcBtn = $('wlGcChargeBtn');
+  const topupOn = (() => { try { return !!(window.GALLA_feature && window.GALLA_feature('gc_topup')); } catch (_) { return false; } })();
+  if (gcBtn && !topupOn) { gcBtn.hidden = true; gcBtn.style.display = 'none'; }
+  if (gcBtn) gcBtn.onclick = () => {
     if(window.GALLA_openCharge) window.GALLA_openCharge();
     else alert('충전은 결제 연동 후 열려요.');
   };
@@ -162,7 +167,9 @@ async function loadPending(){
   const gc = await supa.from('gc_charges').select('id',{count:'exact',head:true})
     .eq('user_id',ME.id).eq('status','pending');
   const n = gc.count||0;
-  if(n>0){ const s=document.createElement('span'); s.className='wl-pend'; s.textContent=`결제 대기 ${n}`; $('wlGcChargeBtn').after(s); }
+  /* ⚠️ 충전 버튼은 플래그가 꺼져 있으면 숨겨진다 — 없을 때 after() 를 부르면 죽는다. */
+  const pendAnchor = $('wlGcChargeBtn');
+  if(n>0 && pendAnchor){ const s=document.createElement('span'); s.className='wl-pend'; s.textContent=`결제 대기 ${n}`; pendAnchor.after(s); }
 }
 
 /* ============ 크리에이터 수익 ============ */

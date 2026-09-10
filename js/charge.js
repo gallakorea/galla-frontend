@@ -437,7 +437,23 @@ window.GALLA_PORTONE = {
   function open() { dim.classList.add("open"); (void sheet.offsetWidth, sheet.classList.add("open")); }
   function close() { sheet?.classList.remove("open"); dim?.classList.remove("open"); }
 
-  window.GALLA_openCharge = function (ctx) { build(); render(ctx || {}); open(); };
+  /* 🚦 1차에서는 GC 를 쓸 곳이 없다 — 후원은 스토어 직접결제로 빠졌고, 창작 에이전트는 2차다.
+     쓸 데 없는 재화를 파는 화면은 심사에서도 "이걸로 뭘 하냐"는 질문을 부른다.
+     창작이 열릴 때 app_settings.features.gc_topup 을 true 로 바꾸면 배포 없이 같이 열린다.
+     ⚠️ fail-closed — 플래그를 못 읽으면 닫힌 것으로 본다(features.js 규약). */
+  function topupOpen() {
+    try { return !!(window.GALLA_feature && window.GALLA_feature("gc_topup")); } catch (_) { return false; }
+  }
+  window.GALLA_gcTopupEnabled = topupOpen;
+
+  window.GALLA_openCharge = function (ctx) {
+    if (!topupOpen()) {
+      /* 조용히 무시하지 않는다 — 버튼이 죽은 것처럼 보이면 그게 더 나쁜 신호다. */
+      if (window.GALLA_toast) window.GALLA_toast("갈라코인 충전은 준비 중이에요.");
+      return;
+    }
+    build(); render(ctx || {}); open();
+  };
   window.GALLA_needGC = function (need, label) {
     window.GALLA_openCharge({ need, label: label || "GC가 부족해요" });
   };
