@@ -73,7 +73,18 @@ async function initPredictMarket(root, spaParams){
   if(!marketId){ $('pmdMain').innerHTML='<div class="empty-zone">잘못된 접근입니다.</div>'; return; }
   await loadMarket();
   // 라이브 갱신: 30초마다 풀·리턴·피드 재조회 (열려있을 때만) — SPA unmount 시 해제
-  LIVE_TIMER = setInterval(async ()=>{ if(MARKET && !MARKET.resolved && !document.hidden){ await refreshState(); renderHero(); loadFeed(); } }, 30000);
+  /* ⌨️ 금액을 손으로 치는 중이면 히어로를 다시 그리지 않는다 — renderHero 는 `#pbAmt` 를
+     포함한 판을 innerHTML 로 통째로 갈아끼우므로, 30초마다 입력창이 새로 만들어져
+     **포커스도 치던 숫자도 날아간다**(날씨 「동네 한마디」와 같은 모양의 결함).
+     시세(피드)는 계속 갱신해도 되니 그쪽만 돌린다. */
+  LIVE_TIMER = setInterval(async ()=>{
+    if(!(MARKET && !MARKET.resolved && !document.hidden)) return;
+    await refreshState();
+    const amt = document.getElementById('pbAmt');
+    const typing = amt && (document.activeElement === amt || (amt.value || '').trim());
+    if(!typing) renderHero();
+    loadFeed();
+  }, 30000);
 }
 if (!(document.body && document.body.dataset.page === 'spa')) {
   document.addEventListener('DOMContentLoaded', () => initPredictMarket(document));

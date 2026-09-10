@@ -138,6 +138,12 @@
     clearInterval(roomTimer);
     roomTimer = setInterval(async function () {
       if (!room) return;
+      /* ⌨️ 쓰는 중이면 건드리지 않는다 — paintRoom 은 innerHTML 을 통째로 갈아끼우므로
+         20초마다 입력창 DOM 이 새로 만들어져 **포커스가 날아간다**(값만 draft 로 살아남는다).
+         한 문장 쓰는 동안 반드시 한 번은 끊겨서, 타이핑이 통째로 허공에 들어간다.
+         실측 2026-09-10(앱): 입력창을 탭하고 친 글자가 하나도 안 들어가 `weather_comments` 0행. */
+      var typing = document.getElementById("wx-say");
+      if (typing && (document.activeElement === typing || (typing.value || "").trim())) return;
       var n = await rpc("weather_room", { p_region: room, p_limit: 40 });
       if (n && n.ok) paintRoom(document.getElementById("wx-room"), n, true);
     }, 20000);
@@ -167,7 +173,7 @@
         '<form class="wx-say-form"><input id="wx-say" maxlength="140" placeholder="지금 여기 어때요? (140자)" enterkeyhint="send">' +
         '<button type="submit">보내기</button></form>' +
       "</div>";
-    if (draft) { var i = el.querySelector("#wx-say"); if (i) i.value = draft; }
+    if (draft) { var i = el.querySelector("#wx-say"); if (i) { i.value = draft; try { i.focus(); i.setSelectionRange(draft.length, draft.length); } catch (_) {} } }
     var f = el.querySelector(".wx-say-form");
     f.addEventListener("submit", async function (e) {
       e.preventDefault();
