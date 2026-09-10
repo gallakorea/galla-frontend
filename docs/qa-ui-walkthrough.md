@@ -33,7 +33,7 @@
 | `dm_messages` 「QA 점프 필러 01~15」 15건 + 트리거 1건 + `notifications` qa0909b `dm` + `dm_threads` b30e7c45 `last_*` 원복 | thread b30e7c45, sender qa0909 (id 목록: scratchpad `jump_filler_ids.json`) | 6-2-15 점프 필 시험용(SQL 삽입, 스크롤이 생기게). 원복값은 위 6-1-7 행과 같음. **✅ 정리 끝(2026-09-11)**: 메시지 16건 id 지정 삭제(가드 n=16)·알림 16건 삭제(가드 n=16)·스레드 last_* 원복 → 메시지 3건·알림 0건 |
 | `dm_messages` 6-2-11 답장 1건(qa0909b 발신, `reply_to`=c9fd7c15) + `notifications` qa0909 `dm` 1건(id > 2724, 기준 5건) + `dm_threads` b30e7c45 `last_*` 원복 | thread b30e7c45 | 6-2-11 답장 시험용(앱에서 실제 전송). 원복값은 위 6-1-7 행과 같음. **✅ 정리 끝(2026-09-11)**: 메시지 3173b616·알림 2749 id 지정 삭제(DO 가드 각 n=1)·스레드 last_* 원복 → 메시지 3건, qa0909 알림 5건(기준값) |
 | `dm_thread_prefs` (qa0909b, thread b30e7c45) `pinned` + `dm_folders`·`dm_thread_folders` (qa0909b) | 6-1-6 고정·폴더 시험 | 기준값: `pinned=false`·`left_at=null`, 폴더 0건·스레드-폴더 0건. 시험 후 이 값으로 되돌린다. **✅ 정리 끝(2026-09-11)**: 고정은 앱에서 해제(pinned false), 시험 폴더 QAF(9418803a)·스레드-폴더 1행 DO 가드 삭제(각 n=1) → 폴더 0·스레드-폴더 0 |
-| `dm_threads` qa0909b ↔ 갈라(96bf8931) + 그 스레드의 `dm_thread_prefs` | 6-4-4 프로필 「메시지」 시험 | 기준값: 스레드 **0개**. 「메시지」가 `dm_thread_with` 로 새 스레드를 만들면 세고(n=1) 지운다 |
+| `dm_threads` qa0909b ↔ 갈라(96bf8931) + 그 스레드의 `dm_thread_prefs` | 6-4-4 프로필 「메시지」 시험 | 기준값: 스레드 **0개**. 「메시지」가 `dm_thread_with` 로 새 스레드를 만들면 세고(n=1) 지운다. **✅ 정리 끝(2026-09-11)**: 새 스레드 37a5e8f1(메시지 0·prefs 0) DO 가드 삭제(n=1) → 0개 |
 | `follows` qa0909b ↔ qa0909 | 6-4-7 팔로우 시험 | 기준값: 양방향 **0행**(follower/following 둘 다 없음). 시험 후 0행으로 되돌린다 |
 | R2 `images/865b6843…/<uuid>.*` (qa0909b) | 9-2-3 갈비스 🖼 첨부(시뮬 샘플 폭포 사진) | upload-media 가 올린 1개. R2 목록에서 prefix 로 세고 지운다 |
 | QA 계정 이메일 원복 | `qa0909b2galla.test` → `qa0909b@galla.test` (`auth.users`·`auth.identities`) | 삭제 전에 원복할 필요는 없지만 기록상 남긴다 |
