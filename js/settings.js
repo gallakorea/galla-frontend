@@ -307,6 +307,10 @@ async function GALLA_settingsInit(root) {
     byId("notifyTile")?.addEventListener("click", () => { window.GALLA_openNotifySettings && window.GALLA_openNotifySettings(); });
     byId("titlesTile")?.addEventListener("click", () => { window.GALLA_openTitles && window.GALLA_openTitles(); });
     byId("gachaTile")?.addEventListener("click", () => { window.GALLA_openGacha && window.GALLA_openGacha(); });
+    /* 📊 내 글 통계 — 예전엔 settings.html 의 인라인 <script> 에서만 연결돼 있었다. SPA 는 인라인을 버리므로
+       앱에서는 이 타일만 눌러도 아무 반응이 없었다(2026-09-10 QA). 다른 타일처럼 여기서 연결한다.
+       (GALLA_openStats 는 js/spa/views/settings.js 가 stats.js 를 싣고, MPA 는 settings.html 이 싣는다) */
+    byId("statsTile")?.addEventListener("click", () => { window.GALLA_openStats && window.GALLA_openStats(); });
     // 🎁 친구 초대 — 설정 전면 진입로(invite.js 는 app.html 이 전역 로드)
     byId("inviteTile")?.addEventListener("click", (e) => {
       e.stopPropagation();
