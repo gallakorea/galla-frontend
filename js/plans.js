@@ -221,22 +221,22 @@
             }).join("") + "</div>" +
             (m.resets_on ? '<div class="gpl-sub">' + esc(String(m.resets_on).slice(5).replace("-", "월 ")) + "일에 새로 채워져요</div>" : "");
           })() +
-          (ent.expires_at ? '<div class="gpl-sub">이용권 만료 ' +
+          (ent.expires_at ? '<div class="gpl-sub">구독 만료 ' +
             esc(new Date(ent.expires_at).toLocaleDateString("ko-KR")) + "</div>" : "") +
         "</div>" + cards +
         (native
           ? (Object.keys(OFFERS).length
               ? '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.'
                 + ' <button class="gpl-restore" type="button">구매 복원</button></div>'
-              : '<div class="gpl-note">이용권 변경은 준비 중이에요.</div>')
+              : '<div class="gpl-note">구독 변경은 준비 중이에요.</div>')
           : '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.</div>');
     }
 
     var scrim = document.createElement("div");
     scrim.className = "gpl-scrim";
-    scrim.innerHTML = '<div class="gpl gpl-enter" role="dialog" aria-label="이용권">' +
+    scrim.innerHTML = '<div class="gpl gpl-enter" role="dialog" aria-label="갈비스 구독">' +
       '<button class="gpl-x" aria-label="닫기">×</button>' +
-      '<h3 class="gpl-h">이용권</h3>' + body + "</div>";
+      '<h3 class="gpl-h">갈비스 구독</h3>' + body + "</div>";
     document.body.appendChild(scrim);
     // rAF는 백그라운드 탭에서 멈춰 시트가 갇힌다 → setTimeout으로 등장 효과만 얹는다.
     setTimeout(function () {

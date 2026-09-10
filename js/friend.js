@@ -1381,7 +1381,7 @@
          값은 여기 안 적는다(앱스토어 anti-steering). 시트가 알아서 보여준다. */
       if (a.kind === "plans") {
         var pc = el('<button class="fr-chip"><span></span></button>');
-        pc.querySelector("span").textContent = a.label || "이용권 보기";
+        pc.querySelector("span").textContent = a.label || "갈비스 구독 보기";
         pc.addEventListener("click", function(){
           if (window.GALLA_openPlans) window.GALLA_openPlans();
         });

@@ -32,12 +32,12 @@
         표시 가격은 우리가 적지 않고 스토어가 준 값을 쓴다(anti-steering).
      ⚠️ 여기 web 값은 '어느 단인지'를 서버와 맞추는 열쇠일 뿐, 앱 화면에 찍지 않는다. */
   const APP_TIERS = [
-    { web: 1000,  id: "im.galla.tip.1k"  },
-    { web: 3000,  id: "im.galla.tip.3k"  },
-    { web: 5000,  id: "im.galla.tip.5k"  },
-    { web: 10000, id: "im.galla.tip.10k" },
-    { web: 30000, id: "im.galla.tip.30k" },
-    { web: 50000, id: "im.galla.tip.50k" },
+    { web: 1000,  id: "im.galla.tip.1k",  emoji: "🩵", color: "#22b8ff" },
+    { web: 3000,  id: "im.galla.tip.3k",  emoji: "💚", color: "#2fbf71" },
+    { web: 5000,  id: "im.galla.tip.5k",  emoji: "💛", color: "#f5c518" },
+    { web: 10000, id: "im.galla.tip.10k", emoji: "🧡", color: "#ff9f1c" },
+    { web: 30000, id: "im.galla.tip.30k", emoji: "❤️", color: "#ff5a5f" },
+    { web: 50000, id: "im.galla.tip.50k", emoji: "💜", color: "#a06bff" },
   ];
   const isApp = () => { try { return !!(window.GALLA_isApp && window.GALLA_isApp()); } catch (_) { return false; } };
   const tierLabel = (a) => a < 1000 ? a + "원" : a < 10000 ? (a / 1000) + "천" : (a / 10000) + "만";
@@ -141,13 +141,40 @@
     const a = amount(); const go = sheet.querySelector("#ds-go");
     const br = sheet.querySelector("#ds-break");
     const ok = a >= MIN;
+    const app = isApp();
     const t = TIERS.slice().reverse().find(t => a >= t.amount) || TIERS[0];
-    const col = ok ? t.color : "#3a3b42";
-    if (go) { go.style.background = `linear-gradient(135deg, ${col}, ${col}cc)`; go.disabled = !ok;
-      go.textContent = ok ? `${won(a)} 후원하기` : `최소 ${won(MIN)}부터`; }
-    if (br) { const fee = Math.floor(a * 0.2), charity = Math.floor(a * 0.05), net = a - fee - charity;
-      br.innerHTML = ok
-        ? `발의자 <b>${won(net)}</b> · 환원 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
+    const at = app ? APP_TIERS.find(x => x.web === a) : null;
+    const col = ok ? ((at && at.color) || t.color) : "#3a3b42";
+
+    /* 🍎 앱에서는 우리가 원화를 찍지 않는다.
+       ① 고른 단의 스토어 표시가는 웹 금액과 다르다(웹 1,000 ↔ 앱 1,500) — 웹 금액을 찍으면
+          결제창 숫자와 어긋나 사용자가 속았다고 느낀다.
+       ② 앱 안에서 외부 결제 가격을 말하는 모양이 되어 anti-steering 소지가 된다.
+       그래서 버튼엔 스토어가 준 표시가만 쓰고, 없으면 금액 없이 '후원하기'로 둔다. */
+    let label;
+    if (!ok) label = app ? "금액을 골라주세요" : `최소 ${won(MIN)}부터`;
+    else if (app) {
+      const offers = window.GALLA_tipOffers ? window.GALLA_tipOffers() : [];
+      const price = at ? ((offers.find(o => o.id === at.id) || {}).price || "") : "";
+      label = price ? `${price} 후원하기` : "후원하기";
+    } else label = `${won(a)} 후원하기`;
+
+    if (go) { go.style.background = `linear-gradient(135deg, ${col}, ${col}cc)`; go.disabled = !ok; go.textContent = label; }
+
+    /* 분배 미리보기 — 기준이 채널마다 다르다.
+       웹은 결제액에서 바로, 앱은 스토어 수수료를 뗀 실수령에서 나눈다(docs/currency-policy.md).
+       앱에서 총액 기준으로 보여주면 실제 지급액보다 크게 적혀 나중에 항의가 된다. */
+    /* 분배 미리보기는 웹에서만 보여준다.
+       앱에서 금액으로 적으려면 두 가지가 걸린다 —
+        ① 기준이 결제액이 아니라 '실수령'이라(스토어 30%) 웹 금액으로 계산하면 서버가 실제
+           지급하는 값과 어긋난다. 실제로 여기서 525원 vs 서버 788원으로 갈렸다.
+        ② 맞추려고 앱 결제액을 코드에 적으면 그게 곧 원화 하드코딩이라 anti-steering 이다.
+       비율 안내는 아래 note 에 이미 있으므로, 앱에서는 숫자를 비운다. */
+    if (br) {
+      if (!ok || app) { br.innerHTML = ""; return; }
+      const net = Math.round(a * 0.75), charity = Math.round(a * 0.05);
+      br.innerHTML = `발의자 <b>${won(net)}</b> · 환원 <b>${won(charity)}</b> · 수수료 ${won(a - net - charity)}`;
+    }
   }
   function renderForm() {
     /* 🍎 앱에서는 스토어에 등록한 6단만 보여준다. 애플·구글은 '등록된 가격'만 결제할 수 있어
@@ -157,12 +184,10 @@
     const tipOffers = app && window.GALLA_tipOffers ? window.GALLA_tipOffers() : [];
     const priceOf = (id) => (tipOffers.find(o => o.id === id) || {}).price || "";
     const tierHTML = app
-      ? APP_TIERS.map((t, i) => {
-          const meta = TIERS[Math.min(i, TIERS.length - 1)];
-          return `<button class="ds-tier" data-amt="${t.web}" style="--c:${meta.color}">
-            <div class="e">${meta.emoji}</div><div class="a">${priceOf(t.id) || tierLabel(t.web)}</div>
-          </button>`;
-        }).join("")
+      ? APP_TIERS.map(t => `
+        <button class="ds-tier" data-amt="${t.web}" style="--c:${t.color}">
+          <div class="e">${t.emoji}</div><div class="a">${priceOf(t.id) || tierLabel(t.web)}</div>
+        </button>`).join("")
       : TIERS.map(t => `
         <button class="ds-tier" data-amt="${t.amount}" style="--c:${t.color}">
           <div class="e">${t.emoji}</div><div class="a">${tierLabel(t.amount)}</div>
