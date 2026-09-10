@@ -713,6 +713,18 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
 - ⚠️ **실제 SIGNED_IN 경로 검증은 남았다** — 로그인해야 이벤트가 튀는데 비밀번호 입력은 내가 하지 않는다. 사장님 다음 로그인(또는 앱 재빌드 후 로그인) 뒤 `login_logs` 에 행이 생기는지로 확인
 - 파급: 로그인 기록은 **「침입자가 흔적을 못 지운다」가 기능의 전부**(코드 주석)인 보안 기능이다. 지금까지는 흔적이 애초에 안 남았다
 
+### 8-F. ❌ **결함 — 갈라뉴스 조회수가 사실상 한 번도 안 올랐다 (같은 게으른 빌더)**
+
+8-E(로그인 기록)와 **같은 모양**을 전수로 찾다가 나왔다.
+
+- 전수 방법: `.rpc/.insert/.update/.upsert/.delete` 호출 중 `await`·`.then`·`return`·대입이 없는 단독 문장을 grep → 후보 15건은 **모두 윗줄에 `await`/대입이 있는 여러 줄 문장**이라 정상(윗줄 3줄씩 확인), `dm.js:5477` 은 대입 후 await. **남은 진짜 1건이 `js/news-page.js:63`**: `bumpViewOnce()` 안의 `supabase.rpc("bump_news_view", { p_id: id }); // 실패해도 무시`
+- 서버는 무죄: `bump_news_view(p_id)` — `update galla_news set view_count = view_count + 1`, authenticated·anon 모두 EXECUTE 있음
+- 규모(DB): 갈라뉴스 **29,753건 중 조회수가 있는 건 2건(최대 1, 합계 2)**. 최근 30일 기사 **7,356건 중 0건**. 조회수로 정렬·노출하는 곳이 있다면 전부 0 동률이었다는 뜻
+- 대조: 이슈 조회수는 `js/issue.js:808` 이 `await …rpc("bump_view")` 로 부른다 → 정상(이슈 카드 「조회 8·10」 이 실제로 오른다). **뉴스만 then 이 빠졌다**
+- 조치: `.then(noop, noop)` 부착. `js/news-page.js?v=0910100`, 배포 도장 `0910100`. (앱 SPA 는 `js/spa/views/news.js` 가 `src + V` 로 버전을 붙여 주입하므로 번들·도장으로 전달된다)
+- 재검증(웹, 새 탭=세션 가드 초기화): `news.html?gn=e96d1398…` → 기사 렌더, `/rest/v1/rpc/bump_news_view` **1건 · HTTP 204**, `galla_news.view_count` **0 → 1**. 검증용 조회 1은 **되돌림**(1 → 0, 재확인)
+- ⚠️ **측정 실수 정정**: 첫 재검증에서 `news.html?id=` 로 열어 「기사를 찾을 수 없어요」가 떴고 요청 0건이 나왔다 — **파라미터가 틀렸다**(이 페이지는 `?gn=` 만 읽는다). 제품 결함 아님. 제품 안의 뉴스 링크는 전부 `?gn=`(index·search 3곳·dm-live·friend·jarvis·공유 OG 함수)이고 `?id=` 링크는 0개 — 실사용 경로는 고친 코드를 탄다
+
 ### 8-B. ⚠️ **취소된 결함 보고 — 「지갑 0 GP」는 결함이 아니었다**
 
 > **2026-09-09 정정.** 아래를 한때 결함으로 올렸으나 **오진이다.**

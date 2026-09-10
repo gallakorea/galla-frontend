@@ -60,7 +60,9 @@
       if (seen.includes(id)) return;
       seen.push(id);
       sessionStorage.setItem(key, JSON.stringify(seen.slice(-200)));
-      supabase.rpc("bump_news_view", { p_id: id });   // 실패해도 무시
+      /* ⚠️ rpc() 는 게으른 빌더 — then 이 불려야 요청이 나간다. 결과를 안 써도 then 은 붙인다.
+         (로그인 기록 log_login 과 같은 모양의 결함, 2026-09-10 QA: 호출만 하면 요청 0건) */
+      supabase.rpc("bump_news_view", { p_id: id }).then(function () {}, function () {});   // 실패해도 무시
     } catch (_) {}
   }
 
