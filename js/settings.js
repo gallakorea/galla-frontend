@@ -18,7 +18,9 @@ async function GALLA_settingsInit(root) {
   try {
     if (window.GALLA_isApp && window.GALLA_isApp()) {
       const pr = byId("stProducts");
-      if (pr) pr.hidden = true;
+      /* ⚠️ hidden 속성만으로는 안 사라진다 — `.st-item { display:flex }` 가 이겨서
+         화면엔 그대로 남는다(실측 2026-09-10). display 를 직접 없앤다. */
+      if (pr) { pr.hidden = true; pr.style.display = "none"; }
     }
   } catch (_) {}
 

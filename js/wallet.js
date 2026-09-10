@@ -60,7 +60,7 @@ function bind(){
      환전·양도 불가 고지는 그대로 남는다(그건 소비자 고지라 빼면 안 된다). */
   try {
     if (window.GALLA_isApp && window.GALLA_isApp()) {
-      const rate = $('wlGcRate'); if (rate) rate.hidden = true;
+      const rate = $('wlGcRate'); if (rate) { rate.hidden = true; rate.style.display = "none"; }
     }
   } catch (_) {}
 

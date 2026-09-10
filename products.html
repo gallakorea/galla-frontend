@@ -169,8 +169,10 @@
       if (!isApp) return;
       var web = document.getElementById("prWebPricing");
       var app = document.getElementById("prAppNotice");
-      if (web) web.hidden = true;
-      if (app) app.hidden = false;
+      /* ⚠️ hidden 만으론 부족할 수 있다 — CSS 의 display 규칙이 이기면 그대로 보인다.
+         설정 항목에서 실제로 그랬다(.st-item{display:flex}). display 를 직접 지정한다. */
+      if (web) { web.hidden = true; web.style.display = "none"; }
+      if (app) { app.hidden = false; app.style.display = ""; }
     } catch (_) {}
   })();
 </script>
