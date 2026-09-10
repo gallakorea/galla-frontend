@@ -1110,6 +1110,14 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
 - **✅ 앱에서 확인(설치본 웹 계층 0910270 으로 다시 갈아 끼움 — 커밋 1ff471201 의 HEAD, 결과물 501개·비밀 파일 0·설치본 `galla-type.css` 전역 `section {` 0회)**: 같은 순서 재현 — 설정 → 성향 상세(13:10, 페이지 모양은 12:58 과 동일: 요약·4축 카드 x 36–888) → 뒤로 → 성장·도전 타일 **x 36–450 · 474–888 전폭**(13:11). 고치기 전엔 같은 순서에서 **x 70–853**(12:59)
 - ⚠️ **구조 메모(범위 밖, 결함으로 안 셈)**: 페이지 CSS 29개가 최상위 `*`·`body`·`html` 규칙을 갖고, 그중 20개는 `body` 에 레이아웃 속성(`max-width`·`margin`·`width`·`overflow`·`display`·`height`)을 준다 — SPA 에선 그 페이지를 한 번 연 뒤 **셸 body 에 그대로 걸린다**. 대부분 같은 리셋·같은 배경이라 폰에선 드러난 깨짐이 없었지만(설정 자신도 `body{max-width}`), 태블릿·데스크톱 SPA 에선 폭이 방문 순서에 따라 바뀔 수 있다. 원칙(`view-loader.js:57` 「페이지 CSS 는 그 페이지 클래스에 걸려 있는 게 원칙」)대로 페이지 범위로 옮기는 정리가 필요 — 29개 파일 일괄 수정이라 이 창에선 안 한다
 
+### 8-W. ⛔ 안드로이드 전수 — 이 맥에선 최신 코드로 못 한다 (2026-09-10 13:45)
+
+- **JDK 없음**: `java -version` → 「Unable to locate a Java Runtime」, Android Studio 내장 JBR 없음, `/Library/Java/JavaVirtualMachines` 비어 있음 → gradle 빌드 불가. JDK 설치는 인터넷에서 받아 실행하는 시스템 변경이라 이 창에서 하지 않는다
+- **남아 있는 디버그 APK 는 옛 웹 계층**: `galla-app/android/app/build/outputs/apk/debug/app-debug.apk`(09-09 11:39) 안 `assets/public/app.html` 도장 **0908040** — 0909·0910 수정이 하나도 없다. 이걸로 전수하면 이미 고친 결함을 다시 찾게 된다
+- 안드로이드는 iOS 시뮬레이터처럼 설치본 웹 계층만 갈아 끼울 수 없다(에셋이 APK 안). 공유 `galla-app` 은 다른 창 미커밋(`android/app/build.gradle` 등)이 있어 `npx cap copy android` 도 안 한다
+- 에뮬레이터 `galla-test`(emulator-5554)는 부팅만 해 둠
+- **넘길 것(사장님/안드로이드 빌드 창)**: 최신 웹 계층(도장 ≥ 0910270)으로 디버그 APK 1개 — 받는 즉시 `adb install -r` 후 §1~§14 AOS 칸 전수
+
 ### 8-B. ⚠️ **취소된 결함 보고 — 「지갑 0 GP」는 결함이 아니었다**
 
 > **2026-09-09 정정.** 아래를 한때 결함으로 올렸으나 **오진이다.**
