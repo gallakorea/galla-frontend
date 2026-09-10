@@ -13,6 +13,10 @@
    ========================================================= */
 (function () {
   var sb = null, ROOT = null, DATA = null, CC = null, SLUG = "";
+  /* 장소 목록은 travel_creator_places 로 나라별·페이지 단위로 받는다(2026-09-11 QA).
+     예전엔 travel_creator(200) 한 번에 받고 칩도 그 200곳 안에서만 걸러서, 큰 채널은 목록이 잘리고
+     칩 숫자(전체 기준)와 목록이 어긋났다(Mark Wiens 2,422곳 중 200곳, 태국 칩 393 → 11). */
+  var PLACES = [], TOTAL_F = 0, BUSY = false, PAGE = 60;
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
@@ -48,7 +52,7 @@
 
   function render() {
     var c = (DATA && DATA.channel) || {};
-    var places = (DATA.places || []).filter(function (p) { return !CC || p.country_code === CC; });
+    var places = PLACES;
 
     /* 지역별로 묶는다. 지역을 모르는 건 '기타'로 몰지 않고 나라 이름을 쓴다 —
        '기타'는 유저에게 아무 정보도 주지 않는다. */
@@ -97,8 +101,12 @@
                   '<i>' + esc(p.video_title || "") + "</i>" +
                 "</button></div>";
             }).join("") + "</div>";
-        }).join("") : '<div class="tv-empty">아직 정리된 곳이 없어요.</div>') +
-      "</div>";
+        }).join("") : '<div class="tv-empty">' + (BUSY ? "불러오는 중…" : "아직 정리된 곳이 없어요.") + '</div>') +
+      "</div>" +
+      (PLACES.length < TOTAL_F
+        ? '<button type="button" class="fd-more-btn" id="tv-cre-more">' +
+          (BUSY ? "불러오는 중…" : "더 보기 (" + PLACES.length + "/" + TOTAL_F + ")") + "</button>"
+        : "");
 
     try { document.title = (c.name || "크리에이터") + " · 여행 | GALLA"; } catch (_) {}
   }
@@ -108,7 +116,8 @@
     ROOT.__wired = true;
     ROOT.addEventListener("click", function (e) {
       var cc = e.target.closest("[data-cc2]");
-      if (cc) { CC = cc.dataset.cc2 || null; render(); return; }
+      if (cc) { CC = cc.dataset.cc2 || null; loadPlaces(true); return; }
+      if (e.target.closest("#tv-cre-more")) { loadPlaces(false); return; }
       if (e.target.closest("#tv-cre-map")) {
         return go("search.html?tab=travel&route=" + encodeURIComponent(SLUG));
       }
@@ -119,6 +128,20 @@
     });
   }
 
+  /* reset=true: 칩을 바꿨다 — 처음부터. false: 「더 보기」 — 받은 수만큼 건너뛰고 이어 붙인다. */
+  async function loadPlaces(reset) {
+    if (BUSY || !SLUG) return;
+    BUSY = true;
+    if (reset) { PLACES = []; TOTAL_F = 0; }
+    if (DATA) render();
+    var cc = CC, off = reset ? 0 : PLACES.length;
+    var d = await rpc("travel_creator_places", { p_slug: SLUG, p_country: cc, p_limit: PAGE, p_offset: off });
+    BUSY = false;
+    if (!ROOT || cc !== CC) return;           // 그 사이 다른 칩을 눌렀다 — 늦게 온 답은 버린다
+    if (d && d.ok) { PLACES = PLACES.concat(d.places || []); TOTAL_F = d.total || 0; }
+    render();
+  }
+
   async function boot(root, params) {
     ROOT = root || document.getElementById("tv-cre-page");
     if (!ROOT) return;
@@ -126,10 +149,11 @@
     SLUG = (params && params.c) || new URLSearchParams(location.search).get("c") || "";
     if (!SLUG) { ROOT.innerHTML = '<div class="tv-empty">잘못된 주소예요.</div>'; return; }
     ROOT.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
-    DATA = await rpc("travel_creator", { p_slug: SLUG, p_limit: 200 });
-    CC = null;
+    // 헤더·나라 칩(전체 기준)만 travel_creator 에서 받는다 — 목록은 loadPlaces 가 따로 받는다.
+    DATA = await rpc("travel_creator", { p_slug: SLUG, p_limit: 1 });
+    CC = null; PLACES = []; TOTAL_F = 0; BUSY = false;
     if (!DATA || !DATA.ok) { ROOT.innerHTML = '<div class="tv-empty">불러오지 못했어요.</div>'; return; }
-    render();
+    await loadPlaces(true);
   }
 
   window.GALLA_PAGE_TRAVEL_CREATOR = {
