@@ -564,6 +564,33 @@ async function initSocial() {
     }
     social.loaded = true;
     applySocialState();
+    subscribeSocialRealtime();
+}
+
+/* 👥 다른 화면에서 팔로우·언팔한 걸 피드도 따라간다.
+   ⚠️ 피드 카드의 팔로우 버튼은 공용 모듈(js/follow.js `.js-follow`)을 안 쓰고
+      여기 `social.follows` 캐시를 쓴다. 그 캐시는 initSocial() 에서 딱 한 번 채워지고
+      SPA 에선 홈 뷰가 다시 초기화되지 않으므로, 릴스·프로필에서 언팔해도
+      피드 카드는 세션 내내 「팔로잉」으로 남아 있었다
+      (실측 2026-09-10: 릴스에서 언팔 → `follows` 행 삭제 확인 → 홈 카드는 그대로 「팔로잉」).
+   follow.js 와 같은 방식으로 realtime 을 하나 더 물려 캐시를 맞춘다. */
+let __socialRT = null;
+function subscribeSocialRealtime() {
+    const supabase = window.supabaseClient;
+    if (__socialRT || !social.userId || !supabase || !supabase.channel) return;
+    try {
+        __socialRT = supabase.channel('idx-follows-' + social.userId)
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'follows', filter: 'follower=eq.' + social.userId },
+                payload => {
+                    const isDel = payload.eventType === 'DELETE';
+                    const uid = ((isDel ? payload.old : payload.new) || {}).following;
+                    if (!uid) return;
+                    if (isDel) social.follows.delete(uid); else social.follows.add(uid);
+                    applySocialState();
+                })
+            .subscribe();
+    } catch (e) {}
 }
 
 function setFollowUI(btn, on) {
