@@ -106,16 +106,40 @@ serve(async (req) => {
 /* =====================================================
    🧠 NAVER NEWS THUMBNAIL EXTRACTOR
 ===================================================== */
+/* 🔒 SSRF 방어 — 이 함수는 요청 본문의 url 을 서버가 대신 가져온다. 예전엔 검사 없이 가져갔다(2026-09-10 QA).
+   article-reader·galla-friend 와 같은 규칙 + 리다이렉트를 손으로 따라가며 매 홉 다시 검사(최대 3홉). */
+function isBlockedHost(u: string): boolean {
+  let h = "";
+  try { h = new URL(u).hostname.toLowerCase(); } catch { return true; }
+  return h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local") ||
+    /^\[?::1\]?$/.test(h) ||
+    /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) || /^0\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+    /^\[?f[cd][0-9a-f]{2}:/i.test(h);
+}
+
 async function extractThumbnail(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-      },
-    });
+    if (!/^https?:\/\//i.test(url) || isBlockedHost(url)) return null;
+    let res: Response | null = null;
+    let cur = url;
+    for (let hop = 0; hop < 4; hop++) {
+      res = await fetch(cur, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        },
+        redirect: "manual",
+      });
+      if (res.status < 300 || res.status >= 400) break;
+      const loc = res.headers.get("location");
+      if (!loc) break;
+      cur = new URL(loc, cur).toString();
+      if (!/^https?:\/\//i.test(cur) || isBlockedHost(cur) || hop === 3) return null;
+    }
 
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
 
     const html = await res.text();
 

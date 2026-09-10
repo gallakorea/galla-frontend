@@ -737,17 +737,40 @@ const NAVER_SECRET = Deno.env.get("NAVER_CLIENT_SECRET") || "";
 function stripTags(s: string) { return String(s || "").replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'"); }
 
 // 📎 근거(링크) 읽기 — 기사/페이지는 본문 추출, 유튜브·비메오는 oEmbed로 제목·작성자. 베스트에포트.
+/* 🔒 SSRF 방어 — 근거 창구(📎)는 '사용자가 준 아무 URL 을 서버가 대신 가져와' 본문을 프롬프트에 넣는다.
+   예전엔 http(s) 여부만 봐서 내부 주소도 그대로 가져갔고, 가져온 글이 답에 섞여 되돌아올 수 있었다(2026-09-10 QA).
+   article-reader 와 같은 규칙 + 리다이렉트를 손으로 따라가며 **매 홉** 다시 검사한다
+   (redirect:"follow" 는 공개 URL → 내부 주소로 튕기는 우회를 못 막는다). 런타임도 169.254·127·10 을 거부하지만 그건 우리 보증이 아니다. */
+function isBlockedHost(u: string): boolean {
+  let h = "";
+  try { h = new URL(u).hostname.toLowerCase(); } catch { return true; }
+  return h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local") ||
+    /^\[?::1\]?$/.test(h) ||
+    /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) || /^0\./.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+    /^\[?f[cd][0-9a-f]{2}:/i.test(h);
+}
 async function fetchSource(url: string): Promise<{ title?: string; text?: string; ok: boolean }> {
   try {
-    if (!/^https?:\/\//.test(url)) return { ok: false };
+    if (!/^https?:\/\//.test(url) || isBlockedHost(url)) return { ok: false };
     if (/youtube\.com|youtu\.be|vimeo\.com/.test(url)) {
       const oe = /vimeo/.test(url) ? `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}` : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
       try { const ry = await fetch(oe); if (ry.ok) { const y = await ry.json(); return { ok: true, title: y.title, text: `영상 "${y.title}" (채널: ${y.author_name || "?"})` }; } } catch { /* */ }
     }
     const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; GallaBot/1.0)" }, redirect: "follow", signal: ctrl.signal });
+    let r: Response | null = null;
+    let cur = url;
+    for (let hop = 0; hop < 4; hop++) {
+      r = await fetch(cur, { headers: { "User-Agent": "Mozilla/5.0 (compatible; GallaBot/1.0)" }, redirect: "manual", signal: ctrl.signal });
+      if (r.status < 300 || r.status >= 400) break;
+      const loc = r.headers.get("location");
+      if (!loc) break;
+      cur = new URL(loc, cur).toString();
+      if (!/^https?:\/\//.test(cur) || isBlockedHost(cur) || hop === 3) { clearTimeout(to); return { ok: false }; }
+    }
     clearTimeout(to);
-    if (!r.ok) return { ok: false };
+    if (!r || !r.ok) return { ok: false };
     if (!/text\/html|xml/.test(r.headers.get("content-type") || "")) return { ok: true, text: `(링크: ${url})` };
     let html = (await r.text()).slice(0, 500000);
     const tM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
