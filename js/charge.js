@@ -146,7 +146,7 @@ window.GALLA_PORTONE = {
       /* 스토어에 상품이 아직 안 붙었거나(심사 전) 카탈로그를 못 받은 상태.
          눌러도 안 되는 버튼을 보여주느니 아무것도 안 보여주는 게 낫다. */
       sheet.innerHTML = shell(
-        `<div class="chg-soon">지금은 충전을 열 수 없어요.<br>잠시 후 다시 시도해 주세요.</div>`,
+        `<div class="chg-soon">지금은 충전을 열 수 없어요.<br>잠시 후 다시 시도해 주세요.<br><span style="font-size:10px;opacity:.7;word-break:break-all">${JSON.stringify(window.__gcDiag||{none:1})}</span></div>`,
         ctx, NOTE_APP);
       return;
     }

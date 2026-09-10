@@ -42,6 +42,16 @@
     },
   };
 
+  /* 등록용 상품 ID 폴백 — 서버 카탈로그를 못 받아도 스토어 등록 자체는 해둔다.
+     ⚠️ 지급량(gc)은 여기 없다. 그건 끝까지 서버(`gc_products`)가 진실이고,
+     카탈로그를 못 받으면 수량을 모르므로 충전 시트에 아무것도 그리지 않는다.
+     ID 만 미리 등록해 두는 이유: register 는 initialize 前에만 유효한데,
+     그 시점엔 로그인·네트워크가 아직 아닐 수 있기 때문이다. */
+  const GC_FALLBACK = {
+    ios: ["im.galla.gc.c1", "im.galla.gc.c5", "im.galla.gc.c10"],
+    android: ["im.galla.gc.c1", "im.galla.gc.c5", "im.galla.gc.c10"],
+  };
+
   const sb = () => window.supabaseClient;
   function platform() {
     try {
@@ -82,15 +92,21 @@
     if (!(await init())) return [];
     const st = store(), P = window.CdvPurchase;
     if (!st || !P) return [];
-    if (!_gcCat.length) _gcCat = await loadGcCatalog(plat);
-    const fresh = _gcCat.filter((x) => !_registered.has(x.id));
-    if (fresh.length) {
-      const platformId = plat === "android" ? P.Platform.GOOGLE_PLAY : P.Platform.APPLE_APPSTORE;
-      st.register(fresh.map((x) => ({ id: x.id, type: P.ProductType.CONSUMABLE, platform: platformId })));
-      fresh.forEach((x) => _registered.add(x.id));
-      try { await st.update(); } catch (_) {}
+    /* 상품 등록은 init() 에서 이미 끝났다(initialize 前이어야 하므로).
+       여기서는 수량을 아직 모를 때 카탈로그만 다시 받아 채운다 —
+       앱 시작 직후엔 supabaseClient 가 아직 없어 카탈로그가 비어 있을 수 있다. */
+    if (!_gcCat.length) {
+      _gcCat = await loadGcCatalog(plat);
+      if (_gcCat.length) { try { await st.update(); } catch (_) {} }
     }
-    return window.GALLA_gcOffers();
+    const _out = window.GALLA_gcOffers();
+    try {
+      window.__gcDiag = { plat, hasStore: !!st, cat: _gcCat.length,
+        ids: _gcCat.map(x => x.id), reg: [..._registered],
+        got: _out.length,
+        probe: (_gcCat.length ? _gcCat : []).map(x => { try { const p = st.get(x.id); const o = p && p.getOffer && p.getOffer(); return x.id.slice(-3) + ":" + (!p ? "noProduct" : (!o ? "noOffer" : "ok")); } catch (e) { return x.id.slice(-3) + ":err"; } }) };
+    } catch (_) {}
+    return _out;
   };
 
   /* 스토어에 실제로 붙은 것만 돌려준다 — 가격은 스토어 표시가 그대로(원화 하드코딩 금지). */
@@ -133,9 +149,21 @@
 
         st.error((e) => console.warn("[iap] store", e && e.code, e && e.message));
 
-        st.register(Object.values(SUBS[plat]).map((id) => ({
-          id, type: P.ProductType.PAID_SUBSCRIPTION, platform: platformId,
-        })));
+        /* ⚠️ register 는 initialize 前에 전부 끝나야 한다.
+           2026-09-10: 소모성(GC)을 initialize 뒤에 register 했더니 스토어가 상품을 안 물어와
+           충전 시트가 계속 "지금은 충전을 열 수 없어요" 로 떨어졌다(시뮬 로컬 StoreKit 실측).
+           구독만 뜨고 충전만 안 뜨던 증상의 원인이 이것이다. */
+        _gcCat = await loadGcCatalog(plat);
+        const gcIds = _gcCat.length ? _gcCat.map((x) => x.id) : GC_FALLBACK[plat];
+        st.register([
+          ...Object.values(SUBS[plat]).map((id) => ({
+            id, type: P.ProductType.PAID_SUBSCRIPTION, platform: platformId,
+          })),
+          ...gcIds.map((id) => ({
+            id, type: P.ProductType.CONSUMABLE, platform: platformId,
+          })),
+        ]);
+        gcIds.forEach((id) => _registered.add(id));
 
         await st.initialize([platformId]);
         await st.update();
