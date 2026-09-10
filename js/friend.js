@@ -1926,7 +1926,9 @@
     typing(false);
     window.__frSuppressGreet = false;
     if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
-    else if(!logEl.children.length){ addMsg("a","이 얘기 나랑 해볼까? 어떻게 생각해?"); }
+    /* 답이 비어 와도(한도·침묵 등) 사용자가 '누른' 요청이니 반드시 한마디 한다. 예전엔 대화 기록이 있으면
+       아무것도 안 띄워 콘텐츠 갈비스 버튼이 먹통처럼 보였다(2026-09-10 QA: 서버 200·951ms, 화면 무반응). */
+    else { addMsg("a", title ? "「"+title.slice(0,40)+"」 얘기 나랑 해볼까? 어떻게 생각해?" : "이 얘기 나랑 해볼까? 어떻게 생각해?"); }
   }
   window.GALLA_askGalvis = askGalvis;
   // 전역 위임 — 각 화면은 <button data-galvis data-gv-type data-gv-id data-gv-title> 만 심으면 됨

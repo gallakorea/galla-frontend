@@ -4344,7 +4344,10 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     //    ⚠️ 빈 메시지 = 창을 열 때 우리가 먼저 거는 인사(greet). 유저가 한 마디도 안 했는데
     //       할당량을 깎으면 "열기만 12번 하면 끝"이 된다 — 우리가 시작한 말을 유저에게 청구하는 꼴.
     //       그래서 인사는 별도의 넉넉한 창으로 센다(공짜는 아니고, 폭주만 막는다).
-    const isGreeting = !String(body?.message || "").trim();
+    /* 콘텐츠 갈비스 버튼(handoff)도 message 가 비어 오지만 '인사'가 아니다 — 사용자가 누른 요청이다.
+       인사로 분류하면 ambient 한도·침묵 판정에 걸려 {reply:""} 로 조용히 버려졌다(2026-09-10 QA: POST 200·951ms·화면 무반응). */
+    const hasHandoff = !!(body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id);
+    const isGreeting = !String(body?.message || "").trim() && !hasHandoff;
     const gate = await aiGate("u:" + uid, isGreeting ? AI_FN + "-ambient" : AI_FN);
     if (!gate.ok) {
       if (isGreeting) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
@@ -4407,7 +4410,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     /* ⚠️ 침묵은 '침묵을 이해하는 클라이언트'에만 준다(quietOk).
        옛 프론트는 빈 reply 를 받으면 하드코딩된 "안녕! 나 갈비스야"로 대체한다 →
        배포 시차 동안 열 때마다 그 말이 뜨는 회귀가 된다. 플래그 없으면 예전처럼 항상 인사. */
-    if (!userMsg && !firstMeet && body?.quietOk === true) {
+    if (!userMsg && !firstMeet && body?.quietOk === true && !hasHandoff) {   // 콘텐츠 버튼(handoff)은 침묵 대상 아님
       /* ⏱ 3분. 처음엔 30분으로 뒀는데 "열어도 대답이 없다"는 제보가 계속 나왔다 —
          컴패니언을 여는 건 사용자가 말을 건 것이고, 친구라면 답을 한다.
          이 문턱은 '연타로 여닫을 때'만 막으면 된다. */
