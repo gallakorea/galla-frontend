@@ -272,7 +272,9 @@
             const seek = () => { try { if (at < (v.duration || Infinity)) v.currentTime = at; } catch (_) {} };
             if (v.readyState >= 1) seek(); else v.addEventListener('loadedmetadata', seek, { once: true });
           }
-          v.muted = MUTED; v.play().catch(() => {});
+          v.muted = MUTED;
+          // 소리 켠 채 재생이 막히면(자동재생 정책) 음소거로 한 번 더 — 멈춘 화면보다 낫다. 선호는 안 바꾼다
+          v.play().catch(() => { if (!v.muted) { v.muted = true; v.play().catch(() => {}); } });
           en.target.querySelector('.grl-playpause')?.classList.remove('show');
         } else { v.pause(); try { v.currentTime = v.currentTime; } catch (_) {} }
       });
@@ -376,11 +378,17 @@
       MUTED = !MUTED;
       document.querySelectorAll('.grl-slide video').forEach(v => v.muted = MUTED);
       bar.querySelector('#grl-mute').innerHTML = MUTED ? IC.muteOn : IC.muteOff;
+      // 전역 선호에도 적는다 — 릴스에서 끄고 홈으로 나가면 홈도 꺼져 있어야 한다
+      if (window.GALLA_setSound) window.GALLA_setSound(!MUTED);
+      else { try { sessionStorage.setItem('gallaSound', MUTED ? '0' : '1'); } catch (_) {} }
     };
   }
 
   function navHide(on) { try { window.GALLA_SPA && window.GALLA_SPA.navHide && window.GALLA_SPA.navHide(on); } catch (_) {} }
   async function boot() {
+    // 소리 = 전역 선호(sessionStorage 'gallaSound', js/media-sound.js 와 같은 키). 예전엔 늘 음소거로 시작해
+    // 홈에서 🔊 켜고 들어와도 🔇 였다(2026-09-11 QA). 진입마다 다시 읽는다(SPA 재방문).
+    try { MUTED = sessionStorage.getItem('gallaSound') !== '1'; } catch (_) { MUTED = true; }
     navHide(true);                                  // 릴스 진입 = 하단 네비 숨김(몰입)
     window.__grlRestoreNav = () => navHide(false);
     window.addEventListener('popstate', function once() { window.removeEventListener('popstate', once); navHide(false); });
