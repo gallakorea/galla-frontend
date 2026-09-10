@@ -24,6 +24,22 @@
     { key: "orange", amount: 10000, color: "#ff9f1c", emoji: "🧡" },
   ];
   const MIN = 1000;
+
+  /* 🍎 앱 후원은 스토어 직접결제(IAP)다 — GC 를 거치지 않는다.
+     애플·구글은 '등록된 가격'만 결제할 수 있어 자유 금액이 안 된다. 그래서 앱에서는
+     고정 6단만 보여준다(유튜브 슈퍼챗도 같은 이유로 단계식이다).
+     ⚠️ 금액이 웹과 다르다 — 스토어 수수료 30% 를 얹은 값이라 웹 1,000 이 앱 1,500 이다.
+        표시 가격은 우리가 적지 않고 스토어가 준 값을 쓴다(anti-steering).
+     ⚠️ 여기 web 값은 '어느 단인지'를 서버와 맞추는 열쇠일 뿐, 앱 화면에 찍지 않는다. */
+  const APP_TIERS = [
+    { web: 1000,  id: "im.galla.tip.1k"  },
+    { web: 3000,  id: "im.galla.tip.3k"  },
+    { web: 5000,  id: "im.galla.tip.5k"  },
+    { web: 10000, id: "im.galla.tip.10k" },
+    { web: 30000, id: "im.galla.tip.30k" },
+    { web: 50000, id: "im.galla.tip.50k" },
+  ];
+  const isApp = () => { try { return !!(window.GALLA_isApp && window.GALLA_isApp()); } catch (_) { return false; } };
   const tierLabel = (a) => a < 1000 ? a + "원" : a < 10000 ? (a / 1000) + "천" : (a / 10000) + "만";
   const COLOR = Object.fromEntries(TIERS.map(t => [t.key, t.color]));
   const tierColor = (k) => COLOR[k] || "#3b82f6";
@@ -116,8 +132,10 @@
   }
   function amount() {
     const c = sheet.querySelector("#ds-amt");
-    const v = c ? parseInt(String(c.value).replace(/[^\d]/g, "") || "0") : 0;
-    return v;
+    if (c) return parseInt(String(c.value).replace(/[^\d]/g, "") || "0");
+    /* 🍎 앱에는 직접 입력칸이 없다(스토어가 등록된 가격만 결제한다) — 고른 단에서 읽는다. */
+    const on = sheet.querySelector(".ds-tier.on");
+    return on ? (parseInt(on.dataset.amt, 10) || 0) : 0;
   }
   function refreshGo() {
     const a = amount(); const go = sheet.querySelector("#ds-go");
@@ -132,36 +150,53 @@
         ? `발의자 <b>${won(net)}</b> · 환원 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
   }
   function renderForm() {
+    /* 🍎 앱에서는 스토어에 등록한 6단만 보여준다. 애플·구글은 '등록된 가격'만 결제할 수 있어
+       직접 입력이 원천적으로 불가능하다(웹에서는 그대로 열려 있다).
+       가격 문구도 우리가 적지 않고 스토어가 준 표시가를 쓴다 — anti-steering. */
+    const app = isApp();
+    const tipOffers = app && window.GALLA_tipOffers ? window.GALLA_tipOffers() : [];
+    const priceOf = (id) => (tipOffers.find(o => o.id === id) || {}).price || "";
+    const tierHTML = app
+      ? APP_TIERS.map((t, i) => {
+          const meta = TIERS[Math.min(i, TIERS.length - 1)];
+          return `<button class="ds-tier" data-amt="${t.web}" style="--c:${meta.color}">
+            <div class="e">${meta.emoji}</div><div class="a">${priceOf(t.id) || tierLabel(t.web)}</div>
+          </button>`;
+        }).join("")
+      : TIERS.map(t => `
+        <button class="ds-tier" data-amt="${t.amount}" style="--c:${t.color}">
+          <div class="e">${t.emoji}</div><div class="a">${tierLabel(t.amount)}</div>
+        </button>`).join("");
+
     sheet.innerHTML = `
       <div class="ds-grip"></div>
       <div class="ds-title">💝 ${A(cur.creatorName || "발의자")} 후원</div>
       <div class="ds-sub">☕ 커피 한 잔값으로도 응원할 수 있어요 · 메시지도 함께 전달됩니다</div>
-      <div class="ds-tiers">${TIERS.map(t => `
-        <button class="ds-tier" data-amt="${t.amount}" style="--c:${t.color}">
-          <div class="e">${t.emoji}</div><div class="a">${tierLabel(t.amount)}</div>
-        </button>`).join("")}</div>
-      <div class="ds-custom"><input id="ds-amt" inputmode="numeric" placeholder="직접 입력" value=""><span class="u">원</span></div>
+      <div class="ds-tiers">${tierHTML}</div>
+      ${app ? "" : `<div class="ds-custom"><input id="ds-amt" inputmode="numeric" placeholder="직접 입력" value=""><span class="u">원</span></div>`}
       <textarea class="ds-msg" id="ds-msg" rows="2" maxlength="200" placeholder="응원 메시지 (선택 · 최대 200자)"></textarea>
       <div class="ds-row">
         <label class="ds-anon"><input type="checkbox" id="ds-anon"> 익명으로 후원</label>
         <span class="ds-break" id="ds-break"></span>
       </div>
-      <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 || GC_SUB > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다${GC_SUB > 0 ? `<br><span style="opacity:.65;font-size:11.5px">창작 크레딧 ${GC_SUB.toLocaleString()}은 AI 창작 전용이라 후원에는 쓸 수 없어요</span>` : ""}</div>
+      <div class="ds-gc" id="ds-gc" ${(!app && (GC_BAL > 0 || GC_SUB > 0)) ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다${GC_SUB > 0 ? `<br><span style="opacity:.65;font-size:11.5px">창작 크레딧 ${GC_SUB.toLocaleString()}은 AI 창작 전용이라 후원에는 쓸 수 없어요</span>` : ""}</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
       <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 발의자 이름으로 기부</b>됩니다(수수료 20%).
-        결제는 <b>갈라코인(GC)</b>으로 합니다.${(window.GALLA_isApp && window.GALLA_isApp()) ? "" : " 1GC=1원, 현금으로만 구매됩니다."}
-        갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.
+        ${app ? "결제는 App Store를 통해 진행됩니다." : "결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다."}
+        갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없습니다.
         <a href="creator.html" class="earn-more">이 돈은 어디로 가나요? ›</a></div>`;
     sheet.querySelectorAll(".ds-tier").forEach(b => {
       b.style.borderColor = "rgba(255,255,255,.12)";
       b.addEventListener("click", () => {
         sheet.querySelectorAll(".ds-tier").forEach(x => { x.classList.remove("on"); x.style.borderColor = "rgba(255,255,255,.12)"; });
         b.classList.add("on"); b.style.borderColor = b.style.getPropertyValue("--c");
-        sheet.querySelector("#ds-amt").value = (+b.dataset.amt).toLocaleString();
+        const inp = sheet.querySelector("#ds-amt");
+        if (inp) inp.value = (+b.dataset.amt).toLocaleString();
         refreshGo();
       });
     });
-    sheet.querySelector("#ds-amt").addEventListener("input", () => {
+    const amtInput = sheet.querySelector("#ds-amt");
+    if (amtInput) amtInput.addEventListener("input", () => {
       sheet.querySelectorAll(".ds-tier").forEach(x => { x.classList.remove("on"); x.style.borderColor = "rgba(255,255,255,.12)"; });
       refreshGo();
     });
@@ -184,6 +219,45 @@
     const args = Object.assign({}, idArg, { p_amount: a, p_message: msg, p_anonymous: anon });
     const gcRpc = kind === "post" ? "gc_donate_post" : kind === "plaza" ? "gc_donate_plaza" : "gc_donate";
     const whoLabel = kind === "post" ? "창작자" : kind === "plaza" ? "작성자" : "발의자";
+
+    /* 🍎 앱 — 스토어 직접결제. GC 잔액을 보지 않는다.
+       ① tip_begin 으로 '누구에게' 를 서버에 먼저 적는다(영수증엔 상품 id 만 오므로)
+       ② 스토어 결제 → verify-iap 가 영수증을 검증하고 tip_confirm 으로 확정
+       실패해도 pending 은 30분 뒤 자동 만료된다. */
+    if (isApp() && window.GALLA_buyTip) {
+      const tier = APP_TIERS.find(t => t.web === a);
+      if (!tier) { alert("이 금액은 앱에서 후원할 수 없어요."); go.disabled = false; refreshGo(); return; }
+      const beginArgs = Object.assign({}, idArg, {
+        p_channel: (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "android") ? "android" : "ios",
+        p_product_id: tier.id, p_message: msg, p_anonymous: anon,
+      });
+      const { data: bg, error: bErr } = await sb().rpc("tip_begin", beginArgs);
+      if (bErr || !bg?.ok) {
+        alert(bg?.reason === "self" ? "본인이 쓴 글은 후원할 수 없어요."
+            : bg?.reason === "auth" ? "로그인이 필요해요." : "후원을 시작하지 못했어요.");
+        go.disabled = false; refreshGo(); return;
+      }
+      const r = await window.GALLA_buyTip(tier.id);
+      if (!r || !r.ok) {
+        if (!(r && r.reason === "canceled")) alert("결제를 시작하지 못했어요.");
+        go.disabled = false; refreshGo(); return;
+      }
+      /* ⚠️ 여기서 '완료'는 결제 접수까지다. 실제 지급은 영수증 검증(verify-iap)이
+         끝나야 확정된다 — 그걸 기다리지 않고 확정처럼 쓰면 검증 실패한 건도 성공으로 보인다. */
+      window.BattleFX?.haptic?.("tap");
+      if (window.GALLA_FX) window.GALLA_FX.confetti({ count: 60 });
+      sheet.innerHTML = `
+        <div class="ds-grip"></div>
+        <div class="ds-done">
+          <div class="ic">💝</div>
+          <h4>후원 완료!</h4>
+          <p>${whoLabel}에게 마음이 전달됐어요.<br>
+          <span style="opacity:.7;font-size:12.5px">영수증 확인이 끝나면 후원 내역에 표시돼요.</span></p>
+        </div>
+        <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
+      sheet.querySelector("#ds-close").addEventListener("click", close);
+      return;
+    }
 
     // ① GC 잔액이 충분하면 갈라코인으로 즉시 후원 (표준 경로)
     if (GC_BAL >= a) {

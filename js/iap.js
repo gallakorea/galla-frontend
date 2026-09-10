@@ -20,6 +20,8 @@
  *   GALLA_gcOffers()            [{pkg, gc, id, price}] — GC 패키지·스토어 표시가
  *   GALLA_ensureGcProducts()    GC 카탈로그를 서버에서 받아 등록하고 오퍼를 돌려준다(충전 시트가 부른다)
  *   GALLA_buyGC(pkg)            GC 충전 구매 → 검증 → 잔액 반영까지
+ *   GALLA_tipOffers()           [{id, price}] — 후원 티어·스토어 표시가
+ *   GALLA_buyTip(productId)     후원 구매(받는 사람은 서버 pending 에 적혀 있다)
  *   GALLA_restorePurchases()    기기 바꿨을 때 되살리기(스토어 심사 필수 항목)
  */
 (function () {
@@ -53,6 +55,14 @@
     ios: ["im.galla.gc.c1", "im.galla.gc.c5", "im.galla.gc.c10"],
     android: ["im.galla.gc.c1", "im.galla.gc.c5", "im.galla.gc.c10"],
   };
+
+  /* 💝 후원 상품 — 스토어 직접결제. 소모성이지만 GC 와 달리 '무엇을 줄지'가 아니라
+     '누구에게 갈지'가 서버 pending 에 적혀 있다(tip_begin).
+     ⚠️ 여기도 register 는 initialize 前에 끝나야 한다 — 소모성 GC 에서 겪은 그 함정. */
+  const TIP_IDS = [
+    "im.galla.tip.1k", "im.galla.tip.3k", "im.galla.tip.5k",
+    "im.galla.tip.10k", "im.galla.tip.30k", "im.galla.tip.50k",
+  ];
 
   const sb = () => window.supabaseClient;
   function platform() {
@@ -157,8 +167,12 @@
           ...gcIds.map((id) => ({
             id, type: P.ProductType.CONSUMABLE, platform: platformId,
           })),
+          ...TIP_IDS.map((id) => ({
+            id, type: P.ProductType.CONSUMABLE, platform: platformId,
+          })),
         ]);
         gcIds.forEach((id) => _registered.add(id));
+        TIP_IDS.forEach((id) => _registered.add(id));
 
         await st.initialize([platformId]);
         await st.update();
@@ -220,6 +234,37 @@
       // 유저가 창을 닫은 것도 여기로 온다 — 실패로 시끄럽게 알리지 않는다
       if (err) return { ok: false, reason: err.code === 6777006 ? "canceled" : (err.message || "order_failed") };
       return { ok: true };                       // 실제 지급은 approved → verify 에서
+    } catch (e) { return { ok: false, reason: String(e).slice(0, 80) }; }
+  };
+
+  /* 💝 후원 구매 — 받는 사람은 이미 서버 pending 에 적혀 있다(donate.js 가 tip_begin 을 먼저 부른다).
+     여기서는 '결제만' 한다. 지급 확정은 approved → verify-iap → tip_confirm 이다. */
+  window.GALLA_tipOffers = function () {
+    const st = store(); if (!st) return [];
+    const out = [];
+    for (const id of TIP_IDS) {
+      try {
+        const p = st.get(id);
+        const offer = p && p.getOffer && p.getOffer();
+        const price = offer && offer.pricingPhases && offer.pricingPhases[0] && offer.pricingPhases[0].price;
+        if (p && price) out.push({ id, price });
+      } catch (_) { /* 이 상품만 건너뛴다 */ }
+    }
+    return out;
+  };
+
+  window.GALLA_buyTip = async function (productId) {
+    const plat = platform();
+    if (!plat) return { ok: false, reason: "not_native" };
+    if (!(await init())) return { ok: false, reason: "store_unavailable" };
+    if (TIP_IDS.indexOf(productId) < 0) return { ok: false, reason: "unknown_product" };
+    try {
+      const p = store().get(productId);
+      const offer = p && p.getOffer && p.getOffer();
+      if (!offer) return { ok: false, reason: "no_offer" };
+      const err = await offer.order();
+      if (err) return { ok: false, reason: err.code === 6777006 ? "canceled" : (err.message || "order_failed") };
+      return { ok: true };
     } catch (e) { return { ok: false, reason: String(e).slice(0, 80) }; }
   };
 
