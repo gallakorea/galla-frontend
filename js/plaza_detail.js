@@ -187,8 +187,9 @@ window.GALLA_renderPlazaDonations = async function (postId) {
 };
 
 async function fetchPostDetail() {
-  // 조회수 +1 (비동기, 실패 무시)
-  supabase.rpc("increment_plaza_view", { p_post_id: postId }).then(() => {});
+  // 조회수 +1 을 **먼저 끝내고** 읽는다(실패는 무시). 예전엔 올리기를 기다리지 않고 바로 읽은 뒤
+  // 화면에 +1 을 더해, 올리기가 먼저 끝나면 한 번 방문이 두 번으로 보였다(DB 21 · 화면 22, 2026-09-11 QA 7-8-4).
+  try { await supabase.rpc("increment_plaza_view", { p_post_id: postId }); } catch (_) {}
 
   const { data, error } = await supabase
     .from("plaza_posts")
@@ -215,7 +216,7 @@ async function fetchPostDetail() {
   // 🤖 갈비스 — 이 글 맥락 채우기
   { const gb = D.querySelector("#plazaGalvisBtn"); if (gb) { gb.setAttribute("data-gv-id", String(postId || "")); gb.setAttribute("data-gv-title", data.title || ""); } }
   if (postMetaEl) {
-    postMetaEl.textContent = `${data.category} · 조회 ${(data.view_count || 0) + 1}`;
+    postMetaEl.textContent = `${data.category} · 조회 ${data.view_count || 0}`;   // 올리기가 끝난 값이라 +1 하지 않는다
   }
   // 작성자 블록 (이슈 상세와 동일 급): 아바타 + 등급 + 활동명 + 팔로우 + 💝응원
   renderAuthorBlock(data);
