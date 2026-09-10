@@ -44,6 +44,22 @@ function loadScriptOnce(src) {
 /* 로더가 걷어낸 create.html 헤더(header.header) 재생성 — 같은 클래스라 기존 CSS 그대로.
    뒤로가기 = 스택 pop (마크업 파일은 불변, DOM만 뷰 안에 생성) */
 function ensureHead(root) {
+  /* 로더가 create.html 헤더를 안 걷어낸 경우 — 원본 「‹」의 인라인 onclick 은 MPA 전용
+     (same-origin referrer 면 back(), 아니면 location.href='index.html')이라, 앱(referrer 없음)에선
+     DM·홈 어디서 열었든 **홈으로 떨어졌다**(2026-09-11 QA 6-1-1: DM ＋ → ‹ = 홈, 2회 재현·웹 SPA DOM 실측).
+     SPA 에선 그 인라인을 떼고 스택 pop 으로 바꾼다(마크업 파일은 불변 — MPA 동작 그대로). */
+  const oldBack = root.querySelector(".cr-head .cr-back");
+  if (oldBack) {
+    oldBack.removeAttribute("onclick");
+    if (!oldBack.__spaBack) {
+      oldBack.__spaBack = true;
+      oldBack.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try { window.GALLA_SPA && window.GALLA_SPA.pop(); } catch (_) {}
+      });
+    }
+    return;
+  }
   if (root.querySelector(".cr-head")) return;
   const head = document.createElement("header");
   head.className = "header header-common";
