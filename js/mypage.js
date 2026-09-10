@@ -149,20 +149,32 @@ async function GALLA_mypageInit(root, spaParams) {
         followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
 
         followBtn.onclick = async () => {
+            let error = null;
             if (isFollowing) {
-                await supabase.from("follows")
+                ({ error } = await supabase.from("follows")
                     .delete()
                     .eq("follower", userId)
-                    .eq("following", viewUserId);
+                    .eq("following", viewUserId));
             } else {
-                await supabase.from("follows")
-                    .insert({ follower: userId, following: viewUserId });
+                ({ error } = await supabase.from("follows")
+                    .insert({ follower: userId, following: viewUserId }));
+                if (error && error.code === "23505") error = null;   // 이미 팔로우(중복) = 성공으로 본다
             }
             // SPA(app.html): location.reload()는 앱 전체를 재부팅하고 해시(#/mypage?user=)가
             // 탭으로 해석돼 '내 프로필'로 떨어진다 — 제자리 갱신. MPA는 기존 reload 유지.
             if (document.body.dataset.page === "spa") {
+                if (error) return;   // 실패면 버튼을 뒤집지 않는다(예전엔 실패해도 글자만 바뀌었다)
                 isFollowing = !isFollowing;
                 followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+                /* 이 사람의 「팔로워」 숫자도 제자리 갱신 — 예전엔 버튼 글자만 바뀌고 숫자는 로드 때 값에 멈춰
+                   언팔 뒤에도 「1 팔로워」(DB 0)로 남았다(2026-09-11 QA 6-4-7, iOS 시뮬). 1358행 realtime 은
+                   내 마이페이지 전용이라 남의 프로필은 여기서 직접 센다. D = 이 화면(스택 뷰)의 루트. */
+                try {
+                    const { count } = await supabase.from("follows")
+                        .select("id", { count: "exact", head: true }).eq("following", viewUserId);
+                    const stat = D.querySelector("#statFollowers");
+                    if (stat && count != null) stat.textContent = count;
+                } catch (_) { /* 숫자 갱신 실패는 조용히 — 다음 진입 때 다시 센다 */ }
             } else location.reload();
         };
 
