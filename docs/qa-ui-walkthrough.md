@@ -69,6 +69,7 @@
 | 뉴스 북마크·반응 | `galla_news_bookmarks` (a3965640…, qa0909b, 09-09 13:57:58) · `galla_news_reactions` (a3965640…, value −1, 09-09 13:57:55) — 09-09 웹 QA 잔여(「이재명 대통령, 프랑스 하원의장 면담」) | 7-3-2 에서 새로 넣는 건 그 자리에서 원복 |
 | 맛집 판정 | `food_votes` (효면옥 0a8e8a38…, qa0909b, good, 09-09 14:04 UTC) — 09-09 웹 QA(7-6-7) 잔여. 이게 전국 목록의 **유일한 반응**이라 지우면 「화제」 = 「최신」으로 돌아간다(7-6-2) | 호치민포 표(96bf8931)는 운영 계정 것 — 건드리지 않는다 |
 | DM GIF 메시지 | qa0909 ↔ qa0909b 대화 | 계정과 함께 |
+| **app_test(test@galla.im, d83101d9…) — AOS 로그인 QA 계정(2026-09-11 11:00 사장님 로그인)** | 기준선(11:02, uuid 컬럼 159개 전수): 행 있는 표 9개만 — user_e2e_keys 1 · call_device_tokens 1 · point_ledger 2 · point_balances 1(10,500 GP) · ai_user_usage 1 · user_profiles 1 · gallian_cache 1 · ai_model_pin 1 · login_logs 1. **follows·votes·comments·bookmarks·notifications·share_events·dm_threads 전부 0** | 계정은 지우지 않는다(사장님 계정). AOS 시험 뒤 기준선보다 늘어난 행만 세고 원복(전수 쿼리: scratchpad `app_test_baseline.json` 과 같은 query_to_xml 전수 카운트) |
 | QA 계정 2개 | qa0909 `00000000-0000-4000-8000-000000000909` · qa0909b `865b6843-cd8d-4ba9-a7b5-d234bbbff2ec` | **FK no cascade** — `public.users`·`public.user_profiles` 먼저, 그다음 `auth.users` |
 | 이미 원복함 | follows 행(트리거 끄고 복원·알림 0) · 댓글 331 지원 2 · 뉴스 view_count 0 · `pending_ping` null · 이슈 387 오탭 투표(votes 1283·알림 1 삭제, pro 0·조회 1) · 여행 대결 표 58·랭킹 2행 삭제(57/77) · 광장 글 58598f6d `view_count` 2 → 0 · 광장 글 6fb61014 `view_count` 21 → 20(두 번 방문분 각각 원복) · 광장 저장 0행 | 참고용 |
 
