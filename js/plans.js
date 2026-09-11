@@ -192,6 +192,10 @@
       ".gpl-bline b{font-size:13px;color:#f3f4f6;font-weight:800}",
       ".gpl-card.rec{border-color:#7a5bfa;background:#161430}",
       ".gpl-badge.rec{background:#3a2d6e;color:#cdbdff}",
+      ".gpl-terms{text-align:left;font-size:11.5px;line-height:1.6;color:#8f98a8;margin-top:14px}",
+      ".gpl-terms b{color:#cfd6e4}",
+      ".gpl-legal{text-align:center;font-size:12px;color:#7d8798;margin-top:8px}",
+      ".gpl-legal a{color:#a8bcff;text-decoration:underline}",
       ".gpl-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;",
       "background:rgba(255,255,255,.08);color:#cfd6e4;font-size:11.5px;font-weight:700;border:0;cursor:pointer}",
       ".gpl-pill.low{background:rgba(255,120,90,.18);color:#ffb098}"
@@ -225,8 +229,8 @@
          '앱 밖에서 더 싸게 사라'는 유도다. 우리는 인앱 결제로 보낸다. */
     var offer = native ? OFFERS[key] : null;
     var price = native
-      ? (offer ? '<span class="gpl-price">' + esc(offer.price) + "/월</span>" : "")
-      : '<span class="gpl-price">' + (plan.price ? won(plan.price) + "/월" : "무료") + "</span>";
+      ? (offer ? '<span class="gpl-price">' + esc(offer.price) + " / 1개월</span>" : "")
+      : '<span class="gpl-price">' + (plan.price ? won(plan.price) + " / 1개월" : "무료") + "</span>";
     var cta = cur ? ""
       : native
         ? (offer ? '<button class="gpl-go" data-buy="' + esc(key) + '">' + esc(plan.label) + " 시작하기</button>" : "")
@@ -236,6 +240,24 @@
       (cur ? '<span class="gpl-badge">이용 중</span>' : "") + (rec ? '<span class="gpl-badge rec">추천</span>' : "") + price + "</div>" +
       '<div class="gpl-pitch">' + esc(PITCH[key] || "") + "</div>" +
       '<div class="gpl-feats">' + chatLine + feats + "</div>" + cta + "</div>";
+  }
+
+  /* 📜 구독 고지(App Store 3.1.2 · Play 정기결제 정책) — 구매 화면에 제목·기간·가격과
+     자동 갱신 조건, 이용약관·개인정보 처리방침 링크가 **반드시** 보여야 한다.
+     26.9.11 애플 2.1 반려 때 요구 목록에 명시됨 — 이 블록을 지우면 심사에서 떨어진다. */
+  function legalLinks(withRestore) {
+    return '<div class="gpl-legal"><a href="#" data-legal="terms.html">이용약관</a> · ' +
+      '<a href="#" data-legal="privacy.html">개인정보 처리방침</a>' +
+      (withRestore ? ' · <button class="gpl-restore" type="button">구매 복원</button>' : "") + "</div>";
+  }
+  function subTerms(withRestore) {
+    var android = channel() === "android";
+    var store = android ? "Google Play" : "Apple ID";
+    var where = android ? "Google Play 스토어 → 결제 및 정기 결제" : "기기 설정 → Apple ID → 구독";
+    return '<div class="gpl-note gpl-terms">모든 구독은 <b>1개월 단위로 자동 갱신</b>됩니다. 결제는 ' + store +
+      " 계정으로 청구되며, 현재 기간이 끝나기 24시간 전까지 해지하지 않으면 같은 가격으로 자동 갱신돼요. " +
+      "구독 관리와 해지는 " + where + "에서 할 수 있고, 해지해도 남은 기간은 그대로 쓸 수 있어요.</div>" +
+      legalLinks(withRestore);
   }
 
   /* opts.reason — "budget"(주기 대화량 소진으로 막힘) · "nudge"(80% 안내). 클릭 이벤트가 들어와도 무시된다. */
@@ -331,10 +353,9 @@
         "</div>" + cards +
         (native
           ? (Object.keys(OFFERS).length
-              ? '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.'
-                + ' <button class="gpl-restore" type="button">구매 복원</button></div>'
-              : '<div class="gpl-note">구독 변경은 준비 중이에요.</div>')
-          : '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.</div>');
+              ? subTerms(true)
+              : '<div class="gpl-note">구독 변경은 준비 중이에요.</div>' + legalLinks(false))
+          : '<div class="gpl-note">언제든 해지할 수 있어요. 남은 기간은 그대로 쓸 수 있어요.</div>' + legalLinks(false));
     }
 
     var scrim = document.createElement("div");
@@ -376,6 +397,14 @@
       rs.disabled = true; rs.textContent = "복원 중…";
       var r = await (window.GALLA_restorePurchases ? window.GALLA_restorePurchases() : { ok: false });
       rs.textContent = r && r.ok ? "복원 요청함" : "복원 실패";
+    });
+    scrim.querySelectorAll("[data-legal]").forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        var to = a.getAttribute("data-legal");
+        bye();
+        setTimeout(function () { (window.GALLA_nav || function (u) { location.href = u; })(to); }, 230);
+      });
     });
     scrim.querySelectorAll("[data-plan]").forEach(function (b) {
       b.addEventListener("click", function () {
