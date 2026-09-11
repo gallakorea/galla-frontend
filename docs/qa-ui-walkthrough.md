@@ -24,11 +24,11 @@
 > 정정(2026-09-11): 중간 보고의 「52.6% (354/673)」은 세는 방식이 달랐다(칸 범위를 넓게 잡음). 이후는 위 방식으로 통일한다.
 > 09-09 판(⬜ 93.3%)은 착수 전 수치라 폐기.
 
-### 안드로이드 전수 — 막힘(2026-09-11)
+### 안드로이드 전수 — ~~막힘~~ → 풀림(2026-09-11 10:16)
 
-- JDK 없음(`/usr/libexec/java_home`: Unable to locate a Java Runtime) → 새 APK 빌드·재서명 불가.
-- 있는 APK: `galla-app/android/app/build/outputs/apk/debug/app-debug.apk`(9/9 11:39) — 안에 든 웹 레이어 도장 **0908040**. 이번 QA 수정(0910xxx) 전이라 이걸로 돌리면 이미 고친 결함을 다시 보고 새 회귀는 못 본다.
-- AVD `galla-test` 는 있음. 필요한 것: JDK 설치(시스템 변경 — 사장님 확인) 후 `npm run sync` + `./gradlew assembleDebug`, 또는 사장님이 최신(≥0910420) APK 빌드.
+- **⚠️ 정정 — 「JDK 없음」은 오탐이었다**: `/usr/libexec/java_home`·`/usr/bin/java` 는 시스템 JDK 만 찾는데, JDK 는 Homebrew **`openjdk@21` 21.0.11**(keg-only, 2026-07-21 설치)로 이미 있었다 → `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`. 설치·시스템 변경 없이 쓸 수 있다. (진단 교훈: `java_home` 실패 = JDK 없음 이 아니다 — `brew list --versions | grep -i jdk` 까지 본다.)
+- **설치본 = 기존 디버그 APK 재패키징**: `app-debug.apk`(09-09 11:39, 웹 0908040)에서 `assets/public/*` 만 HEAD(1315fca24 이후, 도장 **0910420**) `sync-web.sh` 결과물 503개로 갈아 끼우고 `cordova*.js` 는 원본 유지 → `zipalign -p 4` → `apksigner` 디버그 키(SHA-256 0b2b48dd…8a09, 설치본과 **동일**) 재서명 → `adb install -r`(데이터 유지). 공유 `galla-app`(다른 창 미커밋 `build.gradle` 버전 6→7)은 손대지 않았다. 9/9 11:39 이후 galla-app 의 안드로이드 쪽 커밋은 버전 숫자뿐(7fd0df4)이라 **네이티브 층은 최신과 같다**.
+- 에뮬레이터 `galla-test`(emulator-5554) 부팅·설치 완료. 전수 진행은 아래 AOS 칸에 기록.
 
 ### QA 데이터 정리 목록 (QA 끝나면 이 순서로 — 지우기 전에 반드시 센다)
 
@@ -1172,7 +1172,7 @@ DB 대조: `galla_news_reactions` value=-1 1행, `galla_news_bookmarks` 1행.
 
 ### 8-W. ⛔ 안드로이드 전수 — 이 맥에선 최신 코드로 못 한다 (2026-09-10 13:45)
 
-- **JDK 없음**: `java -version` → 「Unable to locate a Java Runtime」, Android Studio 내장 JBR 없음, `/Library/Java/JavaVirtualMachines` 비어 있음 → gradle 빌드 불가. JDK 설치는 인터넷에서 받아 실행하는 시스템 변경이라 이 창에서 하지 않는다
+- ~~**JDK 없음**: `java -version` → 「Unable to locate a Java Runtime」, Android Studio 내장 JBR 없음, `/Library/Java/JavaVirtualMachines` 비어 있음 → gradle 빌드 불가.~~ **⚠️ 오탐 정정(2026-09-11)**: Homebrew `openjdk@21`(keg-only)이 있었다 — 시스템 경로만 봐서 놓침. 이후 경위는 문서 위 「안드로이드 전수 — 풀림」 참조
 - **남아 있는 디버그 APK 는 옛 웹 계층**: `galla-app/android/app/build/outputs/apk/debug/app-debug.apk`(09-09 11:39) 안 `assets/public/app.html` 도장 **0908040** — 0909·0910 수정이 하나도 없다. 이걸로 전수하면 이미 고친 결함을 다시 찾게 된다
 - 안드로이드는 iOS 시뮬레이터처럼 설치본 웹 계층만 갈아 끼울 수 없다(에셋이 APK 안). 공유 `galla-app` 은 다른 창 미커밋(`android/app/build.gradle` 등)이 있어 `npx cap copy android` 도 안 한다
 - 에뮬레이터 `galla-test`(emulator-5554)는 부팅만 해 둠
