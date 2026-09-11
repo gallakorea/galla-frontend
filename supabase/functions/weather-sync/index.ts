@@ -1,4 +1,5 @@
-/* weather-sync — 17개 시·도 '지금 날씨'를 받아 weather_obs 에 캐시한다.
+/* weather-sync — 시·도·시군구(+즐겨찾기된 동) '지금 날씨'를 받아 weather_obs 에 캐시한다.
+   body {region} 이 오면 그 한 곳(주로 읍·면·동)만 받는다 — 동네 방을 열 때 DB(weather_room)가 부른다.
    ⚠️ 브라우저에서 외부 날씨 API 를 직접 부르지 않는다 — CSP connect-src 가 'self' 라 막히고,
       막히지 않더라도 방문자 수만큼 외부 호출이 나간다. 서버가 10분에 한 번만 받아 캐시한다.
 
@@ -14,7 +15,7 @@ const KMA_KEY = Deno.env.get("KMA_SERVICE_KEY") || "";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type" };
 const j = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-type Region = { code: string; name: string; lat: number; lon: number };
+type Region = { code: string; name: string; lat: number; lon: number; nx?: number | null; ny?: number | null; kind?: string };
 
 /* 위경도 → 기상청 격자(nx,ny). 기상청 공식 LCC(Lambert Conformal Conic) 변환.
    ⚠️ 도시별 격자표를 외워 넣지 않는다 — 표를 잘못 옮기면 엉뚱한 동네 날씨가 나온다. */
@@ -56,7 +57,8 @@ async function fromKMA(rs: Region[]) {
   const { base_date, base_time } = kmaBaseTime(new Date());
   const out: Record<string, any> = {};
   await Promise.all(rs.map(async (r) => {
-    const { nx, ny } = toGrid(r.lat, r.lon);
+    /* 동(읍·면·동)은 기상청 격자표의 nx·ny 를 그대로 쓴다 — 없으면(시도·시군구) 위경도에서 LCC 변환 */
+    const { nx, ny } = (r.nx && r.ny) ? { nx: r.nx, ny: r.ny } : toGrid(r.lat, r.lon);
     const u = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst"
       + `?serviceKey=${KMA_KEY}&numOfRows=20&pageNo=1&dataType=JSON`
       + `&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`;
@@ -106,8 +108,27 @@ async function fromOpenMeteo(rs: Region[]) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  const { data: rs } = await sb.from("weather_regions").select("code,name,lat,lon").order("sort");
-  if (!rs?.length) return j({ ok: false, reason: "no_regions" }, 500);
+  let body: any = {};
+  try { body = await req.json(); } catch { /* 크론은 '{}' 를 보낸다 */ }
+  const COLS = "code,name,lat,lon,nx,ny,kind";
+
+  let rs: Region[] = [];
+  if (body?.region) {
+    /* 🏘 동네 한 곳만 — 3,564곳을 10분마다 다 받을 수는 없다(기상청 개발계정 하루 1만 회). 필요할 때만 받는다. */
+    const { data } = await sb.from("weather_regions").select(COLS).eq("code", String(body.region)).limit(1);
+    rs = (data || []) as Region[];
+    if (!rs.length) return j({ ok: false, reason: "bad_region" }, 400);
+  } else {
+    /* 정기 수집 = 시도·시군구 + 누군가 즐겨찾기한 동. 동 전체를 넣으면 3,800곳이 되어 150초 제한에 걸린다. */
+    const { data: base } = await sb.from("weather_regions").select(COLS).in("kind", ["sido", "city"]).order("sort");
+    const { data: favs } = await sb.from("weather_favs").select("region");
+    const have = new Set((base || []).map((r: any) => r.code));
+    const extra = [...new Set((favs || []).map((f: any) => f.region))].filter((c) => !have.has(c));
+    let more: any[] = [];
+    if (extra.length) { const { data } = await sb.from("weather_regions").select(COLS).in("code", extra.slice(0, 300)); more = data || []; }
+    rs = [...(base || []), ...more] as Region[];
+  }
+  if (!rs.length) return j({ ok: false, reason: "no_regions" }, 500);
 
   let src = "kma", obs: Record<string, any> = {};
   if (KMA_KEY) { try { obs = await fromKMA(rs as Region[]); } catch { /* 폴백 */ } }
