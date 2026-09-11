@@ -111,6 +111,7 @@
 | `notifications` id **2752** (app_test 앞, from qa0909, type follow, 「QA 뱃지 테스트(AOS)…」) | 2-1-4 안읽음 뱃지 시험용 SQL 삽입(2026-09-11 11:06:15 KST) | 확인 뒤 id 지정 삭제(가드 n=1) → app_test 알림 0건(기준값). **✅ 정리 끝(2026-09-11 11:08)**: 세어서 n=1 확인 → DO 가드 삭제 → app_test 알림 0건 |
 | `post_bookmarks` (app_test, post_id **66** 「일본댄스」, 11:22:55 KST) | 2-2-6 저장 시험(앱에서 실제 저장) | 보관 화면 확인 뒤 앱에서 저장 해제로 원복 → app_test post_bookmarks 0건(기준값). **✅ 정리 끝(2026-09-11 11:27)**: 보관 화면 🔖 로 해제 → 「저장한 숏판이 없어요.」, DB 0건 |
 | `share_events` id **39** (app_test, kind issue, target `https://galla.im/share/issue/369?ref=FC48E6`, token d6bcf142efce, 11:38:17 KST) | 2-2-7 공유 시트 **열기만** 했는데 생김(`js/share-sheet.js` logShare = 링크 추적 토큰 발급) | 세고(n=1) id 지정 삭제 → app_test share_events 0건(기준값). **✅ 정리 끝(2026-09-11 11:40)**: n=1 확인 → DO 가드(id·user·token) 삭제 → 0건 |
+| `galla_news_reactions`·`galla_news_bookmarks` (app_test, news_id **ac81574e-0f96-4887-afe7-640f38cc0b87** 「미 30년물 금리 5.35% 돌파…」) | 7-3-2·7-3-3 AOS 시험 — 👍·🔖 를 앱에서 켰다가 다시 탭해 끔(12:51~) | 기준선 app_test 반응 **0**·저장 **0**(12:50). 시험 뒤 두 표 모두 0건인지 세서 확인, 남으면 id 지정 삭제 |
 | QA 계정 2개 | qa0909 `00000000-0000-4000-8000-000000000909` · qa0909b `865b6843-cd8d-4ba9-a7b5-d234bbbff2ec` | **FK no cascade** — `public.users`·`public.user_profiles` 먼저, 그다음 `auth.users` |
 | 이미 원복함 | follows 행(트리거 끄고 복원·알림 0) · 댓글 331 지원 2 · 뉴스 view_count 0 · `pending_ping` null · 이슈 387 오탭 투표(votes 1283·알림 1 삭제, pro 0·조회 1) · 여행 대결 표 58·랭킹 2행 삭제(57/77) · 광장 글 58598f6d `view_count` 2 → 0 · 광장 글 6fb61014 `view_count` 21 → 20(두 번 방문분 각각 원복) · 광장 저장 0행 | 참고용 |
 
