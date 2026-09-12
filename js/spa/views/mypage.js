@@ -55,7 +55,11 @@ async function syncNavAvatar() {
     if (!sb) return;
     const { data } = await sb.auth.getSession();
     const uid = data?.session?.user?.id;
-    if (!uid) return;
+    if (!uid) {   // 세션 없음 = 로그아웃 — 캐시 사진을 남기지 않는다(예전엔 그냥 return 해서 사진이 남았다)
+      if (window.GALLA_clearNavAvatar) window.GALLA_clearNavAvatar();
+      else { try { localStorage.removeItem("galla_nav_avatar"); } catch (_) {} }
+      return;
+    }
     const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
     const photo = (u?.avatar_url && window.GALLA_avatarSrc) ? window.GALLA_avatarSrc(u.avatar_url) : null;
     try {   // nav.js와 같은 캐시 키 — 다음 부팅 때 라우터가 즉시 적용

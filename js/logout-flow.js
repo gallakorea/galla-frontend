@@ -46,6 +46,9 @@
     /* signOut 이 네트워크로 실패해도 로컬 세션은 반드시 지운다 — 안 그러면
        "로그아웃했는데 그대로 로그인 상태"가 된다(비행기모드·지하철에서 재현). */
     try { localStorage.removeItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) {}
+    /* 마이 아이콘 사진 캐시도 지운다 — 안 그러면 로그아웃 뒤에도 네비에 사진이 남는다(2026-09-12). */
+    try { localStorage.removeItem("galla_nav_avatar"); } catch (_) {}
+    try { if (window.GALLA_clearNavAvatar) window.GALLA_clearNavAvatar(); } catch (_) {}
     try { sessionStorage.clear(); } catch (_) {}
     // "또 오세요" 인사로 교체 후 홈으로
     if (dim) dim.querySelector(".lo-card").innerHTML =
@@ -54,7 +57,9 @@
     setTimeout(function () {
       /* 앱(SPA 셸)에서 location.href 로 문서를 갈아치우면 셸·라우터가 통째로 죽는다
          — social-auth 의 로그인 복귀에서 이미 물렸던 함정이다. 셸이면 라우터로 간다. */
-      if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
+      /* ⚠️ GALLA_shellGo 는 탭 이름("index")을 받는다. 예전엔 "index.html" 을 넘겨 아무 일도 안 일어났고,
+         「또 만나요」 카드가 화면을 덮은 채 영영 안 닫혔다(2026-09-12 확인). 카드도 여기서 닫는다. */
+      if (window.GALLA_shellGo) { close(dim); window.GALLA_shellGo("index"); return; }
       if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
       location.href = "index.html";
     }, 1100);

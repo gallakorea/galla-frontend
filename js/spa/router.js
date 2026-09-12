@@ -910,7 +910,24 @@
       img.src = (TABS[cur] === "mypage") ? img.dataset.active : img.dataset.base;
     }
   };
-  try { const av = localStorage.getItem("galla_nav_avatar"); if (av) window.GALLA_setNavAvatar(av); } catch (_) {}
+  /* 🚪 로그아웃해도 마이 아이콘에 사진이 남던 것(2026-09-12 사장님 제보) — 캐시 키(galla_nav_avatar)를
+     지우는 곳이 마이 탭의 '사진 없음' 분기뿐이라 로그아웃 뒤에도 키가 남았고, 부팅할 때마다 옛 사진을
+     다시 붙였다. → 로그인 상태일 때만 캐시를 쓰고, 세션이 없으면 키를 지운다. 로그아웃 이벤트에도 즉시 되돌린다. */
+  function clearNavAvatar() {
+    try { localStorage.removeItem("galla_nav_avatar"); } catch (_) {}
+    window.GALLA_setNavAvatar(null);
+  }
+  window.GALLA_clearNavAvatar = clearNavAvatar;
+  try {
+    const av = localStorage.getItem("galla_nav_avatar");
+    if (av && isLoggedIn()) window.GALLA_setNavAvatar(av);
+    else if (av) localStorage.removeItem("galla_nav_avatar");
+  } catch (_) {}
+  (function hookSignOut(n) {
+    const c = window.supabaseClient;
+    if (!c || !c.auth || !c.auth.onAuthStateChange) { if (n < 40) setTimeout(() => hookSignOut(n + 1), 250); return; }
+    c.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") clearNavAvatar(); });
+  })(0);
 
   /* ── 부팅 ─────────────────────────────────────────────────── */
   applyRoute(false);
