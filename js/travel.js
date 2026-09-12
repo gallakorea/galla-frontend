@@ -35,6 +35,9 @@
   var COUNTRY = null;         // 나라 필터(ISO2)
   var AREA = null;            // 나라 안의 광역 필터(도쿄도·교토부·온타리오주 …)
   var loading = false;
+  /* 「누가 갔나」 페이지 — 예전엔 14명만 한 번 불러와 끝이었다(수집은 95명, 2026-09-12 사장님 제보).
+     12명씩 받아 목록 끝이 가까워지면 이어 붙인다. */
+  var WHO_PAGE = 12, WHO_OFF = 0, WHO_END = false, WHO_BUSY = false, WHO_IO = null;
 
   /* 진영 라벨 — 화면 문구를 한 곳에 모은다. 네 곳에 흩어 놓으면 축이 조용히 갈라진다. */
   /* 판정은 **둘뿐**이다(사장님: 선택지가 너무 많다).
@@ -379,24 +382,17 @@
       "</div></article>";
   }
 
-  async function load() {
-    if (!LIST || loading) return;
-    loading = true;
-    LIST.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
-    try {
-      if (VIEW === "who") {
-        var b = await rpc("travel_browse", { p_per: 8, p_channels: 14 });
-        var secs = (b && b.sections) || [];
-        LIST.innerHTML = secs.length ? secs.map(function (s) {
-          return '<section class="tv-who">' +
+  /* 「누가 갔나」 크리에이터 한 줄 — 첫 페이지와 이어 붙이기가 같은 모양을 쓴다 */
+  function whoHTML(s) {
+    return '<section class="tv-who">' +
             '<button type="button" class="tv-who-h" data-creator="' + esc(s.slug) + '">' +
-              (s.thumb ? '<img src="' + esc(s.thumb) + '" alt="" referrerpolicy="no-referrer">' : "") +
+              (s.thumb ? '<img src="' + esc(s.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : "") +
               '<span><span class="tv-who-n">' + esc(s.name) + "</span>" +
               '<span class="tv-who-s">' + s.total + "곳" +
               (s.visited ? " · 내가 간 곳 " + s.visited : "") + "</span></span>" +
               '<span class="tv-who-x">›</span>' +
             "</button>" +
-            '<div class="tv-row chip-scroll">' + s.places.map(function (p) {
+            '<div class="tv-row chip-scroll">' + (s.places || []).map(function (p) {
               /* 16:9 + ▶ 배지 — '이건 그 사람이 찍은 화면'이라고 형태로 말한다.
                  둘러보기의 정사각 실사진과 한눈에 갈린다. */
               return '<button type="button" class="tv-mini" data-place="' + esc(p.id) + '">' +
@@ -407,8 +403,52 @@
                 '<span class="tv-mini-n">' + esc(p.name) + "</span>" +
                 '<span class="tv-mini-s">' + esc([p.city, p.country].filter(Boolean)[0] || "") + "</span></button>";
             }).join("") + "</div></section>";
-        }).join("") : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
+  }
+  /* 목록 끝 신호(#tv-who-more)가 화면 800px 안에 들어오면 다음 12명 */
+  function armWhoMore() {
+    var more = LIST && LIST.querySelector("#tv-who-more");
+    if (WHO_IO) { WHO_IO.disconnect(); }
+    if (!more || WHO_END) return;
+    if (!("IntersectionObserver" in window)) { moreWho(); return; }
+    WHO_IO = WHO_IO || new IntersectionObserver(function (es) {
+      if (es.some(function (e) { return e.isIntersecting; })) moreWho();
+    }, { rootMargin: "800px 0px" });
+    WHO_IO.observe(more);
+  }
+  async function moreWho() {
+    if (WHO_BUSY || WHO_END || VIEW !== "who") return;
+    var more = LIST && LIST.querySelector("#tv-who-more");
+    if (!more) return;
+    WHO_BUSY = true;
+    try {
+      var b = await rpc("travel_browse", { p_per: 8, p_channels: WHO_PAGE, p_offset: WHO_OFF });
+      var secs = (b && b.sections) || [];
+      if (VIEW !== "who" || !more.isConnected) return;       // 그사이 다른 화면으로 갔다
+      if (secs.length) more.insertAdjacentHTML("beforebegin", secs.map(whoHTML).join(""));
+      WHO_OFF += secs.length;
+      WHO_END = secs.length < WHO_PAGE || !b;
+      more.hidden = WHO_END;
+    } finally { WHO_BUSY = false; }
+    if (!WHO_END) armWhoMore();                             // 다시 관찰 = 아직 보이면 한 번 더
+  }
+
+  async function load() {
+    if (!LIST || loading) return;
+    loading = true;
+    LIST.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
+    try {
+      if (VIEW === "who") {
+        WHO_OFF = 0; WHO_END = false;
+        var b = await rpc("travel_browse", { p_per: 8, p_channels: WHO_PAGE, p_offset: 0 });
+        var secs = (b && b.sections) || [];
+        WHO_OFF = secs.length; WHO_END = secs.length < WHO_PAGE;
+        LIST.innerHTML = secs.length
+          ? (b.total ? '<div class="tv-who-count">여행 크리에이터 <b>' + b.total + "명</b></div>" : "") +
+            secs.map(whoHTML).join("") + '<div class="tv-who-more" id="tv-who-more"' + (WHO_END ? " hidden" : "") + "></div>"
+          : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
+        armWhoMore();
       } else if (!COUNTRY) {
+
         /* 1계층 — 나라 그리드. 여행은 '어디 나라 갈까'에서 시작한다. */
         LIST.innerHTML = COUNTRIES.length
           ? '<div class="tv-grid">' + COUNTRIES.map(countryHTML).join("") + "</div>"

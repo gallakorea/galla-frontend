@@ -592,3 +592,8 @@ body.tv-lock { overflow: hidden; }
 .tv-now-c i { font-style: normal; font-weight: 500; color: var(--text-low); margin-left: 5px; }
 .tv-now-t { margin-top: 3px; font-size: 13px; font-weight: 600; color: var(--text-mid); line-height: 1.4; }
 .tv-now-g { margin: 5px 0 0; font-size: 13px; line-height: 1.55; color: var(--text-hi); }
+
+/* 「누가 갔나」 크리에이터 수 · 다음 묶음 신호(2026-09-12 — 14명만 보이던 것을 12명씩 이어 붙이기로) */
+.tv-who-count { margin: 2px 16px 14px; font-size: 13px; color: #9aa0ae; }
+.tv-who-count b { color: #fff; font-weight: 800; }
+.tv-who-more { height: 1px; }
