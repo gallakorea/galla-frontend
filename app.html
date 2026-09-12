@@ -73,6 +73,10 @@
       border-radius: 20px; background: rgba(255, 255, 255, .12); z-index: 0;
       transition: transform .24s cubic-bezier(.32, .72, 0, 1), opacity .18s ease;
       opacity: 0; pointer-events: none; }
+    /* 🫳 네비 끌기 중 — 캡슐이 손가락을 따라온다(transition 끔은 router.js). 지나가는 아이콘만 살짝 키운다 */
+    .nav-inner.scrubbing #nav-glider { background: rgba(255, 255, 255, .17); }
+    .nav-inner .nav-item img { transition: transform .12s ease; }
+    .nav-inner .nav-item.scrub-hover img { transform: scale(1.12); }
   </style>
 </head>
 <body data-page="spa">

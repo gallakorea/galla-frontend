@@ -147,7 +147,8 @@
       let g = document.getElementById("nav-glider");
       if (!g) { g = document.createElement("i"); g.id = "nav-glider"; inner.appendChild(g); }
       const act = inner.querySelector('.nav-item[data-page="' + TABS[cur] + '"]');
-      if (act) {
+      // 네비가 숨은 동안(에디터·로그인 화면)은 폭이 0이라 위치를 못 잰다 — 재면 캡슐이 -28px 로 날아간다
+      if (act && act.offsetWidth) {
         g.style.transform = "translateX(" + (act.offsetLeft + act.offsetWidth / 2 - 28) + "px)";
         g.style.opacity = "1";
       }
@@ -178,7 +179,10 @@
     opts = opts || {};
     idx = Math.max(0, Math.min(TABS.length - 1, idx));
     const tab = TABS[idx];
-    if (GATED[tab] && !isLoggedIn()) { push("login", { next: tab }); return; }   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
+    if (GATED[tab] && !isLoggedIn()) {
+      settle(true);   // 스와이프로 끌려온 트랙을 현재 탭으로 되돌린다 — 안 하면 끌던 자리(-615px 등)에 걸린 채 남는다
+      push("login", { next: tab }); return;   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
+    }   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
     const prev = cur;
     cur = idx;
     ensureTab(tab);
@@ -331,6 +335,10 @@
         // 현 위치에서 이어서 화면 밖으로 — 손가락 흐름 그대로 자연스럽게
         layer.style.transform = "translateX(100%)";
         const entry = stack.pop();
+        /* ⚠️ pop() 을 안 거치는 경로라 네비 복구를 여기서도 해야 한다 — 빠뜨려서 로그인 화면을
+           엣지 스와이프로 닫으면 body.spa-editing 이 남아 하단 네비가 통째로 사라졌다(2026-09-12 사장님 제보). */
+        syncEditorNav();
+        pauseOutside();
         if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
         setTimeout(() => {
           if (entry.onPop) { try { entry.onPop(); } catch (_) {} }   // ⚠️ compose: 이동한 모달을 원래 탭으로 복원(안 하면 모달 유실→다음 진입 실패)
@@ -397,6 +405,8 @@
   const recentEdge = () => Date.now() - edgeTouchAt < 900;
 
   window.addEventListener("popstate", () => {
+    // 네비가 스택 기록을 거슬러 올라간 도착점(dropStackFor) — 라우팅하지 않고 주소만 탭으로 바꾼다.
+    if (navGoTarget) { const t = navGoTarget; navGoTarget = null; try { history.replaceState(null, "", t); } catch (_) {} return; }
     // 오버레이(compose 모달)가 떠 있으면 뒤로가기는 '모달 닫기'로 소비 — 라우팅 안 함.
     if (overlay) { const o = overlay; overlay = null; try { o.obs.disconnect(); } catch (_) {} try { o.hide && o.hide(); } catch (_) {} return; }
     applyRoute(true);
@@ -472,17 +482,103 @@
   })();
 
   /* ── 네비 클릭(재탭 = 맨위로) ──────────────────────────────── */
+  /* 🧹 스택을 걷고 탭으로 갈 때 주소 기록도 정리한다(2026-09-12 네비 전역 QA에서 발견).
+     ① 상세를 여러 장 연 채 네비를 누르면 그 기록이 남아, 뒤로가기 때 닫힌 상세가 되살아났다
+        → 스택 장수만큼 기록을 거슬러 올라가(history.go) 그 자리를 탭 주소로 바꾼다.
+     ② 잠긴 탭(비로그인)으로 주소를 바꿔 두면, 로그인 화면을 닫는 뒤로가기가 그 탭으로 가며
+        로그인 화면을 또 띄웠다(DM→마이 연타 재현) → 잠긴 탭이면 지금 탭 주소를 유지한다. */
+  let navGoTarget = null;
+  function dropStackFor(idx) {
+    const n = stack.length;
+    if (!n) return;
+    while (stack.length) pop({ silent: true });
+    const locked = GATED[TABS[idx]] && !isLoggedIn();
+    const target = "#/" + (locked ? TABS[cur] : TABS[idx]);
+    if (n > 1 && !locked) { navGoTarget = target; try { history.go(-(n - 1)); } catch (_) { navGoTarget = null; } }
+    else { try { history.replaceState(null, "", target); } catch (_) {} }
+  }
+
+  let ignoreNavClickUntil = 0;   // 네비 끌기 직후 브라우저가 붙이는 클릭 무시(아래 navScrub)
   document.querySelectorAll(".nav-item").forEach(it =>
     it.addEventListener("click", () => {
+      if (Date.now() < ignoreNavClickUntil) return;
       const idx = TABS.indexOf(it.dataset.page);
       if (idx === -1) return;
-      if (stack.length) { while (stack.length) pop({ silent: true }); try { history.replaceState(null, "", "#/" + TABS[idx]); } catch (_) {} }
+      dropStackFor(idx);
       if (idx === cur) {
         const mod = panes[TABS[cur]] && panes[TABS[cur]]._mod;
         if (mod && mod.scrolltop) { try { mod.scrolltop(); } catch (_) {} }
         else { const h = panes[TABS[cur]].querySelector(".view-host"); if (h) h.scrollTo({ top: 0, behavior: "smooth" }); }
       } else { hap(); activateTab(idx); }
     }));
+
+  /* ── 🫳 네비 끌기(인스타식) — 하단 네비를 누른 채 좌우로 끌면 캡슐(글라이더)이 손가락을 따라오고,
+     떼는 자리의 탭으로 간다(2026-09-12 사장님 요청, 인스타 녹화 기준).
+     짧은 탭은 그대로 클릭, DM·트렌드 '꾹 누르기' 조그는 14px 움직이면 스스로 취소되므로 충돌 없음(조그가 열려 있으면 양보). */
+  (function navScrub() {
+    const inner = document.querySelector(".nav-inner");
+    if (!inner) return;
+    const items = () => Array.from(inner.querySelectorAll(".nav-item"));
+    const glider = () => document.getElementById("nav-glider");
+    let sx = 0, sy = 0, on = false, dead = false, hover = null, raf = 0, lastX = 0;
+    const centerOf = (it) => it.offsetLeft + it.offsetWidth / 2;   // .nav-inner 기준
+    const nearest = (x) => {
+      let best = null, bd = 1e9;
+      items().forEach(it => { const d = Math.abs(centerOf(it) - x); if (d < bd) { bd = d; best = it; } });
+      return best;
+    };
+    const draw = () => {
+      raf = 0;
+      const g = glider(), its = items();
+      if (!g || !its.length) return;
+      const x = lastX - inner.getBoundingClientRect().left;
+      const c = Math.max(centerOf(its[0]), Math.min(centerOf(its[its.length - 1]), x));
+      g.style.transform = "translateX(" + (c - 28) + "px)";
+      const h = nearest(x);
+      if (h !== hover) {
+        if (hover) hover.classList.remove("scrub-hover");
+        hover = h;
+        if (h) { h.classList.add("scrub-hover"); hap(); }
+      }
+    };
+    const stop = () => {
+      on = false;
+      inner.classList.remove("scrubbing");
+      if (hover) hover.classList.remove("scrub-hover");
+      const g = glider(); if (g) g.style.transition = "";
+    };
+    inner.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      sx = lastX = t.clientX; sy = t.clientY; on = false; dead = false; hover = null;
+    }, { passive: true });
+    inner.addEventListener("touchmove", (e) => {
+      const t = e.touches[0];
+      if (dead || !t) return;
+      if (!on) {
+        const dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        if (Math.abs(dx) <= Math.abs(dy) || document.querySelector("#nav-jog.on")) { dead = true; return; }
+        on = true;
+        inner.classList.add("scrubbing");
+        const g = glider(); if (g) { g.style.transition = "none"; g.style.opacity = "1"; }
+      }
+      e.preventDefault();                                  // 끄는 동안 페이지·뒤로가기 제스처가 따라가지 않게
+      lastX = t.clientX;
+      if (!raf) raf = requestAnimationFrame(draw);
+    }, { passive: false });
+    inner.addEventListener("touchend", (e) => {
+      if (!on) return;
+      const t = e.changedTouches && e.changedTouches[0];
+      if (t) lastX = t.clientX;
+      cancelAnimationFrame(raf); raf = 0; draw();
+      const target = hover;
+      stop();
+      paintNav();                                          // 먼저 캡슐을 지금 탭 자리로 — 잠긴 탭이면 로그인 화면이 네비를 숨겨 위치를 못 잰다
+      if (target && target.dataset.page !== TABS[cur]) target.click();   // 평소 탭과 같은 길(스택 정리·잠긴 탭·햅틱)
+      ignoreNavClickUntil = Date.now() + 400;
+    }, { passive: true });
+    inner.addEventListener("touchcancel", () => { if (on) { cancelAnimationFrame(raf); raf = 0; stop(); paintNav(); } }, { passive: true });
+  })();
 
   /* ── [data-back] 버튼 — SPA에서 스택이 있으면 pop(문서 이탈·location.href 금지).
      모든 페이지 뒤로가기가 data-back을 쓰므로(back.js 미로드 페이지 포함) 여기서 일괄 처리.
@@ -865,7 +961,7 @@
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {
-    go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; while (stack.length) pop({ silent: true }); activateTab(i); },
+    go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; dropStackFor(i); activateTab(i); },   // 스택 기록도 정리(dropStackFor)
     push, pop, compose, openOverlay, pushView,
     /* 🔙 안드로이드 하드웨어 뒤로가기가 이걸 본다(js/android-back.js ③번 분기).
        없으면 그쪽은 '더 갈 데가 없다'고 판단해 ④(두 번 눌러 종료)로 떨어진다 —
@@ -881,7 +977,7 @@
      조그가 이 함수를 부르면 SPA 안에서 처리(없으면 location.href로 문서 이탈했음 = 조그 먹통의 원인). */
   window.GALLA_shellGo = function (page, tab) {
     const i = TABS.indexOf(page); if (i === -1) return;
-    while (stack.length) pop({ silent: true });
+    dropStackFor(i);
     activateTab(i);
     if (!tab) return;
     const setter = page === "dm" ? "GALLA_dmSetTab" : page === "trend" ? "GALLA_trendSetTab" : null;
