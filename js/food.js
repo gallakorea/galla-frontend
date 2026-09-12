@@ -2458,7 +2458,10 @@
       var saved = JSON.parse(localStorage.getItem("galla_food_region") || "null");
       if (saved && saved.code) { myRegion = saved.code; myRegionName = saved.name; }
     } catch (_) {}
-    if (!myRegion) {
+    // weather_my 는 로그인 전용 — 비로그인이 부르면 매번 401 만 쌓인다(26.9.12 날씨 QA)
+    var signedIn = false;
+    try { signedIn = !!(window.supabaseClient && (await window.supabaseClient.auth.getSession()).data.session); } catch (_) {}
+    if (!myRegion && signedIn) {
       var my = await rpc("weather_my");
       if (my && my.length) { myRegion = my[0].code; myRegionName = my[0].name; }
     }

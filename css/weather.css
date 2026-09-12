@@ -194,3 +194,15 @@
   background: #5fd8ff; color: #06202b; font-weight: 900; font-size: 14px;
 }
 .wx-say-form button:active { transform: scale(.96); }
+
+/* 🔒 비로그인 안내 — 제보·즐겨찾기·한마디는 로그인해야 된다(2026-09-12). 누르면 공용 로그인 모달 */
+.wx-guest {
+  margin: 0 16px 10px; padding: 9px 10px 9px 12px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(111,134,255,.10); border: 1px solid rgba(111,134,255,.28);
+  color: #c9d2ff; font-size: 12.5px; line-height: 1.4;
+}
+.wx-guest button {
+  flex: 0 0 auto; height: 30px; padding: 0 14px; border: 0; border-radius: 15px;
+  background: #5a78ff; color: #fff; font-weight: 800; font-size: 12.5px; cursor: pointer;
+}

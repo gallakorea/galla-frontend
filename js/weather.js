@@ -39,8 +39,20 @@
   }
   async function client() { sb = sb || (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : window.supabaseClient); return sb; }
   async function rpc(fn, args) { try { var r = await (await client()).rpc(fn, args || {}); return r && r.data; } catch (_) { return null; } }
-  function needLogin() {
-    if (confirm("로그인이 필요해요. 로그인할까요?")) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
+  /* 🔒 로그인 유도 — 비로그인이 제보·즐겨찾기·한마디를 누르면 서버가 권한 단계(401)에서 막아
+     앱엔 빈 결과(null)만 와서 아무 반응이 없었다(2026-09-12 사장님 제보 「비 와요/안 와요가 안 된다」).
+     예전 needLogin 은 reason:'unauthorized' 일 때만 불렸는데, 비로그인은 함수 본문에 닿지도 못해 그 값이 안 온다.
+     → 누르기 전에 세션을 보고 공용 로그인 모달로 안내한다. 방(z 100000)이 로그인 화면을 덮지 않게
+       모달의 '로그인하기'를 누르면 방을 먼저 닫는다(start 의 캡처 리스너). */
+  var GUEST = false;
+  async function authed() {
+    try { var s = await (await client()).auth.getSession(); return !!(s && s.data && s.data.session); }
+    catch (_) { return false; }
+  }
+  function needLogin(msg) {
+    msg = msg || "로그인하면 비·눈 제보와 한마디를 남길 수 있어요.";
+    if (window.GALLA_needLogin) return window.GALLA_needLogin(msg);
+    if (confirm("로그인이 필요해요. 로그인할까요?")) { closeRoom(); (window.GALLA_nav || function (u) { location.href = u; })("login.html"); }
   }
 
   /* ── 하늘 — 전국에서 '진짜 오는' 비율만큼 빗줄기가 굵어진다 ── */
@@ -113,6 +125,8 @@
   }
 
   async function loadFav() {
+    // 비로그인은 즐겨찾기가 없다 — weather_my 는 로그인 전용이라 부르면 매번 401 만 쌓인다
+    if (!(await authed())) { FAVSEC.hidden = true; return; }
     var d = await rpc("weather_my");
     if (!Array.isArray(d) || !d.length) {
       FAVSEC.hidden = true; return;
@@ -126,6 +140,7 @@
   async function openRoom(code) {
     var d = await rpc("weather_room", { p_region: code, p_limit: 40 });
     if (!d || !d.ok) return;
+    GUEST = !(await authed());
     room = code;
     var el = document.getElementById("wx-room");
     if (!el) {
@@ -165,12 +180,13 @@
           '<button type="button" data-k="snow">❄️ 눈 와요 <b>' + (rep.snow || 0) + "</b></button>" +
           '<button type="button" data-k="none">☀️ 안 와요 <b>' + (rep.none || 0) + "</b></button>" +
         "</div>" +
+        (GUEST ? '<div class="wx-guest"><span>🔒 로그인하면 제보·한마디를 남길 수 있어요</span><button type="button" data-login>로그인</button></div>' : "") +
         '<div class="wx-says">' + ((d.says || []).length
           ? d.says.map(function (s) {
               return '<div class="wx-say-row"><div class="wx-say-nick">' + esc(s.nick) + '<span>' + ago(s.at) + "</span></div>" +
                      '<div class="wx-say-body">' + esc(s.body) + "</div></div>"; }).join("")
           : '<div class="wx-says-empty">아직 조용해요 — 첫 한마디를 남겨보세요</div>') + "</div>" +
-        '<form class="wx-say-form"><input id="wx-say" maxlength="140" placeholder="지금 여기 어때요? (140자)" enterkeyhint="send">' +
+        '<form class="wx-say-form"><input id="wx-say" maxlength="140" placeholder="' + (GUEST ? "로그인하면 한마디를 남길 수 있어요" : "지금 여기 어때요? (140자)") + '" enterkeyhint="send">' +
         '<button type="submit">보내기</button></form>' +
       "</div>";
     if (draft) { var i = el.querySelector("#wx-say"); if (i) { i.value = draft; try { i.focus(); i.setSelectionRange(draft.length, draft.length); } catch (_) {} } }
@@ -179,20 +195,24 @@
       e.preventDefault();
       var i = el.querySelector("#wx-say"), v = (i.value || "").trim();
       if (!v) return;
+      if (!(await authed())) { needLogin(); return; }
       i.disabled = true;
       var res = await rpc("weather_say", { p_region: room, p_body: v });
       i.disabled = false;
       if (res && res.ok) { i.value = ""; var n = await rpc("weather_room", { p_region: room, p_limit: 40 }); if (n && n.ok) paintRoom(el, n); }
       else if (res && res.reason === "unauthorized") needLogin();
       else if (res && res.reason === "slow_down") window.GALLA_toast && GALLA_toast("조금만 천천히요 ㅎㅎ");
+      else if (!res) window.GALLA_toast && GALLA_toast("잠시 후 다시 시도해 주세요");
       i.focus();
     });
   }
   async function onRoomClick(e) {
     var el = document.getElementById("wx-room");
     if (e.target === el || e.target.closest("[data-x]")) return closeRoom();
+    if (e.target.closest("[data-login]")) return needLogin();
     var fav = e.target.closest("[data-fav]");
     if (fav) {
+      if (!(await authed())) return needLogin("로그인하면 동네를 즐겨찾기할 수 있어요.");
       var on = !fav.classList.contains("on");
       var res = await rpc("weather_fav", { p_region: room, p_on: on });
       if (res && res.ok) { fav.classList.toggle("on", on); fav.textContent = on ? "★" : "☆"; loadFav(); }
@@ -202,10 +222,12 @@
     }
     var b = e.target.closest("[data-k]");
     if (b) {
+      if (!(await authed())) return needLogin();
       var res2 = await rpc("weather_report", { p_region: room, p_kind: b.dataset.k });
       if (res2 && res2.ok) { var n = await rpc("weather_room", { p_region: room, p_limit: 40 }); if (n && n.ok) paintRoom(el, n, true); load(); }
       else if (res2 && res2.reason === "unauthorized") needLogin();
       else if (res2 && res2.reason === "cooldown") window.GALLA_toast && GALLA_toast("방금 제보했어요 — " + Math.ceil(res2.wait_sec / 60) + "분 뒤에 다시");
+      else if (!res2) window.GALLA_toast && GALLA_toast("잠시 후 다시 시도해 주세요");
     }
   }
   function closeRoom() {
@@ -243,6 +265,12 @@
       var c = e.target.closest(".wx-card, .wx-hit");
       if (c && c.dataset.r) openRoom(c.dataset.r);
     });
+    // 공용 로그인 모달의 '로그인하기' → 방(z 100000)과 모달을 먼저 닫아야 로그인 화면이 보인다
+    document.addEventListener("click", function (e) {
+      if (!room || !e.target.closest || !e.target.closest("#galla-login-modal .glm-go")) return;
+      closeRoom();
+      var m = document.getElementById("galla-login-modal"); if (m) m.classList.remove("open");
+    }, true);
     QF.addEventListener("submit", function (e) { e.preventDefault(); doSearch(QI.value.trim()); });
     QI.addEventListener("input", function () {
       QX.hidden = !QI.value;

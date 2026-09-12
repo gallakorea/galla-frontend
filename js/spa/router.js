@@ -251,6 +251,12 @@
     }
     const entry = { el: layer, name, mod: null };
     stack.push(entry);
+    /* 🔒 공용 로그인 모달(GALLA_needLogin, z 2147483200)의 '로그인하기'는 이동만 하고 스스로 닫지 않는다 —
+       SPA 에선 로그인 화면이 스택(z 40)으로 떠서 모달이 그 위를 덮은 채 남았다(2026-09-12 날씨 QA에서 발견).
+       로그인 계열 화면을 띄울 때 모달을 닫는다. */
+    if (name === "login" || name === "signup") {
+      const lm = document.getElementById("galla-login-modal"); if (lm) lm.classList.remove("open");
+    }
     syncEditorNav();
     pauseOutside();
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
