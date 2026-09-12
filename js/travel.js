@@ -178,6 +178,7 @@
         try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
         return;
       }
+      if (e.target.closest("[data-tvpick]")) { openTvPick(); return; }
       var cr = e.target.closest("[data-creator]");
       if (cr) { openCreator(cr.dataset.creator); return; }
       var ar = e.target.closest("[data-area]");
@@ -382,6 +383,82 @@
       "</div></article>";
   }
 
+  /* ── 누가 다녀갔나 — 맨 위 아바타 줄 + '누구 고르기' 시트 (2026-09-12 사장님: "맛집처럼 맨 위에")
+     맛집 탭(food.js 누가 다녀갔나)과 같은 문법·같은 스타일(fh-*·cp-*·fd-cpick, food.css 전역)을 쓴다.
+     목록은 travel_channel_stats 한 번으로 96명 전부 — 장소 수는 place_n(크리에이터 페이지와 같은 기준). */
+  var TCH = null, TPICK = null;
+  async function loadTCH() {
+    if (!TCH) { var d = await rpc("travel_channel_stats"); TCH = (d && d.channels) || null; }
+    return TCH || [];
+  }
+  function ini(n) { return String(n || "").replace(/\s/g, "").slice(0, 2); }
+  function whoTopHTML() {
+    if (!TCH || !TCH.length) return "";
+    return '<section class="fh-sec tv-whotop"><div class="fh-h">누가 다녀갔나' +
+        '<button type="button" class="fh-near" data-tvpick="1">누구 고르기</button></div>' +
+      '<div class="fh-row chip-scroll">' + TCH.slice(0, 12).map(function (c) {
+        return '<button type="button" class="fh-ch" data-creator="' + esc(c.slug) + '">' +
+          '<span class="fh-ch-i' + (c.thumb ? "" : " none") + '">' +
+            (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : esc(ini(c.name))) +
+          "</span>" +
+          '<span class="fh-ch-n">' + esc(c.name) + "</span>" +
+          '<span class="fh-ch-c">' + c.total + "곳</span></button>";
+      }).join("") + "</div></section>";
+  }
+  function pickHTML(q) {
+    q = (q || "").replace(/\s/g, "").toLowerCase();
+    var list = (TCH || []).filter(function (c) {
+      return !q || String(c.name).replace(/\s/g, "").toLowerCase().indexOf(q) >= 0;
+    });
+    var groups = [["ko", "한국 크리에이터"], ["etc", "해외 크리에이터"]];
+    var secs = groups.map(function (g) {
+      var arr = list.filter(function (c) { return g[0] === "ko" ? c.lang === "ko" : c.lang !== "ko"; });
+      if (!arr.length) return "";
+      return '<div class="cp-k">' + g[1] + " <b>" + arr.length + "</b></div>" +
+        '<div class="cp-grid">' + arr.map(function (c) {
+          return '<button type="button" class="cp-i" data-tvch="' + esc(c.slug) + '">' +
+            '<span class="cp-av' + (c.thumb ? "" : " none") + '">' +
+              (c.thumb ? '<img src="' + esc(c.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : esc(ini(c.name))) +
+            "</span>" +
+            '<span class="cp-n">' + esc(c.name) + "</span>" +
+            '<span class="cp-c">' + c.total + "</span></button>";
+        }).join("") + "</div>";
+    }).join("");
+    return '<div class="fd-sheet-grip"></div>' +
+      '<div class="cp-h">누가 다녀갔나<button type="button" class="cp-x" data-tvclose="1">✕</button></div>' +
+      '<input class="cp-q" id="tv-cp-q" type="search" placeholder="이름으로 찾기" value="' + esc(q) + '">' +
+      (secs || '<div class="cp-none">찾는 이름이 없어요</div>');
+  }
+  async function openTvPick() {
+    await loadTCH();
+    if (!TPICK) {
+      TPICK = document.createElement("div");
+      TPICK.className = "fd-cpick tv-cpick";
+      document.body.appendChild(TPICK);
+      /* 전파를 끊는다 — 문서 위임 핸들러(맛집 등)가 같은 클릭을 또 받지 않게(food.js 같은 자리 주석 참고) */
+      TPICK.addEventListener("click", function (e) {
+        if (e.target === TPICK || e.target.closest("[data-tvclose]")) { e.stopPropagation(); closeTvPick(); return; }
+        var b = e.target.closest("[data-tvch]");
+        if (b) { e.stopPropagation(); closeTvPick(); openCreator(b.dataset.tvch); }
+      });
+      TPICK.addEventListener("input", function (e) {
+        if (!e.target.matches("#tv-cp-q")) return;
+        var v = e.target.value, box = TPICK.querySelector(".fd-cpick-box");
+        box.innerHTML = pickHTML(v);
+        var q = box.querySelector("#tv-cp-q");
+        if (q) { q.value = v; q.focus(); }
+      });
+    }
+    TPICK.innerHTML = '<div class="fd-cpick-box">' + pickHTML("") + "</div>";
+    TPICK.classList.add("open");
+    document.body.classList.add("fd-detail-on");
+  }
+  function closeTvPick() {
+    if (!TPICK) return;
+    TPICK.classList.remove("open");
+    document.body.classList.remove("fd-detail-on");
+  }
+
   /* 「누가 갔나」 크리에이터 한 줄 — 첫 페이지와 이어 붙이기가 같은 모양을 쓴다 */
   function whoHTML(s) {
     return '<section class="tv-who">' +
@@ -439,20 +516,23 @@
     try {
       if (VIEW === "who") {
         WHO_OFF = 0; WHO_END = false;
+        await loadTCH();
         var b = await rpc("travel_browse", { p_per: 8, p_channels: WHO_PAGE, p_offset: 0 });
         var secs = (b && b.sections) || [];
         WHO_OFF = secs.length; WHO_END = secs.length < WHO_PAGE;
-        LIST.innerHTML = secs.length
+        LIST.innerHTML = whoTopHTML() + (secs.length
           ? (b.total ? '<div class="tv-who-count">여행 크리에이터 <b>' + b.total + "명</b></div>" : "") +
             secs.map(whoHTML).join("") + '<div class="tv-who-more" id="tv-who-more"' + (WHO_END ? " hidden" : "") + "></div>"
-          : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>';
+          : '<div class="tv-empty">아직 연결된 크리에이터가 없어요.</div>');
         armWhoMore();
       } else if (!COUNTRY) {
 
-        /* 1계층 — 나라 그리드. 여행은 '어디 나라 갈까'에서 시작한다. */
-        LIST.innerHTML = COUNTRIES.length
+        /* 1계층 — 나라 그리드. 여행은 '어디 나라 갈까'에서 시작한다.
+           맨 위엔 '누가 다녀갔나' 아바타 줄(맛집과 같은 자리) */
+        await loadTCH();
+        LIST.innerHTML = whoTopHTML() + (COUNTRIES.length
           ? '<div class="tv-grid">' + COUNTRIES.map(countryHTML).join("") + "</div>"
-          : '<div class="tv-empty">아직 모인 곳이 없어요.</div>';
+          : '<div class="tv-empty">아직 모인 곳이 없어요.</div>');
       } else if (!AREA) {
         /* 2계층 — 그 나라의 지역(도쿄도·교토부). 여기까지가 '어디로 갈까'의 층이다.
            지역이 하나뿐이면 층을 하나 세울 이유가 없다 — 바로 장소로 내려간다. */
