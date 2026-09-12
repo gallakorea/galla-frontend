@@ -85,9 +85,12 @@
   //    compose()가 mount(특히 GALLA_composerRescan)보다 먼저 opener를 호출 → 모달이 관찰자
   //    부착 전에 열려 페이지화 실패(광장 헤더 없음·뒤로가기 깨짐)했다.
   function ensureTab(tab) {
+    if (GATED[tab] && !isLoggedIn()) return ensureLocked(tab);            // 🔒 비로그인 = 잠금 판
+    if (tabReady[tab] && panes[tab]._locked) tabReady[tab] = false;       // 잠금 판 → 진짜 화면으로 교체
     if (tabReady[tab]) return tabMountP[tab] || Promise.resolve();
     tabReady[tab] = true;
     const pane = panes[tab];
+    pane._locked = false;
     pane.innerHTML = '<div class="pane-wait"><i></i></div>';
     tabMountP[tab] = (async () => {
       try {
@@ -120,6 +123,68 @@
     })();
     return tabMountP[tab];
   }
+
+  /* 🔒 비로그인 잠금 판 — 로그인 필수 탭(DM·마이)에서 로그인 화면을 push 하던 것을 바꿨다(2026-09-12 사장님).
+     로그인 화면이 스택으로 덮이면 하단 네비가 숨고 스와이프가 끊긴다 → 그 탭 자리에 **그 탭 화면을 흐릿하게**
+     깔고 로그인·회원가입 카드를 올린다. 네비·스와이프는 평소처럼 산다.
+     미리보기는 페이지 마크업만 쓴다 — 스크립트는 안 돌리고(데이터가 없고, 전역 핸들러가 id 로 붙어 오작동한다)
+     id 를 전부 떼고 inert 로 만든다. 로그인 성공은 앱을 한 번 재부팅하므로(login.js spaDone) 그때 진짜 화면이 뜬다. */
+  const LOCK_COPY = {
+    dm:     { t: "로그인하고 대화를 시작해요",   s: "친구와 DM·단체방·삐삐까지, 갈라 계정 하나면 돼요." },
+    mypage: { t: "로그인하고 내 페이지를 만들어요", s: "내가 쓴 글·투표·GP·배지가 여기 모여요." },
+  };
+  function ensureLocked(tab) {
+    const pane = panes[tab];
+    if (pane._locked && tabReady[tab]) return tabMountP[tab] || Promise.resolve();
+    if (pane._mod && pane._mod.unmount) { try { pane._mod.unmount(); } catch (_) {} }
+    pane._mod = null; pane._locked = true; tabReady[tab] = true;
+    pane.innerHTML = '<div class="pane-wait"><i></i></div>';
+    tabMountP[tab] = (async () => {
+      let preview = "";
+      try {
+        const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
+        const cssP = L.injectStyles(v.styles, v.inlineCss, tab);
+        if (booted) { try { await cssP; } catch (_) {} }
+        const tmp = document.createElement("div");
+        tmp.innerHTML = v.app;
+        tmp.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
+        tmp.querySelectorAll("script,iframe,video,audio").forEach(e => e.remove());
+        preview = tmp.innerHTML;
+      } catch (_) {}
+      if (!pane._locked) return;                      // 그사이 로그인돼 진짜 화면으로 바뀌었다
+      const c = LOCK_COPY[tab] || { t: "로그인이 필요해요", s: "" };
+      pane.innerHTML =
+        '<div class="view-host lock-host" data-page="' + tab + '" data-spa-view="' + tab + '">' +
+          '<div class="lock-preview" inert aria-hidden="true">' + preview + "</div></div>" +
+        '<div class="lock-cta"><div class="lock-card" role="dialog" aria-label="로그인 필요">' +
+          '<div class="lock-ico">🔒</div>' +
+          '<div class="lock-t">' + c.t + '</div><div class="lock-s">' + c.s + "</div>" +
+          '<button type="button" class="lock-login" data-lock-login="' + tab + '">로그인</button>' +
+          '<button type="button" class="lock-signup" data-lock-signup="' + tab + '">회원가입</button>' +
+        "</div></div>";
+    })();
+    return tabMountP[tab];
+  }
+  /* 로그인 상태가 바뀌면 로그인 필수 탭을 다시 맞춘다.
+     로그아웃: 이전 사용자의 DM·마이 화면이 keep-alive 판에 그대로 남아 있었다 → 내리고 잠금 판으로.
+     로그인(재부팅 없이 들어온 경우 대비): 잠금 판을 풀고 진짜 화면으로. */
+  function resyncGated() {
+    Object.keys(GATED).forEach(t => {
+      const p = panes[t]; if (!p) return;
+      const want = isLoggedIn() ? "real" : "locked";
+      const have = !tabReady[t] ? "none" : (p._locked ? "locked" : "real");
+      if (have === "none" || have === want) return;
+      if (p._mod && p._mod.unmount) { try { p._mod.unmount(); } catch (_) {} }
+      p._mod = null; p._locked = false; tabReady[t] = false; tabMountP[t] = null; p.innerHTML = "";
+      if (Math.abs(TABS.indexOf(t) - cur) <= 1) ensureTab(t);   // 보이거나 옆이면 바로 다시 그린다
+    });
+  }
+  document.addEventListener("click", (e) => {
+    const lg = e.target.closest && e.target.closest("[data-lock-login]");
+    const su = e.target.closest && e.target.closest("[data-lock-signup]");
+    if (lg) push("login", { next: lg.dataset.lockLogin });
+    else if (su) push("signup", { next: su.dataset.lockSignup });
+  });
 
   /* ── 탭 전환(슬라이드) ─────────────────────────────────────── */
   function place(px, anim) {
@@ -168,8 +233,7 @@
         for (const i of [cur + 1, cur - 1]) {
           const t = TABS[i];
           if (!t || tabReady[t]) continue;
-          if (GATED[t] && !isLoggedIn()) continue;
-          ensureTab(t); return;                         // 한 번에 하나 — 다음 정착 때 또 하나
+          ensureTab(t); return;                         // 로그인 필수 탭은 비로그인이면 잠금 판(가볍다)                         // 한 번에 하나 — 다음 정착 때 또 하나
         }
       }, { timeout: 3000 });
     }, booted ? 1200 : 3500);
@@ -179,10 +243,6 @@
     opts = opts || {};
     idx = Math.max(0, Math.min(TABS.length - 1, idx));
     const tab = TABS[idx];
-    if (GATED[tab] && !isLoggedIn()) {
-      settle(true);   // 스와이프로 끌려온 트랙을 현재 탭으로 되돌린다 — 안 하면 끌던 자리(-615px 등)에 걸린 채 남는다
-      push("login", { next: tab }); return;   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
-    }   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
     const prev = cur;
     cur = idx;
     ensureTab(tab);
@@ -207,8 +267,8 @@
     // 이웃 예열
     setTimeout(() => {
       const n1 = TABS[cur + 1], n0 = TABS[cur - 1];
-      if (n1 && !(GATED[n1] && !isLoggedIn())) ensureTab(n1);
-      if (n0 && !(GATED[n0] && !isLoggedIn())) ensureTab(n0);
+      if (n1) ensureTab(n1);                        // 로그인 필수 탭은 비로그인이면 잠금 판
+      if (n0) ensureTab(n0);
     }, 600);
   }
 
@@ -491,16 +551,14 @@
   /* 🧹 스택을 걷고 탭으로 갈 때 주소 기록도 정리한다(2026-09-12 네비 전역 QA에서 발견).
      ① 상세를 여러 장 연 채 네비를 누르면 그 기록이 남아, 뒤로가기 때 닫힌 상세가 되살아났다
         → 스택 장수만큼 기록을 거슬러 올라가(history.go) 그 자리를 탭 주소로 바꾼다.
-     ② 잠긴 탭(비로그인)으로 주소를 바꿔 두면, 로그인 화면을 닫는 뒤로가기가 그 탭으로 가며
-        로그인 화면을 또 띄웠다(DM→마이 연타 재현) → 잠긴 탭이면 지금 탭 주소를 유지한다. */
+     (예전의 '잠긴 탭이면 지금 탭 주소 유지' 예외는 없앴다 — 이제 잠긴 탭도 로그인 화면 대신 잠금 판이 뜨는 평범한 탭이다) */
   let navGoTarget = null;
   function dropStackFor(idx) {
     const n = stack.length;
     if (!n) return;
     while (stack.length) pop({ silent: true });
-    const locked = GATED[TABS[idx]] && !isLoggedIn();
-    const target = "#/" + (locked ? TABS[cur] : TABS[idx]);
-    if (n > 1 && !locked) { navGoTarget = target; try { history.go(-(n - 1)); } catch (_) { navGoTarget = null; } }
+    const target = "#/" + TABS[idx];
+    if (n > 1) { navGoTarget = target; try { history.go(-(n - 1)); } catch (_) { navGoTarget = null; } }
     else { try { history.replaceState(null, "", target); } catch (_) {} }
   }
 
@@ -1028,7 +1086,10 @@
   (function hookSignOut(n) {
     const c = window.supabaseClient;
     if (!c || !c.auth || !c.auth.onAuthStateChange) { if (n < 40) setTimeout(() => hookSignOut(n + 1), 250); return; }
-    c.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") clearNavAvatar(); });
+    c.auth.onAuthStateChange((ev) => {
+      if (ev === "SIGNED_OUT") { clearNavAvatar(); resyncGated(); }
+      else if (ev === "SIGNED_IN") resyncGated();
+    });
   })(0);
 
   /* ── 부팅 ─────────────────────────────────────────────────── */

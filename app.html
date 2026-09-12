@@ -77,6 +77,19 @@
     .nav-inner.scrubbing #nav-glider { background: rgba(255, 255, 255, .17); }
     .nav-inner .nav-item img { transition: transform .12s ease; }
     .nav-inner .nav-item.scrub-hover img { transform: scale(1.12); }
+    /* 🔒 비로그인 잠금 판(DM·마이) — 그 탭 화면을 흐릿하게 깔고 로그인·가입 카드(로그인 화면 push 대신, 스와이프 유지) */
+    .lock-host { overflow: hidden !important; }
+    .lock-preview { filter: blur(8px) saturate(.8); opacity: .5; pointer-events: none; user-select: none; transform: scale(1.03); }
+    .lock-cta { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+      padding: 24px 24px 120px; background: linear-gradient(180deg, rgba(10,10,11,.1), rgba(10,10,11,.6)); }
+    .lock-card { width: 100%; max-width: 320px; text-align: center; padding: 26px 20px 20px; border-radius: 20px;
+      background: rgba(22,23,29,.92); border: 1px solid rgba(255,255,255,.08); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+    .lock-ico { font-size: 32px; line-height: 1; }
+    .lock-t { margin: 12px 0 6px; font-size: 17px; font-weight: 900; color: #fff; letter-spacing: -.02em; }
+    .lock-s { margin-bottom: 18px; font-size: 13px; line-height: 1.55; color: #aab0bd; }
+    .lock-login, .lock-signup { display: block; width: 100%; height: 48px; border-radius: 14px; font-size: 15px; font-weight: 800; cursor: pointer; }
+    .lock-login { border: 0; background: linear-gradient(135deg, #3d6bff, #5a86ff); color: #fff; }
+    .lock-signup { margin-top: 8px; background: transparent; border: 1px solid rgba(255,255,255,.16); color: #e6e8ee; }
   </style>
 </head>
 <body data-page="spa">
