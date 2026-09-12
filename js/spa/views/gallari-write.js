@@ -9,7 +9,7 @@
  * 없어 라우터 loadPageScripts 폴백 + 자체 auto-init에 의존했다. 브라우저에선
  * 동작했지만 네이티브(WKWebView)에서 미디어 파이프라인 의존 스크립트/리스너·
  * WORKFORM 브리지 배선이 불안정(사진 선택·AI썸네일 첨부·미디어 토글 먹통).
- * predict-market 방식으로 통일 — deps를 순차 loadScriptOnce 후 결정적 mount.
+ * predict-market 방식으로 통일 — deps를 loadScriptOnce(병렬 받기·순서대로 실행) 후 결정적 mount.
  *
  * 셸(app.html)이 이미 로드하는 공유 싱글턴은 제외:
  *   vendor/supabase.js · js/supabase.js · js/error-logger.js

@@ -15,7 +15,7 @@
 
 const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 
-/* issue.html 로드 순서 그대로(의존 순서 보장 — 순차 로드) */
+/* issue.html 로드 순서 그대로(병렬로 받고 async=false 로 삽입 순서대로 실행 — 의존 순서 보장) */
 const SCRIPTS = [
   "/vendor/hls.min.js",    // HLS 재생(비 iOS)
   "/js/hls-attach.js",     // GALLA_attachHls

@@ -49,6 +49,7 @@ function hasScript(src) {
 function loadOne(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V;
     s.onload = () => resolve();
     s.onerror = () => reject(new Error("script load fail: " + src));
@@ -60,9 +61,9 @@ let bootP = null;
 function bootOnce() {
   if (bootP) return bootP;
   bootP = (async () => {
-    for (const src of CLASSIC) {
-      if (!hasScript(src)) await loadOne(src);   // 순차 로드 — 의존 순서 보장
-    }
+    // 한꺼번에 꽂아 병렬로 받는다 — async=false 라 실행은 CLASSIC 순서 그대로(의존 순서 보장).
+    // 예전엔 파일마다 await 해서 19개 왕복이 줄을 섰다(홈은 콜드스타트 첫 화면이라 그대로 체감).
+    await Promise.all(CLASSIC.filter(src => !hasScript(src)).map(loadOne));
     for (const m of MODULES) {
       try { await import(m + V); }
       catch (e) { console.warn("[spa/index] 모듈 로드 실패(기능 저하로 계속):", m, e); }
