@@ -64,12 +64,11 @@ function loadScript(entry) {
 let scriptsReady = null;
 function loadScriptsOnce() {
   if (!scriptsReady) {
-    scriptsReady = (async () => {
-      for (const e of SCRIPTS) {
-        if (hasScript(e.src)) continue;    // 문서에 이미 있으면 스킵(중복 실행 방지)
-        await loadScript(e);
-      }
-    })();
+    // 한꺼번에 꽂아 병렬로 받는다 — async=false 라 실행은 삽입 순서 그대로(의존 순서 보존).
+    // 예전엔 하나씩 await 해서 파일 수만큼 왕복이 줄을 섰다.
+    scriptsReady = Promise.all(
+      SCRIPTS.filter(e => !hasScript(e.src)).map(loadScript)   // 문서에 이미 있으면 스킵(중복 실행 방지)
+    );
   }
   return scriptsReady;
 }

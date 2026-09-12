@@ -307,6 +307,12 @@ async function loadReactionsAndSaves(ids){
 const IC_SAVE=`<svg viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>`;
 const IC_SHARE=`<svg viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>`;
 
+/* 🪶 한꺼번에 다 그리지 않는다 — 시장 349개(진행 35·끝난 314)를 전부 카드로 만들면 예측 판 하나에
+   DOM 15,307개(앱 전체의 95%)가 되어 탭 전환·스크롤이 무거웠다(2026-09-12 에뮬 실측). 처음 MK_PAGE 개만
+   그리고, 목록 끝(#pmMore)이 화면 600px 안에 들어오면 다음 묶음을 붙인다. 정렬은 그대로(진행 먼저). */
+const MK_PAGE = 24;
+let MK_LIST = [], MK_SHOWN = 0, MK_IO = null;
+
 function renderMarkets(){
   let list=allMarkets.slice();
   if(curCat) list=list.filter(m=>m.category===curCat);
@@ -318,9 +324,14 @@ function renderMarkets(){
   openM.sort(sorter); doneM.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   list=[...openM,...doneM];
 
+  MK_LIST=list; MK_SHOWN=0;
   const wrap=$('marketList');
   $('marketsEmpty').hidden = list.length>0;
-  wrap.innerHTML = list.map(m=>{
+  wrap.innerHTML='';
+  appendMarkets();
+}
+
+function marketCardHtml(m){
     const outs=OUT_BY_M[m.id]||[];
     const bettors=outs.reduce((s,o)=>s+(o.bettor_count||0),0);
     const closed=m.resolved || new Date(m.close_at)<=Date.now();
@@ -353,12 +364,27 @@ function renderMarkets(){
         </span>
       </div>
     </div>`;
-  }).join('');
+}
 
-  wrap.querySelectorAll('.pm-card').forEach(c=>{
+function appendMarkets(){
+  const wrap=$('marketList'); if(!wrap) return;
+  const next=MK_LIST.slice(MK_SHOWN, MK_SHOWN+MK_PAGE);
+  MK_SHOWN+=next.length;
+  if(next.length) wrap.insertAdjacentHTML('beforeend', next.map(marketCardHtml).join(''));
+  wrap.querySelectorAll('.pm-card:not([data-bound])').forEach(c=>{
+    c.dataset.bound='1';
     c.onclick=e=>{ if(e.target.closest('.mc-act')) return; goDetail(`predict-market.html?id=${c.dataset.id}`); };
   });
-  bindMarketActions(wrap);
+  bindMarketActions(wrap);   // onclick 재할당이라 이미 붙은 카드엔 무해
+  // 다음 묶음 신호 — 목록 '밖' 형제로 둔다(목록이 그리드여도 칸을 먹지 않게)
+  let more=$('pmMore');
+  if(!more){ more=document.createElement('div'); more.id='pmMore'; more.style.height='1px'; wrap.after(more); }
+  const left=MK_SHOWN<MK_LIST.length;
+  more.hidden=!left;
+  if(!left) return;
+  if(!('IntersectionObserver' in window)){ while(MK_SHOWN<MK_LIST.length) appendMarkets(); return; }
+  if(!MK_IO) MK_IO=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) appendMarkets(); }, { rootMargin:'600px 0px' });
+  MK_IO.disconnect(); MK_IO.observe(more);   // 새로 관찰 = 이미 보이는 중이면 즉시 한 번 더 불린다
 }
 
 function bindMarketActions(wrap){

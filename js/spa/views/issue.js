@@ -66,6 +66,7 @@ function loadScriptOnce(src) {
   loadedOnce.add(src);
   return new Promise((res, rej) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V;
     s.onload = () => res();
     s.onerror = () => { loadedOnce.delete(src); rej(new Error("script load fail " + src)); };
@@ -77,7 +78,7 @@ let bootP = null;
 function bootOnce() {
   if (bootP) return bootP;
   bootP = (async () => {
-    for (const src of SCRIPTS) await loadScriptOnce(src);   // 순차 — 의존 순서 보장
+    await Promise.all(SCRIPTS.map(src => loadScriptOnce(src)));   // 병렬로 받고 삽입 순서대로 실행(async=false) — 의존 순서 보존
     for (const m of MODULES) {
       if (m === "/js/issue.js") { await import(m + V); continue; }   // 본체는 실패 시 throw(뷰 에러 표시)
       try { await import(m + V); }

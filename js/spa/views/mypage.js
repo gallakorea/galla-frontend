@@ -36,6 +36,7 @@ function loadScriptOnce(src) {
   });
   const p = has ? Promise.resolve() : new Promise((res, rej) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V();
     s.onload = () => res();
     s.onerror = () => rej(new Error("script load fail " + src));
@@ -85,7 +86,7 @@ function ensureStackBack(root, params) {
 }
 
 export async function mount(root, params) {
-  for (const src of SCRIPTS) await loadScriptOnce(src);   // 순서 보존(직렬)
+  await Promise.all(SCRIPTS.map(src => loadScriptOnce(src)));   // 병렬로 받고 삽입 순서대로 실행(async=false) — 순서 보존
   await window.GALLA_PAGE_MYPAGE.mount(root, params);
   ensureStackBack(root, params);
   syncNavAvatar();   // 프로필 로드와 병행 — 대기 불필요

@@ -46,6 +46,7 @@ function loadScriptOnce(src) {
   loadedOnce.add(src);
   return new Promise((res, rej) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V;
     s.onload = () => res();
     s.onerror = () => { loadedOnce.delete(src); rej(new Error("script load fail " + src)); };
@@ -54,7 +55,7 @@ function loadScriptOnce(src) {
 }
 
 export async function mount(root, params) {
-  for (const src of SCRIPTS) await loadScriptOnce(src);   // 순차 — 의존 순서 보장
+  await Promise.all(SCRIPTS.map(src => loadScriptOnce(src)));   // 병렬로 받고 삽입 순서대로 실행(async=false) — 의존 순서 보존
   const page = window.GALLA_PAGE_PREDICT_MARKET;
   if (page && page.mount) await page.mount(root, params || {});
 }

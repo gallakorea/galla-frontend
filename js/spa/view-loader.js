@@ -97,32 +97,48 @@
     if (!scripts || !scripts.length) return;
     const replay = [];
     const origAdd = document.addEventListener;
-    let current = null;
+    /* 병렬로 받고 삽입 순서대로 실행한다(async=false). 예전엔 파일마다 await 해서 왕복이 줄을 섰다.
+       DCL 핸들러가 어느 파일 것인지는 실행 중인 스크립트(currentScript)로 가린다.
+       currentScript 가 없는 늦은 등록(비동기 안쪽)은 '아직 onload 안 뜬 첫 파일' = 지금 실행 차례인 파일로 본다
+       — 직렬 시절 current 와 같은 뜻이다. */
+    const fresh = [];                  // 이번에 새로 꽂는 파일(base) — 삽입 순서
+    const doneSet = new Set();
+    const baseOf = (src) => String(src || "").split("?")[0].split("/").pop();
+    const owner = () => {
+      const cs = document.currentScript;
+      const b = cs && cs.src ? baseOf(cs.src) : null;
+      if (b && fresh.includes(b)) return b;
+      return fresh.find(x => !doneSet.has(x)) || null;
+    };
     document.addEventListener = function (type, fn, opts) {
       if (type === "DOMContentLoaded") {
-        if (typeof fn === "function" && current) {
-          if (!pageScriptInit.has(current)) pageScriptInit.set(current, []);
-          pageScriptInit.get(current).push(fn);
+        const cur = owner();
+        if (typeof fn === "function" && cur) {
+          if (!pageScriptInit.has(cur)) pageScriptInit.set(cur, []);
+          pageScriptInit.get(cur).push(fn);
         }
         return;
       }
       return origAdd.call(this, type, fn, opts);
     };
     try {
+      const waits = [];
       for (const src of scripts) {
-        const base = src.split("?")[0].split("/").pop();
-        if (loadedPageScripts.has(base)) { replay.push(base); continue; }
-        loadedPageScripts.add(base);
-        current = base;
-        await new Promise(res => {
-          const s = document.createElement("script");
-          s.src = src; s.onload = res; s.onerror = res;
-          document.head.appendChild(s);
-        });
-        current = null;
+        const base = baseOf(src);
         replay.push(base);
+        if (loadedPageScripts.has(base)) continue;
+        loadedPageScripts.add(base);
+        fresh.push(base);
+        waits.push(new Promise(res => {
+          const s = document.createElement("script");
+          s.async = false;
+          const fin = () => { doneSet.add(base); res(); };
+          s.src = src; s.onload = fin; s.onerror = fin;
+          document.head.appendChild(s);
+        }));
       }
-    } finally { document.addEventListener = origAdd; current = null; }
+      await Promise.all(waits);
+    } finally { document.addEventListener = origAdd; }
     /* 처음 로드든 재방문이든 같은 순서로 초기화한다 — MPA 에서 페이지를 다시 여는 것과 같아야 한다. */
     for (const base of replay) {
       for (const fn of (pageScriptInit.get(base) || [])) {

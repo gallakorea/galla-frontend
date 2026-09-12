@@ -31,6 +31,7 @@ function loadScriptOnce(src) {
   loadedOnce.add(src);
   return new Promise((res) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V;
     s.onload = () => res();
     s.onerror = () => { loadedOnce.delete(src); res(); };
@@ -40,7 +41,7 @@ function loadScriptOnce(src) {
 let bootP = null;
 function bootOnce() {
   if (bootP) return bootP;
-  bootP = (async () => { for (const src of SCRIPTS) await loadScriptOnce(src); })();
+  bootP = (async () => { await Promise.all(SCRIPTS.map(src => loadScriptOnce(src))); })();
   bootP.catch(() => { bootP = null; });
   return bootP;
 }

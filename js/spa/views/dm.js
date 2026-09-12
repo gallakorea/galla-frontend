@@ -48,6 +48,7 @@ function loadScriptOnce(src) {
   loadedOnce.add(src);
   return new Promise((res, rej) => {
     const s = document.createElement("script");
+    s.async = false;   // 병렬로 받되 삽입 순서대로 실행(의존 순서 보존)
     s.src = src + V;
     s.onload = () => res();
     s.onerror = () => { loadedOnce.delete(src); rej(new Error("script load fail " + src)); };
@@ -59,7 +60,7 @@ export async function mount(root, params) {
   // DM은 자체 헤드(.dm-head/탭바)를 쓴다 — 페이지 헤더가 남으면 이중 헤더로 정렬이 깨지고
   // 패널 높이 계산이 어긋나 입력창이 가려진다(사장님 재현). DM 뷰에선 헤더 제거.
   try { const h = root.querySelector("header.header"); if (h) h.remove(); } catch (_) {}
-  for (const src of SCRIPTS) await loadScriptOnce(src);   // 순차 — 의존 순서 보장
+  await Promise.all(SCRIPTS.map(src => loadScriptOnce(src)));   // 병렬로 받고 삽입 순서대로 실행(async=false) — 의존 순서 보존
   const page = window.GALLA_PAGE_DM;
   if (page && page.mount) await page.mount(root, params || {});
   // 첫 페인트용 스켈레톤(dm.html의 data-snap-ghost) — MPA에선 snapshot.js가 걷지만
