@@ -73,9 +73,14 @@ function getViewportHeight() {
 let VIEWPORT_H = getViewportHeight();
 
 function updateViewportHeight() {
-  VIEWPORT_H = getViewportHeight();
+  const h = getViewportHeight();
+  if (!h) return;
+  VIEWPORT_H = h;
 
   if (track) {
+    /* ⚠️ 예전엔 트랙 높이·위치만 다시 잡고 슬라이드 높이는 처음 값 그대로였다 → 창 크기·주소창·
+       키보드로 높이가 한 번 바뀌면 칸마다 오차가 쌓여 **두 장 사이 반쯤에 걸린 화면**이 됐다(2026-09-14 사장님 캡처). */
+    track.querySelectorAll("section.short").forEach(sec => { sec.style.height = `${h}px`; });
     track.style.height = `${shortsList.length * VIEWPORT_H}px`;
     track.style.transition = "none";
     track.style.transform = `translateY(-${currentIndex * VIEWPORT_H}px)`;
@@ -478,9 +483,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
   bindTapControls();
   bindKeyboard();
 
-  moveToIndex(currentIndex, true);
-
-  updateShortsVoteBar();
+  moveToIndex(currentIndex, true, 0, true);
 
   document.body.style.overflow = "hidden";
 
@@ -568,6 +571,7 @@ function buildSection(item) {
   section.innerHTML = `
   <video
     data-src="${item.video_url}"
+    ${item.thumbnail_url ? `poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""}
     playsinline webkit-playsinline muted loop
     preload="none"
     style="width:100%;height:100%;object-fit:cover"
@@ -636,7 +640,7 @@ function removeSlide(section) {
   section.remove();
   if (!shortsList.length) { closeShorts(); return; }
   track.style.height = `${shortsList.length * VIEWPORT_H}px`;
-  moveToIndex(Math.min(i, shortsList.length - 1), true);
+  moveToIndex(Math.min(i, shortsList.length - 1), true, 0, true);
 }
 
 /* 이슈 릴스에 숏판을 섞는다 — 열린 뒤 도착한 것을 '지금 보는 다음 장' 뒤쪽에만 끼운다
@@ -676,17 +680,20 @@ function bindShortsProgress(v) {
 /* =========================
    MOVE / PLAY
 ========================= */
-function moveToIndex(idx, instant = false) {
+function moveToIndex(idx, instant = false, dur = 0, force = false) {
+  if (!track) return;
   // 범위를 벗어나면 끝으로 스냅(항상 transform 재설정 → 드래그 잔상/튐 방지)
   idx = Math.max(0, Math.min(shortsList.length - 1, idx));
-
+  const changed = force || idx !== currentIndex;
   currentIndex = idx;
 
-  track.style.transition = instant ? "none" : "transform 0.35s cubic-bezier(.4,0,.2,1)";
+  /* 감속 곡선(인스타식) — 손을 뗀 속도를 이어받아 미끄러지다 선다. 고정 0.35s 는 '딸깍' 느낌이었다. */
+  track.style.transition = instant ? "none" : `transform ${dur || 320}ms cubic-bezier(.2,.75,.25,1)`;
   // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
   track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
-  window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null — 투표·댓글이 엉뚱한 이슈로 가지 않게
-
+  window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null
+  // 제자리 스냅이면 여기까지 — 진영바를 다시 그리면 iOS 가 누르던 버튼의 click 을 버린다
+  if (!changed) return;
   playOnlyCurrent();
   updateShortsVoteBar();   // 통합 진영바: 마운트 + 통계/내진영 반영
 }
@@ -744,7 +751,11 @@ function playOnlyCurrent() {
       v.playbackRate = 1;
     } else {
       v.pause();
-      v.currentTime = 0;
+      clearTimeout(v.__rewind);
+      v.__rewind = setTimeout(() => {
+        const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
+        if (cur !== v) { try { v.currentTime = 0; } catch (_) {} }
+      }, 450);
     }
   });
 }
@@ -759,62 +770,80 @@ function isReelControl(t) {
   return !!(t && t.closest && t.closest("#shortsVoteBar, .gv, .shorts-actions, .shorts-action-btn, .shorts-top, .shorts-meta, #shortsLoginPop, .grl-rail, [data-prof], .grl-cap-box, button, a, input, textarea"));
 }
 
+/* 트랙의 '지금' 위치 — 넘어가는 애니메이션 중이면 그 중간값(계산된 transform) */
+function trackY() {
+  try { return new DOMMatrixReadOnly(getComputedStyle(track).transform).m42; }
+  catch (_) { return -currentIndex * VIEWPORT_H; }
+}
+
+/* 세로 넘기기(인스타 릴스식)
+   · 손가락을 1:1 로 따라온다 · 방향은 처음 8px 로 잠근다(가로면 닫기 제스처로)
+   · 빠르게 튕기면 짧게 밀어도 한 장, 천천히면 화면 18%(최대 70px) 넘겨야 한 장
+   · 한 번에 한 장만 · 처음/끝에선 고무줄 저항
+   · 넘어가는 중에 다시 잡으면 그 자리에서 이어 잡는다
+   · touchcancel(시스템 제스처·전화 등)에서도 반드시 제자리로 — 없어서 두 장 사이에 멈춰 있었다 */
 function bindGestures() {
+  if (overlay.__gestures) return; overlay.__gestures = true;
+  let axis = null, baseY = 0, startIdx = 0, lastY = 0, lastT = 0, vel = 0;
+  const reset = () => { isDragging = false; axis = null; };
+
   overlay.addEventListener("touchstart", e => {
-    if (window.__COMMENT_OPEN__) return;
-    if (isReelControl(e.target)) { isDragging = false; return; }   // 컨트롤 탭은 제스처 대상 아님
-    isDragging = true;
+    if (window.__COMMENT_OPEN__ || !track) return;
+    if (isReelControl(e.target) || e.touches.length > 1) { reset(); return; }   // 컨트롤 탭은 제스처 대상 아님
+    isDragging = true; axis = null;
     startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    currentTranslateY = -currentIndex * VIEWPORT_H;
+    startY = lastY = e.touches[0].clientY;
+    lastT = performance.now(); vel = 0;
+    baseY = trackY();
+    startIdx = Math.max(0, Math.min(shortsList.length - 1, Math.round(-baseY / VIEWPORT_H)));
     track.style.transition = "none";
+    track.style.transform = `translateY(${baseY}px)`;
   }, { passive: true });
 
   overlay.addEventListener("touchmove", e => {
-    if (window.__COMMENT_OPEN__) return;
-    if (!isDragging) return;
-
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // 🔒 block vertical movement, but DO NOT move track horizontally
-      return;
+    if (window.__COMMENT_OPEN__ || !isDragging || !track) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if (!axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
-
-    track.style.transform = `translateY(${currentTranslateY + dy}px)`;
+    if (axis !== "y") return;   // 가로는 트랙을 안 움직인다(오른쪽으로 크게 밀면 닫기)
+    const now = performance.now(), dt = now - lastT;
+    if (dt > 0 && t.clientY !== lastY) { vel = 0.8 * ((t.clientY - lastY) / dt) + 0.2 * vel; lastY = t.clientY; lastT = now; }
+    let y = baseY + dy;
+    const min = -(shortsList.length - 1) * VIEWPORT_H;
+    if (y > 0) y *= 0.3; else if (y < min) y = min + (y - min) * 0.3;
+    track.style.transform = `translateY(${y}px)`;
   }, { passive: true });
 
-  overlay.addEventListener("touchend", e => {
-    if (window.__COMMENT_OPEN__) return;
-    // ⚠️ 컨트롤 위에서 손 떼면 즉시 종료 — 여기서 moveToIndex()를 부르면 진영바가 다시 그려져
-    //    iOS가 click을 취소한다(아이폰 전용 무반응의 직접 원인).
-    if (isReelControl(e.target)) { isDragging = false; return; }
-    isDragging = false;
-    track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
-    track.style.opacity = "1";
-
-    const dy = e.changedTouches[0].clientY - startY;
-    const dx = e.changedTouches[0].clientX - startX;
-    const horizontal = Math.abs(dx) > Math.abs(dy);
-
-    // 👉 오른쪽으로 확실히 밀면 → 릴스만 닫고 원래 피드로 복귀 (딴 페이지로 안 감)
-    if (horizontal && dx > CLOSE_THRESHOLD_X) {
-      closeShorts();
+  const finish = (e, cancelled) => {
+    if (!isDragging) return;
+    const ax = axis; reset();
+    if (!track) return;
+    if (cancelled || ax !== "y") {
+      const t = e.changedTouches && e.changedTouches[0];
+      // 👉 오른쪽으로 확실히 밀면 → 릴스만 닫고 원래 피드로 복귀
+      if (!cancelled && ax === "x" && t && t.clientX - startX > CLOSE_THRESHOLD_X) { closeShorts(); return; }
+      moveToIndex(Math.round(-trackY() / VIEWPORT_H) === currentIndex ? currentIndex : startIdx);
       return;
     }
-
-    // 가로 스와이프(왼쪽/애매한 대각선)는 아무 이동 없이 제자리 스냅
-    if (horizontal) {
-      moveToIndex(currentIndex);
-      return;
-    }
-
-    // 세로 스와이프 → 릴스 한 칸씩 (범위 밖이면 clamp되어 제자리 스냅)
-    if (dy < -SWIPE_THRESHOLD) moveToIndex(currentIndex + 1);
-    else if (dy > SWIPE_THRESHOLD) moveToIndex(currentIndex - 1);
-    else moveToIndex(currentIndex);
-  });
+    const t = e.changedTouches[0];
+    const dy = t.clientY - startY;
+    if (performance.now() - lastT > 90) vel = 0;   // 멈췄다가 뗀 것 = 튕김 아님
+    const TH = Math.min(SWIPE_THRESHOLD, VIEWPORT_H * 0.18);
+    let idx = startIdx;
+    if (Math.abs(vel) > 0.35 && Math.abs(dy) > 12) idx += vel < 0 ? 1 : -1;
+    else if (dy < -TH) idx += 1;
+    else if (dy > TH) idx -= 1;
+    idx = Math.max(0, Math.min(shortsList.length - 1, idx));
+    const y = trackY();
+    const remain = Math.abs(-idx * VIEWPORT_H - y);
+    const dur = Math.round(Math.min(360, Math.max(160, remain / Math.max(Math.abs(vel), 1.1))));
+    moveToIndex(idx, false, dur);
+  };
+  overlay.addEventListener("touchend", e => finish(e, false));
+  overlay.addEventListener("touchcancel", e => finish(e, true));
 }
 
 /* =========================
@@ -915,6 +944,7 @@ function wireSlideControls(section, item) {
 }
 
 function bindTapControls() {
+  if (overlay.__taps) return; overlay.__taps = true;
   let tapTimer = null;
   let waitingSecond = false;
   let holding2x = false;
@@ -981,6 +1011,7 @@ function bindTapControls() {
    WHEEL (PC)
 ========================= */
 function bindWheel() {
+  if (overlay.__wheel) return; overlay.__wheel = true;
   let lock = false;
   let unlockTimer = null;
   overlay.addEventListener("wheel", e => {

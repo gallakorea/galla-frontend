@@ -468,7 +468,7 @@ window.openReels = function (startId) {
     const vids = (window.cards || [])
         .filter(c => c.video_url)
         .map(c => ({
-            id: c.id, video_url: c.video_url, title: c.title,
+            id: c.id, video_url: c.video_url, title: c.title, thumbnail_url: c.thumbnail_url,
             author: c.author, level: c.level, category: c.category,
             avatar_url: c.avatar_url,
             user_id: c.user_id, faction_a: c.faction_a, faction_b: c.faction_b
