@@ -670,7 +670,7 @@ window.GALLA_shortsMix = function (posts, every) {
     else ti++;
   });
   shortsList = shortsList.slice(0, cut).concat(out);
-  if (POOL) POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; });   // 뒤쪽 번호가 밀렸다
+  if (POOL) { POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; }); fillAhead(0); }   // 뒤쪽 번호가 밀렸다 — 미리 받기를 곧바로 다시 채운다
 };
 
 /* 영상 연결을 끊고 버퍼를 반납한다(재생기 수를 늘 최소로). */
@@ -683,11 +683,13 @@ function releaseVideo(v) {
   v.preload = "none";
   try { v.load(); } catch (_) {}
 }
-/* 재생기 2개(돌려쓰기). i 번째 장 = POOL[i % 2]. */
+/* 재생기 3개(돌려쓰기). i 번째 장 = POOL[i % 3] — 지금 장 + 앞으로 두 장을 미리 받아 둔다.
+   ⚠️ 2개일 땐 다음 한 장만, 그것도 멈춘 뒤에 준비를 시작해 연달아 넘기면 로딩이 보였다(사장님: 전환 시 로딩이 느리다).
+      3개 동시는 폰에서 문제없었다(튕김은 '새 재생기가 쌓여서'였고, 돌려쓰면 쌓이지 않는다). */
 let POOL = null;
 function pool() {
   if (!POOL) {
-    POOL = [0, 1].map(() => {
+    POOL = [0, 1, 2].map(() => {
       const v = document.createElement("video");
       v.className = "sh-player";
       v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
@@ -721,6 +723,24 @@ function placePlayer(p, i) {
   }
 }
 let LAST_SNAP_MS = 0;
+/* 지금 장 뒤로 (재생기 수-1)장을 미리 받아 첫 장면을 그려 둔다. 떠나는 재생기는 멈추기만 하고
+   deferMs 뒤에 자리를 옮긴다(넘기는 동작 중에 옮기면 그 장이 번쩍였다). */
+function fillAhead(deferMs) {
+  const P = pool(), N = P.length;
+  for (let k = 1; k < N; k++) {
+    const want = currentIndex + k, p = P[want % N];
+    clearTimeout(p.__deferT);
+    try { p.pause(); } catch (_) {}
+    if (want >= shortsList.length) continue;
+    if (p.__idx === want) { primeFirstFrame(p); continue; }
+    const go = () => {
+      if (!track || want <= currentIndex || want >= currentIndex + N) return;   // 그 사이 또 넘겼다
+      placePlayer(p, want);
+      primeFirstFrame(p);
+    };
+    if (deferMs > 0) p.__deferT = setTimeout(go, deferMs); else go();
+  }
+}
 /* 대기 중인 다음 장 재생기에 첫 장면을 그려 둔다 — 소리 끈 채 잠깐 재생했다 멈춘다(아이폰은 멈춘 채로는
    첫 장면을 안 그려, 도착하는 순간 영상이 튀어나왔다). 그 사이 지금 장이 되면 그대로 재생을 이어간다. */
 function primeFirstFrame(v) {
@@ -738,7 +758,7 @@ function primeFirstFrame(v) {
 
 /* 지금 장의 영상(재생기). 없으면 null. */
 function curVideo() {
-  const p = POOL && POOL[currentIndex % 2];
+  const p = POOL && POOL[currentIndex % POOL.length];
   return p && p.__idx === currentIndex ? p : null;
 }
 
@@ -816,26 +836,11 @@ function playOnlyCurrent() {
      · 다음 장이 멈춘 채 대기만 해서 도착해야 영상이 튀어나왔다
        → 소리 끈 채 잠깐 재생했다 멈춰 첫 장면을 미리 그려 둔다. */
   const P = pool();
-  const cur = P[currentIndex % 2], nxt = P[(currentIndex + 1) % 2];
+  const cur = P[currentIndex % P.length];
+  clearTimeout(cur.__deferT);
   placePlayer(cur, currentIndex);
-  clearTimeout(nxt.__deferT);
-  if (currentIndex + 1 < shortsList.length) {
-    if (nxt.__idx === currentIndex + 1) {
-      // 뒤로 넘기면 방금까지 재생하던 재생기가 이 자리로 온다 — 화면 밖에서 소리 내며 돌지 않게 먼저 멈춘다
-      try { nxt.pause(); } catch (_) {}
-      primeFirstFrame(nxt);
-    }
-    else {
-      try { nxt.pause(); } catch (_) {}          // 떠나는 장 — 소리만 끊고 그림은 남긴다
-      const want = currentIndex + 1;
-      nxt.__deferT = setTimeout(() => {
-        if (!track || currentIndex + 1 !== want || P[want % 2] !== nxt) return;
-        placePlayer(nxt, want);
-        primeFirstFrame(nxt);
-      }, (LAST_SNAP_MS || 0) + 80);
-    }
-  } else { try { nxt.pause(); } catch (_) {} }
-  [P[currentIndex % 2]].forEach((v) => {
+  fillAhead((LAST_SNAP_MS || 0) + 80);
+  [cur].forEach((v) => {
     const i = currentIndex;
     if (i === currentIndex) {
       /* 🔁 무한 재생 (사용자가 멈출 때까지)
