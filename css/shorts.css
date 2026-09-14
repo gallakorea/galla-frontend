@@ -528,6 +528,14 @@ body[data-page="shorts"] .nav {
   body.shorts-open .short-post .grl-bottom { right: 84px; }
 }
 
+/* 재생기 2개 돌려쓰기 — 각 장에는 썸네일 그림만, 영상은 공용 재생기(.sh-player)가 그 위에 앉는다 */
+.short .sh-poster {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; background: #000; pointer-events: none; z-index: 0;
+}
+.short .sh-poster:not([src]) { visibility: hidden; }
+.short video.sh-player { z-index: 1; }
+
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{
   overflow:hidden;

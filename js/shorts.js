@@ -531,7 +531,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
     e.stopPropagation();
     if (window.GALLA_setSound) window.GALLA_setSound(!(window.GALLA_soundOn && window.GALLA_soundOn()));
     else window.__REELS_MUTED__ = !window.__REELS_MUTED__;
-    const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const cur = curVideo();
     if (cur) cur.muted = !!window.__REELS_MUTED__;
     syncMute();
   });
@@ -548,7 +548,9 @@ function buildSection(item) {
     section.dataset.postId = item.id;
     if (item.user_id) section.dataset.authorId = item.user_id;
     Object.assign(section.style, { height: `${VIEWPORT_H}px`, width: "100%", maxWidth: "480px", margin: "0 auto", position: "relative", overflow: "hidden" });
-    section.innerHTML = `<video data-src="${item.video_url}" playsinline webkit-playsinline muted loop preload="none"${item.thumbnail_url ? ` data-poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""} style="width:100%;height:100%;object-fit:cover"></video>` + window.GALLA_ReelPost.html(item);
+    section.dataset.src = item.video_url;
+    if (item.thumbnail_url) section.dataset.poster = item.thumbnail_url;
+    section.innerHTML = `<img class="sh-poster" alt="">` + window.GALLA_ReelPost.html(item);
     window.GALLA_ReelPost.wire(section, item, {
       remove: () => removeSlide(section),
       leave: (fn) => { closeShortsSilently(); fn(); }
@@ -569,14 +571,10 @@ function buildSection(item) {
     overflow: "hidden"
   });
 
+  section.dataset.src = item.video_url;
+  if (item.thumbnail_url) section.dataset.poster = item.thumbnail_url;
   section.innerHTML = `
-  <video
-    data-src="${item.video_url}"
-    ${item.thumbnail_url ? `data-poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""}
-    playsinline webkit-playsinline muted loop
-    preload="none"
-    style="width:100%;height:100%;object-fit:cover"
-  ></video>
+  <img class="sh-poster" alt="">
 
   <!-- LEFT META (AUTHOR) -->
   <div class="shorts-meta">
@@ -638,6 +636,7 @@ function removeSlide(section) {
   const i = secs.indexOf(section);
   if (i < 0) return;
   shortsList.splice(i, 1);
+  if (POOL) POOL.forEach(p => { if (p.parentNode === section) section.removeChild(p); p.__idx = -1; });
   section.remove();
   if (!shortsList.length) { closeShorts(); return; }
   track.style.height = `${shortsList.length * VIEWPORT_H}px`;
@@ -657,11 +656,18 @@ window.GALLA_shortsMix = function (posts, every) {
   let pi = 0;
   tail.forEach((it, i) => { out.push(it); if ((i + 1) % every === 0 && pi < add.length) out.push(add[pi++]); });
   while (pi < add.length) out.push(add[pi++]);
-  const secs = track.querySelectorAll("section.short");
-  for (let i = cut; i < secs.length; i++) secs[i].remove();
+  /* ⚠️ 예전엔 cut 뒤 장들을 지우고 다시 그렸다 — 폰에서 그 '다시 그린 첫 장'을 재생하는 순간 웹뷰가
+     죽었다(26.9.14 실기기, 세 빌드 모두 두 번째 넘기기). 이제 이미 있는 장은 건드리지 않고 숏판 장만 끼운다. */
+  const fresh = new Set(add);
+  const tailSecs = Array.from(track.querySelectorAll("section.short")).slice(cut);
+  let ti = 0;
+  out.forEach(it => {
+    if (fresh.has(it)) track.insertBefore(buildSection(it), tailSecs[ti] || null);
+    else ti++;
+  });
   shortsList = shortsList.slice(0, cut).concat(out);
-  out.forEach(it => track.appendChild(buildSection(it)));
   track.style.height = `${shortsList.length * VIEWPORT_H}px`;
+  if (POOL) POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; });   // 뒤쪽 번호가 밀렸다
 };
 
 /* 영상 연결을 끊고 버퍼를 반납한다(재생기 수를 늘 최소로). */
@@ -674,6 +680,45 @@ function releaseVideo(v) {
   v.preload = "none";
   try { v.load(); } catch (_) {}
 }
+/* 재생기 2개(돌려쓰기). i 번째 장 = POOL[i % 2]. */
+let POOL = null;
+function pool() {
+  if (!POOL) {
+    POOL = [0, 1].map(() => {
+      const v = document.createElement("video");
+      v.className = "sh-player";
+      v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+      v.muted = true; v.loop = true; v.preload = "auto";
+      v.__idx = -1;
+      return v;
+    });
+  }
+  return POOL;
+}
+function sectionAt(i) { return track ? track.querySelectorAll("section.short")[i] || null : null; }
+/* 재생기 p 를 i 번째 장에 앉히고 그 장 영상을 붙인다(이미 그 장이면 그대로 — 다시 받지 않는다). */
+function placePlayer(p, i) {
+  const sec = sectionAt(i);
+  if (!sec || !sec.dataset.src) return;
+  if (p.parentNode !== sec) {
+    const img = sec.querySelector(".sh-poster");
+    sec.insertBefore(p, img ? img.nextSibling : sec.firstChild);
+  }
+  if (p.__idx !== i || !p._hlsUrl) {
+    releaseVideo(p);
+    p.__idx = i; p.__sig = 0;
+    p.preload = "auto";
+    if (sec.dataset.poster) p.setAttribute("poster", sec.dataset.poster); else p.removeAttribute("poster");
+    if (window.GALLA_attachHls) window.GALLA_attachHls(p, sec.dataset.src);
+    else p.setAttribute("src", sec.dataset.src);
+  }
+}
+/* 지금 장의 영상(재생기). 없으면 null. */
+function curVideo() {
+  const p = POOL && POOL[currentIndex % 2];
+  return p && p.__idx === currentIndex ? p : null;
+}
+
 /* 릴스를 여는 순간 홈 피드 카드 영상의 재생기를 전부 푼다. 홈은 스크롤한 만큼 영상을 붙여 두고
    절대 풀지 않아서, 그 위에 릴스 재생기가 얹히면 폰 웹뷰가 메모리 한도로 죽었다. */
 function releaseFeedVideos() {
@@ -726,17 +771,23 @@ function playOnlyCurrent() {
      바로 안 돌아와 1080p60 HLS 재생기가 사실상 4개 겹치는 순간(=두 번째 넘기기)이 한도였다.
      → 영상은 **지금 장 하나만** 연결한다. 다음 장은 썸네일만 깔아 넘기는 순간 그림은 바로 보이고
        영상이 뒤따른다. 지난 장은 넘기는 즉시 푼다. */
-  document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
-    const d = Math.abs(i - currentIndex);
-    if (d <= 1) { if (v.dataset.poster && !v.getAttribute("poster")) v.setAttribute("poster", v.dataset.poster); }
-    else if (v.getAttribute("poster")) v.removeAttribute("poster");
-    if (d === 0 && window.GALLA_attachHls && v.dataset.src) {
-      v.preload = "auto";
-      window.GALLA_attachHls(v, v.dataset.src);
-    } else if (d > 0 && (v._hlsUrl || v.getAttribute("src"))) {
-      releaseVideo(v);
-      return;
-    }
+  /* 🔴 3차(실기기): 재생기를 풀어도 두 번째 넘기기에 또 죽었다 — 아이폰 웹뷰는 영상 요소마다 만든
+     재생기 메모리를 바로 돌려주지 않아, 새 영상 요소를 재생할 때마다 쌓였다(홈 1 + 릴스 3 = 4번째에서 죽음).
+     → 인스타식 **재생기 2개 돌려쓰기**: 릴스 전체에서 <video> 는 2개뿐이다. i 번째 장은 POOL[i%2] 가
+       맡는다 — 지금 장이 재생하는 동안 다른 하나가 다음 장을 미리 받아 두므로, 넘기면 바로 재생된다.
+       각 장에는 썸네일 그림만 둔다(±2 장만 그림을 붙인다). */
+  const secs = track ? track.querySelectorAll("section.short") : [];
+  secs.forEach((sec, i) => {
+    const img = sec.querySelector(".sh-poster");
+    if (!img) return;
+    if (Math.abs(i - currentIndex) <= 2) { if (sec.dataset.poster && !img.getAttribute("src")) img.setAttribute("src", sec.dataset.poster); }
+    else if (img.getAttribute("src")) img.removeAttribute("src");
+  });
+  const P = pool();
+  if (currentIndex + 1 < shortsList.length) { placePlayer(P[(currentIndex + 1) % 2], currentIndex + 1); try { P[(currentIndex + 1) % 2].pause(); } catch (_) {} }
+  placePlayer(P[currentIndex % 2], currentIndex);
+  [P[currentIndex % 2]].forEach((v) => {
+    const i = currentIndex;
     if (i === currentIndex) {
       /* 🔁 무한 재생 (사용자가 멈출 때까지)
          ⚠️ 한때 Stream 요금 때문에 3회로 끊었다가 되돌렸다 — 영상이 R2로 가서 재생이 공짜고,
@@ -749,7 +800,8 @@ function playOnlyCurrent() {
       // 이어보기: 인덱스에서 넘어온 재생 위치 적용(해당 아이템 최초 활성화 시 1회)
       const seek = window.__SHORTS_PENDING_SEEK__;
       if (seek && shortsList[currentIndex] && seek.key === keyOf(shortsList[currentIndex])) {
-        const apply = () => { try { if (v.duration && seek.time < v.duration - 0.3) v.currentTime = seek.time; } catch (_) {} };
+        const mine = v.__idx;   // 재생기는 돌려쓴다 — 늦게 도착한 콜백이 다른 장 영상에 손대지 않게
+        const apply = () => { if (v.__idx !== mine) return; try { if (v.duration && seek.time < v.duration - 0.3) v.currentTime = seek.time; } catch (_) {} };
         if (v.readyState >= 1) apply();
         else v.addEventListener("loadedmetadata", apply, { once: true });
         window.__SHORTS_PENDING_SEEK__ = null;
@@ -764,9 +816,12 @@ function playOnlyCurrent() {
         try { window.GALLA_signal.video(v, { kind: 'vertical', id: String(it.id), surface: 'reels' }); } catch (_) {}
       }
 
+      const mine = v.__idx;
+      const stillMine = () => v.__idx === mine && mine === currentIndex;
       const playPromise = v.play();
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(err => {
+          if (!stillMine()) return;
           if (err && err.name === "NotAllowedError") {
             // 진짜 자동재생 정책 차단(제스처 없음)일 때만 음소거로 폴백
             v.muted = true;
@@ -774,6 +829,7 @@ function playOnlyCurrent() {
           } else {
             // 데이터 부족 등 → 소리 유지한 채 준비되면 재시도(느린 R2 대응)
             v.addEventListener("canplay", () => {
+              if (!stillMine()) return;   // 그 사이 넘겼으면 이 재생기는 이미 다음 장 몫이다
               v.muted = !!window.__REELS_MUTED__;
               v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
             }, { once: true });
@@ -781,13 +837,6 @@ function playOnlyCurrent() {
         });
       }
       v.playbackRate = 1;
-    } else {
-      v.pause();
-      clearTimeout(v.__rewind);
-      v.__rewind = setTimeout(() => {
-        const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
-        if (cur !== v) { try { v.currentTime = 0; } catch (_) {} }
-      }, 450);
     }
   });
 }
@@ -920,7 +969,7 @@ function showSpeedBadge(section, on) {
 }
 
 function curVideoAndSection() {
-  const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+  const video = curVideo();
   const section = document.querySelectorAll(".short")[currentIndex];
   return { video, section };
 }
@@ -963,7 +1012,7 @@ function wireSlideControls(section, item) {
   onTap(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
   onTap(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
   section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => {
-    const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const cv = curVideo();
     const t = (cv && cv.currentTime > 0.3) ? "&t=" + cv.currentTime.toFixed(1) : "";   // 보던 위치 이어보기
     const url = "issue.html?id=" + item.id + t;
     // SPA(앱): 릴스 닫고 스택 push로 진입 — location.href 하드내비는 MPA로 이탈해 스크롤이 죽는다(프로필 열기와 동일 규약)
@@ -1205,7 +1254,7 @@ function closeShorts() {
   shortsNavHide(false);
   // 이어보기(역방향): 현재 릴스 재생 위치를 인덱스 인라인 영상에 반영
   try {
-    const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const cur = curVideo();
     const id = shortsList[currentIndex]?.id;
     if (cur && id != null && cur.currentTime > 0.3) {
       const inline = document.getElementById("vid-" + id);
@@ -1216,6 +1265,7 @@ function closeShorts() {
   document.body.classList.remove("shorts-open");
   window.__CURRENT_SHORT_ISSUE_ID__ = null;
   document.getElementById("grl-cdim")?.remove();   // 숏판 댓글 시트
+  if (POOL) { POOL.forEach(p => { releaseVideo(p); p.remove(); }); POOL = null; }
   if (overlay) {
     track = null;
     overlay.remove();
@@ -1263,7 +1313,7 @@ if (!__SHORTS_DUP__) document.addEventListener("click", e => {
   if (!go || !go.dataset.goto) return;
   e.preventDefault();
   e.stopPropagation();
-  const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
+  const cv = curVideo();
   const t = (cv && cv.currentTime > 0.3) ? `&t=${cv.currentTime.toFixed(1)}` : "";
   const url = `issue.html?id=${go.dataset.goto}${t}`;
   // SPA(앱): 스택 push로 — 하드내비는 MPA 이탈로 스크롤 죽음
@@ -1355,7 +1405,7 @@ function closeCommentModal() {
     window.__COMMENT_OPEN__ = false;
     window.__COMMENT_STATE__ = "closed";
 
-    const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const video = curVideo();
     if (video) video.play().catch(() => {});
   }, 260);
 }

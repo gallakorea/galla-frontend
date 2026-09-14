@@ -319,6 +319,9 @@
     } finally { if (pending) pending.remove(); }
   }
 
+  /* 홈에서 숏판 목록을 미리 받아 둔다 — 릴스를 여는 순간 바로 섞이게(열린 뒤 늦게 끼우지 않게). */
+  setTimeout(() => { try { if (sb() && document.querySelector('.card-media video, #shortsOverlay, [data-page="index"], body[data-page="spa"]')) mixPosts(); } catch (_) {} }, 3000);
+
   window.GALLA_ReelPost = { html, wire, openComments };
   window.GALLA_reelsFeed = feed;
   window.GALLA_openReels = openReels;
