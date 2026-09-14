@@ -542,6 +542,14 @@ body[data-page="shorts"] .nav {
   width: min(100%, 480px);
   object-fit: cover; background: transparent;
   pointer-events: none; z-index: 1;
+  /* ⚠️ 영상은 반드시 자기 합성 층을 가져야 한다. 장(.short) 밖으로 나오면서 `.short video` 의
+     translateZ·will-change 를 잃었더니, 아이폰 실기기가 끄는 동안 영상을 못 그리고 밑의 썸네일만
+     보였다(26.9.14 사장님 녹화 16:18 — 시뮬레이터는 멀쩡). 옛 엔진 영상과 같은 힌트를 준다. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* LOCK SHORTS SCROLL */
