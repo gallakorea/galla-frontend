@@ -767,7 +767,11 @@ function playOnlyCurrent() {
    touchend에서 moveToIndex()가 진영바를 재생성하고, iOS는 '눌렀던 버튼이 사라지면
    click을 발사하지 않는다' → 아이폰만 진영 버튼 무반응(사장님 재현: PC·안드로이드는 정상). */
 function isReelControl(t) {
-  return !!(t && t.closest && t.closest("#shortsVoteBar, .gv, .shorts-actions, .shorts-action-btn, .shorts-top, .shorts-meta, #shortsLoginPop, .grl-rail, [data-prof], .grl-cap-box, button, a, input, textarea"));
+  /* ⚠️ 예전엔 버튼·레일·작성자 줄·진영바 위에서 시작한 끌기를 통째로 무시했다 → 화면 아래 절반
+     (제목·작성자·진영바)에서 밀면 안 넘어갔다(2026-09-14 시뮬 실측). 그 보호는 '제자리 스냅 때
+     진영바 재생성 → iOS click 취소' 때문이었는데, 이제 같은 칸이면 아무것도 다시 안 그린다.
+     인스타처럼 어디서 밀어도 넘어가고, 안 움직인 탭은 그대로 클릭이 된다. 입력칸만 뺀다. */
+  return !!(t && t.closest && t.closest("#shortsLoginPop, input, textarea, select, [contenteditable]"));
 }
 
 /* 트랙의 '지금' 위치 — 넘어가는 애니메이션 중이면 그 중간값(계산된 transform) */
