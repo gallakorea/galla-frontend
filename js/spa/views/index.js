@@ -30,6 +30,7 @@ const CLASSIC = [
   "/js/tour.js",            // 병맛 10슬라이드 투어(+500GP) — 네이티브에서 통째로 안 떴다
   "/js/noti-icons.js",      // 알림 아이콘 세트
   "/js/index-guide.js",     // 피드 상단 오리엔테이션 배너
+  "/js/reels-mix.js",       // GALLA_ReelPost/openReels — 릴스에 숏판 섞기(엔진은 shorts.js 하나)
   "/js/index.js",           // 홈 피드 본체(GALLA_PAGE_INDEX 노출)
 ];
 /* ES 모듈 의존 — dynamic import. 실패해도 피드 자체는 뜨게 fail-soft */

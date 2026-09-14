@@ -1,8 +1,11 @@
 /* ============================================================
-   통합 릴스 — 이슈 영상 + 숏판(갈라리) 한 피드. scroll-snap 풀스크린.
-   ⚠️ 이슈 배틀 엔진(shorts.js)과 별개. 항목 타입별로 UI만 다르게 그린다.
+   릴스 숏판 슬라이드(레일·하단 작성자·댓글 시트) + 숏판 릴스 페이지 배경판.
+   ⚠️ 릴스 엔진은 shorts.js 하나다(2026-09-14 통합). 여기 .grl-* 는 그 엔진 안의
+      숏판 슬라이드(js/reels-mix.js)가 쓰는 모양이다.
    ============================================================ */
-.grl { position: fixed; inset: 0; z-index: 3000; background: #000;
+/* ⚠️ 릴스는 공용 엔진 오버레이(#shortsOverlay, z 900)가 그린다. 이 판은 그 '뒤'에 깔려야 한다
+   — 예전 값 3000 이면 '다시 보기' 자리가 릴스를 덮는다(2026-09-14 실측). */
+.grl { position: fixed; inset: 0; z-index: 800; background: #000;
   overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .grl::-webkit-scrollbar { display: none; }
@@ -88,6 +91,14 @@
   padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 800; cursor: pointer; }
 
 .grl-loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #888; }
+/* 릴스(공용 엔진 오버레이) 뒤에 깔리는 자리 — 프로필·이슈로 갔다가 돌아오면 보인다 */
+.grl-idle { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #aaa; font-size: 14px; text-align: center; line-height: 1.6; padding: 24px; }
+.grl-idle-btn { min-width: 180px; padding: 13px 20px; border-radius: 14px; border: 0; background: #fff; color: #000; font-size: 15px; font-weight: 800; cursor: pointer; }
+.grl-idle-btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); }
+/* 피드를 받아오는 동안의 검은 막(누른 뒤 반응 없어 보이지 않게) */
+.grl-pending { position: fixed; inset: 0; z-index: 950; background: #000; display: flex; align-items: center; justify-content: center; }
+.grl-spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.2); border-top-color: #fff; animation: grl-spin .8s linear infinite; }
+@keyframes grl-spin { to { transform: rotate(360deg); } }
 .grl-end { height: 100dvh; scroll-snap-align: start; display: flex; align-items: center; justify-content: center; color: #888; font-size: 14px; text-align: center; line-height: 1.7; }
 
 /* ── 릴스 댓글 바텀시트 ── */

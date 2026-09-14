@@ -505,6 +505,18 @@ body[data-page="shorts"] .nav {
 }
 .comment-input button:disabled{ opacity:.45; }
 
+/* =========================
+   숏판 장(같은 엔진 안) — 진영바는 이슈 장에만. 진행바는 맨 아래로.
+   ⚠️ .shorts-vote.gv 가 display:block !important 라 id+!important 로 이긴다.
+========================= */
+#shortsOverlay.sh-post #shortsVoteBar { display: none !important; }
+#shortsOverlay.sh-post #shortsProgress { bottom: calc(env(safe-area-inset-bottom) + 2px); }
+.short-post .grl-rail { bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* 떠 있는 갈비스 오브가 진영 버튼·퍼센트를 덮었다(사장님 캡처 2026-09-14).
+   릴스 안에는 레일에 갈비스 버튼이 따로 있다. */
+body.shorts-open #frOrb { display: none !important; }
+
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{
   overflow:hidden;

@@ -39,6 +39,7 @@ const SCRIPTS = [
   "/js/media-sound.js",    // GALLA_soundOn/setSound(전역 사운드 선호)
   "/js/fx.js",             // GALLA_FX(파티클)
   "/js/ghost.js",          // GALLA_ghost*(유령 페르소나·토글)
+  "/js/reels-mix.js",      // GALLA_ReelPost(릴스 숏판 슬라이드)
 ];
 
 /* ES 모듈 의존 — dynamic import(모듈 캐시로 index 탭과 자연 공유).

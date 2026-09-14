@@ -5,6 +5,9 @@
    - 완전한 릴스/쇼츠 UX
 ========================================================= */
 
+/* 같은 엔진이 다른 URL(?v=)로 두 번 실리면 문서 위임 핸들러가 두 벌 붙어 댓글·공유가 두 번 뜬다.
+   먼저 실린 쪽만 창구(openShorts)와 위임을 가진다. */
+const __SHORTS_DUP__ = window.__SHORTS_ENGINE_READY__ === true;
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 window.__SHORTS_VOTING_LOCK__ = false;
 window.currentCommentStance = "pro";   // pro | con
@@ -26,7 +29,31 @@ function isScrollableTarget(el) {
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
-let SHORTS_ENTRY = 'detail';   // 진입: 'feed'(인덱스=+ 만들기) / 'detail'(상세=‹ 닫기)
+let SHORTS_ENTRY = 'detail';   // 좌상단은 어디서 열든 ‹(뒤로) — '+ 만들기'는 나갈 길을 막았다(2026-09-14)
+let SHORTS_ON_CLOSE = null;    // 닫힐 때 부를 것(숏판 릴스 페이지 = 페이지째 뒤로)
+/* 항목 = 이슈 | 숏판. 두 테이블 id 가 둘 다 bigint 라 숫자만으로는 겹친다 → 종류+id 로 가린다. */
+const keyOf = (v) => (v && v._type === 'post' ? 'p' : 'i') + ':' + (v && Number(v.id));
+const issueIdOf = (v) => (v && v._type !== 'post' ? v.id : null);
+function normItem(v) {
+  const post = v._type === 'post';
+  return {
+    _type: post ? 'post' : 'issue',
+    id: Number(v.id),
+    video_url: v.video_url,
+    thumbnail_url: v.thumbnail_url || "",
+    title: v.title || "",
+    caption: v.caption || "",
+    author: v.author || "익명",
+    avatar_url: v.avatar_url || null,
+    level: v.level != null ? v.level : "",
+    category: v.category || "",
+    user_id: v.user_id || "",
+    faction_a: v.faction_a || "",
+    faction_b: v.faction_b || "",
+    like_count: v.like_count || 0,
+    comment_count: v.comment_count || 0
+  };
+}
 
 let isDragging = false;
 let startX = 0;
@@ -65,18 +92,18 @@ if (window.visualViewport) {
 /* =========================
    OPEN API
 ========================= */
-window.__SHORTS_ENGINE_READY__ = false;
+if (!__SHORTS_DUP__) window.__SHORTS_ENGINE_READY__ = false;
 
-window.openShorts = function (list, startId, startTime, entry) {
+if (!__SHORTS_DUP__) window.openShorts = function (list, startId, startTime, entry, opts) {
   try {
     if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-      window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry);
+      window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry, opts);
     } else {
       console.warn("[SHORTS] __OPEN_SHORTS_INTERNAL__ missing, queueing");
-      window.__SHORTS_OPEN_QUEUE__.push({ list, startId, startTime, entry });
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId, startTime, entry, opts });
       document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-          window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry);
+          window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry, opts);
         }
       }, { once: true });
     }
@@ -88,25 +115,19 @@ window.openShorts = function (list, startId, startTime, entry) {
 /* =========================
    CORE OPEN
 ========================= */
-function __openShortsInternal(list, startId, startTime, entry) {
-  SHORTS_ENTRY = entry === 'feed' ? 'feed' : 'detail';   // 인덱스=+ / 상세(기본)=‹
+function __openShortsInternal(list, startId, startTime, entry, opts) {
+  opts = opts || {};
+  SHORTS_ENTRY = 'detail';
+  SHORTS_ON_CLOSE = typeof opts.onClose === "function" ? opts.onClose : null;
+  const startKey = (opts.startType === 'post' ? 'p' : 'i') + ':' + Number(startId);
   // 이어보기: 시작 아이템을 이 위치(초)부터 재생 (인덱스 인라인에서 넘어옴)
-  window.__SHORTS_PENDING_SEEK__ = (startTime && startTime > 0.3) ? { id: Number(startId), time: startTime } : null;
+  window.__SHORTS_PENDING_SEEK__ = (startTime && startTime > 0.3) ? { key: startKey, time: startTime } : null;
   // 🔥 HARD FIX: 항상 video_url 있는 항목만, 순서 고정
+  const seenKeys = new Set();
   shortsList = (list || [])
-    .filter(v => v && v.video_url)
-    .map(v => ({
-      id: Number(v.id),
-      video_url: v.video_url,
-      title: v.title || "",
-      author: v.author || "익명",
-      avatar_url: v.avatar_url || null,
-      level: v.level != null ? v.level : "",
-      category: v.category || "",
-      user_id: v.user_id || "",
-      faction_a: v.faction_a || "",
-      faction_b: v.faction_b || ""
-    }));
+    .filter(v => v && v.video_url && (v._type !== 'post' || window.GALLA_ReelPost))   // 숏판 UI 모듈 없으면 숏판은 뺀다
+    .map(normItem)
+    .filter(v => { const k = keyOf(v); if (seenKeys.has(k)) return false; seenKeys.add(k); return true; });
   if (!shortsList.length) return;
 
   // 릴스 진입 = 몰입 뷰 → 소리 ON (전역 통일). 여기서 음소거하면 인덱스로도 이어진다.
@@ -126,10 +147,8 @@ function __openShortsInternal(list, startId, startTime, entry) {
       <div class="shorts-scrim shorts-scrim-top"></div>
       <div class="shorts-scrim shorts-scrim-bottom"></div>
       <div class="shorts-top">
-        <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="${SHORTS_ENTRY === 'feed' ? '만들기' : '닫기'}">
-          ${SHORTS_ENTRY === 'feed'
-            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
-            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'}
+        <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="뒤로">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <!-- 상단 음성 버튼 제거(사장님 확정) — 음소거는 화면 탭으로 토글, 상태는 중앙 배지로 안내 -->
       </div>
@@ -424,10 +443,8 @@ function __openShortsInternal(list, startId, startTime, entry) {
     padding: "6px 10px",
     borderRadius: "10px",
   });
-  // 인덱스 진입(+) = 이슈 만들기(작성 허브) / 상세 진입(‹) = 닫기
-  closeBtn.onclick = SHORTS_ENTRY === 'feed'
-    ? () => { closeShorts(); if (window.openWriteHub) window.openWriteHub('galla'); else (window.GALLA_nav || function (u) { location.href = u; })('write.html'); }
-    : closeShorts;
+  // 좌상단 = 뒤로(릴스 닫기). 어디서 열었든 같다.
+  closeBtn.onclick = () => closeShorts();
 
   /* ===== track ===== */
   Object.assign(track.style, {
@@ -440,98 +457,21 @@ function __openShortsInternal(list, startId, startTime, entry) {
   // Remove any previous children in track
   track.innerHTML = "";
 
-  shortsList.forEach(item => {
-    const section = document.createElement("section");
-    section.className = "short";
-    section.dataset.issueId = item.id;
-    if (item.user_id) section.dataset.authorId = item.user_id;
+  shortsList.forEach(item => track.appendChild(buildSection(item)));
 
-    Object.assign(section.style, {
-      height: `${VIEWPORT_H}px`,
-      width: "100%",
-      maxWidth: "480px",
-      margin: "0 auto",
-      position: "relative",
-      overflow: "hidden"
-    });
-
-    section.innerHTML = `
-    <video
-      data-src="${item.video_url}"
-      playsinline webkit-playsinline muted loop
-      preload="none"
-      style="width:100%;height:100%;object-fit:cover"
-    ></video>
-
-    <!-- LEFT META (AUTHOR) -->
-    <div class="shorts-meta">
-      <div class="shorts-author">
-        <span class="author-avatar-link" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar") : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}</span>
-        <div class="author-info">
-          <div class="author-line">
-            <span class="author-name" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${item.author || "익명"}</span>
-            ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
-          </div>
-          ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
-          <div class="shorts-title shorts-goto" data-goto="${item.id}" role="link">${item.title || ""}
-            <span class="shorts-goto-chip">게시물 보기 ›</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT ACTIONS -->
-    <div class="shorts-actions">
-      <button class="shorts-action-btn comment" aria-label="댓글">
-        <span class="sa-ic"><svg viewBox="0 0 24 24">
-          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-        </svg></span>
-        <span class="sa-label">댓글</span>
-      </button>
-
-      <button class="shorts-action-btn share" aria-label="공유">
-        <span class="sa-ic"><svg viewBox="0 0 24 24">
-          <path d="M22 2L11 13"/>
-          <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
-        </svg></span>
-        <span class="sa-label">공유</span>
-      </button>
-
-      <button class="shorts-action-btn galvis" data-galvis data-gv-type="issue" data-gv-id="${item.id}" data-gv-title="${String(item.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기">
-        <span class="sa-ic"><svg viewBox="0 0 24 24" fill="none" class="gv-galvis" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span>
-        <span class="sa-label">갈비스</span>
-      </button>
-
-      <button class="shorts-action-btn goto shorts-goto" data-goto="${item.id}" aria-label="게시물">
-        <span class="sa-ic"><svg viewBox="0 0 24 24">
-          <path d="M4 5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>
-          <path d="M14 4v6h6"/>
-        </svg></span>
-        <span class="sa-label">게시물</span>
-      </button>
-    </div>
-    `;
-
-    track.appendChild(section);
-    wireSlideControls(section, item);
-  });
-
-  currentIndex = Math.max(
-    0,
-    shortsList.findIndex(v => v.id === startId)
-  );
+  currentIndex = Math.max(0, shortsList.findIndex(v => keyOf(v) === startKey));
 
   /* 🔥 추가: 쇼츠 복귀용 상태 저장 */
   sessionStorage.setItem("__SHORTS_RETURN__", JSON.stringify({
     list: shortsList,
     index: currentIndex,
-    issueId: shortsList[currentIndex]?.id
+    issueId: issueIdOf(shortsList[currentIndex])
   }));
 
   // 🔒 shorts-open 모드 명시 (vote / index 충돌 방지)
   document.body.classList.add("shorts-open");
   shortsNavHide(true);   // 셸 하단 nav 숨김(릴스는 풀스크린)
-  window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
+  window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null — 투표·댓글이 엉뚱한 이슈로 가지 않게
 
   bindGestures();
   bindWheel();
@@ -595,6 +535,130 @@ function __openShortsInternal(list, startId, startTime, entry) {
   syncMute();
 }
 
+/* 슬라이드 한 장 — 이슈는 배틀 UI(작성자·댓글·공유·갈비스·게시물 + 하단 고정 진영바),
+   숏판은 GALLA_ReelPost(좋아요·댓글·공유·갈비스·후원·관리). 영상·넘기기·상단 버튼은 공통. */
+function buildSection(item) {
+  if (item._type === 'post') {
+    const section = document.createElement("section");
+    section.className = "short short-post";
+    section.dataset.postId = item.id;
+    if (item.user_id) section.dataset.authorId = item.user_id;
+    Object.assign(section.style, { height: `${VIEWPORT_H}px`, width: "100%", maxWidth: "480px", margin: "0 auto", position: "relative", overflow: "hidden" });
+    section.innerHTML = `<video data-src="${item.video_url}" playsinline webkit-playsinline muted loop preload="none"${item.thumbnail_url ? ` poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""} style="width:100%;height:100%;object-fit:cover"></video>` + window.GALLA_ReelPost.html(item);
+    window.GALLA_ReelPost.wire(section, item, {
+      remove: () => removeSlide(section),
+      leave: (fn) => { closeShortsSilently(); fn(); }
+    });
+    return section;
+  }
+  const section = document.createElement("section");
+  section.className = "short";
+  section.dataset.issueId = item.id;
+  if (item.user_id) section.dataset.authorId = item.user_id;
+
+  Object.assign(section.style, {
+    height: `${VIEWPORT_H}px`,
+    width: "100%",
+    maxWidth: "480px",
+    margin: "0 auto",
+    position: "relative",
+    overflow: "hidden"
+  });
+
+  section.innerHTML = `
+  <video
+    data-src="${item.video_url}"
+    playsinline webkit-playsinline muted loop
+    preload="none"
+    style="width:100%;height:100%;object-fit:cover"
+  ></video>
+
+  <!-- LEFT META (AUTHOR) -->
+  <div class="shorts-meta">
+    <div class="shorts-author">
+      <span class="author-avatar-link" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar") : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}</span>
+      <div class="author-info">
+        <div class="author-line">
+          <span class="author-name" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${item.author || "익명"}</span>
+          ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
+        </div>
+        ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
+        <div class="shorts-title shorts-goto" data-goto="${item.id}" role="link">${item.title || ""}
+          <span class="shorts-goto-chip">게시물 보기 ›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT ACTIONS -->
+  <div class="shorts-actions">
+    <button class="shorts-action-btn comment" aria-label="댓글">
+      <span class="sa-ic"><svg viewBox="0 0 24 24">
+        <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+      </svg></span>
+      <span class="sa-label">댓글</span>
+    </button>
+
+    <button class="shorts-action-btn share" aria-label="공유">
+      <span class="sa-ic"><svg viewBox="0 0 24 24">
+        <path d="M22 2L11 13"/>
+        <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+      </svg></span>
+      <span class="sa-label">공유</span>
+    </button>
+
+    <button class="shorts-action-btn galvis" data-galvis data-gv-type="issue" data-gv-id="${item.id}" data-gv-title="${String(item.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기">
+      <span class="sa-ic"><svg viewBox="0 0 24 24" fill="none" class="gv-galvis" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span>
+      <span class="sa-label">갈비스</span>
+    </button>
+
+    <button class="shorts-action-btn goto shorts-goto" data-goto="${item.id}" aria-label="게시물">
+      <span class="sa-ic"><svg viewBox="0 0 24 24">
+        <path d="M4 5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>
+        <path d="M14 4v6h6"/>
+      </svg></span>
+      <span class="sa-label">게시물</span>
+    </button>
+  </div>
+  `;
+
+  wireSlideControls(section, item);
+  return section;
+}
+
+/* 삭제된 슬라이드를 걷어낸다(숏판 ⋯ 삭제). 마지막 한 장이면 릴스를 닫는다. */
+function removeSlide(section) {
+  if (!track) return;
+  const secs = Array.from(track.querySelectorAll("section.short"));
+  const i = secs.indexOf(section);
+  if (i < 0) return;
+  shortsList.splice(i, 1);
+  section.remove();
+  if (!shortsList.length) { closeShorts(); return; }
+  track.style.height = `${shortsList.length * VIEWPORT_H}px`;
+  moveToIndex(Math.min(i, shortsList.length - 1), true);
+}
+
+/* 이슈 릴스에 숏판을 섞는다 — 열린 뒤 도착한 것을 '지금 보는 다음 장' 뒤쪽에만 끼운다
+   (이미 본 앞쪽 순서·현재 위치는 건드리지 않는다). every=2 → 이슈 2장마다 숏판 1장. */
+window.GALLA_shortsMix = function (posts, every) {
+  if (!overlay || !track || !shortsList.length || !window.GALLA_ReelPost) return;
+  every = every || 2;
+  const have = new Set(shortsList.map(keyOf));
+  const add = (posts || []).filter(v => v && v.video_url).map(v => normItem({ ...v, _type: 'post' })).filter(v => !have.has(keyOf(v)));
+  if (!add.length) return;
+  const cut = Math.min(shortsList.length, currentIndex + 2);
+  const tail = shortsList.slice(cut), out = [];
+  let pi = 0;
+  tail.forEach((it, i) => { out.push(it); if ((i + 1) % every === 0 && pi < add.length) out.push(add[pi++]); });
+  while (pi < add.length) out.push(add[pi++]);
+  const secs = track.querySelectorAll("section.short");
+  for (let i = cut; i < secs.length; i++) secs[i].remove();
+  shortsList = shortsList.slice(0, cut).concat(out);
+  out.forEach(it => track.appendChild(buildSection(it)));
+  track.style.height = `${shortsList.length * VIEWPORT_H}px`;
+};
+
 /* 진행바: 현재 영상의 재생 위치를 하단 바에 반영 */
 function bindShortsProgress(v) {
   const fill = document.getElementById("shortsProgressFill");
@@ -621,7 +685,7 @@ function moveToIndex(idx, instant = false) {
   track.style.transition = instant ? "none" : "transform 0.35s cubic-bezier(.4,0,.2,1)";
   // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
   track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
-  window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
+  window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null — 투표·댓글이 엉뚱한 이슈로 가지 않게
 
   playOnlyCurrent();
   updateShortsVoteBar();   // 통합 진영바: 마운트 + 통계/내진영 반영
@@ -645,7 +709,7 @@ function playOnlyCurrent() {
 
       // 이어보기: 인덱스에서 넘어온 재생 위치 적용(해당 아이템 최초 활성화 시 1회)
       const seek = window.__SHORTS_PENDING_SEEK__;
-      if (seek && shortsList[currentIndex] && seek.id === shortsList[currentIndex].id) {
+      if (seek && shortsList[currentIndex] && seek.key === keyOf(shortsList[currentIndex])) {
         const apply = () => { try { if (v.duration && seek.time < v.duration - 0.3) v.currentTime = seek.time; } catch (_) {} };
         if (v.readyState >= 1) apply();
         else v.addEventListener("loadedmetadata", apply, { once: true });
@@ -654,6 +718,12 @@ function playOnlyCurrent() {
 
       // 진행바 연결(현재 영상 timeupdate)
       bindShortsProgress(v);
+      /* 📊 숏판은 '완주율'이 랭킹 핵심 — 영상마다 한 번 붙인다(멈추거나 끝날 때 기록) */
+      const it = shortsList[currentIndex];
+      if (it && it._type === 'post' && window.GALLA_signal && !v.__sig) {
+        v.__sig = 1;
+        try { window.GALLA_signal.video(v, { kind: 'vertical', id: String(it.id), surface: 'reels' }); } catch (_) {}
+      }
 
       const playPromise = v.play();
       if (playPromise && typeof playPromise.catch === "function") {
@@ -686,7 +756,7 @@ function playOnlyCurrent() {
    touchend에서 moveToIndex()가 진영바를 재생성하고, iOS는 '눌렀던 버튼이 사라지면
    click을 발사하지 않는다' → 아이폰만 진영 버튼 무반응(사장님 재현: PC·안드로이드는 정상). */
 function isReelControl(t) {
-  return !!(t && t.closest && t.closest("#shortsVoteBar, .gv, .shorts-actions, .shorts-action-btn, .shorts-top, .shorts-meta, #shortsLoginPop, button, a, input, textarea"));
+  return !!(t && t.closest && t.closest("#shortsVoteBar, .gv, .shorts-actions, .shorts-action-btn, .shorts-top, .shorts-meta, #shortsLoginPop, .grl-rail, [data-prof], .grl-cap-box, button, a, input, textarea"));
 }
 
 function bindGestures() {
@@ -832,14 +902,14 @@ function wireSlideControls(section, item) {
     const t = (cv && cv.currentTime > 0.3) ? "&t=" + cv.currentTime.toFixed(1) : "";   // 보던 위치 이어보기
     const url = "issue.html?id=" + item.id + t;
     // SPA(앱): 릴스 닫고 스택 push로 진입 — location.href 하드내비는 MPA로 이탈해 스크롤이 죽는다(프로필 열기와 동일 규약)
-    if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShorts(); } catch (_) {} window.GALLA_nav(url); return; }
+    if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShortsSilently(); } catch (_) {} window.GALLA_nav(url); return; }
     location.href = url;
   }));
   section.querySelectorAll("[data-profile-uid]").forEach(p => onTap(p, () => {
     const uid = p.getAttribute("data-profile-uid");
     if (!uid) return;
     // SPA(app.html): 릴스 닫고 스택 push(문서 이탈 시 nav.js 셸 복귀가 ?user를 버림)
-    if (document.body.dataset.page === "spa" && window.GALLA_gotoProfile) { try { closeShorts(); } catch (_) {} window.GALLA_gotoProfile(uid); return; }
+    if (document.body.dataset.page === "spa" && window.GALLA_gotoProfile) { try { closeShortsSilently(); } catch (_) {} window.GALLA_gotoProfile(uid); return; }
     location.href = "mypage.html?user=" + encodeURIComponent(uid);
   }));
 }
@@ -852,7 +922,7 @@ function bindTapControls() {
 
   const isControl = t =>
     t.closest &&
-    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,.shorts-goto,#shortsCommentModal,[data-profile-uid]");
+    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,.shorts-goto,#shortsCommentModal,[data-profile-uid],.grl-rail,.grl-userrow,.grl-cap-box");
 
   overlay.addEventListener("pointerdown", e => {
     if (isControl(e.target)) return;
@@ -928,6 +998,10 @@ function bindWheel() {
    KEYBOARD
 ========================= */
 function bindKeyboard() {
+  /* ⚠️ 릴스를 열 때마다 window 에 새로 붙였다 → 두 번째로 열면 화살표 한 번에 두 칸,
+     Esc 한 번에 닫기 두 번(2026-09-14 실측). window 쪽은 한 번만 붙인다. */
+  if (window.__shortsKeyBound) return;
+  window.__shortsKeyBound = true;
   window.addEventListener("keydown", e => {
     if (!overlay) return;
     if (e.key === "ArrowDown") moveToIndex(currentIndex + 1);
@@ -954,9 +1028,13 @@ function bumpReelView(issueId) {
 }
 
 function updateShortsVoteBar() {
-  const bar = document.getElementById("shortsVoteBar");
-  if (!bar || !window.GALLA_VoteBar) return;
   const cur = shortsList[currentIndex] || {};
+  // 숏판 장 = 진영바·진행바 위치가 다르다(CSS #shortsOverlay.sh-post)
+  if (overlay) overlay.classList.toggle("sh-post", cur._type === "post");
+  const bar = document.getElementById("shortsVoteBar");
+  if (!bar) return;
+  if (cur._type === "post") { bar.dataset.issueId = ""; return; }
+  if (!window.GALLA_VoteBar) return;
   const issueId = cur.id;
   bar.dataset.issueId = issueId || "";
   if (!issueId) { console.warn("[SHORTS][VOTE] missing issueId"); return; }
@@ -1040,7 +1118,7 @@ function showShortsLoginPopup(msg) {
   pop.addEventListener("click", e => { if (e.target === pop) pop.remove(); });
   pop.querySelector(".slp-go").onclick = () => {
     const go = "login.html?next=" + encodeURIComponent("index.html");
-    try { closeShorts(); } catch (e) {}
+    try { closeShortsSilently(); } catch (e) {}
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e) {}
     try { (window.top || window).location.href = go; } catch (e) {}
     setTimeout(function () { try { location.href = go; } catch (e) {} }, 400);
@@ -1066,23 +1144,31 @@ function closeShorts() {
   document.body.style.overflow = "";
   document.body.classList.remove("shorts-open");
   window.__CURRENT_SHORT_ISSUE_ID__ = null;
+  document.getElementById("grl-cdim")?.remove();   // 숏판 댓글 시트
   if (overlay) {
     track = null;
     overlay.remove();
     overlay = null;
   }
+  const cb = SHORTS_ON_CLOSE; SHORTS_ON_CLOSE = null;
+  if (cb) { try { cb(); } catch (_) {} }
 }
+/* 다른 화면으로 떠날 때 — 닫기 콜백(페이지째 뒤로)을 부르지 않는다. 부르면 뒤로가기와 이동이 겹친다. */
+function closeShortsSilently() { SHORTS_ON_CLOSE = null; closeShorts(); }
+if (!__SHORTS_DUP__) window.GALLA_shortsCloseSilently = closeShortsSilently;
 
 /* =========================
    EXPORT
 ========================= */
-window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
-window.__SHORTS_ENGINE_READY__ = true;
+if (!__SHORTS_DUP__) {
+  window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
+  window.__SHORTS_ENGINE_READY__ = true;
+}
 console.info("[SHORTS] engine ready");
 
 if (window.__SHORTS_ENGINE_READY__ && window.__SHORTS_OPEN_QUEUE__.length) {
   window.__SHORTS_OPEN_QUEUE__.forEach(x =>
-    window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId, x.startTime, x.entry)
+    window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId, x.startTime, x.entry, x.opts)
   );
   window.__SHORTS_OPEN_QUEUE__ = [];
 }
@@ -1099,7 +1185,7 @@ window.__FORCE_OPEN_SHORTS__ = function () {
 console.info("[SHORTS] FORCE_OPEN_SHORTS attached");
 
 /* 릴스 → 게시물 본문 이동 (제목 탭) */
-document.addEventListener("click", e => {
+if (!__SHORTS_DUP__) document.addEventListener("click", e => {
   const go = e.target.closest(".shorts-goto");
   if (!go || !go.dataset.goto) return;
   e.preventDefault();
@@ -1108,11 +1194,11 @@ document.addEventListener("click", e => {
   const t = (cv && cv.currentTime > 0.3) ? `&t=${cv.currentTime.toFixed(1)}` : "";
   const url = `issue.html?id=${go.dataset.goto}${t}`;
   // SPA(앱): 스택 push로 — 하드내비는 MPA 이탈로 스크롤 죽음
-  if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShorts(); } catch (_) {} window.GALLA_nav(url); return; }
+  if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShortsSilently(); } catch (_) {} window.GALLA_nav(url); return; }
   location.href = url;
 });
 
-document.addEventListener("click", e => {
+if (!__SHORTS_DUP__) document.addEventListener("click", e => {
   const btn = e.target.closest(".shorts-action-btn");
   if (!btn) return;
 
@@ -1173,6 +1259,8 @@ function openCommentModal() {
    처리했으면 true 를 준다 — 안 그러면 뒤로가기가 앱을 꺼뜨리는 쪽으로 흘러간다. */
 window.GALLA_shortsBack = function () {
   try {
+    const gd = document.getElementById("grl-cdim");
+    if (gd) { gd.remove(); return true; }                                   // ⓪ 숏판 댓글 시트
     if (window.__COMMENT_OPEN__) { closeCommentModal(); return true; }   // ① 댓글 시트 먼저
     const ov = document.getElementById("shortsOverlay");
     if (ov && ov.isConnected) { closeShorts(); return true; }            // ② 그다음 릴스

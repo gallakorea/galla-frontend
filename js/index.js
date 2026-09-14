@@ -485,8 +485,11 @@ window.openReels = function (startId) {
     const startTime = inlineVid && !isNaN(inlineVid.currentTime) ? inlineVid.currentTime : 0;
     // 인라인 미리보기 정지 (소리 중복 방지)
     IDXROOT.querySelectorAll('.card-media video').forEach(v => v.pause());
-    if (typeof window.openShorts === 'function') {
-        window.openShorts(vids, Number(startId), startTime, 'feed');
+    /* 이슈 릴스에도 숏판을 섞는다(이슈 2 : 숏판 1) — 첫 화면은 이슈로 즉시, 숏판은 도착하는 대로 뒤쪽에 */
+    if (window.GALLA_openReels) {
+        window.GALLA_openReels({ items: vids.map(v => ({ _type: 'issue', ...v })), startType: 'issue', startId: Number(startId), at: startTime, mixPosts: true });
+    } else if (typeof window.openShorts === 'function') {
+        window.openShorts(vids, Number(startId), startTime, 'detail');
     } else {
         window.GALLA_goto(`issue.html?id=${startId}`);
     }
@@ -1408,7 +1411,7 @@ async function loadGallariCards() {
 }
 
 /* 🎠 미디어 2개 이상(캐러셀)은 릴스가 아니라 상세로 — 릴스는 단일 미디어만 태운다.
-   마이페이지·갈라리 피드와 같은 규칙이다(어긋나면 같은 글이 화면마다 다른 데로 열린다). */
+   마이페이지·숏판 피드와 같은 규칙이다(어긋나면 같은 글이 화면마다 다른 데로 열린다). */
 function gallariIsCarousel(p) {
     try { const m = window.GALLA_issueMedia ? window.GALLA_issueMedia(p) : null; if (m && m.length) return m.length > 1; } catch (e) {}
     if (Array.isArray(p.media)) return p.media.length > 1;
