@@ -547,7 +547,7 @@ function buildSection(item) {
     section.dataset.postId = item.id;
     if (item.user_id) section.dataset.authorId = item.user_id;
     Object.assign(section.style, { height: `${VIEWPORT_H}px`, width: "100%", maxWidth: "480px", margin: "0 auto", position: "relative", overflow: "hidden" });
-    section.innerHTML = `<video data-src="${item.video_url}" playsinline webkit-playsinline muted loop preload="none"${item.thumbnail_url ? ` poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""} style="width:100%;height:100%;object-fit:cover"></video>` + window.GALLA_ReelPost.html(item);
+    section.innerHTML = `<video data-src="${item.video_url}" playsinline webkit-playsinline muted loop preload="none"${item.thumbnail_url ? ` data-poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""} style="width:100%;height:100%;object-fit:cover"></video>` + window.GALLA_ReelPost.html(item);
     window.GALLA_ReelPost.wire(section, item, {
       remove: () => removeSlide(section),
       leave: (fn) => { closeShortsSilently(); fn(); }
@@ -571,7 +571,7 @@ function buildSection(item) {
   section.innerHTML = `
   <video
     data-src="${item.video_url}"
-    ${item.thumbnail_url ? `poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""}
+    ${item.thumbnail_url ? `data-poster="${String(item.thumbnail_url).replace(/"/g, "&quot;")}"` : ""}
     playsinline webkit-playsinline muted loop
     preload="none"
     style="width:100%;height:100%;object-fit:cover"
@@ -699,11 +699,25 @@ function moveToIndex(idx, instant = false, dur = 0, force = false) {
 }
 
 function playOnlyCurrent() {
+  /* 🔴 폰에서 두 장 넘기면 웹뷰가 죽었다(26.9.14 실기기 로그 「WebView process terminated」).
+     60장 전부에 썸네일을 박고, 지나간 영상의 연결·버퍼를 한 번도 놓지 않아 메모리가 계속 쌓였다.
+     인스타식 창: 영상은 현재±1 장만, 썸네일은 ±2 장만, 그 밖은 연결을 끊고 버퍼를 버린다
+     → 몇 장을 넘기든 동시에 붙잡는 영상 ≤3, 썸네일 ≤5. */
   document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
-    // 현재/인접 슬라이드만 HLS 부착(즉시 전환 위해 다음 것도 미리 버퍼)
-    if (Math.abs(i - currentIndex) <= 1 && window.GALLA_attachHls && v.dataset.src) {
-      v.preload = "auto";
+    const d = Math.abs(i - currentIndex);
+    if (d <= 2) { if (v.dataset.poster && !v.getAttribute("poster")) v.setAttribute("poster", v.dataset.poster); }
+    else if (v.getAttribute("poster")) v.removeAttribute("poster");
+    if (d <= 1 && window.GALLA_attachHls && v.dataset.src) {
+      v.preload = (i >= currentIndex) ? "auto" : "metadata";   // 다음 장은 미리 받고, 지난 장은 가볍게
       window.GALLA_attachHls(v, v.dataset.src);
+    } else if (d > 1 && (v._hlsUrl || v.getAttribute("src"))) {
+      try { v.pause(); } catch (_) {}
+      try { if (window.GALLA_detachHls) window.GALLA_detachHls(v); } catch (_) {}
+      v._hlsUrl = null;
+      v.removeAttribute("src");
+      v.preload = "none";
+      try { v.load(); } catch (_) {}   // 버퍼 반납
+      return;
     }
     if (i === currentIndex) {
       /* 🔁 무한 재생 (사용자가 멈출 때까지)
