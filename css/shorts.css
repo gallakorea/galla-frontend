@@ -534,7 +534,15 @@ body[data-page="shorts"] .nav {
   object-fit: cover; background: #000; pointer-events: none; z-index: 0;
 }
 .short .sh-poster:not([src]) { visibility: hidden; }
-.short video.sh-player { z-index: 1; }
+/* 재생기는 트랙의 직계 자식(장 사이로 옮기지 않는다) — 맡은 장 자리(top)에 장과 같은 크기로 앉는다.
+   장(.short)은 z-index 가 없어 쌓임 맥락이 아니므로, 썸네일(z0) < 재생기(z1) < 장 안 버튼·글(z30~) 순서가 된다. */
+#shortsTrack { position: relative; }
+#shortsTrack > video.sh-player {
+  position: absolute; left: 0; right: 0; margin: 0 auto;
+  width: min(100%, 480px);
+  object-fit: cover; background: transparent;
+  pointer-events: none; z-index: 1;
+}
 
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{

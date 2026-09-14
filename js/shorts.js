@@ -81,6 +81,7 @@ function updateViewportHeight() {
     /* ⚠️ 예전엔 트랙 높이·위치만 다시 잡고 슬라이드 높이는 처음 값 그대로였다 → 창 크기·주소창·
        키보드로 높이가 한 번 바뀌면 칸마다 오차가 쌓여 **두 장 사이 반쯤에 걸린 화면**이 됐다(2026-09-14 사장님 캡처). */
     track.querySelectorAll("section.short").forEach(sec => { sec.style.height = `${h}px`; });
+    if (POOL) POOL.forEach(p => { if (p.__idx >= 0) { p.style.top = `${p.__idx * h}px`; p.style.height = `${h}px`; } });
     track.style.height = `${shortsList.length * VIEWPORT_H}px`;
     track.style.transition = "none";
     track.style.transform = `translateY(-${currentIndex * VIEWPORT_H}px)`;
@@ -636,7 +637,7 @@ function removeSlide(section) {
   const i = secs.indexOf(section);
   if (i < 0) return;
   shortsList.splice(i, 1);
-  if (POOL) POOL.forEach(p => { if (p.parentNode === section) section.removeChild(p); p.__idx = -1; });
+  if (POOL) POOL.forEach(p => { p.__idx = -1; });
   section.remove();
   if (!shortsList.length) { closeShorts(); return; }
   track.style.height = `${shortsList.length * VIEWPORT_H}px`;
@@ -696,19 +697,23 @@ function pool() {
   return POOL;
 }
 function sectionAt(i) { return track ? track.querySelectorAll("section.short")[i] || null : null; }
-/* 재생기 p 를 i 번째 장에 앉히고 그 장 영상을 붙인다(이미 그 장이면 그대로 — 다시 받지 않는다). */
+/* 재생기 p 를 i 번째 장 자리에 두고 그 장 영상을 붙인다(이미 그 장이면 그대로 — 다시 받지 않는다).
+   ⚠️ 재생기를 장(section) 사이로 옮겨 달면 아이폰 웹킷이 끄는 동안 그 영상을 못 그렸다 — 손가락을 대는
+      순간 영상이 검게 사라졌다(26.9.14 사장님 녹화, 0.25초 단위로 확인). 재생기는 트랙에 **한 번만** 붙이고
+      절대 옮기지 않는다. 맡은 장이 바뀌면 위치(top)만 바꾼다. 트랙이 움직이면 같이 움직인다. */
 function placePlayer(p, i) {
   const sec = sectionAt(i);
   if (!sec || !sec.dataset.src) return;
-  if (p.parentNode !== sec) {
-    const img = sec.querySelector(".sh-poster");
-    sec.insertBefore(p, img ? img.nextSibling : sec.firstChild);
-  }
+  if (p.parentNode !== track) track.appendChild(p);
+  p.style.top = `${i * VIEWPORT_H}px`;
+  p.style.height = `${VIEWPORT_H}px`;
   if (p.__idx !== i || !p._hlsUrl) {
     releaseVideo(p);
     p.__idx = i; p.__sig = 0;
     p.preload = "auto";
-    if (sec.dataset.poster) p.setAttribute("poster", sec.dataset.poster); else p.removeAttribute("poster");
+    /* 재생기에는 poster 를 달지 않는다 — 밑에 깔린 썸네일 그림(.sh-poster)이 보이게 두고,
+       재생기 배경은 투명(css). 영상 첫 장면이 나오면 그 위를 덮는다. */
+    p.removeAttribute("poster");
     if (window.GALLA_attachHls) window.GALLA_attachHls(p, sec.dataset.src);
     else p.setAttribute("src", sec.dataset.src);
   }
@@ -780,7 +785,8 @@ function playOnlyCurrent() {
   secs.forEach((sec, i) => {
     const img = sec.querySelector(".sh-poster");
     if (!img) return;
-    if (Math.abs(i - currentIndex) <= 2) { if (sec.dataset.poster && !img.getAttribute("src")) img.setAttribute("src", sec.dataset.poster); }
+    /* 썸네일은 줄여 받는다 — 원본 PNG 가 장당 1~1.6MB 라 폰 데이터에서 영상 받기와 속도를 나눠 먹었다 */
+    if (Math.abs(i - currentIndex) <= 2) { if (sec.dataset.poster && !img.getAttribute("src")) img.setAttribute("src", window.GALLA_thumb ? window.GALLA_thumb(sec.dataset.poster, 540) : sec.dataset.poster); }
     else if (img.getAttribute("src")) img.removeAttribute("src");
   });
   const P = pool();
