@@ -475,6 +475,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
 
   // 🔒 shorts-open 모드 명시 (vote / index 충돌 방지)
   document.body.classList.add("shorts-open");
+  releaseFeedVideos();
   shortsNavHide(true);   // 셸 하단 nav 숨김(릴스는 풀스크린)
   window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null — 투표·댓글이 엉뚱한 이슈로 가지 않게
 
@@ -663,6 +664,24 @@ window.GALLA_shortsMix = function (posts, every) {
   track.style.height = `${shortsList.length * VIEWPORT_H}px`;
 };
 
+/* 영상 연결을 끊고 버퍼를 반납한다(재생기 수를 늘 최소로). */
+function releaseVideo(v) {
+  try { v.pause(); } catch (_) {}
+  try { if (window.GALLA_detachHls) window.GALLA_detachHls(v); } catch (_) {}
+  v._hlsUrl = null;
+  v._srcReady = false;          // 홈 피드 규약(ensureVideoSrc) — 다시 보이면 홈이 알아서 다시 붙인다
+  v.removeAttribute("src");
+  v.preload = "none";
+  try { v.load(); } catch (_) {}
+}
+/* 릴스를 여는 순간 홈 피드 카드 영상의 재생기를 전부 푼다. 홈은 스크롤한 만큼 영상을 붙여 두고
+   절대 풀지 않아서, 그 위에 릴스 재생기가 얹히면 폰 웹뷰가 메모리 한도로 죽었다. */
+function releaseFeedVideos() {
+  document.querySelectorAll(".card-media video[data-src]").forEach(v => {
+    if (v._hlsUrl || v.getAttribute("src")) releaseVideo(v);
+  });
+}
+
 /* 진행바: 현재 영상의 재생 위치를 하단 바에 반영 */
 function bindShortsProgress(v) {
   const fill = document.getElementById("shortsProgressFill");
@@ -703,20 +722,19 @@ function playOnlyCurrent() {
      60장 전부에 썸네일을 박고, 지나간 영상의 연결·버퍼를 한 번도 놓지 않아 메모리가 계속 쌓였다.
      인스타식 창: 영상은 현재±1 장만, 썸네일은 ±2 장만, 그 밖은 연결을 끊고 버퍼를 버린다
      → 몇 장을 넘기든 동시에 붙잡는 영상 ≤3, 썸네일 ≤5. */
+  /* ⚠️ 2차(같은 날 실기기): ±1 장을 붙여도 두 번째 넘기기에서 또 죽었다. 푼 재생기의 메모리가
+     바로 안 돌아와 1080p60 HLS 재생기가 사실상 4개 겹치는 순간(=두 번째 넘기기)이 한도였다.
+     → 영상은 **지금 장 하나만** 연결한다. 다음 장은 썸네일만 깔아 넘기는 순간 그림은 바로 보이고
+       영상이 뒤따른다. 지난 장은 넘기는 즉시 푼다. */
   document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
     const d = Math.abs(i - currentIndex);
-    if (d <= 2) { if (v.dataset.poster && !v.getAttribute("poster")) v.setAttribute("poster", v.dataset.poster); }
+    if (d <= 1) { if (v.dataset.poster && !v.getAttribute("poster")) v.setAttribute("poster", v.dataset.poster); }
     else if (v.getAttribute("poster")) v.removeAttribute("poster");
-    if (d <= 1 && window.GALLA_attachHls && v.dataset.src) {
-      v.preload = (i >= currentIndex) ? "auto" : "metadata";   // 다음 장은 미리 받고, 지난 장은 가볍게
+    if (d === 0 && window.GALLA_attachHls && v.dataset.src) {
+      v.preload = "auto";
       window.GALLA_attachHls(v, v.dataset.src);
-    } else if (d > 1 && (v._hlsUrl || v.getAttribute("src"))) {
-      try { v.pause(); } catch (_) {}
-      try { if (window.GALLA_detachHls) window.GALLA_detachHls(v); } catch (_) {}
-      v._hlsUrl = null;
-      v.removeAttribute("src");
-      v.preload = "none";
-      try { v.load(); } catch (_) {}   // 버퍼 반납
+    } else if (d > 0 && (v._hlsUrl || v.getAttribute("src"))) {
+      releaseVideo(v);
       return;
     }
     if (i === currentIndex) {
@@ -1205,6 +1223,8 @@ function closeShorts() {
   }
   const cb = SHORTS_ON_CLOSE; SHORTS_ON_CLOSE = null;
   if (cb) { try { cb(); } catch (_) {} }
+  // 릴스 열 때 풀어 둔 홈 영상 — 보이는 것부터 다시 붙여 재생
+  setTimeout(() => { try { window.GALLA_resumeHomeVideo && window.GALLA_resumeHomeVideo(); } catch (_) {} }, 0);
 }
 /* 다른 화면으로 떠날 때 — 닫기 콜백(페이지째 뒤로)을 부르지 않는다. 부르면 뒤로가기와 이동이 겹친다. */
 function closeShortsSilently() { SHORTS_ON_CLOSE = null; closeShorts(); }

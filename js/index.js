@@ -122,6 +122,8 @@ window.addEventListener('message', (e) => {
     else if (m.t === 'active') resumeVisibleVideo();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseAllVideos(); });
+// 릴스가 닫히면 shorts.js 가 부른다 — 릴스를 열 때 홈 영상 재생기를 풀었으므로 보이는 것부터 다시 붙인다
+window.GALLA_resumeHomeVideo = resumeVisibleVideo;
 
 const videoObserver = new IntersectionObserver(entries => {
     entries.forEach(e => {
