@@ -551,7 +551,7 @@ function buildSection(item) {
     Object.assign(section.style, { height: `${VIEWPORT_H}px`, width: "100%", maxWidth: "480px", margin: "0 auto", position: "relative", overflow: "hidden" });
     section.dataset.src = item.video_url;
     if (item.thumbnail_url) section.dataset.poster = item.thumbnail_url;
-    section.innerHTML = `<img class="sh-poster" alt="">` + window.GALLA_ReelPost.html(item);
+    section.innerHTML = window.GALLA_ReelPost.html(item);
     window.GALLA_ReelPost.wire(section, item, {
       remove: () => removeSlide(section),
       leave: (fn) => { closeShortsSilently(); fn(); }
@@ -575,7 +575,6 @@ function buildSection(item) {
   section.dataset.src = item.video_url;
   if (item.thumbnail_url) section.dataset.poster = item.thumbnail_url;
   section.innerHTML = `
-  <img class="sh-poster" alt="">
 
   <!-- LEFT META (AUTHOR) -->
   <div class="shorts-meta">
@@ -709,15 +708,31 @@ function placePlayer(p, i) {
   p.style.height = `${VIEWPORT_H}px`;
   if (p.__idx !== i || !p._hlsUrl) {
     releaseVideo(p);
-    p.__idx = i; p.__sig = 0;
+    p.__idx = i; p.__sig = 0; p.__primed = -1;
     p.preload = "auto";
-    /* 재생기에는 poster 를 달지 않는다 — 밑에 깔린 썸네일 그림(.sh-poster)이 보이게 두고,
-       재생기 배경은 투명(css). 영상 첫 장면이 나오면 그 위를 덮는다. */
+    /* 재생기에는 poster 를 달지 않는다(썸네일도 깔지 않는다 — 영상과 구도가 달라 번쩍였다).
+       대기 중인 다음 장은 primeFirstFrame 이 첫 장면을 미리 그려 둔다. */
     p.removeAttribute("poster");
     if (window.GALLA_attachHls) window.GALLA_attachHls(p, sec.dataset.src);
     else p.setAttribute("src", sec.dataset.src);
   }
 }
+let LAST_SNAP_MS = 0;
+/* 대기 중인 다음 장 재생기에 첫 장면을 그려 둔다 — 소리 끈 채 잠깐 재생했다 멈춘다(아이폰은 멈춘 채로는
+   첫 장면을 안 그려, 도착하는 순간 영상이 튀어나왔다). 그 사이 지금 장이 되면 그대로 재생을 이어간다. */
+function primeFirstFrame(v) {
+  if (!v || v.__primed === v.__idx) return;
+  const idx = v.__idx;
+  v.__primed = idx;
+  try {
+    v.muted = true;
+    const pr = v.play();
+    const stop = () => { if (v.__idx === idx && idx !== currentIndex) { try { v.pause(); } catch (_) {} } };
+    if (pr && pr.then) pr.then(() => { if (v.readyState >= 2) stop(); else v.addEventListener("loadeddata", stop, { once: true }); }).catch(() => {});
+    else stop();
+  } catch (_) {}
+}
+
 /* 지금 장의 영상(재생기). 없으면 null. */
 function curVideo() {
   const p = POOL && POOL[currentIndex % 2];
@@ -757,6 +772,7 @@ function moveToIndex(idx, instant = false, dur = 0, force = false) {
   currentIndex = idx;
 
   /* 감속 곡선(인스타식) — 손을 뗀 속도를 이어받아 미끄러지다 선다. 고정 0.35s 는 '딸깍' 느낌이었다. */
+  LAST_SNAP_MS = instant ? 0 : (dur || 320);
   track.style.transition = instant ? "none" : `transform ${dur || 320}ms cubic-bezier(.2,.75,.25,1)`;
   // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
   track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
@@ -781,17 +797,32 @@ function playOnlyCurrent() {
      → 인스타식 **재생기 2개 돌려쓰기**: 릴스 전체에서 <video> 는 2개뿐이다. i 번째 장은 POOL[i%2] 가
        맡는다 — 지금 장이 재생하는 동안 다른 하나가 다음 장을 미리 받아 두므로, 넘기면 바로 재생된다.
        각 장에는 썸네일 그림만 둔다(±2 장만 그림을 붙인다). */
-  const secs = track ? track.querySelectorAll("section.short") : [];
-  secs.forEach((sec, i) => {
-    const img = sec.querySelector(".sh-poster");
-    if (!img) return;
-    /* 썸네일은 줄여 받는다 — 원본 PNG 가 장당 1~1.6MB 라 폰 데이터에서 영상 받기와 속도를 나눠 먹었다 */
-    if (Math.abs(i - currentIndex) <= 2) { if (sec.dataset.poster && !img.getAttribute("src")) img.setAttribute("src", window.GALLA_thumb ? window.GALLA_thumb(sec.dataset.poster, 540) : sec.dataset.poster); }
-    else if (img.getAttribute("src")) img.removeAttribute("src");
-  });
+  /* ⚠️ 4차(사장님 녹화 16:18 + "뒤죽박죽·번쩍임"):
+     · 썸네일(3:4, 얼굴 크게)을 영상(9:16) 밑에 깔았더니 넘길 때 두 그림이 번갈아 번쩍였다 → 썸네일 없음.
+     · 넘기는 순간 떠나는 장의 재생기를 다음다음 장으로 돌려, 올라가는 동안 그 장이 번쩍였다
+       → 떠나는 재생기는 멈추기만 하고, 넘기기 동작이 끝난 뒤에 돌린다.
+     · 다음 장이 멈춘 채 대기만 해서 도착해야 영상이 튀어나왔다
+       → 소리 끈 채 잠깐 재생했다 멈춰 첫 장면을 미리 그려 둔다. */
   const P = pool();
-  if (currentIndex + 1 < shortsList.length) { placePlayer(P[(currentIndex + 1) % 2], currentIndex + 1); try { P[(currentIndex + 1) % 2].pause(); } catch (_) {} }
-  placePlayer(P[currentIndex % 2], currentIndex);
+  const cur = P[currentIndex % 2], nxt = P[(currentIndex + 1) % 2];
+  placePlayer(cur, currentIndex);
+  clearTimeout(nxt.__deferT);
+  if (currentIndex + 1 < shortsList.length) {
+    if (nxt.__idx === currentIndex + 1) {
+      // 뒤로 넘기면 방금까지 재생하던 재생기가 이 자리로 온다 — 화면 밖에서 소리 내며 돌지 않게 먼저 멈춘다
+      try { nxt.pause(); } catch (_) {}
+      primeFirstFrame(nxt);
+    }
+    else {
+      try { nxt.pause(); } catch (_) {}          // 떠나는 장 — 소리만 끊고 그림은 남긴다
+      const want = currentIndex + 1;
+      nxt.__deferT = setTimeout(() => {
+        if (!track || currentIndex + 1 !== want || P[want % 2] !== nxt) return;
+        placePlayer(nxt, want);
+        primeFirstFrame(nxt);
+      }, (LAST_SNAP_MS || 0) + 80);
+    }
+  } else { try { nxt.pause(); } catch (_) {} }
   [P[currentIndex % 2]].forEach((v) => {
     const i = currentIndex;
     if (i === currentIndex) {
