@@ -962,10 +962,14 @@ function bindTapControls() {
       waitingSecond = false; tapTimer = null;
       const { video, section } = curVideoAndSection();
       if (!video) return;
-      // 전역 선호를 뒤집어 인덱스·이슈와 통일 (현재 뮤트면 → 켜기)
-      if (window.GALLA_setSound) window.GALLA_setSound(window.__REELS_MUTED__);
-      else window.__REELS_MUTED__ = !window.__REELS_MUTED__;
-      video.muted = window.__REELS_MUTED__;
+      /* 들리는 상태를 기준으로 뒤집는다. 선호값 기준으로 뒤집으면, 소리 켠 자동재생이 막혀
+         음소거로 대신 튼 영상에서 첫 탭이 '끄기'가 되어 두 번 눌러야 소리가 났다(2026-09-14 실측). */
+      const wantOn = video.muted;
+      if (window.GALLA_setSound) window.GALLA_setSound(wantOn);
+      window.__REELS_MUTED__ = !wantOn;
+      video.muted = !wantOn;
+      // 자동재생이 통째로 막혀 멈춰 있던 영상이면 이 탭(진짜 제스처)으로 같이 튼다
+      if (wantOn && video.paused) video.play().catch(() => {});
       flashBadge(section, window.__REELS_MUTED__ ? REEL_ICONS.soundOff : REEL_ICONS.soundOn);
     }, 260);
   });

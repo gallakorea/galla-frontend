@@ -513,9 +513,20 @@ body[data-page="shorts"] .nav {
 #shortsOverlay.sh-post #shortsProgress { bottom: calc(env(safe-area-inset-bottom) + 2px); }
 .short-post .grl-rail { bottom: calc(96px + env(safe-area-inset-bottom)); }
 
-/* 떠 있는 갈비스 오브가 진영 버튼·퍼센트를 덮었다(사장님 캡처 2026-09-14).
-   릴스 안에는 레일에 갈비스 버튼이 따로 있다. */
-body.shorts-open #frOrb { display: none !important; }
+/* 🟠 갈비스 오브는 릴스에서도 늘 오른쪽 아래(사장님 2026-09-14 — 레일의 '갈비스'는 이 영상 주제를
+   갈비스에게 넘기는 버튼이지 오브를 대신하지 않는다). 예전엔 오브(내비 위 74px)가 진영 버튼·퍼센트를
+   덮었다. 릴스는 내비가 없으니 오브를 코너로 내리고, 오브 자리(56px+여백)를 비워 둔다.
+   데스크톱(≥1100px)은 릴스가 가운데 480px 기둥이라 원래 겹치지 않는다. */
+@media (max-width: 1099px) {
+  body.shorts-open #frOrb { bottom: calc(env(safe-area-inset-bottom) + 22px); right: 14px; }
+  body.shorts-open .shorts-vote {
+    transform: none;
+    left: calc(50% - min(100vw - 24px, 480px) / 2);
+    width: calc(min(100vw - 24px, 480px) - 68px);
+    max-width: none;
+  }
+  body.shorts-open .short-post .grl-bottom { right: 84px; }
+}
 
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{
