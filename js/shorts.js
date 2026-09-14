@@ -82,9 +82,7 @@ function updateViewportHeight() {
        키보드로 높이가 한 번 바뀌면 칸마다 오차가 쌓여 **두 장 사이 반쯤에 걸린 화면**이 됐다(2026-09-14 사장님 캡처). */
     track.querySelectorAll("section.short").forEach(sec => { sec.style.height = `${h}px`; });
     if (POOL) POOL.forEach(p => { if (p.__idx >= 0) { p.style.top = `${p.__idx * h}px`; p.style.height = `${h}px`; } });
-    track.style.height = `${shortsList.length * VIEWPORT_H}px`;
-    track.style.transition = "none";
-    track.style.transform = `translateY(-${currentIndex * VIEWPORT_H}px)`;
+    track.scrollTop = currentIndex * VIEWPORT_H;   // 네이티브 스크롤 — 지금 장 자리로 다시 맞춘다
   }
 }
 window.addEventListener("resize", updateViewportHeight);
@@ -433,7 +431,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
     zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
     background: "#000",
     overflow: "hidden",
-    touchAction: "none",
+    touchAction: "pan-y",   // 세로는 폰 자체 스크롤이 처리한다(릴스 트랙)
     overscrollBehavior: "contain",
     display: "block",
     pointerEvents: "auto"
@@ -453,11 +451,18 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
   closeBtn.onclick = () => closeShorts();
 
   /* ===== track ===== */
+  /* 🔴 5차(사장님 "전혀 달라지는 게 없다"): 손가락을 JS(touchmove→transform)로 따라가게 했더니
+     아이폰 120Hz 화면에서 초당 60번·한 박자 늦게 따라왔다. 곡선을 다듬어도 체감이 안 바뀐다.
+     인스타처럼 **폰 자체 스크롤 + 한 장씩 멈춤(scroll-snap)** 으로 바꾼다 — 끄는 동안·관성·멈춤을
+     OS 가 처리하고, JS 는 멈춘 뒤에만 재생·진영바를 바꾼다. */
   Object.assign(track.style, {
-    width: "100%",
-    height: `${shortsList.length * VIEWPORT_H}px`,
-    transition: "transform 0.35s cubic-bezier(.4,0,.2,1)",
-    willChange: "transform"
+    position: "absolute", inset: "0", width: "100%", height: "100%",
+    overflowY: "auto", overflowX: "hidden",
+    scrollSnapType: "y mandatory",
+    overscrollBehavior: "contain",
+    WebkitOverflowScrolling: "touch",
+    touchAction: "pan-y",
+    transform: "", transition: "", willChange: ""
   });
 
   // Remove any previous children in track
@@ -639,7 +644,6 @@ function removeSlide(section) {
   if (POOL) POOL.forEach(p => { p.__idx = -1; });
   section.remove();
   if (!shortsList.length) { closeShorts(); return; }
-  track.style.height = `${shortsList.length * VIEWPORT_H}px`;
   moveToIndex(Math.min(i, shortsList.length - 1), true, 0, true);
 }
 
@@ -666,7 +670,6 @@ window.GALLA_shortsMix = function (posts, every) {
     else ti++;
   });
   shortsList = shortsList.slice(0, cut).concat(out);
-  track.style.height = `${shortsList.length * VIEWPORT_H}px`;
   if (POOL) POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; });   // 뒤쪽 번호가 밀렸다
 };
 
@@ -766,29 +769,30 @@ function bindShortsProgress(v) {
 ========================= */
 function moveToIndex(idx, instant = false, dur = 0, force = false) {
   if (!track) return;
-  // 범위를 벗어나면 끝으로 스냅(항상 transform 재설정 → 드래그 잔상/튐 방지)
+  idx = Math.max(0, Math.min(shortsList.length - 1, idx));
+  const target = idx * VIEWPORT_H;
+  if (Math.abs(track.scrollTop - target) > 1) {
+    if (instant) track.scrollTop = target;
+    else { try { track.scrollTo({ top: target, behavior: "smooth" }); } catch (_) { track.scrollTop = target; } }
+  }
+  // 프로그램으로 바로 옮긴 경우(열기·삭제)는 곧바로 확정. 부드럽게 옮기면 스크롤이 멈춘 뒤 확정된다.
+  if (instant || force) settleTo(idx, force);
+}
+
+/* 스크롤이 멈춘 자리 = 지금 장. 끄는 동안·관성 중에는 아무것도 안 한다(무거운 일은 멈춘 뒤). */
+function settleTo(idx, force) {
   idx = Math.max(0, Math.min(shortsList.length - 1, idx));
   const changed = force || idx !== currentIndex;
   currentIndex = idx;
-
-  /* 감속 곡선(인스타식) — 손을 뗀 속도를 이어받아 미끄러지다 선다. 고정 0.35s 는 '딸깍' 느낌이었다. */
-  LAST_SNAP_MS = instant ? 0 : (dur || 320);
-  /* 끝으로 갈수록 부드럽게 서는 곡선(easeOutQuint 계열). 예전 곡선+최소 0.16초는 빠르게 튕기면 딱 서서
-     '딸깍'처럼 느껴졌다(사장님: 부자연스럽고 스무스하지 않다). */
-  track.style.transition = instant ? "none" : `transform ${dur || 320}ms cubic-bezier(.22,1,.36,1)`;
-  // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
-  track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
   window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null
-  // 제자리 스냅이면 여기까지 — 진영바를 다시 그리면 iOS 가 누르던 버튼의 click 을 버린다
   if (!changed) return;
-  playOnlyCurrent();       // 다음 장 영상은 바로 재생(첫 장면을 미리 그려 둬서 가볍다)
-  /* 진영바 다시 그리기·투표 수 조회는 넘기기 동작이 끝난 뒤에 — 넘기는 순간 같이 돌면 그 순간 버벅였다 */
-  clearTimeout(moveToIndex.__vbT);
-  if (instant) updateShortsVoteBar();
-  else {
-    if (overlay) overlay.classList.toggle("sh-post", (shortsList[currentIndex] || {})._type === "post");
-    moveToIndex.__vbT = setTimeout(updateShortsVoteBar, (dur || 320) + 30);
-  }
+  LAST_SNAP_MS = 0;          // 이미 멈춘 뒤라 떠나는 재생기는 화면 밖 — 곧바로 돌려도 된다
+  playOnlyCurrent();
+  updateShortsVoteBar();
+}
+function onScrollSettle() {
+  if (!track || !VIEWPORT_H) return;
+  settleTo(Math.round(track.scrollTop / VIEWPORT_H));
 }
 
 function playOnlyCurrent() {
@@ -900,96 +904,32 @@ function isReelControl(t) {
   return !!(t && t.closest && t.closest("#shortsLoginPop, input, textarea, select, [contenteditable]"));
 }
 
-/* 트랙의 '지금' 위치 — 넘어가는 애니메이션 중이면 그 중간값(계산된 transform) */
-function trackY() {
-  try { return new DOMMatrixReadOnly(getComputedStyle(track).transform).m42; }
-  catch (_) { return -currentIndex * VIEWPORT_H; }
-}
+/* 트랙의 '지금' 위치(스크롤) — 옛 transform 방식과 부호를 맞춘다 */
+function trackY() { return track ? -track.scrollTop : 0; }
 
-/* 세로 넘기기(인스타 릴스식)
-   · 손가락을 1:1 로 따라온다 · 방향은 처음 8px 로 잠근다(가로면 닫기 제스처로)
-   · 빠르게 튕기면 짧게 밀어도 한 장, 천천히면 화면 18%(최대 70px) 넘겨야 한 장
-   · 한 번에 한 장만 · 처음/끝에선 고무줄 저항
-   · 넘어가는 중에 다시 잡으면 그 자리에서 이어 잡는다
-   · touchcancel(시스템 제스처·전화 등)에서도 반드시 제자리로 — 없어서 두 장 사이에 멈춰 있었다 */
+/* 세로 넘기기는 폰 자체 스크롤(scroll-snap)이 한다 — 손가락 1:1, 관성, 한 장씩 멈춤, 끝 고무줄 전부 OS.
+   여기서는 ① 스크롤이 멈춘 순간을 잡아 지금 장을 확정하고 ② 가로로 크게 밀면 닫기만 한다. */
 function bindGestures() {
+  if (track && !track.__scrollBound) {
+    track.__scrollBound = true;
+    let t = 0;
+    track.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(onScrollSettle, 90); }, { passive: true });
+    if ("onscrollend" in window) track.addEventListener("scrollend", () => { clearTimeout(t); onScrollSettle(); });
+  }
   if (overlay.__gestures) return; overlay.__gestures = true;
-  let axis = null, baseY = 0, startIdx = 0, lastY = 0, lastT = 0, vel = 0;
-  let samples = [];          // 최근 손가락 위치 {y,t} — 손 뗀 속도는 마지막 0.1초 평균으로 잰다(순간값은 튄다)
-  let pendingY = null, rafId = 0;   // 끄는 동안 화면 이동은 한 프레임에 한 번만
-  const applyDrag = () => { rafId = 0; if (pendingY != null && track) track.style.transform = `translateY(${pendingY}px)`; };
-  const reset = () => { isDragging = false; axis = null; };
-
+  let sx = 0, sy = 0, on = false;
   overlay.addEventListener("touchstart", e => {
-    if (window.__COMMENT_OPEN__ || !track) return;
-    if (isReelControl(e.target) || e.touches.length > 1) { reset(); return; }   // 컨트롤 탭은 제스처 대상 아님
-    isDragging = true; axis = null;
-    startX = e.touches[0].clientX;
-    startY = lastY = e.touches[0].clientY;
-    lastT = performance.now(); vel = 0;
-    samples = [{ y: startY, t: lastT }];
-    baseY = trackY();
-    startIdx = Math.max(0, Math.min(shortsList.length - 1, Math.round(-baseY / VIEWPORT_H)));
-    track.style.transition = "none";
-    track.style.transform = `translateY(${baseY}px)`;
+    if (e.touches.length !== 1 || window.__COMMENT_OPEN__) { on = false; return; }
+    on = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
   }, { passive: true });
-
-  overlay.addEventListener("touchmove", e => {
-    if (window.__COMMENT_OPEN__ || !isDragging || !track) return;
-    const t = e.touches[0];
-    const dx = t.clientX - startX, dy = t.clientY - startY;
-    if (!axis) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-    }
-    if (axis !== "y") return;   // 가로는 트랙을 안 움직인다(오른쪽으로 크게 밀면 닫기)
-    const now = performance.now();
-    if (t.clientY !== lastY) { lastY = t.clientY; lastT = now; }
-    samples.push({ y: t.clientY, t: now });
-    while (samples.length > 2 && now - samples[0].t > 100) samples.shift();
-    let y = baseY + dy;
-    const min = -(shortsList.length - 1) * VIEWPORT_H;
-    if (y > 0) y *= 0.3; else if (y < min) y = min + (y - min) * 0.3;
-    pendingY = y;
-    if (!rafId) rafId = requestAnimationFrame(applyDrag);
+  overlay.addEventListener("touchend", e => {
+    if (!on) return; on = false;
+    const c = e.changedTouches && e.changedTouches[0]; if (!c) return;
+    const dx = c.clientX - sx, dy = c.clientY - sy;
+    // 👉 오른쪽으로 확실히 밀면 → 릴스만 닫고 원래 피드로 복귀
+    if (dx > CLOSE_THRESHOLD_X && Math.abs(dx) > Math.abs(dy) * 1.5) closeShorts();
   }, { passive: true });
-
-  const finish = (e, cancelled) => {
-    if (!isDragging) return;
-    const ax = axis; reset();
-    // 예약해 둔 '다음 프레임 이동'을 먼저 처리하고 지운다 — 안 지우면 제자리 스냅 뒤에 옛 위치로 되돌아간다
-    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; if (pendingY != null && track) track.style.transform = `translateY(${pendingY}px)`; }
-    pendingY = null;
-    if (!track) return;
-    if (cancelled || ax !== "y") {
-      const t = e.changedTouches && e.changedTouches[0];
-      // 👉 오른쪽으로 확실히 밀면 → 릴스만 닫고 원래 피드로 복귀
-      if (!cancelled && ax === "x" && t && t.clientX - startX > CLOSE_THRESHOLD_X) { closeShorts(); return; }
-      moveToIndex(Math.round(-trackY() / VIEWPORT_H) === currentIndex ? currentIndex : startIdx);
-      return;
-    }
-    const t = e.changedTouches[0];
-    const dy = t.clientY - startY;
-    const now = performance.now();
-    samples.push({ y: t.clientY, t: now });
-    while (samples.length > 2 && now - samples[0].t > 100) samples.shift();
-    const s0 = samples[0], s1 = samples[samples.length - 1];
-    vel = (s1.t - s0.t) > 8 ? (s1.y - s0.y) / (s1.t - s0.t) : 0;
-    vel = Math.max(-5, Math.min(5, vel));
-    if (now - lastT > 90) vel = 0;   // 멈췄다가 뗀 것 = 튕김 아님
-    const TH = Math.min(SWIPE_THRESHOLD, VIEWPORT_H * 0.18);
-    let idx = startIdx;
-    if (Math.abs(vel) > 0.35 && Math.abs(dy) > 12) idx += vel < 0 ? 1 : -1;
-    else if (dy < -TH) idx += 1;
-    else if (dy > TH) idx -= 1;
-    idx = Math.max(0, Math.min(shortsList.length - 1, idx));
-    const y = trackY();
-    const remain = Math.abs(-idx * VIEWPORT_H - y);
-    const dur = Math.round(Math.min(420, Math.max(220, remain / Math.max(Math.abs(vel), 1.6))));
-    moveToIndex(idx, false, dur);
-  };
-  overlay.addEventListener("touchend", e => finish(e, false));
-  overlay.addEventListener("touchcancel", e => finish(e, true));
+  overlay.addEventListener("touchcancel", () => { on = false; }, { passive: true });
 }
 
 /* =========================
@@ -1157,22 +1097,8 @@ function bindTapControls() {
    WHEEL (PC)
 ========================= */
 function bindWheel() {
-  if (overlay.__wheel) return; overlay.__wheel = true;
-  let lock = false;
-  let unlockTimer = null;
-  overlay.addEventListener("wheel", e => {
-    e.preventDefault();
-    // 관성/연속 휠이 들어오는 동안 계속 잠금 유지 → 스크롤 1번 = 릴스 1칸
-    clearTimeout(unlockTimer);
-    unlockTimer = setTimeout(() => { lock = false; }, 260);
-
-    if (lock) return;
-    if (Math.abs(e.deltaY) < 8) return;   // 미세 스크롤 무시
-    lock = true;
-
-    if (e.deltaY > 0) moveToIndex(currentIndex + 1);
-    else moveToIndex(currentIndex - 1);
-  }, { passive: false });
+  /* 휠은 브라우저 기본 스크롤 + scroll-snap(한 장씩 멈춤)이 처리한다. 예전처럼 막고(preventDefault)
+     직접 옮기면 폰 자체 스크롤과 싸운다. */
 }
 
 /* =========================

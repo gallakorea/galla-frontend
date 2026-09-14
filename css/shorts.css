@@ -68,9 +68,9 @@ body.shorts-open { overflow: hidden !important; }
   background: #000;
   z-index: 999;
 
-  /* 🔥 JS transform 기반 쇼츠 엔진과 충돌 방지 */
+  /* 세로 넘기기는 안쪽 트랙(#shortsTrack)의 폰 자체 스크롤이 한다 — none 이면 스크롤이 막힌다 */
   overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
 
   box-sizing: border-box;
 }
@@ -551,6 +551,12 @@ body[data-page="shorts"] .nav {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
+
+/* 릴스 트랙 = 스크롤 상자. 한 장씩 딱 멈춘다(빠르게 튕겨도 한 장 — scroll-snap-stop). */
+#shortsTrack { scrollbar-width: none; }
+#shortsTrack::-webkit-scrollbar { display: none; }
+#shortsTrack > section.short { scroll-snap-align: start; scroll-snap-stop: always; }
+body.comment-open #shortsTrack { overflow: hidden; }
 
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{
