@@ -773,14 +773,22 @@ function moveToIndex(idx, instant = false, dur = 0, force = false) {
 
   /* 감속 곡선(인스타식) — 손을 뗀 속도를 이어받아 미끄러지다 선다. 고정 0.35s 는 '딸깍' 느낌이었다. */
   LAST_SNAP_MS = instant ? 0 : (dur || 320);
-  track.style.transition = instant ? "none" : `transform ${dur || 320}ms cubic-bezier(.2,.75,.25,1)`;
+  /* 끝으로 갈수록 부드럽게 서는 곡선(easeOutQuint 계열). 예전 곡선+최소 0.16초는 빠르게 튕기면 딱 서서
+     '딸깍'처럼 느껴졌다(사장님: 부자연스럽고 스무스하지 않다). */
+  track.style.transition = instant ? "none" : `transform ${dur || 320}ms cubic-bezier(.22,1,.36,1)`;
   // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
   track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
   window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null
   // 제자리 스냅이면 여기까지 — 진영바를 다시 그리면 iOS 가 누르던 버튼의 click 을 버린다
   if (!changed) return;
-  playOnlyCurrent();
-  updateShortsVoteBar();   // 통합 진영바: 마운트 + 통계/내진영 반영
+  playOnlyCurrent();       // 다음 장 영상은 바로 재생(첫 장면을 미리 그려 둬서 가볍다)
+  /* 진영바 다시 그리기·투표 수 조회는 넘기기 동작이 끝난 뒤에 — 넘기는 순간 같이 돌면 그 순간 버벅였다 */
+  clearTimeout(moveToIndex.__vbT);
+  if (instant) updateShortsVoteBar();
+  else {
+    if (overlay) overlay.classList.toggle("sh-post", (shortsList[currentIndex] || {})._type === "post");
+    moveToIndex.__vbT = setTimeout(updateShortsVoteBar, (dur || 320) + 30);
+  }
 }
 
 function playOnlyCurrent() {
@@ -907,6 +915,9 @@ function trackY() {
 function bindGestures() {
   if (overlay.__gestures) return; overlay.__gestures = true;
   let axis = null, baseY = 0, startIdx = 0, lastY = 0, lastT = 0, vel = 0;
+  let samples = [];          // 최근 손가락 위치 {y,t} — 손 뗀 속도는 마지막 0.1초 평균으로 잰다(순간값은 튄다)
+  let pendingY = null, rafId = 0;   // 끄는 동안 화면 이동은 한 프레임에 한 번만
+  const applyDrag = () => { rafId = 0; if (pendingY != null && track) track.style.transform = `translateY(${pendingY}px)`; };
   const reset = () => { isDragging = false; axis = null; };
 
   overlay.addEventListener("touchstart", e => {
@@ -916,6 +927,7 @@ function bindGestures() {
     startX = e.touches[0].clientX;
     startY = lastY = e.touches[0].clientY;
     lastT = performance.now(); vel = 0;
+    samples = [{ y: startY, t: lastT }];
     baseY = trackY();
     startIdx = Math.max(0, Math.min(shortsList.length - 1, Math.round(-baseY / VIEWPORT_H)));
     track.style.transition = "none";
@@ -931,17 +943,23 @@ function bindGestures() {
       axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
     if (axis !== "y") return;   // 가로는 트랙을 안 움직인다(오른쪽으로 크게 밀면 닫기)
-    const now = performance.now(), dt = now - lastT;
-    if (dt > 0 && t.clientY !== lastY) { vel = 0.8 * ((t.clientY - lastY) / dt) + 0.2 * vel; lastY = t.clientY; lastT = now; }
+    const now = performance.now();
+    if (t.clientY !== lastY) { lastY = t.clientY; lastT = now; }
+    samples.push({ y: t.clientY, t: now });
+    while (samples.length > 2 && now - samples[0].t > 100) samples.shift();
     let y = baseY + dy;
     const min = -(shortsList.length - 1) * VIEWPORT_H;
     if (y > 0) y *= 0.3; else if (y < min) y = min + (y - min) * 0.3;
-    track.style.transform = `translateY(${y}px)`;
+    pendingY = y;
+    if (!rafId) rafId = requestAnimationFrame(applyDrag);
   }, { passive: true });
 
   const finish = (e, cancelled) => {
     if (!isDragging) return;
     const ax = axis; reset();
+    // 예약해 둔 '다음 프레임 이동'을 먼저 처리하고 지운다 — 안 지우면 제자리 스냅 뒤에 옛 위치로 되돌아간다
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; if (pendingY != null && track) track.style.transform = `translateY(${pendingY}px)`; }
+    pendingY = null;
     if (!track) return;
     if (cancelled || ax !== "y") {
       const t = e.changedTouches && e.changedTouches[0];
@@ -952,7 +970,13 @@ function bindGestures() {
     }
     const t = e.changedTouches[0];
     const dy = t.clientY - startY;
-    if (performance.now() - lastT > 90) vel = 0;   // 멈췄다가 뗀 것 = 튕김 아님
+    const now = performance.now();
+    samples.push({ y: t.clientY, t: now });
+    while (samples.length > 2 && now - samples[0].t > 100) samples.shift();
+    const s0 = samples[0], s1 = samples[samples.length - 1];
+    vel = (s1.t - s0.t) > 8 ? (s1.y - s0.y) / (s1.t - s0.t) : 0;
+    vel = Math.max(-5, Math.min(5, vel));
+    if (now - lastT > 90) vel = 0;   // 멈췄다가 뗀 것 = 튕김 아님
     const TH = Math.min(SWIPE_THRESHOLD, VIEWPORT_H * 0.18);
     let idx = startIdx;
     if (Math.abs(vel) > 0.35 && Math.abs(dy) > 12) idx += vel < 0 ? 1 : -1;
@@ -961,7 +985,7 @@ function bindGestures() {
     idx = Math.max(0, Math.min(shortsList.length - 1, idx));
     const y = trackY();
     const remain = Math.abs(-idx * VIEWPORT_H - y);
-    const dur = Math.round(Math.min(360, Math.max(160, remain / Math.max(Math.abs(vel), 1.1))));
+    const dur = Math.round(Math.min(420, Math.max(220, remain / Math.max(Math.abs(vel), 1.6))));
     moveToIndex(idx, false, dur);
   };
   overlay.addEventListener("touchend", e => finish(e, false));
