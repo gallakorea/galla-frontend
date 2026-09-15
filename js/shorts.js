@@ -998,7 +998,11 @@ function bindGestures() {
       const from = Math.max(0, Math.min(shortsList.length - 1, Math.round(st0 / H)));
       const d = st - st0, dir = d > 0 ? 1 : -1;
       let to = from;
-      if (Math.abs(d) > 8 && (Math.abs(d) > H * 0.22 || (Math.abs(vel) > 0.3 && Math.sign(vel) === dir))) to = from + dir;
+      /* 폰 관성이 갈 곳과 같은 판단을 한다 — 끈 거리 + 속도×0.5초 가 반 칸을 넘으면 다음 장.
+         ⚠️ 22% 만 끌어도 넘기게 했더니 폰은 제자리로 돌아가려 하고 JS 가 다시 끌어올려, 떼는 순간 66px 뒤로
+            출렁였다(26.9.15 시뮬 기록 1108→1042→1748). 판단은 폰과 같게, 꼬리만 JS 가 줄인다. */
+      const proj = d + vel * 500;
+      if (Math.abs(d) > 8 && Math.sign(proj) === dir && Math.abs(proj) > H * 0.5) to = from + dir;
       to = Math.max(0, Math.min(shortsList.length - 1, to));
       if (Math.abs(st - to * H) > 1) {
         /* ⚠️ 미끄러지는 동안 스크롤 위치로 장을 다시 고르면 0→1 로 가다 반 못 미친 순간 0 으로 되돌렸다가
