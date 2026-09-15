@@ -674,7 +674,7 @@ window.GALLA_shortsMix = function (posts, every) {
     else ti++;
   });
   shortsList = shortsList.slice(0, cut).concat(out);
-  if (POOL) { POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; }); fillAhead(0); }   // 뒤쪽 번호가 밀렸다 — 미리 받기를 곧바로 다시 채운다
+  if (POOL) { POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; }); scheduleAhead(); }   // 뒤쪽 번호가 밀렸다 — 미리 받기를 곧바로 다시 채운다
 };
 
 /* 영상 연결을 끊고 버퍼를 반납한다(재생기 수를 늘 최소로). */
@@ -730,6 +730,7 @@ let LAST_SNAP_MS = 0;
 let LAST_DIR = 1;          // 마지막으로 넘긴 방향(+1 앞, -1 뒤) — 미리 받을 장을 고른다
 let FINGER_DOWN = false;   // 손가락이 트랙에 닿아 있는 동안은 장을 확정하지 않는다
 let EARLY = -1;            // 손 뗀 뒤 멈추기 전에 미리 재생을 시작한 장
+let GLIDE_TO = -1;         // 손 뗄 때 정한 도착 장 — 미끄러지는 동안엔 중간 위치로 장을 바꾸지 않는다
 /* 미리 받아 둘 장 — 앞으로 넘기는 중이면 다음 두 장, 뒤로 넘기는 중이면 앞뒤 한 장씩.
    (재생기가 3개라 i-1 과 i+2 는 같은 재생기다. 뒤로 가던 사람이 또 뒤로 가면 바로 나오게) */
 function aheadWanted() {
@@ -758,6 +759,26 @@ function fillAhead(deferMs) {
     };
     if (deferMs > 0) p.__deferT = setTimeout(go, deferMs); else go();
   });
+}
+/* 이웃 장 미리 받기의 유일한 입구. 지금 장이 아직 안 받아졌으면(첫 열기·뒤로 넘기기) 지금 장이 재생된 뒤에 받는다
+   — 셋이 동시에 받으면 대역폭을 나눠 첫 재생이 2초 걸렸다(26.9.15 폰 기록 1794ms, 셋 다 ▶).
+   ⚠️ fillAhead 를 직접 부르지 말 것. 숏판 섞기가 열자마자 fillAhead(0) 을 불러 이 순서를 깨고 있었다. */
+function scheduleAhead() {
+  const P = pool(), cur = P[currentIndex % P.length];
+  const defer = () => (LAST_SNAP_MS || 0) + 80;
+  clearTimeout(cur.__aheadT);
+  if (cur.__aheadGo) { cur.removeEventListener("playing", cur.__aheadGo); cur.__aheadGo = null; }
+  if (cur.__idx !== currentIndex || cur.readyState >= 3) { fillAhead(defer()); return; }
+  const mine = currentIndex;
+  P.forEach(p => { if (p !== cur) { clearTimeout(p.__deferT); try { p.pause(); } catch (_) {} } });
+  const go = () => {
+    clearTimeout(cur.__aheadT);
+    if (cur.__aheadGo) { cur.removeEventListener("playing", cur.__aheadGo); cur.__aheadGo = null; }
+    if (mine === currentIndex && track) fillAhead(defer());
+  };
+  cur.__aheadGo = go;
+  cur.addEventListener("playing", go, { once: true });
+  cur.__aheadT = setTimeout(go, 1500);
 }
 /* 대기 중인 장 재생기에 첫 장면을 그려 둔다 — 소리 끈 채 잠깐 재생했다 멈춘다(아이폰은 멈춘 채로는
    첫 장면을 안 그려, 도착하는 순간 영상이 튀어나왔다). 그 사이 지금 장이 되면 그대로 재생을 이어간다.
@@ -835,12 +856,13 @@ function settleTo(idx, force) {
   if (!changed && !early) return;
   LAST_SNAP_MS = 0;          // 이미 멈춘 뒤라 떠나는 재생기는 화면 밖 — 곧바로 돌려도 된다
   if (changed) playOnlyCurrent();
-  else { const cv = curVideo(); if (!cv || cv.readyState >= 3) fillAhead(80); }   // 재생은 이미 시작됨 — 떠난 재생기만 이제 돌린다
+  else scheduleAhead();   // 재생은 이미 시작됨 — 떠난 재생기만 이제 돌린다
   updateShortsVoteBar();
 }
 function onScrollSettle() {
   if (!track || !VIEWPORT_H) return;
   if (FINGER_DOWN) return;   // 끄는 중 잠깐 멈춘 것 — 손 뗄 때까지 장을 바꾸지 않는다
+  if (GLIDE_TO >= 0 && Math.abs(track.scrollTop - GLIDE_TO * VIEWPORT_H) > 1) return;   // 아직 미끄러지는 중
   settleTo(Math.round(track.scrollTop / VIEWPORT_H));
 }
 /* 손을 뗀 뒤 도착할 장이 반 넘게 들어오면 그 장 영상을 곧바로 튼다 — 멈춘 뒤에 틀면 「올라가다 멈추고
@@ -879,17 +901,7 @@ function playOnlyCurrent() {
   const cur = P[currentIndex % P.length];
   clearTimeout(cur.__deferT);
   placePlayer(cur, currentIndex);
-  /* 지금 장이 아직 안 받아졌으면(첫 열기·뒤로 넘기기) 이웃 장은 지금 장이 재생된 뒤 받는다 — 셋이 동시에
-     받으면 대역폭을 나눠 첫 재생이 2초 걸렸다(26.9.15 폰 기록 1794ms, 셋 다 ▶). */
-  if (cur.readyState >= 3) fillAhead((LAST_SNAP_MS || 0) + 80);
-  else {
-    const mine = currentIndex;
-    P.forEach(p => { if (p !== cur) { clearTimeout(p.__deferT); try { p.pause(); } catch (_) {} } });
-    let fired = false;
-    const go = () => { if (fired) return; fired = true; clearTimeout(cur.__aheadT); cur.removeEventListener("playing", go); if (mine === currentIndex && track) fillAhead((LAST_SNAP_MS || 0) + 80); };
-    cur.addEventListener("playing", go, { once: true });
-    clearTimeout(cur.__aheadT); cur.__aheadT = setTimeout(go, 1500);
-  }
+  scheduleAhead();
   [cur].forEach((v) => {
     const i = currentIndex;
     if (i === currentIndex) {
@@ -967,14 +979,52 @@ function trackY() { return track ? -track.scrollTop : 0; }
 function bindGestures() {
   if (track && !track.__scrollBound) {
     track.__scrollBound = true;
-    let t = 0;
-    track.addEventListener("touchstart", () => { FINGER_DOWN = true; }, { passive: true });
-    const up = () => { FINGER_DOWN = false; clearTimeout(t); t = setTimeout(onScrollSettle, 120); };   // 딱 칸에 맞춰 떼면 스크롤 이벤트가 더 안 온다
+    let t = 0, glideT = 0, st0 = 0, lastY = 0, lastT = 0, vel = 0;
+    track.addEventListener("touchstart", () => {
+      FINGER_DOWN = true;
+      st0 = lastY = track.scrollTop;
+      GLIDE_TO = -1; lastT = performance.now(); vel = 0;
+    }, { passive: true });
+    /* 🔴 손을 떼면 도착할 장을 여기서 정하고 짧게(≈0.3초) 미끄러져 들어가게 한다.
+       폰 자체 관성에 맡겼더니 빠르게 올라가다 마지막 몇 px 를 1~2초 기어가며 멈췄다 — 사장님 체감
+       「올라가다 멈추고 그다음에 영상이 뜬다」(26.9.15 폰 기록: 849→852 에 0.77초, 시뮬 53%→100% 에 2초).
+       손가락이 닿아 있는 동안은 여전히 폰 스크롤이 1:1 로 따라간다. 도착할 장 영상은 뗀 순간 튼다. */
+    const up = () => {
+      if (!FINGER_DOWN) return;
+      FINGER_DOWN = false;
+      clearTimeout(t);
+      const H = VIEWPORT_H, st = track.scrollTop;
+      if (!H) return;
+      const from = Math.max(0, Math.min(shortsList.length - 1, Math.round(st0 / H)));
+      const d = st - st0, dir = d > 0 ? 1 : -1;
+      let to = from;
+      if (Math.abs(d) > 8 && (Math.abs(d) > H * 0.22 || (Math.abs(vel) > 0.3 && Math.sign(vel) === dir))) to = from + dir;
+      to = Math.max(0, Math.min(shortsList.length - 1, to));
+      if (Math.abs(st - to * H) > 1) {
+        /* ⚠️ 미끄러지는 동안 스크롤 위치로 장을 다시 고르면 0→1 로 가다 반 못 미친 순간 0 으로 되돌렸다가
+           다시 1 로 가며 영상이 멈췄다 켜졌다(26.9.15 시뮬 기록 early 1 → early 0 → early 1). 도착 장은 여기서 한 번만 정한다. */
+        GLIDE_TO = to;
+        clearTimeout(glideT);
+        glideT = setTimeout(() => { if (GLIDE_TO === to) { GLIDE_TO = -1; onScrollSettle(); } }, 800);   // 딱 안 닿아도 확정
+        try { track.scrollTo({ top: to * H, behavior: "smooth" }); } catch (_) { track.scrollTop = to * H; }
+        commitEarly(to);
+      }
+      t = setTimeout(onScrollSettle, 120);   // 딱 칸에 맞춰 떼면 스크롤 이벤트가 더 안 온다
+    };
     track.addEventListener("touchend", up, { passive: true });
     track.addEventListener("touchcancel", up, { passive: true });
     track.addEventListener("scroll", () => {
       clearTimeout(t);
+      if (FINGER_DOWN) {   // 손 뗄 때 쓸 속도(px/ms) — 최근 움직임에 무게
+        const now = performance.now(), y = track.scrollTop, dt = now - lastT;
+        if (dt > 0) vel = 0.5 * vel + 0.5 * ((y - lastY) / dt);
+        lastY = y; lastT = now;
+      }
       const H = VIEWPORT_H;
+      if (!FINGER_DOWN && H && GLIDE_TO >= 0) {
+        if (Math.abs(track.scrollTop - GLIDE_TO * H) <= 1) { GLIDE_TO = -1; onScrollSettle(); }
+        return;
+      }
       if (!FINGER_DOWN && H) {
         const st = track.scrollTop, k = Math.round(st / H);
         commitEarly(k);                                          // 손 뗀 뒤 반 넘게 들어온 장 → 지금 튼다
