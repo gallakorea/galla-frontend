@@ -727,6 +727,8 @@ function releaseVideo(v) {
 /* 재생기 3개(돌려쓰기). i 번째 장 = POOL[i % 3] — 지금 장 + 앞으로 두 장을 미리 받아 둔다.
    ⚠️ 2개일 땐 다음 한 장만, 그것도 멈춘 뒤에 준비를 시작해 연달아 넘기면 로딩이 보였다(사장님: 전환 시 로딩이 느리다).
       3개 동시는 폰에서 문제없었다(튕김은 '새 재생기가 쌓여서'였고, 돌려쓰면 쌓이지 않는다). */
+/* 투명 1px — 재생기 기본 그림. 안드로이드 웹뷰가 첫 프레임 전·로딩 실패 때 그리는 회색 재생 아이콘을 없앤다(26.9.15 에뮬). */
+const BLANK_POSTER = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 let POOL = null;
 function pool() {
   if (!POOL) {
@@ -735,6 +737,7 @@ function pool() {
       v.className = "sh-player";
       v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
       v.muted = true; v.loop = true; v.preload = "auto";
+      v.poster = BLANK_POSTER;
       v.__idx = -1;
       return v;
     });
@@ -758,7 +761,7 @@ function placePlayer(p, i) {
     p.preload = "auto";
     /* 재생기에는 poster 를 달지 않는다(썸네일도 깔지 않는다 — 영상과 구도가 달라 번쩍였다).
        대기 중인 다음 장은 primeFirstFrame 이 첫 장면을 미리 그려 둔다. */
-    p.removeAttribute("poster");
+    p.poster = BLANK_POSTER;   // 안드로이드 웹뷰는 poster 가 없으면 회색 큰 재생 아이콘을 그려 밑의 첫 장면 그림을 가렸다
     if (window.GALLA_attachHls) window.GALLA_attachHls(p, sec.dataset.src);
     else p.setAttribute("src", sec.dataset.src);
   }

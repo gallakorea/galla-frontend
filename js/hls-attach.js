@@ -14,7 +14,11 @@
     if (!window.GALLA_isHls(url)) { video.setAttribute("src", url); return; }
 
     // iOS/사파리 = 네이티브 HLS (가장 빠르고 hls.js 불필요)
-    if (video.canPlayType && video.canPlayType("application/vnd.apple.mpegurl")) {
+    /* ⚠️ 안드로이드 웹뷰도 canPlayType 에 "maybe" 를 줘서 네이티브로 빠졌다 → MediaPlayer error -1007
+       (fMP4+분리 오디오 HLS 를 못 읽음) → 이슈 영상이 안드로이드 앱에서 전혀 안 나왔다(26.9.11 기록, 26.9.15 에뮬 재확인).
+       안드로이드는 무조건 hls.js. (cdn.galla.im CORS 에 앱 origin https://localhost 가 있어야 한다) */
+    var isAndroid = /Android/i.test(navigator.userAgent || "");
+    if (!isAndroid && video.canPlayType && video.canPlayType("application/vnd.apple.mpegurl")) {
       video.setAttribute("src", url);
       try { video.load(); } catch (e) {}
       return;
