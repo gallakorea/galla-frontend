@@ -552,6 +552,39 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
 
 /* 슬라이드 한 장 — 이슈는 배틀 UI(작성자·댓글·공유·갈비스·게시물 + 하단 고정 진영바),
    숏판은 GALLA_ReelPost(좋아요·댓글·공유·갈비스·후원·관리). 영상·넘기기·상단 버튼은 공통. */
+/* 영상 첫 장면 그림 — 재생기가 아직 준비 안 됐을 때(빨리 넘길 때·처음 열 때·뒤로 갈 때) 검은 화면 대신 보인다.
+   ⚠️ 옛 썸네일(3:4, 얼굴 크게 잡은 표지)은 영상과 구도가 달라 넘길 때 두 그림이 번갈아 번쩍였다(「뒤죽박죽」).
+      이건 영상의 **0초 장면 그 자체**라 재생기가 그 위에 뜰 때 그림이 바뀌지 않는다.
+   · 이슈(HLS): 영상 폴더의 poster.jpg (26.9.15 63개 일괄 생성, 새 업로드는 없으면 onerror 로 숨김)
+   · 숏판(MP4): Cloudflare 영상 변환으로 0초 장면을 뽑는다(첫 요청 뒤 캐시) */
+function posterOf(url) {
+  if (!url) return "";
+  if (/\/hls\/[a-f0-9]+\/video\.m3u8/i.test(url)) return url.replace(/video\.m3u8.*$/i, "poster.jpg");
+  if (/^https:\/\/cdn\.galla\.im\/.+\.mp4(\?|$)/i.test(url)) return "https://cdn.galla.im/cdn-cgi/media/mode=frame,time=0s,width=480/" + url.split("?")[0];
+  return "";
+}
+function addPoster(section, item) {
+  const src = posterOf(item.video_url);
+  if (!src) return;
+  const img = document.createElement("img");
+  img.className = "sh-poster"; img.alt = ""; img.decoding = "async";
+  img.dataset.src = src;
+  img.onerror = () => { img.removeAttribute("src"); img.dataset.src = ""; };
+  section.prepend(img);
+}
+/* 첫 장면 그림은 지금 장 앞 1장 ~ 뒤 3장만 붙이고, 멀어진 건 뗀다(60장 전부 붙이면 폰 메모리). */
+function syncPosters() {
+  if (!track) return;
+  const secs = track.querySelectorAll("section.short");
+  for (let i = 0; i < secs.length; i++) {
+    const img = secs[i].querySelector("img.sh-poster");
+    if (!img || !img.dataset.src) continue;
+    const near = i >= currentIndex - 1 && i <= currentIndex + 3;
+    const far = i < currentIndex - 2 || i > currentIndex + 4;
+    if (near && !img.getAttribute("src")) img.setAttribute("src", img.dataset.src);
+    else if (far && img.getAttribute("src")) img.removeAttribute("src");
+  }
+}
 function buildSection(item) {
   if (item._type === 'post') {
     const section = document.createElement("section");
@@ -566,6 +599,7 @@ function buildSection(item) {
       remove: () => removeSlide(section),
       leave: (fn) => { closeShortsSilently(); fn(); }
     });
+    addPoster(section, item);
     return section;
   }
   const section = document.createElement("section");
@@ -636,6 +670,7 @@ function buildSection(item) {
   `;
 
   wireSlideControls(section, item);
+  addPoster(section, item);
   return section;
 }
 
@@ -917,6 +952,7 @@ function playOnlyCurrent() {
        → 떠나는 재생기는 멈추기만 하고, 넘기기 동작이 끝난 뒤에 돌린다.
      · 다음 장이 멈춘 채 대기만 해서 도착해야 영상이 튀어나왔다
        → 소리 끈 채 잠깐 재생했다 멈춰 첫 장면을 미리 그려 둔다. */
+  syncPosters();
   const P = pool();
   const cur = P[currentIndex % P.length];
   clearTimeout(cur.__deferT);
