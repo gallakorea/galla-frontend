@@ -556,7 +556,8 @@ body[data-page="shorts"] .nav {
 #shortsTrack { scrollbar-width: none; }
 #shortsTrack::-webkit-scrollbar { display: none; }
 #shortsTrack > section.short { scroll-snap-align: start; scroll-snap-stop: always; }
-body.comment-open #shortsTrack { overflow: hidden; }
+/* 트랙 인라인 overflowY:auto 가 이겨서 댓글 뒤로 릴스가 넘어갔다 — !important */
+body.comment-open #shortsTrack { overflow: hidden !important; }
 
 /* LOCK SHORTS SCROLL */
 body.comment-open #shortsOverlay{

@@ -1049,6 +1049,7 @@ function bindGestures() {
     track.addEventListener("touchcancel", up, { passive: true });
     track.addEventListener("scroll", () => {
       clearTimeout(t);
+      if (!track) return;   // 닫힌 뒤 늦게 도착한 스크롤(관성 중 닫기) — track 이 null 이라 TypeError 가 났다
       const H = VIEWPORT_H;
       if (!FINGER_DOWN && H) {
         const st = track.scrollTop, k = Math.round(st / H);
@@ -1383,6 +1384,13 @@ function shortsNavHide(on) {
 function closeShorts() {
   shortsNavHide(false);
   requestNativePaging(false);
+  /* 댓글을 연 채로 닫히면(Esc·가로 밀어 닫기) comment-open 이 몸통에 남아 다음 릴스가 잠겼다 — 곧바로 걷는다 */
+  if (window.__COMMENT_OPEN__) {
+    document.getElementById("shortsCommentModal")?.classList.remove("visible");
+    document.body.classList.remove("comment-open");
+    window.__COMMENT_OPEN__ = false;
+    window.__COMMENT_STATE__ = "closed";
+  }
   // 이어보기(역방향): 현재 릴스 재생 위치를 인덱스 인라인 영상에 반영
   try {
     const cur = curVideo();
