@@ -63,8 +63,11 @@ async function GALLA_mypageInit(root, spaParams) {
     // ---------------------------
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData?.session;
+    const otherUid = new URLSearchParams(spaParams || location.search).get("user");
 
-    if (!session?.user) {
+    /* 비로그인이라도 **남의 프로필**은 보여 준다(사장님 26.9.15 — 릴스 작성자 사진을 누르면 로그인으로 튕겼다).
+       로그인이 필요한 건 내 마이페이지뿐. 방문자의 쓰기(팔로우·메시지·저장·좋아요)는 askLogin 으로 보낸다. */
+    if (!session?.user && !otherUid) {
         // SPA(app.html): 문서 이탈 없이 로그인 뷰 push. MPA는 기존 그대로.
         if (document.body.dataset.page === "spa" && window.GALLA_gotoLogin) { window.GALLA_gotoLogin("mypage"); return; }
         if (!document.body.classList.contains("in-shell")) alert("로그인이 필요합니다."); // 셸 백그라운드 판에선 알럿이 셸 전체를 덮는다
@@ -72,14 +75,19 @@ async function GALLA_mypageInit(root, spaParams) {
         return;
     }
 
-    const userId = session.user.id;
+    const userId = session?.user?.id || null;
+    const NOBODY = "00000000-0000-0000-0000-000000000000";   // 비로그인 조회용 — uuid 칸에 null 을 넣으면 400
+    const askLogin = () => {
+        if (document.body.dataset.page === "spa" && window.GALLA_gotoLogin) { window.GALLA_gotoLogin("mypage"); return; }
+        (window.GALLA_nav||function(u){location.href=u})("login.html");
+    };
 
     // ============================
     // View User (self vs other)
     // ============================
     const params = new URLSearchParams(spaParams || location.search); // SPA는 라우터 params, MPA는 쿼리스트링
     const viewUserId = params.get("user") || userId;
-    const isMyPage = viewUserId === userId;
+    const isMyPage = !!userId && viewUserId === userId;
 
     // ============================
     // 헤더 & 탭: 내 프로필 vs 방문자 뷰 분기
@@ -138,17 +146,18 @@ async function GALLA_mypageInit(root, spaParams) {
         messageBtn.className = "action-btn secondary";
         messageBtn.textContent = "메시지 보내기";
 
-        const { data: followRow } = await supabase
+        const { data: followRow } = userId ? await supabase
             .from("follows")
             .select("id")
             .eq("follower", userId)
             .eq("following", viewUserId)
-            .maybeSingle();
+            .maybeSingle() : { data: null };
 
         let isFollowing = !!followRow;
         followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
 
         followBtn.onclick = async () => {
+            if (!userId) { askLogin(); return; }
             let error = null;
             if (isFollowing) {
                 ({ error } = await supabase.from("follows")
@@ -179,6 +188,7 @@ async function GALLA_mypageInit(root, spaParams) {
         };
 
         messageBtn.onclick = () => {
+            if (!userId) { askLogin(); return; }
             const name = byId("profileName")?.textContent || "";
             if (window.startDM) window.startDM(viewUserId, name);
         };
@@ -530,7 +540,7 @@ async function GALLA_mypageInit(root, spaParams) {
             `)
             // battle 판단 기준: origin_issue_id 존재 여부 (legacy 데이터 호환)
             .in("origin_issue_id", myIssueIds)
-            .neq("user_id", userId);
+            .neq("user_id", userId || NOBODY);
 
         if (battleError) {
             console.error("[Battle Galla] battle issues error", battleError);
@@ -729,7 +739,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 .select("id,title,category,thumbnail_url,images,video_url,pro_count,con_count,faction_a,faction_b")
                 .eq("id", issueId).maybeSingle(),
             supabase.from("bookmarks")
-                .select("issue_id").eq("user_id", userId).eq("issue_id", issueId).maybeSingle()
+                .select("issue_id").eq("user_id", userId || NOBODY).eq("issue_id", issueId).maybeSingle()
         ]);
         if (!i) { location.href = `issue.html?id=${issueId}`; return; }
         const thumb = i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null;
@@ -748,6 +758,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
+                    if (!userId) { askLogin(); return; }
                     if (saved) {
                         await supabase.from("bookmarks").delete()
                             .eq("user_id", userId).eq("issue_id", issueId);
@@ -771,9 +782,9 @@ async function GALLA_mypageInit(root, spaParams) {
                 .select("id,title,summary,category,hero_image,source_count")
                 .eq("id", newsId).maybeSingle(),
             supabase.from("galla_news_bookmarks")
-                .select("news_id").eq("user_id", userId).eq("news_id", newsId).maybeSingle(),
+                .select("news_id").eq("user_id", userId || NOBODY).eq("news_id", newsId).maybeSingle(),
             supabase.from("galla_news_reactions")
-                .select("value").eq("user_id", userId).eq("news_id", newsId).maybeSingle()
+                .select("value").eq("user_id", userId || NOBODY).eq("news_id", newsId).maybeSingle()
         ]);
         if (!n) { location.href = `search.html?gn=${newsId}`; return; }
 
@@ -790,6 +801,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     label: liked ? "👍 좋아요 취소" : "👍 좋아요",
                     active: liked,
                     onClick: async (btn) => {
+                    if (!userId) { askLogin(); return; }
                         if (liked) {
                             await supabase.from("galla_news_reactions").delete()
                                 .eq("user_id", userId).eq("news_id", newsId);
@@ -806,6 +818,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                     active: saved,
                     onClick: async (btn) => {
+                    if (!userId) { askLogin(); return; }
                         if (saved) {
                             await supabase.from("galla_news_bookmarks").delete()
                                 .eq("user_id", userId).eq("news_id", newsId);
@@ -830,7 +843,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 .select("id,title,body,category,cover_image,thumbnail,up_count,down_count,view_count")
                 .eq("id", postId).maybeSingle(),
             supabase.from("plaza_bookmarks")
-                .select("post_id").eq("user_id", userId).eq("post_id", postId).maybeSingle()
+                .select("post_id").eq("user_id", userId || NOBODY).eq("post_id", postId).maybeSingle()
         ]);
         if (!p) { location.href = `plaza_detail.html?id=${postId}`; return; }
         // 본문 미리보기: 마커 제거 후 앞 120자
@@ -847,6 +860,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
+                    if (!userId) { askLogin(); return; }
                     if (saved) {
                         await supabase.from("plaza_bookmarks").delete()
                             .eq("user_id", userId).eq("post_id", postId);
@@ -870,7 +884,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 .select("id,question,category,image_url,volume,market_type,resolved,close_at")
                 .eq("id", marketId).maybeSingle(),
             supabase.from("market_bookmarks")
-                .select("market_id").eq("user_id", userId).eq("market_id", marketId).maybeSingle()
+                .select("market_id").eq("user_id", userId || NOBODY).eq("market_id", marketId).maybeSingle()
         ]);
         if (!m) { location.href = `predict-market.html?id=${marketId}`; return; }
 
@@ -897,6 +911,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
+                    if (!userId) { askLogin(); return; }
                     if (saved) {
                         await supabase.from("market_bookmarks").delete()
                             .eq("user_id", userId).eq("market_id", marketId);
@@ -1585,7 +1600,7 @@ async function GALLA_mypageInit(root, spaParams) {
                app_settings 는 {authenticated} 전용이라 여기선 동작했지만, 스위치가 흩어져 있으면
                "무엇이 열려 있나"를 한눈에 못 본다. app_features() RPC 는 anon 도 읽는다. */
             const [{ data: prof }] = await Promise.all([
-                supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle(),
+                (userId ? supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle() : Promise.resolve({ data: null })),
             ]);
             on = !!(window.GALLA_feature && window.GALLA_feature("gallari")) || !!(prof && prof.admin_flag);
         } catch (_) {}

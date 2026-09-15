@@ -19,7 +19,8 @@ const SCRIPTS = [
   "/js/charge.js",         // GALLA_needGP/GALLA_needGC(재화 부족 안내·갈라페이 충전)
   "/js/gallian.js",        // GALLA_gallianOf(등급 칩·레벨 텍스트)
   "/js/profile-stats.js",  // 전적·팔로워/팔로잉 시트·일기토 전적 칩(로드 즉시 boot)
-  "/js/auth-gate.js",      // 비로그인 진입 차단 게이트(MPA 에만 있었다)
+  /* auth-gate.js 는 싣지 않는다 — SPA 엔 쿼리가 없어 남의 프로필(params.user)도 문서째 login.html 로 보냈다(26.9.15).
+     마이 탭 비로그인은 라우터 잠금판 + mypage.js 가 막는다. */
   "/js/fx.js",             // GALLA_FX(파티클) — 다른 뷰를 먼저 안 열면 없다
   "/js/noti-icons.js",     // 알림 아이콘 세트
   "/js/dm.js",            // DM 배지·GALLA_openDM — MPA 는 이 페이지에서도 싣는다(웹/앱 동작 일치)

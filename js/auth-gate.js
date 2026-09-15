@@ -6,6 +6,8 @@
    ───────────────────────────────────────────────────────────── */
 (function () {
   var KEY = "sb-bidqauputnhkqepvdzrr-auth-token";
+  // 남의 프로필(mypage.html?user=…)은 비로그인도 본다(26.9.15) — 내 마이페이지만 막는다
+  if (/mypage/.test(location.pathname) && /[?&]user=/.test(location.search)) return;
   try {
     if (localStorage.getItem(KEY)) return;   // 세션 있음 → 통과
   } catch (_) { return; }                     // 저장소 접근 불가 → 정상 흐름에 맡김
