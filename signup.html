@@ -79,7 +79,12 @@
         <span class="sw-badge req">필수</span>
         <h2 class="sw-q">생년월일을<br>알려주세요</h2>
         <p class="sw-hint">📊 여론 통계에 쓰여요 · 만 14세 이상 가입 가능</p>
-        <input type="date" id="birthdate" class="field-input sw-input">
+        <input type="hidden" id="birthdate">
+        <div class="bd-row" style="display:flex;gap:8px">
+          <select id="bdY" class="field-input sw-input" style="flex:1.4 1 0;width:auto;min-width:0" aria-label="태어난 해"><option value="">년</option></select>
+          <select id="bdM" class="field-input sw-input" style="flex:1 1 0;width:auto;min-width:0" aria-label="태어난 월"><option value="">월</option></select>
+          <select id="bdD" class="field-input sw-input" style="flex:1 1 0;width:auto;min-width:0" aria-label="태어난 일"><option value="">일</option></select>
+        </div>
         <div class="pw-hint" id="ageHint"></div>
       </section>
 
@@ -244,6 +249,30 @@ function waitForSupabaseClient() {
       syncAgreeAll(); refreshSignupBtn();
     });
   }
+
+  /* 생년월일 = 년·월·일 선택 3칸 → 숨은 #birthdate(YYYY-MM-DD). signup.js·마법사는 #birthdate 만 읽는다.
+     아이폰 날짜 달력은 여는 순간 오늘 날짜로 채워져 「만 14세 미만」 오류가 먼저 뜨고,
+     오늘부터 수십 년을 한 달씩 넘겨야 했다(26.9.15 사장님 실기기 녹화 중 발견). */
+  (function(){
+    var y = document.getElementById('bdY'), m = document.getElementById('bdM'), d = document.getElementById('bdD');
+    if(!y || !m || !d || !bd) return;
+    var top = new Date().getFullYear() - 14;
+    for(var i = top; i >= 1920; i--) y.add(new Option(i + '년', i));
+    for(var j = 1; j <= 12; j++) m.add(new Option(j + '월', j));
+    function fillDays(){
+      var n = (y.value && m.value) ? new Date(+y.value, +m.value, 0).getDate() : 31, keep = d.value;
+      while(d.options.length > 1) d.remove(1);
+      for(var k = 1; k <= n; k++) d.add(new Option(k + '일', k));
+      if(keep && +keep <= n) d.value = keep;
+    }
+    fillDays();
+    function sync(e){
+      if(e.target !== d) fillDays();
+      bd.value = (y.value && m.value && d.value) ? y.value + '-' + ('0' + m.value).slice(-2) + '-' + ('0' + d.value).slice(-2) : '';
+      bd.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    [y, m, d].forEach(function(s){ s.addEventListener('change', sync); });
+  })();
 
   // 약관 동의 체크박스 연동
   var agreeAll = document.getElementById('agreeAll');
