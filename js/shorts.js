@@ -84,7 +84,8 @@ function updateViewportHeight() {
        키보드로 높이가 한 번 바뀌면 칸마다 오차가 쌓여 **두 장 사이 반쯤에 걸린 화면**이 됐다(2026-09-14 사장님 캡처). */
     track.querySelectorAll("section.short").forEach(sec => { sec.style.height = `${h}px`; });
     if (POOL) POOL.forEach(p => { if (p.__idx >= 0) { p.style.top = `${p.__idx * h}px`; p.style.height = `${h}px`; } });
-    if (!FINGER_DOWN) track.scrollTop = currentIndex * VIEWPORT_H;   // 네이티브 스크롤 — 지금 장 자리로 다시 맞춘다
+    if (!FINGER_DOWN) track.scrollTop = currentIndex * VIEWPORT_H;   // 네이티브 스크롤
+    requestNativePaging();   // 한 장 높이가 바뀌었다 — 페이지 크기도 다시 — 지금 장 자리로 다시 맞춘다
   }
 }
 window.addEventListener("resize", updateViewportHeight);
@@ -494,7 +495,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
 
   moveToIndex(currentIndex, true, 0, true);
   // 오버레이가 보인 뒤 트랙 실제 높이로 한 번 맞춘다(열 때 계산한 높이는 소수·주소창 차이가 있다)
-  requestAnimationFrame(() => { if (track && track.clientHeight) updateViewportHeight(); });
+  requestAnimationFrame(() => { if (track && track.clientHeight) updateViewportHeight(); PAGING_TRIES = 0; requestNativePaging(); });
 
   document.body.style.overflow = "hidden";
 
@@ -674,7 +675,8 @@ window.GALLA_shortsMix = function (posts, every) {
     else ti++;
   });
   shortsList = shortsList.slice(0, cut).concat(out);
-  if (POOL) { POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; }); scheduleAhead(); }   // 뒤쪽 번호가 밀렸다 — 미리 받기를 곧바로 다시 채운다
+  if (POOL) { POOL.forEach(p => { if (p.__idx >= cut) p.__idx = -1; }); scheduleAhead(); }
+  requestNativePaging();   // 장 수가 늘었다   // 뒤쪽 번호가 밀렸다 — 미리 받기를 곧바로 다시 채운다
 };
 
 /* 영상 연결을 끊고 버퍼를 반납한다(재생기 수를 늘 최소로). */
@@ -730,7 +732,6 @@ let LAST_SNAP_MS = 0;
 let LAST_DIR = 1;          // 마지막으로 넘긴 방향(+1 앞, -1 뒤) — 미리 받을 장을 고른다
 let FINGER_DOWN = false;   // 손가락이 트랙에 닿아 있는 동안은 장을 확정하지 않는다
 let EARLY = -1;            // 손 뗀 뒤 멈추기 전에 미리 재생을 시작한 장
-let GLIDE_TO = -1;         // 손 뗄 때 정한 도착 장 — 미끄러지는 동안엔 중간 위치로 장을 바꾸지 않는다
 /* 미리 받아 둘 장 — 앞으로 넘기는 중이면 다음 두 장, 뒤로 넘기는 중이면 앞뒤 한 장씩.
    (재생기가 3개라 i-1 과 i+2 는 같은 재생기다. 뒤로 가던 사람이 또 뒤로 가면 바로 나오게) */
 function aheadWanted() {
@@ -862,11 +863,30 @@ function settleTo(idx, force) {
 function onScrollSettle() {
   if (!track || !VIEWPORT_H) return;
   if (FINGER_DOWN) return;   // 끄는 중 잠깐 멈춘 것 — 손 뗄 때까지 장을 바꾸지 않는다
-  if (GLIDE_TO >= 0 && Math.abs(track.scrollTop - GLIDE_TO * VIEWPORT_H) > 1) return;   // 아직 미끄러지는 중
   settleTo(Math.round(track.scrollTop / VIEWPORT_H));
 }
 /* 손을 뗀 뒤 도착할 장이 반 넘게 들어오면 그 장 영상을 곧바로 튼다 — 멈춘 뒤에 틀면 「올라가다 멈추고
    그다음에 영상이 뜬다」(26.9.15 사장님). 떠나는 재생기는 멈추기만 하고, 자리 옮기기·진영바는 멈춘 뒤. */
+/* 앱(iOS)에서만: 릴스 트랙(웹뷰 안 UIScrollView)에 UIKit 페이징을 켠다 — GallaBridgeVC 의 gallaReels.
+   웹킷이 스크롤뷰를 새로 만들 수 있어 열 때·높이 바뀔 때·숏판 끼운 뒤·댓글 닫은 뒤 다시 요청한다.
+   못 찾으면(스크롤뷰가 아직 안 올라옴) 0.3초 뒤 세 번까지 다시 찾는다. 웹은 그대로 scroll-snap. */
+let PAGING_TRIES = 0;
+function requestNativePaging(on = true) {
+  try {
+    const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaReels;
+    if (!h) return;
+    if (!on) { PAGING_TRIES = 0; h.postMessage({ on: false }); return; }
+    requestAnimationFrame(() => {
+      if (!track || !track.clientHeight || !overlay || !document.body.contains(overlay)) return;
+      h.postMessage({ on: true, contentH: track.scrollHeight, pageH: track.clientHeight });
+    });
+  } catch (_) {}
+}
+window.__gallaReelsPaging = function (ok) {
+  window.__REELS_NATIVE_PAGING__ = !!ok;
+  if (ok) { PAGING_TRIES = 0; return; }
+  if (++PAGING_TRIES <= 3) setTimeout(() => requestNativePaging(), 300);
+};
 function commitEarly(k) {
   if (EARLY === k || k === currentIndex || k < 0 || k >= shortsList.length) return;
   EARLY = k;
@@ -979,56 +999,21 @@ function trackY() { return track ? -track.scrollTop : 0; }
 function bindGestures() {
   if (track && !track.__scrollBound) {
     track.__scrollBound = true;
-    let t = 0, glideT = 0, st0 = 0, lastY = 0, lastT = 0, vel = 0;
-    track.addEventListener("touchstart", () => {
-      FINGER_DOWN = true;
-      st0 = lastY = track.scrollTop;
-      GLIDE_TO = -1; lastT = performance.now(); vel = 0;
-    }, { passive: true });
-    /* 🔴 손을 떼면 도착할 장을 여기서 정하고 짧게(≈0.3초) 미끄러져 들어가게 한다.
-       폰 자체 관성에 맡겼더니 빠르게 올라가다 마지막 몇 px 를 1~2초 기어가며 멈췄다 — 사장님 체감
-       「올라가다 멈추고 그다음에 영상이 뜬다」(26.9.15 폰 기록: 849→852 에 0.77초, 시뮬 53%→100% 에 2초).
-       손가락이 닿아 있는 동안은 여전히 폰 스크롤이 1:1 로 따라간다. 도착할 장 영상은 뗀 순간 튼다. */
+    let t = 0;
+    track.addEventListener("touchstart", () => { FINGER_DOWN = true; }, { passive: true });
+    /* 손 뗀 뒤 도착은 폰이 한다. 앱에선 이 트랙에 UIKit 페이징을 켠다(requestNativePaging) — 인스타 앱과 같은 넘김.
+       ⚠️ JS smooth scrollTo 로 도착 장까지 미끄러뜨려 봤더니 아이폰에선 느리게 출발해 떼는 순간 0.6초 멈칫하고
+          착지까지 0.7~1초였다(26.9.15 폰 기록, 시뮬은 0.38초라 속았다). 쓰지 말 것. */
     const up = () => {
       if (!FINGER_DOWN) return;
       FINGER_DOWN = false;
-      clearTimeout(t);
-      const H = VIEWPORT_H, st = track.scrollTop;
-      if (!H) return;
-      const from = Math.max(0, Math.min(shortsList.length - 1, Math.round(st0 / H)));
-      const d = st - st0, dir = d > 0 ? 1 : -1;
-      let to = from;
-      /* 폰 관성이 갈 곳과 같은 판단을 한다 — 끈 거리 + 속도×0.5초 가 반 칸을 넘으면 다음 장.
-         ⚠️ 22% 만 끌어도 넘기게 했더니 폰은 제자리로 돌아가려 하고 JS 가 다시 끌어올려, 떼는 순간 66px 뒤로
-            출렁였다(26.9.15 시뮬 기록 1108→1042→1748). 판단은 폰과 같게, 꼬리만 JS 가 줄인다. */
-      const proj = d + vel * 500;
-      if (Math.abs(d) > 8 && Math.sign(proj) === dir && Math.abs(proj) > H * 0.5) to = from + dir;
-      to = Math.max(0, Math.min(shortsList.length - 1, to));
-      if (Math.abs(st - to * H) > 1) {
-        /* ⚠️ 미끄러지는 동안 스크롤 위치로 장을 다시 고르면 0→1 로 가다 반 못 미친 순간 0 으로 되돌렸다가
-           다시 1 로 가며 영상이 멈췄다 켜졌다(26.9.15 시뮬 기록 early 1 → early 0 → early 1). 도착 장은 여기서 한 번만 정한다. */
-        GLIDE_TO = to;
-        clearTimeout(glideT);
-        glideT = setTimeout(() => { if (GLIDE_TO === to) { GLIDE_TO = -1; onScrollSettle(); } }, 800);   // 딱 안 닿아도 확정
-        try { track.scrollTo({ top: to * H, behavior: "smooth" }); } catch (_) { track.scrollTop = to * H; }
-        commitEarly(to);
-      }
-      t = setTimeout(onScrollSettle, 120);   // 딱 칸에 맞춰 떼면 스크롤 이벤트가 더 안 온다
+      clearTimeout(t); t = setTimeout(onScrollSettle, 120);   // 딱 칸에 맞춰 떼면 스크롤 이벤트가 더 안 온다
     };
     track.addEventListener("touchend", up, { passive: true });
     track.addEventListener("touchcancel", up, { passive: true });
     track.addEventListener("scroll", () => {
       clearTimeout(t);
-      if (FINGER_DOWN) {   // 손 뗄 때 쓸 속도(px/ms) — 최근 움직임에 무게
-        const now = performance.now(), y = track.scrollTop, dt = now - lastT;
-        if (dt > 0) vel = 0.5 * vel + 0.5 * ((y - lastY) / dt);
-        lastY = y; lastT = now;
-      }
       const H = VIEWPORT_H;
-      if (!FINGER_DOWN && H && GLIDE_TO >= 0) {
-        if (Math.abs(track.scrollTop - GLIDE_TO * H) <= 1) { GLIDE_TO = -1; onScrollSettle(); }
-        return;
-      }
       if (!FINGER_DOWN && H) {
         const st = track.scrollTop, k = Math.round(st / H);
         commitEarly(k);                                          // 손 뗀 뒤 반 넘게 들어온 장 → 지금 튼다
@@ -1361,6 +1346,7 @@ function shortsNavHide(on) {
 
 function closeShorts() {
   shortsNavHide(false);
+  requestNativePaging(false);
   // 이어보기(역방향): 현재 릴스 재생 위치를 인덱스 인라인 영상에 반영
   try {
     const cur = curVideo();
@@ -1511,6 +1497,7 @@ function closeCommentModal() {
   setTimeout(() => {
     modal.classList.remove("visible");
     document.body.classList.remove("comment-open");
+    requestNativePaging();   // 댓글 동안 overflow:hidden → 웹킷이 스크롤뷰를 새로 만들 수 있다
     window.__COMMENT_OPEN__ = false;
     window.__COMMENT_STATE__ = "closed";
 
