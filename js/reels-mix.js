@@ -153,8 +153,8 @@
     // ⋯ 관리(수정·삭제) — 공용 owner-actions
     const moreBtn = el.querySelector('.grl-more');
     if (moreBtn && window.GALLA_canManage) {
-      window.GALLA_canManage(x.user_id).then((can) => {
-        if (!can) return;
+      window.GALLA_canManage(x.user_id).then(() => {
+        // 남의 글이어도 ⋯ 를 띄운다 — owner-actions 가 신고·계정 차단 시트로 분기(App Store 1.2)
         moreBtn.hidden = false;
         moreBtn.addEventListener('click', () => window.GALLA_openOwnerMenu({
           table: 'posts', id: x.id, ownerId: x.user_id, label: '숏판',

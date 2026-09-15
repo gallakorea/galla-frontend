@@ -1498,7 +1498,9 @@ function avatarHTML(c, size) {
 // ⋯ 액션 시트: 일기토 신청 / 신고 / 차단 (자체 스타일)
 function openCommentMoreMenu({ uid, nick, cid }) {
   const meId = ME?.userId || null;
-  const isOther = uid && uid !== meId;
+  // 유령 댓글은 작성자 id 가 비어 있다("null" 문자열로 올 수 있음) — 신고만 되고 일기토·차단은 대상이 없다
+  const realUid = uid && uid !== "null" && uid !== "undefined" ? uid : null;
+  const isOther = !realUid || realUid !== meId;
   $id("cmm-sheet")?.remove();
   const sheet = document.createElement("div");
   sheet.id = "cmm-sheet";
@@ -1507,9 +1509,9 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   sheet.innerHTML = `
     <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
     <div style="position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;padding:8px 0 max(8px,env(safe-area-inset-bottom));animation:cmmUp .22s ease">
-      ${isOther ? opt("⚔️", `<b style="color:#c9d1e0">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
+      ${isOther && realUid ? opt("⚔️", `<b style="color:#c9d1e0">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
       ${isOther ? opt("🚨", "신고", "report") : ""}
-      ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("✏️", "댓글 수정", "edit")}
+      ${isOther ? (realUid ? opt("🚫", "이 사용자 차단", "block") : "") : opt("✏️", "댓글 수정", "edit")}
       ${isOther ? "" : opt("✨", "하이라이트 (800GP · 24h)", "hl")}
       ${isOther ? "" : opt("🗑️", "댓글 삭제", "del")}
       ${opt("🔗", "이 댓글 공유", "share")}
@@ -1530,11 +1532,16 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   });
   const goReport = () => {
     close();
-    if (window.GALLA_openReportMenu) window.GALLA_openReportMenu({ contentType: "comment", contentId: cid, authorId: uid, authorName: nick });
+    if (window.GALLA_reportContent) window.GALLA_reportContent({ contentType: "comment", contentId: cid, authorId: realUid, authorName: nick });
+    else if (window.GALLA_openReportMenu) window.GALLA_openReportMenu({ contentType: "comment", contentId: cid, authorId: realUid, authorName: nick });
     else alert("신고 기능을 불러오지 못했어요.");
   };
   sheet.querySelector(".report")?.addEventListener("click", goReport);
-  sheet.querySelector(".block")?.addEventListener("click", goReport);
+  sheet.querySelector(".block")?.addEventListener("click", () => {
+    close();
+    (window.GALLA_blockUser || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: cid, authorId: realUid, authorName: nick,
+      onBlocked: () => { $q(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.remove(); } });
+  });
   // 🔗 댓글·대댓글 공유 — 인용 카드(/share/comment/issue/<cid>) + 자동 초대링크
   sheet.querySelector(".share")?.addEventListener("click", () => {
     close();

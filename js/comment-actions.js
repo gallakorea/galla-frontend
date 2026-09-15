@@ -100,9 +100,11 @@
 
   window.GALLA_cmtDelete = async function ({ table, id, soft, onDone }) {
     if (!confirm("이 댓글을 삭제할까요?")) return;
-    let error;
-    if (soft) ({ error } = await sb().from(table).update({ status: "deleted" }).eq("id", id));
-    else ({ error } = await sb().from(table).delete().eq("id", id));
+    /* count 로 실제 바뀐 행을 센다 — 권한(RLS) 밖이면 에러 없이 0행이라, 예전엔 안 지워졌는데 「삭제했어요」가 떴다 */
+    let error, count;
+    if (soft) ({ error, count } = await sb().from(table).update({ status: "deleted" }, { count: "exact" }).eq("id", id));
+    else ({ error, count } = await sb().from(table).delete({ count: "exact" }).eq("id", id));
+    if (!error && !count) { alert("삭제하지 못했어요 — 내 댓글만 지울 수 있어요."); return; }
     if (error) {
       // 🔒 격파당한 참전 댓글은 삭제 불가 — 삭제로 재참전 잠금을 우회하는 악용 차단
       if (String(error.message || "").includes("ko_comment_no_delete")) {
@@ -139,6 +141,8 @@
       rows.push(`<button class="opt danger" data-a="del">🗑️ 삭제</button>`);
     } else {
       rows.push(`<button class="opt" data-a="report">🚨 신고</button>`);
+      // 차단 — App Store 1.2(사용자 콘텐츠엔 신고+차단). 작성자 id 가 있어야 막을 수 있다
+      if (opts.uid && opts.uid !== "null" && opts.uid !== "undefined") rows.push(`<button class="opt danger" data-a="block">🚫 이 사용자 차단</button>`);
     }
     rows.push(`<button class="opt" data-a="share">🔗 이 댓글 공유</button>`);
     sheet.innerHTML = `<div class="dim"></div><div class="card">${rows.join("")}<button class="cancel">닫기</button></div>`;
@@ -150,7 +154,8 @@
       const a = b.dataset.a; close();
       if (a === "edit") GALLA_cmtEdit({ table: opts.table, id: opts.id, bodyCol: opts.bodyCol, current: opts.current, onSaved: opts.onEdited });
       else if (a === "del") GALLA_cmtDelete({ table: opts.table, id: opts.id, soft: opts.soft, onDone: opts.onDeleted });
-      else if (a === "report") window.GALLA_openReportMenu?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid });
+      else if (a === "report") (window.GALLA_reportContent || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid });
+      else if (a === "block") (window.GALLA_blockUser || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid, onBlocked: opts.onDeleted });
       else if (a === "share") cmtShare(opts);
     });
   };

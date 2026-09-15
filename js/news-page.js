@@ -259,7 +259,7 @@
     const cmt = (c, isReply, topId) => {
       const liked = myLikes.has(c.id);
       const mine = c.user_id && ME && c.user_id === ME.id;
-      const cmtMenu = mine
+      const cmtMenu = c.id   // 모든 댓글에 ⋯ — comment-actions 가 내 것=수정·삭제, 남의 것=신고·차단(유령은 신고만)
         ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="galla_news_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`
         : "";
       // 👻 유령 댓글: 고정 페르소나 이름·아바타, 프로필 이동 차단(ghost.js)

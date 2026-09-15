@@ -190,4 +190,7 @@
   };
 
   window.GALLA_openReportMenu = openMenu;
+  /* 메뉴를 거치지 않고 바로 — 다른 ⋯ 시트가 「신고」「이 사용자 차단」을 따로 보여줄 때 쓴다 */
+  window.GALLA_reportContent = openReport;
+  window.GALLA_blockUser = confirmBlock;
 })();

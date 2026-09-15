@@ -107,8 +107,8 @@ async function loadMarket(){
   const moreBtn=$('header-more-btn');
   if(moreBtn && window.GALLA_canManage){
     moreBtn.style.display='none';
-    window.GALLA_canManage(m.created_by).then(can=>{
-      if(!can) return;
+    window.GALLA_canManage(m.created_by).then(()=>{
+      // 남의 글이어도 ⋯ 를 띄운다 — owner-actions 가 신고·계정 차단 시트로 분기(App Store 1.2)
       moreBtn.style.display='';
       moreBtn.onclick=()=>window.GALLA_openOwnerMenu({
         table:'markets', id:m.id, ownerId:m.created_by, label:'예측',
@@ -606,7 +606,7 @@ function renderComments(body){
     const borderStyle=multi?` style="border-left-color:${c.outcome_id?ocColor(c.outcome_id):'#8b8b93'}"`:'';
     const roleBadge=isHolder?`<span class="pmd-cmt-role holder">💰 참여자</span>`:`<span class="pmd-cmt-role watch">👁 관전</span>`;
     const mine=c.user_id&&ME&&c.user_id===ME.id;
-    const cmtMenu=mine?`<button class="cmt-mini" data-cmt-menu data-cmt-table="market_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`:'';
+    const cmtMenu=c.id?`<button class="cmt-mini" data-cmt-menu data-cmt-table="market_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`:'';
     // 👻 유령 댓글: 고정 페르소나 (프로필 불연결)
     const gh = c.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed) : null;
     const nameHtml = gh

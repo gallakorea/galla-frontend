@@ -55,8 +55,8 @@
     // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
     const moreBtn = document.getElementById('glp-more');
     if (moreBtn && window.GALLA_canManage) {
-      window.GALLA_canManage(post.user_id).then((can) => {
-        if (!can) return;
+      window.GALLA_canManage(post.user_id).then(() => {
+        // 남의 글이어도 ⋯ 를 띄운다 — owner-actions 가 신고·계정 차단 시트로 분기(App Store 1.2)
         moreBtn.hidden = false;
         moreBtn.onclick = () => window.GALLA_openOwnerMenu({
           table: 'posts', id: post.id, ownerId: post.user_id, label: post.kind === 'horizontal' ? '롱판' : '숏판',

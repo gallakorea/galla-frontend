@@ -228,8 +228,8 @@ async function fetchPostDetail() {
   if (moreBtn) {
     moreBtn.style.display = "none";
     if (window.GALLA_canManage) {
-      window.GALLA_canManage(data.user_id).then((can) => {
-        if (!can) return;
+      window.GALLA_canManage(data.user_id).then(() => {
+        // 남의 글이어도 ⋯ 를 띄운다 — owner-actions 가 신고·계정 차단 시트로 분기(App Store 1.2)
         moreBtn.style.display = "";
         moreBtn.onclick = () =>
           window.GALLA_openOwnerMenu({
@@ -325,7 +325,7 @@ function commentVoteHtml(c) {
 function commentHeaderHtml(c) {
   // ⋯ 메뉴는 항상 노출 — comment-actions가 내 것/관리자엔 수정·삭제, 남의 것엔 신고를 자동 분기.
   //   (예전엔 '내 댓글'에만 떠서 광장엔 수정·삭제 진입이 없던 문제 — 사장님 제보)
-  const menu = c.user_id
+  const menu = c.id   // 유령 댓글(작성자 비공개)에도 ⋯ — 신고는 되고 차단만 빠진다
     ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="plaza_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="body" aria-label="더보기">⋯</button>`
     : "";
   let nick;

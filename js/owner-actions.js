@@ -88,7 +88,17 @@
   async function openMenu(cfg) {
     const me = await getMe();
     const canManage = me.uid && (me.uid === cfg.ownerId || me.admin);
-    if (!canManage) return false; // 소유자/관리자 아님 → 메뉴 없음(호출측이 기존 동작 유지)
+    /* 소유자/관리자 아님 → 신고·계정 차단 시트. 예전엔 false 만 돌려주고 호출측 대부분이 ⋯ 를 숨겨,
+       남의 글에 신고·차단할 길이 없었다(26.9.15, App Store 1.2). */
+    if (!canManage) {
+      if (!window.GALLA_openReportMenu) return false;
+      const CT = { issues: 'issue', posts: 'post', plaza_posts: 'plaza', markets: 'market' };
+      window.GALLA_openReportMenu({
+        contentType: CT[cfg.table] || cfg.table, contentId: cfg.id, authorId: cfg.ownerId || null,
+        authorName: cfg.authorName, onBlocked: cfg.onBlocked || cfg.onDeleted,
+      });
+      return true;
+    }
 
     const ov = overlay();
     const sheet = el('div', 'oa-sheet');

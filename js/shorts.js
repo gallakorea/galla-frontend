@@ -364,6 +364,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
     .sc-nick.con{ color:#ff6b6b; }
     .sc-lv{ font-size:11px; color:#f5c518; }
     .sc-time{ font-size:11px; color:#666; }
+    .sc-more{ margin-left:auto; align-self:center; background:none; border:none; color:#8a8f9a; font-size:18px; line-height:1; padding:2px 8px; cursor:pointer; }
     .sc-body{ font-size:14px; line-height:1.5; color:#eee; word-break:break-word; }
     .sc-acts{ display:flex; align-items:center; gap:10px; margin-top:6px; }
     .sc-like{
@@ -1770,6 +1771,8 @@ async function loadShortsComments() {
   // 로딩 중 스크롤로 이슈가 바뀌었으면 무시
   if (SC.issueId !== window.__CURRENT_SHORT_ISSUE_ID__) return;
   SC.rows = rows || [];
+  // 🚫 차단한 사람 댓글은 안 보인다 — 차단 안내가 약속한 것(report-block.js)
+  if (window.GALLA_filterBlocked) SC.rows = await window.GALLA_filterBlocked(SC.rows, "user_id");
 
   // 전황 요약 갱신
   const pro = issue?.pro_count || 0, con = issue?.con_count || 0;
@@ -1853,6 +1856,7 @@ function renderShortsComments() {
           <b class="sc-nick ${c.faction === "pro" ? "pro" : "con"}">${scEsc(scNick(c))}</b>
           ${scLevel(c)}
           <span class="sc-time">${scTimeAgo(c.created_at)}</span>
+          <button class="sc-more" data-cid="${c.id}" aria-label="더보기">⋯</button>
         </div>
         <div class="sc-body">${scEsc(c.content)}</div>
         <div class="sc-acts">
@@ -1889,6 +1893,32 @@ document.addEventListener("click", async e => {
     const cid = Number(tg.dataset.cid);
     if (SC.expanded.has(cid)) SC.expanded.delete(cid); else SC.expanded.add(cid);
     renderShortsComments();
+    return;
+  }
+
+  /* ⋯ — 내 댓글이면 삭제, 남의 댓글이면 신고·이 사용자 차단.
+     예전엔 릴스 댓글에 ⋯ 자체가 없어 앱에서 신고·차단할 길이 없었다(26.9.15 사장님 심사 녹화 중 발견, App Store 1.2). */
+  const moreBtn = e.target.closest("#shortsCommentModal .sc-more");
+  if (moreBtn) {
+    const cid = Number(moreBtn.dataset.cid);
+    const row = SC.rows.find(r => r.id === cid);
+    if (!row) return;
+    if (!SC.myId) { showShortsLoginPopup("로그인 후 이용할 수 있어요"); return; }
+    if (row.user_id && row.user_id === SC.myId) {
+      if (!confirm("이 댓글을 삭제할까요?")) return;
+      const { count, error } = await supabase.from("comments").update({ status: "deleted" }, { count: "exact" }).eq("id", cid);
+      if (error || !count) { alert("삭제하지 못했어요" + (error?.message ? ": " + error.message : "")); return; }
+      SC.rows = SC.rows.filter(r => r.id !== cid && r.parent_id !== cid);
+      renderShortsComments();
+      window.GALLA_toast?.("🗑️ 댓글을 삭제했어요");
+      return;
+    }
+    if (window.GALLA_openReportMenu) {
+      window.GALLA_openReportMenu({
+        contentType: "comment", contentId: cid, authorId: row.user_id || null, authorName: scNick(row),
+        onBlocked: () => { SC.rows = SC.rows.filter(r => r.user_id !== row.user_id); renderShortsComments(); },
+      });
+    }
     return;
   }
 
