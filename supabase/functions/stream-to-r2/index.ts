@@ -179,6 +179,12 @@ serve(async (req) => {
         thumb = `${R2_PUBLIC_URL}/${prefix}/thumbnail.jpg`;
       }
     } catch { /* 썸네일 실패가 영상 이관을 막지는 않는다 */ }
+    /* 🎞 릴스용 0초 장면(poster.jpg) — 재생기가 준비되기 전에 검은 화면 대신 보인다(shorts.js posterOf).
+       1초 썸네일과 달리 영상 첫 장면 그 자체라 재생기가 떠도 그림이 바뀌지 않는다(26.9.15). */
+    try {
+      const pRes = await fetch(`https://${CF_SUBDOMAIN}/${uid}/thumbnails/thumbnail.jpg?time=0s&height=852`);
+      if (pRes.ok) await putR2(`${prefix}/poster.jpg`, await pRes.arrayBuffer(), "image/jpeg", true);
+    } catch { /* 없어도 릴스는 그림 없이 재생된다 */ }
 
     return json({
       ok: true, uid, files: files.length, bytes,
