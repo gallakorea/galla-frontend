@@ -65,16 +65,18 @@ const SWIPE_THRESHOLD = 70;
 const CLOSE_THRESHOLD_X = 120;
 
 function getViewportHeight() {
-  return window.visualViewport
-    ? window.visualViewport.height
-    : window.innerHeight;
+  /* 정수로, 가능하면 트랙 실제 높이로 — visualViewport.height 는 851.33 같은 소수라 장 높이·재생기 top·
+     스냅 자리가 1~3px 씩 어긋나, 멈춘 뒤 다시 맞추느라 한 번 더 움찔했다(26.9.15 폰 기록 849 → 852). */
+  const el = track || overlay;
+  const h = el && el.clientHeight ? el.clientHeight : (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  return Math.round(h);
 }
 
 let VIEWPORT_H = getViewportHeight();
 
 function updateViewportHeight() {
   const h = getViewportHeight();
-  if (!h) return;
+  if (!h || h === VIEWPORT_H) return;   // 같은 높이면 손대지 않는다 — scrollTop 을 다시 넣으면 폰이 또 스냅했다
   VIEWPORT_H = h;
 
   if (track) {
@@ -82,7 +84,7 @@ function updateViewportHeight() {
        키보드로 높이가 한 번 바뀌면 칸마다 오차가 쌓여 **두 장 사이 반쯤에 걸린 화면**이 됐다(2026-09-14 사장님 캡처). */
     track.querySelectorAll("section.short").forEach(sec => { sec.style.height = `${h}px`; });
     if (POOL) POOL.forEach(p => { if (p.__idx >= 0) { p.style.top = `${p.__idx * h}px`; p.style.height = `${h}px`; } });
-    track.scrollTop = currentIndex * VIEWPORT_H;   // 네이티브 스크롤 — 지금 장 자리로 다시 맞춘다
+    if (!FINGER_DOWN) track.scrollTop = currentIndex * VIEWPORT_H;   // 네이티브 스크롤 — 지금 장 자리로 다시 맞춘다
   }
 }
 window.addEventListener("resize", updateViewportHeight);
@@ -491,6 +493,8 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
   bindKeyboard();
 
   moveToIndex(currentIndex, true, 0, true);
+  // 오버레이가 보인 뒤 트랙 실제 높이로 한 번 맞춘다(열 때 계산한 높이는 소수·주소창 차이가 있다)
+  requestAnimationFrame(() => { if (track && track.clientHeight) updateViewportHeight(); });
 
   document.body.style.overflow = "hidden";
 
@@ -713,7 +717,7 @@ function placePlayer(p, i) {
   p.style.height = `${VIEWPORT_H}px`;
   if (p.__idx !== i || !p._hlsUrl) {
     releaseVideo(p);
-    p.__idx = i; p.__sig = 0; p.__primed = -1;
+    p.__idx = i; p.__sig = 0; p.__primed = -1; p.__priming = -1;
     p.preload = "auto";
     /* 재생기에는 poster 를 달지 않는다(썸네일도 깔지 않는다 — 영상과 구도가 달라 번쩍였다).
        대기 중인 다음 장은 primeFirstFrame 이 첫 장면을 미리 그려 둔다. */
@@ -723,37 +727,58 @@ function placePlayer(p, i) {
   }
 }
 let LAST_SNAP_MS = 0;
-/* 지금 장 뒤로 (재생기 수-1)장을 미리 받아 첫 장면을 그려 둔다. 떠나는 재생기는 멈추기만 하고
+let LAST_DIR = 1;          // 마지막으로 넘긴 방향(+1 앞, -1 뒤) — 미리 받을 장을 고른다
+let FINGER_DOWN = false;   // 손가락이 트랙에 닿아 있는 동안은 장을 확정하지 않는다
+let EARLY = -1;            // 손 뗀 뒤 멈추기 전에 미리 재생을 시작한 장
+/* 미리 받아 둘 장 — 앞으로 넘기는 중이면 다음 두 장, 뒤로 넘기는 중이면 앞뒤 한 장씩.
+   (재생기가 3개라 i-1 과 i+2 는 같은 재생기다. 뒤로 가던 사람이 또 뒤로 가면 바로 나오게) */
+function aheadWanted() {
+  const i = currentIndex;
+  return LAST_DIR < 0 ? [i - 1, i + 1] : [i + 1, i + 2];
+}
+/* 지금 장 말고 나머지 재생기에 미리 받을 장을 채운다. 떠나는 재생기는 멈추기만 하고
    deferMs 뒤에 자리를 옮긴다(넘기는 동작 중에 옮기면 그 장이 번쩍였다). */
 function fillAhead(deferMs) {
-  const P = pool(), N = P.length;
-  for (let k = 1; k < N; k++) {
-    const want = currentIndex + k, p = P[want % N];
-    clearTimeout(p.__deferT);
+  const P = pool(), N = P.length, cur = P[currentIndex % N];
+  const wanted = aheadWanted().filter(w => w >= 0 && w < shortsList.length);
+  P.forEach(p => {
+    if (p === cur) return;
+    if (p.__priming === p.__idx && wanted.includes(p.__idx)) return;   // 첫 장면 그리는 중 — 끊지 않는다
     try { p.pause(); } catch (_) {}
-    if (want >= shortsList.length) continue;
-    if (p.__idx === want) { primeFirstFrame(p); continue; }
+  });
+  wanted.forEach(want => {
+    const p = P[want % N];
+    if (p === cur) return;
+    clearTimeout(p.__deferT);
+    if (p.__idx === want) { primeFirstFrame(p); return; }
     const go = () => {
-      if (!track || want <= currentIndex || want >= currentIndex + N) return;   // 그 사이 또 넘겼다
+      if (!track || !aheadWanted().includes(want)) return;   // 그 사이 또 넘겼다
       placePlayer(p, want);
       primeFirstFrame(p);
     };
     if (deferMs > 0) p.__deferT = setTimeout(go, deferMs); else go();
-  }
+  });
 }
-/* 대기 중인 다음 장 재생기에 첫 장면을 그려 둔다 — 소리 끈 채 잠깐 재생했다 멈춘다(아이폰은 멈춘 채로는
-   첫 장면을 안 그려, 도착하는 순간 영상이 튀어나왔다). 그 사이 지금 장이 되면 그대로 재생을 이어간다. */
+/* 대기 중인 장 재생기에 첫 장면을 그려 둔다 — 소리 끈 채 잠깐 재생했다 멈춘다(아이폰은 멈춘 채로는
+   첫 장면을 안 그려, 도착하는 순간 영상이 튀어나왔다). 그 사이 지금 장이 되면 그대로 재생을 이어간다.
+   ⚠️ '그렸다' 표시는 실제로 장면이 준비된 뒤에만 한다 — 중간에 멈추면 다음 호출이 다시 시도한다. */
 function primeFirstFrame(v) {
-  if (!v || v.__primed === v.__idx) return;
+  if (!v || v.__idx < 0 || v.__primed === v.__idx || v.__priming === v.__idx) return;
   const idx = v.__idx;
-  v.__primed = idx;
+  v.__priming = idx;
+  const done = () => {
+    if (v.__idx !== idx) return;
+    v.__priming = -1;
+    if (v.readyState >= 2) v.__primed = idx;
+    if (idx !== currentIndex) { try { v.pause(); } catch (_) {} }
+  };
   try {
     v.muted = true;
     const pr = v.play();
-    const stop = () => { if (v.__idx === idx && idx !== currentIndex) { try { v.pause(); } catch (_) {} } };
-    if (pr && pr.then) pr.then(() => { if (v.readyState >= 2) stop(); else v.addEventListener("loadeddata", stop, { once: true }); }).catch(() => {});
-    else stop();
-  } catch (_) {}
+    if (pr && pr.then) pr.then(() => { if (v.readyState >= 2) done(); else v.addEventListener("loadeddata", done, { once: true }); })
+      .catch(() => { if (v.__idx === idx) v.__priming = -1; });
+    else done();
+  } catch (_) { v.__priming = -1; }
 }
 
 /* 지금 장의 영상(재생기). 없으면 null. */
@@ -802,17 +827,32 @@ function moveToIndex(idx, instant = false, dur = 0, force = false) {
 /* 스크롤이 멈춘 자리 = 지금 장. 끄는 동안·관성 중에는 아무것도 안 한다(무거운 일은 멈춘 뒤). */
 function settleTo(idx, force) {
   idx = Math.max(0, Math.min(shortsList.length - 1, idx));
+  const early = EARLY === idx; EARLY = -1;
   const changed = force || idx !== currentIndex;
+  if (idx !== currentIndex) LAST_DIR = idx > currentIndex ? 1 : -1;
   currentIndex = idx;
   window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null
-  if (!changed) return;
+  if (!changed && !early) return;
   LAST_SNAP_MS = 0;          // 이미 멈춘 뒤라 떠나는 재생기는 화면 밖 — 곧바로 돌려도 된다
-  playOnlyCurrent();
+  if (changed) playOnlyCurrent();
+  else { const cv = curVideo(); if (!cv || cv.readyState >= 3) fillAhead(80); }   // 재생은 이미 시작됨 — 떠난 재생기만 이제 돌린다
   updateShortsVoteBar();
 }
 function onScrollSettle() {
   if (!track || !VIEWPORT_H) return;
+  if (FINGER_DOWN) return;   // 끄는 중 잠깐 멈춘 것 — 손 뗄 때까지 장을 바꾸지 않는다
   settleTo(Math.round(track.scrollTop / VIEWPORT_H));
+}
+/* 손을 뗀 뒤 도착할 장이 반 넘게 들어오면 그 장 영상을 곧바로 튼다 — 멈춘 뒤에 틀면 「올라가다 멈추고
+   그다음에 영상이 뜬다」(26.9.15 사장님). 떠나는 재생기는 멈추기만 하고, 자리 옮기기·진영바는 멈춘 뒤. */
+function commitEarly(k) {
+  if (EARLY === k || k === currentIndex || k < 0 || k >= shortsList.length) return;
+  EARLY = k;
+  LAST_DIR = k > currentIndex ? 1 : -1;
+  LAST_SNAP_MS = 900;        // 아직 움직이는 중 — 떠나는 장 재생기는 멈춘 뒤(settleTo)에 돌린다
+  currentIndex = k;
+  window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[k]);
+  playOnlyCurrent();
 }
 
 function playOnlyCurrent() {
@@ -839,7 +879,17 @@ function playOnlyCurrent() {
   const cur = P[currentIndex % P.length];
   clearTimeout(cur.__deferT);
   placePlayer(cur, currentIndex);
-  fillAhead((LAST_SNAP_MS || 0) + 80);
+  /* 지금 장이 아직 안 받아졌으면(첫 열기·뒤로 넘기기) 이웃 장은 지금 장이 재생된 뒤 받는다 — 셋이 동시에
+     받으면 대역폭을 나눠 첫 재생이 2초 걸렸다(26.9.15 폰 기록 1794ms, 셋 다 ▶). */
+  if (cur.readyState >= 3) fillAhead((LAST_SNAP_MS || 0) + 80);
+  else {
+    const mine = currentIndex;
+    P.forEach(p => { if (p !== cur) { clearTimeout(p.__deferT); try { p.pause(); } catch (_) {} } });
+    let fired = false;
+    const go = () => { if (fired) return; fired = true; clearTimeout(cur.__aheadT); cur.removeEventListener("playing", go); if (mine === currentIndex && track) fillAhead((LAST_SNAP_MS || 0) + 80); };
+    cur.addEventListener("playing", go, { once: true });
+    clearTimeout(cur.__aheadT); cur.__aheadT = setTimeout(go, 1500);
+  }
   [cur].forEach((v) => {
     const i = currentIndex;
     if (i === currentIndex) {
@@ -918,7 +968,20 @@ function bindGestures() {
   if (track && !track.__scrollBound) {
     track.__scrollBound = true;
     let t = 0;
-    track.addEventListener("scroll", () => { clearTimeout(t); t = setTimeout(onScrollSettle, 90); }, { passive: true });
+    track.addEventListener("touchstart", () => { FINGER_DOWN = true; }, { passive: true });
+    const up = () => { FINGER_DOWN = false; clearTimeout(t); t = setTimeout(onScrollSettle, 120); };   // 딱 칸에 맞춰 떼면 스크롤 이벤트가 더 안 온다
+    track.addEventListener("touchend", up, { passive: true });
+    track.addEventListener("touchcancel", up, { passive: true });
+    track.addEventListener("scroll", () => {
+      clearTimeout(t);
+      const H = VIEWPORT_H;
+      if (!FINGER_DOWN && H) {
+        const st = track.scrollTop, k = Math.round(st / H);
+        commitEarly(k);                                          // 손 뗀 뒤 반 넘게 들어온 장 → 지금 튼다
+        if (Math.abs(st - k * H) <= 1) { onScrollSettle(); return; }   // 칸에 닿은 순간 확정(scrollend 기다리지 않음)
+      }
+      t = setTimeout(onScrollSettle, 90);
+    }, { passive: true });
     if ("onscrollend" in window) track.addEventListener("scrollend", () => { clearTimeout(t); onScrollSettle(); });
   }
   if (overlay.__gestures) return; overlay.__gestures = true;
