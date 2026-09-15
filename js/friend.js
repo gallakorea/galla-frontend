@@ -1919,6 +1919,14 @@
     open();
     var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content", id=(ctx&&ctx.id)||"";
     var jwt=await token();
+    if(!jwt && title){
+      /* 비로그인: 서버 오프너는 못 부르지만 누른 콘텐츠 얘기인 건 보여 준다. 예전엔 기본 인사만 떠서
+         '이 주제를 갈비스에 넘기는 버튼'이 아무 일도 안 한 것처럼 보였다(26.9.15 릴스 QA, 시뮬 비로그인).
+         기본 인사가 뒤늦게 겹치지 않게 억제는 잠깐 더 유지한다. */
+      addMsg("a", "「"+title.slice(0,40)+"」 얘기 나랑 해볼까? 로그인하면 이 얘기 바로 이어서 할 수 있어!");
+      setTimeout(function(){ window.__frSuppressGreet=false; }, 2000);
+      return;
+    }
     if(!jwt || (!title && !id)){ window.__frSuppressGreet=false; if(!logEl.children.length) greet(); return; }
     typing(true);
     // 🎯 서버가 {type,id}로 실제 콘텐츠(찬반수·요약·본문)를 읽어 근거 오프너를 낸다 — 클라는 제목만 넘기던 것 폐지.
