@@ -564,3 +564,6 @@ body.comment-open #shortsOverlay{
   overflow:hidden;
   touch-action:none;
 }
+
+/* 공용 로그인 창(GALLA_needLogin)은 릴스·댓글 시트(z 20000) 위에 떠야 한다 — 가려지면 「등록」이 무반응처럼 보인다 */
+body.shorts-open #galla-login-modal { z-index: 2147483000; }

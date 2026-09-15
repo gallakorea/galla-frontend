@@ -1341,9 +1341,23 @@ function updateShortsVoteBar() {
   }, true);   // ⚠️ capture:true — 버블 차단(stopPropagation)에도 영향받지 않는다
 })();
 
+/* 공용 로그인 창의 「로그인하기」를 릴스 위에서 누르면 릴스부터 닫는다 — 안 닫으면 로그인 화면이 릴스 밑에 깔린다.
+   공용 창 자체 핸들러(버블)보다 먼저 돌도록 capture. 숏판 장(reels-mix → GALLA_needLogin)도 여기로 온다. */
+(function () {
+  if (window.__reelsLoginCloseBound) return; window.__reelsLoginCloseBound = 1;
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest || !e.target.closest("#galla-login-modal .glm-go")) return;
+    if (document.getElementById("shortsOverlay")) { try { closeShortsSilently(); } catch (_) {} }
+  }, true);
+})();
+
 /* 🔐 릴스 위 로그인 팝업 — 자동 리다이렉트 대신 즉각 보이는 안내(사장님 확정).
    [로그인하기] = 릴스 닫고(영상 레이어 제거) 로그인으로 3중 이동. */
 function showShortsLoginPopup(msg) {
+  /* 로그인 안내창은 앱 공용 하나(GALLA_needLogin — 파란 「닫기 / 로그인하기」)로 통일(사장님 26.9.15).
+     예전엔 이슈 장은 이 빨간 「로그인하기 / 나중에」, 숏판 장은 공용 창이라 두 모양이 섞였다.
+     아래 옛 팝업은 공용 창이 없을 때(supabase.js 미로드)만 쓴다. */
+  if (typeof window.GALLA_needLogin === "function") { window.GALLA_needLogin(msg || "로그인 후 이용할 수 있어요"); return; }
   const host = document.body;   // ⚠️ 반드시 body — 오버레이 안이면 릴스 레이어에 가려질 수 있다
   if (document.getElementById("shortsLoginPop")) return;
   if (!document.getElementById("shortsLoginPopCss")) {
