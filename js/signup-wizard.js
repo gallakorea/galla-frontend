@@ -5,7 +5,8 @@
      (같은 ID의 입력을 쓰므로 검증·제출 로직 무손상)
    · 이 파일은 화면 전환만 담당: 진행바, 스텝 검증, Enter/칩 자동 진행
    ========================================================= */
-(function () {
+/* DOMContentLoaded 로 등록 — 앱(SPA)이 방문마다 다시 불러 새 화면에 연결한다 */
+document.addEventListener("DOMContentLoaded", function () {
   const track = document.getElementById("swTrack");
   if (!track) return;
   const steps = [...track.querySelectorAll(".sw-step")];
@@ -165,4 +166,4 @@
   });
 
   paint();
-})();
+});

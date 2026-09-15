@@ -8,7 +8,8 @@ async function waitForClient() {
     console.log("[signup.js] supabaseClient 준비됨");
 }
 
-(async () => {
+/* DOMContentLoaded 로 등록 — 앱(SPA)은 방문마다 이 핸들러를 다시 부른다(즉시 실행이면 재방문 때 새 화면에 안 붙음) */
+document.addEventListener("DOMContentLoaded", async () => {
     await waitForClient();
     const supabase = window.supabaseClient;
 
@@ -164,7 +165,7 @@ async function waitForClient() {
             console.error(err);
         }
     });
-})();
+});
 
 /* Supabase Auth 영문 에러 → 한글. 매칭 안 되면 원문을 그대로 돌려준다. */
 function signupErrorKo(msg) {
