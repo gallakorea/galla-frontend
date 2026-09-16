@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
   }
 
   /* 검색 모드 — 프로그램 이름으로 후보 채널을 찾는다.
-     ⚠️ search.list 는 100유닛이라(playlistItems 의 100배) 남발하면 안 된다. 프로그램당 1회.
+     ⚠️ search.list 는 하루 100회 한도(별도 통)이라(playlistItems 의 100배) 남발하면 안 된다. 프로그램당 1회.
         그리고 결과의 videoCount 는 search 가 안 주므로 channels.list 로 한 번 더 받는다(1유닛). */
   const q = url.searchParams.get("search");
   if (q) {

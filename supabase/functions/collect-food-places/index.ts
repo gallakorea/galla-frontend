@@ -4,7 +4,7 @@
 //    맛집 지도 서비스들도 결국 이 영상들을 보고 손으로 옮겨 적은 것이다 — 그 과정을 자동화한다.
 //
 // 💰 유튜브 쿼터가 이 함수의 진짜 제약이다 (일 10,000유닛).
-//    · search.list        = 100유닛 → 채널 ID 확정에 **딱 한 번**만 쓰고 DB에 캐시한다.
+//    · search.list        = 하루 100회 한도(별도 통) → 채널 ID 확정에 **딱 한 번**만 쓰고 DB에 캐시한다.
 //    · playlistItems.list =   1유닛 → 이후 새 영상은 업로드 플레이리스트로 훑는다(50편/1유닛).
 //    채널 10개를 매일 돌려도 첫날 1,000유닛, 이후 하루 20유닛 남짓이다.
 //
@@ -139,7 +139,7 @@ async function ytGet(path: string, params: Record<string, string>) {
   return await r.json();
 }
 
-/* 채널 ID 확정 — 100유닛짜리라 한 번만 부르고 DB에 박는다.
+/* 채널 ID 확정 — 하루 100회 한도라 한 번만 부르고 DB에 박는다.
    ⚠️ 손으로 UC... 를 적어 넣지 않는다. 틀린 채널을 긁어도 아무도 눈치채지 못한다.
 
    그런데 '한 번만'이 지켜지지 않았다. 미해소 채널을 매 실행 처음부터 다시 시도해서
@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
   const perCh = Number(url.searchParams.get("cap") || "50");
   const useComments = url.searchParams.get("comments") === "1";   // 50편 = 1유닛. 넓게 훑고 제목으로 거른다.
 
-  /* 해소 예산 — search.list 100유닛 × N. 기본 3개(300유닛)면 하루 쿼터를 해치지 않는다. */
+  /* 해소 예산 — search.list N회(하루 100회 한도). 기본 3개(300유닛)면 하루 쿼터를 해치지 않는다. */
   const budget = { left: Number(url.searchParams.get("resolve") || "3") };
 
   /* 🔴 엣지 함수는 유휴 150초에서 끊긴다(실측 2026-08-31: 57채널 한 바퀴 → IDLE_TIMEOUT 504).

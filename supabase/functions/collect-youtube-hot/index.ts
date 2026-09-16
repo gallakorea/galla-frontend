@@ -187,7 +187,7 @@ async function fetchChart(cat: string | null, max: number): Promise<any[]> {
 
 // 채널명/핸들 → 채널ID. 결과는 youtube_channels에 캐시해 재해석 안 함.
 //  · '@핸들'  → channels.list?forHandle (1유닛, 정확)
-//  · 그냥 이름 → search.list?type=channel (100유닛, 근접매칭)
+//  · 그냥 이름 → search.list?type=channel (하루 100회 한도(별도 통), 근접매칭)
 async function resolveChannelId(nameOrHandle: string): Promise<string | null> {
   if (nameOrHandle.startsWith("@")) {
     const u = new URL("https://www.googleapis.com/youtube/v3/channels");
@@ -315,9 +315,9 @@ Deno.serve(async (req) => {
     const { data: chans } = await supa.from("youtube_channels")
       .select("name,feed,channel_id,uploads_playlist,ok");
     const chanList = chans || [];
-    // (a) 미해석 채널 해석(런당 최대 12개 — 검색 100유닛이라 여러 런에 분산). 결과는 캐시.
+    // (a) 미해석 채널 해석(런당 최대 12개 — 검색이 하루 100회 한도라 여러 런에 분산). 결과는 캐시.
     // ⚡ 핸들(@)은 channels.list=1유닛이라 사실상 공짜 → 런당 상한을 넉넉히.
-    //    이름 검색은 search.list=100유닛이라 12개로 계속 분산(쿼터 보호).
+    //    이름 검색은 search.list 가 하루 100회 한도라 12개로 계속 분산(쿼터 보호).
     let handleNow = 0;
     for (const c of chanList) {
       if (c.uploads_playlist || c.ok === false) continue;

@@ -6,7 +6,7 @@
 // 💰 유튜브 쿼터가 이 함수의 진짜 제약이다(일 10,000유닛, 핫튜브·맛집이 이미 6~7천을 쓴다).
 //    · playlistItems.list = 1유닛 / 50편  ← 평상시 경로. 40채널을 매일 돌려도 100유닛 남짓.
 //    · channels.list?forHandle = 1유닛     ← 핸들을 아는 채널의 ID 해석
-//    · search.list = 100유닛               ← 이름만 아는 채널. **회차당 1개**로 묶는다.
+//    · search.list = 하루 100회 한도(별도 통)               ← 이름만 아는 채널. **회차당 1개**로 묶는다.
 //      (묶지 않으면 이름만 있는 채널 10개가 그날 쿼터 1,000유닛을 한 번에 먹는다)
 //
 // ⚠️ 크론에 Authorization/x-cron-secret 을 빼면 401 인데 pg_cron 이력엔 'succeeded' 로 남는다.
@@ -70,7 +70,7 @@ function sameChannelName(title: string, want: string) {
 }
 
 /* 채널 ID 해석 — 비용이 100배 차이 나는 두 길이 있다.
-     channels.list?forHandle = 1유닛 / search.list = 100유닛
+     channels.list?forHandle = 1유닛 / search.list = 하루 100회 한도(별도 통)
    💡 한국 크리에이터는 **한글 핸들이 채널명과 같은 경우가 많다**(@곽튜브, @서재로36).
       그래서 이름에서 핸들 후보를 만들어 1유닛짜리로 먼저 두드린다. 66채널을 전부
       search 로 뚫으면 6,600유닛 — 그날 핫튜브가 멈춘다.
@@ -128,7 +128,7 @@ async function resolveChannel(handle: string | null, name: string, allowSearch: 
      통째로 들어와 거기서 뽑힌 '장소'(멕시코시티 국제공항·해운대역)까지 데이터를 오염시켰다.
      검색은 이름만 보고 찾는 길이라 **핸들보다 더 엄격해야** 하는데 반대였다.
      → 후보를 여럿 받아 이름이 맞는 것만 고른다. 하나도 안 맞으면 붙이지 않는다
-       (100유닛 손해로 끝난다 — 엉뚱한 채널을 붙이는 값이 훨씬 비싸다). */
+       (검색 1회를 버리는 것으로 끝난다 — 엉뚱한 채널을 붙이는 값이 훨씬 비싸다). */
   const d: any = await ytGet("search",
     { part: "snippet", type: "channel", q: name, maxResults: "5" });
   for (const it of (d?.items || [])) {
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
   let full = url.searchParams.get("full") === "1";
   let pages = Math.min(Number(url.searchParams.get("pages") || (full ? "40" : "2")), full ? 90 : 6);
   let only = url.searchParams.get("channel") || "";
-  /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(100유닛). 0 이면 아예 안 한다. */
+  /* 이름만 아는 채널의 해석은 회차당 1개가 기본값이다(하루 100회 한도). 0 이면 아예 안 한다. */
   let searchBudget = Math.min(Number(url.searchParams.get("resolve") || "1"), 3);
 
   /* tags=1: 이미 가진 영상의 태그를 채운다(백필).
