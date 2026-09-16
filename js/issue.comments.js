@@ -2186,10 +2186,15 @@ function bindComposerEls() {
   const submitBtn = $id("battle-comment-submit");
   if (submitBtn && !submitBtn.__bound) {
     submitBtn.__bound = true;
-    submitBtn.addEventListener("click", async () => {
+    /* 🖱 누르는 순간(pointerdown) 처리한다. click 을 기다리면, 버튼을 누를 때 input 이 blur 되고
+       kb-open 이 풀리며 바가 위로 올라가 버려 mouseup 때 버튼이 그 자리에 없다 → click 자체가 안 난다
+       (26.9.16 사장님 제보 "두 번 눌러야 달린다"). preventDefault 로 포커스도 뺏지 않는다. */
+    const doSubmit = async () => {
       if (!requireLogin()) return;
       // 🔒 중복 제출 잠금 — 연타하면 같은 댓글이 여러 개 올라갔다(2026-08-08 QA: 3연타=3개 생성)
       if (submitBtn.__busy) return;
+      if (Date.now() - (submitBtn.__lastAt || 0) < 800) return;   // pointerdown 뒤 따라오는 click 무시
+      submitBtn.__lastAt = Date.now();
       submitBtn.__busy = true;
       submitBtn.disabled = true;
       const unlock = () => { submitBtn.__busy = false; submitBtn.disabled = false; };
@@ -2294,7 +2299,9 @@ function bindComposerEls() {
       renderWarDashboard();
       renderMorale();
       } finally { unlock(); }   // 🔒 중복 제출 잠금 해제(성공·실패·early return 모두)
-    });
+    };
+    submitBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); doSubmit(); });
+    submitBtn.addEventListener("click", doSubmit);   // 폴백(pointer 이벤트 미지원) — 위 시간 잠금이 중복을 막는다
   }
 }
 
@@ -2317,7 +2324,10 @@ function ensureInlineComposer() {
       <button type="button" id="ic-send" class="ic-send"></button>
     </div>`;
   box.querySelector(".ic-close").addEventListener("click", closeInlineComposer);
-  box.querySelector("#ic-send").addEventListener("click", submitInline);
+  /* 답글 전송도 같은 이유로 pointerdown 에서 — 누르는 순간 컴포저가 움직여 click 을 놓쳤다 */
+  const icSend = box.querySelector("#ic-send");
+  icSend.addEventListener("pointerdown", (e) => { e.preventDefault(); icSend.__lastAt = Date.now(); submitInline(); });
+  icSend.addEventListener("click", () => { if (Date.now() - (icSend.__lastAt || 0) < 800) return; submitInline(); });
   box.querySelector("#ic-input").addEventListener("keydown", e => {
     if (e.key === "Enter") submitInline();
     if (e.key === "Escape") closeInlineComposer();

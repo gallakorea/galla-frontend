@@ -499,12 +499,17 @@
 /* 모바일 키보드가 열렸을 때:
    - 하단 네비 숨김(키보드 위에 함께 떠서 겹치는 문제 제거)
    - 컴포저를 bottom:0으로 내려 키보드 바로 위에 붙임 */
-body.kb-open .nav {
-  display: none !important;   /* 플로팅 네비가 키보드 위로 떠 겹치는 것 확실히 차단(단독 모드) */
-}
-body.kb-open .battle-input-bar {
-  bottom: 0;
-  z-index: 10000; /* 키보드 위 */
+/* ⚠️ 마우스(데스크톱)에는 소프트 키보드가 없다. 그런데도 바를 58px 내렸다가 포커스가 빠질 때 도로 올리면,
+   「참전」을 누르는 순간 버튼이 위로 달아나 click 이 아예 나지 않는다 — 한 번 더 눌러야 달렸다
+   (26.9.16 사장님 제보, 실측 재현: 버튼 top 452 → 510 → 432). 터치 기기에서만 적용한다. */
+@media (pointer: coarse) {
+  body.kb-open .nav {
+    display: none !important;   /* 플로팅 네비가 키보드 위로 떠 겹치는 것 확실히 차단(단독 모드) */
+  }
+  body.kb-open .battle-input-bar {
+    bottom: 0;
+    z-index: 10000; /* 키보드 위 */
+  }
 }
 
 
