@@ -542,9 +542,24 @@ const social = {
     bookmarks: new Set(),   // 내가 북마크한 issue_id (문자열)
     postLikes: new Set(),   // 내가 좋아요한 post_id (숏판·롱판)
     postBookmarks: new Set(),
+    plazaVotes: {},             // 광장 글 추천/비추천 — post_id → 1 | -1 (업다운 구조라 Set 이 아니다)
+    plazaBookmarks: new Set(),
+    newsLikes: new Set(),       // 갈라뉴스(galla_news_reactions value=1)
+    newsBookmarks: new Set(),
     likes: new Set(),       // 내가 좋아요한 issue_id (문자열)
     loaded: false
 };
+
+/* 카드 종류별 좋아요·저장 테이블 — 아이콘 줄(footer-icons)은 이슈·숏판·광장·뉴스가 모두 같고
+   data-kind 로만 갈린다. id 는 이슈·숏판이 숫자, 광장·뉴스가 uuid 라 형 변환도 여기서 정한다. */
+const LIKE_TBL = { post: ['post_likes', 'post_id'], plaza: ['plaza_votes', 'post_id'], news: ['galla_news_reactions', 'news_id'], issue: ['issue_likes', 'issue_id'] };
+const MARK_TBL = { post: ['post_bookmarks', 'post_id'], plaza: ['plaza_bookmarks', 'post_id'], news: ['galla_news_bookmarks', 'news_id'], issue: ['bookmarks', 'issue_id'] };
+const LIKE_EXTRA = { plaza: { vote: 1 }, news: { value: 1 } };   // 찬반·반응 테이블은 값 칸이 따로 있다
+const kindOf = (el) => el.dataset.kind || 'issue';
+const idVal = (kind, id) => (kind === 'plaza' || kind === 'news') ? String(id) : Number(id);
+const kindSelOf = (kind) => kind === 'issue' ? ':not([data-kind])' : `[data-kind="${kind}"]`;
+const likeSetOf = (k) => k === 'post' ? social.postLikes : k === 'news' ? social.newsLikes : social.likes;
+const markSetOf = (k) => k === 'post' ? social.postBookmarks : k === 'plaza' ? social.plazaBookmarks : k === 'news' ? social.newsBookmarks : social.bookmarks;
 
 async function initSocial() {
     const supabase = window.supabaseClient;
@@ -554,18 +569,26 @@ async function initSocial() {
         social.userId = user.id;
         /* ⚠️ 순서와 이름을 반드시 맞춰서 받는다 — 쿼리를 끼워 넣고 구조 분해를 그대로 두면
               이슈 좋아요 자리에 숏판 좋아요가 들어와 조용히 뒤바뀐다. */
-        const [f, b, pl, pb, l] = await Promise.all([
+        const [f, b, pl, pb, l, zl, zb, nl, nb] = await Promise.all([
             supabase.from('follows').select('following').eq('follower', user.id),
             supabase.from('bookmarks').select('issue_id').eq('user_id', user.id),
             supabase.from('post_likes').select('post_id').eq('user_id', user.id),
             supabase.from('post_bookmarks').select('post_id').eq('user_id', user.id),
-            supabase.from('issue_likes').select('issue_id').eq('user_id', user.id)
+            supabase.from('issue_likes').select('issue_id').eq('user_id', user.id),
+            supabase.from('plaza_votes').select('post_id, vote').eq('user_id', user.id),
+            supabase.from('plaza_bookmarks').select('post_id').eq('user_id', user.id),
+            supabase.from('galla_news_reactions').select('news_id').eq('user_id', user.id).eq('value', 1),
+            supabase.from('galla_news_bookmarks').select('news_id').eq('user_id', user.id)
         ]);
         f.data?.forEach(r => social.follows.add(r.following));
         b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
         pl.data?.forEach(r => social.postLikes.add(String(r.post_id)));
         pb.data?.forEach(r => social.postBookmarks.add(String(r.post_id)));
         l.data?.forEach(r => social.likes.add(String(r.issue_id)));
+        zl.data?.forEach(r => { social.plazaVotes[String(r.post_id)] = r.vote; });
+        zb.data?.forEach(r => social.plazaBookmarks.add(String(r.post_id)));
+        nl.data?.forEach(r => social.newsLikes.add(String(r.news_id)));
+        nb.data?.forEach(r => social.newsBookmarks.add(String(r.news_id)));
     }
     social.loaded = true;
     applySocialState();
@@ -613,12 +636,15 @@ function applySocialState() {
         setFollowUI(btn, social.follows.has(btn.dataset.uid));
     });
     IDXROOT.querySelectorAll('.bookmark-btn').forEach(img => {
-        const set = img.dataset.kind === 'post' ? social.postBookmarks : social.bookmarks;
-        img.classList.toggle('active', set.has(img.dataset.id));
+        img.classList.toggle('active', markSetOf(kindOf(img)).has(img.dataset.id));
     });
     IDXROOT.querySelectorAll('.like-btn').forEach(btn => {
-        const set = btn.dataset.kind === 'post' ? social.postLikes : social.likes;
-        btn.classList.toggle('on', set.has(btn.dataset.id));
+        btn.classList.toggle('on', likeSetOf(kindOf(btn)).has(btn.dataset.id));
+    });
+    // 광장 카드의 추천/비추천 — 광장 목록(plaza.js)과 같은 pv-vote 컴포넌트
+    IDXROOT.querySelectorAll('.pv-btn').forEach(b => {
+        const mv = social.plazaVotes[b.dataset.id] || 0;
+        b.classList.toggle('on', Number(b.dataset.v) === mv);
     });
 }
 
@@ -628,8 +654,8 @@ async function toggleLike(btn) {
     const id = btn.dataset.id;
     /* 이슈와 숏판은 좋아요 테이블이 다르다(issue_likes / post_likes).
        버튼 모양·클래스는 같게 두고 data-kind 로만 갈린다. */
-    const isPost = btn.dataset.kind === 'post';
-    const set = isPost ? social.postLikes : social.likes;
+    const kind = kindOf(btn);
+    const set = likeSetOf(kind);
     const on = set.has(id);
     const cEl = btn.querySelector('.lk-count');
     const base = Number(btn.dataset.likes) || 0;
@@ -638,7 +664,7 @@ async function toggleLike(btn) {
     if (on) set.delete(id); else set.add(id);
     /* ⚠️ 이슈 버튼엔 data-kind 속성이 아예 없다 — [data-kind=""] 로 찾으면 하나도 안 잡혀
        이슈 좋아요의 화면 갱신이 통째로 죽는다(내가 넣은 회귀). 있을 때만 조건을 붙인다. */
-    const kindSel = isPost ? '[data-kind="post"]' : ':not([data-kind])';
+    const kindSel = kindSelOf(kind);
     IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]${kindSel}`).forEach(b => {
         b.dataset.likes = next;
         b.classList.toggle('on', !on);
@@ -646,11 +672,23 @@ async function toggleLike(btn) {
     });
     if (!on) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
 
-    const tbl = isPost ? 'post_likes' : 'issue_likes';
-    const col = isPost ? 'post_id' : 'issue_id';
-    const { error } = on
-        ? await supabase.from(tbl).delete().eq('user_id', social.userId).eq(col, Number(id))
-        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: Number(id) });
+    const [tbl, col] = LIKE_TBL[kind] || LIKE_TBL.issue;
+    const key = idVal(kind, id);
+    let error;
+    if (kind === 'plaza') {
+        /* 광장은 추천 수(up_count)까지 함께 고치는 전용 RPC 를 쓴다. 같은 값으로 다시 부르면 취소된다 —
+           표에 직접 넣으면 카운트가 안 맞는다(plaza.js 와 같은 경로). */
+        ({ error } = await supabase.rpc('vote_plaza_post', { p_post_id: key, p_value: 1 }));
+    } else if (kind === 'news') {
+        // 반대 반응이 이미 있으면 값만 바꿔야 한다 → upsert (news-page.js 와 같은 규약)
+        ({ error } = on
+            ? await supabase.from(tbl).delete().eq('user_id', social.userId).eq(col, key)
+            : await supabase.from(tbl).upsert({ user_id: social.userId, [col]: key, value: 1 }, { onConflict: `${col},user_id` }));
+    } else {
+        ({ error } = on
+            ? await supabase.from(tbl).delete().eq('user_id', social.userId).eq(col, key)
+            : await supabase.from(tbl).insert({ user_id: social.userId, [col]: key, ...(LIKE_EXTRA[kind] || {}) }));
+    }
     if (error && error.code !== '23505') {
         if (on) set.add(id); else set.delete(id);
         IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]${kindSel}`).forEach(b => {
@@ -687,19 +725,19 @@ async function toggleBookmark(img) {
     if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
     const supabase = window.supabaseClient;
     const id = img.dataset.id;
-    const isPost = img.dataset.kind === 'post';
-    const set = isPost ? social.postBookmarks : social.bookmarks;
+    const kind = kindOf(img);
+    const set = markSetOf(kind);
     const on = set.has(id);
 
     if (on) set.delete(id); else set.add(id);
     applySocialState();
 
-    const tbl = isPost ? 'post_bookmarks' : 'bookmarks';
-    const col = isPost ? 'post_id' : 'issue_id';
+    const [tbl, col] = MARK_TBL[kind] || MARK_TBL.issue;
+    const key = idVal(kind, id);
     const { error } = on
         ? await supabase.from(tbl).delete()
-            .eq('user_id', social.userId).eq(col, Number(id))
-        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: Number(id) });
+            .eq('user_id', social.userId).eq(col, key)
+        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: key });
 
     if (error && error.code !== '23505') {
         if (on) set.add(id); else set.delete(id);
@@ -716,6 +754,20 @@ function sharePost(btn) {
     const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('post', id)
         : ((window.GALLA_SITE || location.origin) + '/share/post/' + id);
     if (window.GALLA_share) return window.GALLA_share({ url, title, text: '갈라에서 보기' });
+    if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
+    navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
+}
+
+/* 광장 글·갈라뉴스 공유 — 카드에서 제목을 읽어 OG 링크(/share/plaza|news/<id>)로 */
+function shareFeedCard(btn, kind) {
+    const id = btn.dataset.id;
+    const card = btn.closest('.card');
+    const title = card?.querySelector('.pz-title, .nf-title')?.textContent?.trim()
+        || (kind === 'plaza' ? 'GALLA 광장' : 'GALLA 갈라뉴스');
+    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl(kind, id)
+        : ((window.GALLA_SITE || location.origin) + '/share/' + kind + '/' + id);
+    const text = kind === 'plaza' ? '갈라 광장에서 보기' : '갈라뉴스에서 보기';
+    if (window.GALLA_share) return window.GALLA_share({ url, title, text });
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
 }
@@ -800,6 +852,29 @@ function attachEvents() {
         };
     });
 
+    // 광장 추천/비추천 — vote_plaza_post 하나로 토글·전환·점수 갱신까지(plaza.js 와 같은 경로)
+    IDXROOT.querySelectorAll('.pv-btn').forEach(btn => {
+        btn.onclick = async e => {
+            e.stopPropagation();
+            if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
+            if (btn.__busy) return;
+            btn.__busy = true;
+            try {
+                const id = btn.dataset.id, val = Number(btn.dataset.v);
+                const { data, error } = await window.supabaseClient.rpc('vote_plaza_post', { p_post_id: id, p_value: val });
+                if (error) { openModal('투표 처리에 실패했어요.'); return; }
+                const row = Array.isArray(data) ? data[0] : data;
+                const mv = row?.my_vote ?? 0;
+                social.plazaVotes[id] = mv;
+                if (typeof row?.score === 'number') {
+                    IDXROOT.querySelectorAll(`.pv-score[data-id="${id}"]`).forEach(el => { el.textContent = String(row.score); });
+                }
+                applySocialState();
+                if (window.GALLA_signal && mv !== 0) window.GALLA_signal.act('plaza', id, mv === 1 ? 'like' : 'skip', 'plaza');
+            } finally { btn.__busy = false; }
+        };
+    });
+
     // 북마크
     IDXROOT.querySelectorAll('.bookmark-btn').forEach(img => {
         img.onclick = e => {
@@ -812,7 +887,9 @@ function attachEvents() {
     IDXROOT.querySelectorAll('.share-btn').forEach(img => {
         img.onclick = e => {
             e.stopPropagation();
-            if (img.dataset.kind === 'post') return sharePost(img);
+            const k = kindOf(img);
+            if (k === 'post') return sharePost(img);
+            if (k === 'plaza' || k === 'news') return shareFeedCard(img, k);
             shareIssue(img.dataset.id);
         };
     });
@@ -822,8 +899,29 @@ function attachEvents() {
         btn.onclick = async e => {
             e.stopPropagation();
             const id = btn.dataset.id, uid = btn.dataset.uid || null;
-            const isPost = btn.dataset.kind === 'post';
+            const kind = kindOf(btn);
+            const isPost = kind === 'post';
             const canManage = window.GALLA_canManage ? await window.GALLA_canManage(uid) : false;
+            if (kind === 'plaza' || kind === 'news') {
+                /* 광장 글은 내 글이면 수정·삭제, 남의 글이면 신고·차단. 갈라뉴스는 작성자가 없어 신고만. */
+                const cardEl = btn.closest('.card');
+                const titleEl = cardEl?.querySelector('.pz-title, .nf-title');
+                if (kind === 'plaza' && canManage && window.GALLA_openOwnerMenu) {
+                    return window.GALLA_openOwnerMenu({
+                        table: 'plaza_posts', id, ownerId: uid, label: '광장 글',
+                        editFields: [{ key: 'title', label: '제목', type: 'text', value: titleEl?.textContent?.trim() || '' }],
+                        onSaved: (patch) => { if (titleEl && patch.title != null) titleEl.textContent = patch.title; },
+                        onDeleted: () => { cardEl?.remove(); },
+                    });
+                }
+                if (window.GALLA_openReportMenu) {
+                    return window.GALLA_openReportMenu({
+                        contentType: kind, contentId: id, authorId: uid,
+                        onBlocked: () => { cardEl?.remove(); },
+                    });
+                }
+                return;
+            }
             if (isPost) {
                 /* 숏판·롱판 — 상세·릴스와 같은 계약(posts 테이블, 본문=caption). */
                 const cardEl = btn.closest('.card');
@@ -876,6 +974,8 @@ function attachEvents() {
                 window.GALLA_goto(`gallari-post.html?id=${card.dataset.id}#comments`);
                 return;
             }
+            if (card.dataset.kind === 'plaza') { window.GALLA_goto(`plaza_detail.html?id=${card.dataset.id}#comments`); return; }
+            if (card.dataset.kind === 'news') { window.GALLA_goto(`news.html?gn=${card.dataset.id}#comments`); return; }
             window.GALLA_goto(`issue.html?id=${card.dataset.id}#battle-zone`);
         };
     });
@@ -1279,7 +1379,7 @@ function renderPlazaCard(p) {
     const excerpt = plazaExcerpt(p.body);
     const cat = p.category ? escHtml(p.category) : '광장';
     return `
-    <div class="card plaza-card" onclick="GALLA_goto('plaza_detail.html?id=${p.id}')">
+    <div class="card plaza-card" data-kind="plaza" data-id="${p.id}" onclick="GALLA_goto('plaza_detail.html?id=${p.id}')">
       <div class="pz-head">
         <span class="pz-badge">🏛 광장</span>
         <span class="pz-cat">${cat}</span>
@@ -1294,11 +1394,19 @@ function renderPlazaCard(p) {
         </div>
         ${cover ? `<div class="pz-thumb"><img src="${escHtml(window.GALLA_thumb ? window.GALLA_thumb(cover, 720) : cover)}" loading="lazy" alt="" style="opacity:0;transition:opacity .18s" onload="this.style.opacity=1" onerror="this.closest('.pz-thumb')?.remove()"></div>` : ''}
       </div>
-      <div class="pz-foot">
-        <span>👍 ${p.up_count || 0}</span>
-        <span>👁 ${p.view_count || 0}</span>
-        ${galvisBtn('plaza', p.id, p.title)}
-        <span class="pz-go">글 보기 ›</span>
+      <div class="card-footer">
+        <div class="footer-icons">
+          <span class="pv-vote">
+            <button type="button" class="pv-btn pv-up" data-id="${p.id}" data-v="1" aria-label="추천"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <span class="pv-score" data-id="${p.id}">${(p.up_count || 0) - (p.down_count || 0)}</span>
+            <button type="button" class="pv-btn pv-down" data-id="${p.id}" data-v="-1" aria-label="비추천"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          </span>
+          <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+          <button type="button" class="fi-btn bookmark-btn" data-kind="plaza" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
+          <button type="button" class="fi-btn share-btn" data-kind="plaza" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
+          ${galvisBtn('plaza', p.id, p.title)}
+        </div>
+        <button class="more-btn card-more" data-kind="plaza" data-id="${p.id}" data-uid="${escHtml(p.user_id || '')}" aria-label="더보기">${moreIcon}</button>
       </div>
     </div>`;
 }
@@ -1326,7 +1434,7 @@ function renderNewsCard(n) {
     const hero = plazaProxify(n.hero_image || '');
     const sum = (n.summary || '').slice(0, 90);
     return `
-    <div class="card news-feed-card" onclick="GALLA_goto('news.html?gn=${n.id}')">
+    <div class="card news-feed-card" data-kind="news" data-id="${n.id}" onclick="GALLA_goto('news.html?gn=${n.id}')">
       ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" referrerpolicy="no-referrer" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
       <div class="nf-body">
         <div class="nf-head">
@@ -1336,7 +1444,16 @@ function renderNewsCard(n) {
         </div>
         <div class="nf-title">${escHtml(n.title)}</div>
         ${sum ? `<div class="nf-sum">${escHtml(sum)}</div>` : ''}
-        <div class="nf-foot"><span>👁 ${(n.view_count || 0).toLocaleString('ko-KR')}</span>${galvisBtn('news', n.id, n.title)}<span class="nf-go">기사 보기 ›</span></div>
+        <div class="card-footer">
+          <div class="footer-icons">
+            <button type="button" class="fi-btn like-btn" data-kind="news" data-id="${n.id}" data-likes="0" aria-label="좋아요">${heartSvg}<span class="lk-count"></span></button>
+            <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+            <button type="button" class="fi-btn bookmark-btn" data-kind="news" data-id="${n.id}" aria-label="저장">${bookmarkSvg}</button>
+            <button type="button" class="fi-btn share-btn" data-kind="news" data-id="${n.id}" aria-label="공유">${shareSvg}</button>
+            ${galvisBtn('news', n.id, n.title)}
+          </div>
+          <button class="more-btn card-more" data-kind="news" data-id="${n.id}" data-uid="" aria-label="더보기">${moreIcon}</button>
+        </div>
       </div>
     </div>`;
 }

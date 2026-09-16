@@ -992,3 +992,12 @@ body.shorts-open .header { display: none !important; }
 /* 미디어 탭 = 소리 토글(그 자리 재생 유지). 전체화면은 '릴스로 보기'로만 간다. */
 .glr-feed-card .card-media{ cursor:pointer; }
 .glr-feed-card .vid-reels-badge, .glr-feed-card .glr-go{ cursor:pointer; }
+
+
+/* 광장 카드의 추천/비추천 — 광장 목록(css/plaza.css)의 pv-vote 를 피드 카드에서도 그대로 쓴다 */
+.card-footer .pv-vote { display: inline-flex; align-items: center; gap: 2px; background: rgba(255,255,255,.04); border-radius: 999px; padding: 2px 6px; }
+.card-footer .pv-btn { background: none; border: none; color: #8b8b93; cursor: pointer; display: flex; padding: 2px; }
+.card-footer .pv-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; }
+.card-footer .pv-btn.pv-up.on { color: #4da3ff !important; }
+.card-footer .pv-btn.pv-down.on { color: #ff5c5c !important; }
+.card-footer .pv-score { min-width: 14px; text-align: center; font-weight: 800; color: #cfd4de; font-size: 12px; }
