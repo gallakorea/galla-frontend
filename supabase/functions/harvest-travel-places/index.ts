@@ -806,6 +806,13 @@ const DEADLINE = Date.now() + 110_000;
     if (error) return j({ ok: false, channel, error: error.message.slice(0, 200) }, 500);
     res = data || res;
   }
+  /* 🔴 AI 잔액이 없으면(402·401) 도장을 찍지 않는다. '결과와 무관하게 찍는다'는 규칙은
+     영상 탓인 실패를 위한 것이다 — 공급자가 죽은 건 영상 탓이 아니다.
+     26.9.13~17 딥시크 잔액이 바닥난 동안 여행 50편·맛집 12편이 '처리됨'으로 넘어갔다. */
+  if (dsDead && !GEM) {
+    return j({ ok: false, reason: "ai_unavailable", channel, picked: list.length,
+               note: "딥시크 잔액·키 문제 — 도장 안 찍음, 충전 후 다시 온다" }, 503);
+  }
   for (let i = 0; i < done.length; i += 200) {
     await supa.rpc("travel_videos_mark_harvested", { p_ids: done.slice(i, i + 200) });
   }

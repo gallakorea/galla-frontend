@@ -75,12 +75,18 @@ Deno.serve(async (req) => {
   const report: any[] = [];
 
   if (doSync && YT) {
+    /* 🔴 예전엔 정렬 없이 limit(rotN) 이었다 — 크론을 붙여도 매번 같은 6채널만 돌았다.
+       그리고 크론 자체가 없어서 26.9.5 이후 맛집 새 영상이 한 편도 안 들어왔다.
+       수확 대상(harvest) 채널만, 가장 오래 안 본 순서로 돌린다. */
     let q = supa.from("food_channels").select("slug,yt_channel_id,last_video_at")
-      .eq("active", true).not("yt_channel_id", "is", null);
+      .eq("active", true).eq("harvest", true).not("yt_channel_id", "is", null)
+      .order("last_synced_at", { ascending: true, nullsFirst: true });
     const { data: chans } = only ? await q.eq("slug", only) : await q.limit(rotN);
     for (const c of (chans || []) as any[]) {
       try { report.push({ ch: c.slug, videos: await syncChannel(c.slug, c.yt_channel_id, pages) }); }
       catch (e) { report.push({ ch: c.slug, err: String(e).slice(0, 140) }); }
+      /* 실패해도 도장을 찍는다 — 안 그러면 막힌 채널이 순번 맨 앞을 영원히 차지한다 */
+      await supa.from("food_channels").update({ last_synced_at: new Date().toISOString() }).eq("slug", c.slug);
     }
   }
 
