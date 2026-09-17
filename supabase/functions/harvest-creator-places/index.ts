@@ -97,7 +97,7 @@ async function verify(name: string, addr: string) {
   if (!best) {
     /* 진단용 — 왜 떨어졌는지 남긴다. 추측으로 고치면 엉뚱한 곳을 만진다. */
     (globalThis as any).__lastMiss = {
-      want: name, region,
+      want: name, region: hint,   // ⚠️ 이 함수엔 region 이 없다 — 진단 줄이 ReferenceError 로 회차 전체를 죽였다
       got: items.slice(0, 3).map((it: any) =>
         `${strip(it.title)}|${(strip(it.category).split(">").pop() || "").trim()}|${strip(it.roadAddress) || strip(it.address)}`),
     };
