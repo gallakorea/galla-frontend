@@ -138,7 +138,7 @@
     if (!SEC || SEC.__tvWired) return;
     SEC.__tvWired = true;
 
-    SEC.querySelector("#tv-openmap").addEventListener("click", openMap);
+    SEC.querySelector("#tv-openmap").addEventListener("click", function () { openMap().then(fitToPick); });
     SEC.querySelector("#tv-vs").addEventListener("click", function () {
       (window.GALLA_nav || function (u) { location.href = u; })("travel-vs.html");
     });
@@ -679,6 +679,21 @@
     if (!fromPop) { try { if (history.state && history.state.tvMap) history.back(); } catch (_) {} }
   }
 
+  /* 🗺 목록에서 나라(·지역)를 골라 둔 채 지도를 열면 그 나라가 한 화면에 들어오게 맞춘다.
+     예전엔 늘 첫 화면(한국)이나 마지막 보던 곳으로 열려, 일본을 골랐는데 한국이 떴다(26.9.18 사장님).
+     범위는 서버가 장소 좌표 2~98 백분위로 준다(튄 좌표 하나에 나라가 개미만 해지지 않게). */
+  async function fitToPick() {
+    if (!COUNTRY || !MAP) return;
+    var b = await rpc("travel_bounds", { p_country: COUNTRY, p_area: AREA && AREA !== "*" ? AREA : null });
+    if (!b || !b.ok || !MAP) return;
+    var pad = Math.min(60, Math.round(window.innerWidth * 0.08));
+    try {
+      MAP.fitBounds([[b.west, b.south], [b.east, b.north]], {
+        padding: { top: 110 + pad, bottom: 120 + pad, left: pad, right: pad },
+        maxZoom: 12, duration: 0,
+      });
+    } catch (_) {}
+  }
   async function openMap() {
     var box = buildMapBox();
     box.__parked = false;
