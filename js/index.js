@@ -1522,6 +1522,13 @@ async function loadVideoCards() {
     return pool.sort(() => Math.random() - 0.5).slice(0, 6);
 }
 
+function vfAgo(t) {
+    const m = Math.max(0, Math.round((Date.now() - new Date(t).getTime()) / 60000));
+    if (m < 1) return '방금';
+    if (m < 60) return m + '분 전';
+    const h = Math.round(m / 60);
+    return h < 24 ? h + '시간 전' : Math.round(h / 24) + '일 전';
+}
 /* 🔥 핫트렌드 영상 카드
    동작은 js/supabase.js 의 공용 계약(data-vplay / data-vopen)이 담당한다.
    여기서 onclick 을 따로 달지 않는다 — 화면마다 갈라져서 앱·웹·PC 가 따로 놀았다. */
@@ -1529,14 +1536,22 @@ function renderVideoCard(v) {
     return `
     <div class="card video-feed-card" data-kind="video" data-id="${escHtml(v.video_id)}" data-vid="${escHtml(v.video_id)}"
          data-vtitle="${escHtml(v.title || '')}" data-vch="${escHtml(v.channel_title || '')}">
+      <!-- 🔥 머리줄 — 예전엔 썸네일부터 시작해 「이건 뭐지?」였다(26.9.18 사장님). 이슈 카드 작성자 줄 자리에
+           무엇인지(핫튜브)·지금 몇 위·언제 집계인지를 둔다. 누르면 핫튜브 전체 순위로. -->
+      <div class="vf-top" onclick="event.stopPropagation();GALLA_goto('search.html?tab=hot')">
+        <span class="vf-top-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
+        <div class="vf-top-tx">
+          <div class="vf-top-t">핫튜브${v.rank ? ` <b>지금 ${v.rank}위</b>` : ''}</div>
+          <div class="vf-top-s">유튜브 급상승${v.collected_at ? ' · ' + vfAgo(v.collected_at) + ' 집계' : ''}</div>
+        </div>
+        <span class="vf-top-go">전체 순위 ›</span>
+      </div>
       <div class="vf-thumb" data-vplay>
         <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
         <span class="vf-play">▶</span>
-        ${v.rank ? `<span class="vf-rank">${v.rank}위</span>` : ''}
         ${v.is_short ? `<span class="vf-short">쇼츠</span>` : ''}
       </div>
       <div class="vf-body" data-vopen>
-        <div class="nf-head"><span class="vf-badge">🔥 핫트렌드</span></div>
         <div class="vf-title">${escHtml(v.title)}</div>
         <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회</div>
       </div>
