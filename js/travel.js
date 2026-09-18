@@ -1047,25 +1047,44 @@
       /* 장소 화면 안의 「지도에서 보기」는 이미 지도 위라 모달만 닫으면 된다 */
       if (e.target.closest("#tv-openmap-here")) { e.stopImmediatePropagation(); closePlaceSheet(); }
     }, true);
-    /* 아래로 끌어 닫기 — 맨 위까지 스크롤된 상태에서만. transform 으로 따라오게(꿀렁임 없이) */
-    var sy = 0, dy = 0, drag = false;
+    /* 🔽 맛집 상세처럼 중간(peek)까지만 올라오고, 위로 끌면 전체(full), 아래로 끌면 접힘→닫힘(사장님 26.9.18).
+       transform 으로만 움직인다 — 높이를 바꾸면 매 프레임 레이아웃이 다시 돌아 꿀렁인다(맛집에서 겪음).
+       full 에서 내용이 스크롤 중이면 끌기가 아니라 스크롤이다(scrollTop>0). */
+    var sy = 0, dy = 0, base = 0, drag = null;
     box.addEventListener("touchstart", function (e) {
-      drag = box.scrollTop <= 0 && e.touches.length === 1;
+      if (e.touches.length !== 1) { drag = false; return; }
       sy = e.touches[0].clientY; dy = 0;
+      base = box.__full ? 0 : psPeekOffset(box);
+      drag = (!box.__full || box.scrollTop <= 0) ? null : false;   // null = 방향 아직 모름
     }, { passive: true });
     box.addEventListener("touchmove", function (e) {
-      if (!drag) return;
+      if (drag === false) return;
       dy = e.touches[0].clientY - sy;
-      if (dy <= 0) { box.style.transform = ""; return; }
-      box.style.transition = "none";
-      box.style.transform = "translateY(" + dy + "px)";
+      if (drag === null) {
+        if (Math.abs(dy) < 6) return;
+        /* full 에서 위로 미는 건 내용 스크롤 — 가로채지 않는다 */
+        if (box.__full && dy < 0) { drag = false; return; }
+        drag = true;
+        box.style.transition = "none";
+      }
+      box.style.transform = "translateY(" + Math.max(0, base + dy) + "px)";
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
     box.addEventListener("touchend", function () {
-      if (!drag) return; drag = false;
-      box.style.transition = "";
-      if (dy > 110) closePlaceSheet(); else box.style.transform = "";
+      if (drag !== true) { drag = null; return; }
+      drag = null;
+      if (box.__full) { psPos(box, dy < 90); return; }          // full: 조금 내리면 복귀, 많이 내리면 접힘
+      if (dy < -50) { psPos(box, true); return; }              // peek: 위로 → 펼침
+      if (dy > 90) { closePlaceSheet(); return; }              // peek: 아래로 → 닫기
+      psPos(box, false);
     }, { passive: true });
+    box.addEventListener("click", function (e) {
+      if (e.target.closest(".tv-ps-grip")) psPos(box, !box.__full);   // 손잡이 탭 = 펼침/접기
+    });
+    /* 화면 크기가 바뀌면(회전·주소창) 접힘 위치를 다시 잡는다 */
+    window.addEventListener("resize", function () {
+      if (PSHEET && PSHEET.classList.contains("open")) psPos(box, box.__full, false);
+    });
     /* ⚠️ 판정은 이벤트에 실려 온 state 로(라우터가 먼저 replaceState 한다 — 맛집·지도와 같은 함정) */
     window.addEventListener("popstate", function (ev) {
       if (!PSHEET.classList.contains("open")) return;
@@ -1074,17 +1093,34 @@
     });
     return PSHEET;
   }
+  function psPeekOffset(box) {
+    var peek = Math.round(window.innerHeight * 0.55);
+    return Math.max(0, box.offsetHeight - peek);
+  }
+  function psPos(box, full, animate) {
+    box.__full = !!full;
+    box.classList.toggle("peek", !full);
+    if (!full) box.scrollTop = 0;
+    box.style.transition = animate === false ? "none" : "";
+    box.style.transform = "translateY(" + (full ? 0 : psPeekOffset(box)) + "px)";
+  }
   async function openPlaceSheet(id) {
     var sh = buildPlaceSheet();
     var body = sh.querySelector(".tv-ps-body");
     var box = sh.querySelector(".tv-ps-box");
     body.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
-    box.style.transform = ""; box.scrollTop = 0;
-    if (!sh.classList.contains("open")) {
+    var wasOpen = sh.classList.contains("open");
+    if (!wasOpen) {
       sh.__prev = history.state; sh.__vid = false;
       try { history.pushState({ tvPlace: 1 }, ""); } catch (_) {}
     }
     sh.classList.add("open");
+    /* 아래(화면 밖)에서 중간(peek)까지 미끄러져 올라온다 */
+    if (!wasOpen) {
+      box.__full = false; box.classList.add("peek"); box.scrollTop = 0;
+      box.style.transition = "none"; box.style.transform = "translateY(100%)"; void box.offsetHeight;
+      requestAnimationFrame(function () { psPos(box, false); });
+    } else psPos(box, false);
     await loadPlaceScript();
     var api = window.GALLA_PAGE_TRAVEL_PLACE;
     if (!api || !sh.classList.contains("open")) return;

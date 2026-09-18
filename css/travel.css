@@ -616,15 +616,16 @@ body.tv-lock { overflow: hidden; }
 .tv-psheet.open { display: block; }
 .tv-ps-box {
   position: absolute; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto;
-  max-height: calc(100% - env(safe-area-inset-top, 0px) - 40px);
+  height: calc(100% - env(safe-area-inset-top, 0px) - 40px);
   overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   background: var(--bg, #0b0c10); border-top-left-radius: 20px; border-top-right-radius: 20px;
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
-  transition: transform .28s cubic-bezier(.2,.85,.3,1);
-  animation: tvPsUp .28s cubic-bezier(.2,.85,.3,1);
+  transition: transform .3s cubic-bezier(.2,.85,.3,1);
+  will-change: transform;
 }
-@keyframes tvPsUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.tv-ps-grip { position: sticky; top: 0; z-index: 3; height: 18px; margin-bottom: -18px; }
+/* 접힘(peek)에선 안쪽 스크롤을 막는다 — 끌기가 스크롤에 먹히지 않게 */
+.tv-ps-box.peek { overflow-y: hidden; }
+.tv-ps-grip { position: sticky; top: 0; z-index: 3; height: 22px; margin-bottom: -22px; cursor: pointer; }
 .tv-ps-grip::after { content: ""; position: absolute; left: 50%; top: 7px; width: 38px; height: 4px;
   margin-left: -19px; border-radius: 4px; background: rgba(255,255,255,.35); }
 .tv-ps-x {
