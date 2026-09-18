@@ -1274,3 +1274,18 @@ html.fd-native-map body::before { display: none; }
 .fd-vplayer .fdv-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
 .fd-vplayer .fdv-yt { display: block; width: max-content; margin: 14px auto 0; padding: 9px 16px; border-radius: 999px;
   border: 1px solid rgba(255,255,255,.22); color: #cfd6e4; font-size: 13px; text-decoration: none; }
+
+/* 🍜 한 영상에 나온 집 고르기 — 채널 페이지 위 */
+.fd-vpick { position: fixed; inset: 0; z-index: 10085; display: none; background: rgba(0,0,0,.55); }
+.fd-vpick.open { display: flex; align-items: flex-end; justify-content: center; }
+.fd-vpick .fdp-sheet { width: 100%; max-width: 520px; background: var(--surface-1); border-top: 1px solid var(--line-2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.fd-vpick .fdp-h { font-size: 15px; font-weight: 800; color: var(--text-hi, #f2f4f8); display: flex; gap: 8px; align-items: baseline; }
+.fd-vpick .fdp-h span { font-size: 12px; color: var(--text-lo, #7b8496); font-weight: 600; }
+.fd-vpick .fdp-t { margin: 4px 0 12px; font-size: 12.5px; color: var(--text-mid, #aab2c2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fd-vpick .fdp-row { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px;
+  border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-2, rgba(255,255,255,.04)); color: inherit; cursor: pointer; }
+.fd-vpick .fdp-row b { font-size: 14.5px; color: var(--text-hi, #f2f4f8); }
+.fd-vpick .fdp-row i { font-style: normal; font-size: 12px; color: var(--text-lo, #7b8496); }
+.fd-vpick .fdp-x { width: 100%; padding: 12px; border: none; background: none; color: var(--text-lo, #7b8496); font-weight: 700; cursor: pointer; }

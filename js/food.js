@@ -219,7 +219,7 @@
     setTimeout(pushTouchTop, 0);
     /* 지도 위에 뜨는 DOM 시트 — 하나라도 열려 있으면 터치를 전부 웹으로 받는다.
        시트마다 열고 닫는 곳에 일일이 걸면 새 시트가 생길 때 또 빠진다 → 클래스 변화를 지켜본다. */
-    var OVER = ".fd-detail.open, .fd-cpick.open, .fd-rpick.open, #fd-fsheet.open, .fd-vplayer.open";
+    var OVER = ".fd-detail.open, .fd-cpick.open, .fd-rpick.open, #fd-fsheet.open, .fd-vplayer.open, .fd-vpick.open";
     var overNow = false;
     function syncOver() {
       var any = !!document.querySelector(OVER);
@@ -586,6 +586,43 @@
     ifr.setAttribute("frameborder", "0");
     fr.appendChild(ifr);
     VP.classList.add("open");
+  }
+  /* 같은 가게가 주소 표기만 달리 두 번 등록된 경우가 있다 — 도로명/지번, '서울특별시'/'서울'
+     (실측: 하영각 = '서울특별시 강남구 개포로31길' + '서울 강남구 개포동'). 이름 + 시·구가 같으면 하나로 본다.
+     같은 구에 같은 이름 지점이 둘인 경우는 드물다. */
+  function uniqPlaces(list) {
+    var seen = {}, out = [];
+    (list || []).forEach(function (p) {
+      var a = String(p.addr || "").replace(/(특별시|광역시|특별자치시|특별자치도)/g, "").trim().split(/\s+/).slice(0, 2).join("");
+      var k = String(p.name || "").replace(/\s+/g, "") + "|" + a;
+      if (!p.id || seen[k]) return;
+      seen[k] = 1; out.push(p);
+    });
+    return out;
+  }
+  /* 한 영상에 가게가 여럿이면 고르게 한다 — 채널 페이지 위에 짧은 목록 */
+  var VPICK = null;
+  function openPlacePick(places, title) {
+    if (!VPICK) {
+      VPICK = document.createElement("div");
+      VPICK.className = "fd-vpick";
+      VPICK.setAttribute("data-no-ptr", "");
+      document.body.appendChild(VPICK);
+      VPICK.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-vpid]");
+        if (b) { VPICK.classList.remove("open"); closeChPage(); openDetail(b.dataset.vpid); return; }
+        if (e.target === VPICK || e.target.closest(".fdp-x")) VPICK.classList.remove("open");
+      });
+    }
+    VPICK.innerHTML = '<div class="fdp-sheet">' +
+      '<div class="fdp-h">이 영상에 나온 집<span>' + places.length + '곳</span></div>' +
+      (title ? '<div class="fdp-t">' + esc(title) + '</div>' : '') +
+      places.map(function (p) {
+        return '<button type="button" class="fdp-row" data-vpid="' + esc(p.id) + '"><b>' + esc(p.name || "") + '</b>' +
+          (p.addr ? '<i>' + esc(String(p.addr).split(/\s+/).slice(0, 3).join(" ")) + '</i>' : '') + '</button>';
+      }).join("") +
+      '<button type="button" class="fdp-x">닫기</button></div>';
+    VPICK.classList.add("open");
   }
   /* 닫으면 재생기를 치운다 — 크로스 오리진이라 pause 를 못 부른다. 프레임을 버리는 게 유일한 정지 수단 */
   function closeVideoSheet() {
@@ -1528,6 +1565,7 @@
     try { closeChPick(); } catch (_) {}
     try { closeRegionPicker(); } catch (_) {}
     try { closeVideoSheet(); } catch (_) {}
+    try { if (VPICK) VPICK.classList.remove("open"); } catch (_) {}
     /* 위 닫기들이 하나라도 못 돌았을 때를 대비한 마지막 빗자루 */
     try {
       document.body.classList.remove("fd-map-on", "fd-detail-on");
@@ -1749,7 +1787,8 @@
        쇼츠 클립은 봐도 가게가 안 나오니 묻지 않는다. */
     var ask = !v.shops && v.askable;
     return '<div class="cg-vwrap">' +
-      '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '">' +
+      '<button type="button" class="cg-v fd-vid" data-vid="' + esc(v.video_id) + '"' +
+        (v.places && v.places.length ? ' data-places="' + esc(JSON.stringify(v.places)) + '"' : '') + '>' +
         '<img src="' + esc(ytThumb(v.video_id)) + '" alt="" loading="lazy">' +
         '<i class="fs-play">▶</i>' +
         (v.shops ? '<span class="cg-vs">🍜 ' + v.shops + '</span>' : '') +
@@ -1856,7 +1895,14 @@
         if (mb) { cgMore(mb.dataset.cgmore); return; }
         var v = e.target.closest(".fd-vid");
         if (v && v.dataset.vid) {
+          /* 영상을 누르면 그 영상에 나온 가게 상세부터(사장님 26.9.18). 한 곳이면 바로, 여러 곳이면 고르게,
+             연결된 가게가 없으면(쇼츠 등) 재생 창으로 */
           var vt = v.querySelector(".cg-vt, .fs-t");
+          var places = [];
+          try { places = JSON.parse(v.dataset.places || "[]"); } catch (_) {}
+          places = uniqPlaces(places);
+          if (places.length === 1) { closeChPage(); openDetail(places[0].id); return; }
+          if (places.length > 1) { openPlacePick(places, vt ? vt.textContent : ""); return; }
           openVideoSheet(v.dataset.vid, vt ? vt.textContent : ""); return;
         }
         var pb = e.target.closest("[data-cgplace]");
