@@ -639,6 +639,29 @@
       v.classList.remove("playing");
     });
   }
+  /* 🖼 가게 사진은 줄여서 받는다 — 우리 CDN 원본(수백 KB)을 그대로 받아 목록이 느렸다(26.9.18).
+     cdn.galla.im 은 Cloudflare 변환, 관광공사 주소(이전 전)는 갈라 엣지 프록시로. 실패하면 원본으로 한 번 더. */
+  function sm(u, w) {
+    if (!u) return u;
+    var g = /^https:\/\/cdn\.galla\.im\/(?!cdn-cgi\/)(.+)$/.exec(u);
+    if (g) return "https://cdn.galla.im/cdn-cgi/image/width=" + (w || 480) + ",quality=78,format=auto/" + g[1];
+    if (/^https:\/\/[a-z0-9.-]*(wikimedia\.org|visitkorea\.or\.kr)\//i.test(u))
+      return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
+    return u;
+  }
+  if (!window.__smFallback) {
+    window.__smFallback = true;
+    document.addEventListener("error", function (e) {
+      var im = e.target;
+      if (!im || im.tagName !== "IMG" || im.dataset.smfb) return;
+      var src = im.getAttribute("src") || "";
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(src);
+      var c = /^https:\/\/cdn\.galla\.im\/cdn-cgi\/image\/[^/]+\/(.+)$/.exec(src);
+      if (!m && !c) return;
+      im.dataset.smfb = "1";
+      try { im.src = m ? decodeURIComponent(m[1]) : "https://cdn.galla.im/" + c[1]; } catch (_) {}
+    }, true);
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -1109,7 +1132,7 @@
        예전엔 사진이 없으면 영상 썸네일로 떨어졌는데, 유튜브 썸네일은 자막이 박힌
        방송 표지라 '식당 리스트'에 섞이면 무엇을 보는 화면인지 흐려진다.
        영상 썸네일은 '누가 갔나'의 몫이다 — 거기선 그게 정보다. */
-    var th = p.cover || "";
+    var th = sm(p.cover) || "";
     var tot = (p.good || 0) + (p.bad || 0);
     var meta = [p.category, shortAddr(p.address), distText(p)].filter(Boolean).join(" · ");
     /* 카드에도 영업시간·평점을 한 줄 얹는다 — 목록에서 바로 판단이 되게 */
@@ -1152,7 +1175,7 @@
     /* '누가 갔나'는 **그 채널의 영상 썸네일**이 원칙이다(어느 방송에 나왔는지가 정보다).
        food_browse 가 채널을 맞춰(f2.channel = ch.slug) 영상을 골라준다.
        다만 영상이 연결된 곳이 264곳뿐이라, 없으면 가게 사진 → 상호 타일 순으로 내려간다. */
-    var th = ytThumb(p.video_id) || p.cover || "";
+    var th = ytThumb(p.video_id) || sm(p.cover) || "";
     var tot = (p.good || 0) + (p.bad || 0);
     return '<div class="fb-card' + (p.visited ? " visited" : "") + '" data-id="' + esc(p.id) + '">' +
       '<div class="fb-thumb">' +
@@ -1801,7 +1824,7 @@
     '</div>';
   }
   function cgPlaceRow(p) {
-    var th = p.cover || ytThumb(p.video_id) || "";
+    var th = sm(p.cover, 240) || ytThumb(p.video_id) || "";
     return '<button type="button" class="cg-p" data-cgplace="' + esc(p.id) + '">' +
       '<span class="cg-pth">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy">' : tileHtml(p)) + '</span>' +
       '<span class="cg-pb"><b>' + esc(p.name) + '</b>' +
@@ -2255,7 +2278,7 @@
             /* 공공 데이터 사진(관광공사)은 공공누리라 **출처 표시가 의무**다.
                유저 제보는 닉네임이 곧 출처이므로 credit 이 비어 있다. */
             var by = x.credit ? x.credit : (x.nick || "익명");
-            return '<div class="fp-i"><img src="' + esc(x.url) + '" alt="" loading="lazy">' +
+            return '<div class="fp-i"><img src="' + esc(sm(x.url, 720)) + '" alt="" loading="lazy">' +
               '<span class="fp-by' + (x.credit ? ' src' : '') + '">' + esc(by) + '</span>' +
               (x.mine ? '<button type="button" class="fp-x" data-photo="' + x.id + '">✕</button>' : '') +
             '</div>'; }).join("") + '</div>'
