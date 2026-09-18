@@ -548,6 +548,7 @@ const social = {
     newsBookmarks: new Set(),
     videoLikes: new Set(),      // 핫튜브 영상(video_likes)
     videoBookmarks: new Set(),  // video_bookmarks
+    marketBookmarks: new Set(), // 갈라예측 저장(market_bookmarks)
     likes: new Set(),       // 내가 좋아요한 issue_id (문자열)
     loaded: false
 };
@@ -555,14 +556,14 @@ const social = {
 /* 카드 종류별 좋아요·저장 테이블 — 아이콘 줄(footer-icons)은 이슈·숏판·광장·뉴스가 모두 같고
    data-kind 로만 갈린다. id 는 이슈·숏판이 숫자, 광장·뉴스가 uuid 라 형 변환도 여기서 정한다. */
 const LIKE_TBL = { post: ['post_likes', 'post_id'], plaza: ['plaza_votes', 'post_id'], news: ['galla_news_reactions', 'news_id'], video: ['video_likes', 'video_id'], issue: ['issue_likes', 'issue_id'] };
-const MARK_TBL = { post: ['post_bookmarks', 'post_id'], plaza: ['plaza_bookmarks', 'post_id'], news: ['galla_news_bookmarks', 'news_id'], video: ['video_bookmarks', 'video_id'], issue: ['bookmarks', 'issue_id'] };
+const MARK_TBL = { post: ['post_bookmarks', 'post_id'], plaza: ['plaza_bookmarks', 'post_id'], news: ['galla_news_bookmarks', 'news_id'], video: ['video_bookmarks', 'video_id'], predict: ['market_bookmarks', 'market_id'], issue: ['bookmarks', 'issue_id'] };
 const LIKE_EXTRA = { plaza: { vote: 1 }, news: { value: 1 } };   // 찬반·반응 테이블은 값 칸이 따로 있다
 const kindOf = (el) => el.dataset.kind || 'issue';
-const idVal = (kind, id) => (kind === 'issue' || kind === 'post') ? Number(id) : String(id);
+const idVal = (kind, id) => (kind === 'issue' || kind === 'post' || kind === 'predict') ? Number(id) : String(id);
 const kindSelOf = (kind) => kind === 'issue' ? ':not([data-kind])' : `[data-kind="${kind}"]`;
 const likeSetOf = (k) => ({ post: social.postLikes, news: social.newsLikes, video: social.videoLikes })[k] || social.likes;
 const markSetOf = (k) => ({ post: social.postBookmarks, plaza: social.plazaBookmarks, news: social.newsBookmarks,
-                            video: social.videoBookmarks })[k] || social.bookmarks;
+                            video: social.videoBookmarks, predict: social.marketBookmarks })[k] || social.bookmarks;
 
 async function initSocial() {
     const supabase = window.supabaseClient;
@@ -572,7 +573,7 @@ async function initSocial() {
         social.userId = user.id;
         /* ⚠️ 순서와 이름을 반드시 맞춰서 받는다 — 쿼리를 끼워 넣고 구조 분해를 그대로 두면
               이슈 좋아요 자리에 숏판 좋아요가 들어와 조용히 뒤바뀐다. */
-        const [f, b, pl, pb, l, zl, zb, nl, nb, vl, vb] = await Promise.all([
+        const [f, b, pl, pb, l, zl, zb, nl, nb, vl, vb, mb] = await Promise.all([
             supabase.from('follows').select('following').eq('follower', user.id),
             supabase.from('bookmarks').select('issue_id').eq('user_id', user.id),
             supabase.from('post_likes').select('post_id').eq('user_id', user.id),
@@ -583,7 +584,8 @@ async function initSocial() {
             supabase.from('galla_news_reactions').select('news_id').eq('user_id', user.id).eq('value', 1),
             supabase.from('galla_news_bookmarks').select('news_id').eq('user_id', user.id),
             supabase.from('video_likes').select('video_id').eq('user_id', user.id),
-            supabase.from('video_bookmarks').select('video_id').eq('user_id', user.id)
+            supabase.from('video_bookmarks').select('video_id').eq('user_id', user.id),
+            supabase.from('market_bookmarks').select('market_id').eq('user_id', user.id)
         ]);
         f.data?.forEach(r => social.follows.add(r.following));
         b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
@@ -596,6 +598,7 @@ async function initSocial() {
         nb.data?.forEach(r => social.newsBookmarks.add(String(r.news_id)));
         vl.data?.forEach(r => social.videoLikes.add(String(r.video_id)));
         vb.data?.forEach(r => social.videoBookmarks.add(String(r.video_id)));
+        mb.data?.forEach(r => social.marketBookmarks.add(String(r.market_id)));
     }
     social.loaded = true;
     applySocialState();
@@ -768,12 +771,12 @@ function sharePost(btn) {
 /* 광장 글·갈라뉴스 공유 — 카드에서 제목을 읽어 OG 링크(/share/plaza|news/<id>)로 */
 function shareFeedCard(btn, kind) {
     const id = btn.dataset.id;
-    const card = btn.closest('.card');
-    const title = card?.querySelector('.pz-title, .nf-title, .vf-title')?.textContent?.trim()
-        || ({ plaza: 'GALLA 광장', news: 'GALLA 갈라뉴스', video: 'GALLA 핫트렌드' })[kind];
+    const card = btn.closest('.card, .predict-feed-card');
+    const title = card?.querySelector('.pz-title, .nf-title, .vf-title, .pf-q')?.textContent?.trim()
+        || ({ plaza: 'GALLA 광장', news: 'GALLA 갈라뉴스', video: 'GALLA 핫트렌드', predict: 'GALLA 갈라예측' })[kind];
     const SITE = window.GALLA_SITE || location.origin;
     const url = window.GALLA_shareUrl ? window.GALLA_shareUrl(kind, id) : (SITE + '/share/' + kind + '/' + id);
-    const text = ({ plaza: '갈라 광장에서 보기', news: '갈라뉴스에서 보기', video: '갈라에서 같이 보기' })[kind];
+    const text = ({ plaza: '갈라 광장에서 보기', news: '갈라뉴스에서 보기', video: '갈라에서 같이 보기', predict: '너라면 어디에 걸래?' })[kind];
     if (window.GALLA_share) return window.GALLA_share({ url, title, text });
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
@@ -897,7 +900,7 @@ function attachEvents() {
             e.stopPropagation();
             const k = kindOf(img);
             if (k === 'post') return sharePost(img);
-            if (k === 'plaza' || k === 'news' || k === 'video') return shareFeedCard(img, k);
+            if (k === 'plaza' || k === 'news' || k === 'video' || k === 'predict') return shareFeedCard(img, k);
             shareIssue(img.dataset.id);
         };
     });
@@ -910,6 +913,21 @@ function attachEvents() {
             const kind = kindOf(btn);
             const isPost = kind === 'post';
             const canManage = window.GALLA_canManage ? await window.GALLA_canManage(uid) : false;
+            if (kind === 'predict') {
+                /* 내가 연 예측이면 수정·삭제(예측 상세와 같은 owner-actions 계약), 아니면 신고·차단 */
+                const cardEl = btn.closest('.predict-feed-card');
+                if (canManage && window.GALLA_openOwnerMenu) {
+                    return window.GALLA_openOwnerMenu({
+                        table: 'markets', id: Number(id), ownerId: uid, label: '예측',
+                        deleteHint: '참여가 있으면 삭제할 수 없습니다 (정산 이용).',
+                        onDeleted: () => { cardEl?.remove(); },
+                    });
+                }
+                if (window.GALLA_openReportMenu) {
+                    return window.GALLA_openReportMenu({ contentType: 'market', contentId: id, authorId: uid, onBlocked: () => { cardEl?.remove(); } });
+                }
+                return;
+            }
             if (kind === 'video') {
                 /* 핫튜브는 갈라 사용자가 쓴 글이 아니라 작성자 차단은 없고 신고만 */
                 const cardEl = btn.closest('.card');
@@ -983,7 +1001,8 @@ function attachEvents() {
     IDXROOT.querySelectorAll('.goto-comments').forEach(el => {
         el.onclick = e => {
             e.stopPropagation();
-            const card = el.closest('.card');
+            const card = el.closest('.card, .predict-feed-card');
+            if (card.dataset.kind === 'predict') { window.GALLA_goto(`predict-market.html?id=${card.dataset.id}#comments`); return; }
             /* 숏판 댓글은 상세 페이지에 있다 — 릴스로 보내면 댓글 시트를 또 열어야 한다. */
             if (card.dataset.kind === 'post') {
                 window.GALLA_goto(`gallari-post.html?id=${card.dataset.id}#comments`);
@@ -1786,7 +1805,7 @@ function renderPredictCard(m) {
         : escHtml(cInit);
     const cAttr = m.created_by ? ` data-user-id="${m.created_by}" data-user-nick="${cName}"` : '';
     return `
-    <div class="predict-feed-card" data-mid="${m.id}"${styleVar}>
+    <div class="predict-feed-card" data-mid="${m.id}" data-kind="predict" data-id="${m.id}"${styleVar}>
         <div class="pf-top">
             <span class="pf-badge">🔮 갈라예측</span>
             <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
@@ -1803,10 +1822,16 @@ function renderPredictCard(m) {
         </div>
         <div class="pf-q">${escHtml(m.question)}</div>
         ${body}
-        <div class="pf-foot">
-            <span class="pf-vol">💰 거래량 <b>${(Math.round(m.volume)).toLocaleString('ko-KR')}</b>P</span>
-            ${galvisBtn('predict', m.id, m.question)}
-            <span class="pf-go">예측하러 가기 <span class="pf-arrow">›</span></span>
+        <!-- 이슈와 같은 아이콘 줄 — 예측엔 좋아요가 없으니 하트 자리에 이 판의 열기인 거래량을 둔다 -->
+        <div class="card-footer pf-actions">
+            <div class="footer-icons">
+                <span class="pf-vol" title="거래량">💰 <b>${(Math.round(m.volume)).toLocaleString('ko-KR')}</b>P</span>
+                <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+                <button type="button" class="fi-btn bookmark-btn" data-kind="predict" data-id="${m.id}" aria-label="저장">${bookmarkSvg}</button>
+                <button type="button" class="fi-btn share-btn" data-kind="predict" data-id="${m.id}" aria-label="공유">${shareSvg}</button>
+                ${galvisBtn('predict', m.id, m.question)}
+            </div>
+            <button class="more-btn card-more" data-kind="predict" data-id="${m.id}" data-uid="${escHtml(m.created_by || '')}" aria-label="더보기">${moreIcon}</button>
         </div>
     </div>`;
 }
