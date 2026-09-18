@@ -21,15 +21,21 @@
   const CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
 
-  async function initGallariPost() {
+  /* 🔎 요소는 '이 화면' 안에서만 찾는다 — 앱(SPA)에선 상세가 여러 장 겹쳐 열려(다음 영상 등) 같은 id 가 문서에 여럿이다.
+     document.getElementById 로 찾으면 밑에 깔린 옛 화면을 건드렸다(26.9.19 QA). */
+  let SCOPE = document;
+  const $id = (x) => SCOPE.querySelector('#' + x);
+
+  async function initGallariPost(host) {
+    SCOPE = (host && host.nodeType === 1) ? host : document;   // DCL 로 불리면 Event 가 온다 — 문서 전체
     const sb = window.supabaseClient;
-    const root = document.getElementById('glp-root');
+    const root = $id('glp-root');
     if (!root) return;
     const id = getParam('id');
     if (!id) { root.innerHTML = '<div class="glp-cempty">콘텐츠를 찾을 수 없어요.</div>'; return; }
 
     // 뒤로
-    const back = document.getElementById('glp-back');
+    const back = $id('glp-back');
     if (back) back.addEventListener('click', () => {
       if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;
       if (history.length > 1) history.back(); else nav('gallari.html');
@@ -50,12 +56,12 @@
     let liked = !!myLike, likeCount = post.like_count || 0;
 
     window.GALLA_DOMAIN = post.kind === 'horizontal' ? 'long' : 'short';
-    document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '롱판') : (author?.nickname || '숏판');
+    $id('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '롱판') : (author?.nickname || '숏판');
     /* 🔒 나만 보기(26.9.18) — 상단 제목 옆 SVG 자물쇠(본인·운영진만 여기까지 온다 — RLS) */
-    if (post.visibility === 'private') document.getElementById('glp-top-title').insertAdjacentHTML('beforeend', ' <span class="vis-lock"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</span>');
+    if (post.visibility === 'private') $id('glp-top-title').insertAdjacentHTML('beforeend', ' <span class="vis-lock"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</span>');
 
     // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
-    const moreBtn = document.getElementById('glp-more');
+    const moreBtn = $id('glp-more');
     if (moreBtn && window.GALLA_canManage) {
       window.GALLA_canManage(post.user_id).then(() => {
         // 남의 글이어도 ⋯ 를 띄운다 — owner-actions 가 신고·계정 차단 시트로 분기(App Store 1.2)
@@ -69,12 +75,12 @@
           onSaved: (patch) => {
             if (patch.title != null && post.kind === 'horizontal') {
               post.title = patch.title;
-              const tEl = document.querySelector('.glp-title'); if (tEl) tEl.textContent = patch.title;
-              document.getElementById('glp-top-title').textContent = patch.title || '롱판';
+              const tEl = SCOPE.querySelector('.glp-title'); if (tEl) tEl.textContent = patch.title;
+              $id('glp-top-title').textContent = patch.title || '롱판';
             }
             if (patch.caption != null) {
               post.caption = patch.caption;
-              const cEl = document.querySelector('.glp-caption');
+              const cEl = SCOPE.querySelector('.glp-caption');
               if (cEl) cEl.innerHTML = post.kind === 'horizontal' ? esc(patch.caption)
                 : `<b>${esc(author?.nickname || '')}</b>  ${esc(patch.caption)}`;
             }
@@ -179,9 +185,9 @@
     }
 
     // 좋아요
-    document.getElementById('glp-like').addEventListener('click', async () => {
+    $id('glp-like').addEventListener('click', async () => {
       if (!me) { alert('로그인이 필요해요.'); return; }
-      const btn = document.getElementById('glp-like'), c = document.getElementById('glp-likec');
+      const btn = $id('glp-like'), c = $id('glp-likec');
       liked = !liked; likeCount += liked ? 1 : -1;
       btn.classList.toggle('on', liked); c.textContent = likeCount;
       try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
@@ -192,7 +198,7 @@
     });
 
     // 후원(GC) — 갈라코인 후원 시트(donate.js). 창작자 이름 전달.
-    document.getElementById('glp-support').addEventListener('click', () => {
+    $id('glp-support').addEventListener('click', () => {
       if (me && post.user_id === me) { (window.GALLA_toast || alert)('내 콘텐츠예요 — 후원은 받는 쪽이에요'); return; }
       if (!me) { alert('로그인하고 후원할 수 있어요.'); return; }
       if (window.openDonatePost) window.openDonatePost(id, author?.nickname || '창작자');
@@ -200,7 +206,7 @@
     });
 
     // 공유 — /share/post/<id> OG 엣지 렌더 링크로
-    document.getElementById('glp-share').addEventListener('click', () => {
+    $id('glp-share').addEventListener('click', () => {
       const shareUrl = window.GALLA_SITE + '/share/post/' + id;
       const text = post.title || post.caption || '콘텐츠';
       if (window.GALLA_share) window.GALLA_share({ url: shareUrl, title: 'GALLA', text });
@@ -210,7 +216,7 @@
 
     // 후원자 요약(슈퍼챗) — 후원 성공 시 donate.js가 다시 부른다
     async function renderDonations() {
-      const box = document.getElementById('glp-donations'); if (!box) return;
+      const box = $id('glp-donations'); if (!box) return;
       const { data } = await sb.rpc('post_donations', { p_post_id: id });
       if (!data || !data.count) { box.innerHTML = ''; return; }
       const won = (n) => (n || 0).toLocaleString() + '원';
@@ -223,16 +229,16 @@
 
     // 댓글
     loadComments(sb, id, me, ava);
-    const focusC = () => { const el = document.getElementById('glp-cinput'); el && !el.disabled && el.focus(); };
-    document.getElementById('glp-cfocus').addEventListener('click', focusC);
+    const focusC = () => { const el = $id('glp-cinput'); el && !el.disabled && el.focus(); };
+    $id('glp-cfocus').addEventListener('click', focusC);
 
     // 조회수 +1 (뷰어도 가능한 SECURITY DEFINER RPC)
     try { sb.rpc('bump_post_view', { p_id: id }); } catch (_) {}
 
     // 롱판(유튜브식) 부가 UX — 설명 접기·프로필·팔로우·다음 영상
     if (post.kind === 'horizontal') {
-      const dmore = document.getElementById('glp-desc-more');
-      const desc = document.getElementById('glp-desc');
+      const dmore = $id('glp-desc-more');
+      const desc = $id('glp-desc');
       if (dmore && desc) {
         // 2줄 안 넘으면 더보기 숨김
         requestAnimationFrame(() => { const b = desc.querySelector('.glp-desc-body'); if (b && b.scrollHeight <= b.clientHeight + 2) dmore.style.display = 'none'; });
@@ -249,7 +255,7 @@
 
   // 다음 영상 — 다른 롱판 목록
   async function loadRelated(sb, curId) {
-    const box = document.getElementById('glp-related'); if (!box) return;
+    const box = $id('glp-related'); if (!box) return;
     const { data } = await sb.from('posts')
       .select('id,title,caption,thumbnail_url,images,user_id,view_count,created_at')
       .eq('kind', 'horizontal').eq('is_published', true).neq('moderation_status', 'blocked').neq('id', curId)
@@ -271,7 +277,7 @@
 
   let REPLY_TO = null;
   async function loadComments(sb, postId, me, ava) {
-    const list = document.getElementById('glp-clist');
+    const list = $id('glp-clist');
     const { data: comments } = await sb.from('post_comments')
       .select('id,user_id,parent_id,body,like_count,created_at')
       .eq('post_id', postId).order('created_at', { ascending: true }).limit(300);
@@ -319,7 +325,7 @@
     // 답글
     list.querySelectorAll('.glp-creply').forEach(b => b.addEventListener('click', () => {
       REPLY_TO = Number(b.dataset.cid);
-      const el = document.getElementById('glp-cinput');
+      const el = $id('glp-cinput');
       if (el) { el.placeholder = `@${b.dataset.nick} 님에게 답글…`; el.focus(); }
     }));
     // 🔗 댓글 공유 — 인용 카드(/share/comment/post/<cid>)
@@ -337,7 +343,7 @@
   }
 
   function wireInput(sb, postId, me, ava) {
-    const input = document.getElementById('glp-cinput'), send = document.getElementById('glp-csend');
+    const input = $id('glp-cinput'), send = $id('glp-csend');
     if (!input || !send || input.dataset.wired) return;
     input.dataset.wired = '1';
     const submit = async () => {
@@ -349,14 +355,17 @@
       if (error) { alert('댓글 등록 실패'); return; }
       input.value = ''; input.placeholder = '댓글 달기…'; REPLY_TO = null;
       try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
-      const cc = document.getElementById('glp-ccount'); if (cc) cc.textContent = Number(cc.textContent || 0) + 1;
+      const cc = $id('glp-ccount'); if (cc) cc.textContent = Number(cc.textContent || 0) + 1;
       loadComments(sb, postId, me, ava);
     };
     send.addEventListener('click', submit);
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
   }
 
-  window.GALLA_PAGE_GALLARI_POST = { init: initGallariPost };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGallariPost);
+  /* 앱(SPA)은 views/gallari-post.js 가 화면마다 init(host) 를 부른다 — 여기서 자동 실행하면 두 번 돈다.
+     예전엔 전용 뷰가 없어 범용 폴백이 스크립트를 한 번만 실행해, 두 번째로 여는 숏판·롱판부터 「불러오는 중」에 멈췄다(26.9.19 QA). */
+  window.GALLA_PAGE_GALLARI_POST = { init: initGallariPost, mount: (host) => initGallariPost(host) };
+  if (document.body && document.body.dataset.page === 'spa') { /* 뷰 어댑터가 부른다 */ }
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGallariPost);
   else initGallariPost();
 })();

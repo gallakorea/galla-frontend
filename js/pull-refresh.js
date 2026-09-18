@@ -85,23 +85,32 @@ if (!window.gallaHardReload) {
   }
   function reset() { if (ind) { ind.classList.add("snap"); ind.classList.remove("on"); ind.style.opacity = "0"; ind.style.transform = "translateY(-6px) scale(.55)"; } }
 
-  document.addEventListener("touchstart", function (e) {
-    if (active || e.touches.length !== 1) { pulling = false; return; }
-    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dy = 0;
-    pulling = winTop() && containerTop(e.target) && !blocked(e.target);
-  }, { passive: true });
-
-  document.addEventListener("touchmove", function (e) {
+  /* ⚠️ touchmove 는 지켜보기만 한다(passive, preventDefault 없음).
+     예전엔 문서 전체에 막을 수 있는(passive:false) touchmove 가 늘 붙어 있어, 폰이 모든 손가락 이동마다 이 검사가 끝나길
+     기다린 뒤에야 스크롤·탭 넘기기를 시작했다 — 화면이 바쁘면(홈 영상 재생 중) 손길이 통째로 씹혀 탭이 안 넘어갔다
+     (26.9.19 에뮬 QA). 손길 중간에 붙였다 떼는 방식도 맨 위에서 가로 밀기를 막았다. 당길 때의 기본 반동은 그대로 둔다. */
+  function onMove(e) {
     if (!pulling || active) return;
     var ny = e.touches[0].clientY - startY;
     var nx = e.touches[0].clientX - startX;
     if (ny <= 0 || Math.abs(nx) > Math.abs(ny)) { pulling = false; reset(); return; }
-    e.preventDefault();
     dy = ny * 0.6;                 // 고무줄 저항감
     drag(dy);
-  }, { passive: false });
+  }
+  function hook() {}
+  function unhook() {}
+  document.addEventListener("touchmove", onMove, { passive: true });
 
+  document.addEventListener("touchstart", function (e) {
+    if (active || e.touches.length !== 1) { pulling = false; unhook(); return; }
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dy = 0;
+    pulling = winTop() && containerTop(e.target) && !blocked(e.target);
+    if (pulling) hook(); else unhook();
+  }, { passive: true });
+
+  document.addEventListener("touchcancel", function () { unhook(); pulling = false; reset(); }, { passive: true });
   document.addEventListener("touchend", function () {
+    unhook();
     if (!pulling) return;
     pulling = false;
     if (dy >= TRIG && !active) {
