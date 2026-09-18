@@ -166,7 +166,7 @@
       if (!btn) return;
       const spa = document.body && document.body.dataset.page === "spa" && window.GALLA_SPA;
       if (!ME) {
-        if (confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?")) {
+        if (((window.GALLA_needLogin && (GALLA_needLogin("로그인하면 내 활동 알림을 볼 수 있어요."), 1)) ? false : confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?"))) {
           if (spa) window.GALLA_SPA.push("login", {}); else (window.GALLA_nav||function(u){location.href=u})("login.html");
         }
         return;

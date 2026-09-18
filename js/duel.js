@@ -558,7 +558,7 @@
     const boostBtn = $("#cg-boost");
     if (boostBtn) boostBtn.onclick = () => { boost = !boost; boostBtn.classList.toggle("on", boost); };
     box.querySelectorAll(".cg-amt").forEach(b => b.onclick = async () => {
-      if (!ME) return alert("로그인이 필요해요.");
+      if (!ME) return (window.GALLA_needLogin ? GALLA_needLogin("로그인이 필요해요.") : alert("로그인이 필요해요."));
       if (!team) return alert("먼저 응원할 편을 고르세요.");
       amt = +b.dataset.amt;
       b.disabled = true;

@@ -5745,7 +5745,7 @@
   }
 
   function promptLogin() {
-    if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) (window.GALLA_nav||function(u){location.href=u})('login.html');
+    if (((window.GALLA_needLogin && (GALLA_needLogin('로그인이 필요합니다.'), 1)) ? false : confirm('로그인이 필요합니다. 로그인하시겠어요?'))) (window.GALLA_nav||function(u){location.href=u})('login.html');
   }
 
   window.GALLA_openDM = function () { ME ? openDM() : promptLogin(); };

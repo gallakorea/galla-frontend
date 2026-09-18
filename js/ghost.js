@@ -244,7 +244,13 @@
     if (!btn || btn._ghostBound) return; btn._ghostBound = true;
     boundBtns.add(btn);
     window.GALLA_ghostReady().then(() => paintGhostBtn(btn));
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
+      /* 비로그인은 상점이 아니라 로그인부터(26.9.18 — 비로그인에게 상점이 열렸다) */
+      try {
+        const c = window.supabaseClient || (window.waitForSupabaseClient && await window.waitForSupabaseClient());
+        const s = c && (await c.auth.getSession()).data.session;
+        if (!s) { if (window.GALLA_needLogin) window.GALLA_needLogin("로그인하면 유령으로 활동할 수 있어요."); return; }
+      } catch (_) {}
       const st = window.__GHOST_ST;
       if (!st?.active) {
         /* 🛒 askShop 규약 — 문구로 한 번 더 묻지 않고 그 자리에서 상점을 연다.

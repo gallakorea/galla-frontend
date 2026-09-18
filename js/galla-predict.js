@@ -412,7 +412,7 @@ function bindMarketActions(wrap){
         try{ await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }catch{ toast('링크 복사 실패'); }
         return;
       }
-      if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
+      if(!ME){ if(((window.GALLA_needLogin && (GALLA_needLogin('로그인이 필요합니다.'), 1)) ? false : confirm('로그인이 필요합니다. 로그인하시겠어요?'))) (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
       btn.disabled=true;
       try{
         if(MY_SAVED[id]){ await supa.from('market_bookmarks').delete().eq('market_id',id).eq('user_id',ME.id); delete MY_SAVED[id]; }
@@ -479,7 +479,7 @@ function openCreateModal(){
     openCreateModal._t=(openCreateModal._t||0)+1;
     if(openCreateModal._t<=20) return setTimeout(openCreateModal,120);
     openCreateModal._t=0;
-    if(confirm('로그인이 필요합니다. 로그인하시겠어요?')){
+    if(((window.GALLA_needLogin && (GALLA_needLogin('로그인이 필요합니다.'), 1)) ? false : confirm('로그인이 필요합니다. 로그인하시겠어요?'))){
       if(document.body&&document.body.dataset.page==='spa'&&window.GALLA_SPA) window.GALLA_SPA.push('login');
       else (window.GALLA_nav||function(u){location.href=u})('login.html');
     }

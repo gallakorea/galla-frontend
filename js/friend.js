@@ -1350,6 +1350,8 @@
         sb2.textContent=a.label||"가입하고 계속하기";
         sb2.onclick=function(){
           try{ sessionStorage.setItem("galla_after_login","friend"); }catch(e){}
+          /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
+          if(window.GALLA_gotoLogin){ window.GALLA_gotoLogin(location.pathname.replace(/^\//,"") + location.search); return; }
           location.href="login.html?next=" + encodeURIComponent(location.pathname + location.search);
         };
         wrap.appendChild(sb2); return;

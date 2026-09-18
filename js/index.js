@@ -810,6 +810,8 @@ function attachEvents() {
                 let uid = null;
                 try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
                 if (!uid) {
+                    /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
+                    if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin('index.html'); return; }
                     const go = 'login.html?next=' + encodeURIComponent('index.html');
                     try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: 'shell', t: 'goto', url: go }, location.origin); } catch (e2) {}
                     try { (window.top || window).location.href = go; } catch (e2) {}

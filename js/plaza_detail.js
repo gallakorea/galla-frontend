@@ -349,7 +349,7 @@ async function handleCommentVote(e) {
 
   const session = await getSessionSafe();
   if (!session?.user) {
-    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
+    if (((window.GALLA_needLogin && (GALLA_needLogin("로그인이 필요합니다."), 1)) ? false : confirm("로그인이 필요합니다. 로그인하시겠어요?"))) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
     return true;
   }
 
@@ -476,7 +476,7 @@ async function submitComment(body) {
   const session = await getSessionSafe();
   const user = session?.user || null;
   if (!user) {
-    if (confirm("댓글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?")) {
+    if (((window.GALLA_needLogin && (GALLA_needLogin("댓글을 쓰려면 로그인이 필요합니다."), 1)) ? false : confirm("댓글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?"))) {
       window.GALLA_gotoLogin ? GALLA_gotoLogin() : ((window.GALLA_nav||function(u){location.href=u})("login.html"));
     }
     return;
@@ -647,11 +647,13 @@ async function initVoteAndComments() {
     voteScoreEl.textContent = String(data.score ?? 0);
 
     if (voteUpBtn && voteDownBtn) {
+      /* 비로그인도 누를 수 있게 둔다 — 누르면 로그인 창(아래 click 핸들러). 예전엔 disabled 라
+         눌러도 아무 반응이 없었다(26.9.18 사장님 「모든 액션은 로그인을 요청하도록」) */
       if (!session) {
-        voteUpBtn.disabled = true;
-        voteDownBtn.disabled = true;
-        voteUpBtn.style.opacity = "0.3";
-        voteDownBtn.style.opacity = "0.3";
+        voteUpBtn.disabled = false;
+        voteDownBtn.disabled = false;
+        voteUpBtn.style.opacity = "1";
+        voteDownBtn.style.opacity = "1";
         return;
       }
 
@@ -728,7 +730,7 @@ async function initVoteAndComments() {
     try {
       const session = await getSessionSafe();
       if (!session) {
-        alert("로그인 후 투표할 수 있습니다.");
+        (window.GALLA_needLogin ? GALLA_needLogin("로그인 후 투표할 수 있습니다.") : alert("로그인 후 투표할 수 있습니다."));
         return;
       }
 
@@ -761,7 +763,7 @@ async function initVoteAndComments() {
     e.preventDefault();
     const session = await getSessionSafe();
     if (!session) {
-      alert("로그인 후 투표할 수 있습니다.");
+      (window.GALLA_needLogin ? GALLA_needLogin("로그인 후 투표할 수 있습니다.") : alert("로그인 후 투표할 수 있습니다."));
       return;
     }
 
@@ -773,7 +775,7 @@ async function initVoteAndComments() {
     e.preventDefault();
     const session = await getSessionSafe();
     if (!session) {
-      alert("로그인 후 투표할 수 있습니다.");
+      (window.GALLA_needLogin ? GALLA_needLogin("로그인 후 투표할 수 있습니다.") : alert("로그인 후 투표할 수 있습니다."));
       return;
     }
 
@@ -837,7 +839,7 @@ async function initPlazaBookmark() {
   btn.addEventListener("click", async () => {
     const s = await getSessionSafe();
     if (!s?.user) {
-      if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
+      if (((window.GALLA_needLogin && (GALLA_needLogin("저장하려면 로그인이 필요합니다."), 1)) ? false : confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?"))) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
       return;
     }
     btn.disabled = true;

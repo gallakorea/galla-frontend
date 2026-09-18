@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0919006"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0919007"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <!-- ⚠️ MPA/SPA 완전 분리: index.html = 순수 MPA(웹 홈피드·SEO). 네이티브 앱은 index.html이 아니라
          app.html(SPA)을 바로 로드한다(번들 sync가 index.html을 app.html로 대체, 원본 피드는 home.html로 보존).
          과거의 index→app 리다이렉트는 부팅 이중로드 깜빡임을 만들어 제거함. 여기엔 어떤 SPA 리다이렉트도 두지 않는다. -->
@@ -228,20 +228,20 @@
 <script src="js/battle-fx.js?v=0909100"></script>
 <script src="js/vote-bar.js?v=080412"></script>
 <script src="js/vote-fx.js?v=0909100"></script>
-<script type="module" src="js/vote.core.js?v=0828173"></script>
+<script type="module" src="js/vote.core.js?v=0918600"></script>
 <script src="js/noti-icons.js?v=080412"></script>
-<script src="js/notifications.js?v=0909100"></script>
-<script src="js/write-hub.js?v=0904140"></script>
+<script src="js/notifications.js?v=0918600"></script>
+<script src="js/write-hub.js?v=0918600"></script>
 <script src="js/media-sound.js?v=080412"></script>
 <script src="js/share-sheet.js?v=0909100"></script>
 <script src="js/owner-actions.js?v=0915300"></script>
 <script src="js/follow.js?v=0909100"></script>
-<script src="js/ghost.js?v=0909100"></script>
+<script src="js/ghost.js?v=0918600"></script>
 <script src="js/user-sheet.js?v=080412"></script>
-<script src="js/report-block.js?v=0915300"></script>
+<script src="js/report-block.js?v=0918600"></script>
 <script src="js/reels-mix.js?v=0915300"></script>
-<script src="js/index.js?v=0918400"></script>
-<script type="module" src="js/shorts.js?v=0915300"></script>
+<script src="js/index.js?v=0918600"></script>
+<script type="module" src="js/shorts.js?v=0918600"></script>
 <script src="js/fx.js?v=0909100"></script>
 <script src="./js/nav.js?v=0911010"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>
@@ -266,7 +266,7 @@
       share-sheet.js 가 필요한 CSS 를 스스로 싣는다. */
 (function () {
   function load() {
-    var s = document.createElement('script'); s.src = 'js/dm.js?v=0910420'; document.head.appendChild(s);
+    var s = document.createElement('script'); s.src = 'js/dm.js?v=0918600'; document.head.appendChild(s);
   }
   if (window.requestIdleCallback) requestIdleCallback(load, { timeout: 2500 });
   else window.addEventListener('load', function () { setTimeout(load, 600); });

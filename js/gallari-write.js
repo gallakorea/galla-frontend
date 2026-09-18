@@ -334,7 +334,7 @@
       if (!sb) { alert('연결 오류'); return; }
       const { data: sess } = await sb.auth.getSession();
       const me = sess?.session?.user?.id;
-      if (!me) { alert('로그인이 필요해요.'); return; }
+      if (!me) { (window.GALLA_needLogin ? GALLA_needLogin('로그인이 필요해요.') : alert('로그인이 필요해요.')); return; }
 
       const title = ($('glrTitle').value || '').trim();
       const caption = ($('glrCaption').value || '').trim();

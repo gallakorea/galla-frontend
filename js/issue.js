@@ -557,7 +557,8 @@ async function wireIssueActions(issue) {
 
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id || null;
-  const needLogin = () => { if (window.GALLA_needLogin) window.GALLA_needLogin("팔로우하려면 로그인이 필요해요."); else if (confirm("로그인이 필요합니다. 로그인할까요?")) (window.GALLA_nav||function(u){location.href=u})("login.html"); };
+  /* 문구는 누른 버튼에 맞춘다 — 예전엔 좋아요·저장 모두 '팔로우하려면…'이 떴다(26.9.18 비로그인 점검) */
+  const needLogin = (msg) => { if (window.GALLA_needLogin) window.GALLA_needLogin(msg || "로그인 후 이용할 수 있어요."); else if (confirm("로그인이 필요합니다. 로그인할까요?")) (window.GALLA_nav||function(u){location.href=u})("login.html"); };
 
   // 좋아요
   let liked = false;
@@ -567,7 +568,7 @@ async function wireIssueActions(issue) {
   const paintLike = () => { if (likeCount) likeCount.textContent = count; likeBtn?.classList.toggle("on", liked); };
   paintLike();
   if (likeBtn) likeBtn.onclick = async () => {
-    if (!uid) return needLogin();
+    if (!uid) return needLogin("로그인하면 좋아요를 누를 수 있어요.");
     liked = !liked; count += liked ? 1 : -1; paintLike();
     if (liked) await supabase.from("issue_likes").insert({ issue_id: issue.id, user_id: uid });
     else await supabase.from("issue_likes").delete().eq("issue_id", issue.id).eq("user_id", uid);
@@ -579,7 +580,7 @@ async function wireIssueActions(issue) {
   const paintSave = () => saveBtn?.classList.toggle("on", saved);
   paintSave();
   if (saveBtn) saveBtn.onclick = async () => {
-    if (!uid) return needLogin();
+    if (!uid) return needLogin("로그인하면 저장할 수 있어요.");
     saved = !saved; paintSave();
     if (saved) await supabase.from("bookmarks").insert({ issue_id: issue.id, user_id: uid });
     else await supabase.from("bookmarks").delete().eq("issue_id", issue.id).eq("user_id", uid);
@@ -833,7 +834,10 @@ function initIssueVoteBar() {
       let uid = null;
       try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
       if (!uid) {
-        const go = "login.html?next=" + encodeURIComponent("issue.html" + (__SPA_PARAMS ? "?id=" + issueId : location.search));
+        const nextP = "issue.html" + (__SPA_PARAMS ? "?id=" + issueId : location.search);
+        /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
+        if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin(nextP); return; }
+        const go = "login.html?next=" + encodeURIComponent(nextP);
         try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {}
         try { (window.top || window).location.href = go; } catch (e2) {}
         setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);

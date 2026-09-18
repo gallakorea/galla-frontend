@@ -31,7 +31,7 @@
   }
   function toast(m) { window.GALLA_toast ? GALLA_toast(m) : 0; }
   function needLogin() {
-    if (confirm("로그인이 필요해요. 로그인할까요?")) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
+    if (((window.GALLA_needLogin && (GALLA_needLogin("로그인이 필요해요."), 1)) ? false : confirm("로그인이 필요해요. 로그인할까요?"))) (window.GALLA_nav || function (u) { location.href = u; })("login.html");
   }
   async function loggedIn() {
     try { var u = await (await client()).auth.getUser(); return !!(u && u.data && u.data.user); } catch (_) { return false; }

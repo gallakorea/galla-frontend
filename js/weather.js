@@ -63,7 +63,7 @@
   function needLogin(msg) {
     msg = msg || "로그인하면 비·눈 제보와 한마디를 남길 수 있어요.";
     if (window.GALLA_needLogin) return window.GALLA_needLogin(msg);
-    if (confirm("로그인이 필요해요. 로그인할까요?")) { closeRoom(); (window.GALLA_nav || function (u) { location.href = u; })("login.html"); }
+    if (((window.GALLA_needLogin && (GALLA_needLogin("로그인이 필요해요."), 1)) ? false : confirm("로그인이 필요해요. 로그인할까요?"))) { closeRoom(); (window.GALLA_nav || function (u) { location.href = u; })("login.html"); }
   }
 
   /* ── 하늘 — 전국에서 '진짜 오는' 비율만큼 빗줄기가 굵어진다 ── */

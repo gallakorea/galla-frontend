@@ -140,7 +140,7 @@
     const { logged, admin } = await isAdmin();
     if (!logged) {
       sheet.classList.remove('open');
-      if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) {
+      if (((window.GALLA_needLogin && (GALLA_needLogin('로그인이 필요합니다.'), 1)) ? false : confirm('로그인이 필요합니다. 로그인하시겠어요?'))) {
         // SPA(app.html)면 로그인도 스택 push(문서 유지), 아니면 기존 이동
         if (window.GALLA_SPA && document.body && document.body.dataset.page === 'spa') window.GALLA_SPA.push('login');
         else (window.GALLA_nav||function(u){location.href=u})('login.html');

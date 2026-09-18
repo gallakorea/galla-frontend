@@ -1388,6 +1388,8 @@ function showShortsLoginPopup(msg) {
   pop.querySelector(".slp-go").onclick = () => {
     const go = "login.html?next=" + encodeURIComponent("index.html");
     try { closeShortsSilently(); } catch (e) {}
+    /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
+    if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin("index.html"); return; }
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e) {}
     try { (window.top || window).location.href = go; } catch (e) {}
     setTimeout(function () { try { location.href = go; } catch (e) {} }, 400);

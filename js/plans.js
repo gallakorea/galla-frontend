@@ -379,6 +379,8 @@
 
     var lg = scrim.querySelector("[data-login]");
     if (lg) lg.addEventListener("click", function () {
+      /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
+      if (window.GALLA_gotoLogin) { bye(); window.GALLA_gotoLogin(location.pathname.replace(/^\//, "") + location.search); return; }
       location.href = "login.html?next=" + encodeURIComponent(location.pathname + location.search);
     });
     /* 💳 인앱 구매 — 실제 지급은 서버 검증(verify-iap) 뒤에 일어난다.
