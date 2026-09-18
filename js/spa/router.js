@@ -75,7 +75,11 @@
   }
 
   /* 스플래시가 내려갔는가. 내려간 뒤의 탭 첫 진입은 FOUC 를 가려 줄 게 아무것도 없다. */
-  let booted = false;
+  /* ⚠️ 스플래시는 세션 첫 진입에만 뜬다(splash-boot 의 sessionStorage). 당겨서 새로고침(location.reload)은
+     같은 세션이라 스플래시가 없다 — 그런데 booted=false 로 시작해 첫 탭이 CSS 를 안 기다리고 그려져,
+     index.css 가 붙기 전 날 HTML(세로 칩·파란 밑줄 회사정보)이 화면에 그대로 보였다(26.9.18 사장님 녹화).
+     → 가려 줄 스플래시가 없으면 처음부터 booted 로 본다. */
+  let booted = !document.getElementById("galla-splash");
   try { document.addEventListener("galla:ready", () => { booted = true; }, { once: true }); } catch (_) {}
 
   /* ── 탭 콘텐츠 로드(1회, keep-alive) ───────────────────────── */

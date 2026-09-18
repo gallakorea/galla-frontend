@@ -68,7 +68,9 @@
       if (!src || /^([a-z]+:)?\/\//i.test(src)) return;   // 외부/절대 URL 제외
       const base = src.split("?")[0].split("/").pop();
       if (SHELL_SCRIPTS.has(base)) return;
-      scripts.push(src);
+      /* ⚠️ type="module" 은 그대로 모듈로 실어야 한다 — 표시를 버리고 일반 스크립트로 실었더니
+         plaza.js(모듈, 최상위 const supabase)가 전역 supabase 와 부딪혀 SyntaxError 로 통째로 죽었다(26.9.18 QA, #/plaza) */
+      scripts.push((s.getAttribute("type") || "").toLowerCase() === "module" ? "module:" + src : src);
     });
 
     const out = { app: app.innerHTML, styles, inlineCss, scripts, title: (doc.title || "").trim(), bodyClass: doc.body ? doc.body.className : "", dataPage: doc.body ? (doc.body.dataset.page || "") : "" };
@@ -123,7 +125,9 @@
     };
     try {
       const waits = [];
-      for (const src of scripts) {
+      for (const raw of scripts) {
+        const isModule = String(raw).startsWith("module:");
+        const src = isModule ? String(raw).slice(7) : raw;
         const base = baseOf(src);
         replay.push(base);
         if (loadedPageScripts.has(base)) continue;
@@ -131,7 +135,7 @@
         fresh.push(base);
         waits.push(new Promise(res => {
           const s = document.createElement("script");
-          s.async = false;
+          if (isModule) s.type = "module"; else s.async = false;
           const fin = () => { doneSet.add(base); res(); };
           s.src = src; s.onload = fin; s.onerror = fin;
           document.head.appendChild(s);
