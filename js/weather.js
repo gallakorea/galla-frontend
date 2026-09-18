@@ -410,18 +410,26 @@
     var cid = cfg && cfg.naver_client_id;
     var el = WMAP.querySelector("#wx-map-c");
     var CENTER = [35.85, 127.75], ZOOM = 7;   // 남한 전체 + 제주가 폰 세로 화면에 꽉 차게
+    var why = "";
+    var P = null;
+    try { P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GallaNaverMap; } catch (_) {}
     try {
-      var P = isApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GallaNaverMap;
-      if (P && cid) {
+      if (!cid) why = "no_client_id";
+      else if (isApp() && P) {
         await P.setup({ ncpKeyId: String(cid) });
         el.classList.add("native");
         WMB = wmNative(P, CENTER[0], CENTER[1], ZOOM);
-      } else if (cid && !isApp()) {
+      } else if (!isApp()) {
         await loadNaverSdk(String(cid), cfg.param);
         WMB = wmWeb(el, CENTER[0], CENTER[1], ZOOM);
-      }
-    } catch (e) { console.warn("[weather] 지도 실패", e); WMB = null; }
-    if (!WMB) { window.GALLA_toast && GALLA_toast("지도를 불러오지 못했어요"); closeWxMap(); return; }
+      } else why = "app_without_native_plugin";
+    } catch (e) { why = "exception:" + (e && (e.message || e)); WMB = null; }
+    if (!WMB) {
+      /* 실패 이유를 남긴다 — 앱에서 "지도 호출 실패"가 떴는데 콘솔을 볼 수 없어 원인을 몰랐다(26.9.18) */
+      try { window.GALLA_logError && GALLA_logError(why || "unknown", "weather_map app=" + isApp() + " plugin=" + !!P + " cfg=" + !!cfg); } catch (_) {}
+      window.GALLA_toast && GALLA_toast("지도를 불러오지 못했어요");
+      closeWxMap(); return;
+    }
     WMB.onIdle(function () { clearTimeout(wmTimer); wmTimer = setTimeout(wmPaint, 180); });
     await wmLoad();
     setTimeout(function () { WMB && WMB.refresh(); }, 120);
