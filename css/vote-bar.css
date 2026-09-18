@@ -216,7 +216,11 @@
 /* 🧍‍🧍 줄다리기 사람 — 막대 위 한 줄(투표 뒤에만). 왼쪽 찬성팀·오른쪽 반대팀이 몸을 젖혀 당기고, 땀이 튀고, 먼지가 인다. */
 /* 투표 전에도 보인다(손짓), 투표 뒤엔 당기기 */
 .gv-tug { display: flex; align-items: flex-end; height: 34px; margin: -2px 2px 4px; }
-.shorts-vote .gv-tug { display: none; }   /* 릴스 위 겹침 화면은 좁아서 생략 */
+/* 릴스 — 자리가 좁아 줄다리기 사람들을 진영 막대 '위 영상 위에' 띄운다(26.9.19 사장님: 「공간이 부족하면 그 위에 띄우기」).
+   자리는 차지하지 않고(absolute), 누르기를 가로채지 않게(pointer-events:none), 영상 위에서 보이게 그림자. */
+/* ⚠️ .shorts-vote 는 이미 position:fixed(기준점) — relative 로 덮으면 막대가 화면에서 풀려 버린다 */
+.shorts-vote .gv-tug { position: absolute; left: 14px; right: 14px; top: -36px; margin: 0; pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.85)) drop-shadow(0 0 6px rgba(0,0,0,.45)); }
 .gv-team { position: relative; }
 .gv:not(.gv-locked) .gv-fig { display: none; }
 .gv.gv-locked .gv-wave, .gv.gv-locked .gv-bub { display: none; }
