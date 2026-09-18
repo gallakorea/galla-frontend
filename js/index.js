@@ -546,20 +546,27 @@ const social = {
     plazaBookmarks: new Set(),
     newsLikes: new Set(),       // 갈라뉴스(galla_news_reactions value=1)
     newsBookmarks: new Set(),
+    videoLikes: new Set(),      // 핫튜브 영상(video_likes)
+    videoBookmarks: new Set(),  // video_bookmarks
+    foodVotes: {},              // 맛집 판정 — place_id → 'good' | 'bad'
+    foodSaves: new Set(),
+    travelWant: new Set(),      // 여행 '가고 싶다'(travel_votes verdict=want)
+    travelSaves: new Set(),
     likes: new Set(),       // 내가 좋아요한 issue_id (문자열)
     loaded: false
 };
 
 /* 카드 종류별 좋아요·저장 테이블 — 아이콘 줄(footer-icons)은 이슈·숏판·광장·뉴스가 모두 같고
    data-kind 로만 갈린다. id 는 이슈·숏판이 숫자, 광장·뉴스가 uuid 라 형 변환도 여기서 정한다. */
-const LIKE_TBL = { post: ['post_likes', 'post_id'], plaza: ['plaza_votes', 'post_id'], news: ['galla_news_reactions', 'news_id'], issue: ['issue_likes', 'issue_id'] };
-const MARK_TBL = { post: ['post_bookmarks', 'post_id'], plaza: ['plaza_bookmarks', 'post_id'], news: ['galla_news_bookmarks', 'news_id'], issue: ['bookmarks', 'issue_id'] };
+const LIKE_TBL = { post: ['post_likes', 'post_id'], plaza: ['plaza_votes', 'post_id'], news: ['galla_news_reactions', 'news_id'], video: ['video_likes', 'video_id'], issue: ['issue_likes', 'issue_id'] };
+const MARK_TBL = { post: ['post_bookmarks', 'post_id'], plaza: ['plaza_bookmarks', 'post_id'], news: ['galla_news_bookmarks', 'news_id'], video: ['video_bookmarks', 'video_id'], issue: ['bookmarks', 'issue_id'] };
 const LIKE_EXTRA = { plaza: { vote: 1 }, news: { value: 1 } };   // 찬반·반응 테이블은 값 칸이 따로 있다
 const kindOf = (el) => el.dataset.kind || 'issue';
-const idVal = (kind, id) => (kind === 'plaza' || kind === 'news') ? String(id) : Number(id);
+const idVal = (kind, id) => (kind === 'issue' || kind === 'post') ? Number(id) : String(id);
 const kindSelOf = (kind) => kind === 'issue' ? ':not([data-kind])' : `[data-kind="${kind}"]`;
-const likeSetOf = (k) => k === 'post' ? social.postLikes : k === 'news' ? social.newsLikes : social.likes;
-const markSetOf = (k) => k === 'post' ? social.postBookmarks : k === 'plaza' ? social.plazaBookmarks : k === 'news' ? social.newsBookmarks : social.bookmarks;
+const likeSetOf = (k) => ({ post: social.postLikes, news: social.newsLikes, video: social.videoLikes, travel: social.travelWant })[k] || social.likes;
+const markSetOf = (k) => ({ post: social.postBookmarks, plaza: social.plazaBookmarks, news: social.newsBookmarks,
+                            video: social.videoBookmarks, food: social.foodSaves, travel: social.travelSaves })[k] || social.bookmarks;
 
 async function initSocial() {
     const supabase = window.supabaseClient;
@@ -569,7 +576,7 @@ async function initSocial() {
         social.userId = user.id;
         /* ⚠️ 순서와 이름을 반드시 맞춰서 받는다 — 쿼리를 끼워 넣고 구조 분해를 그대로 두면
               이슈 좋아요 자리에 숏판 좋아요가 들어와 조용히 뒤바뀐다. */
-        const [f, b, pl, pb, l, zl, zb, nl, nb] = await Promise.all([
+        const [f, b, pl, pb, l, zl, zb, nl, nb, vl, vb, fv, fs, tw, ts] = await Promise.all([
             supabase.from('follows').select('following').eq('follower', user.id),
             supabase.from('bookmarks').select('issue_id').eq('user_id', user.id),
             supabase.from('post_likes').select('post_id').eq('user_id', user.id),
@@ -578,7 +585,13 @@ async function initSocial() {
             supabase.from('plaza_votes').select('post_id, vote').eq('user_id', user.id),
             supabase.from('plaza_bookmarks').select('post_id').eq('user_id', user.id),
             supabase.from('galla_news_reactions').select('news_id').eq('user_id', user.id).eq('value', 1),
-            supabase.from('galla_news_bookmarks').select('news_id').eq('user_id', user.id)
+            supabase.from('galla_news_bookmarks').select('news_id').eq('user_id', user.id),
+            supabase.from('video_likes').select('video_id').eq('user_id', user.id),
+            supabase.from('video_bookmarks').select('video_id').eq('user_id', user.id),
+            supabase.from('food_votes').select('place_id, verdict').eq('user_id', user.id),
+            supabase.from('food_saves').select('place_id').eq('user_id', user.id),
+            supabase.from('travel_votes').select('place_id').eq('user_id', user.id).eq('verdict', 'want'),
+            supabase.from('travel_saves').select('place_id').eq('user_id', user.id)
         ]);
         f.data?.forEach(r => social.follows.add(r.following));
         b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
@@ -589,6 +602,12 @@ async function initSocial() {
         zb.data?.forEach(r => social.plazaBookmarks.add(String(r.post_id)));
         nl.data?.forEach(r => social.newsLikes.add(String(r.news_id)));
         nb.data?.forEach(r => social.newsBookmarks.add(String(r.news_id)));
+        vl.data?.forEach(r => social.videoLikes.add(String(r.video_id)));
+        vb.data?.forEach(r => social.videoBookmarks.add(String(r.video_id)));
+        fv.data?.forEach(r => { social.foodVotes[String(r.place_id)] = r.verdict; });
+        fs.data?.forEach(r => social.foodSaves.add(String(r.place_id)));
+        tw.data?.forEach(r => social.travelWant.add(String(r.place_id)));
+        ts.data?.forEach(r => social.travelSaves.add(String(r.place_id)));
     }
     social.loaded = true;
     applySocialState();
@@ -643,6 +662,7 @@ function applySocialState() {
     });
     // 광장 카드의 추천/비추천 — 광장 목록(plaza.js)과 같은 pv-vote 컴포넌트
     IDXROOT.querySelectorAll('.pv-btn').forEach(b => {
+        if (b.dataset.kind === 'food') { b.classList.toggle('on', social.foodVotes[b.dataset.id] === b.dataset.v); return; }
         const mv = social.plazaVotes[b.dataset.id] || 0;
         b.classList.toggle('on', Number(b.dataset.v) === mv);
     });
@@ -675,7 +695,19 @@ async function toggleLike(btn) {
     const [tbl, col] = LIKE_TBL[kind] || LIKE_TBL.issue;
     const key = idVal(kind, id);
     let error;
-    if (kind === 'plaza') {
+    if (kind === 'travel') {
+        /* 여행의 하트 = '가고 싶다'. 같은 판정을 다시 보내면 서버가 취소한다(travel-place.js 와 같은 RPC). */
+        const { data, error: e2 } = await supabase.rpc('travel_judge', { p_id: key, p_verdict: 'want' });
+        error = e2 || (data && data.ok === false ? { message: data.reason } : null);
+        if (!error && data) {
+            const n = Number(data.want) || 0, isOn = data.mine === 'want';
+            if (isOn) set.add(id); else set.delete(id);
+            IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]${kindSel}`).forEach(b => {
+                b.dataset.likes = n; b.classList.toggle('on', isOn);
+                const c = b.querySelector('.lk-count'); if (c) c.textContent = n ? formatK(n) : '';
+            });
+        }
+    } else if (kind === 'plaza') {
         /* 광장은 추천 수(up_count)까지 함께 고치는 전용 RPC 를 쓴다. 같은 값으로 다시 부르면 취소된다 —
            표에 직접 넣으면 카운트가 안 맞는다(plaza.js 와 같은 경로). */
         ({ error } = await supabase.rpc('vote_plaza_post', { p_post_id: key, p_value: 1 }));
@@ -732,12 +764,23 @@ async function toggleBookmark(img) {
     if (on) set.delete(id); else set.add(id);
     applySocialState();
 
-    const [tbl, col] = MARK_TBL[kind] || MARK_TBL.issue;
-    const key = idVal(kind, id);
-    const { error } = on
-        ? await supabase.from(tbl).delete()
-            .eq('user_id', social.userId).eq(col, key)
-        : await supabase.from(tbl).insert({ user_id: social.userId, [col]: key });
+    let error;
+    if (kind === 'food' || kind === 'travel') {
+        /* 맛집·여행 저장은 각 탭의 토글 RPC 를 그대로 쓴다(저장 수 집계까지 서버가 맞춘다) */
+        const { data, error: e2 } = await supabase.rpc(kind === 'food' ? 'food_toggle_save' : 'travel_save', { p_id: id });
+        error = e2 || (data && data.ok === false ? { message: data.reason } : null);
+        if (!error && data && typeof data.saved === 'boolean') {
+            if (data.saved) set.add(id); else set.delete(id);
+            applySocialState();
+        }
+    } else {
+        const [tbl, col] = MARK_TBL[kind] || MARK_TBL.issue;
+        const key = idVal(kind, id);
+        ({ error } = on
+            ? await supabase.from(tbl).delete()
+                .eq('user_id', social.userId).eq(col, key)
+            : await supabase.from(tbl).insert({ user_id: social.userId, [col]: key }));
+    }
 
     if (error && error.code !== '23505') {
         if (on) set.add(id); else set.delete(id);
@@ -762,11 +805,14 @@ function sharePost(btn) {
 function shareFeedCard(btn, kind) {
     const id = btn.dataset.id;
     const card = btn.closest('.card');
-    const title = card?.querySelector('.pz-title, .nf-title')?.textContent?.trim()
-        || (kind === 'plaza' ? 'GALLA 광장' : 'GALLA 갈라뉴스');
-    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl(kind, id)
-        : ((window.GALLA_SITE || location.origin) + '/share/' + kind + '/' + id);
-    const text = kind === 'plaza' ? '갈라 광장에서 보기' : '갈라뉴스에서 보기';
+    const title = card?.querySelector('.pz-title, .nf-title, .vf-title, .pc-title')?.textContent?.trim()
+        || ({ plaza: 'GALLA 광장', news: 'GALLA 갈라뉴스', video: 'GALLA 핫트렌드', food: 'GALLA 맛집', travel: 'GALLA 여행' })[kind];
+    const SITE = window.GALLA_SITE || location.origin;
+    /* 맛집·여행은 공유 카드 경로가 없다 — 상세 화면 주소를 그대로 준다 */
+    const url = kind === 'food' ? `${SITE}/search?tab=food&fp=${encodeURIComponent(id)}`
+        : kind === 'travel' ? `${SITE}/travel-place?id=${encodeURIComponent(id)}`
+        : (window.GALLA_shareUrl ? window.GALLA_shareUrl(kind, id) : (SITE + '/share/' + kind + '/' + id));
+    const text = ({ plaza: '갈라 광장에서 보기', news: '갈라뉴스에서 보기', video: '갈라에서 같이 보기', food: '갈라 맛집에서 보기', travel: '갈라 여행에서 보기' })[kind];
     if (window.GALLA_share) return window.GALLA_share({ url, title, text });
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
@@ -860,14 +906,25 @@ function attachEvents() {
             if (btn.__busy) return;
             btn.__busy = true;
             try {
-                const id = btn.dataset.id, val = Number(btn.dataset.v);
+                const id = btn.dataset.id;
+                if (btn.dataset.kind === 'food') {
+                    /* 맛집 판정(맛있다/맛없다) — 같은 판정을 다시 누르면 취소(food.js 와 같은 RPC) */
+                    const { data: fd, error: fe } = await window.supabaseClient.rpc('food_judge', { p_id: id, p_verdict: btn.dataset.v });
+                    if (fe || !fd || fd.ok === false) { openModal('판정 처리에 실패했어요.'); return; }
+                    if (fd.mine) social.foodVotes[id] = fd.mine; else delete social.foodVotes[id];
+                    const sc = (Number(fd.good) || 0) - (Number(fd.bad) || 0);
+                    IDXROOT.querySelectorAll(`.pv-score[data-kind="food"][data-id="${id}"]`).forEach(el => { el.textContent = String(sc); });
+                    applySocialState();
+                    return;
+                }
+                const val = Number(btn.dataset.v);
                 const { data, error } = await window.supabaseClient.rpc('vote_plaza_post', { p_post_id: id, p_value: val });
                 if (error) { openModal('투표 처리에 실패했어요.'); return; }
                 const row = Array.isArray(data) ? data[0] : data;
                 const mv = row?.my_vote ?? 0;
                 social.plazaVotes[id] = mv;
                 if (typeof row?.score === 'number') {
-                    IDXROOT.querySelectorAll(`.pv-score[data-id="${id}"]`).forEach(el => { el.textContent = String(row.score); });
+                    IDXROOT.querySelectorAll(`.pv-score:not([data-kind])[data-id="${id}"]`).forEach(el => { el.textContent = String(row.score); });
                 }
                 applySocialState();
                 if (window.GALLA_signal && mv !== 0) window.GALLA_signal.act('plaza', id, mv === 1 ? 'like' : 'skip', 'plaza');
@@ -889,7 +946,7 @@ function attachEvents() {
             e.stopPropagation();
             const k = kindOf(img);
             if (k === 'post') return sharePost(img);
-            if (k === 'plaza' || k === 'news') return shareFeedCard(img, k);
+            if (k === 'plaza' || k === 'news' || k === 'video' || k === 'food' || k === 'travel') return shareFeedCard(img, k);
             shareIssue(img.dataset.id);
         };
     });
@@ -902,6 +959,13 @@ function attachEvents() {
             const kind = kindOf(btn);
             const isPost = kind === 'post';
             const canManage = window.GALLA_canManage ? await window.GALLA_canManage(uid) : false;
+            if (kind === 'video' || kind === 'food' || kind === 'travel') {
+                /* 핫튜브·맛집·여행은 갈라 사용자가 쓴 글이 아니라 작성자 차단은 없고 신고만 */
+                const cardEl = btn.closest('.card');
+                if (window.GALLA_reportContent) return window.GALLA_reportContent({ contentType: kind, contentId: id, authorId: null });
+                if (window.GALLA_openReportMenu) return window.GALLA_openReportMenu({ contentType: kind, contentId: id, authorId: null, onBlocked: () => cardEl?.remove() });
+                return;
+            }
             if (kind === 'plaza' || kind === 'news') {
                 /* 광장 글은 내 글이면 수정·삭제, 남의 글이면 신고·차단. 갈라뉴스는 작성자가 없어 신고만. */
                 const cardEl = btn.closest('.card');
@@ -976,6 +1040,9 @@ function attachEvents() {
             }
             if (card.dataset.kind === 'plaza') { window.GALLA_goto(`plaza_detail.html?id=${card.dataset.id}#comments`); return; }
             if (card.dataset.kind === 'news') { window.GALLA_goto(`news.html?gn=${card.dataset.id}#comments`); return; }
+            if (card.dataset.kind === 'video') { window.GALLA_openVideoPage?.(card.dataset.id, card.dataset.vtitle || '', card.dataset.vch || ''); return; }
+            if (card.dataset.kind === 'food') { window.GALLA_goto(`search.html?tab=food&fp=${card.dataset.id}`); return; }
+            if (card.dataset.kind === 'travel') { window.GALLA_goto(`travel-place.html?id=${card.dataset.id}`); return; }
             window.GALLA_goto(`issue.html?id=${card.dataset.id}#battle-zone`);
         };
     });
@@ -1137,7 +1204,9 @@ async function loadData() {
         loadNewsCards(),
         loadVideoCards(),
         loadDuelCards(),
-        loadGallariCards()
+        loadGallariCards(),
+        loadFoodCards(),
+        loadTravelCards()
     ]);
 
     // 🌍 읽기 필터 — 내 언어 콘텐츠만. 언어가 하나뿐이면 아무것도 하지 않는다(오늘은 no-op).
@@ -1247,10 +1316,11 @@ async function loadData() {
     GALLA_signalReady();
 
     // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
-    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards]) => {
+    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards, foodCards, travelCards]) => {
         feed = interleave(cards, {
             predict: predictionCards, plaza: plazaCards,
-            news: newsCards, video: videoCards, duel: duelCards, gallari: gallariCards
+            news: newsCards, video: videoCards, duel: duelCards, gallari: gallariCards,
+            food: foodCards, travel: travelCards
         });
         window.feed = feed;
         // 그 사이 카테고리 칩을 골랐다면 새 피드 기준으로 필터 재적용
@@ -1308,12 +1378,29 @@ function interleave(issues, ex = {}) {
             if (idx[t] < arr.length) { queue.push({ type: t, data: arr[idx[t]++] }); added = true; }
         }
     }
+    /* 🍜✈️ 맛집·여행 — 홈의 주인공(이슈·숏판)을 밀어내지 않게 첫 화면엔 넣지 않고,
+       '이슈 다음 칸'(다른 콘텐츠 자리) 세 번에 한 번꼴로 맛집·여행을 번갈아 끼운다.
+       다른 콘텐츠 줄(queue)에 넣으므로 이슈 ↔ 다른 콘텐츠가 번갈아 나오는 리듬이 그대로 유지되고,
+       장소 카드끼리 붙지도 않는다. queue 의 k번째는 피드의 2k+1번째 칸이다 → k=2 부터면 6번째 칸부터. */
+    const places = [];
+    const fq = (ex.food || []).slice(), tq = (ex.travel || []).slice();
+    while (fq.length || tq.length) {
+        if (fq.length) places.push({ type: 'food', data: fq.shift() });
+        if (tq.length) places.push({ type: 'travel', data: tq.shift() });
+    }
+    let qpos = 2;
+    places.forEach(p => {
+        if (qpos <= queue.length) { queue.splice(qpos, 0, p); qpos += 3; }
+        else queue.push(p);
+    });
+
     const out = [];
     issues.forEach(c => {
         out.push({ type: 'issue', data: c });
         if (queue.length) out.push(queue.shift());
     });
     while (queue.length) out.push(queue.shift());
+
     return out;
 }
 
@@ -1488,7 +1575,7 @@ async function loadVideoCards() {
    여기서 onclick 을 따로 달지 않는다 — 화면마다 갈라져서 앱·웹·PC 가 따로 놀았다. */
 function renderVideoCard(v) {
     return `
-    <div class="card video-feed-card" data-vid="${escHtml(v.video_id)}"
+    <div class="card video-feed-card" data-kind="video" data-id="${escHtml(v.video_id)}" data-vid="${escHtml(v.video_id)}"
          data-vtitle="${escHtml(v.title || '')}" data-vch="${escHtml(v.channel_title || '')}">
       <div class="vf-thumb" data-vplay>
         <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
@@ -1499,7 +1586,99 @@ function renderVideoCard(v) {
       <div class="vf-body" data-vopen>
         <div class="nf-head"><span class="vf-badge">🔥 핫트렌드</span></div>
         <div class="vf-title">${escHtml(v.title)}</div>
-        <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회${galvisBtn('video', v.video_id, v.title)}</div>
+        <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회</div>
+      </div>
+      <div class="card-footer">
+        <div class="footer-icons">
+          <button type="button" class="fi-btn like-btn" data-kind="video" data-id="${escHtml(v.video_id)}" data-likes="0" aria-label="좋아요">${heartSvg}<span class="lk-count"></span></button>
+          <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+          <button type="button" class="fi-btn bookmark-btn" data-kind="video" data-id="${escHtml(v.video_id)}" aria-label="저장">${bookmarkSvg}</button>
+          <button type="button" class="fi-btn share-btn" data-kind="video" data-id="${escHtml(v.video_id)}" aria-label="공유">${shareSvg}</button>
+          ${galvisBtn('video', v.video_id, v.title)}
+        </div>
+        <button class="more-btn card-more" data-kind="video" data-id="${escHtml(v.video_id)}" data-uid="" aria-label="더보기">${moreIcon}</button>
+      </div>
+    </div>`;
+}
+
+/* 🍜 맛집 카드 — '누가 다녀간 집'이 이 서비스의 정체성이라 머리글에 세운다.
+   틀은 뉴스 카드(사진·머리글·제목·요약)를 그대로 쓰고, 판정은 광장과 같은 추천/비추천 컴포넌트다. */
+async function loadFoodCards() {
+    try {
+        const { data } = await window.supabaseClient.rpc('food_browse', { p_per: 6, p_channels: 10 });
+        const seen = new Set(), pool = [];
+        ((data && data.sections) || []).forEach(sec => (sec.places || []).forEach(p => {
+            if (!p.cover || seen.has(p.id)) return;
+            seen.add(p.id); pool.push({ ...p, who: sec.name });
+        }));
+        return shuffle(pool).slice(0, 4);
+    } catch (_) { return []; }
+}
+function renderFoodCard(p) {
+    const area = String(p.address || '').split(/\s+/).slice(0, 2).join(' ');
+    const score = (Number(p.good) || 0) - (Number(p.bad) || 0);
+    return `
+    <div class="card news-feed-card place-feed-card" data-kind="food" data-id="${p.id}" onclick="GALLA_goto('search.html?tab=food&fp=${p.id}')">
+      <div class="nf-hero"><img src="${escHtml(p.cover)}" loading="lazy" alt="" onerror="this.closest('.nf-hero')?.remove()"></div>
+      <div class="nf-body">
+        <div class="nf-head">
+          <span class="nf-badge">🍜 맛집</span>
+          ${p.category ? `<span class="nf-cat">${escHtml(p.category)}</span>` : ''}
+          ${p.who ? `<span class="nf-src">${escHtml(p.who)} 다녀감</span>` : ''}
+        </div>
+        <div class="nf-title pc-title">${escHtml(p.name)}</div>
+        ${area ? `<div class="nf-sum">${escHtml(area)}</div>` : ''}
+        <div class="card-footer">
+          <div class="footer-icons">
+            <span class="pv-vote">
+              <button type="button" class="pv-btn pv-up" data-kind="food" data-id="${p.id}" data-v="good" aria-label="맛있다"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg></button>
+              <span class="pv-score" data-kind="food" data-id="${p.id}">${score}</span>
+              <button type="button" class="pv-btn pv-down" data-kind="food" data-id="${p.id}" data-v="bad" aria-label="맛없다"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+            </span>
+            <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+            <button type="button" class="fi-btn bookmark-btn" data-kind="food" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
+            <button type="button" class="fi-btn share-btn" data-kind="food" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
+            ${galvisBtn('food', p.id, p.name)}
+          </div>
+          <button class="more-btn card-more" data-kind="food" data-id="${p.id}" data-uid="" aria-label="더보기">${moreIcon}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ✈️ 여행 카드 — '어느 크리에이터가 다녀간 곳'을 머리글에. 하트는 여행 판정의 '가고 싶다'다. */
+async function loadTravelCards() {
+    try {
+        const off = Math.floor(Math.random() * 120);   // 진입마다 새 얼굴
+        const { data } = await window.supabaseClient.rpc('travel_feed', { p_scale: 'spot', p_limit: 40, p_offset: off });
+        const pool = ((data && data.places) || []).filter(p => p.cover && (p.channels || []).length);
+        return shuffle(pool).slice(0, 4);
+    } catch (_) { return []; }
+}
+function renderTravelCard(p) {
+    const where = [p.city || p.admin1, p.country].filter(Boolean).join(' · ');
+    const want = Number(p.want) || 0;
+    const who = (p.channels || [])[0] || '';
+    return `
+    <div class="card news-feed-card place-feed-card" data-kind="travel" data-id="${p.id}" onclick="GALLA_goto('travel-place.html?id=${p.id}')">
+      <div class="nf-hero"><img src="${escHtml(p.cover)}" loading="lazy" alt="" referrerpolicy="no-referrer" onerror="this.closest('.nf-hero')?.remove()"></div>
+      <div class="nf-body">
+        <div class="nf-head">
+          <span class="nf-badge">✈️ 여행</span>
+          ${where ? `<span class="nf-cat">${escHtml(where)}</span>` : ''}
+          ${who ? `<span class="nf-src">${escHtml(who)} 다녀감</span>` : ''}
+        </div>
+        <div class="nf-title pc-title">${escHtml(p.name)}</div>
+        <div class="card-footer">
+          <div class="footer-icons">
+            <button type="button" class="fi-btn like-btn" data-kind="travel" data-id="${p.id}" data-likes="${want}" aria-label="가고 싶다">${heartSvg}<span class="lk-count">${want ? formatK(want) : ''}</span></button>
+            <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+            <button type="button" class="fi-btn bookmark-btn" data-kind="travel" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
+            <button type="button" class="fi-btn share-btn" data-kind="travel" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
+            ${galvisBtn('travel', p.id, p.name)}
+          </div>
+          <button class="more-btn card-more" data-kind="travel" data-id="${p.id}" data-uid="" aria-label="더보기">${moreIcon}</button>
+        </div>
       </div>
     </div>`;
 }
@@ -1837,6 +2016,8 @@ function renderFeedItem(item){
     if (item.type === 'plaza') return renderPlazaCard(item.data);
     if (item.type === 'news') return renderNewsCard(item.data);
     if (item.type === 'video') return renderVideoCard(item.data);
+    if (item.type === 'food') return renderFoodCard(item.data);
+    if (item.type === 'travel') return renderTravelCard(item.data);
     if (item.type === 'duel') return renderDuelCard(item.data);
     if (item.type === 'gallari') return renderGallariCard(item.data);
     return renderCard(item.data);
