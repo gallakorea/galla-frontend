@@ -305,17 +305,20 @@ async function loadMarkets(){
   renderGuide(); renderCombo(); renderDaily(); renderJackpot(); renderMarkets();
 }
 
-let RX_AGG={}, MY_RX={}, MY_SAVED={}, MY_BET={};
+let RX_AGG={}, MY_RX={}, MY_SAVED={}, MY_BET={}, MY_SIDE={};
 async function loadReactionsAndSaves(ids){
-  RX_AGG={}; MY_RX={}; MY_SAVED={}; MY_BET={}; if(!ids.length) return;
-  const [rx,myrx,sv,mb]=await Promise.all([
+  RX_AGG={}; MY_RX={}; MY_SAVED={}; MY_BET={}; MY_SIDE={}; if(!ids.length) return;
+  const [rx,myrx,sv,mb,mc]=await Promise.all([
     supa.from('market_reactions').select('market_id,value').in('market_id',ids),
     ME?supa.from('market_reactions').select('market_id,value').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
     ME?supa.from('market_bookmarks').select('market_id').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
     /* 내가 참여한 예측 — 참여 전 카드만 반짝이게, 참여한 카드엔 「내 선택」 표시 */
     ME?supa.from('predict_bets').select('market_id,outcome_id').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
+    /* GP 를 안 걸어도 입장을 정해 댓글을 달면 참여다(사장님: 「베팅 안 하면 입장 선택하고 댓글 다는 구조」) */
+    ME?supa.from('market_comments').select('market_id,side').eq('author_id',ME.id).in('market_id',ids).in('side',['yes','no']):Promise.resolve({data:[]}),
   ]);
   (mb.data||[]).forEach(b=>{ MY_BET[b.market_id]=b.outcome_id; });
+  (mc.data||[]).forEach(c=>{ if(!MY_SIDE[c.market_id]) MY_SIDE[c.market_id]=c.side; });
   (rx.data||[]).forEach(r=>{ const a=RX_AGG[r.market_id]||={up:0,down:0}; if(r.value===1)a.up++; else a.down++; });
   (myrx.data||[]).forEach(r=>MY_RX[r.market_id]=r.value);
   (sv.data||[]).forEach(b=>MY_SAVED[b.market_id]=true);
@@ -413,8 +416,9 @@ function marketCardHtml(m){
     const soon=!m.resolved && !(new Date(m.close_at)<=Date.now()) && (new Date(m.close_at)-Date.now()) < 86400000;
     /* ✨ 참여 전(진행 중·내 참여 없음) = 반짝이며 눌러 보게 / 참여함 = 차분하게 + 내 선택 표시 */
     const myOut = MY_BET[m.id] ? (outs.find(o=>o.id===MY_BET[m.id])||null) : null;
+    const myPick = myOut ? `걸었어요 · <b>${esc(myOut.label)}</b>` : (MY_SIDE[m.id] ? `내 입장 · <b>${MY_SIDE[m.id]==='yes'?'예':'아니오'}</b>` : '');
     // ⚠️ 아래 const closed 보다 먼저 계산된다 — closed 를 여기서 쓰면 TDZ 오류로 목록이 통째로 비었다(QA)
-    const tease = !m.resolved && new Date(m.close_at) > Date.now() && !MY_BET[m.id];
+    const tease = !m.resolved && new Date(m.close_at) > Date.now() && !MY_BET[m.id] && !MY_SIDE[m.id];
     const bettors=outs.reduce((s,o)=>s+(o.bettor_count||0),0);
     const closed=m.resolved || new Date(m.close_at)<=Date.now();
     let statusBadge;
@@ -438,7 +442,7 @@ function marketCardHtml(m){
         </div>
       </div>
       ${oddsBar(m, outs)}
-      ${myOut?`<div class="pm-mine">내 선택: <b>${esc(myOut.label)}</b></div>`:''}
+      ${myPick?`<div class="pm-mine">${myPick}</div>`:''}
       <div class="pm-card-foot">
         <span class="pm-card-stats">
           <span class="pm-stat gp">${IC_COIN}<b>${fmt(m.total_pool)}</b>GP</span>
