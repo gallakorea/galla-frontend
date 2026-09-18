@@ -447,7 +447,7 @@ function marketCardHtml(m){
       <div class="pm-card-top">
         ${cover?'':`<div class="pm-card-thumb">${IC_TARGET}</div>`}
         <div class="pm-card-h">
-          <div class="pm-card-q">${esc(m.question)}${m.ai_generated ? '<span class="pm-ai-tag" title="AI가 만든 문항입니다">🤖 AI</span>' : ''}</div>
+          <div class="pm-card-q">${esc(m.question)}</div>
           ${cover?'':`<div class="pm-card-meta">${tags}</div>`}
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>

@@ -155,7 +155,6 @@ function render(){
     </div>
     ${m.image_url?`<div class="pb-img"><img src="${esc(m.image_url)}" alt="" loading="lazy" onerror="this.closest('.pb-img')?.remove()"></div>`:''}
     <div class="pb-q">${esc(m.question)}</div>
-    ${m.ai_generated ? '<div class="pb-ai">🤖 이 문항은 AI가 만들었습니다 — 사실과 다를 수 있으니 직접 확인해 주세요.</div>' : ''}
     <div class="pmd-creator" id="pmdCreator" hidden></div>
     ${m.description?`<div class="pb-desc">${esc(m.description)}</div>`:''}
     ${m.issue_id?`<a class="pb-issue-link" href="issue.html?id=${m.issue_id}">⚔️ 원본 이슈에서 진영 대결 보기 →</a>`:''}
@@ -467,7 +466,7 @@ function renderAdmin(closed, canResolve){
   const show=(ok)=>{
     if(!ok) return;
     el.innerHTML=`<div class="pb-admin">
-      <div class="h">🛠 수동 정산(오버라이드) — 마감 후엔 AI가 자동 정산합니다. 결과를 먼저 확정하려면 선택하세요.</div>
+      <div class="h">🛠 수동 정산(오버라이드) — 마감 후엔 자동 정산됩니다. 결과를 먼저 확정하려면 선택하세요.</div>
       <div class="pb-admin-btns">${OUTCOMES.map(o=>`<button class="pb-admin-btn ${sideOf(o)}" data-oid="${o.id}">${esc(o.label)} 적중</button>`).join('')}</div>
     </div>`;
     el.querySelectorAll('.pb-admin-btn').forEach(b=>b.onclick=async ()=>{

@@ -116,14 +116,14 @@
 
     readerEl().innerHTML = `
       <article class="reader">
-        <span class="reader-badge">갈라뉴스 · AI 종합</span>
+        <span class="reader-badge">갈라뉴스</span>
         <h1 class="reader-title">${esc(n.title)}</h1>
         <div class="reader-sub">${esc(n.category || "")} · ${timeAgo(n.published_at)}</div>
         ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ""}
         ${bodyParas.map((p) => `<p>${esc(p)}</p>`).join("")}
         <div class="gn-actions" id="gn-actions"></div>
         ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}
-        <p class="reader-disclaimer">본 기사는 위 보도들을 AI가 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
+        <p class="reader-disclaimer">본 기사는 위 보도들을 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
         <div id="gn-comments" class="gn-comments"></div>
       </article>`;
 

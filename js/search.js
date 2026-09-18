@@ -1328,7 +1328,7 @@ async function initTrendPage() {
       ? window.GALLA_shareUrl("news", btn.dataset.gid)
       : new URL(`news.html?gn=${btn.dataset.gid}`, location.href).href;
     // 앱 웹뷰(capacitor)에선 navigator.share 가 없거나 조용히 실패 → 네이티브 공유를 감싼 공용 유틸 사용.
-    if (window.GALLA_share) { window.GALLA_share({ url, title, text: "여러 기사를 AI가 3줄로 정리한 갈라뉴스" }); return; }
+    if (window.GALLA_share) { window.GALLA_share({ url, title, text: "여러 기사를 3줄로 정리한 갈라뉴스" }); return; }
     if (navigator.share) {
       try { await navigator.share({ title, url }); return; }
       catch (err) { if (err.name === "AbortError") return; }
