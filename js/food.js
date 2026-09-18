@@ -520,6 +520,9 @@
   }
 
   /* ── 공용 ─────────────────────────────────────────── */
+  /* 유튜브 재생은 galla.im/yt 프록시 — **반드시 절대 주소**. 상대 주소 '/yt' 는 앱에선 capacitor://localhost/yt 가 되어
+     앱 번들에 그런 페이지가 없으니 홈 화면(app)이 영상 칸에 통째로 떴다(26.9.18 사장님 캡처). supabase.js·watch-page.js 와 같은 값. */
+  var YT_PROXY = "https://galla.im/yt";
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -1774,7 +1777,7 @@
         if (mb) { cgMore(mb.dataset.cgmore); return; }
         var v = e.target.closest(".fd-vid");
         if (v && v.dataset.vid) {
-          v.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(v.dataset.vid) +
+          v.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(v.dataset.vid) +
             '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
           v.classList.add("playing"); return;
         }
@@ -2255,7 +2258,7 @@
     if (t.closest(".fd-sheet-grip") && SHEET) { setSheetPos(SHEET, !SHEET.__full); return; }   // 손잡이 탭 = 펼침/접기
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
-      vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
+      vw.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(vw.dataset.vid) +
         '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
       vw.classList.add("playing"); return;
     }
