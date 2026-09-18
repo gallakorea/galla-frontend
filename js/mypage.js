@@ -8,7 +8,21 @@ window.GALLA_setStatNum = window.GALLA_setStatNum || function (el, v) {
         : a < 1e8 ? Math.floor(n / 1e4) + "만"     // 100만 ~ 9999만 — 소수 빼서 칸 안에
         : a < 1e10 ? one(n / 1e8) + "억"           // 1.2억 ~ 99.9억
         : Math.floor(n / 1e8).toLocaleString("ko-KR") + "억";
-    el.textContent = t; el.dataset.n = String(n); el.title = n.toLocaleString("ko-KR");
+    el.dataset.n = String(n); el.title = n.toLocaleString("ko-KR");
+    /* ✨ 0 에서 차르륵 올라간다(처음 한 번, 1만 미만일 때 — 축약 숫자는 바로) + 튀어오름 */
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduce && !el.dataset.counted && a > 0 && a < 1e4) {
+        el.dataset.counted = "1";
+        const t0 = performance.now(), dur = 900;
+        const step = (now) => {
+            const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(n * e).toLocaleString("ko-KR");
+            if (p < 1) requestAnimationFrame(step); else el.textContent = t;
+        };
+        requestAnimationFrame(step);
+        setTimeout(() => { el.textContent = t; }, dur + 400);   // 숨은 창에서 rAF 가 멈춰도 최종값은 맞춘다
+    } else el.textContent = t;
+    el.classList.remove("mp-pop"); void el.offsetWidth; el.classList.add("mp-pop");
 };
 /* ═══ 이중 모드(MPA/SPA) ═══
    · MPA(mypage.html 단독 문서): 파일 하단에서 기존처럼 DOMContentLoaded 자동 초기화.
@@ -377,7 +391,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 const { data } = await supabase.rpc("gp_wallet");
                 // 실패하면 숫자를 지어내지 않고 칩을 걷는다 — '0 GP'로 잘못 보이는 게 더 나쁘다
                 if (!data || !data.ok) { chip.remove(); return; }
-                chip.textContent = `🪙 ${Number(data.total || 0).toLocaleString()} GP`;
+                chip.innerHTML = `<span class="mp-gp-coin">🪙</span> ${Number(data.total || 0).toLocaleString()} GP`;
             } catch (_) { chip.remove(); }
         })();
 

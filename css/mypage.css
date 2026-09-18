@@ -1013,3 +1013,79 @@ body{
 .profile-actions{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:6px; }
 .profile-actions button{ min-width:0; padding:0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   font-size:clamp(11.5px, 3.4vw, 13.5px); letter-spacing:-.2px; }
+
+/* ═══ ✨ 마이 상단 연출(26.9.19 사장님: 「존나 화려한 동적 애니메이션」) ═══
+   전부 transform·opacity·background-position 만 움직인다(합성 레이어 — 가볍다). 움직임 줄이기 설정이면 끈다. */
+.profile-section{ position:relative; isolation:isolate; overflow:hidden; }
+/* 오로라 — 뒤에서 천천히 흐르는 빛무리 두 개 */
+.profile-section::before, .profile-section::after{ content:""; position:absolute; z-index:-1; width:260px; height:260px; border-radius:50%;
+  filter:blur(60px); opacity:.34; pointer-events:none; }
+.profile-section::before{ left:-70px; top:-90px; background:radial-gradient(circle, #5b7dff, transparent 70%); animation:mpAuroraA 11s ease-in-out infinite alternate; }
+.profile-section::after{ right:-90px; top:10px; background:radial-gradient(circle, #ff4fa3, transparent 70%); animation:mpAuroraB 13s ease-in-out infinite alternate; }
+@keyframes mpAuroraA{ to{ transform:translate(120px, 60px) scale(1.25); } }
+@keyframes mpAuroraB{ to{ transform:translate(-110px, 70px) scale(1.15); } }
+
+/* 프로필 사진 — 도는 무지개 테두리 + 숨 쉬는 빛 */
+.mp-ava-ring{ padding:3px !important; border-radius:50%; background:none !important; position:relative; }
+.mp-ava-ring::before{ content:""; position:absolute; inset:0; border-radius:50%; z-index:0;
+  background:conic-gradient(from 0deg, #5b7dff, #b07cff, #ff4fa3, #ffb020, #36c2a0, #5b7dff);
+  animation:mpSpin 4s linear infinite; }
+.mp-ava-ring::after{ content:""; position:absolute; inset:-6px; border-radius:50%; z-index:-1;
+  background:conic-gradient(from 0deg, #5b7dff, #b07cff, #ff4fa3, #ffb020, #36c2a0, #5b7dff); filter:blur(12px); opacity:.55;
+  animation:mpSpin 4s linear infinite, mpBreath 2.6s ease-in-out infinite; }
+.mp-ava-ring .profile-img{ position:relative; z-index:1; border:3px solid #0a0a0b !important; }
+.mp-ava-ring .mp-tier-chip{ z-index:2; }
+@keyframes mpSpin{ to{ transform:rotate(360deg); } }
+@keyframes mpBreath{ 0%,100%{ opacity:.35; } 50%{ opacity:.75; } }
+
+/* 숫자 — 등장 튀어오름 + 누르면 통통 */
+.stat-unit{ transition:transform .18s cubic-bezier(.3,1.6,.5,1); cursor:pointer; }
+.stat-unit:active{ transform:scale(.9); }
+.stat-num.mp-pop{ animation:mpPop .6s cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes mpPop{ 0%{ transform:translateY(8px) scale(.7); opacity:0; } 60%{ transform:translateY(-3px) scale(1.12); opacity:1; } 100%{ transform:none; } }
+.stats-row .stat-unit + .stat-unit{ position:relative; }
+
+/* 닉네임 — 흐르는 광택 */
+.profile-name{ background:linear-gradient(100deg, #fff 0%, #fff 40%, #c9d6ff 48%, #fff 56%, #fff 100%); background-size:250% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent !important; animation:mpShine 4.5s ease-in-out infinite; }
+@keyframes mpShine{ 0%{ background-position:120% 0; } 60%,100%{ background-position:-120% 0; } }
+
+/* 왕관 — 반짝 지나가는 빛 */
+.mp-crown{ position:relative; overflow:hidden; }
+.mp-crown::after{ content:""; position:absolute; top:0; bottom:0; width:40%; left:-50%;
+  background:linear-gradient(100deg, transparent, rgba(255,255,255,.85), transparent); animation:mpGlint 3.2s ease-in-out infinite; }
+@keyframes mpGlint{ 0%,55%{ left:-50%; } 100%{ left:130%; } }
+
+/* 전투력 — 전기 떨림 + 테두리 불빛 */
+.mp-power{ position:relative; animation:mpVolt 3s ease-in-out infinite; }
+@keyframes mpVolt{ 0%,86%,100%{ box-shadow:0 0 0 rgba(255,214,107,0); } 88%{ box-shadow:0 0 14px rgba(255,214,107,.8); transform:translateX(-1px); } 90%{ transform:translateX(1px); } 92%{ box-shadow:0 0 6px rgba(255,214,107,.4); transform:none; } }
+
+/* GP — 동전 빙글 */
+.mp-gp{ display:inline-block; }
+.mp-gp::first-letter{ display:inline-block; }
+.mp-gp-coin{ display:inline-block; animation:mpCoin 3.6s ease-in-out infinite; }
+@keyframes mpCoin{ 0%,70%,100%{ transform:rotateY(0); } 85%{ transform:rotateY(360deg); } }
+
+/* 버튼 — 프로필 편집 흐르는 그라데이션, 모든 버튼 누르면 빛이 지나감 */
+.profile-actions .action-btn.primary{ background:linear-gradient(110deg, #3b6bff, #7a5cff, #ff4fa3, #3b6bff) !important; background-size:300% 100% !important;
+  animation:mpGrad 6s linear infinite; box-shadow:0 6px 20px rgba(91,110,255,.35); }
+@keyframes mpGrad{ to{ background-position:300% 0; } }
+.profile-actions button{ position:relative; overflow:hidden; transition:transform .15s ease; }
+.profile-actions button:active{ transform:scale(.95); }
+.profile-actions button::after{ content:""; position:absolute; top:0; bottom:0; width:45%; left:-60%;
+  background:linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent); animation:mpBtnSweep 5s ease-in-out infinite; }
+.profile-actions button:nth-child(2)::after{ animation-delay:.6s; } .profile-actions button:nth-child(3)::after{ animation-delay:1.2s; } .profile-actions button:nth-child(4)::after{ animation-delay:1.8s; }
+@keyframes mpBtnSweep{ 0%,75%{ left:-60%; } 100%{ left:130%; } }
+
+@media (prefers-reduced-motion: reduce){
+  .profile-section *, .profile-section::before, .profile-section::after, .mp-ava-ring::before, .mp-ava-ring::after{ animation:none !important; }
+}
+/* ✨ 더 세게 — 오로라 진하게, 숫자 유리 카드(테두리를 도는 빛), 숫자 그라데이션 */
+.profile-section::before, .profile-section::after{ opacity:.55; }
+.stats-row{ position:relative; padding:10px 4px !important; border-radius:16px; background:rgba(255,255,255,.04); isolation:isolate; overflow:hidden; }
+.stats-row::before{ content:""; position:absolute; inset:-60%; z-index:-2;
+  background:conic-gradient(from 0deg, transparent 0 70%, rgba(143,160,255,.9) 80%, rgba(255,79,163,.9) 88%, transparent 96%);
+  animation:mpSpin 5s linear infinite; }
+.stats-row::after{ content:""; position:absolute; inset:1.5px; z-index:-1; border-radius:14.5px; background:#0f1016; }
+.stat-num{ background:linear-gradient(180deg, #fff 30%, #b9c4ff); -webkit-background-clip:text; background-clip:text; color:transparent !important; }
+.stat-label{ color:#aab0bf !important; }
