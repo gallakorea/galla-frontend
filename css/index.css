@@ -1066,3 +1066,17 @@ body.shorts-open .header { display: none !important; }
 .predict-feed-card .pf-cover::after { content: ""; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(10,17,32,0) 55%, rgba(10,17,32,.7)); }
 @media (prefers-reduced-motion: reduce) { .predict-feed-card.in .pf-cover img { animation: none; } }
+
+/* 🪪 콘텐츠 종류 표식(26.9.19 사장님: 「피드마다 이게 어떤 건지 SVG 로」) — js/kind-icons.js 가 그린다.
+   종류 색을 옅게 깐 알약 + 아이콘 + 이름. 작성자 줄(이슈·숏판·롱판)에선 둘째 줄 맨 앞, 배지형 카드(광장·뉴스·일기토·예측)에선 배지 자리. */
+.ktag { --kc: #ff6b57; display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+  height: 20px; padding: 0 8px 0 6px; border-radius: 999px; margin-right: 6px;
+  font-size: 11px; font-weight: 900; letter-spacing: -.01em; line-height: 1; color: var(--kc);
+  background: color-mix(in srgb, var(--kc) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc) 32%, transparent); }
+.ktag b { font-weight: 900; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ktag .kic { flex: 0 0 auto; }
+.ktag-issue { --kc: #ff6b57; } .ktag-short { --kc: #ff4fa3; } .ktag-long { --kc: #7d92ff; } .ktag-link { --kc: #a9afbd; }
+.ktag-plaza { --kc: #36c2a0; } .ktag-news { --kc: #5ab0ff; } .ktag-hottube { --kc: #ff5a3d; } .ktag-duel { --kc: #ffb020; } .ktag-predict { --kc: #b98bff; }
+.mah-line2 .ktag { height: 18px; margin-right: 5px; transform: translateY(-1px); }
+.pf-top .ktag, .pz-head .ktag, .nf-head .ktag { margin-right: 0; }
+.pf-ctag .kic { vertical-align: -1px; margin-right: 3px; }

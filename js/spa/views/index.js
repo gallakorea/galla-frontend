@@ -15,6 +15,7 @@ const CLASSIC = [
   "/vendor/hls.min.js",     // HLS 재생(비 iOS)
   "/js/hls-attach.js",      // GALLA_attachHls
   "/js/battle-fx.js",       // BattleFX(햅틱·연출)
+  "/js/kind-icons.js",      // GALLA_KIND(콘텐츠 종류 표식 SVG)
   "/js/vote-lines.js",      // GALLA_VOTE_LINES(줄다리기 대사 창고·조립기)
   "/js/vote-bar.js",        // GALLA_VoteBar(진영바)
   "/js/vote-fx.js",         // GALLA_VoteFX(투표 축하)

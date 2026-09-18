@@ -10,6 +10,9 @@
  *   단일문서 SPA에서 다른 탭 판의 .card/.vote-btn 등을 오염시키지 않기 위함. */
 const __IDX_MPA = !!(document.body && document.body.dataset.page === 'index');
 let IDXROOT = document;
+/* 🪪 종류 표식(js/kind-icons.js) — 없으면 빈칸(카드는 그대로 뜬다) */
+const KT = (k, label) => window.GALLA_KIND ? window.GALLA_KIND.tag(k, label) : '';
+const KI = (k, size) => window.GALLA_KIND ? window.GALLA_KIND.icon(k, size) : '';
 
 /* 상세 이동 — SPA 셸에선 스택 push(문서 유지·탭 보존), MPA에선 기존 그대로 location 이동 */
 window.GALLA_goto = function (url) {
@@ -387,7 +390,7 @@ function renderCard(data) {
                         <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${escHtml(data.author)}</span>
                         <span class="level-badge">Lv.${data.level}</span>
                     </div>
-                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${escHtml(data.category)} · ${data.time} · 조회 ${formatK(data.views)}</div>
+                    <div class="mah-line2">${KT('issue')}${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${escHtml(data.category)} · ${data.time} · 조회 ${formatK(data.views)}</div>
                 </div>
             </div>
             ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
@@ -1420,7 +1423,7 @@ function renderPlazaCard(p) {
     return `
     <div class="card plaza-card" data-kind="plaza" data-id="${p.id}" onclick="GALLA_goto('plaza_detail.html?id=${p.id}')">
       <div class="pz-head">
-        <span class="pz-badge">🏛 광장</span>
+        ${KT('plaza')}
         <span class="pz-cat">${cat}</span>
         <span class="pz-author">${p.user_id && window.GALLA_userBadge
             ? window.GALLA_userBadge(p.user_id, p.nickname)
@@ -1477,7 +1480,7 @@ function renderNewsCard(n) {
       ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" referrerpolicy="no-referrer" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
       <div class="nf-body">
         <div class="nf-head">
-          <span class="nf-badge">📰 갈라뉴스</span>
+          ${KT('news')}
           <span class="nf-cat">${escHtml(n.category || '')}</span>
           ${n.source_count ? `<span class="nf-src">출처 ${n.source_count}곳 종합</span>` : ''}
         </div>
@@ -1540,7 +1543,7 @@ function renderVideoCard(v) {
            무엇인지(핫튜브)·지금 몇 위·언제 집계인지를 둔다. 누르면 핫튜브 전체 순위로.
            ⚠️ GALLA_goto 는 앱에서 검색 화면을 스택에 새로 쌓아 「검색」 칸이 열렸다(QA) — 트렌드 탭 전환은 GALLA_nav. -->
       <div class="vf-top" onclick="event.stopPropagation();(window.GALLA_nav||GALLA_goto)('search.html?tab=hot')">
-        <span class="vf-top-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
+        <span class="vf-top-ic">${KI('hottube', 20)}</span>
         <div class="vf-top-tx">
           <div class="vf-top-t">핫튜브${v.rank ? ` <b>지금 ${v.rank}위</b>` : ''}</div>
           <div class="vf-top-s">유튜브 급상승${v.collected_at ? ' · ' + vfAgo(v.collected_at) + ' 집계' : ''}</div>
@@ -1674,7 +1677,7 @@ function renderGallariCard(p) {
                         <span class="author-name"${p.user_id ? ` data-profile-uid="${p.user_id}"` : ''}>${escHtml(u.nickname || '익명')}</span>
                         <span class="level-badge">Lv.${u.level || 1}</span>
                     </div>
-                    <div class="mah-line2">${isLink ? `🔗 ${escHtml(gallariHost(p.link_url))}` : (isLong ? '🎬 롱판' : '⚡ 숏판')} · ${gallariAgo(p.created_at)} · 조회 ${formatK(p.view_count || 0)}</div>
+                    <div class="mah-line2">${isLink ? KT('link', escHtml(gallariHost(p.link_url))) : KT(isLong ? 'long' : 'short')}${gallariAgo(p.created_at)} · 조회 ${formatK(p.view_count || 0)}</div>
                 </div>
             </div>
             ${p.user_id ? `<button class="follow-btn" data-uid="${p.user_id}">+ 팔로우</button>` : ''}
@@ -1741,7 +1744,7 @@ function renderDuelCard(d) {
     const cta = live ? '관전하러 가기 ›' : voting ? '투표하러 가기 ›' : '결과 보기 ›';
     return `
     <div class="card duel-feed-card${live ? ' live' : ''}" onclick="GALLA_goto('duel.html?id=${d.id}')">
-      <div class="nf-head"><span class="df-badge">⚔️ 일기토</span>${state}</div>
+      <div class="nf-head">${KT('duel')}${state}</div>
       <div class="df-topic">${escHtml(d.topic || '자유 일기토')}</div>
       <div class="df-vs">
         <span class="df-name">${escHtml(d.chalName)}</span>
@@ -1832,7 +1835,7 @@ function renderPredictCard(m) {
     return `
     <div class="predict-feed-card" data-mid="${m.id}" data-kind="predict" data-id="${m.id}"${styleVar}>
         <div class="pf-top">
-            <span class="pf-badge">🔮 갈라예측</span>
+            ${KT('predict')}
             <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
         </div>
         <div class="pf-creator">
@@ -1840,7 +1843,7 @@ function renderPredictCard(m) {
             <div class="pf-cinfo">
                 <div class="pf-cline">
                     <span class="pf-cname"${cAttr}>${cName}</span>
-                    <span class="pf-ctag">🔮 예언자</span>
+                    <span class="pf-ctag">${KI('predict', 11)}예언자</span>
                 </div>
                 <div class="pf-csub">이 판을 연 예언자</div>
             </div>
