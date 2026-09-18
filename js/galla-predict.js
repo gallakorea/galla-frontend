@@ -413,7 +413,8 @@ function marketCardHtml(m){
     const soon=!m.resolved && !(new Date(m.close_at)<=Date.now()) && (new Date(m.close_at)-Date.now()) < 86400000;
     /* ✨ 참여 전(진행 중·내 참여 없음) = 반짝이며 눌러 보게 / 참여함 = 차분하게 + 내 선택 표시 */
     const myOut = MY_BET[m.id] ? (outs.find(o=>o.id===MY_BET[m.id])||null) : null;
-    const tease = !closed && !MY_BET[m.id];
+    // ⚠️ 아래 const closed 보다 먼저 계산된다 — closed 를 여기서 쓰면 TDZ 오류로 목록이 통째로 비었다(QA)
+    const tease = !m.resolved && new Date(m.close_at) > Date.now() && !MY_BET[m.id];
     const bettors=outs.reduce((s,o)=>s+(o.bettor_count||0),0);
     const closed=m.resolved || new Date(m.close_at)<=Date.now();
     let statusBadge;
