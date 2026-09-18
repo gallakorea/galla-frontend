@@ -602,6 +602,9 @@
     if (MAPBOX && document.body.contains(MAPBOX)) return MAPBOX;
     MAPBOX = document.createElement("div");
     MAPBOX.className = "tv-map";
+    /* 🔴 지도를 아래로 끌거나 두 손가락으로 확대하면 '당겨서 새로고침'이 같이 돌아 페이지가 새로 떠서
+       지도가 꺼졌다(26.9.18 사장님 「확대하면 지도 꺼지고」). 맛집 시트와 같은 함정 — 지도 위에선 끈다. */
+    MAPBOX.setAttribute("data-no-ptr", "");
     MAPBOX.innerHTML =
       '<div class="tv-map-c" id="tv-map-c"></div>' +
       '<button type="button" class="tv-map-x" id="tv-map-x" aria-label="닫기">✕</button>' +
@@ -614,9 +617,15 @@
     /* 🔴 상세를 닫으면 back() 이 도는데, 그 popstate 를 지도가 **자기 것으로 오해**해 같이 닫힌다
        (맛집에서 실제로 겪은 사고). 상세에서 돌아오면 state 는 다시 {tvMap:1} 이다 —
        그 자리로 돌아온 거면 지도는 그대로 둔다. 리스너 등록 순서에 기대지 않는 판별이다. */
-    window.addEventListener("popstate", function () {
+    /* ⚠️ history.state 가 아니라 **이벤트에 실려 온 state** 로 판정한다 — 앱(SPA)에선 라우터 popstate 가
+       먼저 돌아 state 를 바꿀 수 있다(맛집에서 지도까지 닫히던 원인, 26.9.18).
+       핀으로 장소 페이지에 갔다가 돌아오면({tvMap} 칸) 내려 두었던 지도를 다시 띄운다. */
+    window.addEventListener("popstate", function (ev) {
+      var mine = false;
+      try { mine = !!(ev && ev.state && ev.state.tvMap); } catch (_) {}
+      if (MAPBOX.__parked) { if (mine) resumeMap(); return; }
       if (!MAPBOX.classList.contains("open")) return;
-      try { if (history.state && history.state.tvMap) return; } catch (_) {}
+      if (mine) return;
       closeMap(true);
     });
     MAPBOX.querySelector("#tv-routes").addEventListener("click", function (e) {
@@ -638,8 +647,24 @@
     });
     return MAPBOX;
   }
+  /* 🔴 핀을 누르면 장소 페이지로 넘어가는데 지도(z 10000)가 그 위를 계속 덮고 있어서
+     아무 반응이 없는 것처럼 보였다(26.9.18 사장님 「선택도 안되고」). 지도를 잠시 내려 두고 넘어간다. */
+  function parkMap() {
+    if (!MAPBOX || !MAPBOX.classList.contains("open")) return;
+    MAPBOX.__parked = true;
+    MAPBOX.classList.remove("open");
+    document.body.classList.remove("tv-lock");
+  }
+  function resumeMap() {
+    if (!MAPBOX) return;
+    MAPBOX.__parked = false;
+    MAPBOX.classList.add("open");
+    document.body.classList.add("tv-lock");
+    [0, 120, 400].forEach(function (ms) { setTimeout(function () { if (MAP) MAP.resize(); }, ms); });
+  }
   function closeMap(fromPop) {
     if (!MAPBOX) return;
+    MAPBOX.__parked = false;
     MAPBOX.classList.remove("open");
     document.body.classList.remove("tv-lock");
     if (!fromPop) { try { if (history.state && history.state.tvMap) history.back(); } catch (_) {} }
@@ -647,6 +672,7 @@
 
   async function openMap() {
     var box = buildMapBox();
+    box.__parked = false;
     box.classList.add("open");
     document.body.classList.add("tv-lock");
     try { history.pushState({ tvMap: 1 }, ""); } catch (_) {}
@@ -959,6 +985,7 @@
      같은 화면을 두 곳에 두면 반드시 갈라진다. */
   function openDetail(id) {
     if (!id) return;
+    parkMap();          // 지도 핀·경로 점에서 왔으면 지도를 내려 둔다(돌아오면 다시 뜬다)
     (window.GALLA_nav || function (u) { location.href = u; })("travel-place.html?id=" + encodeURIComponent(id));
   }
 

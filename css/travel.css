@@ -231,13 +231,15 @@ body.tv-lock { overflow: hidden; }
    맛집에서 leaflet.css 가 마커를 240px 로 터뜨린 사고와 같은 함정이다. 특이도를 (0,2,0)으로 올린다. */
 .tv-map .tv-map-c,
 .tv-map .tv-map-c.maplibregl-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* 🔴 앱은 화면 끝까지 그려서 top:12px 이면 닫기가 상태바·다이내믹 아일랜드 밑에 깔려 안 눌렸다
+   (26.9.18 사장님 「지도 닫는것도 없고」). 위아래 안전 영역만큼 내린다. */
 .tv-map-x {
-  position: absolute; right: 12px; top: 12px; z-index: 3; width: 38px; height: 38px;
+  position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 3; width: 38px; height: 38px;
   border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff;
   font-size: 16px; cursor: pointer; backdrop-filter: blur(6px);
 }
 .tv-map-hint {
-  position: absolute; left: 12px; top: 14px; z-index: 3; padding: 7px 13px; border-radius: 999px;
+  position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 14px); z-index: 3; padding: 7px 13px; border-radius: 999px;
   background: rgba(0,0,0,.62); color: #fff; font-size: 12.5px; font-weight: 700;
   backdrop-filter: blur(6px);
 }
@@ -358,7 +360,7 @@ body.tv-lock { overflow: hidden; }
    ⚠️ nav 위(z 10000)의 오버레이 안이라 z-index 는 지도 캔버스보다만 높으면 된다. */
 /* 여정 칩 — 크리에이터 칩 바로 위. 두 줄이 층을 이룬다(누가 → 어느 여행). */
 .tv-trips {
-  position: absolute; left: 0; right: 0; bottom: 56px; z-index: 3;
+  position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 56px); z-index: 3;
   display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 0 12px;
 }
 .tv-trips::-webkit-scrollbar { display: none; }
@@ -371,7 +373,7 @@ body.tv-lock { overflow: hidden; }
 .tv-tchip.on { background: #ffd166; color: #2b2200; }
 
 .tv-routes {
-  position: absolute; left: 0; right: 0; bottom: 14px; z-index: 3;
+  position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 3;
   display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; padding: 0 12px;
 }
 .tv-routes::-webkit-scrollbar { display: none; }
@@ -536,7 +538,7 @@ body.tv-lock { overflow: hidden; }
 
 /* 구독자 필터 칩 — 지도 위쪽(힌트 아래) */
 .tv-subs {
-  position: absolute; left: 0; right: 0; top: 58px; z-index: 3;
+  position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 58px); z-index: 3;
   display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 0 12px;
 }
 .tv-subs::-webkit-scrollbar { display: none; }
@@ -597,3 +599,6 @@ body.tv-lock { overflow: hidden; }
 .tv-who-count { margin: 2px 16px 14px; font-size: 13px; color: #9aa0ae; }
 .tv-who-count b { color: #fff; font-weight: 800; }
 .tv-who-more { height: 1px; }
+
+/* 확대·축소 버튼이 아래 칩 두 줄(크리에이터·여정)과 겹쳐 눌리지 않았다 — 칩 위로 올린다(26.9.18) */
+.tv-map .maplibregl-ctrl-bottom-right { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
