@@ -240,3 +240,79 @@
     #pc-left .pcl-write::before { content: '✎'; font-size: 17px; }
   }
 }
+
+/* ═══ 🗂 오른쪽 패널 v2 — 썸네일·순위·움직임(26.9.19 사장님: 「너무 단순해」) ═══ */
+@media (min-width: 1100px) {
+  /* 차례로 떠오르기(처음 그릴 때만 — 90초 새로고침은 pcr-quiet 로 조용히) */
+  #pc-right:not(.pcr-quiet) .pcr-card { animation: pcrIn .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--pcr-i, 0) * 70ms); }
+  @keyframes pcrIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  .pcr-card { position: relative; overflow: hidden; transition: border-color .2s, background .2s; }
+  .pcr-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(143,160,255,.55), transparent); background-size: 200% 100%;
+    animation: pcrSheen 6s linear infinite; opacity: .6; }
+  @keyframes pcrSheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .pcr-card:hover { border-color: rgba(143,160,255,.22); background: rgba(255,255,255,.045); }
+
+  /* 썸네일이 있는 줄 */
+  .pcr-row.pcr-media { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; position: relative; }
+  .pcr-row.pcr-wide { grid-template-columns: 84px 1fr; }
+  .pcr-tx { min-width: 0; }
+  .pcr-th { position: relative; display: block; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: #1a1c22; }
+  .pcr-th-w { width: 84px; height: 48px; border-radius: 9px; }
+  .pcr-th img, .pcr-tile-img img, .pcr-cell-img img, .pcr-hero-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .pcr-row:hover .pcr-th img { transform: scale(1.1); }
+  .noimg { background: linear-gradient(135deg, #1d2130, #2a2140) !important; }
+  .pcr-rank { position: absolute; left: -4px; top: 4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 7px;
+    font: 900 11.5px/20px system-ui; font-style: normal; text-align: center; color: #fff;
+    background: linear-gradient(135deg, #ff5f6d, #ffc371); box-shadow: 0 3px 10px rgba(255,95,109,.45); }
+  .pcr-row:nth-of-type(n+2) .pcr-rank { background: linear-gradient(135deg, #5b7dff, #9b6bff); box-shadow: 0 3px 10px rgba(91,125,255,.4); }
+  .pcr-row.pcr-media b { font-size: 13px; -webkit-line-clamp: 2; }
+
+  /* 전황 막대 — 흐르는 빛 */
+  .pcr-odds { position: relative; }
+  .pcr-odds::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    width: 40%; animation: pcrRun 2.6s ease-in-out infinite; }
+  @keyframes pcrRun { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+
+  /* 지금 뜨는 영상 1위 — 큰 썸네일 */
+  .pcr-hero { position: relative; display: block; border-radius: 14px; overflow: hidden; aspect-ratio: 16/9; margin: 2px 0 6px; text-decoration: none; background: #111; }
+  .pcr-hero-img { position: absolute; inset: 0; display: block; }
+  .pcr-hero:hover .pcr-hero-img img { transform: scale(1.07); }
+  .pcr-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.85)); }
+  .pcr-hero::before { content: ""; position: absolute; top: 0; bottom: 0; width: 35%; z-index: 2; left: -40%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.18), transparent); animation: pcrShine 4.5s ease-in-out infinite; }
+  @keyframes pcrShine { 0%, 60% { left: -40%; } 100% { left: 120%; } }
+  .pcr-play { position: absolute; z-index: 3; left: 50%; top: 42%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; background: rgba(255,0,51,.88); box-shadow: 0 0 0 0 rgba(255,0,51,.5); animation: pcrPing 2.2s ease-out infinite; }
+  @keyframes pcrPing { 0% { box-shadow: 0 0 0 0 rgba(255,0,51,.55); } 100% { box-shadow: 0 0 0 16px rgba(255,0,51,0); } }
+  .pcr-badge { position: absolute; z-index: 3; left: 10px; top: 10px; padding: 3px 9px; border-radius: 999px; font: 900 11px/1.4 system-ui; font-style: normal;
+    color: #fff; background: linear-gradient(135deg, #ff5f6d, #ff9a3d); }
+  .pcr-hero-tx { position: absolute; z-index: 3; left: 12px; right: 12px; bottom: 10px; }
+  .pcr-hero-tx b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; font-size: 14px; font-weight: 900; line-height: 1.35; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+  .pcr-hero-tx i { display: block; margin-top: 2px; font-style: normal; font-size: 11.5px; color: #d0d4dd; }
+
+  /* 예측 — 사진 타일 2열 */
+  .pcr-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 2px; }
+  .pcr-tile { position: relative; display: block; aspect-ratio: 1; border-radius: 13px; overflow: hidden; text-decoration: none; background: #15161c; }
+  .pcr-tile-img { position: absolute; inset: 0; display: block; }
+  .pcr-tile:hover .pcr-tile-img img { transform: scale(1.1); }
+  .pcr-tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,10,40,.05) 20%, rgba(12,8,28,.92)); }
+  .pcr-tile-tx { position: absolute; z-index: 2; left: 9px; right: 9px; bottom: 8px; }
+  .pcr-tile-tx b { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: #fff; font-size: 12px; font-weight: 800; line-height: 1.35; }
+  .pcr-tile-tx i { display: block; margin-top: 3px; font-style: normal; font-size: 10.5px; color: #ffd66b; font-weight: 800; }
+
+  /* 맛집·여행 — 사진 2×2 */
+  .pcr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 2px; }
+  .pcr-cell { position: relative; display: block; aspect-ratio: 4/5; border-radius: 13px; overflow: hidden; text-decoration: none; background: #15161c; }
+  .pcr-cell-img { position: absolute; inset: 0; display: block; }
+  .pcr-cell-img img { animation: pcrKen 14s ease-in-out infinite alternate; }
+  .pcr-cell:nth-child(2) .pcr-cell-img img { animation-delay: -4s; } .pcr-cell:nth-child(3) .pcr-cell-img img { animation-delay: -8s; }
+  @keyframes pcrKen { from { transform: scale(1.02); } to { transform: scale(1.14) translate(-2%, -2%); } }
+  .pcr-cell::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,.82)); }
+  .pcr-cell-tx { position: absolute; z-index: 2; left: 9px; right: 9px; bottom: 8px; }
+  .pcr-cell-tx b { display: block; color: #fff; font-size: 12.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pcr-cell-tx i { display: block; margin-top: 1px; font-style: normal; font-size: 10.5px; color: #cfd3dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (prefers-reduced-motion: reduce) {
+    #pc-right *, #pc-right *::before, #pc-right *::after { animation: none !important; transition: none !important; }
+  }
+}

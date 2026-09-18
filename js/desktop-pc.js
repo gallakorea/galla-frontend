@@ -160,73 +160,134 @@
     return false;
   }
 
+  /* 🗂 오른쪽 패널 — 트렌드의 여러 코너를 썸네일과 함께(26.9.19 사장님: 「이슈 전황뿐 아니라 트렌드의 다양한 콤포넌트를 썸네일과, 너무 단순해」).
+     순서: 이슈 전황 → 지금 뜨는 영상 → 갈라 예측 → 갈라뉴스 → 맛집·여행 → 광장 HOT → 난장 → 앱.
+     각 카드는 실패하면 조용히 사라진다(빈 껍데기 금지). 움직임은 CSS(desktop.css pcr-*)만 — 등장·반짝·확대. */
+  const TH = (u, w) => { try { return u ? (window.GALLA_thumb ? window.GALLA_thumb(u, w || 240) : u) : ''; } catch (_) { return u || ''; } };
+  const IMG = (u, w, cls) => u ? `<span class="${cls || 'pcr-th'}"><img src="${esc(TH(u, w))}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('noimg');this.remove()"></span>` : `<span class="${cls || 'pcr-th'} noimg"></span>`;
+  const sN = n => { n = Number(n) || 0; return n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : n.toLocaleString(); };
+  const pick = (arr, n) => { const a = (arr || []).slice(); for (let k = a.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [a[k], a[r]] = [a[r], a[k]]; } return a.slice(0, n); };
+
+  let QUIET = false;
   async function buildRight() {
     if (document.getElementById('pc-right')) return;
     const ytSurface = isYouTubeSurface();
     const el = document.createElement('aside');
     el.id = 'pc-right';
+    if (QUIET) el.classList.add('pcr-quiet');
     el.innerHTML =
       (ytSurface ? '' : card('pcr-battle', '갈라 이슈 전황', true)) +
       card('pcr-hot', '지금 뜨는 영상') +
       (ytSurface ? '' : card('pcr-predict', '갈라 예측')) +
+      card('pcr-news', '갈라뉴스') +
+      card('pcr-spots', '맛집 · 여행') +
+      card('pcr-plaza', '광장 HOT') +
       card('pcr-rooms', '난장 라이브', true) +
-      // 📲 앱 다운로드 프로모(정적) — 갈비스와 함께 핵심 전환 트리거
       `<section class="pcr-card pcr-getapp"><h3>📲 갈라 앱</h3>
         <div class="pcr-body"><p class="pcr-dl-t">알림·통화·오프라인까지 — <b>앱으로 더 크게</b></p>
         <button class="pcr-dl" type="button">앱 받기</button></div></section>`;
     document.body.appendChild(el);
     el.querySelector('.pcr-dl')?.addEventListener('click', () => { window.GALLA_appDownload && window.GALLA_appDownload('getapp'); });
+    el.querySelectorAll('.pcr-card').forEach((c, k) => c.style.setProperty('--pcr-i', k));   // 차례로 떠오르기
 
     const supa = await sb();
     if (!supa) { el.remove(); return; }
 
-    // ① 실시간 전황 — 지금 가장 뜨거운 이슈(찬반 합산 상위)
-    try {
+    // ① 이슈 전황 — 찬반 합산 상위 4, 썸네일 + 줄다리기 막대
+    if (!ytSurface) try {
       const { data } = await supa.from('issues')
-        .select('id,title,pro_count,con_count,view_count,created_at')
-        .order('created_at', { ascending: false }).limit(24);
-      const hot = (data || [])
-        .map(r => ({ ...r, heat: (r.pro_count || 0) + (r.con_count || 0) }))
+        .select('id,title,pro_count,con_count,created_at,card_thumb_url,thumbnail_url')
+        .order('created_at', { ascending: false }).limit(30);
+      const hot = (data || []).map(r => ({ ...r, heat: (r.pro_count || 0) + (r.con_count || 0) }))
         .sort((a, b) => b.heat - a.heat).slice(0, 4);
-      fill('pcr-battle', hot.map(r => {
-        const p = r.pro_count || 0, c = r.con_count || 0, t = Math.max(1, p + c);
-        return `<a class="pcr-row" href="issue.html?id=${r.id}">
-          <b>${esc(r.title)}</b>
-          <div class="pcr-odds"><span class="yes" style="width:${Math.round(p / t * 100)}%"></span><span class="no" style="width:${Math.round(c / t * 100)}%"></span></div>
-          <i>찬 ${p} · 반 ${c} · ${ago(r.created_at)}</i>
+      fill('pcr-battle', hot.map((r, k) => {
+        const p = r.pro_count || 0, c = r.con_count || 0, t = Math.max(1, p + c), pp = Math.round(p / t * 100);
+        return `<a class="pcr-row pcr-media" href="issue.html?id=${r.id}">
+          ${IMG(r.card_thumb_url || r.thumbnail_url, 160)}<em class="pcr-rank">${k + 1}</em>
+          <span class="pcr-tx"><b>${esc(r.title)}</b>
+            <span class="pcr-odds"><span class="yes" style="width:${pp}%"></span><span class="no" style="width:${100 - pp}%"></span></span>
+            <i>찬 ${p} · 반 ${c} · ${ago(r.created_at)}</i></span>
         </a>`;
       }).join(''), 'index.html', '전장 전체 보기');
     } catch (_) { fill('pcr-battle', ''); }
 
-    // ①.5 지금 뜨는 영상 — 핫튜브(유튜브 인기 급상승, 롱폼 상위). 임베드 재생은 트렌드 탭에서.
+    // ② 지금 뜨는 영상 — 1위는 크게, 나머지는 작은 썸네일
     try {
       const { data } = await supa.from('youtube_hot')
-        .select('video_id,title,channel_title,view_count')
+        .select('video_id,title,channel_title,view_count,thumbnail,rank')
         .eq('feed', 'all').eq('is_short', false)
         .not('channel_title', 'ilike', '%- Topic')
         .order('rank', { ascending: true }).limit(4);
-      const sN = n => { n = Number(n) || 0; return n >= 100000000 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 10000 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : String(n); };
-      fill('pcr-hot', (data || []).map(v => `
-        <a class="pcr-row" href="watch.html?v=${encodeURIComponent(v.video_id)}">
-          <b>${esc(v.title)}</b>
-          <i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i>
-        </a>`).join(''), 'search.html', '핫튜브 전체 보기');
+      const rows = data || [];
+      fill('pcr-hot', rows.map((v, k) => {
+        const href = `watch.html?v=${encodeURIComponent(v.video_id)}`;
+        const th = v.thumbnail || `https://i.ytimg.com/vi/${encodeURIComponent(v.video_id)}/hqdefault.jpg`;
+        if (k === 0) return `<a class="pcr-hero" href="${href}">
+            <span class="pcr-hero-img"><img src="${esc(th)}" alt="" loading="lazy"></span>
+            <span class="pcr-play"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            <em class="pcr-badge">🔥 1위</em>
+            <span class="pcr-hero-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
+          </a>`;
+        return `<a class="pcr-row pcr-media pcr-wide" href="${href}">
+            <span class="pcr-th pcr-th-w"><img src="${esc(th)}" alt="" loading="lazy"></span><em class="pcr-rank">${k + 1}</em>
+            <span class="pcr-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
+          </a>`;
+      }).join(''), 'search.html?tab=hot', '핫튜브 전체 보기');
     } catch (_) { fill('pcr-hot', ''); }
 
-    // ② 오늘의 예측 — 마감 임박 순(살아있는 마켓)
-    try {
+    // ③ 갈라 예측 — 사진 타일 2개 + 마감
+    if (!ytSurface) try {
       const { data } = await supa.from('markets')
-        .select('id,question,total_pool,volume,close_at,resolved')
-        .eq('resolved', false)
-        .order('close_at', { ascending: true }).limit(3);
-      fill('pcr-predict', (data || []).map(m => `
-        <a class="pcr-row" href="predict-market.html?id=${m.id}">
-          <b>${esc(m.question)}</b>
-          <i>상금풀 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i>
-        </a>`).join(''), 'predict.html', '예측 전체 보기');
+        .select('id,question,total_pool,close_at,image_url')
+        .eq('resolved', false).gt('close_at', new Date().toISOString())
+        .order('close_at', { ascending: true }).limit(4);
+      fill('pcr-predict', `<div class="pcr-tiles">` + (data || []).map(m => `
+        <a class="pcr-tile" href="predict-market.html?id=${m.id}">
+          ${IMG(m.image_url, 360, 'pcr-tile-img')}
+          <span class="pcr-tile-tx"><b>${esc(m.question)}</b><i>🪙 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i></span>
+        </a>`).join('') + `</div>`, 'galla-predict.html', '예측 전체 보기');
     } catch (_) { fill('pcr-predict', ''); }
 
-    // ③ 난장 라이브 — 최근 대화가 있는 방
+    // ④ 갈라뉴스 — 대표 사진 + 제목
+    try {
+      const { data } = await supa.from('galla_news')
+        .select('id,title,category,hero_image,published_at')
+        .eq('status', 'published').order('published_at', { ascending: false }).limit(3);
+      fill('pcr-news', (data || []).map(n => `
+        <a class="pcr-row pcr-media" href="news.html?gn=${encodeURIComponent(n.id)}">
+          ${IMG(n.hero_image, 160)}
+          <span class="pcr-tx"><b>${esc(n.title)}</b><i>${esc(n.category || '')}${n.published_at ? ' · ' + ago(n.published_at) : ''}</i></span>
+        </a>`).join(''), 'search.html?tab=news', '갈라뉴스 더 보기');
+    } catch (_) { fill('pcr-news', ''); }
+
+    // ⑤ 맛집 · 여행 — 사진 2×2(맛집 2 + 여행 2), 볼 때마다 바뀐다
+    try {
+      const [f, t] = await Promise.all([
+        supa.rpc('food_browse', {}),   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS) — 맛집 탭과 같은 함수로
+        supa.from('travel_places').select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60),
+      ]);
+      const foods = [].concat(...(((f.data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
+      const cells = pick(foods, 2).map(x => ({ href: 'search.html?tab=food', img: x.cover, name: x.name,
+          sub: '🍜 ' + [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }))
+        .concat(pick(t.data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name, sub: '✈️ ' + (x.city || x.country || '여행') })));
+      fill('pcr-spots', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
+        <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
+        'search.html?tab=food', '맛집·여행 더 보기');
+    } catch (_) { fill('pcr-spots', ''); }
+
+    // ⑥ 광장 HOT — 추천 점수 순
+    try {
+      const { data } = await supa.from('plaza_posts')
+        .select('id,title,category,up_count,down_count,cover_image,thumbnail,created_at')
+        .order('hot_score', { ascending: false, nullsFirst: false }).limit(3);
+      fill('pcr-plaza', (data || []).map(x => `
+        <a class="pcr-row${(x.thumbnail || x.cover_image) ? ' pcr-media' : ''}" href="plaza_detail.html?id=${encodeURIComponent(x.id)}">
+          ${(x.thumbnail || x.cover_image) ? IMG(x.thumbnail || x.cover_image, 160) : ''}
+          <span class="pcr-tx"><b>${esc(x.title || '(제목 없음)')}</b><i>▲ ${(x.up_count || 0) - (x.down_count || 0)} · ${esc(x.category || '광장')} · ${ago(x.created_at)}</i></span>
+        </a>`).join(''), 'search.html?tab=plaza', '광장 더 보기');
+    } catch (_) { fill('pcr-plaza', ''); }
+
+    // ⑦ 난장 라이브 — 최근 대화가 있는 방
     try {
       const { data } = await supa.from('open_rooms')
         .select('id,title,member_count,last_message,last_message_at,kind')
@@ -249,8 +310,11 @@
     // 라이브 패널은 90초마다 새로 — 탭이 보일 때만(배터리·트래픽)
     setInterval(() => {
       if (document.hidden || !MQ.matches) return;
-      document.getElementById('pc-right')?.remove();
-      buildRight();
+      /* 새 패널을 다 그린 뒤 옛 것을 걷는다 — 먼저 지우면 90초마다 패널이 통째로 깜빡였다. 새로 그릴 땐 등장 연출 없이 */
+      const old = document.getElementById('pc-right');
+      if (old) old.id = 'pc-right-old';
+      QUIET = true;
+      buildRight().finally(() => { QUIET = false; setTimeout(() => document.getElementById('pc-right-old')?.remove(), 400); });
     }, 90000);
   }
 
