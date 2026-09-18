@@ -818,6 +818,11 @@ body.fd-detail-on .a2hs-bar, body.fd-detail-on #frOrb { display: none !important
    시트도 화면을 다 먹지 않게 낮춘다(핀 주변을 확인하면서 읽는 게 맞다). */
 .fd-detail.over-map .fd-detail-bg { background: rgba(0,0,0,.28); }
 .fd-detail.over-map .fd-sheet { max-height: 66%; }
+/* 위로 끌면 펼친다(바텀시트) — 높이가 부드럽게 늘도록 max-height 도 전환에 넣는다 */
+.fd-detail .fd-sheet { transition: transform .3s cubic-bezier(.22,.9,.3,1), max-height .28s ease; }
+.fd-detail .fd-sheet.expanded,
+.fd-detail.over-map .fd-sheet.expanded { max-height: calc(100% - env(safe-area-inset-top, 0px) - 12px); }
+.fd-detail .fd-sheet-grip { cursor: pointer; }
 
 /* ═══ 🚨 오버레이가 0×0 으로 접히던 버그 (2026-08-31) ═══════
    증상: 지도가 열렸는데 마커 0개, "이 구역엔 없어요". 경계값이 중심점 하나로 접혔다.

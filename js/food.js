@@ -371,6 +371,7 @@
     var d = await rpc("food_place_detail", { p_id: id });
     if (!d || !d.ok) return toast("정보를 불러오지 못했어요");
     DETAIL.classList.add("open");
+    if (SHEET) SHEET.classList.remove("expanded");   // 새로 열 땐 기본 높이부터
     /* 지도에서 왔으면 스크림을 옅게 — 핀을 누른 자리가 뒤에 보여야 공간 맥락이 산다.
        목록에서 왔으면 뒤에 지도가 없으니 진하게 덮는다(사장님 지적). */
     DETAIL.classList.toggle("over-map", !!(MAP && MAP.classList.contains("open")));
@@ -443,30 +444,38 @@
     box.classList.add("on");
   }
 
-  /* 👇 시트를 아래로 끌어 닫는다 — 내용이 맨 위일 때만(스크롤 중엔 스크롤이 우선).
-     90px 넘게 내리거나 빠르게 튕기면 닫고, 아니면 제자리로 돌아간다. */
+  /* 👆👇 바텀시트 끌기 — 위로 끌면 펼치고, 펼친 상태에서 아래로 끌면 원래 높이, 원래 높이에서 아래로 끌면 닫는다.
+     아래로 끄는 건 내용이 맨 위일 때만(스크롤 중엔 스크롤이 우선). 60px(위)·90px(아래) 넘거나 빠르게 튕기면 적용. */
   function armSheetSwipe(sh) {
     if (!sh || sh.__swipe) return;
     sh.__swipe = true;
-    var y0 = 0, t0 = 0, dy = 0, drag = false;
+    var y0 = 0, t0 = 0, dy = 0, drag = false, atTop = true;
     sh.addEventListener("touchstart", function (e) {
-      if (sh.scrollTop > 0 || !e.touches || e.touches.length !== 1) { drag = false; return; }
+      if (!e.touches || e.touches.length !== 1) { drag = false; return; }
       y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; drag = true;
+      atTop = sh.scrollTop <= 0;
     }, { passive: true });
     sh.addEventListener("touchmove", function (e) {
       if (!drag) return;
       dy = e.touches[0].clientY - y0;
-      if (dy <= 0) { sh.style.transform = ""; return; }           // 위로 끌면 평소 스크롤
-      sh.style.transition = "none";
-      sh.style.transform = "translateY(" + dy + "px)";
+      if (dy > 0 && atTop) {                       // 아래로 — 시트가 손가락을 따라온다
+        sh.style.transition = "none";
+        sh.style.transform = "translateY(" + dy + "px)";
+      }
     }, { passive: true });
     function end() {
       if (!drag) return;
       drag = false;
-      var fast = dy > 40 && (Date.now() - t0) < 220;
-      sh.style.transition = "";
-      if (dy > 90 || fast) { sh.style.transform = ""; closeDetail(); }
-      else sh.style.transform = "";
+      var ms = Date.now() - t0, fastDown = dy > 40 && ms < 220, fastUp = dy < -30 && ms < 220;
+      sh.style.transition = ""; sh.style.transform = "";
+      if (dy < -60 || fastUp) {                    // 위로 → 펼침
+        if (!sh.classList.contains("expanded")) sh.classList.add("expanded");
+        return;
+      }
+      if (atTop && (dy > 90 || fastDown)) {        // 아래로 → 펼침이면 접고, 아니면 닫는다
+        if (sh.classList.contains("expanded")) sh.classList.remove("expanded");
+        else closeDetail();
+      }
     }
     sh.addEventListener("touchend", end);
     sh.addEventListener("touchcancel", end);
@@ -2219,6 +2228,7 @@
        지도 위에 상세를 띄웠을 때 보이는 지도를 눌러도 닫히지 않았다(실측).
        바깥을 누른 건 곧 DETAIL 자신이 타깃인 경우다 — 그걸로 판정한다. */
     if (t.closest(".fd-dclose") || t === DETAIL || t.closest(".fd-detail-bg")) { closeDetail(); return; }
+    if (t.closest(".fd-sheet-grip") && SHEET) { SHEET.classList.toggle("expanded"); return; }   // 손잡이 탭 = 펼침/접기
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
       vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
