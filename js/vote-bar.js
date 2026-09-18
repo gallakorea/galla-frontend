@@ -69,8 +69,9 @@
     if (reduce() || !Element.prototype.animate) return;
     const fp = el.querySelector(".gv-fill-pro"), fc = el.querySelector(".gv-fill-con"), bar = el.querySelector(".gv-bar");
     const marks = [el.querySelector(".gv-needle"), el.querySelector(".gv-knot")].filter(Boolean);
-    const d = side === "pro" ? 1 : -1, clamp = (v) => Math.max(4, Math.min(96, v));
-    const seq = [from, to + 10 * d, to - 6 * d, to + 4 * d, to - 2 * d, to].map(clamp);
+    /* 끝(0·100%)으로 갈 때도 출렁임이 보이게 되받아치기를 크게(−12), 중간값만 3~97% 로 가둔다(QA: 0표→100% 에서 거의 안 움직였다) */
+    const d = side === "pro" ? 1 : -1, clamp = (v) => Math.max(3, Math.min(97, v));
+    const seq = [from, clamp(to + 8 * d), clamp(to - 12 * d), clamp(to + 5 * d), clamp(to - 4 * d), to];
     const off = [0, .28, .5, .68, .84, 1];
     const opt = { duration: 1500, easing: "cubic-bezier(.3,.7,.3,1)" };
     const kf = (fn) => seq.map((v, i) => Object.assign({ offset: off[i] }, fn(v)));
