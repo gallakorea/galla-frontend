@@ -2195,3 +2195,17 @@ body {
 .sg-go { width: 100%; height: 48px; border: 0; border-radius: 14px; background: #4f6bff; color: #fff; font-size: 15px; font-weight: 900; cursor: pointer; }
 .sg-go:disabled { opacity: .45; }
 .sg-f { margin-top: 9px; font-size: 11.5px; color: #767c89; }
+
+/* 📐 이슈 상세 — 모바일 폭 끝까지(26.9.19 사장님). 사진·제목·투표는 이미 끝까지였고, 아래 상자들이 좌우 14~16px 들어가 있었다.
+   상자는 끝까지 + 모서리 없음, 글자는 상자 안쪽 여백으로. 누르는 요소(후원 버튼·입력칸)는 여백 유지.
+   ⚠️ 다른 화면에 새지 않게 이슈 상세 범위(MPA body · SPA 뷰 호스트)로 가둔다. */
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) .issue-explain,
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) .ai-argument-card { margin-left: 0; margin-right: 0; border-radius: 0; border-left: 0; border-right: 0; }
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) .ai-news { padding-left: 0; padding-right: 0; }
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) .ai-news .ai-box { border-radius: 0; border-left: 0; border-right: 0; }
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #stats-locked,
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) .fac-support { margin-left: -16px; margin-right: -16px; border-radius: 0; border-left: 0; border-right: 0; }
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .comment-war-header,
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .army-label,
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .zone-list { margin-left: -14px; margin-right: -14px; border-radius: 0; border-left: 0; border-right: 0; }
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #stats-locked { width: calc(100% + 32px); max-width: none; box-sizing: border-box; }   /* 폭 100% 고정이라 32px 모자랐다(QA) */
