@@ -193,112 +193,126 @@
     const supa = await sb();
     if (!supa) { el.remove(); return; }
 
-    // ① 이슈 전황 — 찬반 합산 상위 4, 썸네일 + 줄다리기 막대
-    if (!ytSurface) try {
-      const { data } = await supa.from('issues')
-        .select('id,title,pro_count,con_count,created_at,card_thumb_url,thumbnail_url')
-        .order('created_at', { ascending: false }).limit(30);
-      const hot = (data || []).map(r => ({ ...r, heat: (r.pro_count || 0) + (r.con_count || 0) }))
-        .sort((a, b) => b.heat - a.heat).slice(0, 4);
-      fill('pcr-battle', hot.map((r, k) => {
-        const p = r.pro_count || 0, c = r.con_count || 0, t = Math.max(1, p + c), pp = Math.round(p / t * 100);
-        return `<a class="pcr-row pcr-media" href="issue.html?id=${r.id}">
-          ${IMG(r.card_thumb_url || r.thumbnail_url, 160)}<em class="pcr-rank">${k + 1}</em>
-          <span class="pcr-tx"><b>${esc(r.title)}</b>
-            <span class="pcr-odds"><span class="yes" style="width:${pp}%"></span><span class="no" style="width:${100 - pp}%"></span></span>
-            <i>찬 ${p} · 반 ${c} · ${ago(r.created_at)}</i></span>
-        </a>`;
-      }).join(''), 'index.html', '전장 전체 보기');
-    } catch (_) { fill('pcr-battle', ''); }
-
-    // ② 지금 뜨는 영상 — 1위는 크게, 나머지는 작은 썸네일
-    try {
-      const { data } = await supa.from('youtube_hot')
-        .select('video_id,title,channel_title,view_count,thumbnail,rank')
-        .eq('feed', 'all').eq('is_short', false)
-        .not('channel_title', 'ilike', '%- Topic')
-        .order('rank', { ascending: true }).limit(4);
-      const rows = data || [];
-      fill('pcr-hot', rows.map((v, k) => {
-        const href = `watch.html?v=${encodeURIComponent(v.video_id)}`;
-        const th = v.thumbnail || `https://i.ytimg.com/vi/${encodeURIComponent(v.video_id)}/hqdefault.jpg`;
-        if (k === 0) return `<a class="pcr-hero" href="${href}">
-            <span class="pcr-hero-img"><img src="${esc(th)}" alt="" loading="lazy"></span>
-            <span class="pcr-play"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M8 5.5v13l11-6.5z"/></svg></span>
-            <em class="pcr-badge">🔥 1위</em>
-            <span class="pcr-hero-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
-          </a>`;
-        return `<a class="pcr-row pcr-media pcr-wide" href="${href}">
-            <span class="pcr-th pcr-th-w"><img src="${esc(th)}" alt="" loading="lazy"></span><em class="pcr-rank">${k + 1}</em>
-            <span class="pcr-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
-          </a>`;
-      }).join(''), 'search.html?tab=hot', '핫튜브 전체 보기');
-    } catch (_) { fill('pcr-hot', ''); }
-
-    // ③ 갈라 예측 — 사진 타일 2개 + 마감
-    if (!ytSurface) try {
-      const { data } = await supa.from('markets')
-        .select('id,question,total_pool,close_at,image_url')
-        .eq('resolved', false).gt('close_at', new Date().toISOString())
-        .order('close_at', { ascending: true }).limit(4);
-      fill('pcr-predict', `<div class="pcr-tiles">` + (data || []).map(m => `
-        <a class="pcr-tile" href="predict-market.html?id=${m.id}">
-          ${IMG(m.image_url, 360, 'pcr-tile-img')}
-          <span class="pcr-tile-tx"><b>${esc(m.question)}</b><i>🪙 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i></span>
-        </a>`).join('') + `</div>`, 'galla-predict.html', '예측 전체 보기');
-    } catch (_) { fill('pcr-predict', ''); }
-
-    // ④ 갈라뉴스 — 대표 사진 + 제목
-    try {
-      const { data } = await supa.from('galla_news')
-        .select('id,title,category,hero_image,published_at')
-        .eq('status', 'published').order('published_at', { ascending: false }).limit(3);
-      fill('pcr-news', (data || []).map(n => `
-        <a class="pcr-row pcr-media" href="news.html?gn=${encodeURIComponent(n.id)}">
-          ${IMG(n.hero_image, 160)}
-          <span class="pcr-tx"><b>${esc(n.title)}</b><i>${esc(n.category || '')}${n.published_at ? ' · ' + ago(n.published_at) : ''}</i></span>
-        </a>`).join(''), 'search.html?tab=news', '갈라뉴스 더 보기');
-    } catch (_) { fill('pcr-news', ''); }
-
-    // ⑤ 맛집 · 여행 — 사진 2×2(맛집 2 + 여행 2), 볼 때마다 바뀐다
-    try {
-      const [f, t] = await Promise.all([
-        supa.rpc('food_browse', {}),   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS) — 맛집 탭과 같은 함수로
-        supa.from('travel_places').select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60),
-      ]);
-      const foods = [].concat(...(((f.data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
-      const cells = pick(foods, 2).map(x => ({ href: 'search.html?tab=food', img: x.cover, name: x.name,
-          sub: '🍜 ' + [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }))
-        .concat(pick(t.data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name, sub: '✈️ ' + (x.city || x.country || '여행') })));
-      fill('pcr-spots', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
-        <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
-        'search.html?tab=food', '맛집·여행 더 보기');
-    } catch (_) { fill('pcr-spots', ''); }
-
-    // ⑥ 광장 HOT — 추천 점수 순
-    try {
-      const { data } = await supa.from('plaza_posts')
-        .select('id,title,category,up_count,down_count,cover_image,thumbnail,created_at')
-        .order('hot_score', { ascending: false, nullsFirst: false }).limit(3);
-      fill('pcr-plaza', (data || []).map(x => `
-        <a class="pcr-row${(x.thumbnail || x.cover_image) ? ' pcr-media' : ''}" href="plaza_detail.html?id=${encodeURIComponent(x.id)}">
-          ${(x.thumbnail || x.cover_image) ? IMG(x.thumbnail || x.cover_image, 160) : ''}
-          <span class="pcr-tx"><b>${esc(x.title || '(제목 없음)')}</b><i>▲ ${(x.up_count || 0) - (x.down_count || 0)} · ${esc(x.category || '광장')} · ${ago(x.created_at)}</i></span>
-        </a>`).join(''), 'search.html?tab=plaza', '광장 더 보기');
-    } catch (_) { fill('pcr-plaza', ''); }
-
-    // ⑦ 난장 라이브 — 최근 대화가 있는 방
-    try {
-      const { data } = await supa.from('open_rooms')
-        .select('id,title,member_count,last_message,last_message_at,kind')
-        .eq('kind', 'open')
-        .order('last_message_at', { ascending: false, nullsFirst: false }).limit(3);
-      fill('pcr-rooms', (data || []).map(r => `
-        <a class="pcr-row" href="dm.html?tab=rooms">
-          <b>${esc(r.title)}</b>
-          <i>${r.member_count || 0}명 · ${r.last_message ? esc(String(r.last_message).slice(0, 22)) : '새 난장'}${r.last_message_at ? ' · ' + ago(r.last_message_at) : ''}</i>
-        </a>`).join(''), 'dm.html?tab=rooms', '난장 전체 보기');
-    } catch (_) { fill('pcr-rooms', ''); }
+    /* ⏱ 카드마다 따로·동시에 부른다. 예전엔 차례로 await 해서 요청 하나가 멈추면(로그인 세션 갱신 대기 등)
+       뒤 카드까지 전부 「불러오는 중」에 갇혔다(26.9.19 사장님 제보). 8초 넘으면 한 번 더, 그래도 안 되면 그 카드만 걷는다. */
+    const TO = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+    const job = (id, fn) => TO(fn(), 8000).catch(() => TO(fn(), 8000)).catch(() => fill(id, ''));
+    await Promise.all([
+      ytSurface ? null : job('pcr-battle', async () => {
+        // ① 이슈 전황 — 찬반 합산 상위 4, 썸네일 + 줄다리기 막대
+        try {
+          const { data } = await supa.from('issues')
+            .select('id,title,pro_count,con_count,created_at,card_thumb_url,thumbnail_url')
+            .order('created_at', { ascending: false }).limit(30);
+          const hot = (data || []).map(r => ({ ...r, heat: (r.pro_count || 0) + (r.con_count || 0) }))
+            .sort((a, b) => b.heat - a.heat).slice(0, 4);
+          fill('pcr-battle', hot.map((r, k) => {
+            const p = r.pro_count || 0, c = r.con_count || 0, t = Math.max(1, p + c), pp = Math.round(p / t * 100);
+            return `<a class="pcr-row pcr-media" href="issue.html?id=${r.id}">
+              ${IMG(r.card_thumb_url || r.thumbnail_url, 160)}<em class="pcr-rank">${k + 1}</em>
+              <span class="pcr-tx"><b>${esc(r.title)}</b>
+                <span class="pcr-odds"><span class="yes" style="width:${pp}%"></span><span class="no" style="width:${100 - pp}%"></span></span>
+                <i>찬 ${p} · 반 ${c} · ${ago(r.created_at)}</i></span>
+            </a>`;
+          }).join(''), 'index.html', '전장 전체 보기');
+        } catch (_) { fill('pcr-battle', ''); }
+      }),
+      job('pcr-hot', async () => {
+        // ② 지금 뜨는 영상 — 1위는 크게, 나머지는 작은 썸네일
+        try {
+          const { data } = await supa.from('youtube_hot')
+            .select('video_id,title,channel_title,view_count,thumbnail,rank')
+            .eq('feed', 'all').eq('is_short', false)
+            .not('channel_title', 'ilike', '%- Topic')
+            .order('rank', { ascending: true }).limit(4);
+          const rows = data || [];
+          fill('pcr-hot', rows.map((v, k) => {
+            const href = `watch.html?v=${encodeURIComponent(v.video_id)}`;
+            const th = v.thumbnail || `https://i.ytimg.com/vi/${encodeURIComponent(v.video_id)}/hqdefault.jpg`;
+            if (k === 0) return `<a class="pcr-hero" href="${href}">
+                <span class="pcr-hero-img"><img src="${esc(th)}" alt="" loading="lazy"></span>
+                <span class="pcr-play"><svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+                <em class="pcr-badge">🔥 1위</em>
+                <span class="pcr-hero-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
+              </a>`;
+            return `<a class="pcr-row pcr-media pcr-wide" href="${href}">
+                <span class="pcr-th pcr-th-w"><img src="${esc(th)}" alt="" loading="lazy"></span><em class="pcr-rank">${k + 1}</em>
+                <span class="pcr-tx"><b>${esc(v.title)}</b><i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i></span>
+              </a>`;
+          }).join(''), 'search.html?tab=hot', '핫튜브 전체 보기');
+        } catch (_) { fill('pcr-hot', ''); }
+      }),
+      ytSurface ? null : job('pcr-predict', async () => {
+        // ③ 갈라 예측 — 사진 타일 2개 + 마감
+        try {
+          const { data } = await supa.from('markets')
+            .select('id,question,total_pool,close_at,image_url')
+            .eq('resolved', false).gt('close_at', new Date().toISOString())
+            .order('close_at', { ascending: true }).limit(4);
+          fill('pcr-predict', `<div class="pcr-tiles">` + (data || []).map(m => `
+            <a class="pcr-tile" href="predict-market.html?id=${m.id}">
+              ${IMG(m.image_url, 360, 'pcr-tile-img')}
+              <span class="pcr-tile-tx"><b>${esc(m.question)}</b><i>🪙 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i></span>
+            </a>`).join('') + `</div>`, 'galla-predict.html', '예측 전체 보기');
+        } catch (_) { fill('pcr-predict', ''); }
+      }),
+      job('pcr-news', async () => {
+        // ④ 갈라뉴스 — 대표 사진 + 제목
+        try {
+          const { data } = await supa.from('galla_news')
+            .select('id,title,category,hero_image,published_at')
+            .eq('status', 'published').order('published_at', { ascending: false }).limit(3);
+          fill('pcr-news', (data || []).map(n => `
+            <a class="pcr-row pcr-media" href="news.html?gn=${encodeURIComponent(n.id)}">
+              ${IMG(n.hero_image, 160)}
+              <span class="pcr-tx"><b>${esc(n.title)}</b><i>${esc(n.category || '')}${n.published_at ? ' · ' + ago(n.published_at) : ''}</i></span>
+            </a>`).join(''), 'search.html?tab=news', '갈라뉴스 더 보기');
+        } catch (_) { fill('pcr-news', ''); }
+      }),
+      job('pcr-spots', async () => {
+        // ⑤ 맛집 · 여행 — 사진 2×2(맛집 2 + 여행 2), 볼 때마다 바뀐다
+        try {
+          const [f, t] = await Promise.all([
+            supa.rpc('food_browse', {}),   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS) — 맛집 탭과 같은 함수로
+            supa.from('travel_places').select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60),
+          ]);
+          const foods = [].concat(...(((f.data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
+          const cells = pick(foods, 2).map(x => ({ href: 'search.html?tab=food', img: x.cover, name: x.name,
+              sub: '🍜 ' + [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }))
+            .concat(pick(t.data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name, sub: '✈️ ' + (x.city || x.country || '여행') })));
+          fill('pcr-spots', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
+            <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
+            'search.html?tab=food', '맛집·여행 더 보기');
+        } catch (_) { fill('pcr-spots', ''); }
+      }),
+      job('pcr-plaza', async () => {
+        // ⑥ 광장 HOT — 추천 점수 순
+        try {
+          const { data } = await supa.from('plaza_posts')
+            .select('id,title,category,up_count,down_count,cover_image,thumbnail,created_at')
+            .order('hot_score', { ascending: false, nullsFirst: false }).limit(3);
+          fill('pcr-plaza', (data || []).map(x => `
+            <a class="pcr-row${(x.thumbnail || x.cover_image) ? ' pcr-media' : ''}" href="plaza_detail.html?id=${encodeURIComponent(x.id)}">
+              ${(x.thumbnail || x.cover_image) ? IMG(x.thumbnail || x.cover_image, 160) : ''}
+              <span class="pcr-tx"><b>${esc(x.title || '(제목 없음)')}</b><i>▲ ${(x.up_count || 0) - (x.down_count || 0)} · ${esc(x.category || '광장')} · ${ago(x.created_at)}</i></span>
+            </a>`).join(''), 'search.html?tab=plaza', '광장 더 보기');
+        } catch (_) { fill('pcr-plaza', ''); }
+      }),
+      job('pcr-rooms', async () => {
+        // ⑦ 난장 라이브 — 최근 대화가 있는 방
+        try {
+          const { data } = await supa.from('open_rooms')
+            .select('id,title,member_count,last_message,last_message_at,kind')
+            .eq('kind', 'open')
+            .order('last_message_at', { ascending: false, nullsFirst: false }).limit(3);
+          fill('pcr-rooms', (data || []).map(r => `
+            <a class="pcr-row" href="dm.html?tab=rooms">
+              <b>${esc(r.title)}</b>
+              <i>${r.member_count || 0}명 · ${r.last_message ? esc(String(r.last_message).slice(0, 22)) : '새 난장'}${r.last_message_at ? ' · ' + ago(r.last_message_at) : ''}</i>
+            </a>`).join(''), 'dm.html?tab=rooms', '난장 전체 보기');
+        } catch (_) { fill('pcr-rooms', ''); }
+      }),
+    ]);
   }
 
   let built = false;
