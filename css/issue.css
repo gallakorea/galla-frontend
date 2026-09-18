@@ -2208,4 +2208,4 @@ body {
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .comment-war-header,
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .army-label,
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .zone-list { margin-left: -14px; margin-right: -14px; border-radius: 0; border-left: 0; border-right: 0; }
-:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #stats-locked { width: calc(100% + 32px); max-width: none; box-sizing: border-box; }   /* 폭 100% 고정이라 32px 모자랐다(QA) */
+:is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #stats-locked { width: calc(100% + 32px) !important; max-width: none; box-sizing: border-box; }   /* .stats-section > * 가 width:100% !important 라 이겨야 한다(QA) */
