@@ -8,6 +8,21 @@
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ✨ 투표 전 반짝이 장식(26.9.18 사장님: 「투표 전이 심심 — 반짝이며 눌러 보게」). 투표하면 CSS 가 전부 끈다. */
+  /* 🪢 줄다리기 사람(투표 뒤에만 보인다, 26.9.19 사장님: 「밧줄 당기며 땀 흘리는 표현」) — 왼쪽 팀 기준으로 그리고 오른쪽 팀은 좌우 반전.
+     몸을 뒤로 젖혀 버티는 자세 · 땀방울 2개 · 발밑 먼지. 이모지 대신 SVG. */
+  const FIG = '<svg class="gv-fig" viewBox="0 0 26 32" aria-hidden="true">' +
+    '<g class="gv-fig-body" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="6.5" cy="7" r="3.6" fill="currentColor" stroke="none"/>' +
+      '<path d="M8.6 10.4 L14.2 20"/>' +                 // 몸통(뒤로 젖힘)
+      '<path d="M10.2 13.2 L25 16.4 M11.8 15.6 L25 16.4"/>' + // 두 팔 → 밧줄
+      '<path d="M14.2 20 L10 29.5 M14.2 20 L19.6 29.5"/>' +  // 버틴 다리
+    '</g>' +
+    '<path class="gv-sweat s1" d="M3 3.2c-.9 1.3-1.2 2-.6 2.6.6.5 1.4.1 1.4-.7 0-.5-.3-1.1-.8-1.9z"/>' +
+    '<path class="gv-sweat s2" d="M1.6 8.6c-.8 1.1-1 1.8-.5 2.3.5.4 1.2.1 1.2-.6 0-.4-.2-.9-.7-1.7z"/>' +
+    '<ellipse class="gv-dust" cx="11" cy="30.6" rx="4" ry="1.3"/>' +
+  '</svg>';
+  const TUG = '<div class="gv-tug" aria-hidden="true"><div class="gv-team gv-team-pro">' + FIG + FIG + '</div>' +
+    '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + '</div></div>';
   const FX = '<i class="gv-bglow"></i><i class="gv-bshine"></i><i class="gv-spark s1"></i><i class="gv-spark s2"></i><i class="gv-spark s3"></i>';
   // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
   function html(o) {
@@ -19,7 +34,7 @@
       <button class="gv-btn gv-pro ${o.proClass || ""}" data-haptic="vote" ${o.proAttr || ""}>${FX}<span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
       <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="vote" ${o.conAttr || ""}>${FX}<span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
     </div>`;
-    return `${buttons}
+    return `${buttons}${TUG}
       <div class="gv-bar" data-pro="${pro}" data-con="${con}" style="--gv-k:${pp}%">
         <div class="gv-fill gv-fill-pro" style="width:${pp}%"><i class="gv-sheen"></i></div>
         <div class="gv-fill gv-fill-con" style="width:${cp}%"><i class="gv-sheen"></i></div>
@@ -101,6 +116,7 @@
     const fromPP = fp ? (parseFloat(fp.style.width) || pp) : pp;
     if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%"; if (kn) kn.style.left = pp + "%";
     if (bar) bar.style.setProperty("--gv-k", pp + "%");   // 투표 뒤 빛 알갱이 출발점 = 매듭
+    el.style.setProperty("--gv-k", pp + "%");              // 줄다리기 사람들 밧줄 매듭도 같은 자리
     if (opts.voted === "pro" || opts.voted === "con") tug(el, fromPP, pp, opts.voted);
     const pctP = q(".gv-pct-pro"), pctC = q(".gv-pct-con");
     if (pctP) { pctP.classList.toggle("gv-hide", pp < 14); countUp(pctP, pp, "%"); }

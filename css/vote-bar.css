@@ -212,3 +212,33 @@
 @media (prefers-reduced-motion: reduce) {
   .gv.gv-locked .gv-mine::before, .gv.gv-locked .gv-mine::after, .gv.gv-locked .gv-glint, .gv.gv-side-pro .gv-fill-pro, .gv.gv-side-con .gv-fill-con { animation: none !important; }
 }
+
+/* 🧍‍🧍 줄다리기 사람 — 막대 위 한 줄(투표 뒤에만). 왼쪽 찬성팀·오른쪽 반대팀이 몸을 젖혀 당기고, 땀이 튀고, 먼지가 인다. */
+.gv-tug { display: none; }
+.gv.gv-locked .gv-tug { display: flex; align-items: flex-end; height: 34px; margin: -2px 2px 4px; }
+.gv-team { display: flex; gap: 1px; flex: 0 0 auto; }
+.gv-team-con { transform: scaleX(-1); }
+.gv-team-pro { color: color-mix(in srgb, var(--gv-pro) 55%, #fff); }
+.gv-team-con { color: color-mix(in srgb, var(--gv-con) 55%, #fff); }
+.gv.gv-side-pro .gv-team-con, .gv.gv-side-con .gv-team-pro { opacity: .55; }
+.gv-fig { width: 24px; height: 30px; overflow: visible; }
+.gv-fig-body { transform-origin: 14px 30px; animation: gvHeave 1.1s ease-in-out infinite; }
+.gv-fig + .gv-fig .gv-fig-body { animation-delay: .18s; }
+.gv-team-con .gv-fig-body { animation-delay: .55s; }
+.gv-team-con .gv-fig + .gv-fig .gv-fig-body { animation-delay: .73s; }
+@keyframes gvHeave { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-9deg) translateX(-1px); } }
+.gv-sweat { fill: #a9dcff; opacity: 0; }
+.gv-sweat.s1 { animation: gvSweat 1.4s ease-in infinite; }
+.gv-sweat.s2 { animation: gvSweat 1.4s ease-in .7s infinite; }
+.gv-fig + .gv-fig .gv-sweat.s1 { animation-delay: .4s; } .gv-fig + .gv-fig .gv-sweat.s2 { animation-delay: 1.1s; }
+@keyframes gvSweat { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-6px, 9px); } }
+.gv-dust { fill: rgba(210,190,150,.5); opacity: 0; transform-origin: 11px 30.6px; animation: gvDust 1.1s ease-out infinite; }
+@keyframes gvDust { 0% { opacity: .7; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.8) translateX(-3px); } }
+/* 밧줄 — 두 팀 손 사이 한 줄, 매듭은 실제 비율 자리. 팽팽하게 떨린다. */
+.gv-rope { position: relative; flex: 1; height: 3px; margin: 0 -2px 15px; border-radius: 2px;
+  background: repeating-linear-gradient(115deg, #d7b16a 0 4px, #9c7534 4px 7px); box-shadow: 0 1px 2px rgba(0,0,0,.5);
+  animation: gvTaut .25s linear infinite; }
+@keyframes gvTaut { 0%,100% { transform: translateY(0); } 50% { transform: translateY(.6px); } }
+.gv-rope-knot { position: absolute; top: 50%; left: var(--gv-k, 50%); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3d0, #c89a4a 60%, #7c5a22); box-shadow: 0 0 8px rgba(255,220,140,.8); transition: left .75s cubic-bezier(.34,1.35,.5,1); }
+@media (prefers-reduced-motion: reduce) { .gv-fig-body, .gv-sweat, .gv-dust, .gv-rope { animation: none !important; } }
