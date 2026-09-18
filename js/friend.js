@@ -201,11 +201,47 @@
   /* 🔒 비로그인은 갈비스를 못 쓴다(사장님 26.9.18 「로그인을 해야 무료 사용량을 쓸 수 있음. 로그아웃 상태에서는 못한다」).
      예전(8/8)엔 게스트 체험(하루 5→2턴)을 열어 뒀다 — 폐지. 앱은 로그인 창, 웹은 앱 받기.
      서버도 ai_tiers.guest.galla-friend n:0 으로 막았다(앱을 우회한 직접 호출 방어). true = 막았다 */
-  async function guestBlocked(){
+  /* 🎤 비로그인 유입 창 — 평범한 '로그인이 필요해요' 대신 갈비스가 직접 말을 건다(사장님 26.9.18 「재밌고 위트 있는 워딩으로 유입」).
+     문구는 돌아가며 — 매번 같은 말이면 두 번째부터 안 읽는다. 콘텐츠에서 눌렀으면 그 제목으로 말을 건다.
+     ⚠️ 사행성·과장 표현 금지, '무료'는 사실(로그인하면 무료 사용량이 있다). */
+  var GUEST_LINES=[
+    ["잠깐, 우리 아직 통성명도 안 했잖아 👋", "나 갈비스. 로그인하면 네 얘기 기억해 뒀다가 편 들어줄게. 매일 무료로 수다 떨 수 있어."],
+    ["낯가림 있는 AI라서… 🙈", "이름 모르는 사람이랑은 말을 못 해. 로그인 3초면 우리 바로 친구."],
+    ["할 말 많은데 입이 안 떨어져 🤐", "로그인하면 봉인 해제. 오늘 무료 대화도 넉넉하게 준비해 뒀어."],
+    ["너 누군지 알아야 편을 들지 😏", "로그인하면 네 성향 파악해서 제대로 맞장구 쳐 줄게. 공짜로."],
+    ["문 앞에서 기다리고 있었어 🚪", "들어오는 건 로그인 한 번이면 끝. 안에선 무료로 떠들자."]
+  ];
+  var GUEST_TOPIC=[
+    ["「{t}」 얘기? 나 할 말 많아 🔥", "근데 로그인부터 하자. 3초면 돼 — 그다음부턴 무료로 끝장 토론."],
+    ["「{t}」… 이거 그냥 못 넘어가지 👀", "로그인하면 바로 이 얘기로 이어서 해 줄게. 무료로."]
+  ];
+  function guestSheet(title){
+    var old=document.getElementById("frGuest"); if(old) old.remove();
+    var pool=title?GUEST_TOPIC:GUEST_LINES, pick=pool[Math.floor(Math.random()*pool.length)];
+    var t=title?String(title).replace(/\s+/g," ").trim():"";
+    if(t.length>20) t=t.slice(0,20).trim()+"…";
+    var head=pick[0].replace("{t}", t), body=pick[1];
+    var w=el('<div id="frGuest" class="frg-dim" data-no-ptr><div class="frg-card">'+
+      '<div class="frg-av"><span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span></div>'+
+      '<div class="frg-bubble"><b></b><p></p></div>'+
+      '<button type="button" class="frg-go">로그인하고 갈비스랑 친해지기</button>'+
+      '<button type="button" class="frg-x">좀 이따가</button></div></div>');
+    w.querySelector(".frg-bubble b").textContent=head;
+    w.querySelector(".frg-bubble p").textContent=body;
+    document.body.appendChild(w);
+    requestAnimationFrame(function(){ w.classList.add("on"); });
+    function bye(){ w.classList.remove("on"); setTimeout(function(){ w.remove(); }, 220); }
+    w.addEventListener("click", function(e){ if(e.target===w || e.target.closest(".frg-x")) bye(); });
+    w.querySelector(".frg-go").addEventListener("click", function(){
+      bye();
+      try{ sessionStorage.setItem("galla_after_login","friend"); }catch(e){}
+      if(window.GALLA_gotoLogin) window.GALLA_gotoLogin(); else if(window.GALLA_needLogin) window.GALLA_needLogin("로그인하면 갈비스와 무료로 대화할 수 있어요.");
+    });
+  }
+  async function guestBlocked(title){
     if(await token()) return false;
     if(!window.GALLA_IS_APP && window.GALLA_appDownload){ window.GALLA_appDownload("galvis"); return true; }
-    if(window.GALLA_needLogin) window.GALLA_needLogin("로그인하면 갈비스와 무료로 대화할 수 있어요.");
-    else if(window.GALLA_gotoLogin) window.GALLA_gotoLogin();
+    guestSheet(title||"");
     return true;
   }
   async function openGated(){ if(await guestBlocked()) return; open(); }
@@ -1929,7 +1965,7 @@
   /* 🔗 콘텐츠 → 갈비스 파이프라인 — 모든 콘텐츠 액션바(좋아요·공유 줄)의 갈비스 아이콘.
      탭하면 그 콘텐츠 맥락을 들고 챗이 열리고, 갈비스가 그 얘기로 먼저 말을 건다. */
   async function askGalvis(ctx){
-    if(await guestBlocked()) return;      // 비로그인 체험 폐지(26.9.18)
+    if(await guestBlocked(ctx&&ctx.title)) return;      // 비로그인 체험 폐지(26.9.18) — 제목으로 말을 건다
     window.__frSuppressGreet = true;      // 콘텐츠 오프너를 내가 낸다(기본 인사 억제)
     open();
     var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content", id=(ctx&&ctx.id)||"";

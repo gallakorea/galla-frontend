@@ -600,3 +600,20 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
   animation:frChoiceGo .3s ease forwards;
 }
 @keyframes frChoiceGo{ to{ transform:scale(1.03); opacity:0; } }
+
+/* 🎤 비로그인 갈비스 유입 창(26.9.18) — 갈비스가 직접 말을 건다 */
+#frGuest{ position:fixed; inset:0; z-index:2147482000; display:flex; align-items:flex-end; justify-content:center;
+  background:rgba(4,6,12,.55); opacity:0; transition:opacity .2s; }
+#frGuest.on{ opacity:1; }
+#frGuest .frg-card{ width:min(100%,460px); margin:0 10px calc(env(safe-area-inset-bottom,0px) + 14px); padding:22px 18px 14px;
+  border-radius:24px; background:linear-gradient(160deg,rgba(22,26,38,.98),rgba(12,14,20,.98)); border:1px solid rgba(120,200,255,.18);
+  box-shadow:0 24px 60px rgba(0,0,0,.55); text-align:center; transform:translateY(24px); transition:transform .28s cubic-bezier(.2,.85,.3,1); }
+#frGuest.on .frg-card{ transform:translateY(0); }
+#frGuest .frg-av{ position:relative; width:64px; height:64px; margin:0 auto 12px; }
+#frGuest .frg-av .fr-ring, #frGuest .frg-av .fr-core{ position:absolute; }
+#frGuest .frg-av .fr-core{ inset:16px; }
+#frGuest .frg-bubble b{ display:block; color:#fff; font-size:17px; font-weight:900; line-height:1.35; }
+#frGuest .frg-bubble p{ margin:8px 0 16px; color:#aeb6c8; font-size:13.5px; line-height:1.55; }
+#frGuest .frg-go{ width:100%; padding:14px; border:0; border-radius:14px; background:var(--accent-grad,#4361ff); color:#fff;
+  font-size:15px; font-weight:900; cursor:pointer; }
+#frGuest .frg-x{ width:100%; margin-top:6px; padding:10px; border:0; background:none; color:#7d8494; font-size:13px; font-weight:700; cursor:pointer; }
