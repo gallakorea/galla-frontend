@@ -76,12 +76,15 @@ body::before {
 /* 상점 충전 버튼도 동일 액센트 (이미 파랑이지만 톤 통일) */
 .shop-charge { background: var(--accent-grad) !important; }
 
-/* ===== 스크롤바/선택 — 프리미엄 디테일 ===== */
+/* ===== 스크롤바/선택 ===== */
 ::selection { background: rgba(67,97,255,.35); color: #fff; }
-* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: rgba(255,255,255,.13); border-radius: 8px; }
-*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+/* 🔴 스크롤바는 전부 숨긴다 — 위아래로 움직일 때 오른쪽에 막대가 떴다(26.9.18 사장님 「전부 없애 전체 모든 페이지」).
+   페이지별 CSS 가 자기 스크롤바를 다시 그려도 이기도록 !important. 스크롤 자체는 그대로 된다.
+   (iOS 네이티브 인디케이터는 scrollbar-width:none 을 따른다 — WebKit 18.2+. 앱 셸 스크롤뷰는 네이티브에서도 끈다) */
+html, body, * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+  display: none !important; width: 0 !important; height: 0 !important; background: transparent !important;
+}
 /* 가로 스크롤 칩/카테고리/서브탭 행 — 스크롤바(아래 '줄') 완전 숨김(터치 UI).
    SPA에선 페이지별 CSS가 늦게 로드돼 전역 8px 스크롤바가 카테고리 밑에 줄로 보였다.
    theme.css는 항상 먼저 로드되므로 여기서 전역으로 확실히 숨긴다. */
