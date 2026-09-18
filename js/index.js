@@ -1756,7 +1756,7 @@ async function loadPredictionCards() {
     const supabase = window.supabaseClient;
     let { data: markets } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('markets')
-        .select('id, question, category, market_type, volume, close_at, resolved, created_at, created_by')
+        .select('id, question, category, market_type, total_pool, jackpot_bonus, image_url, close_at, resolved, created_at, created_by')
         .eq('resolved', false)
         .limit(60));
     if (!markets || !markets.length) return [];
@@ -1766,7 +1766,7 @@ async function loadPredictionCards() {
     markets = markets.map(m => {
         const ageH = (now - new Date(m.created_at)) / 3600000;
         const freshBonus = ageH < 24 ? 6000 : ageH < 168 ? 2500 : 0; // 신규(24h)·이번주 가점
-        const engagement = (m.volume || 0) + freshBonus;
+        const engagement = (m.total_pool || 0) + freshBonus;   // ⚠️ volume 은 옛 CPMM 칸(늘 0) — 예측 탭과 같은 판돈(total_pool)
         const jitter = 0.6 + Math.random() * 0.9;                     // 랜덤 요소
         return { ...m, _score: engagement * jitter + Math.random() * 1500 };
     }).sort((a, b) => b._score - a._score).slice(0, 12);
@@ -1774,7 +1774,7 @@ async function loadPredictionCards() {
     const ids = markets.map(m => m.id);
     const { data: outs } = await supabase
         .from('market_outcomes')
-        .select('market_id, label, pool_yes, pool_no, sort_order')
+        .select('market_id, label, pool_gp, bettor_count, sort_order')
         .in('market_id', ids);
     const byM = {};
     outs?.forEach(o => (byM[o.market_id] ||= []).push(o));
@@ -1788,13 +1788,18 @@ async function loadPredictionCards() {
         creatorIds.forEach(id => { const u = (window.__GU_CACHE || {})[id]; if (u) profMap[id] = u; });
     }
 
-    const pct = o => Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100);
+    /* 🔴 비율·금액은 예측 탭(galla-predict.js)과 같은 칸으로 — 예전엔 옛 CPMM 칸(pool_yes/pool_no·volume)을 읽어
+       홈 카드만 늘 50:50·0P 였다(26.9.18 사장님: 「액션바 금액 동기화 안 된다」). */
     return markets.map(m => {
-        const list = (byM[m.id] || []).map(o => ({ label: o.label, p: pct(o) }));
+        const os = byM[m.id] || [];
+        const tot = os.reduce((a, o) => a + (o.pool_gp || 0), 0);
+        const list = os.map(o => ({ label: o.label, p: tot > 0 ? Math.round((o.pool_gp || 0) / tot * 100) : Math.round(100 / Math.max(1, os.length)) }));
+        const bettors = os.reduce((a, o) => a + (o.bettor_count || 0), 0);
         const prof = profMap[m.created_by];
         return {
             ...m,
             outcomes: list,
+            bettors,
             creatorName: prof?.nickname || '갈라 예언자',
             creatorLevel: prof?.level ?? 1,
             creatorAvatar: prof?.avatar_url || null
@@ -1840,12 +1845,13 @@ function renderPredictCard(m) {
                 <div class="pf-csub">이 판을 연 예언자</div>
             </div>
         </div>
+        ${m.image_url ? `<div class="pf-cover"><img src="${escHtml(window.GALLA_thumb ? window.GALLA_thumb(m.image_url, 900) : m.image_url)}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : ''}
         <div class="pf-q">${escHtml(m.question)}</div>
         ${body}
         <!-- 이슈와 같은 아이콘 줄 — 예측엔 좋아요가 없으니 하트 자리에 이 판의 열기인 거래량을 둔다 -->
         <div class="card-footer pf-actions">
             <div class="footer-icons">
-                <span class="pf-vol" title="거래량">💰 <b>${(Math.round(m.volume)).toLocaleString('ko-KR')}</b>P</span>
+                <span class="pf-vol" title="판돈">💰 <b>${Math.round(m.total_pool || 0).toLocaleString('ko-KR')}</b>GP · ${Number(m.bettors || 0).toLocaleString('ko-KR')}명</span>
                 <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                 <button type="button" class="fi-btn bookmark-btn" data-kind="predict" data-id="${m.id}" aria-label="저장">${bookmarkSvg}</button>
                 <button type="button" class="fi-btn share-btn" data-kind="predict" data-id="${m.id}" aria-label="공유">${shareSvg}</button>
