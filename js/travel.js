@@ -697,7 +697,8 @@
       MAP = new maplibregl.Map({
         container: "tv-map-c",
         style: STYLE,
-        center: [30, 25], zoom: 1.4,
+        /* 처음 열면 대한민국부터(사장님 26.9.18). 한반도 남쪽이 폰 세로 화면에 꽉 차는 높이 */
+        center: [127.9, 35.9], zoom: 6.2,
         attributionControl: { compact: true },
       });
       MAP.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");

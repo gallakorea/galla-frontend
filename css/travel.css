@@ -233,13 +233,15 @@ body.tv-lock { overflow: hidden; }
 .tv-map .tv-map-c.maplibregl-map { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* 🔴 앱은 화면 끝까지 그려서 top:12px 이면 닫기가 상태바·다이내믹 아일랜드 밑에 깔려 안 눌렸다
    (26.9.18 사장님 「지도 닫는것도 없고」). 위아래 안전 영역만큼 내린다. */
+/* 닫기는 맛집 지도와 같은 자리(왼쪽 위)·같은 모양 — 탭마다 달라서 헷갈렸다(26.9.18 사장님 「통일해」) */
 .tv-map-x {
-  position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 3; width: 38px; height: 38px;
-  border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff;
-  font-size: 16px; cursor: pointer; backdrop-filter: blur(6px);
+  position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 3; width: 34px; height: 34px;
+  display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  background: var(--surface-3); border: 1px solid var(--line-2); color: var(--text-hi);
+  font-size: 17px; line-height: 1; padding: 0;
 }
 .tv-map-hint {
-  position: absolute; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 14px); z-index: 3; padding: 7px 13px; border-radius: 999px;
+  position: absolute; left: 56px; top: calc(env(safe-area-inset-top, 0px) + 14px); z-index: 3; padding: 7px 13px; border-radius: 999px;
   background: rgba(0,0,0,.62); color: #fff; font-size: 12.5px; font-weight: 700;
   backdrop-filter: blur(6px);
 }
