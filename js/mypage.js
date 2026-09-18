@@ -77,6 +77,41 @@ async function GALLA_mypageInit(root, spaParams) {
 
     const userId = session?.user?.id || null;
     const NOBODY = "00000000-0000-0000-0000-000000000000";   // 비로그인 조회용 — uuid 칸에 null 을 넣으면 400
+    /* 받은 팔로우 요청 시트 */
+    async function openFollowRequests(btn) {
+        const { data } = await supabase.rpc("my_follow_requests");
+        const list = Array.isArray(data) ? data : [];
+        const old = document.getElementById("mpReqSheet"); if (old) old.remove();
+        const w = document.createElement("div");
+        w.id = "mpReqSheet"; w.className = "mp-req-dim"; w.setAttribute("data-no-ptr", "");
+        const esc2 = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+        const av = (u) => (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u) : (u || ""));
+        w.innerHTML = `<div class="mp-req-card"><div class="mp-req-h">팔로우 요청 <span>${list.length}</span><button type="button" class="mp-req-x">✕</button></div>
+          <div class="mp-req-list">${list.length ? list.map((r) => `<div class="mp-req-row" data-uid="${esc2(r.uid)}">
+              <img src="${esc2(av(r.avatar))}" alt=""><b>${esc2(r.nick)}</b>
+              <button type="button" class="mp-req-ok">수락</button><button type="button" class="mp-req-no">거절</button></div>`).join("")
+            : `<div class="mp-req-empty">받은 요청이 없어요</div>`}</div></div>`;
+        document.body.appendChild(w);
+        requestAnimationFrame(() => w.classList.add("on"));
+        const bye = () => { w.classList.remove("on"); setTimeout(() => w.remove(), 200); };
+        w.addEventListener("click", async (e) => {
+            if (e.target === w || e.target.closest(".mp-req-x")) return bye();
+            const row = e.target.closest(".mp-req-row"); if (!row) return;
+            const ok = e.target.closest(".mp-req-ok"), no = e.target.closest(".mp-req-no");
+            if (!ok && !no) return;
+            row.style.opacity = ".4";
+            const { data: r } = await supabase.rpc("respond_follow_request", { p_requester: row.dataset.uid, p_accept: !!ok });
+            if (r && r.ok) {
+                row.remove();
+                const left = w.querySelectorAll(".mp-req-row").length;
+                w.querySelector(".mp-req-h span").textContent = left;
+                if (!left) w.querySelector(".mp-req-list").innerHTML = `<div class="mp-req-empty">받은 요청이 없어요</div>`;
+                if (btn) btn.innerHTML = "👥 팔로우 요청" + (left ? ` <b>${left}</b>` : "");
+                if (ok) { try { const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following", userId);
+                    const st = D.querySelector("#statFollowers"); if (st && count != null) st.textContent = count; } catch (_) {} }
+            } else row.style.opacity = "1";
+        });
+    }
     const askLogin = () => {
         if (document.body.dataset.page === "spa" && window.GALLA_gotoLogin) { window.GALLA_gotoLogin("mypage"); return; }
         (window.GALLA_nav||function(u){location.href=u})("login.html");
@@ -110,6 +145,7 @@ async function GALLA_mypageInit(root, spaParams) {
     // ============================
     const profileActions = byId("profileActions");
     profileActions.innerHTML = "";
+    let PRIVATE_LOCK = false;   // 🔒 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
 
     if (isMyPage) {
         const editBtn = document.createElement("button");
@@ -138,6 +174,22 @@ async function GALLA_mypageInit(root, spaParams) {
         profileActions.appendChild(missionBtn);
         profileActions.appendChild(shopBtn);
         profileActions.appendChild(planBtn);
+
+        /* 🔒 비공개 계정이면 받은 팔로우 요청 — 수락·거절(26.9.18) */
+        try {
+            const { data: me2 } = await supabase.rpc("follow_state", { p_target: userId });
+            if (me2 && me2.private) {
+                const reqBtn = document.createElement("button");
+                reqBtn.className = "action-btn secondary mp-req-btn";
+                const n0 = Number(me2.requests || 0);
+                reqBtn.innerHTML = "👥 팔로우 요청" + (n0 ? ` <b>${n0}</b>` : "");
+                reqBtn.onclick = () => openFollowRequests(reqBtn);
+                profileActions.appendChild(reqBtn);
+                const nm = byId("profileName");
+                if (nm && !nm.querySelector(".mp-priv")) nm.insertAdjacentHTML("beforeend", ' <span class="mp-priv" title="비공개 계정">🔒</span>');
+                if (new URLSearchParams(spaParams || location.search).get("requests")) openFollowRequests(reqBtn);
+            }
+        } catch (_) {}
     } else {
         const followBtn = document.createElement("button");
         followBtn.className = "action-btn primary";
@@ -146,35 +198,51 @@ async function GALLA_mypageInit(root, spaParams) {
         messageBtn.className = "action-btn secondary";
         messageBtn.textContent = "메시지 보내기";
 
-        const { data: followRow } = userId ? await supabase
-            .from("follows")
-            .select("id")
-            .eq("follower", userId)
-            .eq("following", viewUserId)
-            .maybeSingle() : { data: null };
-
-        let isFollowing = !!followRow;
-        followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+        /* 🔒 비공개 계정(인스타식, 26.9.18) — 팔로우는 '요청 → 상대가 수락'. 상태는 서버가 판정(follow_state) */
+        let FS = { state: userId ? "none" : "guest", private: false };
+        try { const { data } = await supabase.rpc("follow_state", { p_target: viewUserId }); if (data) FS = data; } catch (_) {}
+        let isFollowing = FS.state === "following";
+        const paintFollow = () => {
+            followBtn.textContent = FS.state === "following" ? "언팔로우"
+                : FS.state === "requested" ? "요청됨"
+                : FS.private ? "팔로우 요청" : "팔로우";
+            followBtn.classList.toggle("secondary", FS.state === "requested" || FS.state === "following");
+            followBtn.classList.toggle("primary", !(FS.state === "requested" || FS.state === "following"));
+        };
+        paintFollow();
+        /* 비공개 계정이고 내가 승인된 팔로워가 아니면 콘텐츠 자리에 잠금 안내(서버 RLS 가 이미 목록을 비운다 — 여긴 설명) */
+        PRIVATE_LOCK = !!(FS.private && FS.state !== "following" && FS.state !== "self");
 
         followBtn.onclick = async () => {
             if (!userId) { askLogin(); return; }
             let error = null;
-            if (isFollowing) {
+            if (FS.state === "following") {
                 ({ error } = await supabase.from("follows")
                     .delete()
                     .eq("follower", userId)
                     .eq("following", viewUserId));
+                if (!error) FS.state = "none";
+            } else if (FS.state === "requested") {
+                const r = await supabase.rpc("cancel_follow_request", { p_target: viewUserId });
+                error = r.error; if (!error) FS.state = "none";
             } else {
-                ({ error } = await supabase.from("follows")
-                    .insert({ follower: userId, following: viewUserId }));
-                if (error && error.code === "23505") error = null;   // 이미 팔로우(중복) = 성공으로 본다
+                const r = await supabase.rpc("follow_user", { p_target: viewUserId });
+                error = r.error || (r.data && r.data.ok === false ? { message: r.data.reason } : null);
+                if (!error && r.data) FS.state = r.data.state;
+                if (!error && FS.state === "requested") window.GALLA_toast && GALLA_toast("팔로우를 요청했어요. 수락하면 콘텐츠를 볼 수 있어요.");
             }
+            paintFollow();
             // SPA(app.html): location.reload()는 앱 전체를 재부팅하고 해시(#/mypage?user=)가
             // 탭으로 해석돼 '내 프로필'로 떨어진다 — 제자리 갱신. MPA는 기존 reload 유지.
             if (document.body.dataset.page === "spa") {
                 if (error) return;   // 실패면 버튼을 뒤집지 않는다(예전엔 실패해도 글자만 바뀌었다)
-                isFollowing = !isFollowing;
-                followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+                isFollowing = FS.state === "following";
+                /* 수락된 팔로워가 되거나 끊기면 잠금 여부가 바뀐다 — 목록을 다시 그린다 */
+                const lockNow = !!(FS.private && FS.state !== "following");
+                if (lockNow !== PRIVATE_LOCK) {
+                    PRIVATE_LOCK = lockNow;
+                    const act = D.querySelector(".tabs .tab.active"); if (act) act.click();
+                }
                 /* 이 사람의 「팔로워」 숫자도 제자리 갱신 — 예전엔 버튼 글자만 바뀌고 숫자는 로드 때 값에 멈춰
                    언팔 뒤에도 「1 팔로워」(DB 0)로 남았다(2026-09-11 QA 6-4-7, iOS 시뮬). 1358행 realtime 은
                    내 마이페이지 전용이라 남의 프로필은 여기서 직접 센다. D = 이 화면(스택 뷰)의 루트. */
@@ -453,6 +521,7 @@ async function GALLA_mypageInit(root, spaParams) {
             .from("issues")
             .select(`
                 id,
+                visibility,
                 title,
                 created_at,
                 score,
@@ -492,6 +561,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 // 이미지 변환이 켜진 지금은 igCard 쪽 GALLA_thumb가 480px로 줄여 받아 무겁지 않다.
                 thumb: issue.card_thumb_url || issue.thumbnail_url || firstImg || null,
                 title: issue.title,
+                priv: issue.visibility === "private",
                 badge: mediaBadge(issue),
                 onClick: () => openQvList(qvItems, myIdx)   // 이탈 금지 — 마이페이지 내 퀵뷰로 소비
             }));
@@ -943,13 +1013,14 @@ async function GALLA_mypageInit(root, spaParams) {
     // =====================================================
     // 인스타 그리드 카드 (정사각 썸네일 + 하단 타이틀 오버레이)
     // =====================================================
-    const igCard = ({ thumb, title, badge, onClick }) => {
+    const igCard = ({ thumb, title, badge, onClick, priv }) => {
         const card = document.createElement("div");
         card.className = "ig-card";
         card.innerHTML = `
             <img src="${(window.GALLA_thumb ? window.GALLA_thumb(thumb, 480) : thumb) || "./assets/logo.png"}" loading="lazy"
                  onerror="this.src='./assets/logo.png'">
             ${badge ? `<span class="ig-badge">${badge}</span>` : ""}
+            ${priv ? `<span class="ig-lock" title="나만 보기">🔒</span>` : ""}
             <div class="ig-title">${title || ""}</div>
         `;
         card.onclick = onClick;
@@ -1613,6 +1684,13 @@ async function GALLA_mypageInit(root, spaParams) {
     /* 탭 → 렌더 한 곳으로. 탭 클릭·부팅·안전망이 전부 이걸 쓴다
        (세 군데가 각자 분기를 갖고 있으면 한 곳만 고쳐져 화면이 어긋난다). */
     function renderFor(menu) {
+        if (PRIVATE_LOCK) {
+            tabContent.className = "content-area";
+            tabContent.innerHTML = `<div class="mp-lock"><div class="mp-lock-ic">🔒</div>
+              <div class="mp-lock-t">비공개 계정이에요</div>
+              <div class="mp-lock-s">${userId ? "팔로우 요청을 보내고 수락되면 콘텐츠를 볼 수 있어요." : "로그인하고 팔로우 요청을 보내 보세요."}</div></div>`;
+            return;
+        }
         switch (menu) {
             case "galla": return renderGalla();          // 내가 만든 이슈
             case "short": return renderContent("vertical");

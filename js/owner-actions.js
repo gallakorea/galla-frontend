@@ -28,6 +28,8 @@
     trash: svg('<path d="M3 6h18"/><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><path d="M19 6l-.8 13.1a2 2 0 0 1-2 1.9H7.8a2 2 0 0 1-2-1.9L5 6"/><path d="M10 11v6M14 11v6"/>'),
     boost: svg('<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1 0-2.9a2.1 2.1 0 0 0-3-.1z"/><path d="M12 15l-3-3a12 12 0 0 1 3-6.5C13.7 3.7 16 3 19.5 3c.7 0 1.3.1 1.5.3.2.2.3.8.3 1.5 0 3.5-.7 5.8-2.5 7.5A12 12 0 0 1 12 15z"/><path d="M14.5 9.5h.01"/>'),
     dot:   svg('<circle cx="12" cy="12" r="2.5"/>'),
+    lock:  svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+    globe: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/>'),
   };
 
   // 앱 공통 카테고리(write.html select와 동일) — 수정 시 드롭다운으로 노출
@@ -118,6 +120,31 @@
       b.onclick = () => { closeSheet(); x.onClick && x.onClick(); };
       sheet.appendChild(b);
     });
+
+    /* 🔒 공개 범위 전환(26.9.18) — 이슈·광장·숏판롱판. 서버 set_content_visibility 가 작성자·운영진만 허용 */
+    const VKIND = { issues: 'issue', plaza_posts: 'plaza', posts: 'post' }[cfg.table];
+    if (VKIND && cfg.id != null) {
+      const vis = el('button', 'oa-item', `<span class="oa-ic">${IC.lock}</span> 공개 범위 확인 중…`);
+      vis.disabled = true;
+      sheet.appendChild(vis);
+      (async () => {
+        let cur = 'public';
+        try { const { data } = await window.supabaseClient.from(cfg.table).select('visibility').eq('id', cfg.id).maybeSingle(); if (data && data.visibility) cur = data.visibility; } catch (_) {}
+        const next = cur === 'private' ? 'public' : 'private';
+        vis.innerHTML = next === 'private'
+          ? `<span class="oa-ic">${IC.lock}</span> 나만 보기로 전환`
+          : `<span class="oa-ic">${IC.globe}</span> 전체 공개로 전환`;
+        vis.disabled = false;
+        vis.onclick = async () => {
+          closeSheet();
+          const { data: r, error } = await window.supabaseClient.rpc('set_content_visibility', { p_kind: VKIND, p_id: String(cfg.id), p_vis: next });
+          if (error || !r || !r.ok) { (window.GALLA_toast || toast)('바꾸지 못했어요. 잠시 후 다시 시도해 주세요'); return; }
+          (window.GALLA_toast || toast)(next === 'private' ? '🔒 나만 보기로 바꿨어요 — 이제 나만 볼 수 있어요' : '🌐 전체 공개로 바꿨어요');
+          try { cfg.onVisibility && cfg.onVisibility(next); } catch (_) {}
+          try { document.dispatchEvent(new CustomEvent('galla:visibility', { detail: { table: cfg.table, id: cfg.id, visibility: next } })); } catch (_) {}
+        };
+      })();
+    }
 
     const del = el('button', 'oa-item oa-danger', `<span class="oa-ic">${IC.trash}</span> 삭제하기`);
     del.onclick = () => { closeSheet(); confirmDelete(cfg); };

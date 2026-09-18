@@ -193,7 +193,7 @@ async function fetchPostDetail() {
 
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("id, user_id, title, body, category, nickname, view_count, created_at, locale")
+    .select("id, user_id, title, body, category, nickname, view_count, created_at, locale, visibility")
     .eq("id", postId)
     .single();
 
@@ -203,6 +203,7 @@ async function fetchPostDetail() {
   }
 
   if (postTitleEl) postTitleEl.textContent = data.title;
+  if (postTitleEl && data.visibility === "private") postTitleEl.insertAdjacentHTML("beforeend", ' <span class="vis-lock">🔒 나만 보기</span>');   // 🔒 26.9.18
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   /* 🌐 다른 언어로 쓰인 글이면 '번역 보기'를 붙인다(인스타 방식).
      ⚠️ 원문 HTML(마커·미디어)을 건드리지 않으려고 **본문 텍스트만** 대상으로 한다.

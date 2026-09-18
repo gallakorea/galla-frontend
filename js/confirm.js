@@ -1,3 +1,18 @@
+/* 🔒 공개 범위 선택(26.9.18) — [🌐 전체 공개 | 🔒 나만 보기]. 올린 뒤에도 ⋯ 메뉴에서 바꿀 수 있다 */
+function __visPicker(anchor, after) {
+  if (!anchor || !anchor.parentElement) return () => 'public';
+  let w = anchor.parentElement.querySelector(':scope > .vis-pick');
+  if (!w) {
+    w = document.createElement('div'); w.className = 'vis-pick'; w.setAttribute('role', 'radiogroup');
+    w.innerHTML = '<button type="button" data-v="public" class="on">🌐 전체 공개</button><button type="button" data-v="private">🔒 나만 보기</button>' +
+      '<span class="vis-hint">나만 보기는 나만 볼 수 있어요</span>';
+    w.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return;
+      w.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x === b)); w.classList.toggle('priv', b.dataset.v === 'private'); });
+    if (after) anchor.after(w); else anchor.parentElement.insertBefore(w, anchor);
+  }
+  return () => (w.querySelector('[data-v].on') || {}).dataset?.v === 'private' ? 'private' : 'public';
+}
+
 window.__CONFIRM_MODE__ = true;
 let __USER_CONFIRMED_PUBLISH__ = false;
 
@@ -261,6 +276,7 @@ async function initConfirmPage(ctx) {
       }
 
       /* ---------- DB 발행: issues INSERT ---------- */
+      const __vis = (window.__issueVis ? window.__issueVis() : 'public');
       // 📈 브레인 성과 역연결 — 갈비스 제목 공식으로 만든 거면 기록(크론이 이 이슈 반응을 측정해 공식 점수화)
       let __titlePattern = null;
       try {
@@ -290,6 +306,7 @@ async function initConfirmPage(ctx) {
           faction_a: draft.faction_a ?? null,
           faction_b: draft.faction_b ?? null,
           tags: draft.tags ?? null,   // 🔖 해시태그 — draft에서 발행된 이슈로 전달(검색용)
+          visibility: __vis,          // 🔒 공개 범위(26.9.18)
           status: 'normal',
           moderation_status: 'pending',
           created_at: new Date().toISOString(),
@@ -418,3 +435,8 @@ const labelMap = {
   'check-oneline': '한줄 요약',
   'check-description': '본문',
 };
+
+/* 발행 버튼 위에 공개 범위 선택 */
+(function(){ const put = () => { const bar = document.querySelector('.cf-actionbar'); if (bar && !window.__issueVis) window.__issueVis = __visPicker(bar); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put); else put();
+  setTimeout(put, 800); })();

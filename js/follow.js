@@ -8,6 +8,7 @@
   const sb = () => window.supabaseClient || (window.supabase && window.supabase.from ? window.supabase : null);
   let myId = null, loaded = false;
   const follows = new Set();
+  const requested = new Set();   // 🔒 비공개 계정에 보낸 팔로우 요청(수락 대기)
 
   // 로그인 모달이 없는 페이지(광장 등) 대비 폴백 정의
   if (!window.GALLA_needLogin) {
@@ -34,6 +35,9 @@
       if (myId) {
         const { data } = await c.from("follows").select("following").eq("follower", myId);
         (data || []).forEach(r => follows.add(r.following));
+        /* 🔒 비공개 계정에 보낸, 아직 수락 안 된 팔로우 요청(26.9.18) */
+        try { const { data: rq } = await c.from("follow_requests").select("target").eq("requester", myId);
+              (rq || []).forEach(r => requested.add(r.target)); } catch (_) {}
         subscribeRealtime();   // 팔로우 상태를 전 페이지·전 세션 실시간 동기화
       }
       loaded = true;
@@ -65,24 +69,36 @@
   function paint(btn) {
     const uid = btn.dataset.uid;
     if (myId && uid === myId) { btn.style.display = "none"; return; }  // 내 콘텐츠엔 숨김
-    const on = follows.has(uid);
-    btn.classList.toggle("following", on);
-    btn.textContent = on ? "팔로잉" : "+ 팔로우";
+    const on = follows.has(uid), req = requested.has(uid);
+    btn.classList.toggle("following", on || req);
+    btn.textContent = on ? "팔로잉" : req ? "요청됨" : "+ 팔로우";
   }
 
   async function toggle(btn) {
     const uid = btn.dataset.uid; if (!uid) return;
     if (!myId) { window.GALLA_needLogin ? window.GALLA_needLogin("팔로우하려면 로그인이 필요해요.") : ((window.GALLA_nav||function(u){location.href=u})("login.html")); return; }
-    const on = follows.has(uid);
-    if (on) follows.delete(uid); else follows.add(uid);
-    // 같은 uid의 모든 버튼 동기화
-    document.querySelectorAll(`.js-follow[data-uid="${uid}"]`).forEach(paint);
+    const on = follows.has(uid), req = requested.has(uid);
+    const repaint = () => document.querySelectorAll(`.js-follow[data-uid="${uid}"]`).forEach(paint);
     window.BattleFX?.haptic?.("tap");
-    const r = on
-      ? await sb().from("follows").delete().eq("follower", myId).eq("following", uid)
-      : await sb().from("follows").insert({ follower: myId, following: uid });
-    if (r.error) { if (on) follows.add(uid); else follows.delete(uid); document.querySelectorAll(`.js-follow[data-uid="${uid}"]`).forEach(paint); }
-    else if (!on) { try { window.GALLA_pushSend && window.GALLA_pushSend("follow", uid); } catch (_) {} }   // 📮 팔로우 즉시 푸시(앱 밖에서도 도착)
+    if (on) {                                   // 언팔
+      follows.delete(uid); repaint();
+      const r = await sb().from("follows").delete().eq("follower", myId).eq("following", uid);
+      if (r.error) { follows.add(uid); repaint(); }
+      return;
+    }
+    if (req) {                                  // 요청 취소
+      requested.delete(uid); repaint();
+      const r = await sb().rpc("cancel_follow_request", { p_target: uid });
+      if (r.error) { requested.add(uid); repaint(); }
+      return;
+    }
+    /* 팔로우 — 서버가 상대 공개 여부를 보고 바로 팔로우 또는 '요청'으로 처리(비공개 계정은 직접 insert 가 RLS 로 막힌다) */
+    const r = await sb().rpc("follow_user", { p_target: uid });
+    const st = r.data && r.data.state;
+    if (r.error || !r.data || r.data.ok === false) { repaint(); return; }
+    if (st === "requested") { requested.add(uid); window.GALLA_toast && GALLA_toast("팔로우를 요청했어요"); }
+    else { follows.add(uid); try { window.GALLA_pushSend && window.GALLA_pushSend("follow", uid); } catch (_) {} }   // 📮 팔로우 즉시 푸시
+    repaint();
   }
 
   window.GALLA_bindFollow = async function (root) {

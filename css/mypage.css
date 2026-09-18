@@ -948,3 +948,26 @@ body{
 .profile-name{ flex: 0 0 auto; white-space: nowrap; min-width: 0; }
 .mp-crowns{ flex: 1 1 auto; min-width: 0; }
 .mp-crown-more{ opacity: .75; }
+
+/* 🔒 비공개 계정(26.9.18) — 잠금 안내 · 받은 팔로우 요청 */
+.mp-lock { padding: 56px 20px; text-align: center; }
+.mp-lock-ic { font-size: 40px; margin-bottom: 10px; }
+.mp-lock-t { color: var(--text-hi, #fff); font-size: 16px; font-weight: 900; }
+.mp-lock-s { margin-top: 6px; color: var(--text-low, #8a90a0); font-size: 13px; line-height: 1.5; }
+.mp-priv { font-size: .8em; opacity: .85; }
+.mp-req-btn b { margin-left: 2px; padding: 1px 6px; border-radius: 999px; background: #ff5c5c; color: #fff; font-size: 11px; }
+.mp-req-dim { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(4,6,12,.55); opacity: 0; transition: opacity .2s; }
+.mp-req-dim.on { opacity: 1; }
+.mp-req-card { width: min(100%, 480px); max-height: 70dvh; overflow-y: auto; margin: 0 8px calc(env(safe-area-inset-bottom,0px) + 10px);
+  border-radius: 20px; background: var(--surface-1, #121318); border: 1px solid var(--line-2, #262a33); padding: 14px 14px 10px; }
+.mp-req-h { display: flex; align-items: center; gap: 6px; color: var(--text-hi, #fff); font-size: 16px; font-weight: 900; margin-bottom: 8px; }
+.mp-req-h span { color: #8a90a0; font-size: 13px; }
+.mp-req-x { margin-left: auto; border: 0; background: none; color: #8a90a0; font-size: 16px; cursor: pointer; }
+.mp-req-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line-2, #262a33); transition: opacity .2s; }
+.mp-req-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #222; }
+.mp-req-row b { flex: 1; color: var(--text-hi, #fff); font-size: 14px; }
+.mp-req-ok, .mp-req-no { border: 0; border-radius: 999px; padding: 7px 13px; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.mp-req-ok { background: var(--accent-grad, #4361ff); color: #fff; }
+.mp-req-no { background: var(--surface-3, #23252d); color: #c3c8d4; }
+.mp-req-empty { padding: 24px 0; text-align: center; color: #8a90a0; font-size: 13px; }

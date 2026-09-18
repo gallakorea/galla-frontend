@@ -669,6 +669,8 @@ function renderIssue(issue) {
 
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
+  /* 🔒 나만 보기 글이면 제목 옆 표시(본인·운영진만 여기까지 온다 — RLS) */
+  if (issue.visibility === "private") qs("issue-title").insertAdjacentHTML("beforeend", ' <span class="vis-lock">🔒 나만 보기</span>');
   qs("issue-desc").innerText = issue.one_line || "";
 
 /* 핵심 요약 + Instagram 방식 더 보기 */

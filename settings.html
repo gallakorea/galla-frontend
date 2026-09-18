@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0919009"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0919010"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>설정 - GALLA</title>
     <link rel="stylesheet" href="./css/settings.css?v=0910200">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0918100">
+  <link rel="stylesheet" href="./css/theme.css?v=0918800">
 <link rel="stylesheet" href="./css/desktop.css?v=0904140">
 </head>
 
@@ -196,6 +196,8 @@
     <!-- 계정 -->
     <div class="st-label">👤 계정</div>
     <section class="st-list">
+        <div class="st-item" id="st-private"><span class="st-ic">🔒</span> 비공개 계정 <span class="st-val" id="st-private-v">…</span></div>
+        <div class="st-note" id="st-private-note" style="padding:0 16px 10px;color:#7d8494;font-size:12px;line-height:1.5">켜면 내가 수락한 팔로워만 내 콘텐츠를 볼 수 있어요. 끄면 대기 중인 팔로우 요청은 모두 수락돼요.</div>
         <div class="st-item"><span class="st-ic">✉️</span> 이메일 <span class="st-val" id="emailValue">-</span></div>
         <div class="st-item"><span class="st-ic">📱</span> 전화번호 <span class="st-val" id="phoneValue">-</span></div>
         <div class="st-item" data-target="change-password.html"><span class="st-ic">🔑</span> 비밀번호 변경 <span class="st-arrow">›</span></div>
@@ -331,7 +333,7 @@ function waitForSupabaseClient() {
 <script src="js/account-delete.js?v=080412"></script>
 <script src="js/notify-settings.js?v=0909100"></script>
 <script src="js/invite.js?v=0909100"></script><!-- 🎁 초대 허브 -->
-<script src="js/settings.js?v=0910200"></script>
+<script src="js/settings.js?v=0918800"></script>
 <script src="js/bug-report.js?v=0909100"></script>
 <script>
 /* 📳 흔들어서 신고 — iOS만 권한 동의가 필요하다. 필요한 기기에서만 항목을 보여준다. */

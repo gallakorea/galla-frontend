@@ -288,6 +288,27 @@ async function GALLA_settingsInit(root) {
       }
     } catch (_) {}
 
+    // 🔒 비공개 계정(인스타식, 26.9.18) — 켜면 승인한 팔로워만 콘텐츠를 본다
+    try {
+      const row = byId("st-private"), val = byId("st-private-v");
+      if (row && val) {
+        let on = false;
+        const paint = () => { val.textContent = on ? "켜짐" : "꺼짐"; val.style.color = on ? "#6f86ff" : ""; };
+        const { data: fs } = await supabase.rpc("follow_state", { p_target: userId });
+        on = !!(fs && fs.private); paint();
+        row.style.cursor = "pointer";
+        row.addEventListener("click", async () => {
+          const next = !on;
+          val.textContent = "바꾸는 중…";
+          const { data: r, error } = await supabase.rpc("set_profile_private", { p_on: next });
+          if (error || !r || !r.ok) { paint(); window.GALLA_toast && GALLA_toast("잠시 후 다시 시도해 주세요"); return; }
+          on = next; paint();
+          window.GALLA_toast && GALLA_toast(on ? "🔒 비공개 계정이 됐어요 — 이제 팔로우는 요청으로 받아요"
+            : "🌐 공개 계정이 됐어요" + (r.auto_accepted ? ` · 대기 요청 ${r.auto_accepted}건 수락` : ""));
+        });
+      }
+    } catch (_) {}
+
     // 2) 📳 흔들어서 신고 — iOS(권한 요청 필요 기기)에서만 항목 노출
     try {
       const DM = window.DeviceMotionEvent;

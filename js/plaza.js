@@ -1,3 +1,18 @@
+/* 🔒 공개 범위 선택(26.9.18) — [🌐 전체 공개 | 🔒 나만 보기]. 올린 뒤에도 ⋯ 메뉴에서 바꿀 수 있다 */
+function __visPicker(anchor, after) {
+  if (!anchor || !anchor.parentElement) return () => 'public';
+  let w = anchor.parentElement.querySelector(':scope > .vis-pick');
+  if (!w) {
+    w = document.createElement('div'); w.className = 'vis-pick'; w.setAttribute('role', 'radiogroup');
+    w.innerHTML = '<button type="button" data-v="public" class="on">🌐 전체 공개</button><button type="button" data-v="private">🔒 나만 보기</button>' +
+      '<span class="vis-hint">나만 보기는 나만 볼 수 있어요</span>';
+    w.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return;
+      w.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x === b)); w.classList.toggle('priv', b.dataset.v === 'private'); });
+    if (after) anchor.after(w); else anchor.parentElement.insertBefore(w, anchor);
+  }
+  return () => (w.querySelector('[data-v].on') || {}).dataset?.v === 'private' ? 'private' : 'public';
+}
+
 /* =========================
    SUPABASE CLIENT INIT
 ========================= */
@@ -213,6 +228,7 @@ bindPlazaSortSearch();
 
 const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
+try { const __ma = submitBtn && submitBtn.closest('.modal-actions'); if (__ma) window.__plazaVis = __visPicker(__ma); } catch (_) {}
 const charCount = document.getElementById("char-count");
 const bodyInput = document.getElementById("plaza-body");
 
@@ -909,6 +925,7 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   } catch (_) {}
 
   const payload = {
+    visibility: (window.__plazaVis ? window.__plazaVis() : 'public'),   // 🔒 공개 범위(26.9.18)
     category,
     title,
     body,

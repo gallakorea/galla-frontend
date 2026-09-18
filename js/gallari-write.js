@@ -1,3 +1,18 @@
+/* 🔒 공개 범위 선택(26.9.18) — [🌐 전체 공개 | 🔒 나만 보기]. 올린 뒤에도 ⋯ 메뉴에서 바꿀 수 있다 */
+function __visPicker(anchor, after) {
+  if (!anchor || !anchor.parentElement) return () => 'public';
+  let w = anchor.parentElement.querySelector(':scope > .vis-pick');
+  if (!w) {
+    w = document.createElement('div'); w.className = 'vis-pick'; w.setAttribute('role', 'radiogroup');
+    w.innerHTML = '<button type="button" data-v="public" class="on">🌐 전체 공개</button><button type="button" data-v="private">🔒 나만 보기</button>' +
+      '<span class="vis-hint">나만 보기는 나만 볼 수 있어요</span>';
+    w.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return;
+      w.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x === b)); w.classList.toggle('priv', b.dataset.v === 'private'); });
+    if (after) anchor.after(w); else anchor.parentElement.insertBefore(w, anchor);
+  }
+  return () => (w.querySelector('[data-v].on') || {}).dataset?.v === 'private' ? 'private' : 'public';
+}
+
 /* ============================================================
    갈라리 작성 — 진영 없는 일반 콘텐츠 (인스타식 세로/캐러셀 + 유튜브식 가로)
    · 미디어 파이프라인 재사용: GALLA_PROCESS_IMAGES(4:5 크롭)·GALLA_UPLOAD_MEDIA·
@@ -329,6 +344,7 @@
 
     /* ---------- 발행 ---------- */
     const submitBtn = $('glrSubmit');
+    try { const __tg = document.getElementById('glrTags'); const __blk = __tg && (__tg.closest('.field-block') || __tg); window.__glrVis = __visPicker(__blk, true); } catch (_) {}
     submitBtn.addEventListener('click', async () => {
       const sb = supa();
       if (!sb) { alert('연결 오류'); return; }
@@ -431,6 +447,7 @@
         tags: tags.length ? tags : null,
         is_published: true,
         moderation_status: modStatus,
+        visibility: (window.__glrVis ? window.__glrVis() : 'public'),   // 🔒 공개 범위(26.9.18)
       };
       const { error } = await sb.from('posts').insert(payload).select('id').single();
       submitBtn.disabled = false; submitBtn.textContent = '공유';
