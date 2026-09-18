@@ -27,78 +27,82 @@
 
   /* 📱 3단계 관문 — 출금은 휴대폰 확인 뒤에만(26.9.18 사장님: 단계별 가입).
      가입 땐 안 묻고, 돈을 받으려는 순간에 이유와 함께 묻는다. 서버(request_withdrawal)도 need_phone 으로 막는다.
-     확인 수단 = 네이버·카카오 계정에 등록된 번호(무료, 엣지 phone-verify). 문자·본인인증은 건당 비용이라 뒤로 미뤘다.
-     앱: 인앱 브라우저로 동의 → im.galla.app://verify-done 로 복귀(또는 사용자가 닫음) → 상태를 다시 읽는다.
-     웹: 같은 탭에서 동의 → withdraw.html?pv=ok|fail 로 복귀. */
-  var PV_REASON = {
-    no_phone: "번호를 받지 못했어요. 동의 화면에서 「휴대전화번호」를 허용해 주세요.",
+     확인 수단 = 문자 인증번호(엣지 sms-verify, 솔라피). 네이버·카카오 동의 방식은 "복잡하다"로 접었다(phone-verify 는 예비).
+     출금은 20만원 이상부터라 그땐 이미 수익이 난 사람 — 건당 10원대 문자비는 감당된다(사장님). */
+  var SMS_REASON = {
+    not_configured: "문자 인증을 준비하고 있어요 — 곧 열려요. 쌓인 수익은 그대로 보관돼요.",
+    bad_phone: "휴대폰 번호를 다시 확인해 주세요. (010으로 시작하는 번호)",
     phone_taken: "이미 다른 계정에서 확인한 번호예요. 한 번호로 한 계정만 수익을 받을 수 있어요.",
-    cancel: "확인을 취소했어요.", access_denied: "확인을 취소했어요.",
-    state: "확인 시간이 지났어요. 다시 시도해 주세요.", token: "확인에 실패했어요. 다시 시도해 주세요."
+    too_many: "요청이 너무 많아요. 잠시 뒤에 다시 시도해 주세요.",
+    wait: "방금 보냈어요. 1분 뒤에 다시 받을 수 있어요.",
+    send_fail: "문자를 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+    bad_code: "6자리 인증번호를 입력해 주세요.",
+    no_code: "먼저 인증번호를 받아 주세요.",
+    expired: "인증번호 시간이 지났어요. 다시 받아 주세요.",
+    wrong: "인증번호가 맞지 않아요."
   };
-  function isApp() { try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (_) { return false; } }
-  function gateHTML(msg, bad) {
+  function gateHTML() {
     return '<div class="wd-gate">' +
       '<div class="wd-gate-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 10.5l2 2 3.5-4"/></svg></div>' +
       '<div class="wd-gate-t">수익을 받으려면 휴대폰 확인이 필요해요</div>' +
       '<ul class="wd-gate-l">' +
-        '<li><b>내 계좌로만</b> — 확인한 이름과 예금주가 같아야 송금돼요</li>' +
+        '<li><b>내 계좌로만</b> — 확인한 본인에게만 송금돼요</li>' +
         '<li><b>남이 못 빼가게</b> — 계정을 도둑맞아도 수익은 안전해요</li>' +
         '<li><b>한 번호 한 계정</b> — 수익을 쪼개 받는 부정을 막아요</li>' +
       '</ul>' +
-      '<button type="button" class="wd-gate-btn wd-naver" data-pv="naver"><b>N</b> 네이버로 확인</button>' +
-      '<button type="button" class="wd-gate-btn wd-kakao" data-pv="kakao"><b>K</b> 카카오로 확인</button>' +
-      '<div class="wd-gate-s' + (bad ? ' bad' : '') + '" id="wdVerifyMsg">' + (msg || "네이버·카카오에 등록된 번호로 10초면 끝나요 · 번호는 정산 확인에만 써요") + '</div>' +
+      '<div class="wd-sms-row"><input type="tel" inputmode="numeric" autocomplete="tel" class="wd-sms-in" id="wdPhone" placeholder="010-0000-0000" maxlength="13">' +
+        '<button type="button" class="wd-sms-send" id="wdSend">인증번호 받기</button></div>' +
+      '<div class="wd-sms-row" id="wdCodeRow" hidden><input type="text" inputmode="numeric" autocomplete="one-time-code" class="wd-sms-in" id="wdCode" placeholder="인증번호 6자리" maxlength="6">' +
+        '<span class="wd-sms-timer" id="wdTimer"></span></div>' +
+      '<button type="button" class="wd-gate-btn" id="wdCheck" hidden>확인</button>' +
+      '<div class="wd-gate-s" id="wdVerifyMsg">문자로 받은 6자리 번호만 넣으면 끝나요 · 번호는 정산 확인에만 써요</div>' +
     '</div>';
   }
-  async function startPV(sb, prov) {
-    var msg = $("wdVerifyMsg");
-    function say(t, bad) { if (msg) { msg.textContent = t; msg.classList.toggle("bad", !!bad); } }
-    var app = isApp();
-    say("여는 중…");
-    var res = await sb.functions.invoke("phone-verify", { body: { action: "authorize", provider: prov, return: app ? "app" : "web" } });
-    var d = res.data || {};
-    if (!d.ok || !d.url) {
-      say(/not_configured/.test(d.reason || "") ? (prov === "kakao" ? "카카오" : "네이버") + " 확인은 준비 중이에요 — 다른 쪽으로 해 주세요." : "시작하지 못했어요. 잠시 후 다시 시도해 주세요.", true);
-      return;
-    }
-    if (app) {
-      var C = window.Capacitor.Plugins || {};
-      var recheck = function () { refreshGate(sb); };
-      try {
-        if (C.Browser && !window.__wdPvHooked) {
-          window.__wdPvHooked = true;
-          C.Browser.addListener("browserFinished", recheck);
-          C.App && C.App.addListener("appUrlOpen", function (ev) {
-            var u = (ev && ev.url) || "";
-            if (u.indexOf("verify-done") < 0) return;
-            try { C.Browser.close(); } catch (_) {}
-            var m = /[?&]pv=(\w+)/.exec(u), r = /[?&]r=([^&]+)/.exec(u);
-            if (m && m[1] !== "ok") { var g = $("wdGateBox"); if (g) { g.innerHTML = gateHTML(PV_REASON[r && decodeURIComponent(r[1])] || "확인하지 못했어요. 다시 시도해 주세요.", true); bindGate(sb); } }
-            recheck();
-          });
-        }
-        await C.Browser.open({ url: d.url, presentationStyle: "popover" });
-      } catch (_) { location.href = d.url; }
-      return;
-    }
-    location.href = d.url;
-  }
-  async function refreshGate(sb) {
-    var v = (await sb.rpc("my_verification")).data || {};
-    if (v.phone_verified) { showForm(); (window.GALLA_toast || alert)("휴대폰 확인 완료 — 이제 출금할 수 있어요"); }
-  }
+  var smsTimer = null;
   function bindGate(sb) {
-    document.querySelectorAll("#wdGateBox [data-pv]").forEach(function (b) {
-      b.onclick = function () { startPV(sb, b.dataset.pv); };
-    });
+    var phone = $("wdPhone"), send = $("wdSend"), code = $("wdCode"), check = $("wdCheck"), msg = $("wdVerifyMsg");
+    function say(t, bad) { msg.textContent = t; msg.classList.toggle("bad", !!bad); }
+    phone.oninput = function () {
+      var d = phone.value.replace(/\D/g, "").slice(0, 11);
+      phone.value = d.length > 7 ? d.slice(0, 3) + "-" + d.slice(3, 7) + "-" + d.slice(7) : d.length > 3 ? d.slice(0, 3) + "-" + d.slice(3) : d;
+    };
+    send.onclick = async function () {
+      send.disabled = true; say("보내는 중…");
+      var r = await sb.functions.invoke("sms-verify", { body: { action: "send", phone: phone.value } });
+      var d = r.data || {};
+      if (!d.ok) { say(SMS_REASON[d.reason] || "문자를 보내지 못했어요. 잠시 후 다시 시도해 주세요.", d.reason !== "not_configured"); send.disabled = false; return; }
+      $("wdCodeRow").hidden = false; check.hidden = false; send.textContent = "다시 받기";
+      say("문자로 보낸 6자리 번호를 입력해 주세요.");
+      try { code.focus(); } catch (_) {}
+      var left = d.ttl || 300;
+      clearInterval(smsTimer);
+      smsTimer = setInterval(function () {
+        left--; $("wdTimer").textContent = Math.floor(left / 60) + ":" + ("0" + (left % 60)).slice(-2);
+        if (left <= 0) { clearInterval(smsTimer); $("wdTimer").textContent = "만료"; }
+      }, 1000);
+      setTimeout(function () { send.disabled = false; }, 60000);   // 서버도 60초 안 재발송을 막는다
+    };
+    code.oninput = function () { code.value = code.value.replace(/\D/g, "").slice(0, 6); if (code.value.length === 6) check.click(); };
+    check.onclick = async function () {
+      if (check.disabled) return;
+      check.disabled = true; say("확인 중…");
+      var r = await sb.functions.invoke("sms-verify", { body: { action: "check", phone: phone.value, code: code.value } });
+      var d = r.data || {};
+      check.disabled = false;
+      if (!d.ok) {
+        say((SMS_REASON[d.reason] || "확인하지 못했어요.") + (d.reason === "wrong" && d.left != null ? " (남은 기회 " + d.left + "번)" : ""), true);
+        return;
+      }
+      clearInterval(smsTimer);
+      showForm(); (window.GALLA_toast || alert)("휴대폰 확인 완료 — 이제 출금할 수 있어요");
+    };
   }
   function formSection() { var b = $("withdrawBtn"); return b && b.closest("section"); }
-  function showGate(sb, msg, bad) {
+  function showGate(sb) {
     var sec = formSection(); if (!sec) return;
     var g = $("wdGateBox");
     if (!g) { g = document.createElement("div"); g.id = "wdGateBox"; sec.parentNode.insertBefore(g, sec); }
-    g.innerHTML = gateHTML(msg, bad); g.hidden = false; sec.hidden = true;
+    g.innerHTML = gateHTML(); g.hidden = false; sec.hidden = true;
     bindGate(sb);
   }
   function showForm() {
@@ -183,14 +187,8 @@
       }
       await loadAvail(sb);
       /* 인증 여부 — 안 됐으면 입력란 대신 관문 카드. 모바일 리다이렉트로 돌아온 경우(?iv=)는 바로 확인한다. */
-      var q = new URLSearchParams(location.search), pv = q.get("pv");
       var v = (await sb.rpc("my_verification")).data || {};
-      if (!v.phone_verified) {
-        showGate(sb, pv === "fail" ? (PV_REASON[q.get("r")] || "확인하지 못했어요. 다시 시도해 주세요.") : "", pv === "fail");
-      } else {
-        showForm();
-        if (pv === "ok") (window.GALLA_toast || alert)("휴대폰 확인 완료 — 이제 출금할 수 있어요");
-      }
+      if (!v.phone_verified) showGate(sb); else showForm();
     } finally {
       running = false;
     }

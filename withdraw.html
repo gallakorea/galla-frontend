@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0920100"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0920200"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>출금 요청 - GALLA</title>
 
-    <link rel="stylesheet" href="./css/withdraw.css?v=0920100">
+    <link rel="stylesheet" href="./css/withdraw.css?v=0920200">
     <link rel="stylesheet" href="./css/nav.css?v=0808104">
 
     <style>
@@ -54,7 +54,7 @@
             주민등록번호·신분증 사진을 받는 화면은 방침과도 어긋났다 → 걷어내고 실제 request_withdrawal() 로 잇는다. -->
     <div class="withdraw-guide">
         지금은 <strong>신청까지만 접수</strong>되고, 실제 송금은 결제(PG) 연동 후 시작됩니다.<br>
-        출금 전에 <strong>네이버·카카오로 휴대폰 확인</strong>을 한 번 해 주세요(예금주 확인용).
+        출금 전에 <strong>문자 인증으로 휴대폰 확인</strong>을 한 번 해 주세요(본인 확인용).
     </div>
 
     <!-- FORM SECTION -->
@@ -181,7 +181,7 @@ window.addEventListener("scroll", () => {
 
 
 <!-- 실제 출금 로직 -->
-<script src="./js/withdraw.js?v=0920100"></script>
+<script src="./js/withdraw.js?v=0920200"></script>
 
 <script src="./js/nav.js?v=0918710"></script>
 <script src="./js/desktop-pc.js?v=081603" defer></script>

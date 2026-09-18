@@ -152,3 +152,11 @@ body {
 .wd-gate-btn b { display: inline-block; width: 20px; margin-right: 6px; font-weight: 900; }
 .wd-gate-btn.wd-naver { background: #03c75a; color: #fff; }
 .wd-gate-btn.wd-kakao { background: #fee500; color: #191600; }
+.wd-sms-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.wd-sms-in { flex: 1; min-width: 0; height: 48px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+  background: #121318; color: #eef0f5; font-size: 16px; padding: 0 14px; letter-spacing: .5px; }
+.wd-sms-send { flex: 0 0 auto; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #4f6bff;
+  background: rgba(79,107,255,.14); color: #cfd7ff; font-size: 14px; font-weight: 800; cursor: pointer; }
+.wd-sms-send:disabled { opacity: .5; }
+.wd-sms-timer { flex: 0 0 48px; text-align: right; font-size: 13px; font-weight: 800; color: #ff8a8a; font-variant-numeric: tabular-nums; }
+.wd-sms-row[hidden], .wd-gate-btn[hidden] { display: none; }   /* display:flex 가 hidden 을 덮어써 번호 받기 전부터 코드 칸이 보였다 */
