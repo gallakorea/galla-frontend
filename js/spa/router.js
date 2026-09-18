@@ -193,18 +193,15 @@
   });
 
   /* ── 탭 전환(슬라이드) ─────────────────────────────────────── */
-  function place(px, anim) {
-    track.classList.toggle("anim", !!anim);
-    track.style.transform = "translateX(" + px + "px)";
+  /* 🧲 판 이동 = 가로 스크롤(폰 스냅). 탭 버튼·코드로 옮길 때만 여기서 스크롤한다 —
+     손가락으로 넘길 땐 OS 가 스크롤하고, 멈추면 아래 watchNativeSwipe 가 activateTab 을 부른다. */
+  let progScrollUntil = 0;                         // 코드로 옮기는 중(그동안 스크롤 감시가 탭을 바꾸지 않게)
+  function settle(anim) {
+    const left = cur * W();
+    if (Math.abs(track.scrollLeft - left) < 1) return;
+    progScrollUntil = Date.now() + (anim ? 700 : 80);
+    try { track.scrollTo({ left, behavior: anim ? "smooth" : "auto" }); } catch (_) { track.scrollLeft = left; }
   }
-  // 정착 상태는 dvw 단위 — 창 크기가 바뀌어도(회전·데스크톱 리사이즈) 판이 어긋나지 않는다.
-  // ms: 스와이프 놓는 속도에 맞춘 전환 시간(없으면 CSS 기본 .22s).
-  function settle(anim, ms) {
-    track.classList.toggle("anim", !!anim);
-    track.style.transitionDuration = anim && ms ? ms + "ms" : "";
-    track.style.transform = "translateX(" + (-cur * 100) + "dvw)";
-  }
-  const baseX = () => -cur * W();
 
   function paintNav() {
     document.querySelectorAll(".nav-item").forEach(it => {
@@ -252,7 +249,7 @@
     const prev = cur;
     cur = idx;
     ensureTab(tab);
-    settle(opts.anim !== false, opts.dur);
+    if (!opts.fromScroll) settle(opts.anim !== false);
     paintNav();
     /* 같은 탭을 다시 적용할 때(뒤로가기로 탭 안의 오버레이 한 칸을 닫은 경우 등)는 그 칸의 state 를 지우지 않는다 —
        null 로 덮으면 맛집 지도처럼 state 로 자기 칸을 알아보는 오버레이가 길을 잃는다(26.9.18). */
@@ -486,83 +483,35 @@
     applyRoute(true);
   });
 
-  /* ── 탭 스와이프(직접 터치 — iframe 중계 불필요) ───────────── */
-  (function swipe() {
-    let sx = 0, sy = 0, dx = 0, lock = null, t0 = 0, lastX = 0, lastT = 0, vel = 0, hGuard = false, startEl = null;
-    const EDGE_GUARD = 24;   // 좌측 엣지는 시스템 뒤로가기와 충돌 방지
-    /* 가로 스크롤 영역(카테고리 칩 행·서브탭·캐러셀·입력) 위 제스처는 탭 스와이프에서 제외 —
-       안 그러면 카테고리를 좌우로 밀 때 탭이 통째로 넘어가 카테고리를 못 고른다(사장님).
-       알려진 칩 행은 클래스로, 그 외 가로 스크롤러는 overflow-x 감지로 확실히 커버. */
-    const HROW_SEL = ".chip-scroll, .news-category-chips, .hv-cats, .cat-chips, .plaza-categories, .hv-mode, .tabs-header, .dm-tabs, .carousel-wrap";
-    function inHScroll(el) {
-      for (let n = el; n && n !== document.body && n.nodeType === 1; n = n.parentElement) {
-        const tag = n.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "VIDEO" || n.isContentEditable) return true;
-        if (n.classList && n.matches && n.matches(HROW_SEL)) return true;
-        try { const s = getComputedStyle(n); if ((s.overflowX === "auto" || s.overflowX === "scroll") && n.scrollWidth > n.clientWidth + 2) return true; } catch (_) {}
-      }
-      return false;
-    }
-    /* 스크롤이 관성으로 흐르는 중(마지막 스크롤 250ms 안)에 댄 손가락은 무조건 세로 — 스크롤하다 옆 탭으로 새던 대부분이 이 순간 */
-    let lastScrollAt = 0, scrollingGesture = false;
-    document.addEventListener("scroll", () => { lastScrollAt = performance.now(); }, { capture: true, passive: true });
-    track.addEventListener("touchstart", (e) => {
-      hGuard = false;
-      scrollingGesture = performance.now() - lastScrollAt < 250;
-      if (stack.length) return;                     // 상세 스택 위에선 탭 스와이프 안 함
-      // DM 상세(대화방·설정 등)에선 탭 스와이프 끔 — 구 iframe 셸 정책 계승
-      // (dm.js의 스와이프 백·말풍선 제스처와 충돌해 판 전체가 끌려가던 것 방지)
-      if (document.body.classList.contains("dm-detail")) return;
-      startEl = e.target;                            // 가로 스크롤러 판정은 가로로 잠길 때 한 번만(아래 touchmove)
-      const t = e.touches[0];
-      sx = lastX = t.clientX; sy = t.clientY; dx = 0; lock = null; vel = 0;
-      t0 = lastT = performance.now();
-    }, { passive: true });
-    track.addEventListener("touchmove", (e) => {
-      // dm-detail 중엔 start가 안 돌아 sx가 이전 제스처 값 — 여기서도 막아야 오계산 잠금이 없다
-      if (stack.length || hGuard || document.body.classList.contains("dm-detail")) return;
-      const t = e.touches[0];
-      const mx = t.clientX - sx, my = t.clientY - sy;
-      if (lock === null) {
-        /* 🔒 방향 판정을 단단하게(26.9.19 사장님: 「위로 스크롤하다 잘못하면 좌우로 넘어간다, 헐렁하다」)
-           예전: 8px·가로가 세로의 1.2배면 가로 — 비스듬한 스크롤이 탭 전환으로 샜다.
-           지금: 12px 이상 움직이고 가로가 세로의 2배 이상일 때만 가로, 세로가 먼저 8px 가면 바로 세로. */
-        if (scrollingGesture) { lock = "v"; return; }
-        if (Math.abs(my) >= 8 && Math.abs(my) >= Math.abs(mx)) { lock = "v"; return; }
-        if (Math.abs(mx) < 12) return;
-        lock = Math.abs(mx) > Math.abs(my) * 2 ? "h" : "v";
-        if (lock === "h" && sx < EDGE_GUARD) lock = "v";
-        /* 가로 스크롤러 위면 이 제스처는 탭 전환 금지. 예전엔 touchstart 마다(세로 스크롤 포함)
-           조상 전부 getComputedStyle 을 돌렸다 — 가로로 잠길 때만 보면 된다. */
-        if (lock === "h" && inHScroll(startEl)) { hGuard = true; lock = "v"; return; }
-      }
-      if (lock !== "h") return;
-      if (e.cancelable) e.preventDefault();          // 옆으로 끄는 동안 세로 스크롤이 같이 흔들리지 않게(헐렁함의 원인)
-      dx = mx;
-      const now = performance.now();
-      if (t.clientX !== lastX) {                       // 제자리 이벤트는 속도·시각을 갱신하지 않는다(멈춤 판정은 touchend 에서)
-        const inst = (t.clientX - lastX) / Math.max(1, now - lastT);
-        vel = vel * 0.4 + inst * 0.6;                 // 마지막 두 점만 쓰면 튄다 — 살짝 평활
-        lastX = t.clientX; lastT = now;
-      }
-      let d = dx;
-      if ((cur === 0 && d > 0) || (cur === TABS.length - 1 && d < 0)) d *= 0.28;   // 고무줄
-      place(baseX() + d, false);
-    }, { passive: false });
-    track.addEventListener("touchend", () => {
-      if (stack.length || lock !== "h") { lock = null; return; }
-      if (performance.now() - lastT > 90) vel = 0;     // 멈췄다 뗀 손가락은 던진 게 아니다
-      /* 넘어가는 기준을 올렸다(22%·0.32 → 33%·0.55+40px) — 살짝 튕기거나 스치는 걸로는 안 넘어가게 */
-      const commit = Math.abs(dx) > W() * 0.33 || (Math.abs(vel) > 0.55 && Math.abs(dx) > 40);
-      /* 🫧 놓는 속도 그대로 이어서 감속 — 예전엔 속도와 무관하게 0.22초 고정이라 천천히 끌다 놓아도
-         남은 거리를 '착' 하고 채웠다(딸깍). 곡선 cubic-bezier(.32,.72,0,1)의 시작 기울기가 2.25 라
-         시간 = 2.25 × 남은거리 / 손가락속도 로 두면 첫 프레임 속도가 손가락과 맞는다. 200~380ms 로 가둔다. */
-      //    거리 상한(180 + 남은거리×0.6)도 둔다 — 멈춰서 놓은 짧은 복귀(속도≈0)가 380ms 로 기어가지 않게.
-      const durFor = (remain) => Math.round(Math.max(200, Math.min(380, 180 + remain * 0.6, 2.25 * remain / Math.max(Math.abs(vel), 0.05))));
-      if (commit && dx < 0 && cur < TABS.length - 1) { hap(); activateTab(cur + 1, { dur: durFor(W() - Math.abs(dx)) }); }
-      else if (commit && dx > 0 && cur > 0) { hap(); activateTab(cur - 1, { dur: durFor(W() - Math.abs(dx)) }); }
-      else settle(true, durFor(Math.abs(dx)));
-      lock = null;
+  /* ── 🧲 탭 스와이프 = 폰 가로 스크롤 감시 ─────────────────────
+     예전의 JS 스와이프(touchstart/move/end + translateX)는 걷어냈다(26.9.19 사장님: 「헐렁」 4종 — 스크롤하다 옆으로 샘·흐물·
+     살짝 밀어도 넘어감·멈춤 느슨). 이제 방향 판정·추종·감속·스냅은 OS 가 하고, 여기선
+     ① 판이 절반을 넘는 순간 햅틱 한 번 ② 네비 캡슐이 손가락을 따라감 ③ 멈추면 그 판으로 activateTab(주소·훅·예열) 만 한다. */
+  (function watchNativeSwipe() {
+    let lastLive = cur, idleT = null, raf = 0;
+    const glide = () => {
+      raf = 0;
+      const inner = document.querySelector(".nav-inner"), g = document.getElementById("nav-glider");
+      if (!inner || !g || inner.classList.contains("scrubbing")) return;   // 네비를 손가락으로 끄는 중이면 그쪽이 캡슐을 움직인다
+      const its = Array.from(inner.querySelectorAll(".nav-item")); if (!its.length || !its[0].offsetWidth) return;
+      const f = Math.max(0, Math.min(its.length - 1, track.scrollLeft / W()));
+      const a = its[Math.floor(f)], b = its[Math.min(its.length - 1, Math.floor(f) + 1)], t = f - Math.floor(f);
+      const ca = a.offsetLeft + a.offsetWidth / 2, cb = b.offsetLeft + b.offsetWidth / 2;
+      g.style.transition = "none"; g.style.transform = "translateX(" + (ca + (cb - ca) * t - 28) + "px)";
+    };
+    track.addEventListener("scroll", () => {
+      if (stack.length) return;
+      const live = Math.round(track.scrollLeft / W());
+      if (live !== lastLive) { lastLive = live; if (Date.now() > progScrollUntil) hap(); }   // 절반을 넘는 순간 '틱'
+      if (!raf) raf = requestAnimationFrame(glide);
+      clearTimeout(idleT);
+      idleT = setTimeout(() => {                      // 스크롤이 멈추면(스냅 완료) 그 판으로 정착
+        const g = document.getElementById("nav-glider"); if (g) g.style.transition = "";
+        const idx = Math.max(0, Math.min(TABS.length - 1, Math.round(track.scrollLeft / W())));
+        if (Date.now() < progScrollUntil) { paintNav(); return; }
+        if (idx !== cur) activateTab(idx, { fromScroll: true });
+        else paintNav();
+      }, 90);
     }, { passive: true });
   })();
 
@@ -736,7 +685,7 @@
     navTo(m[1], params);
   });
 
-  window.addEventListener("resize", () => settle(false));
+  window.addEventListener("resize", () => settle(false));   // 회전·리사이즈 때 판 자리 다시 맞춤
 
   /* ── ⌨️ 전역 키보드 리프트 — SPA에선 컴포저가 transform된 판/스택 안 fixed라 iOS의
      '키보드 위 자동 추적'이 안 먹어 입력창이 키보드에 가린다(유튜브·뉴스·댓글 등 모든 컴포저).
