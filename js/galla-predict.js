@@ -248,6 +248,17 @@ function renderJackpot(){
 }
 
 /* 오즈 바 (예 vs 아니오) */
+/* 🎯 다지선다 목록 카드 — 선택지별 줄(이름·비율 막대·배당). 2지선다 막대(oddsBar)로 그리면 앞의 두 개만 예·아니오처럼 보였다. */
+function multiRows(m, outs){
+  const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
+  const rows=outs.slice().sort((a,b)=>(b.pool_gp||0)-(a.pool_gp||0));
+  const top=rows.slice(0,4);
+  return `<div class="pm-multi">${top.map((o,i)=>{
+    const p=tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length);
+    const od=oddsOf(m,o);
+    return `<div class="pm-mrow" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
+  }).join('')}${rows.length>4?`<div class="pm-mmore">+${rows.length-4}개 선택지</div>`:''}</div>`;
+}
 function oddsBar(m, outs){
   const yes = outs.find(o=>o.label==='예')||outs[0];
   const no  = outs.find(o=>o.label==='아니오')||outs[1];
@@ -441,7 +452,7 @@ function marketCardHtml(m){
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>
       </div>
-      ${oddsBar(m, outs)}
+      ${m.market_type==='multi' ? multiRows(m, outs) : oddsBar(m, outs)}
       ${myPick?`<div class="pm-mine">${myPick}</div>`:''}
       <div class="pm-card-foot">
         <span class="pm-card-stats">
