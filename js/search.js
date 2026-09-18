@@ -1364,6 +1364,11 @@ async function initTrendPage() {
     if (p.tab) activateTab(p.tab, false);
     else if (p.fp) activateTab("food", false);
     if (p.fp) openFoodPlaceDeep(p.fp);
+    /* 🔴 여행 딥링크 — 크리에이터 페이지 「지도에서 경로 보기」(route=)·장소 페이지 「지도에서 보기」(map=1).
+       웹은 travel.js 가 location.search 로 읽지만 앱(SPA)은 주소창이 해시라 여기로만 온다.
+       예전엔 탭만 열고 버려서 버튼을 눌러도 지도가 안 떴다(26.9.18 사장님 제보). */
+    if (p.route && window.GALLA_openTravelRoute) window.GALLA_openTravelRoute(p.route);
+    else if (p.map && window.GALLA_openTravelMap) window.GALLA_openTravelMap();
   };
 
   /* ================= INIT ================= */
@@ -1390,6 +1395,16 @@ async function initTrendPage() {
     // SPA: 라우터가 넘겨준 파라미터(보관 → 맛집 상세 등). location.search 는 앱에서 비어 있다.
     if (PEND.tab) activateTab(PEND.tab, false); else activateTab("food", false);
     if (PEND.fp) openFoodPlaceDeep(PEND.fp);
+    /* 트렌드가 아직 안 떠 있을 때 온 여행 딥링크 — travel.js 가 늦게 실릴 수 있어 잠깐 기다린다 */
+    if (PEND.route || PEND.map) {
+      let n = 0;
+      const tryOpen = () => {
+        if (PEND.route && window.GALLA_openTravelRoute) return window.GALLA_openTravelRoute(PEND.route);
+        if (!PEND.route && window.GALLA_openTravelMap) return window.GALLA_openTravelMap();
+        if (++n < 40) setTimeout(tryOpen, 150);
+      };
+      tryOpen();
+    }
   } else {
     // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}

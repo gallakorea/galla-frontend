@@ -1209,5 +1209,10 @@
 
   window.GALLA_openTravelPlace = openDetail;
   window.GALLA_openTravelMap = openMap;
+  /* 앱(SPA) 딥링크용 — search.js 의 GALLA_trendApplyParams 가 route= 를 여기로 넘긴다 */
+  window.GALLA_openTravelRoute = function (slug) {
+    if (!slug || !/^[A-Za-z0-9_-]{1,64}$/.test(slug)) return;
+    return openMap().then(function () { drawRoute(slug); });
+  };
   window.GALLA_openTravelCreator = openCreator;
 })();
