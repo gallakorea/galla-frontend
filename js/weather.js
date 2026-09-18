@@ -391,10 +391,11 @@
     /* 겹침 솎기 — 서울(25구)처럼 촘촘한 곳은 알약이 포개져 읽히지 않는다. 화면 64×40px 칸마다 하나만.
        좌표→화면은 경계로 선형 환산(이 축척에선 충분히 정확, 네이티브도 경계만 알면 된다). 더 확대하면 나머지가 나온다 */
     if (b) {
+      /* 칸 크기 = 알약 크기. 네이티브 알약이 웹보다 넓어(아이콘+등급 글자) 64×40 에선 겹쳤다(26.9.18 QA 시뮬) → 88×46 */
       var W = window.innerWidth || 375, H = window.innerHeight || 800, seen = {};
       list = list.filter(function (r) {
         var x = (r.lon - b.swLon) / (b.neLon - b.swLon) * W, y = (b.neLat - r.lat) / (b.neLat - b.swLat) * H;
-        var k = Math.floor(x / 64) + ":" + Math.floor(y / 40);
+        var k = Math.floor(x / 88) + ":" + Math.floor(y / 46);
         if (seen[k]) return false; seen[k] = 1; return true;
       });
     }

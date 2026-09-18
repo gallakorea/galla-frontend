@@ -1,7 +1,8 @@
 /* weather.css — "지금 우리 동네" 탭.
    비 오는 지역은 화면이 젖은 느낌이 나야 한다. 캔버스 빗줄기 + 카드 글로우로 만든다. */
 
-.tab-panel[data-panel="weather"] { position: relative; overflow: hidden; }
+/* 좌우 여백 — 맛집·여행 탭과 같은 14px. 빠져 있어서 카드·「지도」 버튼이 화면 끝에 붙어 잘렸다(26.9.18 QA) */
+.tab-panel[data-panel="weather"] { position: relative; overflow: hidden; padding: 0 14px 28px; }
 
 /* 하늘 — 패널 전체를 덮되 클릭은 통과시킨다 */
 #wx-sky {

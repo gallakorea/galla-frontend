@@ -971,7 +971,7 @@
       /* 🔴 핀 300개가 화면을 빈틈없이 덮어서, 한 손으로 두 번 탭해 확대하려 해도 거의 항상 핀이 눌려
          장소 페이지로 넘어갔다 — 사장님 눈엔 「지도를 누르면 닫힌다」(26.9.18). 화면 거리로 묶는다:
          56px 칸마다 대표 핀 하나 + 개수. 묶음을 누르면 그 자리로 확대한다. 충분히 확대하면(13+) 안 묶는다. */
-      var CELL = 56, groups = {}, order = [];
+      var CELL = 66, groups = {}, order = [];   // 56 → 66: 한국처럼 장소가 많은 곳에서 핀(44px)이 여전히 겹쳤다(26.9.18 QA 시뮬)
       var noCluster = MAP.getZoom() >= 13;
       ps.forEach(function (p) {
         var pt = MAP.project([Number(p.lon), Number(p.lat)]);
