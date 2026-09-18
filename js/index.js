@@ -1537,8 +1537,9 @@ function renderVideoCard(v) {
     <div class="card video-feed-card" data-kind="video" data-id="${escHtml(v.video_id)}" data-vid="${escHtml(v.video_id)}"
          data-vtitle="${escHtml(v.title || '')}" data-vch="${escHtml(v.channel_title || '')}">
       <!-- 🔥 머리줄 — 예전엔 썸네일부터 시작해 「이건 뭐지?」였다(26.9.18 사장님). 이슈 카드 작성자 줄 자리에
-           무엇인지(핫튜브)·지금 몇 위·언제 집계인지를 둔다. 누르면 핫튜브 전체 순위로. -->
-      <div class="vf-top" onclick="event.stopPropagation();GALLA_goto('search.html?tab=hot')">
+           무엇인지(핫튜브)·지금 몇 위·언제 집계인지를 둔다. 누르면 핫튜브 전체 순위로.
+           ⚠️ GALLA_goto 는 앱에서 검색 화면을 스택에 새로 쌓아 「검색」 칸이 열렸다(QA) — 트렌드 탭 전환은 GALLA_nav. -->
+      <div class="vf-top" onclick="event.stopPropagation();(window.GALLA_nav||GALLA_goto)('search.html?tab=hot')">
         <span class="vf-top-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
         <div class="vf-top-tx">
           <div class="vf-top-t">핫튜브${v.rank ? ` <b>지금 ${v.rank}위</b>` : ''}</div>
