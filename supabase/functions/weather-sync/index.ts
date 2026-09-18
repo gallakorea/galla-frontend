@@ -11,7 +11,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const KMA_KEY = Deno.env.get("KMA_SERVICE_KEY") || "";
+/* 🔴 기상청은 공공데이터포털 API 라 **포털 공용 키(DATA_GO_KR_KEY)로 이미 열려 있었다**(26.9.18 실측 resultCode 00).
+   KMA_SERVICE_KEY 만 찾느라 여태 Open-Meteo 로 떨어지고 있었다. 전용 키가 없으면 공용 키를 쓴다. */
+const KMA_KEY = Deno.env.get("KMA_SERVICE_KEY") || Deno.env.get("DATA_GO_KR_KEY") || "";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type" };
 const j = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -53,7 +55,31 @@ function kmaBaseTime(now: Date) {
    0 없음 / 1 비 / 2 비눈 / 3 눈 / 5 빗방울 / 6 빗방울눈날림 / 7 눈날림 */
 const PTY_TO_WMO: Record<number, number> = { 0: 0, 1: 61, 2: 66, 3: 71, 5: 51, 6: 66, 7: 71 };
 
-async function fromKMA(rs: Region[]) {
+/* 초단기예보 기준시각 — 매시 30분 발표, 약 45분에 제공 */
+function kmaFcstBase(now: Date) {
+  const kst = new Date(now.getTime() + 9 * 3600e3);
+  kst.setUTCMinutes(kst.getUTCMinutes() - 45);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return { base_date: `${kst.getUTCFullYear()}${p(kst.getUTCMonth() + 1)}${p(kst.getUTCDate())}`, base_time: `${p(kst.getUTCHours())}30` };
+}
+/* SKY(1 맑음·3 구름많음·4 흐림) → WMO */
+const SKY_TO_WMO: Record<number, number> = { 1: 0, 3: 2, 4: 3 };
+const SKY_TTL = 3 * 3600e3;
+
+async function kmaSky(nx: number, ny: number): Promise<number | null> {
+  const { base_date, base_time } = kmaFcstBase(new Date());
+  const u = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst"
+    + `?serviceKey=${KMA_KEY}&numOfRows=60&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`;
+  try {
+    const d = await (await fetch(u, { signal: AbortSignal.timeout(9000) })).json();
+    const items = d?.response?.body?.items?.item;
+    if (!Array.isArray(items)) return null;
+    const sky = items.filter((x: any) => x.category === "SKY").sort((a: any, b: any) => (a.fcstDate + a.fcstTime).localeCompare(b.fcstDate + b.fcstTime))[0];
+    return sky ? Number(sky.fcstValue) : null;
+  } catch { return null; }
+}
+
+async function fromKMA(rs: Region[], prev: Record<string, { sky: number | null; sky_at: string | null }> = {}) {
   const { base_date, base_time } = kmaBaseTime(new Date());
   const out: Record<string, any> = {};
   await Promise.all(rs.map(async (r) => {
@@ -69,10 +95,19 @@ async function fromKMA(rs: Region[]) {
       if (!Array.isArray(items)) return;
       const g = (c: string) => items.find((x: any) => x.category === c)?.obsrValue;
       const pty = Number(g("PTY") ?? 0);
+      /* 하늘상태: 3시간 안에 받은 값이 있으면 재사용, 없으면 초단기예보에서 받는다 */
+      const pv = prev[r.code];
+      let sky = pv?.sky ?? null, skyAt = pv?.sky_at ?? null;
+      if (sky == null || !skyAt || Date.now() - new Date(skyAt).getTime() > SKY_TTL) {
+        const s2 = await kmaSky(nx, ny);
+        if (s2 != null) { sky = s2; skyAt = new Date().toISOString(); }
+      }
       out[r.code] = {
         temp: Number(g("T1H") ?? NaN), precip: Number(g("RN1") ?? 0),
-        code: PTY_TO_WMO[pty] ?? 0, wind: Number(g("WSD") ?? NaN),
-        obs_at: new Date().toISOString(),
+        /* 비·눈이 오면 PTY 가 우선, 아니면 하늘상태(없으면 맑음) */
+        code: pty > 0 ? (PTY_TO_WMO[pty] ?? 61) : (sky != null ? (SKY_TO_WMO[sky] ?? 0) : 0),
+        wind: Number(g("WSD") ?? NaN),
+        obs_at: new Date().toISOString(), sky, sky_at: skyAt,
       };
     } catch { /* 이 지역만 건너뛴다 — 하나 실패로 전체를 버리지 않는다 */ }
   }));
@@ -131,11 +166,30 @@ Deno.serve(async (req) => {
   if (!rs.length) return j({ ok: false, reason: "no_regions" }, 500);
 
   let src = "kma", obs: Record<string, any> = {};
-  if (KMA_KEY) { try { obs = await fromKMA(rs as Region[]); } catch { /* 폴백 */ } }
-  // 기상청이 없거나 절반도 못 받으면 Open-Meteo 로 (부분 실패에 화면이 비지 않게)
-  if (Object.keys(obs).length < rs.length / 2) {
+  /* ⏱ 기상청 개발계정은 하루 1만 회. 249곳 × 10분 크론이면 하루 3.6만 회라 넘친다.
+     초단기실황은 한 시간에 한 번 발표되므로 정기 수집은 받은 지 55분 안 된 지점을 건너뛴다(하루 약 6천 회).
+     크론은 10분마다 돌지만 지점마다 시간당 한 번씩 흩어져 받는다. 동네 방(한 곳 요청)은 항상 받는다. */
+  let todo = rs as Region[];
+  if (KMA_KEY && !body?.region) {
+    const { data: fresh } = await sb.from("weather_obs").select("region")
+      .in("region", rs.map((r) => r.code)).gt("updated_at", new Date(Date.now() - 55 * 60e3).toISOString());
+    const skip = new Set((fresh || []).map((x: any) => x.region));
+    todo = (rs as Region[]).filter((r) => !skip.has(r.code));
+    if (!todo.length) return j({ ok: true, source: "kma", updated: 0, fresh: skip.size });
+  }
+  if (KMA_KEY) {
+    let prev: Record<string, any> = {};
+    try {
+      const { data: pr } = await sb.from("weather_obs").select("region,sky,sky_at").in("region", todo.map((r) => r.code));
+      (pr || []).forEach((x: any) => { prev[x.region] = x; });
+    } catch { /* 없으면 새로 받는다 */ }
+    try { obs = await fromKMA(todo, prev); } catch { /* 폴백 */ }
+  }
+  // 기상청이 없거나 절반도 못 받으면 못 받은 곳만 Open-Meteo 로 (부분 실패에 화면이 비지 않게)
+  if (Object.keys(obs).length < todo.length / 2) {
     src = KMA_KEY ? "openmeteo(kma-fallback)" : "openmeteo";
-    try { obs = { ...(await fromOpenMeteo(rs as Region[])), ...obs }; } catch (e) {
+    const miss = todo.filter((r) => !obs[r.code]);
+    try { obs = { ...(await fromOpenMeteo(miss)), ...obs }; } catch (e) {
       return j({ ok: false, reason: "fetch_failed", detail: String(e).slice(0, 120) }, 502);
     }
   }
@@ -145,6 +199,7 @@ Deno.serve(async (req) => {
     precip: Number.isFinite(v.precip) ? v.precip : null,
     code: v.code ?? null, wind: Number.isFinite(v.wind) ? v.wind : null,
     obs_at: v.obs_at, updated_at: new Date().toISOString(),
+    ...(v.sky !== undefined ? { sky: v.sky, sky_at: v.sky_at } : {}),
   }));
   if (!rows.length) return j({ ok: false, reason: "empty" }, 502);
   const { error } = await sb.from("weather_obs").upsert(rows, { onConflict: "region" });
