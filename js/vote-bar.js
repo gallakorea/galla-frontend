@@ -21,8 +21,18 @@
     '<path class="gv-sweat s2" d="M1.6 8.6c-.8 1.1-1 1.8-.5 2.3.5.4 1.2.1 1.2-.6 0-.4-.2-.9-.7-1.7z"/>' +
     '<ellipse class="gv-dust" cx="11" cy="30.6" rx="4" ry="1.3"/>' +
   '</svg>';
-  const TUG = '<div class="gv-tug" aria-hidden="true"><div class="gv-team gv-team-pro">' + FIG + FIG + '</div>' +
-    '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + '</div></div>';
+  /* 🙋 투표 전 — 똑바로 서서 한 팔로 「이리 와」 손짓하며 통통 뛴다(26.9.19 사장님). 투표하면 FIG(당기기)로 바뀐다. */
+  const WAVE = '<svg class="gv-wave" viewBox="0 0 26 32" aria-hidden="true"><g class="gv-wave-body" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="6.5" r="3.6" fill="currentColor" stroke="none"/>' +
+      '<path d="M12 10.4 L12 20.2"/>' +
+      '<path d="M12 12.6 L8 18.4"/>' +
+      '<path d="M12 20.2 L8.6 29.5 M12 20.2 L15.6 29.5"/>' +
+      '<g class="gv-wave-arm"><path d="M12 12.6 L19.5 6.4"/><circle cx="20.6" cy="5.4" r="1.7" fill="currentColor" stroke="none"/></g>' +
+    '</g></svg>';
+  const TUG = '<div class="gv-tug" aria-hidden="true"><div class="gv-team gv-team-pro">' + FIG + FIG + WAVE + WAVE +
+    '<span class="gv-bub">이쪽이야!</span></div>' +
+    '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + WAVE + WAVE +
+    '<span class="gv-bub">우리 편 와!</span></div></div>';
   const FX = '<i class="gv-bglow"></i><i class="gv-bshine"></i><i class="gv-spark s1"></i><i class="gv-spark s2"></i><i class="gv-spark s3"></i>';
   // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
   function html(o) {

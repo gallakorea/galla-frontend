@@ -214,8 +214,12 @@
 }
 
 /* 🧍‍🧍 줄다리기 사람 — 막대 위 한 줄(투표 뒤에만). 왼쪽 찬성팀·오른쪽 반대팀이 몸을 젖혀 당기고, 땀이 튀고, 먼지가 인다. */
-.gv-tug { display: none; }
-.gv.gv-locked .gv-tug { display: flex; align-items: flex-end; height: 34px; margin: -2px 2px 4px; }
+/* 투표 전에도 보인다(손짓), 투표 뒤엔 당기기 */
+.gv-tug { display: flex; align-items: flex-end; height: 34px; margin: -2px 2px 4px; }
+.shorts-vote .gv-tug { display: none; }   /* 릴스 위 겹침 화면은 좁아서 생략 */
+.gv-team { position: relative; }
+.gv:not(.gv-locked) .gv-fig { display: none; }
+.gv.gv-locked .gv-wave, .gv.gv-locked .gv-bub { display: none; }
 .gv-team { display: flex; gap: 1px; flex: 0 0 auto; }
 .gv-team-con { transform: scaleX(-1); }
 .gv-team-pro { color: color-mix(in srgb, var(--gv-pro) 55%, #fff); }
@@ -242,3 +246,24 @@
 .gv-rope-knot { position: absolute; top: 50%; left: var(--gv-k, 50%); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff3d0, #c89a4a 60%, #7c5a22); box-shadow: 0 0 8px rgba(255,220,140,.8); transition: left .75s cubic-bezier(.34,1.35,.5,1); }
 @media (prefers-reduced-motion: reduce) { .gv-fig-body, .gv-sweat, .gv-dust, .gv-rope { animation: none !important; } }
+
+/* 🙋 투표 전 손짓 */
+.gv-wave { width: 24px; height: 30px; overflow: visible; }
+.gv-wave-body { animation: gvHop .9s ease-in-out infinite; }
+.gv-wave + .gv-wave .gv-wave-body { animation-delay: .3s; }
+.gv-wave-arm { transform-origin: 12px 12.6px; animation: gvBeckon .45s ease-in-out infinite alternate; }
+.gv-wave + .gv-wave .gv-wave-arm { animation-delay: .2s; }
+@keyframes gvHop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes gvBeckon { from { transform: rotate(-35deg); } to { transform: rotate(25deg); } }
+/* 투표 전 밧줄 — 바닥에 늘어져 있다(가운데가 처짐) */
+.gv:not(.gv-locked) .gv-rope { height: 8px; margin-bottom: 4px; background: none; box-shadow: none; animation: none;
+  border-bottom: 3px solid #b8934f; border-radius: 0 0 50% 50% / 0 0 100% 100%; opacity: .75; }
+.gv:not(.gv-locked) .gv-rope-knot { display: none; }
+/* 말풍선 — 양 팀이 번갈아 */
+.gv-bub { position: absolute; bottom: 30px; left: 8px; white-space: nowrap; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 900;
+  color: #10131b; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); opacity: 0; transform-origin: 20% 100%; animation: gvBub 3.2s ease-in-out infinite; }
+.gv-bub::after { content: ""; position: absolute; left: 12px; bottom: -4px; border: 4px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.gv-team-con .gv-bub { transform: scaleX(-1); animation-name: gvBubR; animation-delay: 1.6s; }
+@keyframes gvBub { 0%,55%,100% { opacity: 0; transform: translateY(4px) scale(.6); } 8%,45% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes gvBubR { 0%,55%,100% { opacity: 0; transform: scaleX(-1) translateY(4px) scale(.6); } 8%,45% { opacity: 1; transform: scaleX(-1) translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .gv-wave-body, .gv-wave-arm, .gv-bub { animation: none !important; } .gv-bub { opacity: 1; } }
