@@ -19,6 +19,7 @@ const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 const SCRIPTS = [
   "/vendor/hls.min.js",    // HLS 재생(비 iOS)
   "/js/hls-attach.js",     // GALLA_attachHls
+  "/js/vote-lines.js",      // GALLA_VOTE_LINES(줄다리기 대사 창고·조립기)
   "/js/vote-bar.js",       // GALLA_VoteBar(통합 진영바)
   "/js/vote-fx.js",        // GALLA_VoteFX(투표 연출)
   "/js/battle-fx.js",      // BattleFX(파티클/충격파/햅틱)

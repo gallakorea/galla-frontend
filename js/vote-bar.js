@@ -194,34 +194,69 @@
 
   /* 🎭 줄다리기 대사·치열해지는 순간(26.9.19 사장님: 「막 치열해지는 애니메이션, 살려주세요 같은 위트 있는 말풍선」)
      화면에 보이는 막대만 2.4초마다 훑는다. 투표 전: 부르는 대사가 바뀐다 / 투표 뒤: 양 팀이 번갈아 한마디 + 가끔 확 치열해진다. */
-  /* 대사 창고 — 희로애락이 섞이게(26.9.19 사장님: 「열받아서·웃겨서·슬퍼서 참여하게, 다양하게, 욕도 좋다」).
-     욕은 사장님 결정으로 실제 욕(시발·존나·개·썅)을 일부 섞는다 — ⚠️ 스토어 연령등급 설문의 「비속어」 항목을 이에 맞춰 신고해야 한다. */
-  const LINES_CALL = {
-    pro: ["이쪽이야!", "아 시발 도와줘!", "존나 밀리는 중 와줘ㅠ", "여기가 맞아!", "너 우리 편이지?", "손 잡아!", "빨리 와!!", "고민할 시간에 당겨!", "우리 편 오면 치킨 쏜다(거짓말)", "제발… 한 명만…",
-          "여기 줄 서면 복 받음", "아 빨리 좀 와 시발", "안 오면 서운해할 거야", "니가 오면 이겨", "눈 마주쳤지? 이리 와", "편 안 고르면 반칙이다", "우리 편 사람 좋아"],
-    con: ["우리 편 와!", "시발 빨리 와 팔 빠져", "존나 급해 도와줘!!", "이쪽이 진리!", "여기 자리 있어!", "망설이지 마!", "어서 와~", "저쪽 가면 후회한다", "여기가 찐이야", "혼자 구경만 할 거야?",
-          "엄마가 이쪽 가랬어", "빨리 안 와? 시발 팔 떨어진다", "우리 편은 간식 있음", "와서 한 번만 잡아줘", "너 같은 사람 기다렸어", "구경꾼은 벌금", "딱 너만 오면 돼"],
-  };
-  const LINES_LOSE = ["아 시발 도와줘!!", "존나 밀린다 사람 좀!!", "썅 이게 말이 되냐", "개빡치네 진짜 시발", "존나 억울하다 진짜", "아 썅 줄 놓칠 뻔", "아 시발 밀린다", "이게 지네?? 개빡치네", "우리 편 다 어디 갔냐", "눈물 난다 진짜…", "한 명만… 제발 한 명만…", "배신자들 다 나와",
-    "아 시발 손바닥 다 까졌어", "이럴 거면 왜 불렀어ㅠ", "엄마 나 끌려가…", "저놈들 뭐 먹고 왔냐", "억울해서 잠 못 잔다", "아직 안 끝났다 이것들아",
-    "살려주세요ㅠㅠ", "내 인생도 이렇게 밀려…", "지원군 언제 와!!", "진짜 개빡친다", "놓으면 끝이야 버텨!!", "나 여기서 죽는다…", "누가 기름 발랐냐 줄에",
-    "아 쟤네 반칙하는 거 봤어?", "울면서 당기는 중"];
-  const LINES_WIN = ["존나 쉽네ㅋㅋ", "개꿀잼 이거 뭐냐ㅋㅋ", "시발 이게 이기네ㅋㅋ", "존나 행복하다", "개꿀ㅋㅋㅋ", "밥은 먹고 왔냐?ㅋ", "이 맛에 줄다리기 하지", "벌써 끝났냐?ㅋㅋ", "힘 좀 써봐 그쪽~", "우리 편 개잘함", "저쪽 표정 봐ㅋㅋ",
-    "한 발만 더!!", "이기는 편 우리 편~", "여유롭다 여유로워", "손 풀리는 중ㅋ", "끝까지 방심 금물!", "승리의 땀방울…", "저쪽 우는 소리 들림", "오늘 치킨은 우리 거",
-    "줄 좀 더 줄까?ㅋ", "이 정도면 산책이지", "고맙다 저쪽 편 ㅋ", "완전 압살ㅋㅋ", "오 이제 좀 재밌네"];
-  const LINES_TIE = ["아 시발 팔 나간다", "존나 힘들어 진짜", "개힘들다 살려줘", "썅 누가 좀 대신 당겨", "살려주세요ㅠㅠ", "죽을 것 같아…", "팔 빠질 것 같아", "손 놓으면 진다!", "허리 나갔어…", "물 한 잔만…", "누가 내 발 밟았어?!",
-    "한 명만 더 오면 이겨!", "영차! 영차!", "끝까지 간다!!", "숨 좀 쉬자…", "엄마 나 여기 있어!", "밀리면 끝이야!", "이거 놓으면 나 진짜 운다",
-    "누가 먼저 놓나 보자", "아 시발 존나 팽팽하네", "팔에 쥐 났어ㅠ", "내일 출근 못 함", "방귀 뀌면 진다 참아", "심장 터진다 진짜", "이거 몇 시간째냐",
-    "간식 사 올 사람?", "다리 후들후들", "끝나면 삼겹살이다!!"];
-  /* 그 팀이 밀리는지·이기는지로 대사를 고른다(막대의 찬반 수 기준) */
+  /* 대사 — 큰 창고는 js/vote-lines.js(GALLA_VOTE_LINES, 약 670줄). 없으면 아래 최소 목록.
+     🔀 셔플 백: 한 번씩 다 쓰기 전엔 같은 대사가 다시 안 나온다(26.9.19 사장님: 「절대 중복을 못 느끼게」).
+     🧠 이슈별 주제 대사: issue_tug_lines(엣지 tug-lines 가 딥시크로 생성)를 이슈마다 한 번 받아 섞는다. */
+  const FALL = { CALL_PRO: ["이쪽이야!", "빨리 와!!"], CALL_CON: ["우리 편 와!", "여기가 찐이야"], LOSE: ["살려주세요ㅠㅠ"], WIN: ["개꿀ㅋㅋㅋ"], TIE: ["영차! 영차!"], DUO: [["항복해라~", "꿈도 꾸지 마"]] };
+  const L = () => window.GALLA_VOTE_LINES || FALL;
+  const bags = {};
+  function draw(key, arr) {
+    if (!arr || !arr.length) return "";
+    let b = bags[key];
+    if (!b || !b.length || b._src !== arr) {
+      b = arr.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
+      b._src = arr; bags[key] = b;
+    }
+    return b.pop();
+  }
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  /* 이슈별 주제 대사 캐시 — issueId → {pro_call,con_call,pro_lose,pro_win,con_lose,con_win,tie,duo} | null */
+  const TOPIC = {}, TOPIC_P = {};
+  function issueIdOf(el) {
+    if (el.dataset.issueId) return el.dataset.issueId;
+    const c = el.closest("[data-kind]:not([data-kind='post']):not([data-kind='plaza']):not([data-kind='news']):not([data-kind='video']):not([data-kind='predict']), .card[data-id]:not([data-kind])");
+    if (c && c.dataset.id) return c.dataset.id;
+    const q = new URLSearchParams((location.hash.split("?")[1]) || location.search).get("id");
+    return (/issue/.test(location.pathname + location.hash) && q) ? q : null;
+  }
+  function topicFor(el) {
+    const id = issueIdOf(el); if (!id) return null;
+    if (TOPIC[id] !== undefined) return TOPIC[id];
+    if (!TOPIC_P[id] && window.supabaseClient) {
+      TOPIC_P[id] = window.supabaseClient.from("issue_tug_lines").select("lines").eq("issue_id", Number(id)).maybeSingle()
+        .then(r => { TOPIC[id] = (r && r.data && r.data.lines) || null; }, () => { TOPIC[id] = null; });
+    }
+    return null;
+  }
+  /* 진영 이름 — 조립 문장의 {F}(내 편)·{O}(상대 편) */
+  function names(el, side) {
+    const a = (el.querySelector(".gv-pro .gv-name") || {}).textContent || "우리", b = (el.querySelector(".gv-con .gv-name") || {}).textContent || "저쪽";
+    return side === "pro" ? { F: a.trim(), O: b.trim() } : { F: b.trim(), O: a.trim() };
+  }
+  /* 섞는 비율: 이슈 주제 대사 40% · 조립 문장 35% · 손으로 쓴 창고 25% (주제 대사 없으면 조립 60 : 창고 40) */
+  function mix(el, side, topicKey, mood, staticKey) {
+    const t = topicFor(el), r = Math.random();
+    if (t && t[topicKey] && t[topicKey].length && r < .4) return draw("t" + issueIdOf(el) + topicKey, t[topicKey]);
+    const G = L().gen;
+    if (G && r < (t ? .75 : .6)) { const g = G(mood, names(el, side)); if (g) return g; }
+    return draw(staticKey, L()[staticKey]);
+  }
+  function callFor(el, side) {
+    return mix(el, side, side === "pro" ? "pro_call" : "con_call", "CALL", side === "pro" ? "CALL_PRO" : "CALL_CON");
+  }
+  /* 그 팀이 밀리는지·이기는지로 고른다(막대의 찬반 수 기준). 절반은 이슈 주제 대사 */
   function lineFor(el, side) {
     const bar = el.querySelector(".gv-bar");
     const pro = bar ? (parseInt(bar.dataset.pro, 10) || 0) : 0, con = bar ? (parseInt(bar.dataset.con, 10) || 0) : 0;
     const share = (pro + con) ? (side === "pro" ? pro : con) / (pro + con) * 100 : 50;
-    const pool = share < 42 ? LINES_LOSE : share > 58 ? LINES_WIN : LINES_TIE;
-    return pick(Math.random() < .2 ? LINES_TIE : pool);   // 가끔은 섞어서 예측 못 하게
+    const mood = Math.random() < .2 ? "TIE" : share < 42 ? "LOSE" : share > 58 ? "WIN" : "TIE";
+    return mix(el, side, mood === "TIE" ? "tie" : side + "_" + mood.toLowerCase(), mood, mood);
   }
-  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function duoFor(el) {
+    const t = topicFor(el);
+    if (t && t.duo && t.duo.length && Math.random() < .6) return draw("t" + issueIdOf(el) + "duo", t.duo);
+    return draw("DUO", L().DUO);
+  }
   let tugTimer = null;
   function tugTick() {
     if (document.hidden || reduce()) return;
@@ -232,12 +267,20 @@
       const locked = el.classList.contains("gv-locked");
       if (!locked) {                                                   // 투표 전 — 말풍선이 안 보일 때 대사만 바꿔 둔다
         const bp = el.querySelector(".gv-bub-pro"), bc = el.querySelector(".gv-bub-con");
-        if (bp && Math.random() < .5) bp.textContent = pick(LINES_CALL.pro);
-        if (bc && Math.random() < .5) bc.textContent = pick(LINES_CALL.con);
+        if (bp && Math.random() < .5) bp.textContent = callFor(el, "pro");
+        if (bc && Math.random() < .5) bc.textContent = callFor(el, "con");
         return;
       }
       if (el._talking) return;
-      if (Math.random() < .55) {                                       // 한마디
+      if (Math.random() < .3) {                                        // 주고받기 — 한쪽이 약 올리면 반대쪽이 받아친다
+        const pair = duoFor(el); if (!pair || !pair.length) return;
+        const first = Math.random() < .5 ? "pro" : "con", second = first === "pro" ? "con" : "pro";
+        const b1 = el.querySelector(".gv-bub-" + first), b2 = el.querySelector(".gv-bub-" + second); if (!b1 || !b2) return;
+        el._talking = true;
+        b1.textContent = pair[0]; el.classList.add("gv-talk-" + first);
+        setTimeout(() => { b2.textContent = pair[1]; el.classList.add("gv-talk-" + second); }, 1100);
+        setTimeout(() => { el.classList.remove("gv-talk-pro", "gv-talk-con"); el._talking = false; }, 3400);
+      } else if (Math.random() < .6) {                                 // 한마디
         const side = Math.random() < .5 ? "pro" : "con";
         const b = el.querySelector(".gv-bub-" + side); if (!b) return;
         b.textContent = lineFor(el, side);
