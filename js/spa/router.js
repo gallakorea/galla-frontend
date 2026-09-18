@@ -248,7 +248,9 @@
     ensureTab(tab);
     settle(opts.anim !== false, opts.dur);
     paintNav();
-    try { history.replaceState(null, "", "#/" + tab); } catch (_) {}
+    /* 같은 탭을 다시 적용할 때(뒤로가기로 탭 안의 오버레이 한 칸을 닫은 경우 등)는 그 칸의 state 를 지우지 않는다 —
+       null 로 덮으면 맛집 지도처럼 state 로 자기 칸을 알아보는 오버레이가 길을 잃는다(26.9.18). */
+    try { history.replaceState(prev === cur ? history.state : null, "", "#/" + tab); } catch (_) {}
     // 활성/비활성 훅(P1: 릴스 정지·정렬 초기화 등) — postMessage 대신 직접 호출
     if (prev !== cur) {
       const pm = panes[TABS[prev]] && panes[TABS[prev]]._mod;

@@ -1309,9 +1309,11 @@
        같이 닫혔다(실측: 지도 위 상세에서 X 를 눌렀더니 지도까지 사라짐).
        지도와 상세는 각각 pushState 를 하므로, 상세에서 돌아오면 state 는 다시 {fdMap:1} 이다.
        그 자리로 돌아온 거면 지도는 그대로 둔다 — 리스너 등록 순서에 기대지 않는 판별이다. */
-    window.addEventListener("popstate", function () {
+    /* ⚠️ history.state 가 아니라 **이벤트에 실려 온 state** 로 판정한다. 앱(SPA)에선 라우터의 popstate 리스너가
+       먼저 돌아 replaceState(null) 로 state 를 지워 버려서, 상세만 닫았는데 지도까지 닫혔다(26.9.18 사장님 제보·재현). */
+    window.addEventListener("popstate", function (ev) {
       if (!MAP.classList.contains("open")) return;
-      try { if (history.state && history.state.fdMap) return; } catch (_) {}
+      try { if (ev && ev.state && ev.state.fdMap) return; } catch (_) {}
       closeMap(true);
     });
   }
