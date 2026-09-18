@@ -87,6 +87,8 @@
           (p.category ? " · " + esc(p.category) : "") + "</div>" +
         (p.name_local || p.name_en
           ? '<div class="tv-d-alt">' + esc(p.name_local || p.name_en) + "</div>" : "") +
+        /* 🌤 현지 날씨 — 지금 + 7일(사장님 26.9.18 「해외 날씨도」). 비동기로 채운다(loadWx) */
+        (p.lat != null ? '<div class="tv-wx" id="tv-wx">' + wxHtml(CUR.__wx) + "</div>" : "") +
         ((p.certs || []).length
           ? '<div class="tv-certs">' + p.certs.map(function (c) {
               return '<span class="tv-certp">' + esc(c.emoji || "🏅") + " " + esc(c.name) +
@@ -147,6 +149,7 @@
     wire();
     if (vids.length) paintNow(vids[0].video_id);
     loadTalk();
+    if (p.lat != null && !CUR.__wx) loadWx(p);
     try { document.title = p.name + " · 여행 | GALLA"; } catch (_) {}
   }
 
@@ -235,6 +238,42 @@
     });
     paintNow(vid);
     try { hero.scrollIntoView({ block: "nearest" }); } catch (_) {}
+  }
+
+  /* ── 현지 날씨(travel-weather 엣지 → MET Norway, 좌표 0.1° 칸 1시간 캐시) ── */
+  function wxOf(code) {
+    var c = Number(code);
+    if (c === 0) return ["☀️", "맑음"]; if (c === 1) return ["🌤️", "대체로 맑음"]; if (c === 2) return ["⛅", "구름 조금"];
+    if (c === 3) return ["☁️", "흐림"]; if (c === 45 || c === 48) return ["🌫️", "안개"]; if (c >= 95) return ["⛈️", "뇌우"];
+    if (c >= 85) return ["🌨️", "소낙눈"]; if (c >= 80) return ["🌦️", "소나기"]; if (c >= 71 && c <= 77) return ["❄️", "눈"];
+    if (c >= 66 && c <= 67) return ["🌨️", "진눈깨비"]; if (c >= 61) return ["🌧️", "비"]; if (c >= 51) return ["🌦️", "이슬비"];
+    return ["☁️", "흐림"];
+  }
+  function wxHtml(w) {
+    if (!w) return '<div class="tv-wx-load">현지 날씨 불러오는 중…</div>';
+    if (w === "none") return "";
+    var n = w.now || {}, a = wxOf(n.code);
+    var DOW = ["일", "월", "화", "수", "목", "금", "토"];
+    return '<div class="tv-wx-now"><span class="tv-wx-e">' + a[0] + '</span><b>' + (n.temp == null || isNaN(n.temp) ? "–" : Math.round(n.temp) + "°") +
+        '</b><span class="tv-wx-t">현지 지금 · ' + a[1] + (n.precip > 0 ? " · " + n.precip + "mm" : "") + "</span></div>" +
+      '<div class="tv-wx-days">' + (w.days || []).map(function (d, i) {
+        var dt = new Date(d.date + "T12:00:00Z");
+        return '<div class="tv-wx-d"><i>' + (i === 0 ? "오늘" : DOW[dt.getUTCDay()]) + "</i><span>" + wxOf(d.code)[0] +
+          "</span><b>" + d.max + "°</b><u>" + d.min + "°</u></div>";
+      }).join("") + "</div>" +
+      '<div class="tv-wx-src">날씨 MET Norway</div>';
+  }
+  async function loadWx(p) {
+    var mine = PID;
+    var w = null;
+    try {
+      var r = await (await client()).functions.invoke("travel-weather", { body: { lat: Number(p.lat), lon: Number(p.lon) } });
+      w = r && r.data && r.data.ok ? r.data : null;
+    } catch (_) {}
+    if (!CUR || PID !== mine) return;          // 그새 다른 장소로 바뀌었으면 버린다
+    CUR.__wx = w || "none";
+    var box = ROOT && ROOT.querySelector("#tv-wx");
+    if (box) box.innerHTML = wxHtml(CUR.__wx);
   }
 
   async function doJudge(v) {
