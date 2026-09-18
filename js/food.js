@@ -371,13 +371,18 @@
     var d = await rpc("food_place_detail", { p_id: id });
     if (!d || !d.ok) return toast("정보를 불러오지 못했어요");
     DETAIL.classList.add("open");
-    if (SHEET) SHEET.classList.remove("expanded");   // 새로 열 땐 기본 높이부터
     /* 지도에서 왔으면 스크림을 옅게 — 핀을 누른 자리가 뒤에 보여야 공간 맥락이 산다.
        목록에서 왔으면 뒤에 지도가 없으니 진하게 덮는다(사장님 지적). */
     DETAIL.classList.toggle("over-map", !!(MAP && MAP.classList.contains("open")));
     document.body.classList.add("fd-detail-on");
     try { history.pushState({ fdDetail: 1 }, ""); } catch (_) {}
     showSheet(d);
+    /* 아래에서 올라와 접힌(peek) 높이에 멈춘다 — 새로 열 땐 항상 접힘부터 */
+    if (SHEET) {
+      SHEET.__full = false;
+      SHEET.style.transition = "none"; SHEET.style.transform = "translateY(100%)"; void SHEET.offsetHeight;
+      setTimeout(function () { setSheetPos(SHEET, false); }, 20);
+    }
     loadAssembly(id);            // 해당되는 집만 명단이 붙는다(없으면 조용히 끝)
   }
 
@@ -444,46 +449,65 @@
     box.classList.add("on");
   }
 
-  /* 👆👇 바텀시트 끌기 — 위로 끌면 펼치고, 펼친 상태에서 아래로 끌면 원래 높이, 원래 높이에서 아래로 끌면 닫는다.
-     아래로 끄는 건 내용이 맨 위일 때만(스크롤 중엔 스크롤이 우선). 60px(위)·90px(아래) 넘거나 빠르게 튕기면 적용. */
+  /* 🧲 바텀시트 위치 — peek(접힘: 화면의 66%·88%만 보임) ↔ full(펼침). 높이는 고정, translateY 만 바꾼다. */
+  function sheetPeekOffset(sh) {
+    var vis = window.innerHeight * (DETAIL && DETAIL.classList.contains("over-map") ? 0.66 : 0.88);
+    return Math.max(0, Math.round(sh.getBoundingClientRect().height - vis));
+  }
+  function setSheetPos(sh, full, animate) {
+    var off = full ? 0 : sheetPeekOffset(sh);
+    sh.__full = !!full || off === 0;                // 내용이 짧아 다 보이면 곧 펼침 상태
+    sh.classList.toggle("peek", !sh.__full);
+    sh.style.transition = animate === false ? "none" : "";
+    sh.style.transform = "translateY(" + off + "px)";
+    if (!sh.__full) sh.scrollTop = 0;
+  }
+  /* 끌기 — 접힘: 위로 끌면 펼침, 아래로 끌면 닫힘. 펼침: 내용이 맨 위일 때 아래로 끌면 접힘.
+     손가락을 그대로 따라오고, 손을 떼면 60px(위)·90px(아래) 넘거나 빠르게 튕긴 쪽으로 미끄러진다. */
   function armSheetSwipe(sh) {
     if (!sh || sh.__swipe) return;
     sh.__swipe = true;
-    var y0 = 0, t0 = 0, dy = 0, drag = false, atTop = true;
+    var y0 = 0, t0 = 0, dy = 0, drag = false, base = 0;
     sh.addEventListener("touchstart", function (e) {
       if (!e.touches || e.touches.length !== 1) { drag = false; return; }
-      y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; drag = true;
-      atTop = sh.scrollTop <= 0;
+      y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0;
+      drag = !sh.__full || sh.scrollTop <= 0;     // 펼침에서 내용이 스크롤돼 있으면 스크롤이 먼저
+      base = sh.__full ? 0 : sheetPeekOffset(sh);
+      sh.__dragging = drag;
     }, { passive: true });
     sh.addEventListener("touchmove", function (e) {
       if (!drag) return;
       dy = e.touches[0].clientY - y0;
-      if (dy > 0 && atTop) {                       // 아래로 — 시트가 손가락을 따라온다
-        sh.style.transition = "none";
-        sh.style.transform = "translateY(" + dy + "px)";
-      }
+      if (sh.__full && dy < 0) return;             // 펼친 상태에서 위로 = 내용 스크롤
+      sh.style.transition = "none";
+      sh.style.transform = "translateY(" + Math.max(0, base + dy) + "px)";
     }, { passive: true });
     function end() {
       if (!drag) return;
-      drag = false;
-      var ms = Date.now() - t0, fastDown = dy > 40 && ms < 220, fastUp = dy < -30 && ms < 220;
-      sh.style.transition = ""; sh.style.transform = "";
-      if (dy < -60 || fastUp) {                    // 위로 → 펼침
-        if (!sh.classList.contains("expanded")) sh.classList.add("expanded");
-        return;
+      drag = false; sh.__dragging = false;
+      var ms = Date.now() - t0, fastUp = dy < -30 && ms < 250, fastDown = dy > 40 && ms < 250;
+      if (!sh.__full) {
+        if (dy < -60 || fastUp) { setSheetPos(sh, true); return; }
+        if (dy > 90 || fastDown) { closeDetail(); return; }
+        setSheetPos(sh, false); return;
       }
-      if (atTop && (dy > 90 || fastDown)) {        // 아래로 → 펼침이면 접고, 아니면 닫는다
-        if (sh.classList.contains("expanded")) sh.classList.remove("expanded");
-        else closeDetail();
-      }
+      setSheetPos(sh, !(dy > 110 || fastDown));
     }
     sh.addEventListener("touchend", end);
     sh.addEventListener("touchcancel", end);
+    /* 상세 정보가 늦게 붙어(국회의원 명단 등) 시트가 길어지면, 접힌 위치를 즉시 다시 맞춘다 —
+       안 그러면 보이는 윗선이 위로 밀려 올라간다. */
+    try {
+      new ResizeObserver(function () {
+        if (DETAIL && DETAIL.classList.contains("open") && !sh.__full && !sh.__dragging) setSheetPos(sh, false, false);
+      }).observe(sh);
+    } catch (_) {}
   }
 
   function closeDetail(fromPop) {
     if (!DETAIL) return;
     hideSheet(); closeSub();
+    if (SHEET) { SHEET.style.transform = ""; SHEET.style.transition = ""; SHEET.classList.remove("peek"); SHEET.__full = false; }
     DETAIL.classList.remove("open");
     document.body.classList.remove("fd-detail-on");
     if (!fromPop) { try { if (history.state && history.state.fdDetail) history.back(); } catch (_) {} }
@@ -2228,7 +2252,7 @@
        지도 위에 상세를 띄웠을 때 보이는 지도를 눌러도 닫히지 않았다(실측).
        바깥을 누른 건 곧 DETAIL 자신이 타깃인 경우다 — 그걸로 판정한다. */
     if (t.closest(".fd-dclose") || t === DETAIL || t.closest(".fd-detail-bg")) { closeDetail(); return; }
-    if (t.closest(".fd-sheet-grip") && SHEET) { SHEET.classList.toggle("expanded"); return; }   // 손잡이 탭 = 펼침/접기
+    if (t.closest(".fd-sheet-grip") && SHEET) { setSheetPos(SHEET, !SHEET.__full); return; }   // 손잡이 탭 = 펼침/접기
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
       vw.innerHTML = '<iframe src="/yt?v=' + encodeURIComponent(vw.dataset.vid) +
