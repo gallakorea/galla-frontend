@@ -36,7 +36,9 @@
   let overlay = null;                // 탭 위에 뜬 단일 모달(글쓰기 compose 등)의 뒤로가기 관리 {el, hide, obs}
 
   // 📳 탭 전환 햅틱 — 인스타처럼 판이 넘어가는 순간 '틱'(iOS selectionChanged). GALLA_haptic은 셸(supabase.js)이 정의.
-  function hap(k) { try { window.GALLA_haptic && window.GALLA_haptic(k || "selection"); } catch (_) {} }
+  /* ⚠️ "selection"(iOS selectionChanged)은 selectionStart 없이 부르면 아무것도 안 울린다(26.9.19 사장님: 「탭 넘어갈 때 햅틱 작동 안 함」)
+     → 탭 전환은 impact MEDIUM, 네비 끌기 중 탭 지날 때는 LIGHT. */
+  function hap(k) { try { window.GALLA_haptic && window.GALLA_haptic(k || "medium"); } catch (_) {} }
 
   /* ═══ 🔇 전역 오디오 거버너 — 활성 표면(현재 탭 또는 최상단 스택) 밖의 미디어는 절대 재생 금지.
      keep-alive 판이라 화면 밖 홈 영상이 살아있고, 무언가 video.play()를 부르면 소리가 새던 것(사장님
@@ -501,8 +503,12 @@
       }
       return false;
     }
+    /* 스크롤이 관성으로 흐르는 중(마지막 스크롤 250ms 안)에 댄 손가락은 무조건 세로 — 스크롤하다 옆 탭으로 새던 대부분이 이 순간 */
+    let lastScrollAt = 0, scrollingGesture = false;
+    document.addEventListener("scroll", () => { lastScrollAt = performance.now(); }, { capture: true, passive: true });
     track.addEventListener("touchstart", (e) => {
       hGuard = false;
+      scrollingGesture = performance.now() - lastScrollAt < 250;
       if (stack.length) return;                     // 상세 스택 위에선 탭 스와이프 안 함
       // DM 상세(대화방·설정 등)에선 탭 스와이프 끔 — 구 iframe 셸 정책 계승
       // (dm.js의 스와이프 백·말풍선 제스처와 충돌해 판 전체가 끌려가던 것 방지)
@@ -518,14 +524,20 @@
       const t = e.touches[0];
       const mx = t.clientX - sx, my = t.clientY - sy;
       if (lock === null) {
-        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
-        lock = Math.abs(mx) > Math.abs(my) * 1.2 ? "h" : "v";
+        /* 🔒 방향 판정을 단단하게(26.9.19 사장님: 「위로 스크롤하다 잘못하면 좌우로 넘어간다, 헐렁하다」)
+           예전: 8px·가로가 세로의 1.2배면 가로 — 비스듬한 스크롤이 탭 전환으로 샜다.
+           지금: 12px 이상 움직이고 가로가 세로의 2배 이상일 때만 가로, 세로가 먼저 8px 가면 바로 세로. */
+        if (scrollingGesture) { lock = "v"; return; }
+        if (Math.abs(my) >= 8 && Math.abs(my) >= Math.abs(mx)) { lock = "v"; return; }
+        if (Math.abs(mx) < 12) return;
+        lock = Math.abs(mx) > Math.abs(my) * 2 ? "h" : "v";
         if (lock === "h" && sx < EDGE_GUARD) lock = "v";
         /* 가로 스크롤러 위면 이 제스처는 탭 전환 금지. 예전엔 touchstart 마다(세로 스크롤 포함)
            조상 전부 getComputedStyle 을 돌렸다 — 가로로 잠길 때만 보면 된다. */
         if (lock === "h" && inHScroll(startEl)) { hGuard = true; lock = "v"; return; }
       }
       if (lock !== "h") return;
+      if (e.cancelable) e.preventDefault();          // 옆으로 끄는 동안 세로 스크롤이 같이 흔들리지 않게(헐렁함의 원인)
       dx = mx;
       const now = performance.now();
       if (t.clientX !== lastX) {                       // 제자리 이벤트는 속도·시각을 갱신하지 않는다(멈춤 판정은 touchend 에서)
@@ -536,11 +548,12 @@
       let d = dx;
       if ((cur === 0 && d > 0) || (cur === TABS.length - 1 && d < 0)) d *= 0.28;   // 고무줄
       place(baseX() + d, false);
-    }, { passive: true });
+    }, { passive: false });
     track.addEventListener("touchend", () => {
       if (stack.length || lock !== "h") { lock = null; return; }
       if (performance.now() - lastT > 90) vel = 0;     // 멈췄다 뗀 손가락은 던진 게 아니다
-      const commit = Math.abs(dx) > W() * 0.22 || Math.abs(vel) > 0.32;   // 조금 더 잘 걸리게(쫀쫀·반응)
+      /* 넘어가는 기준을 올렸다(22%·0.32 → 33%·0.55+40px) — 살짝 튕기거나 스치는 걸로는 안 넘어가게 */
+      const commit = Math.abs(dx) > W() * 0.33 || (Math.abs(vel) > 0.55 && Math.abs(dx) > 40);
       /* 🫧 놓는 속도 그대로 이어서 감속 — 예전엔 속도와 무관하게 0.22초 고정이라 천천히 끌다 놓아도
          남은 거리를 '착' 하고 채웠다(딸깍). 곡선 cubic-bezier(.32,.72,0,1)의 시작 기울기가 2.25 라
          시간 = 2.25 × 남은거리 / 손가락속도 로 두면 첫 프레임 속도가 손가락과 맞는다. 200~380ms 로 가둔다. */
@@ -608,7 +621,7 @@
       if (h !== hover) {
         if (hover) hover.classList.remove("scrub-hover");
         hover = h;
-        if (h) { h.classList.add("scrub-hover"); hap(); }
+        if (h) { h.classList.add("scrub-hover"); hap("light"); }
       }
     };
     const stop = () => {
