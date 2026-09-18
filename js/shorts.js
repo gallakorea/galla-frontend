@@ -655,6 +655,12 @@ function buildSection(item) {
       <span class="sa-label">공유</span>
     </button>
 
+    <!-- 후원 — 숏판 릴스(reels-mix)와 같은 자리·아이콘. 이슈 작성자에게 GC(openDonate, 26.9.19 사장님) -->
+    <button class="shorts-action-btn support" aria-label="후원">
+      <span class="sa-ic"><svg viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
+      <span class="sa-label">후원</span>
+    </button>
+
     <button class="shorts-action-btn galvis" data-galvis data-gv-type="issue" data-gv-id="${item.id}" data-gv-title="${String(item.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기">
       <span class="sa-ic"><svg viewBox="0 0 24 24" fill="none" class="gv-galvis" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span>
       <span class="sa-label">갈비스</span>
@@ -673,6 +679,24 @@ function buildSection(item) {
   wireSlideControls(section, item);
   addPoster(section, item);
   return section;
+}
+
+/* 🎁 이슈 후원 — 홈엔 donate.js 가 안 실려 있어 누를 때 싣는다(숏판 릴스와 같은 방식) */
+async function supportIssue(item) {
+  let uid = null;
+  try { const { data } = await window.supabaseClient.auth.getSession(); uid = data?.session?.user?.id || null; } catch (_) {}
+  const say = (m) => (window.showToast || window.GALLA_toast || alert)(m);
+  if (!uid) { (window.GALLA_needLogin || say)("로그인하고 후원할 수 있어요"); return; }
+  if (item.user_id && item.user_id === uid) { say("내 이슈예요"); return; }
+  if (!window.openDonate) {
+    await new Promise((res) => {
+      const sc = document.createElement("script");
+      sc.src = "/js/donate.js?v=" + (window.GALLA_V || "1");
+      sc.onload = sc.onerror = res; document.head.appendChild(sc);
+    });
+  }
+  if (window.openDonate) window.openDonate(item.id, item.author || "");
+  else say("후원 준비 중");
 }
 
 /* 삭제된 슬라이드를 걷어낸다(숏판 ⋯ 삭제). 마지막 한 장이면 릴스를 닫는다. */
@@ -1160,6 +1184,7 @@ function onTap(el, fn) {
 function wireSlideControls(section, item) {
   onTap(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
   onTap(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
+  onTap(section.querySelector(".shorts-action-btn.support"), () => supportIssue(item));
   section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => {
     const cv = curVideo();
     const t = (cv && cv.currentTime > 0.3) ? "&t=" + cv.currentTime.toFixed(1) : "";   // 보던 위치 이어보기
