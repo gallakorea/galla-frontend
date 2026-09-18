@@ -972,3 +972,17 @@ body{
 .mp-req-ok { background: var(--accent-grad, #4361ff); color: #fff; }
 .mp-req-no { background: var(--surface-3, #23252d); color: #c3c8d4; }
 .mp-req-empty { padding: 24px 0; text-align: center; color: #8a90a0; font-size: 13px; }
+
+/* 📐 모바일 폭 끝까지(26.9.18 사장님 — 홈·예측과 같게). 앱 상자(최대 480px) 안에서 끝까지.
+   탭 내용 상자(.content-area)의 좌우 16px 여백을 걷고, 격자는 인스타식(칸 사이 2px, 둥근 모서리 없음),
+   목록은 둥근 박스 대신 화면 폭 줄 + 얇은 구분선. 글자는 줄 안쪽 여백으로 화면 끝에서 띄운다.
+   ⚠️ gallari.css(.glf-*·.mp-sh-*)는 다른 화면도 쓰므로 #tabContent 안만 바꾼다. */
+#tabContent.content-area { padding-left: 0; padding-right: 0; }
+#tabContent .mp-sh-grid, #tabContent .glf-grid { gap: 2px; padding: 0; }
+#tabContent .mp-sh-cell, #tabContent .glf-tile { border-radius: 0; }
+#tabContent .mp-am-list { padding: 0; }
+#tabContent .mp-am-row { padding: 9px 16px; }
+#tabContent .mp-list { gap: 0; padding: 0 0 8px; }
+#tabContent .mp-row { border-radius: 0; border-width: 0 0 1px; background: transparent; padding: 12px 16px; }
+#tabContent .mp-row:active { transform: none; }
+#tabContent .mp-lv-tt, #tabContent .mp-lv-meta { margin-left: 16px; margin-right: 16px; }

@@ -518,3 +518,12 @@
 /* 안내 하단 — 접어두기 · 더 이상 안 보기(다른 탭 안내와 같은 모양, 26.9.18) */
 .pg-foot{ display:flex; align-items:center; justify-content:center; gap:10px; padding:4px 0 14px; color:#5b6272; font-size:12px; }
 .pg-foot button{ border:0; background:none; color:#8a91a3; font-size:13px; font-weight:700; cursor:pointer; padding:6px 4px; }
+
+/* 📐 모바일 폭 끝까지(26.9.18 사장님 — 홈 피드와 같게). 앱 상자(최대 480px) 안에서 끝까지 — PC 화면 전체가 아니다.
+   예측 목록 카드·오늘의 보너스 카드만 로비 좌우 여백(14px)을 음수 여백으로 걷어낸다.
+   칩·정렬·안내 줄은 글자가 화면 끝에 붙지 않게 여백을 둔다. 카드 사이는 박스 대신 얇은 선. */
+.pm-lobby .market-list, .pm-lobby .pm-jackpot { margin-left: -14px; margin-right: -14px; }
+.pm-lobby .market-list { gap: 0; }
+.pm-lobby .pm-card { border-radius: 0; border-width: 0 0 1px; padding: 14px 16px; }
+.pm-lobby .pm-card:active { transform: none; }
+.pm-lobby .pm-jackpot { border-radius: 0; border-left: 0; border-right: 0; padding-left: 16px; padding-right: 16px; }
