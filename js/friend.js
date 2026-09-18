@@ -198,13 +198,25 @@
   var _sources=[];               // 📎 근거 창구 — 콘텐츠 만들 재료(기사·링크·글·이미지)
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
 
+  /* 🔒 비로그인은 갈비스를 못 쓴다(사장님 26.9.18 「로그인을 해야 무료 사용량을 쓸 수 있음. 로그아웃 상태에서는 못한다」).
+     예전(8/8)엔 게스트 체험(하루 5→2턴)을 열어 뒀다 — 폐지. 앱은 로그인 창, 웹은 앱 받기.
+     서버도 ai_tiers.guest.galla-friend n:0 으로 막았다(앱을 우회한 직접 호출 방어). true = 막았다 */
+  async function guestBlocked(){
+    if(await token()) return false;
+    if(!window.GALLA_IS_APP && window.GALLA_appDownload){ window.GALLA_appDownload("galvis"); return true; }
+    if(window.GALLA_needLogin) window.GALLA_needLogin("로그인하면 갈비스와 무료로 대화할 수 있어요.");
+    else if(window.GALLA_gotoLogin) window.GALLA_gotoLogin();
+    return true;
+  }
+  async function openGated(){ if(await guestBlocked()) return; open(); }
+
   function build(){
     // 🔵 아크 리액터 오브 — 회전 틱 링 + 카운터 링 + 앰버 코어(자비스 HUD 오마주)
     orb = el('<button id="frOrb" aria-label="G.A.L.V.I.S.">'+
       '<span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span>'+
       '<span class="fr-dot"></span></button>');
     document.body.appendChild(orb);
-    orb.addEventListener("click", open);
+    orb.addEventListener("click", openGated);
 
     /* 🔴 오브가 화면 하단 고정 입력바의 '등록' 버튼을 덮고 있었다(실측 2026-08-28 iOS 앱).
        광장 상세: 컴포저는 bottom 78px~146px, 오브는 74px~130px 에 right:14px —
@@ -1917,6 +1929,7 @@
   /* 🔗 콘텐츠 → 갈비스 파이프라인 — 모든 콘텐츠 액션바(좋아요·공유 줄)의 갈비스 아이콘.
      탭하면 그 콘텐츠 맥락을 들고 챗이 열리고, 갈비스가 그 얘기로 먼저 말을 건다. */
   async function askGalvis(ctx){
+    if(await guestBlocked()) return;      // 비로그인 체험 폐지(26.9.18)
     window.__frSuppressGreet = true;      // 콘텐츠 오프너를 내가 낸다(기본 인사 억제)
     open();
     var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content", id=(ctx&&ctx.id)||"";
@@ -1966,16 +1979,17 @@
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
     peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
-    window.GALLA_openFriend = open;
+    window.GALLA_openFriend = openGated;
     /* 🛠 도킹 미니챗을 밖에서 연다 — 작업 화면 아래에 갈비스가 붙어 같이 상의하는 형태.
        화면은 위에 그대로 두고 대화만 반쪽으로 올라온다(스크림 pass-through). */
-    window.GALLA_openDock = function (work) { try { openDock(work || { type: "agent" }); } catch (e) {} };
+    window.GALLA_openDock = async function (work) { if (await guestBlocked()) return; try { openDock(work || { type: "agent" }); } catch (e) {} };
     window.GALLA_closeDock = function () { try { exitDock(); } catch (e) {} };
     /* 🧩 대화 안에서 고르게 한다 — "갈비스랑 만들기"인데 선택은 딴 화면에서 하면 그건 갈비스가 아니다.
        판을 고르는 것도, 그다음을 고르는 것도 같은 대화에 남아야 맥락이 이어진다.
        ⚠️ 메뉴 단계(local=true)는 서버로 보내지 않는다 — 고르는 중에 LLM 을 부르면 돈만 나가고 느려진다.
           진짜로 시킬 때만 서버로 간다. */
-    window.GALLA_friendOffer = function (text, opts, onPick) {
+    window.GALLA_friendOffer = async function (text, opts, onPick) {
+      if (await guestBlocked()) return;
       try {
         open();
         /* ⚠️ 고정 지연으로는 못 맞춘다 — 열자마자 갈비스가 먼저 인사를 던지는 턴이 있어서,
@@ -2007,7 +2021,8 @@
     };
     /* 🎯 갈비스를 '무슨 얘기'로 시작해서 연다 — 사용자가 이미 고른 걸 또 묻지 않게.
        고른 걸 다시 타이핑하게 만들면 선택지를 준 의미가 없다. */
-    window.GALLA_friendAsk = function (text) {
+    window.GALLA_friendAsk = async function (text) {
+      if (await guestBlocked()) return;
       try {
         open();
         if (!text) return;
