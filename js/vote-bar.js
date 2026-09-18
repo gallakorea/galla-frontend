@@ -20,7 +20,7 @@
       <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="vote" ${o.conAttr || ""}>${FX}<span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
     </div>`;
     return `${buttons}
-      <div class="gv-bar" data-pro="${pro}" data-con="${con}">
+      <div class="gv-bar" data-pro="${pro}" data-con="${con}" style="--gv-k:${pp}%">
         <div class="gv-fill gv-fill-pro" style="width:${pp}%"><i class="gv-sheen"></i></div>
         <div class="gv-fill gv-fill-con" style="width:${cp}%"><i class="gv-sheen"></i></div>
         <div class="gv-pct gv-pct-pro${pp < 14 ? " gv-hide" : ""}">${pp}%</div>
@@ -49,7 +49,11 @@
     const a = el.querySelector(".gv-pro"), b = el.querySelector(".gv-con");
     a && a.classList.toggle("gv-mine", stance === "pro");
     b && b.classList.toggle("gv-mine", stance === "con");
-    if (stance === "pro" || stance === "con") el.classList.add("gv-locked");
+    if (stance === "pro" || stance === "con") {
+      el.classList.add("gv-locked");
+      el.classList.toggle("gv-side-pro", stance === "pro");   // 투표 뒤 연출(빛 알갱이가 내 편 쪽으로)용
+      el.classList.toggle("gv-side-con", stance === "con");
+    }
   }
 
   function countUp(el, to, suffix) {
@@ -96,6 +100,7 @@
     const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle"), kn = q(".gv-knot");
     const fromPP = fp ? (parseFloat(fp.style.width) || pp) : pp;
     if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%"; if (kn) kn.style.left = pp + "%";
+    if (bar) bar.style.setProperty("--gv-k", pp + "%");   // 투표 뒤 빛 알갱이 출발점 = 매듭
     if (opts.voted === "pro" || opts.voted === "con") tug(el, fromPP, pp, opts.voted);
     const pctP = q(".gv-pct-pro"), pctC = q(".gv-pct-con");
     if (pctP) { pctP.classList.toggle("gv-hide", pp < 14); countUp(pctP, pp, "%"); }

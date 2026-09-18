@@ -181,3 +181,34 @@
 @media (prefers-reduced-motion: reduce) {
   .gv:not(.gv-locked) .gv-btn::before, .gv-bglow, .gv-bshine, .gv-spark, .gv-glint, .gv:not(.gv-locked) .gv-needle { animation: none !important; }
 }
+
+/* 💫 투표 뒤도 화려하게(26.9.19 사장님: 「선택 전·후 UI 갭이 너무 크다, 선택 후를 개선」)
+   내 버튼: 진영 색 불빛이 테두리를 천천히 돌고 안쪽이 숨쉰다 / 안 고른 쪽은 덜 흐리게
+   막대: 빛 알갱이가 매듭에서 내 편 끝으로 끌려간다(우리 편이 당기는 중) · 내 편 막대 맥박 · 매듭 반짝 */
+.gv.gv-locked .gv-btn:not(.gv-mine) { opacity: .6; filter: grayscale(.2); }
+.gv.gv-locked .gv-mine { position: relative; overflow: hidden; isolation: isolate; border-color: transparent !important; }
+.gv.gv-locked .gv-mine > .gv-emoji, .gv.gv-locked .gv-mine > .gv-name { position: relative; z-index: 3; }
+.gv.gv-locked .gv-mine::before { content: ""; position: absolute; left: 50%; top: 50%; width: 260%; aspect-ratio: 1; margin: -130% 0 0 -130%; z-index: 0;
+  background: conic-gradient(from 0deg, transparent 0 55%, rgba(255,255,255,.95) 62%, var(--gv-mine-c) 70%, transparent 80% 100%); animation: gvChase 4.5s linear infinite; }
+.gv.gv-locked .gv-mine::after { content: ""; position: absolute; inset: 2px; border-radius: 10px; z-index: 1; background: var(--gv-mine-c); animation: gvMineBreath 2.4s ease-in-out infinite; }
+.gv.gv-locked .gv-pro.gv-mine { --gv-mine-c: var(--gv-pro); }
+.gv.gv-locked .gv-con.gv-mine { --gv-mine-c: var(--gv-con); }
+@keyframes gvMineBreath { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.28); } }
+.gv.gv-locked .gv-mine .gv-name::after { content: " ✓ 내 진영"; font-size: 11px; font-weight: 900; opacity: .9; }
+/* 내 편 막대 맥박 */
+.gv.gv-side-pro .gv-fill-pro, .gv.gv-side-con .gv-fill-con { animation: gvTension 2.6s ease-in-out infinite, gvMinePulse 2s ease-in-out infinite; }
+@keyframes gvMinePulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35) saturate(1.2); } }
+/* 빛 알갱이 — 매듭에서 내 편 끝으로 끌려간다(.gv-glint 재사용) */
+.gv.gv-locked .gv-glint { display: block; position: absolute; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; z-index: 4; pointer-events: none;
+  background: #fff; box-shadow: 0 0 6px 2px rgba(255,255,255,.8); opacity: 0; left: var(--gv-k, 50%); }
+.gv.gv-side-pro .gv-glint { animation: gvPullL 1.8s cubic-bezier(.5,0,.8,.6) infinite; }
+.gv.gv-side-con .gv-glint { animation: gvPullR 1.8s cubic-bezier(.5,0,.8,.6) infinite; }
+.gv.gv-locked .gv-glint.g2 { animation-delay: .6s; } .gv.gv-locked .gv-glint.g3 { animation-delay: 1.2s; }
+@keyframes gvPullL { 0% { opacity: 0; transform: translateX(0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateX(-160px) scale(1.2); } }
+@keyframes gvPullR { 0% { opacity: 0; transform: translateX(0) scale(.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateX(160px) scale(1.2); } }
+/* 매듭 반짝 */
+.gv.gv-locked .gv-knot { animation-name: gvTension, gvKnotGlow; animation-duration: 2.6s, 1.6s; animation-iteration-count: infinite, infinite; animation-timing-function: ease-in-out, ease-in-out; }
+@keyframes gvKnotGlow { 0%,100% { box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 8px rgba(255,220,140,.6); } 50% { box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 18px 4px rgba(255,220,140,.95); } }
+@media (prefers-reduced-motion: reduce) {
+  .gv.gv-locked .gv-mine::before, .gv.gv-locked .gv-mine::after, .gv.gv-locked .gv-glint, .gv.gv-side-pro .gv-fill-pro, .gv.gv-side-con .gv-fill-con { animation: none !important; }
+}

@@ -146,3 +146,6 @@ body[data-page="spa"] .glp { padding-bottom: calc(150px + env(safe-area-inset-bo
 }
 .glp-origin span{ color:#8a8f9c; font-weight:700; }
 .glp-origin:active{ transform:scale(.985); }
+
+/* 📐 모바일 폭 끝까지(26.9.19 사장님) — 웹(MPA)에서 브라우저 기본 body 여백 8px 이 남아 화면 전체가 좌우 8px 들어가 있었다 */
+body[data-page="gallari-post"] { margin: 0; }
