@@ -271,15 +271,17 @@
   /* 앱: 네이티브 지도 어댑터 */
   function wmNative(P, lat, lon, zoom) {
     var last = { ok: false, zoom: zoom }, idleFns = [], clicks = {}, handles = [], seq = 0;
-    P.addListener("idle", function (e) {
+    /* ⚠️ 이 앱의 Capacitor 는 addListener 가 Promise 가 아니라 핸들을 바로 돌려준다 —
+       .then 을 붙였더니 예외로 지도가 통째로 안 떴다(26.9.18 앱 실측, 웹은 멀쩡). 둘 다 받는다 */
+    function keep(h) { if (h && typeof h.then === "function") h.then(function (x) { handles.push(x); }); else if (h) handles.push(h); }
+    keep(P.addListener("idle", function (e) {
       last = { swLat: +e.swLat, swLon: +e.swLon, neLat: +e.neLat, neLon: +e.neLon, zoom: +e.zoom,
                ok: (+e.neLat > +e.swLat) && (+e.neLon > +e.swLon) };
       idleFns.forEach(function (f) { try { f(); } catch (_) {} });
-    }).then(function (h) { handles.push(h); });
-    P.addListener("markerClick", function (e) { var f = clicks[e && e.id]; if (f) try { f(); } catch (_) {} })
-      .then(function (h) { handles.push(h); });
-    P.create({ x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, lat: lat, lng: lon, zoom: zoom })
-      .catch(function (e) { console.warn("[weather] 네이티브 지도 create 실패", e); });
+    }));
+    keep(P.addListener("markerClick", function (e) { var f = clicks[e && e.id]; if (f) try { f(); } catch (_) {} }));
+    try { var cr = P.create({ x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, lat: lat, lng: lon, zoom: zoom });
+          cr && cr.catch && cr.catch(function (e) { console.warn("[weather] 네이티브 지도 create 실패", e); }); } catch (_) {}
     document.body.classList.add("fd-native-map"); document.documentElement.classList.add("fd-native-map");
     /* 터치: 위 막대 아래는 지도로. 방(#wx-room)이 떠 있으면 전부 웹으로(안 그러면 방의 버튼을 지도가 먹는다) */
     function touch() {
