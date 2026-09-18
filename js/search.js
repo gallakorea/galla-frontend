@@ -594,7 +594,7 @@ async function initTrendPage() {
       html += videos.map(v =>
         `<div class="sr-card video" data-vid="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}">
           <div class="sr-thumb">${isValidThumbnail(v.thumbnail) ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">▶</span>`}
-            ${v.is_short ? `<span class="sr-badge-short">쇼츠</span>` : `<span class="sr-badge-vid">▶</span>`}</div>
+            ${v.is_short ? `<span class="sr-badge-short">세로</span>` : `<span class="sr-badge-vid">▶</span>`}</div>
           <div class="sr-body">
             <div class="sr-title">${esc(v.title)}</div>
             <div class="sr-meta">${esc(v.channel_title || "")} · 조회 ${shortNum(v.view_count)}</div>

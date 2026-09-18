@@ -721,7 +721,7 @@
       } else { addMsg("a","영상 만들다 삐끗했어 ㅜ 다시 해볼까?"); }
     }catch(e){ clearProgress(); addMsg("a","영상 만들다 문제 생겼어 ㅜ 다시?"); }
   }
-  /* 🎞 실촬영 릴스 — '릴스 실행 에이전트' 접수 카드(사장님 확정 구조: 자체 ffmpeg 렌더러 완주).
+  /* 🎞 실촬영 숏판 — '숏판 실행 에이전트' 접수 카드(사장님 확정 구조: 자체 ffmpeg 렌더러 완주).
      카드에서: 녹음(또는 AI 목소리 선택) → reel-agent 잡 생성 → 서버가 STT 정렬·클립 비전 분석·
      AI 내용 매칭까지 자율 실행 → 렌더 워커가 완성 → 카드가 status 폴링으로 진행을 보여주고
      완성되면 편집기에 자동 첨부(setVideo). 앱을 나가도 잡은 서버에 살아있다. */
@@ -734,14 +734,14 @@
     /* fail-closed — agent-hub.js 가 아직 안 실렸으면 undefined 다. 런칭 차단은
        '모르면 막는다'가 맞다. 열 때 ENABLED=true 가 되면 여기도 같이 열린다. */
     if (window.GALLA_AGENT_READY !== true) {
-      var lock = el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 릴스 대본' +
+      var lock = el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 숏판 대본' +
         (place ? " — " + place : "") + '</div><div class="fr-script-body"></div>' +
         '<div class="fr-reel-status">영상으로 만들어 주는 기능은 아직 준비 중이에요 — 정식 출시 뒤 바로 열려요 🙂</div></div>');
       lock.querySelector(".fr-script-body").textContent = text;
       logEl.appendChild(lock); scrollBottom();
       return;
     }
-    var wrap=el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 릴스 대본'+(place?" — "+place:"")+'</div><div class="fr-script-body"></div>'+
+    var wrap=el('<div class="fr-script fr-reel"><div class="fr-script-h">🎞 숏판 대본'+(place?" — "+place:"")+'</div><div class="fr-script-body"></div>'+
       '<div class="fr-reel-ctl"><button class="fr-reel-rec">🎙 녹음 시작</button><button class="fr-reel-ai">🤖 AI 목소리로</button><span class="fr-reel-time"></span></div>'+
       '<div class="fr-reel-done" hidden><audio class="fr-reel-audio" controls></audio>'+
       '<div class="fr-reel-ctl"><button class="fr-reel-redo">다시 녹음</button><button class="fr-reel-make">🎬 이 녹음으로 영상 만들기</button></div></div>'+
@@ -976,12 +976,12 @@
           var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline></video></div></div>');
           m.querySelector("video").src=url; logEl.appendChild(m); scrollBottom();
         }
-        addMsg("a", applied ? "릴스 완성! 편집기에 넣어놨어 — [공유]만 누르면 발행 🎬" : "릴스 완성! 영상 꾹 눌러 저장해 쓰면 돼 🎬");
+        addMsg("a", applied ? "숏판 완성! 편집기에 넣어놨어 — [공유]만 누르면 발행 🎬" : "숏판 완성! 영상 꾹 눌러 저장해 쓰면 돼 🎬");
         unlock(); return;
       }
       if(job.state==="failed"){ status(""); addMsg("a","만들다 실패했어 ㅜ 다시 해볼까?"); unlock(); return; }
     }
-    unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤 '내 릴스 어떻게 됐어?' 하고 물어봐줘");
+    unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤 '내 숏판 어떻게 됐어?' 하고 물어봐줘");
   }
 
   /* 🎬 미리보기 = 작업대. 컷 배치는 눈으로 보고 고치는 일이라 말풍선 안에서 할 일이 아니다.
@@ -1013,7 +1013,7 @@
       var clips=items.filter(function(c){ return c.kind==="video"; });
       if(!clips.length){
         unlock();
-        addMsg("a", items.length ? "사진만으론 릴스 배치가 안 돼 ㅜ 현장에서 찍은 '영상 클립'을 숏판 편집기에 올려줘 (10초 내외 여러 개면 최고)" : "먼저 숏판 편집기에 네가 찍은 클립들을 올려줘! 거기서 다시 부르면 바로 만들게");
+        addMsg("a", items.length ? "사진만으론 숏판 배치가 안 돼 ㅜ 현장에서 찍은 '영상 클립'을 숏판 편집기에 올려줘 (10초 내외 여러 개면 최고)" : "먼저 숏판 편집기에 네가 찍은 클립들을 올려줘! 거기서 다시 부르면 바로 만들게");
         return;
       }
       var jwt=await token(); if(!jwt){ unlock(); addMsg("a","로그인해야 만들 수 있어 ㅜ"); return; }
@@ -1026,7 +1026,7 @@
         var ext=(blob.type||"").indexOf("mp4")>=0?"m4a":"webm";
         voiceUrl=await window.GALLA_UPLOAD_MEDIA(new File([blob],"reel-voice."+ext,{type:blob.type||"audio/webm"}),"audio");
       }
-      // 3) 릴스 에이전트 접수 — 서버가 정렬·분석·매칭·렌더큐까지 자율 실행
+      // 3) 숏판 에이전트 접수 — 서버가 정렬·분석·매칭·렌더큐까지 자율 실행
       status("🤖 에이전트 접수 중…");
       var res=await (await fetch(SB+"/functions/v1/reel-agent",{ method:"POST",
         headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
@@ -1082,9 +1082,9 @@
         try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.setVideo){ window.GALLA_WORKFORM.setVideo(doneUrl, clips[0].thumb||null, "vertical"); applied=true; flashDock(); } }catch(e){}
         var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline></video></div></div>');
         m.querySelector("video").src=doneUrl; logEl.appendChild(m); scrollBottom();
-        addMsg("a", applied ? "릴스 완성! 편집기에 넣어놨어 — 확인하고 [공유]만 누르면 발행 🎬 (인스타에 올리려면 영상 꾹 눌러 저장)" : "릴스 완성! 영상 꾹 눌러서 저장해 쓰면 돼 🎬");
+        addMsg("a", applied ? "숏판 완성! 편집기에 넣어놨어 — 확인하고 [공유]만 누르면 발행 🎬 (인스타에 올리려면 영상 꾹 눌러 저장)" : "숏판 완성! 영상 꾹 눌러서 저장해 쓰면 돼 🎬");
         unlock();
-      } else { unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤에 '내 릴스 어떻게 됐어?' 하고 물어봐줘 — 잡은 살아있어"); }
+      } else { unlock(); addMsg("a","렌더가 오래 걸리네 ㅜ 잠시 뒤에 '내 숏판 어떻게 됐어?' 하고 물어봐줘 — 잡은 살아있어"); }
     }catch(e){ unlock(); status(""); addMsg("a","만들다 문제 생겼어 ㅜ 다시 해볼까?"); }
   }
   // 편집기가 준비되면(GALLA_WORKFORM 노출) 도킹 자동 오픈. 최대 ~6s 폴링.
@@ -1589,7 +1589,7 @@
     if(a.kind==="plan"){ renderPlan(a.ideas); return; }             // 🗂 콘텐츠 기획안 카드
     if(a.kind==="titles"){ renderTitles(a.titles); return; }        // 🔥 어그로 제목 카드
     if(a.kind==="script"){ renderScript(a.text); return; }          // 📜 대본
-    if(a.kind==="reelScript"){ renderReelScript(a.text, a.place); return; }   // 🎞 릴스 대본(녹음→자동편집)
+    if(a.kind==="reelScript"){ renderReelScript(a.text, a.place); return; }   // 🎞 숏판 대본(녹음→자동편집)
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -1972,7 +1972,7 @@
     var jwt=await token();
     if(!jwt && title){
       /* 비로그인: 서버 오프너는 못 부르지만 누른 콘텐츠 얘기인 건 보여 준다. 예전엔 기본 인사만 떠서
-         '이 주제를 갈비스에 넘기는 버튼'이 아무 일도 안 한 것처럼 보였다(26.9.15 릴스 QA, 시뮬 비로그인).
+         '이 주제를 갈비스에 넘기는 버튼'이 아무 일도 안 한 것처럼 보였다(26.9.15 숏판 QA, 시뮬 비로그인).
          기본 인사가 뒤늦게 겹치지 않게 억제는 잠깐 더 유지한다. */
       addMsg("a", "「"+title.slice(0,40)+"」 얘기 나랑 해볼까? 로그인하면 이 얘기 바로 이어서 할 수 있어!");
       setTimeout(function(){ window.__frSuppressGreet=false; }, 2000);

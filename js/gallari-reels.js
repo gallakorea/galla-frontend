@@ -27,7 +27,7 @@
   /* 릴스 뒤에 깔리는 자리 — 프로필·이슈로 갔다가 돌아오면 이게 보인다. */
   function idle(root, msg) {
     root.innerHTML = `<div class="grl-idle">${msg ? `<p>${msg}</p>` : ''}
-      ${msg ? '' : '<button type="button" class="grl-idle-btn" data-act="replay">릴스 다시 보기</button>'}
+      ${msg ? '' : '<button type="button" class="grl-idle-btn" data-act="replay">처음부터 다시 보기</button>'}
       <button type="button" class="grl-idle-btn ghost" data-act="back">뒤로</button></div>`;
     root.querySelector('[data-act="back"]').onclick = leave;
     const re = root.querySelector('[data-act="replay"]');

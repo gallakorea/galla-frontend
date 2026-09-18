@@ -142,7 +142,7 @@
       <button type="button" class="hv-tile${s ? " hv-tile-s" : ""}" ${attrs(v)}>
         <span class="hv-tile-th">
           <img src="${esc(v.thumbnail || "")}" alt="" loading="lazy">
-          ${s ? `<span class="hv-sbadge">쇼츠</span>`
+          ${s ? `<span class="hv-sbadge">세로</span>`
               : (v.duration ? `<span class="hv-dur">${dur(v.duration)}</span>` : "")}
         </span>
         <span class="hv-tile-t">${esc(v.title)}</span>
@@ -224,13 +224,13 @@
   async function renderAll(el) {
     const rows = mode === "short" ? await loadAllShorts() : pick(await loadFeed("all"));
     if (!rows.length) {
-      el.innerHTML = `<div class="hv-empty">${mode === "short" ? "쇼츠" : "롱폼"} 영상이 아직 없어요.</div>`;
+      el.innerHTML = `<div class="hv-empty">${mode === "short" ? "세로" : "가로"} 영상이 아직 없어요.</div>`;
       return;
     }
 
     if (mode === "short") {
       el.innerHTML = sectionHTML(
-        "⚡ 급상승 쇼츠", `${rows.length}편`,
+        "⚡ 급상승 세로 영상", `${rows.length}편`,
         `<div class="hv-sgrid">${rows.map(shortHTML).join("")}</div>`,
       ) + SHELVES.map((f) => `<div class="hv-shelf-slot" data-feed="${f}"></div>`).join("");
     } else {
@@ -260,12 +260,12 @@
     const rows = pick(await loadFeed(feed));
     const c = label(feed);
     if (!rows.length) {
-      el.innerHTML = `<div class="hv-empty">${c.label}에 지금 뜨는 ${mode === "short" ? "쇼츠" : "롱폼"} 영상이 없어요.</div>`;
+      el.innerHTML = `<div class="hv-empty">${c.label}에 지금 뜨는 ${mode === "short" ? "세로" : "가로"} 영상이 없어요.</div>`;
       return;
     }
     el.innerHTML = sectionHTML(
       `${c.emoji} ${c.label}`,
-      `${mode === "short" ? "쇼츠" : "인기"} ${rows.length}편`,
+      `${mode === "short" ? "세로" : "인기"} ${rows.length}편`,
       mode === "short"
         ? `<div class="hv-sgrid">${rows.map(shortHTML).join("")}</div>`
         : `<div class="hv-list">${rows.map(rowHTML).join("")}</div>`,

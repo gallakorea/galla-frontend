@@ -293,7 +293,7 @@ function renderIssueMedia(issue) {
                 <video class="issue-cvid" data-src="${m.url}" ${m.thumb ? `poster="${m.thumb}"` : ''}
                        loop playsinline webkit-playsinline muted preload="none"></video>
                 <button class="vid-mute issue-cvid-mute" type="button">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-                <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
+                <span class="vid-reels-badge" aria-label="전체 화면으로 보기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" stroke="none"/></svg></span>
             </div>`;
         }
         // ⚠️ 캐러셀은 lazy 금지 — 가로 오프스크린이라 lazy면 안 불러와져 넘기면 빈 슬라이드가 된다.

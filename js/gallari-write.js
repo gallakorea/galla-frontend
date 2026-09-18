@@ -60,7 +60,7 @@ function __visPicker(anchor, after) {
       $('glrCapLabel').textContent = kind === 'horizontal' ? '설명' : '내용';
       $('glrHint').textContent = kind === 'horizontal'
         ? '🎬 롱판 — 가로 영상(16:9, 최대 1분). 유튜브처럼 제목·설명과 함께 몰입해서 봐요.'
-        : '⚡ 숏판 — 세로영상 또는 사진(최대 10장 캐러셀). 릴스처럼 훅, 진영·배틀 없이 그냥 콘텐츠예요.';
+        : '⚡ 숏판 — 세로영상 또는 사진(최대 10장 캐러셀). 첫 3초 훅, 진영·배틀 없이 그냥 콘텐츠예요.';
       try { const _hd = document.querySelector('.wr-appbar-title'); if (_hd) _hd.textContent = (kind === 'horizontal' ? '롱판' : '숏판') + ' 만들기'; } catch (_) {}
     }
     kindTabs.forEach(t => t.addEventListener('click', () => setKind(t.dataset.kind)));

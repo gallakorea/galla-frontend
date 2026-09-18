@@ -373,7 +373,7 @@
 
             <div class="dm-sec">${ICONS.chat}동영상</div>
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>자동 재생</b><i>피드·릴스의 영상을 알아서 재생할지</i></span>
+              <span class="dm-set-mid"><b>자동 재생</b><i>피드·숏판의 영상을 알아서 재생할지</i></span>
               <span class="dm-seg" data-pref-seg="videoAuto">
                 <button type="button" data-v="always">항상</button>
                 <button type="button" data-v="wifi">Wi-Fi만</button>

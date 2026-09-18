@@ -79,7 +79,7 @@
           "팔로워": "Followers",
           "핫트렌드": "Hot Trends",
           "핫튜브": "HotTube",
-          "숏판": "Shorts",
+          "숏판": "Shortpan",
           "롱판": "Long",
           "갈비스와 얘기": "Talk to Galvis",
           "정치": "Politics",

@@ -290,7 +290,7 @@ function renderMedia(data) {
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
                     onclick="event.stopPropagation();toggleFeedMute('vid-${data.id}','mute-${data.id}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-            <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
+            <span class="vid-reels-badge" aria-label="전체 화면으로 보기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" stroke="none"/></svg></span>
         </div>`;
     }
 
@@ -314,7 +314,7 @@ function renderMedia(data) {
                     loop playsinline webkit-playsinline muted preload="none"></video>
                 <button class="vid-mute" id="${mid}"
                         onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-                <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
+                <span class="vid-reels-badge" aria-label="전체 화면으로 보기"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" stroke="none"/></svg></span>
             </div>`;
         }
         return `<div class="carousel-slide"><img src="${T(m.url)}" loading="eager" decoding="async"></div>`;
@@ -1557,7 +1557,7 @@ function renderVideoCard(v) {
       <div class="vf-thumb" data-vplay>
         <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
         <span class="vf-play">▶</span>
-        ${v.is_short ? `<span class="vf-short">쇼츠</span>` : ''}
+        ${v.is_short ? `<span class="vf-short">세로</span>` : ''}
       </div>
       <div class="vf-body" data-vopen>
         <div class="vf-title">${escHtml(v.title)}</div>
@@ -1681,7 +1681,7 @@ function gallariMedia(p, isLong, thumb, dest) {
             <div class="vid-dur" id="dur-p${p.id}">-:--</div>
             <button class="vid-mute" id="${mid}"
                     onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-            <span class="vid-reels-badge" onclick="event.stopPropagation();GALLA_goto('${dest}')">${isLong ? '▶︎ 영상 보기' : '▶︎ 릴스로 보기'}</span>
+            <span class="vid-reels-badge" onclick="event.stopPropagation();GALLA_goto('${dest}')">${isLong ? '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="12.5" rx="2.5"/><path d="M10.2 8.6v5.3l4.3-2.65z" fill="currentColor" stroke="none"/></svg>' : '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" stroke="none"/></svg>'}</span>
         </div>`;
     }
     return `
