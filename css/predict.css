@@ -733,3 +733,30 @@
 .pm-lobby .pm-tease.pm-on .pm-mrow { animation: pmPick 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * .45s); }
 @keyframes pmPick { 0%,100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); } 12% { box-shadow: inset 0 0 0 1.5px rgba(255,214,107,.95), 0 0 14px rgba(255,200,80,.35); } 26% { box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); } }
 @media (prefers-reduced-motion: reduce) { .pm-mrow, .pm-mrow::before { animation: none !important; transition: none; } }
+
+/* 🔤 목록 막대 글자 강조 + 불빛 천천히(26.9.19 사장님: 「예·아니오 글자가 잘 안 보인다, 도는 걸 좀 천천히」) */
+.pm-lobby .pm-odds-side .lab { font-size: 14px; font-weight: 900; letter-spacing: -.2px; color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.6); }
+.pm-lobby .pm-odds-side.yes .lab { padding-left: 14px; }
+.pm-lobby .pm-odds-side.no .lab { padding-right: 14px; }
+.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation-duration: 9s; }
+
+/* ✨ 예측 상세 — 참여 전 예·아니오(선택지) 버튼 금빛 연출. 하나를 고르면(.sel) 꺼진다. */
+.pb-glow, .pb-twk { display: none; }
+.pb-outs.pb-tease .pb-out { overflow: hidden; isolation: isolate; border-color: transparent; }
+.pb-outs.pb-tease .pb-out > span { position: relative; z-index: 3; }
+.pb-outs.pb-tease .pb-out::before { content: ""; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; z-index: 0;
+  background: repeating-conic-gradient(from 0deg, #ffd66b 0 4deg, transparent 4deg 13deg); animation: pbChase 9s linear infinite; }
+.pb-outs.pb-tease .pb-out::after { content: ""; position: absolute; inset: 2px; border-radius: 12px; z-index: 1; background: #171a24; }
+.pb-outs.pb-tease .pb-out.no::before { animation-direction: reverse; }
+@keyframes pbChase { to { transform: rotate(360deg); } }
+.pb-outs.pb-tease .pb-glow { display: block; position: absolute; inset: 2px; border-radius: 12px; z-index: 2; pointer-events: none; opacity: .15;
+  background: radial-gradient(120% 120% at 50% 110%, rgba(255,205,90,.55), rgba(255,205,90,.06) 60%, transparent); animation: pbGlow 2.6s ease-in-out infinite; }
+.pb-outs.pb-tease .pb-out.no .pb-glow { animation-delay: 1.3s; }
+@keyframes pbGlow { 0%,100% { opacity: .15; } 30% { opacity: 1; } 55% { opacity: .15; } }
+.pb-outs.pb-tease .pb-twk { display: block; position: absolute; z-index: 3; width: 7px; height: 7px; border-radius: 50%; pointer-events: none; opacity: 0;
+  background: #fff; box-shadow: 0 0 7px 2px rgba(255,230,160,.95); animation: pbTwk 2.2s ease-in-out infinite; }
+.pb-outs.pb-tease .pb-twk.t1 { left: 14%; top: 20%; } .pb-outs.pb-tease .pb-twk.t2 { right: 16%; bottom: 22%; animation-delay: 1.1s; }
+@keyframes pbTwk { 0%,100% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.3); } 60% { opacity: .2; transform: scale(.6); } }
+.pb-outs.pb-tease .pb-out.yes .lb { color: #cfe0ff; } .pb-outs.pb-tease .pb-out.no .lb { color: #ffd3dc; }
+@media (prefers-reduced-motion: reduce) { .pb-outs.pb-tease .pb-out::before, .pb-glow, .pb-twk { animation: none !important; } }

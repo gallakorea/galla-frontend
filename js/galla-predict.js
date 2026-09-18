@@ -298,7 +298,7 @@ function countUp(root){
 async function loadMarkets(){
   // 🌍 읽기 필터 — 내 언어 + global 마켓. 언어가 하나뿐이면 no-op.
   const { data, error } = await (window.GALLA_lfilter || function (q) { return q; })(supa.from('markets')
-    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at,created_by,ai_generated')
+    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at,created_by,ai_generated,market_type')
     .order('created_at',{ascending:false}));
   if(error){ console.error(error); return; }
   allMarkets = data||[];

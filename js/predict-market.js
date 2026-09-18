@@ -60,7 +60,7 @@ let LIVE_TIMER = null;
 async function initPredictMarket(root, spaParams){
   D = (root && root !== document && root.querySelector) ? root : document;
   // 재-mount 대비 상태 리셋(스택은 매번 새로 mount — 다른 마켓 id로 재진입 가능)
-  MARKET=null; OUTCOMES=[]; STATE=null; SEL=null; MY_SAVED=false; MY_BAL=0; MY_PAID=0;
+  MARKET=null; OUTCOMES=[]; STATE=null; SEL=null; MY_SAVED=false; MY_BAL=0; MY_PAID=0; PB_PICKED=false;
   TAB='comments'; CMT_SIDE=null; MY_POS_SIDE=null; CMT_DATA=null; CMT_TOP_LIMIT=8; CMT_EXPANDED.clear();
   window.__PB_PREV_ODDS = {};
   if (LIVE_TIMER) { clearInterval(LIVE_TIMER); LIVE_TIMER = null; }
@@ -276,6 +276,7 @@ function renderMine(){
   el.innerHTML=`<div class="pb-mine">${rows}</div>`;
 }
 
+let PB_PICKED=false;   // 이 화면에서 사용자가 직접 선택지를 눌렀나(금빛 연출 끄기)
 function renderPanel(closed){
   const el=$('pbPanel'); if(!el) return;
   if(closed){ el.innerHTML=''; return; }
@@ -288,13 +289,17 @@ function renderPanel(closed){
     const tick=(prev!=null&&od!=null&&Math.abs(od-prev)>0.005)?(od>prev?' tick-up':' tick-down'):'';
     window.__PB_PREV_ODDS[o.id]=od;
     return `<button class="pb-out ${side} ${SEL===o.id?'sel':''}" data-haptic="vote" data-oid="${o.id}">
+      <i class="pb-glow"></i><i class="pb-twk t1"></i><i class="pb-twk t2"></i>
       <span class="lb">${esc(o.label)}</span>
       <span class="od${tick}">×${od?od.toFixed(2):'–'}</span>
       <span class="pool">${fmt(o.pool)}GP · ${o.bettors||0}명</span>
     </button>`;
   }).join('');
+  /* ✨ 아직 안 걸었고 고르지도 않았으면 금빛 연출로 눌러 보게(26.9.19 사장님: 「예측 상세에서 금빛 연출」) */
+  /* ⚠️ SEL 은 첫 선택지로 자동으로 잡히므로(위 141행) '고르기 전' 판단엔 못 쓴다 — 누르는 순간 끈다(아래 onclick) */
+  const tease=!PB_PICKED && !Object.values(STATE?.my_bets||{}).some(v=>Number(v)>0);
   el.innerHTML=`
-    <div class="pb-outs">${outBtns}</div>
+    <div class="pb-outs${tease?' pb-tease':''}">${outBtns}</div>
     <div class="pb-panel">
       <div class="pb-panel-h"><span>참여 금액</span><span>참여 가능 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b>${ME&&MY_PAID>0?` <small style="color:#5c6479">(충전 GP ${fmt(MY_PAID)} 별도)</small>`:''}</span></div>
       <div class="pb-chips">
@@ -313,7 +318,8 @@ function renderPanel(closed){
     // 로그인 필수 — 미로그인은 결과(입장) 선택 자체를 막고 로그인으로 유도
     if(window.GALLA_requireLogin){ if(!(await window.GALLA_requireLogin('예측 참여는 로그인 후 가능해요.'))) return; }
     else if(needLogin()) return;
-    SEL=Number(b.dataset.oid);
+    SEL=Number(b.dataset.oid); PB_PICKED=true;
+    el.querySelector('.pb-outs')?.classList.remove('pb-tease');
     el.querySelectorAll('.pb-out').forEach(x=>x.classList.toggle('sel',Number(x.dataset.oid)===SEL));
     updateEst();
   });
