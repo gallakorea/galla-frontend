@@ -100,6 +100,9 @@ body { display: block; }
 /* 🎬 영상 페이드인 — 어두운 자리 위로 '재생 시작 순간' 스르륵(검은 프레임 번쩍임 제거) */
 .card-media video.vp-fade { opacity: 0; transition: opacity .3s ease; position: relative; z-index: 1; }
 .card-media video.vp-fade.vp-on { opacity: 1; }
+/* 🖼 대표 이미지는 영상 밑에 먼저 깐다 — 영상이 opacity 0 인 동안 poster 까지 같이 가려져
+   새로고침 뒤 첫 카드가 2~3초 검게 비었다(26.9.18 사장님 녹화). 영상(z-index 1)이 뜨면 그 위를 덮는다. */
+.card-media .vp-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none; }
 /* 로딩 무빙 — 단색 어두운 자리에 은은한 시머(재생 시작하면 사라짐) */
 .card-media--video::after {
     content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;

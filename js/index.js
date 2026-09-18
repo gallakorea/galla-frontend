@@ -278,6 +278,7 @@ function renderMedia(data) {
         return `
         <div class="card-media card-media--video"
              onclick="event.stopPropagation();openReels(${data.id})">
+            ${m.thumb ? `<img class="vp-poster" src="${T(m.thumb)}" alt="" decoding="async" onerror="this.remove()">` : ''}
             <video id="vid-${data.id}" class="vp-fade" data-src="${m.url}"
                 ${m.thumb ? `poster="${T(m.thumb)}"` : ''}
                 autoplay loop playsinline webkit-playsinline muted preload="none"></video>
@@ -1616,6 +1617,7 @@ function gallariMedia(p, isLong, thumb, dest) {
         return `
         <div class="card-media card-media--video${isLong ? ' glr-long' : ''}"
              onclick="event.stopPropagation();GALLA_openPostReels('${vid}','${dest}')">
+            ${thumb ? `<img class="vp-poster" src="${escHtml(T(thumb))}" alt="" decoding="async" onerror="this.remove()">` : ''}
             <video id="${vid}" class="vp-fade" data-src="${escHtml(p.video_url)}"
                 ${thumb ? `poster="${escHtml(T(thumb))}"` : ''}
                 autoplay loop playsinline webkit-playsinline muted preload="none"></video>
