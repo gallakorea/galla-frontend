@@ -19,6 +19,9 @@ export async function loadStats(issueId) {
   if (error) { console.error("[issue.stats] demographics error:", error); lockAllStats(0); return; }
 
   const total = data?.total || 0;
+  /* 🪜 2단계 관문(26.9.18 사장님: 단계별 가입) — 통계는 내 정보(출생연도·성별·지역)를 넣은 사람만 본다.
+     가입 땐 안 묻고, 보고 싶은 순간에 이유와 함께 묻는다. 서버(issue_demographics)가 need 로 강제한다. */
+  if (data && data.need) { lockAllStats(total); renderNeedGate(issueId, data.need, total); return; }
   if (!data || data.locked || total < MIN_PARTICIPANTS) { lockAllStats(total); return; }
 
   const stats = {
@@ -383,3 +386,62 @@ function renderAiSummary(text) {
   root.innerHTML = text || `집계된 응답으로 종합 브리핑을 준비 중입니다.`;
 }
 function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+/* ======================================================
+   🪜 통계 관문 — 내 정보 3가지 넣고 보기
+====================================================== */
+const SG_REGIONS = ["서울","부산","대구","인천","광주","대전","울산","세종","경기","강원","충북","충남","전북","전남","경북","경남","제주","해외"];
+function renderNeedGate(issueId, need, total) {
+  const locked = qs("#stats-locked");
+  if (!locked) return;
+  let box = locked.querySelector(".sg-gate");
+  if (!box) { box = document.createElement("div"); box.className = "sg-gate"; locked.appendChild(box); }
+  const desc = locked.querySelector(".ai-news-placeholder-desc");
+  if (desc) desc.hidden = true;
+  const head =
+    '<div class="sg-t">누가 어느 편인지, 통계로 볼래요?</div>' +
+    '<div class="sg-s">성별·나이대·지역별로 누가 찬성·반대했는지 보여 줘요.<br>' +
+    '보려면 <b>내 정보 3가지</b>를 넣어 주세요 — 내 투표도 통계에 보태져요.</div>';
+  if (need === "login") {
+    box.innerHTML = head + '<button type="button" class="sg-go" id="sgLogin">로그인하고 통계 보기</button>' +
+      '<div class="sg-f">지금 ' + total + '명 참전 중</div>';
+    box.querySelector("#sgLogin").onclick = () => {
+      if (window.GALLA_needLogin) window.GALLA_needLogin("통계 보기");
+      else if (window.GALLA_gotoLogin) window.GALLA_gotoLogin();
+      else location.href = "login.html";
+    };
+    return;
+  }
+  const top = new Date().getFullYear() - 14;
+  let years = '<option value="">출생연도</option>';
+  for (let y = top; y >= 1930; y--) years += '<option value="' + y + '">' + y + '년</option>';
+  box.innerHTML = head +
+    '<div class="sg-form">' +
+      '<select class="sg-in" id="sgYear" aria-label="출생연도">' + years + '</select>' +
+      '<div class="sg-chips"><button type="button" class="sg-chip" data-g="male">남성</button><button type="button" class="sg-chip" data-g="female">여성</button></div>' +
+      '<select class="sg-in" id="sgRegion" aria-label="지역"><option value="">사는 지역</option>' +
+        SG_REGIONS.map(r => '<option value="' + r + '">' + r + '</option>').join("") + '</select>' +
+    '</div>' +
+    '<button type="button" class="sg-go" id="sgGo" disabled>통계 보기</button>' +
+    '<div class="sg-f">통계엔 묶음(5명 이상)으로만 쓰여요 · 나를 알아볼 수 없어요</div>';
+  let g = "";
+  const go = box.querySelector("#sgGo"), yr = box.querySelector("#sgYear"), rg = box.querySelector("#sgRegion");
+  const ready = () => { go.disabled = !(yr.value && g && rg.value); };
+  box.querySelectorAll(".sg-chip").forEach(c => c.onclick = () => {
+    g = c.dataset.g; box.querySelectorAll(".sg-chip").forEach(x => x.classList.toggle("on", x === c)); ready();
+  });
+  yr.onchange = ready; rg.onchange = ready;
+  go.onclick = async () => {
+    go.disabled = true; go.textContent = "저장 중…";
+    const { data, error } = await window.supabaseClient.rpc("set_my_demographics",
+      { p_birth_year: parseInt(yr.value, 10), p_gender: g, p_region: rg.value });
+    if (error || !data || !data.ok) {
+      const M = { age14: "만 14세 이상만 참여할 수 있어요.", birth: "출생연도를 골라 주세요.", gender: "성별을 골라 주세요.", region: "지역을 골라 주세요." };
+      (window.GALLA_toast || alert)(M[data && data.reason] || "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      go.textContent = "통계 보기"; ready(); return;
+    }
+    box.remove();
+    if (desc) desc.hidden = false;
+    loadStats(issueId);
+  };
+}

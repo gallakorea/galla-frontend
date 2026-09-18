@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-<meta name="galla-ver" content="0919900"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0920000"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
     <link rel="stylesheet" href="css/signup.css?v=080412">
@@ -74,64 +74,10 @@
         <input type="text" id="nickname" class="field-input sw-input" placeholder="닉네임 (활동명)" maxlength="20" enterkeyhint="next">
       </section>
 
-      <!-- 4. 생년월일 -->
-      <section class="sw-step" data-step="birth">
-        <span class="sw-badge req">필수</span>
-        <h2 class="sw-q">생년월일을<br>알려주세요</h2>
-        <p class="sw-hint">📊 여론 통계에 쓰여요 · 만 14세 이상 가입 가능</p>
-        <input type="hidden" id="birthdate">
-        <div class="bd-row" style="display:flex;gap:8px">
-          <select id="bdY" class="field-input sw-input" style="flex:1.4 1 0;width:auto;min-width:0" aria-label="태어난 해"><option value="">년</option></select>
-          <select id="bdM" class="field-input sw-input" style="flex:1 1 0;width:auto;min-width:0" aria-label="태어난 월"><option value="">월</option></select>
-          <select id="bdD" class="field-input sw-input" style="flex:1 1 0;width:auto;min-width:0" aria-label="태어난 일"><option value="">일</option></select>
-        </div>
-        <div class="pw-hint" id="ageHint"></div>
-      </section>
+      <!-- 🪜 생년월일·성별·지역·휴대폰 단계는 뺐다(26.9.18 사장님: 단계별 가입).
+           통계용 정보는 이슈 통계를 열 때, 휴대폰은 출금할 때 이유와 함께 받는다. -->
 
-      <!-- 5. 성별 -->
-      <section class="sw-step" data-step="gender">
-        <span class="sw-badge req">필수</span>
-        <h2 class="sw-q">성별을<br>선택해주세요</h2>
-        <p class="sw-hint">📊 세대·성별 여론 지형을 그리는 데 쓰여요.</p>
-        <div class="region-grid gender-grid sw-chips">
-          <div class="region-chip gender-chip" data-gender="male">남성</div>
-          <div class="region-chip gender-chip" data-gender="female">여성</div>
-        </div>
-      </section>
-
-      <!-- 6. 지역 -->
-      <section class="sw-step" data-step="region">
-        <span class="sw-badge req">필수</span>
-        <h2 class="sw-q">어느 지역에<br>살고 계세요?</h2>
-        <p class="sw-hint">📊 지역별 여론 지도를 만드는 데 쓰여요.</p>
-        <div class="region-grid sw-chips">
-          <div class="region-chip">서울</div><div class="region-chip">부산</div>
-          <div class="region-chip">대구</div><div class="region-chip">인천</div>
-          <div class="region-chip">광주</div><div class="region-chip">대전</div>
-          <div class="region-chip">울산</div><div class="region-chip">세종</div>
-          <div class="region-chip">경기</div><div class="region-chip">강원</div>
-          <div class="region-chip">충북</div><div class="region-chip">충남</div>
-          <div class="region-chip">전북</div><div class="region-chip">전남</div>
-          <div class="region-chip">경북</div><div class="region-chip">경남</div>
-          <div class="region-chip">제주</div><div class="region-chip">해외</div>
-        </div>
-        <div class="region-selected-text">선택한 지역: <span id="selectedRegion">없음</span></div>
-      </section>
-
-      <!-- 7. 휴대폰 (선택) -->
-      <section class="sw-step" data-step="phone">
-        <span class="sw-badge opt">선택</span>
-        <h2 class="sw-q">휴대폰 번호를<br>등록해두시겠어요?</h2>
-        <p class="sw-hint">지금 등록해두면 나중에 번거로울 일이 없어요.</p>
-        <div class="sw-benefits">
-          <div>💰 발제가 후원을 받으면 <b>수익 정산</b>에 꼭 필요해요</div>
-          <div>🔐 비밀번호를 잊어도 <b>계정 복구</b>가 훨씬 쉬워져요</div>
-        </div>
-        <input type="tel" id="phone" class="field-input sw-input" placeholder="010-0000-0000" inputmode="tel" enterkeyhint="done">
-        <button type="button" class="sw-skip" id="swSkipPhone">나중에 등록할게요 →</button>
-      </section>
-
-      <!-- 8. 약관 동의 + 가입 -->
+      <!-- 4. 약관 동의 + 가입 -->
       <section class="sw-step" data-step="agree">
         <span class="sw-badge req">필수</span>
         <h2 class="sw-q">마지막이에요!<br>약관에 동의해주세요</h2>
@@ -205,13 +151,13 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- 부가 UX(비밀번호 표시·일치 힌트·생년월일·약관) — 앱(SPA)은 인라인 스크립트를 버리므로 파일로 둔다 -->
-<script src="./js/signup-extras.js?v=0915200"></script>
+<script src="./js/signup-extras.js?v=0920000"></script>
 
 <!-- signup 기능 -->
 <script src="./js/nickname-check.js?v=080412"></script>
-<script src="./js/signup.js?v=0915200"></script>
-<script src="js/social-auth.js?v=0906010"></script>
-<script src="./js/signup-wizard.js?v=0915200"></script>
+<script src="./js/signup.js?v=0920000"></script>
+<script src="js/social-auth.js?v=0920000"></script>
+<script src="./js/signup-wizard.js?v=0920000"></script>
 
 <script src="/js/analytics.js?v=080412"></script>
 <script src="/js/pwa.js?v=0901012"></script>

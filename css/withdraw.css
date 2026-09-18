@@ -132,3 +132,19 @@ body {
     border-radius: 10px;
     cursor: pointer;
 }
+
+/* 📱 출금 전 휴대폰 인증 관문(26.9.18) */
+.wd-gate { margin: 18px 16px; padding: 22px 18px 18px; border-radius: 18px; text-align: center;
+  background: linear-gradient(180deg, #14161d, #0e0f13); border: 1px solid rgba(255,255,255,.08); }
+.wd-gate-ic { width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  color: #8ea2ff; background: rgba(111,134,255,.12); }
+.wd-gate-t { font-size: 17px; font-weight: 900; color: #f2f4f8; margin-bottom: 14px; }
+.wd-gate-l { list-style: none; margin: 0 0 18px; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 9px; }
+.wd-gate-l li { font-size: 13.5px; color: #aab0bd; line-height: 1.45; padding-left: 18px; position: relative; }
+.wd-gate-l li::before { content: ""; position: absolute; left: 4px; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: #6f86ff; }
+.wd-gate-l b { color: #e7e9f0; }
+.wd-gate-btn { width: 100%; height: 50px; border: 0; border-radius: 14px; font-size: 15.5px; font-weight: 900;
+  color: #fff; background: #4f6bff; cursor: pointer; }
+.wd-gate-btn:disabled { opacity: .55; }
+.wd-gate-s { margin-top: 10px; font-size: 12px; color: #7c8290; line-height: 1.5; }
+.wd-gate-s.bad { color: #ff7a7a; }

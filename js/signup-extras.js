@@ -80,13 +80,14 @@ document.addEventListener("DOMContentLoaded", function () {
   var signupBtn2 = document.getElementById('signupBtn');
   function syncAgreeAll(){ agreeAll.checked = allBoxes.every(function(b){ return b.checked; }); }
   function refreshSignupBtn(){
-    var age = window.GALLA_ageFromBirth(bd && bd.value);
+    /* 생년월일 칸이 없으면(26.9.18 단계별 가입) 만 14세는 약관 체크박스 자기 확인으로 받는다 */
+    var age = bd ? window.GALLA_ageFromBirth(bd.value) : 99;
     var ok = reqBoxes.every(function(b){ return b.checked; }) && age !== null && age >= 14;
     signupBtn2.disabled = !ok;
   }
   agreeAll.addEventListener('change', function(){
     // 연령은 생년월일이 통과해야만 강제로 켤 수 있음
-    var canAge = (window.GALLA_ageFromBirth(bd && bd.value) || 0) >= 14;
+    var canAge = !bd || (window.GALLA_ageFromBirth(bd.value) || 0) >= 14;
     allBoxes.forEach(function(b){ if(b === ageAgree) b.checked = agreeAll.checked && canAge; else b.checked = agreeAll.checked; });
     refreshSignupBtn();
   });

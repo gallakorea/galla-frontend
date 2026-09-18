@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const password = pwInput.value.trim();
         const password2 = pw2Input.value.trim();
         const nickname = nicknameInput.value.trim();
-        const phone = phoneInput.value.trim();
+        const phone = phoneInput ? phoneInput.value.trim() : "";
         const birthDate = (document.getElementById("birthdate") || {}).value || "";
         const marketingOptIn = document.getElementById("agreeMarketing").checked;
 
@@ -78,20 +78,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (_) { /* 확인 실패 시 진행 — 서버 제약이 최종 방어 */ }
 
-        // 만 14세 이상 확인 (개인정보보호법 제22조의2)
-        const age = window.GALLA_ageFromBirth ? window.GALLA_ageFromBirth(birthDate) : null;
-        if (age === null) {
-            alert("생년월일을 입력해주세요.");
-            return;
-        }
-        if (age < 14) {
-            alert("만 14세 미만은 가입할 수 없습니다.");
-            return;
-        }
-
-        // 통계 필수 정보: 성별 · 지역
-        if (!selectedGender) { alert("성별을 선택해주세요. (여론 통계에 필요해요)"); return; }
-        if (!selectedRegion) { alert("사는 지역을 선택해주세요. (여론 통계에 필요해요)"); return; }
+        /* 🪜 단계별 가입(26.9.18): 생년월일·성별·지역은 가입에서 뺐다 — 통계를 열 때 받는다.
+           만 14세 이상은 약관의 [필수] '만 14세 이상입니다' 자기 확인으로 받는다(아래 agreeAge). */
 
         // 필수 약관 동의 확인
         const agreeAge = document.getElementById("agreeAge").checked;
@@ -120,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         phone: phone || null,
                         region: selectedRegion || null,
                         gender: selectedGender || null,
-                        birth_date: birthDate,
+                        birth_date: birthDate || null,
                         age_verified: true,
                         terms_agreed: true,
                         marketing_opt_in: marketingOptIn

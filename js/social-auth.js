@@ -363,33 +363,13 @@
       wrap.innerHTML = `
         <div class="soco-card soco-full">
           <div class="soco-title">가입을 마무리해요 🎉</div>
-          <div class="soco-sub">활동하려면 아래 정보가 필요해요. 잠깐이면 돼요.</div>
+          <div class="soco-sub">닉네임만 정하면 바로 시작해요.</div>
 
           <label class="soco-lab">닉네임 <em>필수</em></label>
           <input id="soco-nick" class="soco-input" maxlength="20" placeholder="닉네임 (2~12자)" autocomplete="off">
           <div id="soco-nickmsg" class="soco-msg"></div>
 
-          <label class="soco-lab">출생연도 <em>필수</em></label>
-          <select id="soco-birth" class="soco-input soco-select">
-            <option value="">출생연도 선택</option>
-            ${YEARS.map(y => `<option value="${y}">${y}년</option>`).join("")}
-          </select>
-
-          <label class="soco-lab">성별 <em>필수</em></label>
-          <div class="soco-chips" id="soco-gender">
-            <button type="button" class="soco-chip" data-g="male">남성</button>
-            <button type="button" class="soco-chip" data-g="female">여성</button>
-          </div>
-
-          <label class="soco-lab">지역 <em>필수</em></label>
-          <select id="soco-region" class="soco-input soco-select">
-            <option value="">지역 선택</option>
-            ${REGIONS.map(r => `<option value="${r}">${r}</option>`).join("")}
-          </select>
-
-          <label class="soco-lab">휴대폰 <em class="opt">선택</em></label>
-          <input id="soco-phone" class="soco-input" type="tel" inputmode="tel" placeholder="010-0000-0000 (수익 정산·계정 복구에 필요)">
-
+          <!-- 🪜 출생연도·성별·지역·휴대폰은 뺐다(26.9.18 단계별 가입) — 통계를 열 때·출금할 때 이유와 함께 받는다 -->
           <label class="soco-check soco-agree"><input type="checkbox" id="soco-terms"><span>[필수] 만 14세 이상 · <a href="/terms.html" target="_blank">이용약관</a> · <a href="/privacy.html" target="_blank">개인정보 수집·이용</a> 동의</span></label>
           <label class="soco-check"><input type="checkbox" id="soco-mkt"><span>[선택] 마케팅·이벤트 정보 수신 동의 🎁 무료 GP 소식</span></label>
 
@@ -399,31 +379,18 @@
       document.body.appendChild(wrap);
       const nick = wrap.querySelector("#soco-nick");
       const msg = wrap.querySelector("#soco-nickmsg");
-      const birth = wrap.querySelector("#soco-birth");
       const err = wrap.querySelector("#soco-err");
-      let gender = "";
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
-      wrap.querySelectorAll(".soco-chip").forEach(ch => ch.onclick = () => {
-        gender = ch.dataset.g;
-        wrap.querySelectorAll(".soco-chip").forEach(x => x.classList.toggle("on", x === ch));
-      });
       wrap.querySelector("#soco-go").onclick = async () => {
         const c = sb();
         const n = nick.value.trim();
         err.textContent = ""; err.className = "soco-msg";
         if (n.length < 2) return fail("닉네임은 2자 이상이에요.");
-        if (!birth.value) return fail("출생연도를 선택해 주세요.");
-        if (!gender) return fail("성별을 선택해 주세요.");
-        if (!wrap.querySelector("#soco-region").value) return fail("지역을 선택해 주세요.");
         if (!wrap.querySelector("#soco-terms").checked) return fail("필수 약관에 동의해 주세요.");
         const btn = wrap.querySelector("#soco-go"); btn.disabled = true; btn.textContent = "설정 중…";
         const { data, error } = await c.rpc("social_onboard", {
           p_nick: n, p_terms: true,
           p_marketing: wrap.querySelector("#soco-mkt").checked,
-          p_birth_year: parseInt(birth.value, 10),
-          p_gender: gender,
-          p_region: wrap.querySelector("#soco-region").value,
-          p_phone: wrap.querySelector("#soco-phone").value.trim() || null,
         });
         if (error || !data?.ok) {
           const r = data?.reason;
