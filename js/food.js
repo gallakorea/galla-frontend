@@ -375,6 +375,8 @@
        목록에서 왔으면 뒤에 지도가 없으니 진하게 덮는다(사장님 지적). */
     DETAIL.classList.toggle("over-map", !!(MAP && MAP.classList.contains("open")));
     document.body.classList.add("fd-detail-on");
+    DETAIL.__prevState = history.state;   // 닫을 때 되돌릴 칸의 state(지도 위면 {fdMap:1})
+    DETAIL.__vidPlayed = false;
     try { history.pushState({ fdDetail: 1 }, ""); } catch (_) {}
     showSheet(d);
     /* 아래에서 올라와 접힌(peek) 높이에 멈춘다 — 새로 열 땐 항상 접힘부터 */
@@ -511,7 +513,16 @@
     if (SHEET) { SHEET.style.transform = ""; SHEET.style.transition = ""; SHEET.classList.remove("peek"); SHEET.__full = false; }
     DETAIL.classList.remove("open");
     document.body.classList.remove("fd-detail-on");
-    if (!fromPop) { try { if (history.state && history.state.fdDetail) history.back(); } catch (_) {} }
+    /* ⚠️ 영상을 틀었으면 history.back() 을 쓰지 않는다. 아이폰(WebKit)은 iframe 안(유튜브 재생기)의 이동까지
+       전체 방문 기록에 칸으로 합쳐서, back 한 번이 지도 칸을 지나쳐 지도까지 닫혔다(26.9.18 실기기, 크롬은 재현 안 됨).
+       이때는 지금 칸의 state 만 원래 칸(지도면 {fdMap:1})으로 되돌린다 — 칸 수에 기대지 않는다. */
+    if (!fromPop) {
+      try {
+        if (DETAIL.__vidPlayed) { if (history.state && history.state.fdDetail) history.replaceState(DETAIL.__prevState || null, ""); }
+        else if (history.state && history.state.fdDetail) history.back();
+      } catch (_) {}
+    }
+    DETAIL.__vidPlayed = false;
     loadList();
   }
   function subSheet() { buildDetail(); return DETAIL.querySelector("#fd-dsub"); }
@@ -2272,6 +2283,7 @@
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
       if (vw.__thumb == null) vw.__thumb = vw.innerHTML;   // 닫을 때 되돌릴 썸네일
+      DETAIL.__vidPlayed = true;
       vw.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(vw.dataset.vid) +
         '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
       vw.classList.add("playing"); return;
