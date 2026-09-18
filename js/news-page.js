@@ -123,7 +123,7 @@
         ${bodyParas.map((p) => `<p>${esc(p)}</p>`).join("")}
         <div class="gn-actions" id="gn-actions"></div>
         ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}
-        <p class="reader-disclaimer">본 기사는 위 보도들을 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
+        <p class="reader-disclaimer">본 기사는 위 보도들을 생성형 AI 도구로 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
         <div id="gn-comments" class="gn-comments"></div>
       </article>`;
 

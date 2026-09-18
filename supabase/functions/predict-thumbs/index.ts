@@ -62,7 +62,8 @@ async function put(buf: Uint8Array, id: number) {
   const png = buf[0] === 0x89;
   const key = `predict/thumbs/${id}-${Date.now().toString(36)}.${png ? "png" : "jpg"}`;
   const r = await r2.fetch(`https://${CF_ACCOUNT}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`, {
-    method: "PUT", headers: { "content-type": png ? "image/png" : "image/jpeg", "cache-control": "public, max-age=31536000, immutable" }, body: buf.slice().buffer as ArrayBuffer,
+    method: "PUT", headers: { "content-type": png ? "image/png" : "image/jpeg", "cache-control": "public, max-age=31536000, immutable",
+      "x-amz-meta-ai-generated": "true", "x-amz-meta-generator": "flux-1-schnell" }   // 기계 판독용 생성물 표시(인공지능기본법) — 화면엔 안 보인다, body: buf.slice().buffer as ArrayBuffer,
   });
   return r.ok ? `${R2_PUBLIC_URL}/${key}` : null;
 }

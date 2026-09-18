@@ -180,6 +180,7 @@ function render(){
       </button>
     </div>
 
+    ${m.ai_generated ? '<p class="pb-gen-note">이 문항과 이미지는 생성형 AI 도구를 활용해 제작되었습니다.</p>' : ''}
     <div class="pb-live">
       <div class="pb-live-h"><span class="pm-badge-live"><i></i>LIVE</span> 실시간 참여</div>
       <div id="pbFeed"></div>

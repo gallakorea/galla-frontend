@@ -219,12 +219,28 @@
     const q = new URLSearchParams((location.hash.split("?")[1]) || location.search).get("id");
     return (/issue/.test(location.pathname + location.hash) && q) ? q : null;
   }
+  /* 🧼 센 욕은 초성만(26.9.19 사장님: 「위험한 건 초성」, 스토어 심사) — 서버(tug-lines)가 이미 바꿔 저장하지만 옛 행·새는 줄 대비 한 번 더.
+     부모 욕은 줄째 버린다. */
+  const SOFT = [[/씨발|시발|씨바|시바|ㅆㅂ/g, "ㅅㅂ"], [/존나|존내|졸라/g, "ㅈㄴ"], [/썅|씹/g, "ㅆ"], [/개새끼|개새기|개색기/g, "ㄱㅅㄲ"],
+    [/새끼|색기/g, "ㅅㄲ"], [/좆|좃/g, "ㅈ"], [/지랄/g, "ㅈㄹ"], [/병신/g, "ㅂㅅ"], [/미친놈|미친년/g, "ㅁㅊㄴ"], [/염병/g, "ㅇㅂ"]];
+  const PAT = /애미|애비|느금|니미|엠창/;
+  const soft1 = (t) => SOFT.reduce((x, [re, to]) => x.replace(re, to), String(t || ""));
+  function softLines(L) {
+    if (!L || typeof L !== "object") return L;
+    const out = {};
+    for (const k of Object.keys(L)) {
+      const v = L[k];
+      out[k] = Array.isArray(v) ? v.map(x => Array.isArray(x) ? x.map(soft1) : soft1(x))
+        .filter(x => !PAT.test(Array.isArray(x) ? x.join(" ") : x)) : v;
+    }
+    return out;
+  }
   function topicFor(el) {
     const id = issueIdOf(el); if (!id) return null;
     if (TOPIC[id] !== undefined) return TOPIC[id];
     if (!TOPIC_P[id] && window.supabaseClient) {
       TOPIC_P[id] = window.supabaseClient.from("issue_tug_lines").select("lines").eq("issue_id", Number(id)).maybeSingle()
-        .then(r => { TOPIC[id] = (r && r.data && r.data.lines) || null; }, () => { TOPIC[id] = null; });
+        .then(r => { TOPIC[id] = softLines((r && r.data && r.data.lines) || null); }, () => { TOPIC[id] = null; });
     }
     return null;
   }
