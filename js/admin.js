@@ -448,21 +448,32 @@
     $("#bg-list").innerHTML = rows.length ? rows.map(b => `<div class="ad-tip" data-id="${b.id}">
         <div class="ad-tip-h"><span class="ad-tag st-${b.status === "resolved" ? "done" : b.status === "new" ? "open" : "pending"}">${stmap[b.status] || b.status}</span>
           <span class="ad-tk-m">${esc(b.reporter || "익명")} · ${ago(b.created_at)} · ${esc(b.viewport || "")} · v${esc(b.app_version || "-")}</span></div>
+        ${b.category ? `<div class="ad-tag" style="display:inline-block;margin:4px 0">${esc(b.category)}</div>` : ""}
         <div class="ad-tip-b" style="white-space:pre-wrap">${esc(b.message)}</div>
+        ${b.has_shot ? `<button class="ad-btn" data-shot="${b.id}" style="margin-top:6px">📷 스크린샷 보기</button><div class="bg-shot" data-for="${b.id}"></div>` : ""}
+        ${(b.meta && b.meta.trail && b.meta.trail.length) ? `<details style="margin-top:6px"><summary class="ad-tk-m">👣 직전 흔적 ${b.meta.trail.length}개${b.meta.app ? " · 앱" : " · 웹"}</summary>
+          <div class="ad-tk-m" style="white-space:pre-wrap;font-size:11.5px">${b.meta.trail.map(t => (t.k === "page" ? "📄 " : "👆 ") + esc(t.v)).join("\n")}</div></details>` : ""}
         <div class="ad-tk-m" style="margin-top:6px">📍 ${esc(b.page_url || "-")}</div>
         <div class="ad-tk-m" style="opacity:.6;font-size:11px">${esc(b.user_agent || "")}</div>
         ${b.admin_note ? `<div class="ad-tk-r">↳ ${esc(b.admin_note)}</div>` : ""}
         <div class="ad-tip-acts" style="margin-top:8px">
           <button class="ad-btn" data-act="reviewing">🔧 확인중</button>
-          <button class="ad-btn primary" data-act="resolved">✅ 해결</button>
+          <button class="ad-btn primary" data-act="resolved" title="해결 = 제보자에게 500 GP 자동 지급(1회)">✅ 해결${b.rewarded_at ? " (보상 완료)" : " +500GP"}</button>
           <button class="ad-btn danger" data-act="wontfix">🚫 보류</button></div>
       </div>`).join("") : `<div class="ad-soon">해당 상태의 버그 신고가 없어요.</div>`;
     $("#bg-list").onclick = async e => {
+      const sh = e.target.closest("[data-shot]");
+      if (sh) {
+        const box = $(`.bg-shot[data-for="${sh.dataset.shot}"]`);
+        const url = await rpc("admin_bug_shot", { p_id: Number(sh.dataset.shot) });
+        if (box && typeof url === "string") box.innerHTML = `<img src="${url}" style="max-width:260px;border-radius:10px;margin-top:6px;border:1px solid rgba(255,255,255,.15)">`;
+        sh.remove(); return;
+      }
       const btn = e.target.closest("[data-act]"); if (!btn) return;
       const id = Number(btn.closest(".ad-tip").dataset.id); const st = btn.dataset.act;
       const note = (st === "resolved" || st === "wontfix") ? prompt("메모(선택)") : null;
       const r = await rpc("admin_resolve_bug", { p_id: id, p_status: st, p_note: note || null });
-      if (r?.ok) { toast("상태 변경: " + (stmap[st] || st)); renderBugs(); } else alert("처리 실패");
+      if (r?.ok) { toast("상태 변경: " + (stmap[st] || st) + (r.rewarded ? " · 제보자 500 GP 지급" : "")); renderBugs(); } else alert("처리 실패");
     };
   }
 

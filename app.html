@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0925600"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0925900"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -165,6 +165,8 @@
 
 <!-- 에러 로거 — SPA 부팅/런타임 에러를 client_errors에 남겨 실기기 진단 가능하게 -->
 <script src="/js/error-logger.js?v=080412"></script>
+<!-- 🐞 버그 신고 — 앱 어디서든 흔들기·스크린샷·오류 알림에서 바로 열린다(26.9.19: 예전엔 설정·글쓰기 화면에 가야만 실려 앱에선 사실상 꺼져 있었다) -->
+<script src="/js/bug-report.js?v=0925800" defer></script>
 <!-- 📦 OTA(무선 업데이트) — 네이티브 번들 앱에서만. notifyAppReady(롤백방지)+백그라운드 업데이트 확인 -->
 <script src="/js/ota.js?v=080412"></script>
 <!-- 공유 싱글턴 — 단일 문서라 세션·실시간·통화가 딱 1개 인스턴스로 돈다 -->
@@ -190,7 +192,7 @@
 <!-- 🤖 갈라비스(도구형) 폐기 → 🫂 갈라 친구(관계형)로 재탄생. (구 jarvis.js/css는 미사용) -->
 <script src="./js/friend.js?v=0924700" defer></script><!-- 🫂 갈라 친구 AI -->
 
-<script src="./js/notifications.js?v=0925600"></script>
+<script src="./js/notifications.js?v=0925900"></script>
 <!-- 웹푸시 발송 트리거(GALLA_pushSend) — 팔로우 등 앱 전역에서 사용 -->
 <script src="./js/push.js?v=0828022"></script>
 <script src="./js/native-push.js?v=0828027"></script>

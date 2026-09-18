@@ -82,6 +82,7 @@
     duel_cheer_win:  { ic: "trophy",  cls: "t-win",     key: "reward" },
     follow_request:  { ic: "follow",  cls: "t-follow",  key: "follow" },
     follow_accept:   { ic: "follow",  cls: "t-follow",  key: "follow" },
+    bug_reward:      { ic: "gift",    cls: "t-donation", key: "reward" },
     issue_win:       { ic: "trophy",  cls: "t-win",     key: "reward" },
     donation:        { ic: "gift",    cls: "t-donation", key: "reward" },
     withdrawal:      { ic: "cash",    cls: "t-cash",    key: "reward" },

@@ -67,6 +67,19 @@
       "#bugr-shake button{flex:0 0 auto;padding:8px 12px;border:none;border-radius:9px;cursor:pointer;" +
         "font-size:12.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#6a7bff,#3a5bff)}" +
       "#bugr-shake button.no{padding:8px 10px;background:rgba(255,255,255,.07);color:#9aa0ad;font-weight:700}" +
+      ".bugr-cats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}" +
+      ".bugr-cat{padding:12px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#e6e9f0;font-size:13.5px;font-weight:800;text-align:left;cursor:pointer;transition:transform .12s,background .15s,border-color .15s}" +
+      ".bugr-cat:active{transform:scale(.97)}" +
+      ".bugr-cat.on{background:rgba(106,123,255,.18);border-color:#6a7bff;color:#fff}" +
+      ".bugr-cats.shake{animation:bugrShake .4s}" +
+      "@keyframes bugrShake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}" +
+      ".bugr-ta{min-height:76px}" +
+      ".bugr-shot{margin-top:10px}" +
+      ".bugr-shot-add{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:10px;border:1px dashed rgba(255,255,255,.2);color:#c9cfdb;font-size:13px;font-weight:800;cursor:pointer}" +
+      ".bugr-shot-add[hidden]{display:none}" +
+      ".bugr-shot-prev{position:relative;display:inline-block}" +
+      ".bugr-shot-prev img{display:block;max-width:140px;max-height:220px;border-radius:10px;border:1px solid rgba(255,255,255,.15)}" +
+      ".bugr-shot-x{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:none;background:#2a2c34;color:#fff;font-weight:900;cursor:pointer}" +
       "@media (prefers-reduced-motion:reduce){#bugr-shake{transition:none}}";
     document.head.appendChild(s);
   }
@@ -87,7 +100,64 @@
   // 다른 코드가 "이 오류를 신고에 붙여줘"라고 알릴 수 있는 통로
   window.GALLA_noteError = (msg, extra) => noteError("manual", msg, extra);
 
-  window.GALLA_openBugReport = function (prefillPage) {
+  /* 👣 직전 흔적 — 어떤 화면을 거쳐 무엇을 눌렀는지 최근 14개. 사용자가 「안 돼요」만 적어도 재현 경로가 남는다.
+     눌린 것은 글자·aria-label 앞 24자만(입력값·비밀번호는 담지 않는다). */
+  const TRAIL = [];
+  const trail = (k, v) => { TRAIL.push({ k, v: String(v || "").slice(0, 80), t: Date.now() }); if (TRAIL.length > 14) TRAIL.shift(); };
+  trail("page", location.pathname + location.search + location.hash);
+  window.addEventListener("hashchange", () => trail("page", location.hash));
+  window.addEventListener("popstate", () => trail("page", location.pathname + location.hash));
+  document.addEventListener("click", (e) => {
+    const el = e.target && e.target.closest && e.target.closest("button,a,[role=button],[data-act],.nav-item");
+    if (!el || el.closest(".bugr-dim")) return;
+    const label = (el.getAttribute("aria-label") || el.textContent || el.className || el.tagName).replace(/\s+/g, " ").trim().slice(0, 24);
+    trail("tap", label);
+  }, { capture: true, passive: true });
+
+  /* 📸 스크린샷을 찍으면 「이 화면 신고할까요?」 — 앱이 찍힌 화면을 넘겨준다(iOS·안드로이드 14+ 네이티브 → 여기).
+     그 사진을 신고에 자동 첨부한다. 무시하면 6.5초 뒤 사라진다. */
+  let PENDING_SHOT = null;
+  window.GALLA_onScreenshot = function (dataUrl) {
+    if (document.querySelector(".bugr-dim")) return;
+    PENDING_SHOT = (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) ? dataUrl : null;
+    css();
+    document.getElementById("bugr-shake")?.remove();
+    const t = document.createElement("div");
+    t.id = "bugr-shake";
+    t.innerHTML = '<span>📸 이 화면에 문제가 있나요?</span><button type="button">🐞 바로 신고</button>' +
+                  '<button type="button" class="no" aria-label="닫기">✕</button>';
+    document.body.appendChild(t);
+    (void t.offsetWidth, t.classList.add("show"));
+    const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
+    const bs = t.querySelectorAll("button");
+    bs[0].onclick = () => { kill(); window.GALLA_openBugReport(null, { shot: PENDING_SHOT }); PENDING_SHOT = null; };
+    bs[1].onclick = () => { kill(); PENDING_SHOT = null; };
+    setTimeout(kill, 6500);
+  };
+
+  /* 사진 줄이기 — 긴 변 1280px·JPEG 0.7(대개 150~300KB). 서버는 900KB 넘으면 버린다 */
+  function shrinkImage(src) {
+    return new Promise((res) => {
+      const im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, 1280 / Math.max(im.width, im.height));
+        const c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        let q = 0.7, out = c.toDataURL("image/jpeg", q);
+        while (out.length > 850000 && q > 0.35) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+        res(out);
+      };
+      im.onerror = () => res(null);
+      im.src = src;
+    });
+  }
+
+  const CATS = [
+    ["tap", "👆 눌러도 안 돼요"], ["broken", "🧩 화면이 깨져요"], ["slow", "🐢 느리거나 멈춰요"],
+    ["wrong", "🔤 글자·내용이 이상해요"], ["crash", "💥 튕기거나 꺼져요"], ["etc", "💬 기타"],
+  ];
+  window.GALLA_openBugReport = function (prefillPage, opts) {
+    opts = opts || {};
     if (document.querySelector(".bugr-dim")) return;   // 흔들다 두 장 겹치는 것 방지
     css();
     const page = prefillPage || location.href;
@@ -101,8 +171,12 @@
         '<span class="bugr-htt">🐞 버그 신고</span>' +
       '</div>' +
       '<div class="bugr-card" role="region">' +
-      '<div class="bugr-sb">불편했던 점이나 오류를 알려주세요. 어디서 무엇을 하다 생겼는지 적어주시면 큰 도움이 됩니다.</div>' +
-      '<textarea class="bugr-ta" placeholder="예) 광장에서 글을 열었더니 화면이 깨졌어요. / 예측 공유 버튼이 안 눌려요."></textarea>' +
+      '<div class="bugr-sb">어떤 문제인지 하나만 눌러도 보낼 수 있어요. 지금 화면·직전에 누른 것·기기 정보는 자동으로 붙어요.<br>' +
+      '<b style="color:#ffd66b">확인된 버그는 500 GP로 보답해요 🎁</b></div>' +
+      '<div class="bugr-cats">' + CATS.map(([k, l]) => '<button type="button" class="bugr-cat" data-k="' + k + '">' + l + '</button>').join("") + '</div>' +
+      '<textarea class="bugr-ta" placeholder="(선택) 무엇을 하다가 그랬는지 한 줄만 — 예) 예측 공유 버튼이 안 눌려요"></textarea>' +
+      '<div class="bugr-shot"><div class="bugr-shot-prev" hidden><img alt=""><button type="button" class="bugr-shot-x" aria-label="사진 빼기">✕</button></div>' +
+        '<label class="bugr-shot-add">📷 스크린샷 붙이기<input type="file" accept="image/*" hidden></label></div>' +
       '<div class="bugr-ctx">' +
       '<span class="bugr-chip">📍 ' + page.replace(/^https?:\/\//, "").slice(0, 60) + '</span>' +
       '<span class="bugr-chip">📱 ' + dev.slice(0, 40) + '</span>' +
@@ -162,9 +236,26 @@
       armSwipe(dim, close);
     }
     dim.querySelector(".bugr-back").addEventListener("click", () => close());
+    /* 유형 칩 — 하나만 */
+    let CAT = null;
+    dim.querySelectorAll(".bugr-cat").forEach(b => b.addEventListener("click", () => {
+      CAT = CAT === b.dataset.k ? null : b.dataset.k;
+      dim.querySelectorAll(".bugr-cat").forEach(x => x.classList.toggle("on", x.dataset.k === CAT));
+      try { window.BattleFX && window.BattleFX.haptic && window.BattleFX.haptic("tap"); } catch (_) {}
+    }));
+    /* 스크린샷 — 스크린샷 찍어서 열었으면 이미 붙어 있다. 아니면 앨범에서 */
+    let SHOT = null;
+    const prev = dim.querySelector(".bugr-shot-prev"), add = dim.querySelector(".bugr-shot-add");
+    const setShot = (d) => { SHOT = d; prev.hidden = !d; add.hidden = !!d; if (d) prev.querySelector("img").src = d; };
+    if (opts.shot) shrinkImage(opts.shot).then(setShot);
+    dim.querySelector(".bugr-shot-x").addEventListener("click", () => setShot(null));
+    add.querySelector("input").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      const r = new FileReader(); r.onload = () => shrinkImage(r.result).then(setShot); r.readAsDataURL(f);
+    });
     go.addEventListener("click", async () => {
       const msg = ta.value.trim();
-      if (msg.length < 4) { ta.focus(); toast("조금만 더 자세히 적어주세요"); return; }
+      if (!CAT && !SHOT && msg.length < 2) { toast("어떤 문제인지 하나만 눌러주세요"); const cs = dim.querySelector(".bugr-cats"); cs.classList.add("shake"); setTimeout(() => cs.classList.remove("shake"), 500); return; }
       go.disabled = true; go.textContent = "보내는 중…";
       try {
         const c = sb();
@@ -174,12 +265,16 @@
         const body = err
           ? msg + "\n\n---\n[자동 첨부] " + err.kind + ": " + err.msg + (err.extra ? "\n" + err.extra : "")
           : msg;
+        const catLabel = CAT ? (CATS.find(x => x[0] === CAT) || [])[1] : null;
         const { error } = await c.rpc("submit_bug", {
           p_message: body, p_page_url: page, p_user_agent: navigator.userAgent,
           p_viewport: window.innerWidth + "x" + window.innerHeight, p_app_version: APPV,
+          p_category: catLabel, p_shot: SHOT,
+          p_meta: { trail: TRAIL.slice(-14), err: err || null, route: location.hash || null, lang: navigator.language, dpr: window.devicePixelRatio,
+                    app: !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) },
         });
         if (error) throw error;
-        close(); toast("신고 접수됐어요. 감사합니다! 🙏");
+        close(); toast("접수됐어요! 확인되면 500 GP 보내드릴게요 🙏");
       } catch (e) {
         go.disabled = false; go.textContent = "신고 보내기";
         toast("전송 실패 — 잠시 후 다시 시도해주세요");
@@ -253,6 +348,24 @@
   //     권한이 오리진에 유지되므로 이후 '모든 페이지'에서 흔들기가 동작한다.
   //     (기존엔 권한 필요 기기에서 리스너를 안 붙여, 설정 켠 페이지 말고는 흔들어도 무반응이었다.)
   enableShake();
+
+  /* 💡 알려 주기 — 앱을 세 번째 켤 때 한 번: 흔들거나 스크린샷을 찍으면 바로 신고된다 */
+  try {
+    const n = Number(localStorage.getItem("galla_bugr_opens") || 0) + 1;
+    localStorage.setItem("galla_bugr_opens", String(n));
+    if (n === 3 && !localStorage.getItem("galla_bugr_tip")) {
+      localStorage.setItem("galla_bugr_tip", "1");
+      setTimeout(() => {
+        if (document.querySelector(".bugr-dim, #bugr-shake")) return;
+        css();
+        const t = document.createElement("div"); t.id = "bugr-shake";
+        t.innerHTML = '<span>🐞 이상한 화면을 봤다면 흔들거나 스크린샷만 찍으세요</span><button type="button" class="no" aria-label="닫기">알겠어요</button>';
+        document.body.appendChild(t); (void t.offsetWidth, t.classList.add("show"));
+        const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
+        t.querySelector("button").onclick = kill; setTimeout(kill, 7000);
+      }, 6000);
+    }
+  } catch (_) {}
 
   /* ─────────────────────────────────────────────────────────
      ⚠️ 오류 알림 + 신고 버튼 — window.GALLA_errorToast(메시지, 원인)

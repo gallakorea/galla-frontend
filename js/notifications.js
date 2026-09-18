@@ -28,7 +28,7 @@
     duel: "battle", duel_result: "battle", duel_challenge: "battle",
     duel_live: "battle", duel_voting: "battle", duel_decline: "battle",
     duel_watch: "battle", duel_forfeit: "battle", duel_extend: "battle", duel_cheer_win: "reward",
-    issue_win: "reward", donation: "reward", withdrawal: "reward",
+    issue_win: "reward", donation: "reward", bug_reward: "reward", withdrawal: "reward",
     market_resolved: "predict",
   };
   // 표시 순서 = 아래 배열 순서(사람이 먼저 궁금해하는 것부터)
