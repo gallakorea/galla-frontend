@@ -234,13 +234,21 @@ function renderHero(){
   // 보너스 마켓: 히어로에 반짝이 별이 떠다닌다
   const sparkles=STATE.is_jackpot
     ? `<span class="pb-spark s1">✨</span><span class="pb-spark s2">✨</span><span class="pb-spark s3">💫</span><span class="pb-spark s4">🪙</span>` : '';
-  el.innerHTML=`${sparkles}
-    <div class="pm-odds">
+  /* 🎯 다지선다는 두 칸 막대로 그리면 앞의 두 선택지만 50:50 처럼 보였다(26.9.19 사장님 캡처) — 선택지별 줄로 */
+  const allTot=outs.reduce((a,o)=>a+(o.pool||0),0);
+  const bars = isMulti()
+    ? `<div class="pb-mrows">${outs.slice().sort((a,b)=>(b.pool||0)-(a.pool||0)).map((o,i)=>{
+        const p=allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/outs.length);
+        return `<div class="pm-mrow" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span></div>`;
+      }).join('')}</div>`
+    : `<div class="pm-odds">
       <div class="pm-odds-bar" style="height:40px">
         <div class="pm-odds-side yes shine" style="width:${Math.max(16,Math.min(84,yp))}%"><span class="lab">${esc(yes?.label||'예')} ${yp}%</span></div>
         <div class="pm-odds-side no shine" style="width:${Math.max(16,Math.min(84,100-yp))}%"><span class="lab">${esc(no?.label||'아니오')} ${100-yp}%</span></div>
       </div>
-    </div>
+    </div>`;
+  el.innerHTML=`${sparkles}
+    ${bars}
     <div class="pb-pool-row">
       <div>
         <div class="pb-pool-lbl">${(STATE.jackpot||0)>0?'보너스 포함 상금풀':'현재 상금풀'}</div>
@@ -299,7 +307,7 @@ function renderPanel(closed){
   /* ⚠️ SEL 은 첫 선택지로 자동으로 잡히므로(위 141행) '고르기 전' 판단엔 못 쓴다 — 누르는 순간 끈다(아래 onclick) */
   const tease=!PB_PICKED && !Object.values(STATE?.my_bets||{}).some(v=>Number(v)>0);
   el.innerHTML=`
-    <div class="pb-outs${tease?' pb-tease':''}">${outBtns}</div>
+    <div class="pb-outs${tease?' pb-tease':''}${OUTCOMES.length>2?' pb-many':''}">${outBtns}</div>
     <div class="pb-panel">
       <div class="pb-panel-h"><span>참여 금액</span><span>참여 가능 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b>${ME&&MY_PAID>0?` <small style="color:#5c6479">(충전 GP ${fmt(MY_PAID)} 별도)</small>`:''}</span></div>
       <div class="pb-chips">

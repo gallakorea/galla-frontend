@@ -760,3 +760,17 @@
 @keyframes pbTwk { 0%,100% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.3); } 60% { opacity: .2; transform: scale(.6); } }
 .pb-outs.pb-tease .pb-out.yes .lb { color: #cfe0ff; } .pb-outs.pb-tease .pb-out.no .lb { color: #ffd3dc; }
 @media (prefers-reduced-motion: reduce) { .pb-outs.pb-tease .pb-out::before, .pb-glow, .pb-twk { animation: none !important; } }
+
+/* 🎯 예측 상세 다지선다(26.9.19 사장님: 「다지선다로 가니 폭 무너짐 — 길어지면 두 줄로」)
+   선택지 버튼이 한 줄에 5개 늘어서 화면 폭을 넘고 페이지가 옆으로 밀렸다 → 3개 이상이면 2열, 이름은 단어 단위 두 줄까지. */
+.pb-outs { flex-wrap: wrap; }
+.pb-out { min-width: 0; }
+.pb-outs.pb-many { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.pb-outs.pb-many .pb-out { padding: 12px 8px; }
+.pb-outs.pb-many .pb-out:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.pb-out .lb { word-break: keep-all; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pb-out .pool { white-space: nowrap; }
+.pb-admin-btns { flex-wrap: wrap; }
+.pb-admin-btns .pb-admin-btn { flex: 1 1 calc(50% - 4px); min-width: 0; word-break: keep-all; }
+.pb-mrows { display: flex; flex-direction: column; gap: 7px; }
+.pb-mrows .pm-mrow::before { transition: none; }
