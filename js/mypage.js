@@ -145,6 +145,7 @@ async function GALLA_mypageInit(root, spaParams) {
     // ============================
     const profileActions = byId("profileActions");
     profileActions.innerHTML = "";
+    let NAME_LOCK = false;      // 내 계정이 비공개면 이름 옆 자물쇠(이름을 쓴 뒤에 붙인다)
     let PRIVATE_LOCK = false;   // 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
     /* 🔒 공개 범위 아이콘은 SVG(이모지 금지 — 기기마다 모양이 달라진다, 사장님 26.9.18) */
     const LOCK_SVG = '<svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -190,6 +191,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 reqBtn.innerHTML = USERS_SVG + " 팔로우 요청" + (n0 ? ` <b>${n0}</b>` : "");
                 reqBtn.onclick = () => openFollowRequests(reqBtn);
                 profileActions.appendChild(reqBtn);
+                NAME_LOCK = true;
                 const nm = byId("profileName");
                 if (nm && !nm.querySelector(".mp-priv")) nm.insertAdjacentHTML("beforeend", ' <span class="mp-priv" title="비공개 계정">' + LOCK_SVG + '</span>');
                 if (new URLSearchParams(spaParams || location.search).get("requests")) openFollowRequests(reqBtn);
@@ -289,6 +291,8 @@ async function GALLA_mypageInit(root, spaParams) {
 
         if (nameEl) {
             nameEl.textContent = viewProfile.nickname || "익명의 사용자";
+            /* 🔒 비공개 계정 자물쇠 — 이름을 쓴 '뒤에' 붙인다(먼저 붙이면 이 줄이 덮어써 사라졌다, 26.9.18 QA) */
+            if (NAME_LOCK) nameEl.insertAdjacentHTML("beforeend", ' <span class="mp-priv" title="비공개 계정">' + LOCK_SVG + '</span>');
             nameEl.setAttribute("data-nick-uid", viewUserId);   // 꾸미기 도색 대상
         }
         const hdrTitle = byId("mpHdrTitle");
