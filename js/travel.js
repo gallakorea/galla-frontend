@@ -147,7 +147,7 @@
       if (tb) { DASH_TAB = tb.dataset.dtab; paintDash(); return; }
       var cc = e.target.closest("[data-country]");
       if (cc) { COUNTRY = cc.dataset.country; AREA = null;
-                await loadAreas(); paintChips(); paintDash(); load(); return; }
+                toTop(); await loadAreas(); paintChips(); paintDash(); load(); return; }
       var pl = e.target.closest("[data-place]");
       if (pl) openDetail(pl.dataset.place);
     });
@@ -159,34 +159,48 @@
     });
     CHIPS.addEventListener("click", async function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
-      if (b.dataset.areaBack) { AREA = null; paintChips(); load(); return; }   // 지역 → 나라
+      if (b.dataset.areaBack) { AREA = null; toTop(); paintChips(); load(); return; }   // 지역 → 나라
       COUNTRY = b.dataset.cc || null;
       AREA = null;                    // 나라가 바뀌면 지역 선택은 버린다
+      toTop();
       await loadAreas();
       paintChips(); paintDash(); load();
     });
     CHIPS2.addEventListener("click", function (e) {
       var b = e.target.closest(".tv-chip"); if (!b) return;
       AREA = b.dataset.area || null;
-      paintChips(); load();
+      toTop(); paintChips(); load();
     });
     LIST.addEventListener("click", async function (e) {
       var cc = e.target.closest("[data-country]");
       if (cc) {
         COUNTRY = cc.dataset.country; AREA = null;
-        await loadAreas(); paintChips(); paintDash(); load();
-        try { LIST.scrollIntoView({ block: "start" }); } catch (_) {}
+        toTop(); await loadAreas(); paintChips(); paintDash(); load();
         return;
       }
       if (e.target.closest("[data-tvpick]")) { openTvPick(); return; }
       var cr = e.target.closest("[data-creator]");
       if (cr) { openCreator(cr.dataset.creator); return; }
       var ar = e.target.closest("[data-area]");
-      if (ar) { AREA = ar.dataset.area; paintChips(); load(); return; }
-      if (e.target.closest("[data-area-all]")) { AREA = "*"; paintChips(); load(); return; }
+      if (ar) { AREA = ar.dataset.area; toTop(); paintChips(); load(); return; }
+      if (e.target.closest("[data-area-all]")) { AREA = "*"; toTop(); paintChips(); load(); return; }
       var card = e.target.closest("[data-place]");
       if (card) openDetail(card.dataset.place);
     });
+  }
+
+  /* 나라·지역을 고르면 새 화면처럼 맨 위부터 보여준다.
+     🔴 예전엔 목록 첫 줄로 scrollIntoView 했는데, 새 목록이 아직 로딩 전이라 높이가 바뀌면서
+        헤더·탭이 잘린 채 화면 중간이 떴다(26.9.18 사장님 「나라를 선택하면 화면이 중앙으로 뜸」).
+        앱(SPA)은 .view-host, 웹은 window 가 스크롤한다 — 가장 가까운 스크롤 조상을 찾아 0 으로. */
+  function toTop() {
+    try {
+      for (var n = SEC && SEC.parentElement; n && n !== document.body; n = n.parentElement) {
+        var oy = getComputedStyle(n).overflowY;
+        if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 2) { n.scrollTop = 0; return; }
+      }
+      window.scrollTo(0, 0);
+    } catch (_) {}
   }
 
   /* ── 칩 ───────────────────────────────────────────── */
