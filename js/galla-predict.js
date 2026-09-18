@@ -345,6 +345,10 @@ function renderMarkets(){
   appendMarkets();
 }
 
+function pmThumb(u){
+  const g=/^https:\/\/cdn\.galla\.im\/(?!cdn-cgi\/)(.+)$/.exec(u||'');
+  return g ? 'https://cdn.galla.im/cdn-cgi/image/width=900,quality=80,format=auto/'+g[1] : u;
+}
 /* 목록 카드 아이콘 — 이모지 대신 SVG(26.9.18 개편) */
 const IC_TARGET='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>';
 const IC_COIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 9.8c0-1.2 1.1-1.9 2.5-1.9s2.5.7 2.5 1.9-1.1 1.7-2.5 2.1-2.5 1-2.5 2.2 1.1 1.9 2.5 1.9 2.5-.7 2.5-1.9"/></svg>';
@@ -412,12 +416,16 @@ function marketCardHtml(m){
     } else if(closed){ statusBadge=`<span class="pm-card-act">⏳ 마감·정산대기</span>`; }
     else statusBadge=`<span class="pm-badge-live"><i></i>LIVE · ${timeLeft(m.close_at)}</span>`;
 
-    return `<div class="pm-card ${m.resolved?'resolved':''}${hot?' pm-hot':''}" data-id="${m.id}">
+    const tags=`${m.category?`<span class="pm-meta-cat">${esc(m.category)}</span>`:''}${statusBadge}${hot?'<span class="pm-hot-tag">HOT</span>':''}${soon?'<span class="pm-soon-tag">마감 임박</span>':''}${m.is_jackpot?'<span class="pm-meta-cat">보너스</span>':''}`;
+    /* 🖼 썸네일 있는 예측 = 카드 위 16:9 커버 + 딱지를 사진 위에(26.9.18 사장님). 사진은 CDN 변환으로 줄여 받는다. */
+    const cover=m.image_url ? `<div class="pm-cover"><img src="${esc(pmThumb(m.image_url))}" alt="" loading="lazy" decoding="async" onerror="this.closest('.pm-cover').remove()"><div class="pm-cover-tags">${tags}</div></div>` : '';
+    return `<div class="pm-card ${m.resolved?'resolved':''}${hot?' pm-hot':''}${cover?' has-cover':''}" data-id="${m.id}">
+      ${cover}
       <div class="pm-card-top">
-        <div class="pm-card-thumb">${m.image_url?`<img src="${esc(m.image_url)}" loading="lazy">`:IC_TARGET}</div>
+        ${cover?'':`<div class="pm-card-thumb">${IC_TARGET}</div>`}
         <div class="pm-card-h">
           <div class="pm-card-q">${esc(m.question)}${m.ai_generated ? '<span class="pm-ai-tag" title="AI가 만든 문항입니다">🤖 AI</span>' : ''}</div>
-          <div class="pm-card-meta">${m.category?`<span class="pm-meta-cat">${esc(m.category)}</span>`:''}${statusBadge}${hot?'<span class="pm-hot-tag">HOT</span>':''}${soon?'<span class="pm-soon-tag">마감 임박</span>':''}${m.is_jackpot?'<span class="pm-meta-cat">보너스</span>':''}</div>
+          ${cover?'':`<div class="pm-card-meta">${tags}</div>`}
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>
       </div>

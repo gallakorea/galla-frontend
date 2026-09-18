@@ -648,3 +648,20 @@
   color: #ffd1d8; background: rgba(255,45,95,.18); box-shadow: inset 0 0 0 1px rgba(255,45,95,.5); }
 .pm-card.pm-on .pm-soon-tag { animation: pmSoon 1.1s ease-in-out infinite; }
 @keyframes pmSoon { 0%,100% { box-shadow: inset 0 0 0 1px rgba(255,45,95,.5), 0 0 0 0 rgba(255,45,95,.0); } 50% { box-shadow: inset 0 0 0 1px rgba(255,45,95,.9), 0 0 12px 2px rgba(255,45,95,.45); } }
+
+/* 🖼 썸네일 커버(26.9.18) — 카드 위 16:9, 딱지는 사진 위, 천천히 확대(켄 번스) */
+.pm-lobby .pm-card.has-cover { padding-top: 0; }
+.pm-lobby .pm-cover { position: relative; margin: 0 -18px 16px; aspect-ratio: 16 / 9; overflow: hidden; background: #10131b; }
+.pm-lobby .pm-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.12);
+  transition: transform 1.4s cubic-bezier(.16,.84,.24,1), filter 1s ease; filter: saturate(1.05); }
+.pm-lobby .pm-card.pm-in .pm-cover img { transform: scale(1.02); }
+.pm-lobby .pm-card.pm-in.pm-on .pm-cover img { animation: pmKen 14s ease-in-out 1.4s infinite alternate; }
+@keyframes pmKen { 0% { transform: scale(1.02) translate3d(0,0,0); } 100% { transform: scale(1.12) translate3d(-2%, -1.5%, 0); } }
+.pm-lobby .pm-cover::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,10,16,0) 45%, rgba(8,10,16,.55) 78%, rgba(12,14,20,.95)); }
+.pm-lobby .pm-cover-tags { position: absolute; left: 16px; right: 16px; bottom: 12px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+.pm-lobby .pm-cover-tags .pm-meta-cat { background: rgba(0,0,0,.45); color: #e6e9f2; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.pm-lobby .pm-cover-tags .pm-badge-live { background: rgba(0,0,0,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.pm-lobby .pm-card.has-cover .pm-card-q { font-size: 17px; }
+.pm-lobby .pm-card.has-cover.pm-hot::before { z-index: 3; }
+.pm-lobby .pm-card.resolved .pm-cover img { filter: grayscale(.6) brightness(.8); }
