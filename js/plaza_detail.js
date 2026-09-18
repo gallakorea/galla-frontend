@@ -216,6 +216,8 @@ async function fetchPostDetail() {
   } catch (e) {}
   // 🤖 갈비스 — 이 글 맥락 채우기
   { const gb = D.querySelector("#plazaGalvisBtn"); if (gb) { gb.setAttribute("data-gv-id", String(postId || "")); gb.setAttribute("data-gv-title", data.title || ""); } }
+  { const sp = D.querySelector("#plazaSupportBtn");
+    if (sp) { if (!data.user_id) sp.remove(); else { sp.dataset.spId = String(data.id); sp.dataset.spUid = data.user_id; sp.dataset.spName = ((window.__GU_CACHE || {})[data.user_id] || {}).nickname || data.nickname || ""; } } }
   if (postMetaEl) {
     postMetaEl.textContent = `${data.category} · 조회 ${data.view_count || 0}`;   // 올리기가 끝난 값이라 +1 하지 않는다
   }

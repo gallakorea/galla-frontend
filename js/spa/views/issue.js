@@ -27,6 +27,7 @@ const SCRIPTS = [
   "/js/items.js",          // GALLA_myItems/openShop(아이템·상점)
   "/js/emoticon.js",       // GALLA_renderEmoticons(스티커)
   "/js/gif.js",            // 댓글 GIF
+  "/js/support-btn.js",     // GALLA_support(후원 버튼 공용)
   "/js/donate.js",         // GALLA_initDonations(발의자 후원)
   "/js/charge.js",         // GALLA_needGP(충전 유도)
   "/js/faction.js",        // GALLA_initFaction(진영 밀어주기)

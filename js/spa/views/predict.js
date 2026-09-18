@@ -14,6 +14,7 @@ const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 
 /* 순서 의존: video-compress → media-upload, 본체(galla-predict)는 마지막 */
 const SCRIPTS = [
+  "/js/support-btn.js",    // GALLA_support(후원 버튼 공용)
   "/js/follow.js",         // GALLA_bindFollow (유저시트 팔로우 버튼)
   "/js/ghost.js",          // GALLA_userMap / GALLA_userBadge + data-nick-uid 위임
   "/js/user-sheet.js",     // GALLA_openUserSheet (프로필 시트)

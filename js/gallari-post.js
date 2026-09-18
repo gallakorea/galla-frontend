@@ -115,8 +115,8 @@
       <button class="glp-act glp-like${liked ? ' on' : ''}" id="glp-like">${HEART}<span id="glp-likec">${likeCount}</span></button>
       <button class="glp-act" id="glp-cfocus">${CHAT}<span>${post.comment_count || 0}</span></button>
       <button class="glp-act" id="glp-share">${SHARE}</button>
+      <button class="glp-support" id="glp-support"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;vertical-align:-3px;margin-right:3px"><circle cx="11" cy="13" r="8.2"/><path d="M6.9 9.6l1.8 7 2.3-5 2.3 5 1.8-7"/><path d="M6.2 12.4h9.6"/><path d="M19.6 1.8v4.4M17.4 4h4.4" stroke-width="1.6"/></svg>후원</button>
       <button class="glp-act" data-galvis data-gv-type="gallari" data-gv-id="${esc(post.id)}" data-gv-title="${esc((post.caption || post.title || '게시물').slice(0, 120))}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>
-      <button class="glp-support" id="glp-support">🎁 후원</button>
     </div>`;
 
     const tagsHtml = (Array.isArray(post.tags) && post.tags.length)

@@ -657,7 +657,7 @@ function buildSection(item) {
 
     <!-- 후원 — 숏판 릴스(reels-mix)와 같은 자리·아이콘. 이슈 작성자에게 GC(openDonate, 26.9.19 사장님) -->
     <button class="shorts-action-btn support" aria-label="후원">
-      <span class="sa-ic"><svg viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
+      <span class="sa-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="13" r="8.2"/><path d="M6.9 9.6l1.8 7 2.3-5 2.3 5 1.8-7"/><path d="M6.2 12.4h9.6"/><path d="M19.6 1.8v4.4M17.4 4h4.4" stroke-width="1.6"/></svg></span>
       <span class="sa-label">후원</span>
     </button>
 

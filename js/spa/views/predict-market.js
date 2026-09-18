@@ -17,6 +17,7 @@ const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 
 /* predict-market.html 로드 순서 기준(크롬 제외), 본체는 마지막 */
 const SCRIPTS = [
+  "/js/support-btn.js",    // GALLA_support(후원 버튼 공용)
   "/js/follow.js",          // GALLA_bindFollow (예언자 팔로우)
   "/js/owner-actions.js",   // GALLA_canManage / GALLA_openOwnerMenu (⋯ 메뉴·수동 정산)
   "/js/share-sheet.js",     // GALLA_share / GALLA_shareUrl

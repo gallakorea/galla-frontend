@@ -12,6 +12,8 @@ const __IDX_MPA = !!(document.body && document.body.dataset.page === 'index');
 let IDXROOT = document;
 /* 🪪 종류 표식(js/kind-icons.js) — 없으면 빈칸(카드는 그대로 뜬다) */
 const KT = (k, label) => window.GALLA_KIND ? window.GALLA_KIND.tag(k, label) : '';
+/* 🎁 후원 버튼(js/support-btn.js) — 받을 사람이 있는 카드(이슈·숏판·롱판·광장)만, 갈비스 앞 */
+const SPB = (k, id, uid, name) => window.GALLA_supportBtn ? window.GALLA_supportBtn(k, id, uid, name) : '';
 const KI = (k, size) => window.GALLA_KIND ? window.GALLA_KIND.icon(k, size) : '';
 
 /* 상세 이동 — SPA 셸에선 스택 push(문서 유지·탭 보존), MPA에선 기존 그대로 location 이동 */
@@ -431,6 +433,7 @@ function renderCard(data) {
                     <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                     <button type="button" class="fi-btn bookmark-btn" data-id="${data.id}" aria-label="저장">${bookmarkSvg}</button>
                     <button type="button" class="fi-btn share-btn" data-id="${data.id}" aria-label="공유">${shareSvg}</button>
+                    ${SPB('issue', data.id, data.user_id, data.author)}
                     ${galvisBtn('issue', data.id, data.title)}
                 </div>
                 <button class="more-btn card-more" data-id="${data.id}" data-uid="${data.user_id || ''}" aria-label="더보기">${moreIcon}</button>
@@ -1446,6 +1449,7 @@ function renderPlazaCard(p) {
           <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
           <button type="button" class="fi-btn bookmark-btn" data-kind="plaza" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
           <button type="button" class="fi-btn share-btn" data-kind="plaza" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
+          ${SPB('plaza', p.id, p.user_id, p.nickname)}
           ${galvisBtn('plaza', p.id, p.title)}
         </div>
         <button class="more-btn card-more" data-kind="plaza" data-id="${p.id}" data-uid="${escHtml(p.user_id || '')}" aria-label="더보기">${moreIcon}</button>
@@ -1697,6 +1701,7 @@ function renderGallariCard(p) {
                 <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                 <button type="button" class="fi-btn bookmark-btn" data-kind="post" data-id="${p.id}" aria-label="저장">${bookmarkSvg}</button>
                 <button type="button" class="fi-btn share-btn" data-kind="post" data-id="${p.id}" aria-label="공유">${shareSvg}</button>
+                ${p.link_url ? '' : SPB('post', p.id, p.user_id, u.nickname)}
                 ${galvisBtn(isLong ? 'long' : 'shorts', p.id, text)}
             </div>
             <button class="more-btn card-more" data-kind="post" data-id="${p.id}" data-uid="${escHtml(p.user_id || '')}" aria-label="더보기">${moreIcon}</button>
@@ -1759,7 +1764,7 @@ async function loadPredictionCards() {
     const supabase = window.supabaseClient;
     let { data: markets } = await (window.GALLA_lfilter || function (q) { return q; })(supabase
         .from('markets')
-        .select('id, question, category, market_type, total_pool, jackpot_bonus, image_url, close_at, resolved, created_at, created_by')
+        .select('id, question, category, market_type, total_pool, jackpot_bonus, image_url, close_at, resolved, created_at, created_by, ai_generated')
         .eq('resolved', false)
         .limit(60));
     if (!markets || !markets.length) return [];
@@ -1854,10 +1859,11 @@ function renderPredictCard(m) {
         <!-- 이슈와 같은 아이콘 줄 — 예측엔 좋아요가 없으니 하트 자리에 이 판의 열기인 거래량을 둔다 -->
         <div class="card-footer pf-actions">
             <div class="footer-icons">
-                <span class="pf-vol" title="판돈">💰 <b>${Math.round(m.total_pool || 0).toLocaleString('ko-KR')}</b>GP · ${Number(m.bettors || 0).toLocaleString('ko-KR')}명</span>
+                <span class="pf-vol" title="참여 GP">💰 <b>${Math.round(m.total_pool || 0).toLocaleString('ko-KR')}</b>GP · ${Number(m.bettors || 0).toLocaleString('ko-KR')}명</span>
                 <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                 <button type="button" class="fi-btn bookmark-btn" data-kind="predict" data-id="${m.id}" aria-label="저장">${bookmarkSvg}</button>
                 <button type="button" class="fi-btn share-btn" data-kind="predict" data-id="${m.id}" aria-label="공유">${shareSvg}</button>
+                ${m.ai_generated || !m.created_by ? '' : SPB('market', m.id, m.created_by, m.creatorName || '')}
                 ${galvisBtn('predict', m.id, m.question)}
             </div>
             <button class="more-btn card-more" data-kind="predict" data-id="${m.id}" data-uid="${escHtml(m.created_by || '')}" aria-label="더보기">${moreIcon}</button>

@@ -17,7 +17,7 @@
   const IC = {
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>',
-    gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="13" r="8.2"/><path d="M6.9 9.6l1.8 7 2.3-5 2.3 5 1.8-7"/><path d="M6.2 12.4h9.6"/><path d="M19.6 1.8v4.4M17.4 4h4.4" stroke-width="1.6"/></svg>',   // 후원 = ₩ 코인(js/support-btn.js 와 같은 모양)
     more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>',
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
     galvis: '<svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>',
@@ -77,8 +77,8 @@
         <button class="grl-act grl-like" type="button"><span class="ic">${IC.heart}</span><b class="c">${x.like_count || 0}</b></button>
         <button class="grl-act grl-comment" type="button">${IC.chat}<b class="cc">${x.comment_count || 0}</b></button>
         <button class="grl-act grl-share" type="button">${IC.send}<b>공유</b></button>
-        <button class="grl-act" type="button" data-galvis data-gv-type="shorts" data-gv-id="${x.id}" data-gv-title="${esc(String(x.caption || '숏판 영상').slice(0, 120))}" aria-label="갈비스와 얘기"><span class="ic">${IC.galvis}</span><b>갈비스</b></button>
         <button class="grl-act support grl-support" type="button">${IC.gift}<b>후원</b></button>
+        <button class="grl-act" type="button" data-galvis data-gv-type="shorts" data-gv-id="${x.id}" data-gv-title="${esc(String(x.caption || '숏판 영상').slice(0, 120))}" aria-label="갈비스와 얘기"><span class="ic">${IC.galvis}</span><b>갈비스</b></button>
         <button class="grl-act grl-more" type="button" hidden aria-label="관리">${IC.more}<b>관리</b></button>
       </div>
       <div class="grl-bottom">

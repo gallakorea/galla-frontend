@@ -14,6 +14,7 @@ const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 
 /* plaza_detail.html 로드 순서 그대로(크롬 제외) — 본체(모듈)는 아래서 dynamic import */
 const SCRIPTS = [
+  "/js/support-btn.js",     // GALLA_support(후원 버튼 공용)
   "/js/follow.js",          // GALLA_bindFollow (작성자 팔로우)
   "/js/share-sheet.js",     // GALLA_share / GALLA_shareUrl
   "/js/report-block.js",    // 신고·차단 (comment-actions 의존)

@@ -237,13 +237,14 @@
     const go = sheet.querySelector("#ds-go"); go.disabled = true; go.textContent = "처리 중…";
 
     // 대상: 이슈 / 광장 글 / 갈라리 콘텐츠 — RPC·인자만 다르고 정책(75/5/20)은 동일
-    const kind = cur.postId ? "post" : cur.plazaId ? "plaza" : "issue";
+    const kind = cur.postId ? "post" : cur.plazaId ? "plaza" : cur.marketId ? "market" : "issue";
     const idArg = kind === "post" ? { p_post_id: cur.postId }
                 : kind === "plaza" ? { p_post_id: cur.plazaId }
+                : kind === "market" ? { p_market_id: cur.marketId }
                 : { p_issue_id: cur.issueId };
     const args = Object.assign({}, idArg, { p_amount: a, p_message: msg, p_anonymous: anon });
-    const gcRpc = kind === "post" ? "gc_donate_post" : kind === "plaza" ? "gc_donate_plaza" : "gc_donate";
-    const whoLabel = kind === "post" ? "창작자" : kind === "plaza" ? "작성자" : "발의자";
+    const gcRpc = kind === "post" ? "gc_donate_post" : kind === "plaza" ? "gc_donate_plaza" : kind === "market" ? "gc_donate_market" : "gc_donate";
+    const whoLabel = kind === "post" ? "창작자" : kind === "plaza" ? "작성자" : kind === "market" ? "예언자" : "발의자";
 
     /* 🍎 앱 — 스토어 직접결제. GC 잔액을 보지 않는다.
        ① tip_begin 으로 '누구에게' 를 서버에 먼저 적는다(영수증엔 상품 id 만 오므로)
@@ -252,7 +253,10 @@
     if (isApp() && window.GALLA_buyTip) {
       const tier = APP_TIERS.find(t => t.web === a);
       if (!tier) { alert("이 금액은 앱에서 후원할 수 없어요."); go.disabled = false; refreshGo(); return; }
-      const beginArgs = Object.assign({}, idArg, {
+      /* ⚠️ tip_begin 은 광장 글을 p_plaza_post_id(uuid)로 받는다 — gc_donate_plaza 의 p_post_id 를 그대로 넘기면
+         uuid 가 bigint 칸에 들어가 앱 광장 후원이 통째로 실패했다(26.9.19) */
+      const tipId = kind === "plaza" ? { p_plaza_post_id: cur.plazaId } : idArg;
+      const beginArgs = Object.assign({}, tipId, {
         p_channel: (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "android") ? "android" : "ios",
         p_product_id: tier.id, p_message: msg, p_anonymous: anon,
       });
@@ -312,7 +316,7 @@
       // 슈퍼챗 목록 즉시 갱신
       if (kind === "plaza") window.GALLA_renderPlazaDonations?.(cur.plazaId);
       else if (kind === "post") window.GALLA_renderPostDonations?.(cur.postId);
-      else renderList(cur.issueId);
+      else if (kind === "issue") renderList(cur.issueId);
       return;
     }
 
@@ -364,6 +368,8 @@
   window.openDonatePlaza = (postId, creatorName) => openWith({ plazaId: postId, creatorName });
   // 갈라리 창작자 후원 — 같은 시트, gc_donate_post 사용
   window.openDonatePost = (postId, creatorName) => openWith({ postId, creatorName });
+  // 예측 예언자 후원(사람이 연 예측만 — AI 예측은 서버가 no_target) — gc_donate_market
+  window.openDonateMarket = (marketId, creatorName) => openWith({ marketId, creatorName });
 
   // ── 슈퍼챗 목록 렌더 + 버튼 배선 ──
   async function renderList(issueId) {

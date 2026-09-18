@@ -553,6 +553,11 @@ async function wireIssueActions(issue) {
   // 🤖 갈비스 진입 — 이 이슈 맥락으로 대화(버튼은 issue.html 정적, 여기서 id·제목 채움)
   const gvBtn = qs("issue-galvis-btn");
   if (gvBtn) { gvBtn.setAttribute("data-gv-id", issue.id || ""); gvBtn.setAttribute("data-gv-title", issue.title || ""); }
+  const spBtn = qs("issue-support-btn");
+  if (spBtn) {
+    if (issue.is_anonymous || !issue.user_id) spBtn.remove();   // 받을 사람이 안 보이는 이슈엔 후원 없음
+    else { spBtn.dataset.spId = issue.id; spBtn.dataset.spUid = issue.user_id; spBtn.dataset.spName = issue.author || ""; }
+  }
   if (!supabase) return;
 
   const { data: sess } = await supabase.auth.getSession();
