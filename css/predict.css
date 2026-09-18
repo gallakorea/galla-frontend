@@ -629,23 +629,9 @@
 .pm-lobby .pm-card { overflow: hidden; }
 
 /* 🎆 화려하게(26.9.18 사장님: 「화려하게 눈길을 사로잡게, 지금 너무 재미없어」) */
-/* 카드 배경 네온 빛 — 예(파랑)·아니오(빨강) 빛 덩어리가 떠다닌다 */
+/* 색감은 개편 전으로(26.9.18 사장님: 「색감은 이전 게 더 좋음」) — 네온 배경 빛·형광 막대는 걷었다. 움직임만 남긴다. */
 .pm-lobby .pm-card > :not(.pm-ripple) { position: relative; z-index: 1; }
 .pm-lobby .pm-card > .pm-ripple { z-index: 2; }
-.pm-lobby .pm-card::after { content: ""; position: absolute; inset: -30% -20%; z-index: 0; pointer-events: none; opacity: .0;
-  background:
-    radial-gradient(38% 45% at 18% 70%, rgba(74,123,255,.26), transparent 70%),
-    radial-gradient(38% 45% at 84% 30%, rgba(255,60,110,.22), transparent 70%);
-  transition: opacity .8s ease; }
-.pm-lobby .pm-card.pm-on::after { opacity: 1; animation: pmDrift 9s ease-in-out infinite alternate; }
-@keyframes pmDrift { 0% { transform: translate3d(-4%, 2%, 0) scale(1); } 50% { transform: translate3d(3%, -3%, 0) scale(1.08); } 100% { transform: translate3d(5%, 3%, 0) scale(.96); } }
-.pm-lobby .pm-card.resolved::after { display: none; }
-
-/* 막대 — 형광 + 빛 번짐 */
-.pm-lobby .pm-odds-side.yes { background: linear-gradient(90deg, #2a5bff, #5b86ff 70%, #7a9dff); box-shadow: 0 0 18px rgba(74,123,255,.45); }
-.pm-lobby .pm-odds-side.no  { background: linear-gradient(270deg, #ff2d5f, #ff5a7c 70%, #ff7a92); box-shadow: 0 0 18px rgba(255,60,90,.4); }
-.pm-lobby .pm-odds-side .lab { color: #fff !important; text-shadow: 0 1px 6px rgba(0,0,0,.35); }
-.pm-lobby .pm-card.resolved .pm-odds-side { box-shadow: none; filter: saturate(.5); }
 
 /* 입체 등장 — 떠오르며 살짝 기울었다 펴진다 */
 /* 원근은 카드마다(perspective()) — 목록 전체에 걸면 긴 목록 가운데를 기준으로 카드가 비뚤게 투영됐다(QA) */
