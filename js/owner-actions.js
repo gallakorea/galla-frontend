@@ -121,9 +121,10 @@
       sheet.appendChild(b);
     });
 
-    /* 🔒 공개 범위 전환(26.9.18) — 이슈·광장·숏판롱판. 서버 set_content_visibility 가 작성자·운영진만 허용 */
+    /* 🔒 공개 범위 전환(26.9.18) — 이슈·광장·숏판롱판. **작성자 본인만**(서버 set_content_visibility 도 같다).
+       ⚠️ 운영진에게도 띄웠더니 남의 글이 '나만 보기'로 바뀌어 작성자만 보게 됐다(26.9.18 사장님). */
     const VKIND = { issues: 'issue', plaza_posts: 'plaza', posts: 'post' }[cfg.table];
-    if (VKIND && cfg.id != null) {
+    if (VKIND && cfg.id != null && me.uid && me.uid === cfg.ownerId) {
       const vis = el('button', 'oa-item', `<span class="oa-ic">${IC.lock}</span> 공개 범위 확인 중…`);
       vis.disabled = true;
       sheet.appendChild(vis);
