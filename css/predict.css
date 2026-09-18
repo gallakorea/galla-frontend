@@ -527,3 +527,138 @@
 .pm-lobby .pm-card { border-radius: 0; border-width: 0 0 1px; padding: 14px 16px; }
 .pm-lobby .pm-card:active { transform: none; }
 .pm-lobby .pm-jackpot { border-radius: 0; border-left: 0; border-right: 0; padding-left: 16px; padding-right: 16px; }
+
+/* ✨ 예측 목록 카드 — 여유·움직임 개편(26.9.18 사장님: 폭을 다 쓰니 위아래가 다닥다닥 답답하다)
+   · 여유: 안쪽 여백 22/18px, 제목 16px·줄간 1.42, 막대 40px, 요소 사이 간격 넓힘
+   · 구분: 선 대신 카드마다 은은한 판 + 판 사이 10px 틈(화면 폭은 그대로 끝까지)
+   · 움직임: 화면에 들어올 때 아래에서 떠오름(시차) + 막대가 50:50 에서 실제 비율로 차오름
+            (.pm-rv 는 JS 가 켤 때만 — JS 가 죽어도 카드가 숨지 않게) */
+.pm-lobby .market-list { gap: 10px; }
+.pm-lobby .pm-card {
+  position: relative; padding: 22px 18px 18px; border: 0; border-radius: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.012));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  transition: background .25s ease;
+}
+.pm-lobby .pm-card:active { transform: none; background: linear-gradient(180deg, rgba(111,134,255,.08), rgba(111,134,255,.03)); }
+.pm-lobby .pm-card-top { gap: 14px; }
+.pm-lobby .pm-card-thumb { width: 52px; height: 52px; border-radius: 15px; border: 0;
+  background: radial-gradient(120% 120% at 20% 10%, #2b3350, #141826 70%);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06); color: #ff6b7d; }
+.pm-lobby .pm-card-thumb svg { width: 26px; height: 26px; }
+.pm-lobby .pm-card-q { font-size: 16px; line-height: 1.42; letter-spacing: -.2px; }
+.pm-lobby .pm-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 12px; }
+.pm-lobby .pm-meta-cat { padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.06); color: #aab1c2; font-weight: 700; }
+.pm-lobby .pm-card-by { margin-top: 10px; }
+.pm-lobby .pm-odds { margin: 18px 0 4px; }
+.pm-lobby .pm-odds-bar { height: 40px; border-radius: 12px; border: 0; background: #0b0d13;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+.pm-lobby .pm-odds-side .lab { font-size: 13px; padding: 0 14px; }
+.pm-lobby .pm-odds-mult { margin-top: 9px; }
+.pm-lobby .pm-card-foot { margin-top: 16px; }
+.pm-lobby .pm-card-stats { gap: 8px; }
+.pm-lobby .pm-stat { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px 5px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.05); color: #9aa3b8; font-size: 12.5px; }
+.pm-lobby .pm-stat svg { width: 14px; height: 14px; }
+.pm-lobby .pm-stat.gp svg { color: #ffcf3f; }
+.pm-lobby .pm-stat b { color: #e3e8f3; font-weight: 800; }
+.pm-lobby .pm-card-act { padding: 6px; }
+.pm-lobby .pm-card-act svg { width: 19px; height: 19px; }
+
+/* 떠오르기 + 막대 차오르기 */
+.pm-rv .pm-card { opacity: 0; transform: translateY(18px);
+  transition: opacity .6s ease, transform .7s cubic-bezier(.16,.84,.24,1), background .25s ease; }
+.pm-rv .pm-card.pm-in { opacity: 1; transform: none; }
+.pm-rv .pm-card:not(.pm-in) .pm-odds-side { width: 50% !important; }
+.pm-rv .pm-card.pm-in .pm-odds-side { transition: width 1.1s cubic-bezier(.2,.8,.2,1) .25s; }
+.pm-rv .pm-card.pm-in:active { transform: none; }
+/* LIVE 점은 은은하게 숨쉬기(원래 퍼지는 고리 유지) */
+.pm-lobby .pm-badge-live { padding: 2px 9px 2px 7px; border-radius: 999px; background: rgba(255,60,90,.1); }
+/* 움직임 줄이기 설정이면 JS 가 .pm-rv 를 아예 켜지 않는다(galla-predict.js revealCards) */
+
+/* ⚡ 움직임 더(26.9.18 사장님: 「동적 애니메이션이 훨씬 더」)
+   계속 도는 효과는 화면에 보이는 카드(.pm-on)에서만 돈다 — 긴 목록에서 배터리·스크롤 성능 보호. */
+.pm-rv .pm-card { filter: blur(6px); transform: translateY(26px) scale(.965);
+  transition: opacity .65s ease, transform .8s cubic-bezier(.16,.84,.24,1), filter .7s ease, background .25s ease; }
+.pm-rv .pm-card.pm-in { filter: none; transform: none; }
+
+/* 과녁 아이콘 — 흔들림 + 퍼지는 빛 고리 */
+.pm-lobby .pm-card-thumb { position: relative; overflow: visible; }
+.pm-lobby .pm-card-thumb::after { content: ""; position: absolute; inset: -2px; border-radius: 17px; pointer-events: none;
+  box-shadow: 0 0 0 0 rgba(255,107,125,.45); opacity: 0; }
+.pm-lobby .pm-card.pm-on .pm-card-thumb::after { animation: pmRing 2.8s ease-out infinite; }
+.pm-lobby .pm-card.pm-on .pm-card-thumb svg { animation: pmWobble 3.6s ease-in-out infinite; transform-origin: 50% 50%; }
+.pm-lobby .pm-card-thumb img { border-radius: 15px; }
+@keyframes pmRing { 0% { opacity: .9; box-shadow: 0 0 0 0 rgba(255,107,125,.45); } 70% { opacity: 0; box-shadow: 0 0 0 12px rgba(255,107,125,0); } 100% { opacity: 0; } }
+@keyframes pmWobble { 0%,100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-8deg) scale(1.06); } 50% { transform: rotate(0) scale(1); } 75% { transform: rotate(6deg) scale(1.04); } }
+
+/* 투표 막대 — 흐르는 빛 + 숨쉬는 경계선 */
+.pm-lobby .pm-odds-side { overflow: hidden; }
+.pm-lobby .pm-card.pm-on .pm-odds-side::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);
+  background-size: 250% 100%; animation: pmSweep 3.2s ease-in-out infinite; }
+.pm-lobby .pm-card.pm-on .pm-odds-side.no::after { animation-delay: 1.6s; }
+@keyframes pmSweep { 0% { background-position: 130% 0; } 60%,100% { background-position: -130% 0; } }
+.pm-lobby .pm-odds-side.yes::before { content: ""; position: absolute; right: 0; top: 18%; bottom: 18%; width: 2px; border-radius: 2px;
+  background: #fff; opacity: .55; box-shadow: 0 0 8px 2px rgba(255,255,255,.5); }
+.pm-lobby .pm-card.pm-on .pm-odds-side.yes::before { animation: pmSplit 1.8s ease-in-out infinite; }
+@keyframes pmSplit { 0%,100% { opacity: .35; box-shadow: 0 0 4px 1px rgba(255,255,255,.3); } 50% { opacity: .95; box-shadow: 0 0 12px 3px rgba(255,255,255,.65); } }
+
+/* 배당 숫자 — 금속 광택 */
+.pm-lobby .pm-odds-mult b { background: linear-gradient(100deg, currentColor 35%, #fff 50%, currentColor 65%); background-size: 240% 100%;
+  -webkit-background-clip: text; background-clip: text; }
+.pm-lobby .pm-card.pm-on .pm-odds-mult .y b { -webkit-text-fill-color: transparent; color: #6f96ff; animation: pmGloss 3.4s linear infinite; }
+.pm-lobby .pm-card.pm-on .pm-odds-mult .n b { -webkit-text-fill-color: transparent; color: #ff5a78; animation: pmGloss 3.4s linear infinite 1.7s; }
+@keyframes pmGloss { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+
+/* 판돈 상위 — 윗선 오로라 + HOT */
+.pm-lobby .pm-card.pm-hot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, #4a7bff, #8c50ff, #ff4f6e, #ffb43d, #4a7bff); background-size: 300% 100%; }
+.pm-lobby .pm-card.pm-hot.pm-on::before { animation: pmAurora 4s linear infinite; }
+@keyframes pmAurora { 0% { background-position: 0 0; } 100% { background-position: 300% 0; } }
+.pm-hot-tag { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 900;
+  color: #fff; background: linear-gradient(90deg, #ff4f6e, #ff9a3d); box-shadow: 0 0 10px rgba(255,90,90,.35); }
+.pm-card.pm-on .pm-hot-tag { animation: pmHotPulse 1.6s ease-in-out infinite; }
+@keyframes pmHotPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+/* 누른 자리 물결 */
+.pm-ripple { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%,-50%) scale(0);
+  width: 24px; height: 24px; background: radial-gradient(circle, rgba(143,162,255,.35), rgba(143,162,255,0) 70%);
+  animation: pmRip .65s ease-out forwards; }
+@keyframes pmRip { to { transform: translate(-50%,-50%) scale(26); opacity: 0; } }
+.pm-lobby .pm-card { overflow: hidden; }
+
+/* 🎆 화려하게(26.9.18 사장님: 「화려하게 눈길을 사로잡게, 지금 너무 재미없어」) */
+/* 카드 배경 네온 빛 — 예(파랑)·아니오(빨강) 빛 덩어리가 떠다닌다 */
+.pm-lobby .pm-card > :not(.pm-ripple) { position: relative; z-index: 1; }
+.pm-lobby .pm-card > .pm-ripple { z-index: 2; }
+.pm-lobby .pm-card::after { content: ""; position: absolute; inset: -30% -20%; z-index: 0; pointer-events: none; opacity: .0;
+  background:
+    radial-gradient(38% 45% at 18% 70%, rgba(74,123,255,.26), transparent 70%),
+    radial-gradient(38% 45% at 84% 30%, rgba(255,60,110,.22), transparent 70%);
+  transition: opacity .8s ease; }
+.pm-lobby .pm-card.pm-on::after { opacity: 1; animation: pmDrift 9s ease-in-out infinite alternate; }
+@keyframes pmDrift { 0% { transform: translate3d(-4%, 2%, 0) scale(1); } 50% { transform: translate3d(3%, -3%, 0) scale(1.08); } 100% { transform: translate3d(5%, 3%, 0) scale(.96); } }
+.pm-lobby .pm-card.resolved::after { display: none; }
+
+/* 막대 — 형광 + 빛 번짐 */
+.pm-lobby .pm-odds-side.yes { background: linear-gradient(90deg, #2a5bff, #5b86ff 70%, #7a9dff); box-shadow: 0 0 18px rgba(74,123,255,.45); }
+.pm-lobby .pm-odds-side.no  { background: linear-gradient(270deg, #ff2d5f, #ff5a7c 70%, #ff7a92); box-shadow: 0 0 18px rgba(255,60,90,.4); }
+.pm-lobby .pm-odds-side .lab { color: #fff !important; text-shadow: 0 1px 6px rgba(0,0,0,.35); }
+.pm-lobby .pm-card.resolved .pm-odds-side { box-shadow: none; filter: saturate(.5); }
+
+/* 입체 등장 — 떠오르며 살짝 기울었다 펴진다 */
+/* 원근은 카드마다(perspective()) — 목록 전체에 걸면 긴 목록 가운데를 기준으로 카드가 비뚤게 투영됐다(QA) */
+.pm-rv .pm-card { transform: perspective(900px) translateY(30px) rotateX(14deg) scale(.96); transform-origin: 50% 100%; }
+.pm-rv .pm-card.pm-in { transform: none; }
+
+/* LIVE — 네온 깜빡임 */
+.pm-lobby .pm-badge-live { text-shadow: 0 0 8px rgba(255,60,90,.7); }
+.pm-lobby .pm-card.pm-on .pm-badge-live { animation: pmNeon 3s ease-in-out infinite; }
+@keyframes pmNeon { 0%,18%,22%,60%,100% { opacity: 1; } 20% { opacity: .55; } 62% { opacity: .75; } }
+
+/* 마감 임박(24시간 안) */
+.pm-soon-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 900;
+  color: #ffd1d8; background: rgba(255,45,95,.18); box-shadow: inset 0 0 0 1px rgba(255,45,95,.5); }
+.pm-card.pm-on .pm-soon-tag { animation: pmSoon 1.1s ease-in-out infinite; }
+@keyframes pmSoon { 0%,100% { box-shadow: inset 0 0 0 1px rgba(255,45,95,.5), 0 0 0 0 rgba(255,45,95,.0); } 50% { box-shadow: inset 0 0 0 1px rgba(255,45,95,.9), 0 0 12px 2px rgba(255,45,95,.45); } }

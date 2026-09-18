@@ -338,14 +338,71 @@ function renderMarkets(){
   list=[...openM,...doneM];
 
   MK_LIST=list; MK_SHOWN=0;
+  HOT_IDS=new Set(openM.slice().sort((a,b)=>(b.total_pool||0)-(a.total_pool||0)).slice(0,3).filter(m=>(m.total_pool||0)>0).map(m=>m.id));
   const wrap=$('marketList');
   $('marketsEmpty').hidden = list.length>0;
   wrap.innerHTML='';
   appendMarkets();
 }
 
+/* 목록 카드 아이콘 — 이모지 대신 SVG(26.9.18 개편) */
+const IC_TARGET='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>';
+const IC_COIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 9.8c0-1.2 1.1-1.9 2.5-1.9s2.5.7 2.5 1.9-1.1 1.7-2.5 2.1-2.5 1-2.5 2.2 1.1 1.9 2.5 1.9 2.5-.7 2.5-1.9"/></svg>';
+const IC_PPL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"/><path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.3 14.4c1.7.6 2.9 2.2 3.2 4.6"/></svg>';
+
+/* ✨ 화면에 들어오는 카드만 떠오르게(시차) — 막대는 .pm-in 이 붙는 순간 50:50 → 실제 비율로 차오른다.
+   ⚠️ 움직임 줄이기 설정·IO 없음이면 .pm-rv 를 켜지 않는다 = 카드가 숨는 일이 없다. */
+let MK_RV=null, MK_VIS=null, HOT_IDS=new Set();
+/* 숫자 올라가기 — 퍼센트·판돈·참여자 */
+function pmCount(el, to, suffix){
+  const t0=performance.now(), dur=1100;
+  (function f(t){ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=(suffix==='%'?Math.round(to*e):fmt(Math.round(to*e)))+(suffix||'');
+    if(k<1) requestAnimationFrame(f); })(t0);
+}
+function pmCountCard(c){
+  c.querySelectorAll('.pm-odds-side .lab').forEach(l=>{
+    const m=/^(\S+)\s(\d+)%$/.exec(l.textContent.trim()); if(!m) return;
+    const name=m[1], to=+m[2]; const t0=performance.now(), dur=1100;
+    (function f(t){ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3); l.textContent=name+' '+Math.round(to*e)+'%'; if(k<1) requestAnimationFrame(f); })(t0);
+  });
+  c.querySelectorAll('.pm-stat b').forEach(b=>{ const to=+String(b.textContent).replace(/[^\d]/g,''); if(to>0) pmCount(b,to,''); });
+}
+/* 누른 자리 물결 */
+function pmRipple(c, ev){
+  const r=c.getBoundingClientRect(), p=(ev.touches&&ev.touches[0])||ev;
+  const d=document.createElement('span'); d.className='pm-ripple';
+  d.style.left=(p.clientX-r.left)+'px'; d.style.top=(p.clientY-r.top)+'px';
+  c.appendChild(d); setTimeout(()=>d.remove(), 700);
+}
+function revealCards(wrap){
+  const reduce=window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce || !('IntersectionObserver' in window)){ wrap.classList.remove('pm-rv'); return; }
+  wrap.classList.add('pm-rv');
+  if(!MK_RV) MK_RV=new IntersectionObserver(es=>{
+    let k=0;
+    es.forEach(e=>{ if(!e.isIntersecting) return;
+      const c=e.target; MK_RV.unobserve(c);
+      const delay=k++*70;
+      c.style.transitionDelay=delay+'ms';
+      c.classList.add('pm-in');   // ⚠️ rAF 에 기대지 않는다 — 화면 갱신이 멈춘 순간(백그라운드·숨은 창)이면 카드가 영영 투명으로 남았다(QA)
+      setTimeout(()=>pmCountCard(c), delay+250);
+      setTimeout(()=>{ c.style.transitionDelay=''; }, 900);
+    });
+  }, { threshold:.12 });
+  wrap.querySelectorAll('.pm-card:not(.pm-in):not([data-rvbound])').forEach(c=>{ c.dataset.rvbound='1'; MK_RV.observe(c); });
+  /* 보이는 카드에만 .pm-on — 계속 도는 효과(빛·고리·오로라)는 이 카드에서만 돈다 */
+  if(!MK_VIS) MK_VIS=new IntersectionObserver(es=>es.forEach(e=>e.target.classList.toggle('pm-on', e.isIntersecting)), { rootMargin:'80px 0px' });
+  wrap.querySelectorAll('.pm-card:not([data-visbound])').forEach(c=>{
+    c.dataset.visbound='1'; MK_VIS.observe(c);
+    c.addEventListener('pointerdown', ev=>pmRipple(c, ev), { passive:true });
+  });   // *bound = 스냅샷이 박제하지 않고 지우는 이름
+}
+
 function marketCardHtml(m){
     const outs=OUT_BY_M[m.id]||[];
+    const hot=!m.resolved && (m.total_pool||0)>0 && HOT_IDS.has(m.id);
+    const soon=!m.resolved && !(new Date(m.close_at)<=Date.now()) && (new Date(m.close_at)-Date.now()) < 86400000;
     const bettors=outs.reduce((s,o)=>s+(o.bettor_count||0),0);
     const closed=m.resolved || new Date(m.close_at)<=Date.now();
     let statusBadge;
@@ -355,20 +412,20 @@ function marketCardHtml(m){
     } else if(closed){ statusBadge=`<span class="pm-card-act">⏳ 마감·정산대기</span>`; }
     else statusBadge=`<span class="pm-badge-live"><i></i>LIVE · ${timeLeft(m.close_at)}</span>`;
 
-    return `<div class="pm-card ${m.resolved?'resolved':''}" data-id="${m.id}">
+    return `<div class="pm-card ${m.resolved?'resolved':''}${hot?' pm-hot':''}" data-id="${m.id}">
       <div class="pm-card-top">
-        <div class="pm-card-thumb">${m.image_url?`<img src="${esc(m.image_url)}" loading="lazy">`:'🎯'}</div>
+        <div class="pm-card-thumb">${m.image_url?`<img src="${esc(m.image_url)}" loading="lazy">`:IC_TARGET}</div>
         <div class="pm-card-h">
           <div class="pm-card-q">${esc(m.question)}${m.ai_generated ? '<span class="pm-ai-tag" title="AI가 만든 문항입니다">🤖 AI</span>' : ''}</div>
-          <div class="pm-card-meta">${esc(m.category||'')} · ${statusBadge}${m.is_jackpot?' · 🎁 보너스':''}</div>
+          <div class="pm-card-meta">${m.category?`<span class="pm-meta-cat">${esc(m.category)}</span>`:''}${statusBadge}${hot?'<span class="pm-hot-tag">HOT</span>':''}${soon?'<span class="pm-soon-tag">마감 임박</span>':''}${m.is_jackpot?'<span class="pm-meta-cat">보너스</span>':''}</div>
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>
       </div>
       ${oddsBar(m, outs)}
       <div class="pm-card-foot">
         <span class="pm-card-stats">
-          <span>💰 <b>${fmt(m.total_pool)}</b>GP</span>
-          <span>👥 <b>${fmt(bettors)}</b></span>
+          <span class="pm-stat gp">${IC_COIN}<b>${fmt(m.total_pool)}</b>GP</span>
+          <span class="pm-stat">${IC_PPL}<b>${fmt(bettors)}</b>명</span>
         </span>
         <span class="pm-card-stats">
           <button class="pm-card-act mc-act ${MY_SAVED[m.id]?'on':''}" data-act="save" data-id="${m.id}" aria-label="저장">${IC_SAVE}</button>
@@ -389,6 +446,7 @@ function appendMarkets(){
     c.onclick=e=>{ if(e.target.closest('.mc-act')) return; goDetail(`predict-market.html?id=${c.dataset.id}`); };
   });
   bindMarketActions(wrap);   // onclick 재할당이라 이미 붙은 카드엔 무해
+  revealCards(wrap);
   // 다음 묶음 신호 — 목록 '밖' 형제로 둔다(목록이 그리드여도 칸을 먹지 않게)
   let more=$('pmMore');
   if(!more){ more=document.createElement('div'); more.id='pmMore'; more.style.height='1px'; wrap.after(more); }
