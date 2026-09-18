@@ -201,6 +201,15 @@
     /* 지도가 웹뷰 **뒤**에 있으므로 캔버스는 비어 있어야 보인다 */
     /* ⚠️ 뒤에 있으면 터치는 전부 웹뷰가 먹는다 — 헤더 아래를 지도로 넘기라고 알려준다.
        이걸 안 하면 지도는 그려지는데 팬·핀 클릭이 통째로 죽는다(2026-09-09 실측). */
+    /* 지도 위에 DOM 시트(상세 등)를 띄우면 터치를 전부 웹이 받아야 한다 — 안 그러면 시트의 ✕·여백을 눌러도
+       뒤의 지도가 먹어서 상세가 안 닫혔다(26.9.18 사장님 제보, 앱 전용).
+       ⚠️ y:0 은 iOS 에선 '구멍 없음'이지만 안드로이드에선 'y≥0 = 전부 지도'로 뜻이 반대다.
+          두 플랫폼 모두 '지도로 안 넘김'이 되는 건 아주 큰 값뿐이다. */
+    function webOnly(on) {
+      if (!P.setTouchTop) return;
+      if (on) P.setTouchTop({ y: 100000 }).catch(function () {});
+      else pushTouchTop();
+    }
     function pushTouchTop() {
       if (!P.setTouchTop) return;
       var top = document.querySelector(".fd-map-top");
@@ -208,6 +217,21 @@
       P.setTouchTop({ y: y }).catch(function () {});
     }
     setTimeout(pushTouchTop, 0);
+    /* 지도 위에 뜨는 DOM 시트 — 하나라도 열려 있으면 터치를 전부 웹으로 받는다.
+       시트마다 열고 닫는 곳에 일일이 걸면 새 시트가 생길 때 또 빠진다 → 클래스 변화를 지켜본다. */
+    var OVER = ".fd-detail.open, .fd-cpick.open, .fd-rpick.open, #fd-fsheet.open";
+    var overNow = false;
+    function syncOver() {
+      var any = !!document.querySelector(OVER);
+      if (any === overNow) return;
+      overNow = any;
+      webOnly(any);
+    }
+    var overMO = null;
+    try {
+      overMO = new MutationObserver(syncOver);
+      overMO.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    } catch (_) {}
     el.classList.add("fd-canvas-native");
     document.body.classList.add("fd-native-map");
     document.documentElement.classList.add("fd-native-map");
@@ -226,7 +250,7 @@
       refresh: function () {
         var f = rect();
         P.setFrame({ x: f.x, y: f.y, width: f.width, height: f.height }).catch(function () {});
-        pushTouchTop();                              // 헤더 높이가 바뀌면 경계선도 따라가야 한다
+        if (overNow) webOnly(true); else pushTouchTop();   // 헤더 높이가 바뀌면 경계선도 따라간다(시트가 떠 있으면 웹 유지)
         /* 첫 진입엔 idle 이 아직 안 와서 경계가 없다 — 한 번 물어서 채워둔다 */
         P.getBounds().then(function (b) {
           if (!b || !b.ok) return;
@@ -251,7 +275,9 @@
         var i = pending.indexOf(m); if (i >= 0) pending.splice(i, 1);
         schedule();
       },
+      webOnly: webOnly,
       teardown: function () {
+        try { overMO && overMO.disconnect(); } catch (_) {}
         el.classList.remove("fd-canvas-native");
         document.body.classList.remove("fd-native-map");
         document.documentElement.classList.remove("fd-native-map");
@@ -327,12 +353,13 @@
   function buildDetail() {
     if (DETAIL) return;
     DETAIL = document.createElement("div");
-    DETAIL.className = "fd-detail";
+    DETAIL.className = "fd-detail"; DETAIL.setAttribute("data-no-ptr", "");   // 시트를 끌어 내리면 당겨서 새로고침이 같이 돌았다(26.9.18)
     DETAIL.innerHTML = '<div class="fd-detail-bg"></div>' +
       '<div class="fd-sheet" id="fd-sheet"></div>' +
       '<div class="fd-fsheet" id="fd-dsub"></div>';
     document.body.appendChild(DETAIL);
     SHEET = DETAIL.querySelector("#fd-sheet");
+    armSheetSwipe(SHEET);
     DETAIL.addEventListener("click", onDetailClick);
     DETAIL.addEventListener("submit", onDetailSubmit);
     window.addEventListener("popstate", function () {
@@ -414,6 +441,35 @@
         ' 정치자금 지출내역. 중앙선관위 정보공개 자료를 언론 3사가 정리한 것으로,' +
         ' 기재된 내용만 그대로 표시합니다.</p>';
     box.classList.add("on");
+  }
+
+  /* 👇 시트를 아래로 끌어 닫는다 — 내용이 맨 위일 때만(스크롤 중엔 스크롤이 우선).
+     90px 넘게 내리거나 빠르게 튕기면 닫고, 아니면 제자리로 돌아간다. */
+  function armSheetSwipe(sh) {
+    if (!sh || sh.__swipe) return;
+    sh.__swipe = true;
+    var y0 = 0, t0 = 0, dy = 0, drag = false;
+    sh.addEventListener("touchstart", function (e) {
+      if (sh.scrollTop > 0 || !e.touches || e.touches.length !== 1) { drag = false; return; }
+      y0 = e.touches[0].clientY; t0 = Date.now(); dy = 0; drag = true;
+    }, { passive: true });
+    sh.addEventListener("touchmove", function (e) {
+      if (!drag) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy <= 0) { sh.style.transform = ""; return; }           // 위로 끌면 평소 스크롤
+      sh.style.transition = "none";
+      sh.style.transform = "translateY(" + dy + "px)";
+    }, { passive: true });
+    function end() {
+      if (!drag) return;
+      drag = false;
+      var fast = dy > 40 && (Date.now() - t0) < 220;
+      sh.style.transition = "";
+      if (dy > 90 || fast) { sh.style.transform = ""; closeDetail(); }
+      else sh.style.transform = "";
+    }
+    sh.addEventListener("touchend", end);
+    sh.addEventListener("touchcancel", end);
   }
 
   function closeDetail(fromPop) {
@@ -1205,7 +1261,7 @@
   function buildMap() {
     if (MAP) return;
     MAP = document.createElement("div");
-    MAP.className = "fd-map";
+    MAP.className = "fd-map"; MAP.setAttribute("data-no-ptr", "");   // 시트를 끌어 내리면 당겨서 새로고침이 같이 돌았다(26.9.18)
     MAP.innerHTML =
       '<div class="fd-map-canvas" id="fd-canvas"></div>' +
       '<div class="fd-map-top">' +
@@ -1664,7 +1720,7 @@
   async function openChPage(slug) {
     if (!CHPAGE) {
       CHPAGE = document.createElement("div");
-      CHPAGE.className = "fd-cpick fd-cgpage";
+      CHPAGE.className = "fd-cpick fd-cgpage"; CHPAGE.setAttribute("data-no-ptr", "");   // 시트를 끌어 내리면 당겨서 새로고침이 같이 돌았다(26.9.18)
       document.body.appendChild(CHPAGE);
       /* ⚠️ 전파를 끊는다 — 패널 클릭 처리기가 document 위임이라 안 끊으면 두 번 처리된다
          (누구 고르기에서 밟은 함정: chFilter 가 두 번 토글돼 null 이 됐다). */
@@ -1751,7 +1807,7 @@
   function openChPick() {
     if (!CHPICK) {
       CHPICK = document.createElement("div");
-      CHPICK.className = "fd-cpick";
+      CHPICK.className = "fd-cpick"; CHPICK.setAttribute("data-no-ptr", "");   // 시트를 끌어 내리면 당겨서 새로고침이 같이 돌았다(26.9.18)
       document.body.appendChild(CHPICK);
       /* 🔴 전파를 반드시 끊는다.
          패널 클릭 처리기가 **document 위임**(379행)이라, 시트가 body 직속이면
@@ -2324,7 +2380,7 @@
   function openRegionPicker() {
     if (!RPICK) {
       RPICK = document.createElement("div");
-      RPICK.className = "fd-rpick";
+      RPICK.className = "fd-rpick"; RPICK.setAttribute("data-no-ptr", "");   // 시트를 끌어 내리면 당겨서 새로고침이 같이 돌았다(26.9.18)
       RPICK.innerHTML = '<div class="fd-rpick-bg"></div><div class="fd-fsheet" id="fd-rsheet"></div>';
       document.body.appendChild(RPICK);
       RPICK.addEventListener("click", function (e) {
