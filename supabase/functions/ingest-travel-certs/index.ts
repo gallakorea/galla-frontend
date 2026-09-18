@@ -60,6 +60,9 @@ async function sparqlCsv(query: string) {
 }
 
 /* 커먼즈 사진의 저작자·라이선스 — 표시 의무가 있는 라이선스가 대부분이다. */
+/* 🖼 Special:FilePath 는 열 때마다 리다이렉트 2번 + 원본 서버라 장당 1~2초였다(26.9.18 대만 카드).
+   크레딧을 물을 때 직접 썸네일 주소(upload/thumb.wikimedia.org)도 받아 그걸 저장한다. */
+const THUMBS = new Map<string, string>();
 async function commonsCredits(files: string[]) {
   const out = new Map<string, string>();
   if (!files.length) return out;
@@ -67,7 +70,8 @@ async function commonsCredits(files: string[]) {
   u.searchParams.set("action", "query");
   u.searchParams.set("titles", files.slice(0, 50).map((f) => "File:" + f).join("|"));
   u.searchParams.set("prop", "imageinfo");
-  u.searchParams.set("iiprop", "extmetadata");
+  u.searchParams.set("iiprop", "extmetadata|url");
+  u.searchParams.set("iiurlwidth", "1280");   // 직접 썸네일 주소도 같이 받는다(아래 THUMBS)
   u.searchParams.set("format", "json");
   try {
     const r = await fetch(u, { headers: { "User-Agent": UA } });
@@ -78,6 +82,8 @@ async function commonsCredits(files: string[]) {
       const artist = strip(m?.Artist?.value || "").slice(0, 60);
       const lic = strip(m?.LicenseShortName?.value || "").slice(0, 30);
       const t = String(p?.title || "").replace(/^File:/, "");
+      const th = p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url;
+      if (t && th) THUMBS.set(t, String(th).split("?")[0]);
       const c = [artist, lic].filter(Boolean).join(" · ");
       if (t) out.set(t, c ? `${c} / Wikimedia Commons` : "Wikimedia Commons");
     }
@@ -133,7 +139,7 @@ SELECT ?item ?ko ?en ?coord ?img ?cc WHERE {
 
   const credits = await commonsCredits([...new Set(files)]);
   items.forEach((it: any) => {
-    if (it._file) it.photo_credit = credits.get(it._file) || "Wikimedia Commons";
+    if (it._file) { it.photo_credit = credits.get(it._file) || "Wikimedia Commons"; const th = THUMBS.get(it._file); if (th) it.photo = th; }
     delete it._file;
   });
 

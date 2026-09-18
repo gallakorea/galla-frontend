@@ -17,6 +17,23 @@
 (function () {
   var sb = null;
 
+  /* 🗺 위키미디어 사진은 갈라 엣지 프록시로 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
+  function wm(u, w) {
+    if (!u || !/^https:\/\/[a-z0-9.-]*wikimedia\.org\//i.test(u)) return u;
+    return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
+  }
+  /* 프록시가 첫 조회에 시간 초과(502)하면 원본 주소로 한 번 더 받는다 */
+  if (!window.__wmFallback) {
+    window.__wmFallback = true;
+    document.addEventListener("error", function (e) {
+      var im = e.target;
+      if (!im || im.tagName !== "IMG" || im.dataset.wmfb) return;
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(im.getAttribute("src") || "");
+      if (!m) return;
+      im.dataset.wmfb = "1";
+      try { im.src = decodeURIComponent(m[1]); } catch (_) {}
+    }, true);
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -73,7 +90,7 @@
             '<img src="https://i.ytimg.com/vi/' + esc(vids[0].video_id) + '/hqdefault.jpg" alt="" referrerpolicy="no-referrer">' +
             '<i class="tv-hero-play"></i></div>'
         : p.cover
-          ? '<div class="tv-hero"><img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
+          ? '<div class="tv-hero"><img src="' + esc(wm(p.cover, 960)) + '" alt="" referrerpolicy="no-referrer">' +
             (p.photo_credit ? '<span class="tv-credit">' + esc(p.photo_credit) + "</span>" : "") + "</div>"
           : '<div class="tv-hero empty">' + flag(p.country_code) + "</div>") +
 

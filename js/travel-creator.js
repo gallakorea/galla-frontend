@@ -18,6 +18,23 @@
      칩 숫자(전체 기준)와 목록이 어긋났다(Mark Wiens 2,422곳 중 200곳, 태국 칩 393 → 11). */
   var PLACES = [], TOTAL_F = 0, BUSY = false, PAGE = 60;
 
+  /* 🗺 위키미디어 사진은 갈라 엣지 프록시로 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
+  function wm(u, w) {
+    if (!u || !/^https:\/\/[a-z0-9.-]*wikimedia\.org\//i.test(u)) return u;
+    return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
+  }
+  /* 프록시가 첫 조회에 시간 초과(502)하면 원본 주소로 한 번 더 받는다 */
+  if (!window.__wmFallback) {
+    window.__wmFallback = true;
+    document.addEventListener("error", function (e) {
+      var im = e.target;
+      if (!im || im.tagName !== "IMG" || im.dataset.wmfb) return;
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(im.getAttribute("src") || "");
+      if (!m) return;
+      im.dataset.wmfb = "1";
+      try { im.src = decodeURIComponent(m[1]); } catch (_) {}
+    }, true);
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -90,11 +107,11 @@
                   ? '<button type="button" class="tv-cre-th" data-vid="' + esc(p.video_id) +
                     '" data-vplace="' + esc(p.id) +
                     '" data-vt="' + esc(p.video_title || "") + '" aria-label="영상 재생">' +
-                    (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                    (p.cover ? '<img src="' + esc(wm(p.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                              : '<span class="tv-ph">🌍</span>') +
                     '<i class="tv-play"></i></button>'
                   : '<span class="tv-cre-th">' +
-                    (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                    (p.cover ? '<img src="' + esc(wm(p.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                              : '<span class="tv-ph">🌍</span>') + "</span>") +
                 '<button type="button" class="tv-cre-t" data-place="' + esc(p.id) + '">' +
                   '<b>' + esc(p.name) + (p.visited ? " ✓" : "") + "</b>" +

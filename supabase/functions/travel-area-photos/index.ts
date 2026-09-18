@@ -77,15 +77,19 @@ async function commons(file: string) {
   u.searchParams.set("action", "query");
   u.searchParams.set("titles", "File:" + file);
   u.searchParams.set("prop", "imageinfo");
-  u.searchParams.set("iiprop", "extmetadata");
+  u.searchParams.set("iiprop", "extmetadata|url");
+  u.searchParams.set("iiurlwidth", "1280");   // 직접 썸네일 주소(리다이렉트 없는)
   u.searchParams.set("format", "json");
   let credit = "Wikimedia Commons";
+  let direct = "";
   try {
     const r = await fetch(u, { headers: { "User-Agent": UA } });
     if (r.ok) {
       const pages = (await r.json())?.query?.pages || {};
       for (const p of Object.values<any>(pages)) {
         const m = p?.imageinfo?.[0]?.extmetadata || {};
+        const th = p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url;
+        if (th) direct = String(th).split("?")[0];
         const artist = strip(m?.Artist?.value || "").slice(0, 60);
         const lic = strip(m?.LicenseShortName?.value || "").slice(0, 30);
         const c = [artist, lic].filter(Boolean).join(" · ");
@@ -94,7 +98,8 @@ async function commons(file: string) {
     }
   } catch (_) { /* 크레딧 실패가 사진을 막지는 않는다 */ }
   return {
-    url: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=1200`,
+    /* 🖼 직접 주소 우선 — Special:FilePath 는 리다이렉트 2번이라 느렸다(26.9.18) */
+    url: direct || `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=1200`,
     credit,
   };
 }

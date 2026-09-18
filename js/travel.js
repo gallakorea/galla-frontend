@@ -54,6 +54,23 @@
   };
 
   /* ── 공용 ─────────────────────────────────────────── */
+  /* 🗺 위키미디어 사진은 갈라 엣지 프록시로 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
+  function wm(u, w) {
+    if (!u || !/^https:\/\/[a-z0-9.-]*wikimedia\.org\//i.test(u)) return u;
+    return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
+  }
+  /* 프록시가 첫 조회에 시간 초과(502)하면 원본 주소로 한 번 더 받는다 */
+  if (!window.__wmFallback) {
+    window.__wmFallback = true;
+    document.addEventListener("error", function (e) {
+      var im = e.target;
+      if (!im || im.tagName !== "IMG" || im.dataset.wmfb) return;
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(im.getAttribute("src") || "");
+      if (!m) return;
+      im.dataset.wmfb = "1";
+      try { im.src = decodeURIComponent(m[1]); } catch (_) {}
+    }, true);
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -274,7 +291,7 @@
         var up = t.delta != null && t.delta > 0, dn = t.delta != null && t.delta < 0;
         return '<button type="button" class="tv-tr" data-country="' + esc(t.code) + '">' +
           '<span class="tv-tr-i">' +
-            (t.cover ? '<img src="' + esc(t.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+            (t.cover ? '<img src="' + esc(wm(t.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                      : '<span class="tv-ph">' + flag(t.code) + "</span>") +
             '<i class="tv-tr-r">' + t.ratio + "</i></span>" +
           '<span class="tv-tr-n">' + flag(t.code) + " " + esc(t.name || t.code) + "</span>" +
@@ -299,7 +316,7 @@
                   : (String(p.at || "").slice(0, 10).replace(/-/g, ".").slice(2));
         return '<button type="button" class="tv-dp" data-place="' + esc(p.id) + '">' +
           '<span class="tv-dp-i">' +
-            (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+            (p.cover ? '<img src="' + esc(wm(p.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                      : '<span class="tv-ph">' + flag(p.country_code) + "</span>") +
             '<i class="tv-dp-b">' + esc(badge) + "</i></span>" +
           '<span class="tv-dp-n">' + esc(p.name) + "</span>" +
@@ -329,7 +346,7 @@
     var names = (c.names || []).slice(0, 3).join(" · ");
     return '<button type="button" class="tv-cc" data-country="' + esc(c.code) + '">' +
       '<div class="tv-cc-img">' +
-        (c.cover ? '<img src="' + esc(c.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        (c.cover ? '<img src="' + esc(wm(c.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                  : '<span class="tv-ph">' + flag(c.code) + "</span>") +
         '<span class="tv-cc-flag">' + flag(c.code) + "</span>" +
       "</div>" +
@@ -358,7 +375,7 @@
          200 image/jpeg 인데 타일은 빈칸. 위키미디어 파일명엔 괄호가 흔하다.
          괄호·따옴표를 퍼센트 인코딩하고 작은따옴표로 감싼다(나라 카드는 <img src> 라 무관). */
       (a.cover ? ' style="background-image:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.78)),url(&#39;' +
-                 esc(cssUrl(a.cover)) + '&#39;)"' : "") + ">" +
+                 esc(cssUrl(wm(a.cover, 720))) + '&#39;)"' : "") + ">" +
       '<span class="tv-tile-n">' + esc(a.name) + "</span>" +
       '<span class="tv-tile-s">' + a.spots + "곳" +
         (a.creators ? " · 크리에이터 " + a.creators + "명" : "") + "</span></button>";
@@ -381,7 +398,7 @@
     var cert = (p.certs || [])[0];
     return '<article class="tv-card" data-place="' + esc(p.id) + '">' +
       '<div class="tv-thumb">' +
-        (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        (p.cover ? '<img src="' + esc(wm(p.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                  : '<span class="tv-ph">' + flag(p.country_code) + "</span>") +
         (badge ? '<span class="tv-badge">' + badge + "</span>" : "") +
         (cert ? '<span class="tv-cert">' + esc(cert) + "</span>" : "") +
@@ -488,7 +505,7 @@
                  둘러보기의 정사각 실사진과 한눈에 갈린다. */
               return '<button type="button" class="tv-mini" data-place="' + esc(p.id) + '">' +
                 '<span class="tv-mini-i">' +
-                  (p.cover ? '<img src="' + esc(p.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+                  (p.cover ? '<img src="' + esc(wm(p.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
                            : '<span class="tv-ph">🌍</span>') +
                   '<i class="tv-play"></i></span>' +
                 '<span class="tv-mini-n">' + esc(p.name) + "</span>" +
@@ -996,7 +1013,7 @@
           el.className += " cert";
           el.innerHTML = "<span>" + esc(p.cert) + "</span>";
         } else if (p.cover) {
-          el.innerHTML = '<img src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">';
+          el.innerHTML = '<img src="' + esc(wm(p.cover)) + '" alt="" referrerpolicy="no-referrer">';
         } else {
           el.innerHTML = "<span>" + fb + "</span>";
         }

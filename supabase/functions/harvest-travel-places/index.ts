@@ -311,6 +311,9 @@ async function wikidataSearch(name: string, cc: string | null, scale = "spot") {
 
 /* 커먼즈 사진의 저작자·라이선스. 표시가 의무인 라이선스가 대부분이라 credit 없이 쓰면 안 된다.
    한 회차의 파일을 모아 **한 번에** 물어본다(최대 50개). */
+/* 🖼 Special:FilePath 는 열 때마다 리다이렉트 2번 + 원본 서버라 장당 1~2초였다(26.9.18 대만 카드).
+   크레딧을 물을 때 직접 썸네일 주소(upload/thumb.wikimedia.org)도 받아 그걸 저장한다. */
+const THUMBS = new Map<string, string>();
 async function commonsCredits(files: string[]) {
   const out = new Map<string, string>();
   if (!files.length) return out;
@@ -318,7 +321,8 @@ async function commonsCredits(files: string[]) {
   u.searchParams.set("action", "query");
   u.searchParams.set("titles", files.slice(0, 50).map((f) => "File:" + f).join("|"));
   u.searchParams.set("prop", "imageinfo");
-  u.searchParams.set("iiprop", "extmetadata");
+  u.searchParams.set("iiprop", "extmetadata|url");
+  u.searchParams.set("iiurlwidth", "960");   // 직접 썸네일 주소도 같이 받는다(아래 THUMBS)
   u.searchParams.set("format", "json");
   u.searchParams.set("origin", "*");
   try {
@@ -330,6 +334,8 @@ async function commonsCredits(files: string[]) {
       const artist = strip(meta?.Artist?.value || "").slice(0, 80);
       const lic = strip(meta?.LicenseShortName?.value || "").slice(0, 40);
       const title = String(p?.title || "").replace(/^File:/, "");
+      const th = p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url;
+      if (title && th) THUMBS.set(title, String(th).split("?")[0]);
       const credit = [artist, lic].filter(Boolean).join(" · ");
       if (title) out.set(title, credit ? `${credit} / Wikimedia Commons` : "Wikimedia Commons");
     }
@@ -794,7 +800,7 @@ const DEADLINE = Date.now() + 110_000;
     const credits = await commonsCredits([...wantCredit.keys()]);
     for (const [file, arr] of wantCredit) {
       const c = credits.get(file) || "Wikimedia Commons";
-      for (const it of arr) it.photo_credit = c;
+      for (const it of arr) { it.photo_credit = c; const th = THUMBS.get(file); if (th) it.photo = th; }
     }
   }
 

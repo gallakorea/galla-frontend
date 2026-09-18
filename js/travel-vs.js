@@ -21,6 +21,23 @@
   var IDX = 0, SHOWN_AT = 0, BUSY = false;
   var STAGE_NM = ["16강", "8강", "4강", "결승"];
 
+  /* 🗺 위키미디어 사진은 갈라 엣지 프록시로 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
+  function wm(u, w) {
+    if (!u || !/^https:\/\/[a-z0-9.-]*wikimedia\.org\//i.test(u)) return u;
+    return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
+  }
+  /* 프록시가 첫 조회에 시간 초과(502)하면 원본 주소로 한 번 더 받는다 */
+  if (!window.__wmFallback) {
+    window.__wmFallback = true;
+    document.addEventListener("error", function (e) {
+      var im = e.target;
+      if (!im || im.tagName !== "IMG" || im.dataset.wmfb) return;
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(im.getAttribute("src") || "");
+      if (!m) return;
+      im.dataset.wmfb = "1";
+      try { im.src = decodeURIComponent(m[1]); } catch (_) {}
+    }, true);
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -87,7 +104,7 @@
   function card(p, side) {
     var sub = where(p);
     return '<button type="button" class="tvs-card" data-side="' + side + '">' +
-      '<img class="tvs-shot" src="' + esc(p.cover) + '" alt="" referrerpolicy="no-referrer">' +
+      '<img class="tvs-shot" src="' + esc(wm(p.cover, 960)) + '" alt="" referrerpolicy="no-referrer">' +
       (p.creators > 1 ? '<span class="tvs-who">유튜버 ' + p.creators + '명</span>' : "") +
       '<span class="tvs-nm"><b>' + esc(p.name) + "</b>" +
       "<span>" + flag(p.country_code) + " " + esc(sub) + "</span></span></button>";
@@ -170,7 +187,7 @@
     ROOT.innerHTML =
       '<div class="tvs-res">' +
         '<div class="tvs-crown">내가 고른 1위</div>' +
-        '<div class="tvs-win"><img src="' + esc(champ.cover) + '" alt="" referrerpolicy="no-referrer">' +
+        '<div class="tvs-win"><img src="' + esc(wm(champ.cover, 960)) + '" alt="" referrerpolicy="no-referrer">' +
           '<span class="tvs-nm"><b>' + esc(champ.name) + "</b><span>" +
           flag(champ.country_code) + " " + esc(sub) + "</span></span></div>" +
         '<div class="tvs-type">' + esc(ty[0]) + "</div>" +
@@ -179,7 +196,7 @@
         "</div>" +
         (runners.length
           ? '<div class="tvs-runners">' + runners.map(function (r) {
-              return '<div class="tvs-run"><img src="' + esc(r.cover) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
+              return '<div class="tvs-run"><img src="' + esc(wm(r.cover)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' +
                      "<b>" + esc(r.name) + "</b></div>";
             }).join("") + "</div>"
           : "") +
