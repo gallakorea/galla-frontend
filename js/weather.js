@@ -30,6 +30,17 @@
     return { k: "cloud", e: "⛅", t: "흐림" };
   }
   var isWet = function (k) { return k === "rain" || k === "snow" || k === "storm" || k === "drizzle"; };
+  /* 😷 미세먼지 등급(환경부 기준) — 미세(PM10)·초미세(PM2.5) 중 나쁜 쪽. 에어코리아 실시간(26.9.18) */
+  var AIRG = [
+    { k: "good", t: "좋음", e: "😀", c: "#3b82f6" }, { k: "normal", t: "보통", e: "🙂", c: "#22a55a" },
+    { k: "bad", t: "나쁨", e: "😷", c: "#f08c1e" }, { k: "worst", t: "매우나쁨", e: "🤢", c: "#e0413a" }];
+  function g10(v) { return v == null ? -1 : v <= 30 ? 0 : v <= 80 ? 1 : v <= 150 ? 2 : 3; }
+  function g25(v) { return v == null ? -1 : v <= 15 ? 0 : v <= 35 ? 1 : v <= 75 ? 2 : 3; }
+  function airOf(a) {
+    if (!a || (a.pm10 == null && a.pm25 == null)) return null;
+    var i = Math.max(g10(a.pm10), g25(a.pm25));
+    return i < 0 ? null : { g: AIRG[i], pm10: a.pm10, pm25: a.pm25, g10: AIRG[g10(a.pm10)] || null, g25: AIRG[g25(a.pm25)] || null, est: a.est };
+  }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
   function ago(t) {
     var d = (Date.now() - new Date(t).getTime()) / 1000;
@@ -93,6 +104,7 @@
       (opts && opts.sido && r.sido ? '<div class="wx-c-sido">' + esc(r.sido) + "</div>" : "") +
       '<div class="wx-c-temp">' + (r.temp == null ? "–" : Math.round(r.temp) + "°") + "</div>" +
       '<div class="wx-c-desc">' + esc(w.t) + (r.precip > 0 ? " " + r.precip + "mm" : "") + "</div>" +
+      (function () { var A = airOf(r.air); return A ? '<div class="wx-c-air" style="--ag:' + A.g.c + '">' + A.g.e + " 공기 " + A.g.t + "</div>" : ""; })() +
       (rep ? '<div class="wx-c-bar"><i style="width:' + pct + '%"></i></div><div class="wx-c-rep"><b>' + wetSay + "</b>명 와요 · " + (r.none || 0) + "명 안와요</div>"
            : '<div class="wx-c-rep none">제보 없음</div>') +
       (r.says ? '<div class="wx-c-say">💬 ' + r.says + "</div>" : "") + "</button>";
@@ -121,7 +133,7 @@
       "</b> — 기상청은 " + esc(clash[0].w.t) + "이라는데 사람들은 " + (clash[0].peopleWet ? "온다고" : "안 온다고") + " 합니다</div>");
     GRID.innerHTML = rs.map(function (r) { return card(r); }).join("");
     sky(rs.length ? wetObs / rs.length : 0, snowy > wetObs / 2);
-    FOOT.textContent = "실황 10분마다 · 제보 30분 · 한마디 2시간 집계";
+    FOOT.textContent = "실황 10분마다 · 제보 30분 · 한마디 2시간 집계 · 날씨 기상청 · 미세먼지 한국환경공단 에어코리아(실시간 미확정 자료)";
   }
 
   async function loadFav() {
@@ -171,7 +183,12 @@
       '<div class="wx-room-in">' +
         '<div class="wx-room-hd">' +
           '<div><div class="wx-room-nm">' + esc(r.name) + (r.sido ? ' <span>' + esc(r.sido) + "</span>" : "") + "</div>" +
-          '<div class="wx-room-wx">' + w.e + " " + esc(w.t) + (r.temp == null ? "" : " · " + Math.round(r.temp) + "°") + (r.precip > 0 ? " · " + r.precip + "mm" : "") + "</div></div>" +
+          '<div class="wx-room-wx">' + w.e + " " + esc(w.t) + (r.temp == null ? "" : " · " + Math.round(r.temp) + "°") + (r.precip > 0 ? " · " + r.precip + "mm" : "") + "</div>" +
+          (function () { var A = airOf(r.air); if (!A) return "";
+            return '<div class="wx-room-air">' + A.g.e + " 미세먼지 " + (A.pm10 == null ? "–" : A.pm10) + (A.g10 ? "<b style=\"color:" + A.g10.c + "\">" + A.g10.t + "</b>" : "") +
+              " · 초미세 " + (A.pm25 == null ? "–" : A.pm25) + (A.g25 ? "<b style=\"color:" + A.g25.c + "\">" + A.g25.t + "</b>" : "") +
+              (A.est ? ' <i>(시도 평균)</i>' : "") + "</div>"; })() +
+          "</div>" +
           '<button type="button" class="wx-fav ' + (d.faved ? "on" : "") + '" data-fav aria-label="즐겨찾기">' + (d.faved ? "★" : "☆") + "</button>" +
           '<button type="button" class="wx-room-x" data-x aria-label="닫기">✕</button>' +
         "</div>" +
@@ -243,7 +260,7 @@
      · 앱은 네이티브 네이버 지도(GallaNaverMap, 웹뷰 뒤 — 웹 SDK 는 capacitor origin 인증 불가),
        웹은 네이버 JS SDK. 키는 맛집과 같은 food_map_config 에서 받는다.
      ⚠️ 네이티브 지도는 한 번에 하나다(맛집과 공유). 닫을 때 반드시 destroy — 안 하면 다음 판 뒤에 남는다. */
-  var WMAP = null, WMB = null, WPTS = [], wmTimer = 0;
+  var WMAP = null, WMB = null, WPTS = [], wmTimer = 0, WMODE = "temp";   // temp | air
   function tempColor(t) {
     if (t == null) return "#5b6170";
     if (t <= -5) return "#3b5bdb"; if (t <= 0) return "#4c7ef3"; if (t <= 5) return "#3fa2e8";
@@ -309,9 +326,9 @@
         clicks = {};
         P.setMarkers({ markers: list.map(function (r) {
           var id = "w" + (++seq); clicks[id] = function () { onClick(r); };
+          var pl = pillOf(r);
           return { id: id, kind: "wx", lat: +r.lat, lng: +r.lon, size: 24,
-                   text: wx(r.code_wmo).e + " " + (r.temp == null ? "–" : Math.round(r.temp) + "°"),
-                   badge: r.name, bg: tempColor(r.temp), ring: "#ffffff", fg: "#ffffff" };
+                   text: pl.text, badge: r.name, bg: pl.bg, ring: "#ffffff", fg: "#ffffff" };
         }) }).catch(function () {});
       },
       teardown: function () {
@@ -341,9 +358,8 @@
       draw: function (list, onClick) {
         markers.forEach(function (m) { try { m.setMap(null); } catch (_) {} }); markers = [];
         list.forEach(function (r) {
-          var w = wx(r.code_wmo);
-          var html = '<div class="wxm"><b style="background:' + tempColor(r.temp) + '">' + w.e + " " +
-                     (r.temp == null ? "–" : Math.round(r.temp) + "°") + "</b><i>" + esc(r.name) + "</i></div>";
+          var pl = pillOf(r);
+          var html = '<div class="wxm"><b style="background:' + pl.bg + '">' + esc(pl.text) + "</b><i>" + esc(r.name) + "</i></div>";
           var m = new nv.Marker({ position: new nv.LatLng(+r.lat, +r.lon), map: map, icon: { content: html, anchor: new nv.Point(0, 0) } });
           nv.Event.addListener(m, "click", function () { onClick(r); });
           markers.push(m);
@@ -351,6 +367,14 @@
       },
       teardown: function () { markers.forEach(function (m) { try { m.setMap(null); } catch (_) {} }); try { map.destroy(); } catch (_) {} el.innerHTML = ""; }
     };
+  }
+  /* 알약 한 개의 글자·색 — 기온 모드 / 미세먼지 모드 */
+  function pillOf(r) {
+    if (WMODE === "air") {
+      var A = airOf({ pm10: r.pm10, pm25: r.pm25, est: r.pm_est });
+      return A ? { text: A.g.e + " " + A.g.t, bg: A.g.c } : { text: "· 측정 없음", bg: "#5b6170" };
+    }
+    return { text: wx(r.code_wmo).e + " " + (r.temp == null ? "–" : Math.round(r.temp) + "°"), bg: tempColor(r.temp) };
   }
   function wmPaint() {
     if (!WMB || !WPTS.length) return;
@@ -387,6 +411,13 @@
     if (at && t) at.textContent = new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + " 실황";
     wmPaint();
   }
+  function paintLegend() {
+    var L = WMAP && WMAP.querySelector("#wx-map-legend"); if (!L) return;
+    L.classList.toggle("air", WMODE === "air");
+    L.innerHTML = WMODE === "air"
+      ? AIRG.map(function (g) { return '<span style="--ag:' + g.c + '">' + g.e + " " + g.t + "</span>"; }).join("") + '<em>에어코리아</em>'
+      : "-5°<i></i>30°+";
+  }
   async function openWxMap() {
     if (!WMAP) {
       WMAP = document.createElement("div");
@@ -395,10 +426,17 @@
         '<div class="wx-map-top"><div class="wx-map-row">' +
           '<button type="button" class="wx-map-x" id="wx-map-x" aria-label="닫기">✕</button>' +
           '<div class="wx-map-t">전국 날씨<span id="wx-map-at"></span></div></div>' +
+          '<div class="wx-map-seg" id="wx-map-seg"><button type="button" data-m="temp" class="on">🌡️ 기온</button><button type="button" data-m="air">😷 미세먼지</button></div>' +
           '<div class="wx-map-sum" id="wx-map-sum"></div></div>' +
-        '<div class="wx-map-legend">-5°<i></i>30°+</div>';
+        '<div class="wx-map-legend" id="wx-map-legend"></div>';
       document.body.appendChild(WMAP);
       WMAP.querySelector("#wx-map-x").addEventListener("click", function () { closeWxMap(); });
+      WMAP.querySelector("#wx-map-seg").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-m]"); if (!b || b.dataset.m === WMODE) return;
+        WMODE = b.dataset.m;
+        WMAP.querySelectorAll("#wx-map-seg [data-m]").forEach(function (x) { x.classList.toggle("on", x === b); });
+        paintLegend(); wmPaint();
+      });
       /* 뒤로가기로 닫힌다 — 판정은 이벤트 state 로(라우터가 먼저 replaceState 한다, 맛집·여행과 같은 함정).
          방(#wx-room)이 떠 있으면 뒤로가기는 방부터 — 방은 기록 칸이 없어 여기서 같이 처리한다 */
       window.addEventListener("popstate", function (ev) {
@@ -409,6 +447,7 @@
     }
     if (WMAP.classList.contains("open")) return;
     WMAP.classList.add("open");
+    paintLegend();
     try { history.pushState({ wxMap: 1 }, ""); } catch (_) {}
     var cfg = await rpc("food_map_config");
     var cid = cfg && cfg.naver_client_id;
@@ -459,7 +498,8 @@
           return '<button type="button" class="wx-hit" data-r="' + esc(r.code) + '">' +
             "<span>" + w.e + "</span><b>" + esc(r.name) + "</b>" +
             (r.sido ? '<i>' + esc(r.sido) + "</i>" : "") +
-            (r.temp == null ? "" : '<u>' + Math.round(r.temp) + "°</u>") + "</button>"; }).join("")
+            (r.temp == null ? "" : '<u>' + Math.round(r.temp) + "°</u>") +
+            (function () { var A = airOf(r.air); return A ? '<em style="color:' + A.g.c + '">' + A.g.e + "</em>" : ""; })() + "</button>"; }).join("")
       : '<div class="wx-empty">그런 동네는 아직 없어요</div>';
   }
 

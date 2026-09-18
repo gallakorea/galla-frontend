@@ -255,3 +255,17 @@ body.fd-native-map .wx-map { background: transparent; }
   box-shadow: 0 1.5px 4px rgba(0,0,0,.45); }
 .wxm i { margin-top: 1px; font-style: normal; color: #fff; font: 800 10.5px/1.2 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
   text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 2px #000; }
+
+/* 😷 미세먼지(26.9.18) — 카드·방·지도 */
+.wx-c-air { margin-top: 4px; display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800;
+  color: var(--ag); background: color-mix(in srgb, var(--ag) 16%, transparent); }
+.wx-room-air { margin-top: 4px; font-size: 12.5px; color: #c9cfdb; font-weight: 600; }
+.wx-room-air b { margin-left: 3px; font-weight: 800; }
+.wx-room-air i { font-style: normal; color: #7d8494; font-size: 11px; }
+.wx-hit em { font-style: normal; margin-left: 4px; }
+.wx-map-seg { display: inline-flex; gap: 4px; margin-top: 8px; padding: 3px; border-radius: 999px; background: rgba(20,22,28,.85); }
+.wx-map-seg button { border: 0; background: transparent; color: #aab0bf; font-size: 12.5px; font-weight: 800; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.wx-map-seg button.on { background: #fff; color: #111; }
+.wx-map-legend.air { justify-content: space-between; }
+.wx-map-legend.air span { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px; background: var(--ag); color: #fff; }
+.wx-map-legend.air em { font-style: normal; color: #7d8494; font-size: 10px; }
