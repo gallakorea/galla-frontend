@@ -192,5 +192,43 @@
     return false;
   }
 
+  /* 🎭 줄다리기 대사·치열해지는 순간(26.9.19 사장님: 「막 치열해지는 애니메이션, 살려주세요 같은 위트 있는 말풍선」)
+     화면에 보이는 막대만 2.4초마다 훑는다. 투표 전: 부르는 대사가 바뀐다 / 투표 뒤: 양 팀이 번갈아 한마디 + 가끔 확 치열해진다. */
+  const LINES_CALL = { pro: ["이쪽이야!", "여기가 맞아!", "너 우리 편이지?", "손 잡아!", "빨리 와!!"],
+                       con: ["우리 편 와!", "이쪽이 진리!", "여기 자리 있어!", "망설이지 마!", "어서 와~"] };
+  const LINES_PULL = ["살려주세요ㅠㅠ", "죽을 것 같아…", "팔 빠질 것 같아", "손 놓으면 진다!", "허리 나갔어…", "물 한 잔만…",
+                      "누가 내 발 밟았어?!", "한 명만 더 오면 이겨!", "영차! 영차!", "끝까지 간다!!", "숨 좀 쉬자…", "엄마 나 여기 있어!", "밀리면 끝이야!", "이거 놓으면 나 진짜 운다"];
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  let tugTimer = null;
+  function tugTick() {
+    if (document.hidden || reduce()) return;
+    const vh = window.innerHeight || 800;
+    document.querySelectorAll(".gv").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (!r.width || r.bottom < 0 || r.top > vh) return;              // 화면 밖은 건너뛴다
+      const locked = el.classList.contains("gv-locked");
+      if (!locked) {                                                   // 투표 전 — 말풍선이 안 보일 때 대사만 바꿔 둔다
+        const bp = el.querySelector(".gv-bub-pro"), bc = el.querySelector(".gv-bub-con");
+        if (bp && Math.random() < .5) bp.textContent = pick(LINES_CALL.pro);
+        if (bc && Math.random() < .5) bc.textContent = pick(LINES_CALL.con);
+        return;
+      }
+      if (el._talking) return;
+      if (Math.random() < .55) {                                       // 한마디
+        const side = Math.random() < .5 ? "pro" : "con";
+        const b = el.querySelector(".gv-bub-" + side); if (!b) return;
+        b.textContent = pick(LINES_PULL);
+        el._talking = true; el.classList.add("gv-talk-" + side);
+        setTimeout(() => { el.classList.remove("gv-talk-" + side); el._talking = false; }, 2200);
+      }
+      if (Math.random() < .35 && !el.classList.contains("gv-surge")) { // 확 치열해지는 순간
+        el.classList.add("gv-surge");
+        setTimeout(() => el.classList.remove("gv-surge"), 1800);
+      }
+    });
+  }
+  function startTug() { if (!tugTimer) tugTimer = setInterval(tugTick, 2400); }
+  startTug();
+
   window.GALLA_VoteBar = { html, mount, update, setMine, applyVote, guardLocked, notice, pct };
 })();

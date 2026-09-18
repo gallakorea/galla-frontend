@@ -273,3 +273,18 @@
 @keyframes gvBub { 0%,55%,100% { opacity: 0; transform: translateY(4px) scale(.6); } 8%,45% { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes gvBubR { 0%,55%,100% { opacity: 0; transform: scaleX(-1) translateY(4px) scale(.6); } 8%,45% { opacity: 1; transform: scaleX(-1) translateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .gv-wave-body, .gv-wave-arm, .gv-bub { animation: none !important; } .gv-bub { opacity: 1; } }
+
+/* 🎭 투표 뒤 말풍선 — 평소엔 숨고, JS 가 .gv-talk-pro/.gv-talk-con 을 붙일 때 한 번 튀어나온다 */
+.gv.gv-locked .gv-bub { display: none; }
+.gv.gv-locked.gv-talk-pro .gv-bub-pro, .gv.gv-locked.gv-talk-con .gv-bub-con { display: block; animation: gvBubOnce 2.2s ease-out forwards; }
+@keyframes gvBubOnce { 0% { opacity: 0; transform: translateY(6px) scale(.5); } 12% { opacity: 1; transform: translateY(-2px) scale(1.08); } 20%,80% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-6px) scale(.95); } }
+/* 🔥 확 치열해지는 순간(.gv-surge) — 빠르게 당기고 밧줄·매듭·막대가 요동친다, 땀 폭발 */
+.gv-surge .gv-fig-body { animation-duration: .32s !important; }
+.gv-surge .gv-rope { animation: gvTautHard .07s linear infinite !important; }
+@keyframes gvTautHard { 0%,100% { transform: translateY(-1px); } 50% { transform: translateY(1.5px); } }
+.gv-surge .gv-rope-knot { animation: gvKnotJit .12s linear infinite; }
+@keyframes gvKnotJit { 0%,100% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }
+.gv-surge .gv-sweat { animation-duration: .5s !important; }
+.gv-surge .gv-dust { animation-duration: .45s !important; }
+.gv-surge .gv-bar { animation: gvShake .09s linear infinite; }
+@keyframes gvShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
