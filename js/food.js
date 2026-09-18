@@ -506,6 +506,7 @@
 
   function closeDetail(fromPop) {
     if (!DETAIL) return;
+    stopVideos(DETAIL);
     hideSheet(); closeSub();
     if (SHEET) { SHEET.style.transform = ""; SHEET.style.transition = ""; SHEET.classList.remove("peek"); SHEET.__full = false; }
     DETAIL.classList.remove("open");
@@ -523,6 +524,16 @@
   /* 유튜브 재생은 galla.im/yt 프록시 — **반드시 절대 주소**. 상대 주소 '/yt' 는 앱에선 capacitor://localhost/yt 가 되어
      앱 번들에 그런 페이지가 없으니 홈 화면(app)이 영상 칸에 통째로 떴다(26.9.18 사장님 캡처). supabase.js·watch-page.js 와 같은 값. */
   var YT_PROXY = "https://galla.im/yt";
+  /* ⏹ 재생 중인 영상을 멈춘다 — iframe 을 치우고 썸네일로 되돌린다.
+     상세·채널 페이지는 닫아도 DOM 이 살아 있어, 안 치우면 화면 밖에서 소리가 계속 났다(26.9.18 사장님 제보). */
+  function stopVideos(root) {
+    if (!root) return;
+    root.querySelectorAll(".fd-vid.playing").forEach(function (v) {
+      v.innerHTML = v.__thumb != null ? v.__thumb : "";
+      v.__thumb = null;
+      v.classList.remove("playing");
+    });
+  }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
@@ -1777,6 +1788,7 @@
         if (mb) { cgMore(mb.dataset.cgmore); return; }
         var v = e.target.closest(".fd-vid");
         if (v && v.dataset.vid) {
+          if (v.__thumb == null) v.__thumb = v.innerHTML;   // 닫을 때 되돌릴 썸네일
           v.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(v.dataset.vid) +
             '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
           v.classList.add("playing"); return;
@@ -1802,6 +1814,7 @@
   }
   function closeChPage() {
     if (!CHPAGE) return;
+    stopVideos(CHPAGE);
     CHPAGE.classList.remove("open");
     document.body.classList.remove("fd-detail-on");
   }
@@ -2258,6 +2271,7 @@
     if (t.closest(".fd-sheet-grip") && SHEET) { setSheetPos(SHEET, !SHEET.__full); return; }   // 손잡이 탭 = 펼침/접기
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
+      if (vw.__thumb == null) vw.__thumb = vw.innerHTML;   // 닫을 때 되돌릴 썸네일
       vw.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(vw.dataset.vid) +
         '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
       vw.classList.add("playing"); return;
