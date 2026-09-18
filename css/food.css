@@ -1289,3 +1289,18 @@ html.fd-native-map body::before { display: none; }
 .fd-vpick .fdp-row b { font-size: 14.5px; color: var(--text-hi, #f2f4f8); }
 .fd-vpick .fdp-row i { font-style: normal; font-size: 12px; color: var(--text-lo, #7b8496); }
 .fd-vpick .fdp-x { width: 100%; padding: 12px; border: none; background: none; color: var(--text-lo, #7b8496); font-weight: 700; cursor: pointer; }
+
+/* 📐 맛집 상세 창 — 폭 끝까지·여유(26.9.19 사장님: 「맛집·여행 상세도 폭 다 써」「따닥따닥 개선」)
+   질문 상자는 폭 끝까지, 사진 줄은 16px 에서 시작해 끝까지 흐르게(안쪽 여백이 겹쳐 32px 에서 시작했다),
+   사진·메뉴·이야기는 굵은 띠로 나누고 덩어리 사이를 벌린다. */
+.fd-detail .fd-sheet .fd-meta { margin-top: 8px; }
+.fd-detail .fd-sheet .fi-wrap { margin-top: 16px; }
+.fd-detail .fd-sheet .fs-ask { margin: 18px -16px 0; border-radius: 0; border-left: 0; border-right: 0; padding-left: 16px; padding-right: 16px; }
+.fd-detail .fd-sheet .fd-judge { margin-top: 24px; }
+.fd-detail .fd-sheet .fd-acts { margin-top: 20px; }
+.fd-detail .fd-sheet .fd-ext { margin-top: 12px; }
+.fd-detail .fd-sheet .fd-photos, .fd-detail .fd-sheet .fd-menu, .fd-detail .fd-sheet .fd-talk {
+  margin: 26px -16px 0; padding: 18px 16px 4px; border-top: 8px solid rgba(255,255,255,.035); border-radius: 0; }
+.fd-detail .fd-sheet .fp-h, .fd-detail .fd-sheet .fm-h, .fd-detail .fd-sheet .fd-talk-h { margin-bottom: 12px; }
+.fd-detail .fd-sheet .fp-row { margin: 0 -16px; padding: 0 16px; }
+.fd-detail .fd-sheet .fd-flag { margin-top: 18px; }

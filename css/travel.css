@@ -654,3 +654,22 @@ body.tv-lock { overflow: hidden; }
 .tv-wx-d b { font-size: 12.5px; color: #ff8a5c; font-weight: 800; }
 .tv-wx-d u { text-decoration: none; font-size: 11.5px; color: #6fa8ff; font-weight: 700; }
 .tv-wx-src { margin-top: 6px; text-align: right; font-size: 10.5px; color: var(--text-low, #6b7180); }
+
+/* 📐 여행 장소 상세 — 폭 끝까지·여유(26.9.19 사장님: 「폭 다 써」「사진처럼 너무 따닥따닥」)
+   영상 소개가 끝나자마자 장소 이름이 붙어(간격 0) 답답했다 → 덩어리 사이를 벌리고, 섹션마다 굵은 띠로 나눈다.
+   날씨 상자는 폭 끝까지. 페이지·지도 위 장소 창(.tv-psheet) 모두 .tv-d-body 를 쓴다. */
+.tv-d-body .tv-now { padding: 0; background: none; border: 0; margin-bottom: 22px; }
+.tv-d-body .tv-now-t { margin-top: 6px; line-height: 1.5; }
+.tv-d-body .tv-now-g { margin-top: 8px; line-height: 1.55; }
+.tv-d-body .tv-d-name { margin-top: 4px; font-size: 24px; line-height: 1.25; }
+.tv-d-body .tv-d-sub { margin-top: 8px; }
+.tv-d-body .tv-d-alt { margin-top: 5px; }
+.tv-d-body .tv-wx { margin: 20px -16px 0; border-radius: 0; border-left: 0; border-right: 0; padding-left: 16px; padding-right: 16px; }
+.tv-d-body .tv-judge { margin-top: 26px; }
+.tv-d-body .tv-jhint { margin-top: 10px; }
+.tv-d-body .tv-vids, .tv-d-body .tv-talk { margin: 28px -16px 0; padding: 6px 16px 0; border-top: 8px solid rgba(255,255,255,.035); }
+.tv-d-body .tv-h { margin-top: 16px; margin-bottom: 12px; font-size: 17px; }
+.tv-d-body .tv-vid { padding: 10px 0; }
+.tv-d-body .tv-vid + .tv-vid { border-top: 1px solid rgba(255,255,255,.05); }
+.tv-d-body .tv-all { margin-top: 18px; }
+.tv-d-body .tv-src { margin-top: 22px; }
