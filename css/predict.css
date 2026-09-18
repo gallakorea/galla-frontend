@@ -669,11 +669,16 @@
 /* ✨ 참여 전 예측 — 반짝이며 눌러 보게(26.9.18 사장님, 홈 진영 막대와 같은 결). 참여했거나 마감이면 꺼진다.
    계속 도는 효과는 보이는 카드(.pm-on)에서만. */
 .pm-lobby .pm-tease .pm-odds-bar { position: relative; isolation: isolate; padding: 2px; background: transparent; box-shadow: none; }
-.pm-lobby .pm-tease .pm-odds-bar::before { content: ""; position: absolute; left: 50%; top: 50%; width: 140%; aspect-ratio: 1; margin: -70% 0 0 -70%; z-index: -2;
-  background: repeating-conic-gradient(from 0deg, #ffd66b 0 3deg, transparent 3deg 9deg); }
+/* ⚠️ 테두리 불빛은 '가장자리를 따라 도는 점등'(전광판) — 회전하는 방사형 빛줄기는 욱일기로 보일 수 있어 금지(26.9.19 사장님) */
+.pm-lobby .pm-tease .pm-odds-bar::before { content: ""; position: absolute; inset: 0; border-radius: 12px; z-index: -2; pointer-events: none;
+  background:
+    linear-gradient(90deg, #ffd66b 0 6px, transparent 6px) 0 0 / 14px 2px repeat-x,
+    linear-gradient(90deg, #ffd66b 0 6px, transparent 6px) 0 100% / 14px 2px repeat-x,
+    linear-gradient(#ffd66b 0 6px, transparent 6px) 0 0 / 2px 14px repeat-y,
+    linear-gradient(#ffd66b 0 6px, transparent 6px) 100% 0 / 2px 14px repeat-y; }
 .pm-lobby .pm-tease .pm-odds-bar::after { content: ""; position: absolute; inset: 2px; border-radius: 10px; z-index: -1; background: #0b0d13; }
-.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation: pmChase 4s linear infinite; }
-@keyframes pmChase { to { transform: rotate(360deg); } }
+.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation: mqRun .55s linear infinite; }
+@keyframes mqRun { to { background-position: 14px 0, -14px 100%, 0 -14px, 100% 14px; } }
 .pm-lobby .pm-tease .pm-odds-side:first-child { border-radius: 10px 0 0 10px; }
 .pm-lobby .pm-tease .pm-odds-side.no { border-radius: 0 10px 10px 0; }
 /* 예·아니오 번갈아 밝게 */
@@ -691,7 +696,7 @@
 .pm-lobby .pm-tease .pm-spk.k1 { left: 18%; } .pm-lobby .pm-tease .pm-spk.k2 { left: 52%; animation-delay: .7s; } .pm-lobby .pm-tease .pm-spk.k3 { left: 83%; animation-delay: 1.4s; }
 @keyframes pmTwinkle { 0%,100% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.3); } 60% { opacity: .2; transform: scale(.6); } }
 /* 「지금 참여 ›」 — 금빛 맥박 */
-.pm-cta { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 900; color: #1a1206;
+.pm-cta { display: inline-flex; white-space: nowrap; flex: 0 0 auto; align-items: center; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 900; color: #1a1206;
   background: linear-gradient(100deg, #ffd66b, #ffb43d); box-shadow: 0 0 0 0 rgba(255,200,80,.6); }
 .pm-card.pm-on .pm-cta { animation: pmCta 1.6s ease-out infinite; }
 @keyframes pmCta { 0% { box-shadow: 0 0 0 0 rgba(255,200,80,.55); transform: scale(1); } 40% { transform: scale(1.06); } 70% { box-shadow: 0 0 0 9px rgba(255,200,80,0); transform: scale(1); } 100% { box-shadow: 0 0 0 0 rgba(255,200,80,0); } }
@@ -739,17 +744,22 @@
   text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.6); }
 .pm-lobby .pm-odds-side.yes .lab { padding-left: 14px; }
 .pm-lobby .pm-odds-side.no .lab { padding-right: 14px; }
-.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation-duration: 9s; }
+.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation-duration: .55s; }   /* 점등은 빠르게(26.9.19 사장님) */
 
 /* ✨ 예측 상세 — 참여 전 예·아니오(선택지) 버튼 금빛 연출. 하나를 고르면(.sel) 꺼진다. */
 .pb-glow, .pb-twk { display: none; }
 .pb-outs.pb-tease .pb-out { overflow: hidden; isolation: isolate; border-color: transparent; }
 .pb-outs.pb-tease .pb-out > span { position: relative; z-index: 3; }
-.pb-outs.pb-tease .pb-out::before { content: ""; position: absolute; left: 50%; top: 50%; width: 220%; aspect-ratio: 1; margin: -110% 0 0 -110%; z-index: 0;
-  background: repeating-conic-gradient(from 0deg, #ffd66b 0 4deg, transparent 4deg 13deg); animation: pbChase 9s linear infinite; }
+.pb-outs.pb-tease .pb-out::before { content: ""; position: absolute; inset: 0; border-radius: 14px; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, #ffd66b 0 7px, transparent 7px) 0 0 / 16px 2px repeat-x,
+    linear-gradient(90deg, #ffd66b 0 7px, transparent 7px) 0 100% / 16px 2px repeat-x,
+    linear-gradient(#ffd66b 0 7px, transparent 7px) 0 0 / 2px 16px repeat-y,
+    linear-gradient(#ffd66b 0 7px, transparent 7px) 100% 0 / 2px 16px repeat-y;
+  animation: pbRun .6s linear infinite; }
 .pb-outs.pb-tease .pb-out::after { content: ""; position: absolute; inset: 2px; border-radius: 12px; z-index: 1; background: #171a24; }
 .pb-outs.pb-tease .pb-out.no::before { animation-direction: reverse; }
-@keyframes pbChase { to { transform: rotate(360deg); } }
+@keyframes pbRun { to { background-position: 16px 0, -16px 100%, 0 -16px, 100% 16px; } }
 .pb-outs.pb-tease .pb-glow { display: block; position: absolute; inset: 2px; border-radius: 12px; z-index: 2; pointer-events: none; opacity: .15;
   background: radial-gradient(120% 120% at 50% 110%, rgba(255,205,90,.55), rgba(255,205,90,.06) 60%, transparent); animation: pbGlow 2.6s ease-in-out infinite; }
 .pb-outs.pb-tease .pb-out.no .pb-glow { animation-delay: 1.3s; }

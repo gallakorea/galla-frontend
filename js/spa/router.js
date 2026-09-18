@@ -513,6 +513,23 @@
         else paintNav();
       }, 90);
     }, { passive: true });
+    /* 넘긴 직후 판이 아직 미끄러지는 중에 손가락을 대면 폰은 그 손길을 가로 트랙에 붙인다 —
+       그대로 위로 쓸면 세로 대신 옆 판으로 넘어갔다(26.9.19 사장님). 닿는 순간 판을 도착 자리에 바로 세우고
+       이번 손길 동안은 가로를 잠가, 손길이 판 안 세로 스크롤로 가게 한다. 손을 떼면 풀린다. */
+    let lockedX = false;
+    track.addEventListener("touchstart", () => {
+      if (stack.length) return;
+      const w = W(), sl = track.scrollLeft, idx = Math.max(0, Math.min(TABS.length - 1, Math.round(sl / w)));
+      if (Math.abs(sl - idx * w) < 2) return;             // 멈춰 있는 판 — 평소처럼
+      lockedX = true; track.style.overflowX = "hidden";
+      track.scrollLeft = idx * w;
+      clearTimeout(idleT);
+      if (idx !== cur) activateTab(idx, { fromScroll: true }); else paintNav();
+      const g = document.getElementById("nav-glider"); if (g) g.style.transition = "";
+    }, { passive: true, capture: true });
+    const unlock = () => { if (!lockedX) return; lockedX = false; track.style.overflowX = ""; };
+    track.addEventListener("touchend", unlock, { passive: true, capture: true });
+    track.addEventListener("touchcancel", unlock, { passive: true, capture: true });
   })();
 
   /* ── 네비 클릭(재탭 = 맨위로) ──────────────────────────────── */
@@ -775,6 +792,7 @@
     const frame = (fn) => { let done = false; const run = () => { if (done) return; done = true; fn(); };
       requestAnimationFrame(run); setTimeout(run, 50); };
     document.addEventListener("scroll", (e) => {
+      if (e.target === track) return;                   // 탭 넘기기 스크롤이 판 스크롤 이벤트를 덮어쓰지 않게
       pendingEvt = e;
       if (ticking) return;
       ticking = true;
@@ -784,6 +802,9 @@
         const el = (t && t.nodeType === 1 && t.scrollHeight > t.clientHeight + 1) ? t : null;
         if (!el) return;
         const host = hostOf(el);
+        /* 판 안의 세로 스크롤만 본다 — 탭 트랙(가로 스크롤, 26.9.19~)이나 판 밖 요소의 스크롤이 끼면 scrollTop 0 으로 읽혀
+           '맨 위'로 오판, 네비가 줄었다 도로 커졌다(사장님: 「네비 커지고 작아지고가 잘 안 됨」) */
+        if (!host || el === track) return;
         if (host && host.dataset.page === "dm") return;   // DM은 헤더 고정(기존 정책)
         const hdrEl = host ? host.querySelector("header.header") : null;
         const y = el.scrollTop;
