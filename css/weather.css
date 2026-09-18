@@ -240,7 +240,8 @@ body.fd-native-map .wx-map { background: transparent; }
 .wx-map-t span { margin-left: 6px; color: #9aa1b2; font-size: 12px; font-weight: 600; }
 .wx-map-sum { margin-top: 8px; color: #cfd5e3; font-size: 12.5px; font-weight: 600; }
 .wx-map-legend {
-  position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 500;
+  /* ⚠️ 좌하단 NAVER 로고·출처 표기를 가리면 안 된다(약관) — 그 위로 띄운다 */
+  position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 44px); z-index: 500;
   display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 14px;
   background: rgba(10,11,15,.82); backdrop-filter: blur(8px); color: #cfd5e3; font-size: 11px; font-weight: 700;
   pointer-events: none;

@@ -354,8 +354,10 @@
   }
   function wmPaint() {
     if (!WMB || !WPTS.length) return;
+    /* 시도↔시군구 전환은 줌 숫자가 아니라 **보이는 범위**로 — 네이티브·웹 SDK 의 줌 눈금이 한 단계 달라서
+       숫자로 가르면 앱과 웹이 다르게 동작했다. 세로로 위도 1.8° 안쪽이면 시군구 */
     var b = WMB.bounds(), z = WMB.zoom();
-    var city = z >= 9;
+    var city = b ? (b.neLat - b.swLat) < 1.8 : z >= 9;
     var list = WPTS.filter(function (r) {
       if (city ? r.kind !== "city" : r.kind !== "sido") return false;
       if (!b) return true;
@@ -420,7 +422,7 @@
       else if (isApp() && P) {
         await P.setup({ ncpKeyId: String(cid) });
         el.classList.add("native");
-        WMB = wmNative(P, CENTER[0], CENTER[1], ZOOM);
+        WMB = wmNative(P, CENTER[0], CENTER[1], ZOOM - 1);   // 네이티브 SDK 는 같은 줌에서 웹보다 한 단계 가깝다(실측)
       } else if (!isApp()) {
         await loadNaverSdk(String(cid), cfg.param);
         WMB = wmWeb(el, CENTER[0], CENTER[1], ZOOM);

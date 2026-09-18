@@ -76,10 +76,14 @@ async function loadMyStreak(){
 }
 
 /* ============ 놀이 안내 (어떻게 돌아가요?) ============ */
-const GUIDE_KEY='galla_predict_guide_seen';
+/* 최초 진입은 접힘 — 사용자가 펼쳤을 때만 펼친 채로 기억(GUIDE_OPEN='1'), [더 이상 안 보기]면 영구 제거
+   (26.9.18 사장님 「오리엔테이션 펼침 안내 전부 최초 진입시 닫힘으로 시작, 더이상 안보기 누르면 사라지게」) */
+const GUIDE_OPEN='galla_predict_guide_open', GUIDE_DISMISS='galla_predict_guide_dismissed';
 function renderGuide(){
   const el=$('pmGuide'); if(!el) return;
-  const seen=localStorage.getItem(GUIDE_KEY)==='1';
+  let dismissed=false; try{ dismissed=localStorage.getItem(GUIDE_DISMISS)==='1'; }catch(_){}
+  if(dismissed){ el.innerHTML=''; el.hidden=true; return; }
+  let seen=true; try{ seen=localStorage.getItem(GUIDE_OPEN)!=='1'; }catch(_){}   // seen=true → 접힘
   el.innerHTML=`
   <div class="pg ${seen?'':'open'}" id="pgBox">
     <button class="pg-head" id="pgToggle">
@@ -145,6 +149,7 @@ function renderGuide(){
         예시) 상금풀 10,000GP · 예 8,000 vs 아니오 2,000<br>
         → '아니오'에 1,000GP 걸고 적중하면 <b>내 몫 = 1,000/2,000 × 10,000 = 5,000GP</b> 🎉
       </div>
+      <div class="pg-foot"><button type="button" class="pg-fold" id="pgFold">접어두기</button><span>·</span><button type="button" class="pg-dismiss" id="pgDismiss">더 이상 안 보기</button></div>
     </div>
   </div>`;
   $('pgToggle').onclick=()=>{
@@ -152,10 +157,18 @@ function renderGuide(){
     const opening=!box.classList.contains('open');
     box.classList.toggle('open',opening);
     box.querySelector('.pg-head-arrow').textContent=opening?'▴':'▾';
-    localStorage.setItem(GUIDE_KEY,'1');
+    try{ localStorage.setItem(GUIDE_OPEN,opening?'1':'0'); }catch(_){}
     if(opening&&window.GALLA_FX){ const r=$('pgToggle').getBoundingClientRect(); window.GALLA_FX.burst(r.left+30,r.top+r.height/2,{emojis:['🎡','✨'],count:8,spread:46}); }
   };
-  if(!seen) localStorage.setItem(GUIDE_KEY,'1');
+  $('pgFold').onclick=()=>{
+    const box=$('pgBox'); box.classList.remove('open');
+    box.querySelector('.pg-head-arrow').textContent='▾';
+    try{ localStorage.setItem(GUIDE_OPEN,'0'); }catch(_){}
+  };
+  $('pgDismiss').onclick=()=>{
+    try{ localStorage.setItem(GUIDE_DISMISS,'1'); }catch(_){}
+    el.innerHTML=''; el.hidden=true;
+  };
 }
 
 /* ============ 몰입 배너 ============ */

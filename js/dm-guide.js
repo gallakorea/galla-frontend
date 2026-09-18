@@ -37,7 +37,8 @@
     var tourDone = false; try { tourDone = !!localStorage.getItem("galla_dm_tour_v2"); } catch (e) {}
     var collapsed;
     if (!tourDone) collapsed = true;
-    else { try { collapsed = localStorage.getItem(COLLAPSE) === "1"; } catch (e) { collapsed = false; } }
+    /* 최초 진입은 접힘 — 사용자가 펼친 적이 있을 때만(COLLAPSE='0') 펼친다(26.9.18 사장님 「최초 진입시 닫힘으로 시작」) */
+    else { try { collapsed = localStorage.getItem(COLLAPSE) !== "0"; } catch (e) { collapsed = true; } }
 
     var wrap = document.createElement("section");
     wrap.className = "dmg-wrap";

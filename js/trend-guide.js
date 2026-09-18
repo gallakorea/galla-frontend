@@ -32,7 +32,8 @@
       if (ex.__live) return false;
       var dead = ex.closest(".dmg-wrap"); (dead || ex).remove();
     }
-    var collapsed = false; try { collapsed = localStorage.getItem(COLLAPSE) === "1"; } catch (e) {}
+    /* 최초 진입은 접힘 — 사용자가 펼친 적이 있을 때만(COLLAPSE='0') 펼친다(26.9.18 사장님 「최초 진입시 닫힘으로 시작」) */
+    var collapsed = true; try { collapsed = localStorage.getItem(COLLAPSE) !== "0"; } catch (e) {}
 
     var wrap = document.createElement("section");
     wrap.className = "dmg-wrap";
