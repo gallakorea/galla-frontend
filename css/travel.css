@@ -609,20 +609,28 @@ body.tv-lock { overflow: hidden; }
   border-radius: 999px; background: #ff5c2b; color: #fff; font: 800 11px/20px system-ui, sans-serif;
   font-style: normal; text-align: center; box-shadow: 0 0 0 2px #0b0c10;
 }
-/* 핀 미리보기 카드 — 누르자마자 페이지를 넘기지 않는다 */
-.tv-pv {
-  position: absolute; left: 12px; right: 56px; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 4;
-  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 10px; border-radius: 16px;
-  background: rgba(16,17,22,.94); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08);
-  box-shadow: 0 8px 28px rgba(0,0,0,.45); cursor: pointer;
+
+/* 지도 위 장소 모달 — 장소 페이지 화면(travel-place.js)을 시트 안에 그대로 올린다(26.9.18).
+   z: 지도(10000) 위. 아래에서 올라오고, 끌어 내리면 닫힌다. */
+.tv-psheet { position: fixed; inset: 0; z-index: 10020; display: none; background: rgba(0,0,0,.45); }
+.tv-psheet.open { display: block; }
+.tv-ps-box {
+  position: absolute; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto;
+  max-height: calc(100% - env(safe-area-inset-top, 0px) - 40px);
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  background: var(--bg, #0b0c10); border-top-left-radius: 20px; border-top-right-radius: 20px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transition: transform .28s cubic-bezier(.2,.85,.3,1);
+  animation: tvPsUp .28s cubic-bezier(.2,.85,.3,1);
 }
-.tv-pv[hidden] { display: none; }
-.tv-pv-i { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 10px; object-fit: cover;
-  display: flex; align-items: center; justify-content: center; font-size: 24px; background: #1b1d24; }
-.tv-pv-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.tv-pv-t b { color: #fff; font-size: 14.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tv-pv-t i { color: #aab0bf; font-size: 12px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tv-pv-go { flex: 0 0 auto; padding: 8px 12px; border: 0; border-radius: 999px; background: #38d6b0; color: #06231c;
-  font-size: 12.5px; font-weight: 800; cursor: pointer; }
-.tv-pv-x { flex: 0 0 auto; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent;
-  color: #8a90a0; font-size: 14px; cursor: pointer; }
+@keyframes tvPsUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.tv-ps-grip { position: sticky; top: 0; z-index: 3; height: 18px; margin-bottom: -18px; }
+.tv-ps-grip::after { content: ""; position: absolute; left: 50%; top: 7px; width: 38px; height: 4px;
+  margin-left: -19px; border-radius: 4px; background: rgba(255,255,255,.35); }
+.tv-ps-x {
+  position: sticky; top: 10px; float: right; margin: 10px 10px -48px 0; z-index: 4;
+  width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 15px; cursor: pointer; backdrop-filter: blur(6px);
+}
+.tv-psheet .tv-page { padding-top: 0; min-height: 0; }
+.tv-psheet .tv-hero { border-top-left-radius: 20px; border-top-right-radius: 20px; overflow: hidden; }

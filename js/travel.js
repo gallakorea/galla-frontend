@@ -611,16 +611,9 @@
       '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>' +
       '<div class="tv-subs chip-scroll" id="tv-subs"></div>' +
       '<div class="tv-trips chip-scroll" id="tv-trips"></div>' +
-      '<div class="tv-routes chip-scroll" id="tv-routes"></div>' +
-      '<div class="tv-pv" id="tv-pv" hidden></div>';
+      '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
     document.body.appendChild(MAPBOX);
     MAPBOX.querySelector("#tv-map-x").addEventListener("click", function () { closeMap(); });
-    MAPBOX.querySelector("#tv-pv").addEventListener("click", function (e) {
-      var go = e.target.closest("[data-pvgo]");
-      if (go) { hidePreview(); openDetail(go.dataset.pvgo); return; }
-      if (e.target.closest(".tv-pv-x")) hidePreview();
-      else { var t = e.target.closest(".tv-pv"); if (t && !e.target.closest("button")) { var b = t.querySelector("[data-pvgo]"); if (b) { hidePreview(); openDetail(b.dataset.pvgo); } } }
-    });
     /* 🔴 상세를 닫으면 back() 이 도는데, 그 popstate 를 지도가 **자기 것으로 오해**해 같이 닫힌다
        (맛집에서 실제로 겪은 사고). 상세에서 돌아오면 state 는 다시 {tvMap:1} 이다 —
        그 자리로 돌아온 거면 지도는 그대로 둔다. 리스너 등록 순서에 기대지 않는 판별이다. */
@@ -629,9 +622,11 @@
        핀으로 장소 페이지에 갔다가 돌아오면({tvMap} 칸) 내려 두었던 지도를 다시 띄운다. */
     window.addEventListener("popstate", function (ev) {
       var mine = false;
-      try { mine = !!(ev && ev.state && ev.state.tvMap); } catch (_) {}
+      try { mine = !!(ev && ev.state && (ev.state.tvMap || ev.state.tvPlace)); } catch (_) {}
       if (MAPBOX.__parked) { if (mine) resumeMap(); return; }
-      if (!MAPBOX.classList.contains("open")) return;
+      /* 모달에서 영상을 틀면 back 대신 replaceState 로 닫혀 지도 칸이 하나 더 남는다.
+         지도를 이미 닫았는데 그 빈 칸에 도착했으면 한 칸 더 건너뛴다 */
+      if (!MAPBOX.classList.contains("open")) { if (mine) { try { history.back(); } catch (_) {} } return; }
       if (mine) return;
       closeMap(true);
     });
@@ -662,6 +657,13 @@
     MAPBOX.classList.remove("open");
     document.body.classList.remove("tv-lock");
   }
+  /* 모달 안에서 로그인 등 다른 화면으로 넘어가면(SPA 해시 이동) 지도가 그 화면을 덮는다 — 내려 둔다 */
+  window.addEventListener("hashchange", function () {
+    if (!MAPBOX || !MAPBOX.classList.contains("open")) return;
+    if (/^#\/(trend|search)?(\?|$)/.test(location.hash) || !location.hash) return;
+    closePlaceSheet(true);
+    parkMap();
+  });
   function resumeMap() {
     if (!MAPBOX) return;
     MAPBOX.__parked = false;
@@ -701,7 +703,6 @@
       MAP.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       /* moveend 마다 bbox 로 다시 물어본다 — 전 세계를 한 번에 내려받으면 안 된다. */
       MAP.on("moveend", refreshPins);
-      MAP.on("click", hidePreview);        // 빈 곳을 누르면 미리보기만 닫는다(지도는 그대로)
       MAP.on("load", function () { MAP.resize(); refreshPins(); loadRouteChips(); paintSubsChips(); });
       /* dvh 는 주소창이 접히고 펴질 때 값이 바뀐다 — 그때마다 다시 맞춘다.
          이게 없으면 스크롤 한 번에 지도 아래가 잘린 채로 남는다. */
@@ -923,24 +924,6 @@
   }
 
   var pinBusy = false;
-  /* 핀 미리보기 — 누르자마자 페이지를 넘기면 지도가 닫힌 것처럼 느껴진다. 아래에 카드로 먼저 보여준다 */
-  function showPreview(p) {
-    var box = document.getElementById("tv-pv"); if (!box) return;
-    var img = p.cover || p.ch_thumb;
-    box.innerHTML =
-      (img ? '<img class="tv-pv-i" src="' + esc(img) + '" alt="" referrerpolicy="no-referrer">' : '<span class="tv-pv-i">' + (p.cert || flag(p.country_code || "")) + "</span>") +
-      '<div class="tv-pv-t"><b>' + esc(p.name || "") + "</b>" +
-        (p.ch_name ? "<i>" + esc(p.ch_name) + (p.ch_n > 1 ? " 외 " + (p.ch_n - 1) + "명" : "") + "</i>" : "") + "</div>" +
-      '<button type="button" class="tv-pv-go" data-pvgo="' + esc(p.id) + '">자세히</button>' +
-      '<button type="button" class="tv-pv-x" aria-label="닫기">✕</button>';
-    var ii = box.querySelector("img.tv-pv-i");
-    if (ii) ii.addEventListener("error", function () { ii.remove(); });
-    box.hidden = false;
-  }
-  function hidePreview() {
-    var box = document.getElementById("tv-pv"); if (box) box.hidden = true;
-  }
-
   async function refreshPins() {
     if (ROUTE) return;              // 경로 모드에선 일반 핀을 얹지 않는다
     if (!MAP || pinBusy) return;
@@ -955,7 +938,6 @@
       var ps = (r && r.places) || [];
       MARKERS.forEach(function (m) { m.remove(); });
       MARKERS = [];
-      hidePreview();
       /* 🔴 핀 300개가 화면을 빈틈없이 덮어서, 한 손으로 두 번 탭해 확대하려 해도 거의 항상 핀이 눌려
          장소 페이지로 넘어갔다 — 사장님 눈엔 「지도를 누르면 닫힌다」(26.9.18). 화면 거리로 묶는다:
          56px 칸마다 대표 핀 하나 + 개수. 묶음을 누르면 그 자리로 확대한다. 충분히 확대하면(13+) 안 묶는다. */
@@ -1006,8 +988,8 @@
             MAP.easeTo({ center: bb.getCenter(), zoom: Math.min(z, 16), duration: 450 });
             return;
           }
-          /* 한 곳 → 바로 넘어가지 않고 미리보기 카드. 넘어가는 건 「자세히」에서만 */
-          showPreview(p);
+          /* 한 곳 → 지도 위에 상세 모달(사장님 26.9.18 「페이지로 이동이 아니라 모달로」) */
+          openPlaceSheet(p.id);
         });
         MARKERS.push(new maplibregl.Marker({ element: el, anchor: "bottom" })
           .setLngLat([Number(p.lon), Number(p.lat)]).addTo(MAP));
@@ -1033,9 +1015,103 @@
 
   /* 장소 상세는 독립 페이지다(travel-place.html). 오버레이는 걷어냈다 —
      같은 화면을 두 곳에 두면 반드시 갈라진다. */
+  /* ── 지도 위 장소 모달 ─────────────────────────────────
+     사장님(26.9.18): 「여행 지도도 누르면 페이지로 이동이 아니라 모달로」.
+     ⚠️ 화면을 새로 그리지 않는다 — 장소 페이지(travel-place.js)의 mount 를 이 시트 안에서 부른다.
+        같은 화면을 두 벌 두면 반드시 갈라진다(그 파일 머리 주석의 원칙 그대로).
+     닫기: X · 바깥 · 아래로 끌기 · 뒤로가기. 지도는 그대로 남는다. */
+  var PSHEET = null;
+  function loadPlaceScript() {
+    if (window.GALLA_PAGE_TRAVEL_PLACE) return Promise.resolve();
+    return new Promise(function (res) {
+      var sc = document.createElement("script");
+      var v = window.GALLA_V || ((document.querySelector('meta[name="galla-ver"]') || {}).content) || "";
+      sc.src = "/js/travel-place.js" + (v ? "?v=" + v : "");
+      sc.onload = sc.onerror = function () { res(); };
+      document.head.appendChild(sc);
+    });
+  }
+  function buildPlaceSheet() {
+    if (PSHEET && document.body.contains(PSHEET)) return PSHEET;
+    PSHEET = document.createElement("div");
+    PSHEET.className = "tv-psheet";
+    PSHEET.setAttribute("data-no-ptr", "");
+    PSHEET.innerHTML = '<div class="tv-ps-box"><div class="tv-ps-grip"></div>' +
+      '<button type="button" class="tv-ps-x" aria-label="닫기">✕</button><div class="tv-ps-body"></div></div>';
+    document.body.appendChild(PSHEET);
+    var box = PSHEET.querySelector(".tv-ps-box");
+    PSHEET.addEventListener("click", function (e) {
+      if (e.target === PSHEET || e.target.closest(".tv-ps-x")) { closePlaceSheet(); return; }
+      /* 재생기 iframe 이 방문 기록에 칸을 보탤 수 있다(아이폰) — 영상을 틀었으면 닫을 때 back 대신 replaceState */
+      if (e.target.closest(".tv-hero, .tv-vid")) PSHEET.__vid = true;
+      /* 장소 화면 안의 「지도에서 보기」는 이미 지도 위라 모달만 닫으면 된다 */
+      if (e.target.closest("#tv-openmap-here")) { e.stopImmediatePropagation(); closePlaceSheet(); }
+    }, true);
+    /* 아래로 끌어 닫기 — 맨 위까지 스크롤된 상태에서만. transform 으로 따라오게(꿀렁임 없이) */
+    var sy = 0, dy = 0, drag = false;
+    box.addEventListener("touchstart", function (e) {
+      drag = box.scrollTop <= 0 && e.touches.length === 1;
+      sy = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    box.addEventListener("touchmove", function (e) {
+      if (!drag) return;
+      dy = e.touches[0].clientY - sy;
+      if (dy <= 0) { box.style.transform = ""; return; }
+      box.style.transition = "none";
+      box.style.transform = "translateY(" + dy + "px)";
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    box.addEventListener("touchend", function () {
+      if (!drag) return; drag = false;
+      box.style.transition = "";
+      if (dy > 110) closePlaceSheet(); else box.style.transform = "";
+    }, { passive: true });
+    /* ⚠️ 판정은 이벤트에 실려 온 state 로(라우터가 먼저 replaceState 한다 — 맛집·지도와 같은 함정) */
+    window.addEventListener("popstate", function (ev) {
+      if (!PSHEET.classList.contains("open")) return;
+      try { if (ev && ev.state && ev.state.tvPlace) return; } catch (_) {}
+      closePlaceSheet(true);
+    });
+    return PSHEET;
+  }
+  async function openPlaceSheet(id) {
+    var sh = buildPlaceSheet();
+    var body = sh.querySelector(".tv-ps-body");
+    var box = sh.querySelector(".tv-ps-box");
+    body.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
+    box.style.transform = ""; box.scrollTop = 0;
+    if (!sh.classList.contains("open")) {
+      sh.__prev = history.state; sh.__vid = false;
+      try { history.pushState({ tvPlace: 1 }, ""); } catch (_) {}
+    }
+    sh.classList.add("open");
+    await loadPlaceScript();
+    var api = window.GALLA_PAGE_TRAVEL_PLACE;
+    if (!api || !sh.classList.contains("open")) return;
+    body.innerHTML = '<main class="tv-page" id="tv-page"></main>';
+    try { await api.mount(body, { id: id }); } catch (_) {}
+  }
+  function closePlaceSheet(fromPop) {
+    if (!PSHEET || !PSHEET.classList.contains("open")) return;
+    try { if (window.GALLA_PAGE_TRAVEL_PLACE) GALLA_PAGE_TRAVEL_PLACE.unmount(); } catch (_) {}
+    PSHEET.classList.remove("open");
+    PSHEET.querySelector(".tv-ps-body").innerHTML = "";      // 재생 중인 영상 프레임까지 버린다(소리 정지)
+    try { document.title = "GALLA 갈라"; } catch (_) {}
+    if (!fromPop) {
+      try {
+        if (history.state && history.state.tvPlace) {
+          if (PSHEET.__vid) history.replaceState(PSHEET.__prev || null, "");
+          else history.back();
+        }
+      } catch (_) {}
+    }
+    PSHEET.__vid = false;
+  }
+
   function openDetail(id) {
     if (!id) return;
-    parkMap();          // 지도 핀·경로 점에서 왔으면 지도를 내려 둔다(돌아오면 다시 뜬다)
+    /* 지도 위(핀·경로 점)에서 누른 거면 페이지로 넘기지 않고 지도 위 모달로 */
+    if (MAPBOX && MAPBOX.classList.contains("open")) return openPlaceSheet(id);
     (window.GALLA_nav || function (u) { location.href = u; })("travel-place.html?id=" + encodeURIComponent(id));
   }
 
