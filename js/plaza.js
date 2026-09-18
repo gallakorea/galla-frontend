@@ -4,7 +4,7 @@ function __visPicker(anchor, after) {
   let w = anchor.parentElement.querySelector(':scope > .vis-pick');
   if (!w) {
     w = document.createElement('div'); w.className = 'vis-pick'; w.setAttribute('role', 'radiogroup');
-    w.innerHTML = '<button type="button" data-v="public" class="on">🌐 전체 공개</button><button type="button" data-v="private">🔒 나만 보기</button>' +
+    w.innerHTML = '<button type="button" data-v="public" class="on"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg> 전체 공개</button><button type="button" data-v="private"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</button>' +
       '<span class="vis-hint">나만 보기는 나만 볼 수 있어요</span>';
     w.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return;
       w.querySelectorAll('[data-v]').forEach(x => x.classList.toggle('on', x === b)); w.classList.toggle('priv', b.dataset.v === 'private'); });

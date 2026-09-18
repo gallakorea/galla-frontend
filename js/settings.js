@@ -303,8 +303,8 @@ async function GALLA_settingsInit(root) {
           const { data: r, error } = await supabase.rpc("set_profile_private", { p_on: next });
           if (error || !r || !r.ok) { paint(); window.GALLA_toast && GALLA_toast("잠시 후 다시 시도해 주세요"); return; }
           on = next; paint();
-          window.GALLA_toast && GALLA_toast(on ? "🔒 비공개 계정이 됐어요 — 이제 팔로우는 요청으로 받아요"
-            : "🌐 공개 계정이 됐어요" + (r.auto_accepted ? ` · 대기 요청 ${r.auto_accepted}건 수락` : ""));
+          window.GALLA_toast && GALLA_toast(on ? "비공개 계정이 됐어요 — 이제 팔로우는 요청으로 받아요"
+            : "공개 계정이 됐어요" + (r.auto_accepted ? ` · 대기 요청 ${r.auto_accepted}건 수락` : ""));
         });
       }
     } catch (_) {}

@@ -670,7 +670,7 @@ function renderIssue(issue) {
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
   /* 🔒 나만 보기 글이면 제목 옆 표시(본인·운영진만 여기까지 온다 — RLS) */
-  if (issue.visibility === "private") qs("issue-title").insertAdjacentHTML("beforeend", ' <span class="vis-lock">🔒 나만 보기</span>');
+  if (issue.visibility === "private") qs("issue-title").insertAdjacentHTML("beforeend", ' <span class="vis-lock"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</span>');
   qs("issue-desc").innerText = issue.one_line || "";
 
 /* 핵심 요약 + Instagram 방식 더 보기 */

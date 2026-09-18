@@ -951,7 +951,8 @@ body{
 
 /* 🔒 비공개 계정(26.9.18) — 잠금 안내 · 받은 팔로우 요청 */
 .mp-lock { padding: 56px 20px; text-align: center; }
-.mp-lock-ic { font-size: 40px; margin-bottom: 10px; }
+.mp-lock-ic { margin-bottom: 10px; color: #c9cfdb; }
+.mp-lock-ic .lk-ic { width: 40px; height: 40px; }
 .mp-lock-t { color: var(--text-hi, #fff); font-size: 16px; font-weight: 900; }
 .mp-lock-s { margin-top: 6px; color: var(--text-low, #8a90a0); font-size: 13px; line-height: 1.5; }
 .mp-priv { font-size: .8em; opacity: .85; }

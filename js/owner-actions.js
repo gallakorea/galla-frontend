@@ -139,7 +139,7 @@
           closeSheet();
           const { data: r, error } = await window.supabaseClient.rpc('set_content_visibility', { p_kind: VKIND, p_id: String(cfg.id), p_vis: next });
           if (error || !r || !r.ok) { (window.GALLA_toast || toast)('바꾸지 못했어요. 잠시 후 다시 시도해 주세요'); return; }
-          (window.GALLA_toast || toast)(next === 'private' ? '🔒 나만 보기로 바꿨어요 — 이제 나만 볼 수 있어요' : '🌐 전체 공개로 바꿨어요');
+          (window.GALLA_toast || toast)(next === 'private' ? '나만 보기로 바꿨어요 — 이제 나만 볼 수 있어요' : '전체 공개로 바꿨어요');
           try { cfg.onVisibility && cfg.onVisibility(next); } catch (_) {}
           try { document.dispatchEvent(new CustomEvent('galla:visibility', { detail: { table: cfg.table, id: cfg.id, visibility: next } })); } catch (_) {}
         };

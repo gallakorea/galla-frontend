@@ -106,7 +106,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 const left = w.querySelectorAll(".mp-req-row").length;
                 w.querySelector(".mp-req-h span").textContent = left;
                 if (!left) w.querySelector(".mp-req-list").innerHTML = `<div class="mp-req-empty">받은 요청이 없어요</div>`;
-                if (btn) btn.innerHTML = "👥 팔로우 요청" + (left ? ` <b>${left}</b>` : "");
+                if (btn) btn.innerHTML = USERS_SVG + " 팔로우 요청" + (left ? ` <b>${left}</b>` : "");
                 if (ok) { try { const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following", userId);
                     const st = D.querySelector("#statFollowers"); if (st && count != null) st.textContent = count; } catch (_) {} }
             } else row.style.opacity = "1";
@@ -145,7 +145,12 @@ async function GALLA_mypageInit(root, spaParams) {
     // ============================
     const profileActions = byId("profileActions");
     profileActions.innerHTML = "";
-    let PRIVATE_LOCK = false;   // 🔒 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
+    let PRIVATE_LOCK = false;
+    /* 🔒 공개 범위 아이콘은 SVG(이모지 금지 — 기기마다 모양이 달라진다, 사장님 26.9.18) */
+    const LOCK_SVG = '<svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+    const USERS_SVG = '<svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    const LOCK_BADGE = '<span class="ig-lock" title="나만 보기">' + LOCK_SVG + '</span>';
+    const LOCK_INLINE = '<span class="vis-lock-i" title="나만 보기">' + LOCK_SVG + '</span>';   // 🔒 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
 
     if (isMyPage) {
         const editBtn = document.createElement("button");
@@ -182,11 +187,11 @@ async function GALLA_mypageInit(root, spaParams) {
                 const reqBtn = document.createElement("button");
                 reqBtn.className = "action-btn secondary mp-req-btn";
                 const n0 = Number(me2.requests || 0);
-                reqBtn.innerHTML = "👥 팔로우 요청" + (n0 ? ` <b>${n0}</b>` : "");
+                reqBtn.innerHTML = USERS_SVG + " 팔로우 요청" + (n0 ? ` <b>${n0}</b>` : "");
                 reqBtn.onclick = () => openFollowRequests(reqBtn);
                 profileActions.appendChild(reqBtn);
                 const nm = byId("profileName");
-                if (nm && !nm.querySelector(".mp-priv")) nm.insertAdjacentHTML("beforeend", ' <span class="mp-priv" title="비공개 계정">🔒</span>');
+                if (nm && !nm.querySelector(".mp-priv")) nm.insertAdjacentHTML("beforeend", ' <span class="mp-priv" title="비공개 계정">' + LOCK_SVG + '</span>');
                 if (new URLSearchParams(spaParams || location.search).get("requests")) openFollowRequests(reqBtn);
             }
         } catch (_) {}
@@ -1020,7 +1025,7 @@ async function GALLA_mypageInit(root, spaParams) {
             <img src="${(window.GALLA_thumb ? window.GALLA_thumb(thumb, 480) : thumb) || "./assets/logo.png"}" loading="lazy"
                  onerror="this.src='./assets/logo.png'">
             ${badge ? `<span class="ig-badge">${badge}</span>` : ""}
-            ${priv ? `<span class="ig-lock" title="나만 보기">🔒</span>` : ""}
+            ${priv ? LOCK_BADGE : ""}
             <div class="ig-title">${title || ""}</div>
         `;
         card.onclick = onClick;
@@ -1288,7 +1293,7 @@ async function GALLA_mypageInit(root, spaParams) {
         if (plazaSubTab === "mine") {
             const { data, error } = await supabase
                 .from("plaza_posts")
-                .select("id, title, thumbnail, cover_image, created_at")
+                .select("id, title, thumbnail, cover_image, created_at, visibility")
                 .eq("user_id", viewUserId)
                 .order("created_at", { ascending: false });
             if (error) {
@@ -1343,7 +1348,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 thumb: p.cover_image || p.thumbnail,
                 kind: "🏛",
                 title: p.title,
-                meta: `<span class="mp-row-tag plaza">🏛 광장</span> ${mpAgo(p.created_at)}`,
+                meta: `${p.visibility === "private" ? LOCK_INLINE : ""}<span class="mp-row-tag plaza">🏛 광장</span> ${mpAgo(p.created_at)}`,
                 onClick: () => openQvList(qvItems, myIdx)
             }));
         });
@@ -1507,7 +1512,7 @@ async function GALLA_mypageInit(root, spaParams) {
         tabContent.className = "content-area";
         tabContent.innerHTML = MP_SPINNER;
         const { data: posts } = await supabase.from("posts")
-            .select("id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count")
+            .select("id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,visibility")
             .eq("user_id", viewUserId).eq("kind", kind).eq("is_published", true)
             .order("created_at", { ascending: false }).limit(60);
         const items = posts || [];
@@ -1525,10 +1530,10 @@ async function GALLA_mypageInit(root, spaParams) {
         if (!items.length) inner = `<div class="glf-empty">아직 ${kind === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
         else if (kind === "vertical") inner = '<div class="glf-grid">' + items.map(p =>
             `<div class="glf-tile" data-id="${p.id}" data-car="${isCar(p) ? 1 : 0}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
-             ${isCar(p) ? '<span class="glf-play">⧉</span>' : (p.video_url ? '<span class="glf-play">▶</span>' : '')}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
+             ${p.visibility === "private" ? LOCK_BADGE : ""}${isCar(p) ? '<span class="glf-play">⧉</span>' : (p.video_url ? '<span class="glf-play">▶</span>' : '')}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
         else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
-             <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
+             <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${p.visibility === "private" ? LOCK_INLINE : ""}${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
         if (stale(tok)) return;
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
@@ -1567,10 +1572,10 @@ async function GALLA_mypageInit(root, spaParams) {
             if (d < 31536000) return Math.floor(d / 2592000) + "개월 전"; return Math.floor(d / 31536000) + "년 전";
         };
         const [iss, pst, mkt, plz] = await Promise.all([
-            supabase.from("issues").select("id,title,thumbnail_url,card_thumb_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
-            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,media,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
+            supabase.from("issues").select("id,title,thumbnail_url,card_thumb_url,images,created_at,visibility").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
+            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,media,video_url,view_count,created_at,visibility").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
             supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(6),
-            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
+            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at,visibility").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
         ]);
         const pdata = pst.data || [];
         const shorts = pdata.filter(r => r.kind !== "horizontal").slice(0, 6);
@@ -1603,6 +1608,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 const tt = typeof t === "function" ? t(r) : t;   // 행별 타입(캐러셀 숏판→상세)
                 return `<div class="mp-sh-cell" data-t="${tt}" data-id="${r.id}">
                     ${th ? art(th) : `<div class="mp-yt-ph"></div>`}
+                    ${r.visibility === "private" ? LOCK_BADGE : ""}
                     <span class="mp-sh-cap">${esc(capOf(r) || "")}</span>
                     ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
                 </div>`;
@@ -1620,7 +1626,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 const artHtml = th ? art(th, 160) : `<div class="mp-am-ph">${GLYPH[t] || ""}</div>`;
                 return `<div class="mp-am-row" data-t="${t}" data-id="${r.id}">
                     <div class="mp-am-art">${artHtml}</div>
-                    <div class="mp-am-info"><div class="mp-am-tt">${esc(titleOf(r) || "제목 없음")}</div><div class="mp-am-sub">${esc(metaOf(r))}</div></div>
+                    <div class="mp-am-info"><div class="mp-am-tt">${r.visibility === "private" ? LOCK_INLINE : ""}${esc(titleOf(r) || "제목 없음")}</div><div class="mp-am-sub">${esc(metaOf(r))}</div></div>
                 </div>`;
             }).join("");
             return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-am-list">${html}</div></section>`;
@@ -1686,7 +1692,7 @@ async function GALLA_mypageInit(root, spaParams) {
     function renderFor(menu) {
         if (PRIVATE_LOCK) {
             tabContent.className = "content-area";
-            tabContent.innerHTML = `<div class="mp-lock"><div class="mp-lock-ic">🔒</div>
+            tabContent.innerHTML = `<div class="mp-lock"><div class="mp-lock-ic">${LOCK_SVG}</div>
               <div class="mp-lock-t">비공개 계정이에요</div>
               <div class="mp-lock-s">${userId ? "팔로우 요청을 보내고 수락되면 콘텐츠를 볼 수 있어요." : "로그인하고 팔로우 요청을 보내 보세요."}</div></div>`;
             return;

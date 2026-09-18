@@ -51,6 +51,8 @@
 
     window.GALLA_DOMAIN = post.kind === 'horizontal' ? 'long' : 'short';
     document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '롱판') : (author?.nickname || '숏판');
+    /* 🔒 나만 보기(26.9.18) — 상단 제목 옆 SVG 자물쇠(본인·운영진만 여기까지 온다 — RLS) */
+    if (post.visibility === 'private') document.getElementById('glp-top-title').insertAdjacentHTML('beforeend', ' <span class="vis-lock"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</span>');
 
     // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
     const moreBtn = document.getElementById('glp-more');

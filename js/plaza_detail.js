@@ -203,7 +203,7 @@ async function fetchPostDetail() {
   }
 
   if (postTitleEl) postTitleEl.textContent = data.title;
-  if (postTitleEl && data.visibility === "private") postTitleEl.insertAdjacentHTML("beforeend", ' <span class="vis-lock">🔒 나만 보기</span>');   // 🔒 26.9.18
+  if (postTitleEl && data.visibility === "private") postTitleEl.insertAdjacentHTML("beforeend", ' <span class="vis-lock"><svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 나만 보기</span>');   // 🔒 26.9.18
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   /* 🌐 다른 언어로 쓰인 글이면 '번역 보기'를 붙인다(인스타 방식).
      ⚠️ 원문 HTML(마커·미디어)을 건드리지 않으려고 **본문 텍스트만** 대상으로 한다.
