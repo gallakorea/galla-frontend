@@ -369,7 +369,7 @@
   async function openDetail(id) {
     buildDetail();
     var d = await rpc("food_place_detail", { p_id: id });
-    if (!d || !d.ok) return toast("정보를 불러오지 못했어요");
+    if (!d || !d.ok) { resumeChPage(); return toast("정보를 불러오지 못했어요"); }
     DETAIL.classList.add("open");
     /* 지도에서 왔으면 스크림을 옅게 — 핀을 누른 자리가 뒤에 보여야 공간 맥락이 산다.
        목록에서 왔으면 뒤에 지도가 없으니 진하게 덮는다(사장님 지적). */
@@ -523,6 +523,7 @@
       } catch (_) {}
     }
     DETAIL.__vidPlayed = false;
+    resumeChPage();
     loadList();
   }
   function subSheet() { buildDetail(); return DETAIL.querySelector("#fd-dsub"); }
@@ -610,7 +611,7 @@
       document.body.appendChild(VPICK);
       VPICK.addEventListener("click", function (e) {
         var b = e.target.closest("[data-vpid]");
-        if (b) { VPICK.classList.remove("open"); closeChPage(); openDetail(b.dataset.vpid); return; }
+        if (b) { VPICK.classList.remove("open"); detailFromCh(b.dataset.vpid); return; }
         if (e.target === VPICK || e.target.closest(".fdp-x")) VPICK.classList.remove("open");
       });
     }
@@ -1464,7 +1465,7 @@
        먼저 돌아 replaceState(null) 로 state 를 지워 버려서, 상세만 닫았는데 지도까지 닫혔다(26.9.18 사장님 제보·재현). */
     window.addEventListener("popstate", function (ev) {
       if (!MAP.classList.contains("open")) return;
-      try { if (ev && ev.state && ev.state.fdMap) return; } catch (_) {}
+      try { if (ev && ev.state && (ev.state.fdMap || ev.state.fdCh)) return; } catch (_) {}
       closeMap(true);
     });
   }
@@ -1561,7 +1562,7 @@
   window.GALLA_FOOD_CLOSE_ALL = function () {
     try { if (MAP && MAP.classList.contains("open")) closeMap(true); } catch (_) {}
     try { if (DETAIL && DETAIL.classList.contains("open")) closeDetail(true); } catch (_) {}
-    try { closeChPage(); } catch (_) {}
+    try { closeChPage(true); } catch (_) {}
     try { closeChPick(); } catch (_) {}
     try { closeRegionPicker(); } catch (_) {}
     try { closeVideoSheet(); } catch (_) {}
@@ -1880,6 +1881,18 @@
       document.body.appendChild(CHPAGE);
       /* ⚠️ 전파를 끊는다 — 패널 클릭 처리기가 document 위임이라 안 끊으면 두 번 처리된다
          (누구 고르기에서 밟은 함정: chFilter 가 두 번 토글돼 null 이 됐다). */
+      /* ⚠️ 판정은 이벤트에 실려 온 state 로(지도와 같은 이유 — 라우터가 먼저 replaceState 한다).
+         상세를 닫고 {fdCh} 칸으로 돌아온 거면 채널 페이지는 그대로 둔다. */
+      window.addEventListener("popstate", function (ev) {
+        /* 상세에서 영상을 틀면 back 대신 replaceState 로 닫혀 {fdCh} 칸이 하나 더 남는다.
+           채널 페이지가 이미 닫혔는데 그 칸에 도착했으면 빈 칸이니 한 칸 더 건너뛴다 */
+        if (!CHPAGE.classList.contains("open") && !CHPAGE.__parked) {
+          try { if (ev && ev.state && ev.state.fdCh) history.back(); } catch (_) {}
+          return;
+        }
+        try { if (ev && ev.state && (ev.state.fdCh || ev.state.fdDetail)) return; } catch (_) {}
+        closeChPage(true);
+      });
       CHPAGE.addEventListener("click", function (e) {
         if (e.target === CHPAGE || e.target.closest("[data-cgclose]")) {
           e.stopPropagation(); closeChPage(); return;
@@ -1901,15 +1914,18 @@
           var places = [];
           try { places = JSON.parse(v.dataset.places || "[]"); } catch (_) {}
           places = uniqPlaces(places);
-          if (places.length === 1) { closeChPage(); openDetail(places[0].id); return; }
+          if (places.length === 1) { detailFromCh(places[0].id); return; }
           if (places.length > 1) { openPlacePick(places, vt ? vt.textContent : ""); return; }
           openVideoSheet(v.dataset.vid, vt ? vt.textContent : ""); return;
         }
         var pb = e.target.closest("[data-cgplace]");
-        if (pb) { closeChPage(); openDetail(pb.dataset.cgplace); }
+        if (pb) { detailFromCh(pb.dataset.cgplace); }
       });
     }
     CHPAGE.innerHTML = '<div class="fd-cpick-box"><div class="cp-none">불러오는 중…</div></div>';
+    /* 뒤로가기(스와이프)로 닫히게 방문 기록에 한 칸 둔다 — 없으면 뒤로가기가 채널 페이지를 건너뛰고 앞 화면까지 갔다 */
+    if (!CHPAGE.classList.contains("open")) { try { history.pushState({ fdCh: 1 }, ""); } catch (_) {} }
+    CHPAGE.__parked = false;
     CHPAGE.classList.add("open");
     document.body.classList.add("fd-detail-on");
     var d = await rpc("food_channel_page", { p_slug: slug, p_places: 30, p_videos: 24 });
@@ -1924,11 +1940,34 @@
       if (v && v.ok && CG && CG.slug === slug) { CG.vTotal = v.total || 0; cgPaint(); }
     });
   }
-  function closeChPage() {
+  function closeChPage(fromPop) {
     if (!CHPAGE) return;
+    var was = CHPAGE.classList.contains("open");
     stopVideos(CHPAGE);
+    CHPAGE.__parked = false;
     CHPAGE.classList.remove("open");
     document.body.classList.remove("fd-detail-on");
+    if (was && !fromPop) { try { if (history.state && history.state.fdCh) history.back(); } catch (_) {} }
+  }
+  /* 🔴 모달 위에 모달을 겹치지 않는다(사장님 26.9.18). 채널 페이지에서 가게를 열면 채널 페이지를 잠시 내려 두고
+     상세만 보인다. 상세를 닫으면 보던 탭·스크롤 그대로 채널 페이지가 돌아온다.
+     (예전엔 채널 페이지를 아예 닫아서, 상세를 닫으면 목록으로 떨어져 보던 영상을 다시 찾아야 했다) */
+  function detailFromCh(id) {
+    if (CHPAGE && CHPAGE.classList.contains("open")) {
+      var bx = CHPAGE.querySelector(".fd-cpick-box");
+      CHPAGE.__scroll = bx ? bx.scrollTop : 0;
+      stopVideos(CHPAGE);
+      CHPAGE.classList.remove("open");
+      CHPAGE.__parked = true;
+    }
+    openDetail(id);
+  }
+  function resumeChPage() {
+    if (!CHPAGE || !CHPAGE.__parked) return;
+    CHPAGE.__parked = false;
+    CHPAGE.classList.add("open");
+    document.body.classList.add("fd-detail-on");
+    var bx = CHPAGE.querySelector(".fd-cpick-box"); if (bx) bx.scrollTop = CHPAGE.__scroll || 0;
   }
 
   /* ── 누구 고르기 ──────────────────────────────────────
