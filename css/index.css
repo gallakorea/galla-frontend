@@ -1014,19 +1014,25 @@ body.shorts-open .header { display: none !important; }
 
 /* 📐 홈 피드 카드 — 인스타처럼 화면 폭 끝까지(26.9.18 사장님).
    예전엔 좌우 16px 여백 + 둥근 테두리 박스라 사진·영상이 화면보다 32px 좁았다.
-   ⚠️ .card 는 다른 페이지 20여 곳이 같이 쓴다 → 홈 피드(#best-list) 안만 바꾼다.
-   카드 사이 구분은 아래 얇은 선 + 간격으로. 헤더·본문 안쪽 여백은 그대로(글자가 화면 끝에 붙지 않게). */
-#best-list > .card {
+   ⚠️ 홈 피드는 상자가 둘이다: 위 #best-list(베스트) + 아래 #recommend-list(추천 — 이슈·숏판롱판·광장·기사·영상·일기토·예측).
+      처음엔 #best-list 만 바꿔서 내리면 옛 모양이 나왔다(폰 실측). 둘 다, 카드 종류 전부.
+   ⚠️ .card 는 다른 페이지 20여 곳이 같이 쓴다 → 홈 피드 상자 안만 바꾼다.
+   카드 사이 구분은 아래 얇은 선 + 간격으로. 안쪽 여백은 그대로(글자가 화면 끝에 붙지 않게). */
+:is(#best-list, #recommend-list) > :is(.card, .predict-feed-card) {
     margin: 0 0 18px;
     border: 0;
     border-bottom: 1px solid #161618;
     border-radius: 0;
-    background: transparent;
+    box-shadow: none;
 }
-#best-list > .card.pinned {
+:is(#best-list, #recommend-list) > .card { background: transparent; }
+:is(#best-list, #recommend-list) > .card.pinned {
     border-left-width: 0 !important;
     border-right-width: 0 !important;
     border-radius: 0;
     box-shadow: none;
 }
-#best-list > .card.glr-feed-card:active { transform: none; }
+/* 예측 카드는 배경색으로 구분되는 카드라 배경은 두고, 흐르는 테두리만 위아래 선으로 */
+:is(#best-list, #recommend-list) > .predict-feed-card::before { border-radius: 0; padding: 1px 0; }
+/* 화면 끝까지 닿는 카드는 눌림 축소가 가장자리를 들뜨게 보인다 — 끈다 */
+:is(#best-list, #recommend-list) > :is(.card, .predict-feed-card):active { transform: none; }
