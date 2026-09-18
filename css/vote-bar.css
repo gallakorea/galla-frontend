@@ -132,3 +132,52 @@
 @media (prefers-reduced-motion: reduce) {
   .gv.gv-locked .gv-fill, .gv.gv-locked .gv-knot, .gv.gv-locked .gv-fill::after, .gv-bar.gv-tugging { animation: none !important; }
 }
+
+/* ✨ 투표 전 — 전광판처럼 반짝이며 눌러 보게(26.9.18 사장님). 투표하면(.gv-locked) 전부 꺼지고 줄다리기로 넘어간다.
+   전부 transform·opacity 만 움직인다(합성 레이어 — 피드에 여러 장 있어도 가볍게). */
+.gv:not(.gv-locked) .gv-btn { position: relative; overflow: hidden; border-color: transparent; isolation: isolate; }
+.gv:not(.gv-locked) .gv-btn > .gv-emoji, .gv:not(.gv-locked) .gv-btn > .gv-name { position: relative; z-index: 3; }
+/* ① 가장자리를 도는 전구 불빛 */
+.gv:not(.gv-locked) .gv-btn::before { content: ""; position: absolute; left: 50%; top: 50%; width: 260%; aspect-ratio: 1; margin: -130% 0 0 -130%; z-index: 0;
+  background: repeating-conic-gradient(from 0deg, var(--gv-bulb) 0 5deg, transparent 5deg 16deg); animation: gvChase 3.2s linear infinite; }
+.gv:not(.gv-locked) .gv-btn::after { content: ""; position: absolute; inset: 2px; border-radius: 10px; z-index: 1; background: #0c0e14; }
+.gv:not(.gv-locked) .gv-pro { --gv-bulb: #ffd66b; }
+.gv:not(.gv-locked) .gv-con { --gv-bulb: #ffd66b; }
+.gv:not(.gv-locked) .gv-con::before { animation-direction: reverse; }
+@keyframes gvChase { to { transform: rotate(360deg); } }
+/* ② 번갈아 빛나며 부른다(핑퐁) */
+.gv-bglow { display: none; }
+.gv:not(.gv-locked) .gv-bglow { display: block; position: absolute; inset: 2px; border-radius: 10px; z-index: 2; pointer-events: none; opacity: 0;
+  animation: gvPing 2.4s ease-in-out infinite; }
+.gv:not(.gv-locked) .gv-pro .gv-bglow { background: radial-gradient(120% 140% at 50% 120%, rgba(90,130,255,.55), rgba(90,130,255,.08) 60%, transparent); }
+.gv:not(.gv-locked) .gv-con .gv-bglow { background: radial-gradient(120% 140% at 50% 120%, rgba(255,80,120,.55), rgba(255,80,120,.08) 60%, transparent); animation-delay: 1.2s; }
+@keyframes gvPing { 0%,100% { opacity: .15; } 30% { opacity: 1; } 55% { opacity: .15; } }
+/* ③ 광택이 쓱 */
+.gv-bshine { display: none; }
+.gv:not(.gv-locked) .gv-bshine { display: block; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.28), transparent); transform: translateX(-130%) skewX(-12deg);
+  animation: gvBShine 2.8s ease-in-out infinite; }
+.gv:not(.gv-locked) .gv-con .gv-bshine { animation-delay: 1.4s; }
+@keyframes gvBShine { 0%,55% { transform: translateX(-130%) skewX(-12deg); } 85%,100% { transform: translateX(330%) skewX(-12deg); } }
+/* ④ 별빛 반짝 */
+.gv-spark { display: none; }
+.gv:not(.gv-locked) .gv-spark { display: block; position: absolute; z-index: 3; width: 9px; height: 9px; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, #fff 0 18%, transparent 20%), conic-gradient(from 45deg, transparent 0 20%, #fff8d6 22% 28%, transparent 30% 45%, #fff8d6 47% 53%, transparent 55% 70%, #fff8d6 72% 78%, transparent 80% 95%, #fff8d6 97%);
+  -webkit-mask: radial-gradient(circle, #000 35%, transparent 70%); mask: radial-gradient(circle, #000 35%, transparent 70%);
+  animation: gvTwinkle 1.9s ease-in-out infinite; }
+.gv:not(.gv-locked) .gv-spark.s1 { left: 12%; top: 18%; }
+.gv:not(.gv-locked) .gv-spark.s2 { right: 14%; top: 22%; animation-delay: .7s; }
+.gv:not(.gv-locked) .gv-spark.s3 { left: 46%; bottom: 14%; animation-delay: 1.3s; }
+.gv:not(.gv-locked) .gv-con .gv-spark { animation-delay: .35s; }
+@keyframes gvTwinkle { 0%,100% { opacity: 0; transform: scale(.3) rotate(0); } 40% { opacity: 1; transform: scale(1.35) rotate(45deg); } 60% { opacity: .2; transform: scale(.7) rotate(90deg); } }
+/* ⑤ 막대 — 경계가 좌우로 약 올리듯 흔들리고, 반짝이가 뿌려진다 */
+.gv:not(.gv-locked) .gv-needle { animation: gvTease 2.4s ease-in-out infinite; }
+@keyframes gvTease { 0%,100% { translate: 0 0; } 25% { translate: -14px 0; } 50% { translate: 0 0; } 75% { translate: 14px 0; } }
+.gv-glint { display: none; }
+.gv:not(.gv-locked) .gv-glint { display: block; position: absolute; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; z-index: 4; pointer-events: none;
+  background: #fff; box-shadow: 0 0 6px 2px rgba(255,240,190,.9); opacity: 0; animation: gvTwinkle 2.2s ease-in-out infinite; }
+.gv:not(.gv-locked) .gv-glint.g1 { left: 22%; } .gv:not(.gv-locked) .gv-glint.g2 { left: 55%; animation-delay: .8s; } .gv:not(.gv-locked) .gv-glint.g3 { left: 81%; animation-delay: 1.5s; }
+.gv:not(.gv-locked) .gv-btn:active { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) {
+  .gv:not(.gv-locked) .gv-btn::before, .gv-bglow, .gv-bshine, .gv-spark, .gv-glint, .gv:not(.gv-locked) .gv-needle { animation: none !important; }
+}

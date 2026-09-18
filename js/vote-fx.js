@@ -13,7 +13,7 @@
     con: ["#ff5a7a", "#ff8aa0", "#ffd0da", "#ffffff", "#ffd54a", "#ff9b4d"]
   };
   const BURST = ["🎉", "✨", "💥", "⭐", "🔥", "🎊"];
-  const COINS = ["🪙", "💰", "💎", "🎰", "🏆", "⭐"];
+  const COINS = ["🪙", "💰", "💎", "🎁", "🏆", "⭐"];
 
   function ensureLayer() {
     let l = document.getElementById("gv-fx");

@@ -1,5 +1,5 @@
 /* =========================================================
-   🎰 갈라 뽑기(가챠) — 700GP 소비 후 랜덤 보상(코스메틱/GP)
+   🎁 갈라 뽑기(가챠) — 700GP 소비 후 랜덤 보상(코스메틱/GP)
    window.GALLA_openGacha() · gacha_draw RPC · 자체 CSS/애니메이션
    ========================================================= */
 (function () {
@@ -59,7 +59,7 @@
     clearInterval(spinTimer); machine.classList.remove("spin");
 
     if (!data?.ok) {
-      machine.textContent = "🎰";
+      machine.textContent = "🎁";
       let msg = "뽑기 실패";
       if (data?.reason === "insufficient") msg = "GP가 부족해요 (700GP 필요)";
       else if (data?.reason === "daily_limit") msg = `오늘 뽑기 한도(${data.limit}회)를 다 썼어요. 내일 다시!`;
@@ -68,7 +68,7 @@
       else btn.disabled = false;
       return;
     }
-    if (data.limit) btn.textContent = `🎰 뽑기 (700 GP) · 오늘 ${data.used}/${data.limit}`;
+    if (data.limit) btn.textContent = `🎁 뽑기 (700 GP) · 오늘 ${data.used}/${data.limit}`;
     const color = GRADE[data.grade] || GRADE.common;
     machine.textContent = data.type === "bust" ? "💨" : (data.type === "gp" ? "💰" : "🎁");
     rewardBox.innerHTML = `<div class="ga-reward" style="border-color:${color};background:${color}22">
@@ -89,11 +89,11 @@
     document.getElementById("ga-sheet")?.remove();
     sheet = document.createElement("div"); sheet.id = "ga-sheet"; sheet.className = "ga-sheet";
     sheet.innerHTML = `<div class="dim"></div><div class="ga-card">
-      <div class="ga-title">🎰 갈라 뽑기</div>
+      <div class="ga-title">🎁 갈라 뽑기</div>
       <div class="ga-bal" id="ga-bal">보유 – GP</div>
-      <div class="ga-machine" id="ga-machine">🎰</div>
+      <div class="ga-machine" id="ga-machine">🎁</div>
       <div id="ga-reward-wrap"></div>
-      <button class="ga-draw" id="ga-draw">🎰 뽑기 (700 GP)</button>
+      <button class="ga-draw" id="ga-draw">🎁 뽑기 (700 GP)</button>
       <button class="ga-odds-btn" id="ga-odds-btn">📊 확률 공개 보기</button>
       <div class="ga-odds" id="ga-odds" hidden>
         <table>

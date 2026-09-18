@@ -7,6 +7,8 @@
   const pct = (pro, con) => { const t = (pro || 0) + (con || 0); return t ? Math.round((pro / t) * 100) : 50; };
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* ✨ 투표 전 반짝이 장식(26.9.18 사장님: 「투표 전이 심심 — 반짝이며 눌러 보게」). 투표하면 CSS 가 전부 끈다. */
+  const FX = '<i class="gv-bglow"></i><i class="gv-bshine"></i><i class="gv-spark s1"></i><i class="gv-spark s2"></i><i class="gv-spark s3"></i>';
   // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
   function html(o) {
     o = o || {};
@@ -14,8 +16,8 @@
     const pro = o.pro || 0, con = o.con || 0, total = pro + con;
     const pp = pct(pro, con), cp = 100 - pp;
     const buttons = o.buttons === false ? "" : `<div class="gv-btns">
-      <button class="gv-btn gv-pro ${o.proClass || ""}" data-haptic="vote" ${o.proAttr || ""}><span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
-      <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="vote" ${o.conAttr || ""}><span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
+      <button class="gv-btn gv-pro ${o.proClass || ""}" data-haptic="vote" ${o.proAttr || ""}>${FX}<span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
+      <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="vote" ${o.conAttr || ""}>${FX}<span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
     </div>`;
     return `${buttons}
       <div class="gv-bar" data-pro="${pro}" data-con="${con}">
@@ -25,6 +27,7 @@
         <div class="gv-pct gv-pct-con${cp < 14 ? " gv-hide" : ""}">${cp}%</div>
         <div class="gv-needle" style="left:${pp}%"></div>
         <div class="gv-knot" style="left:${pp}%"></div>
+        <i class="gv-glint g1"></i><i class="gv-glint g2"></i><i class="gv-glint g3"></i>
         <div class="gv-pop gv-pop-pro">+1</div><div class="gv-pop gv-pop-con">+1</div>
       </div>
       <div class="gv-stats">
