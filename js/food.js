@@ -219,7 +219,7 @@
     setTimeout(pushTouchTop, 0);
     /* 지도 위에 뜨는 DOM 시트 — 하나라도 열려 있으면 터치를 전부 웹으로 받는다.
        시트마다 열고 닫는 곳에 일일이 걸면 새 시트가 생길 때 또 빠진다 → 클래스 변화를 지켜본다. */
-    var OVER = ".fd-detail.open, .fd-cpick.open, .fd-rpick.open, #fd-fsheet.open";
+    var OVER = ".fd-detail.open, .fd-cpick.open, .fd-rpick.open, #fd-fsheet.open, .fd-vplayer.open";
     var overNow = false;
     function syncOver() {
       var any = !!document.querySelector(OVER);
@@ -537,6 +537,62 @@
   var YT_PROXY = "https://galla.im/yt";
   /* ⏹ 재생 중인 영상을 멈춘다 — iframe 을 치우고 썸네일로 되돌린다.
      상세·채널 페이지는 닫아도 DOM 이 살아 있어, 안 치우면 화면 밖에서 소리가 계속 났다(26.9.18 사장님 제보). */
+  /* 🎬 영상 재생 창 — 격자 칸·시트 안에서 그 자리에 틀면 너무 작고 전체 화면도 안 됐다(26.9.18 사장님).
+     화면 위에 크게 띄운다. 재생기는 시청 페이지(watch-page.js)와 같은 galla.im/yt 프록시·같은 allow 값
+     (특히 'fullscreen' — 빠지면 전체 화면 버튼이 안 먹는다). 뒤의 상세·채널 페이지·지도는 그대로 둔다. */
+  var VP = null;
+  function openVideoSheet(vid, title) {
+    if (!vid) return;
+    if (!VP) {
+      VP = document.createElement("div");
+      VP.className = "fd-vplayer";
+      VP.setAttribute("data-no-ptr", "");
+      VP.innerHTML = '<div class="fdv-bg"></div>' +
+        '<div class="fdv-box">' +
+          '<div class="fdv-top"><span class="fdv-title"></span>' +
+            '<button type="button" class="fdv-x" aria-label="닫기">✕</button></div>' +
+          '<div class="fdv-frame"></div>' +
+          '<a class="fdv-yt" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>' +
+        '</div>';
+      document.body.appendChild(VP);
+      VP.addEventListener("click", function (e) {
+        if (e.target.closest(".fdv-x") || e.target.classList.contains("fdv-bg")) closeVideoSheet();
+      });
+      /* 아래로 끌어 닫기 — 재생기 밖(제목 줄·빈 곳)에서만 잡힌다(iframe 안 터치는 재생기가 가져간다) */
+      var box = VP.querySelector(".fdv-box"), y0 = 0, dy = 0, drag = false;
+      box.addEventListener("touchstart", function (e) {
+        if (!e.touches || e.touches.length !== 1) return;
+        y0 = e.touches[0].clientY; dy = 0; drag = true;
+      }, { passive: true });
+      box.addEventListener("touchmove", function (e) {
+        if (!drag) return;
+        dy = Math.max(0, e.touches[0].clientY - y0);
+        box.style.transition = "none"; box.style.transform = "translateY(" + dy + "px)";
+      }, { passive: true });
+      box.addEventListener("touchend", function () {
+        if (!drag) return; drag = false;
+        box.style.transition = ""; box.style.transform = "";
+        if (dy > 100) closeVideoSheet();
+      });
+    }
+    VP.querySelector(".fdv-title").textContent = title || "";
+    VP.querySelector(".fdv-yt").href = "https://www.youtube.com/watch?v=" + encodeURIComponent(vid);
+    var fr = VP.querySelector(".fdv-frame");
+    fr.innerHTML = "";
+    var ifr = document.createElement("iframe");
+    ifr.src = YT_PROXY + "?v=" + encodeURIComponent(vid);
+    ifr.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen");
+    ifr.setAttribute("allowfullscreen", "");
+    ifr.setAttribute("frameborder", "0");
+    fr.appendChild(ifr);
+    VP.classList.add("open");
+  }
+  /* 닫으면 재생기를 치운다 — 크로스 오리진이라 pause 를 못 부른다. 프레임을 버리는 게 유일한 정지 수단 */
+  function closeVideoSheet() {
+    if (!VP) return;
+    var fr = VP.querySelector(".fdv-frame"); if (fr) fr.innerHTML = "";
+    VP.classList.remove("open");
+  }
   function stopVideos(root) {
     if (!root) return;
     root.querySelectorAll(".fd-vid.playing").forEach(function (v) {
@@ -1471,6 +1527,7 @@
     try { closeChPage(); } catch (_) {}
     try { closeChPick(); } catch (_) {}
     try { closeRegionPicker(); } catch (_) {}
+    try { closeVideoSheet(); } catch (_) {}
     /* 위 닫기들이 하나라도 못 돌았을 때를 대비한 마지막 빗자루 */
     try {
       document.body.classList.remove("fd-map-on", "fd-detail-on");
@@ -1799,10 +1856,8 @@
         if (mb) { cgMore(mb.dataset.cgmore); return; }
         var v = e.target.closest(".fd-vid");
         if (v && v.dataset.vid) {
-          if (v.__thumb == null) v.__thumb = v.innerHTML;   // 닫을 때 되돌릴 썸네일
-          v.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(v.dataset.vid) +
-            '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
-          v.classList.add("playing"); return;
+          var vt = v.querySelector(".cg-vt, .fs-t");
+          openVideoSheet(v.dataset.vid, vt ? vt.textContent : ""); return;
         }
         var pb = e.target.closest("[data-cgplace]");
         if (pb) { closeChPage(); openDetail(pb.dataset.cgplace); }
@@ -2282,11 +2337,10 @@
     if (t.closest(".fd-sheet-grip") && SHEET) { setSheetPos(SHEET, !SHEET.__full); return; }   // 손잡이 탭 = 펼침/접기
     var vw = t.closest(".fd-vid");
     if (vw && vw.dataset.vid) {
-      if (vw.__thumb == null) vw.__thumb = vw.innerHTML;   // 닫을 때 되돌릴 썸네일
-      DETAIL.__vidPlayed = true;
-      vw.innerHTML = '<iframe src="' + YT_PROXY + '?v=' + encodeURIComponent(vw.dataset.vid) +
-        '" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>';
-      vw.classList.add("playing"); return;
+      var vtt = vw.querySelector(".fs-t, .cg-vt");
+      DETAIL.__vidPlayed = true;          // 재생기 iframe 이 방문 기록을 건드릴 수 있다 — 닫을 때 back 대신 replaceState
+      openVideoSheet(vw.dataset.vid, vtt ? vtt.textContent : "");
+      return;
     }
     if (t.closest("[data-hours]")) {
       var dd = SHEET && SHEET.querySelector("#fi-days");
