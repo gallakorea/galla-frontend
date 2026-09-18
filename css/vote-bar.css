@@ -98,3 +98,37 @@
 .shorts-vote .gv-btn { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); background: rgba(10,12,20,.5); padding: 11px 8px; }
 .shorts-vote .gv-stats { margin-top: 7px; }
 .shorts-vote .gv-total { color: #c9cede; }
+
+/* 🪢 줄다리기(26.9.18 사장님: 「줄다리기 하는 듯한 애니메이션 — 선택하고 나서」)
+   투표한 순간: 고른 쪽으로 확 끌려갔다 되받아치며 출렁인 뒤 실제 비율에 멈춘다(JS tug, WAAPI) + 막대 떨림.
+   투표한 뒤(.gv-locked): 경계에 매듭 · 서로 당기듯 경계가 오간다 · 밧줄 결이 각자 자기 쪽으로 흐른다.
+   투표 전엔 차분하게(기존 광택만). 움직임 줄이기면 전부 끔. */
+.gv.gv-locked .gv-bar { background: linear-gradient(90deg, color-mix(in srgb, var(--gv-pro) 78%, #000) 50%, color-mix(in srgb, var(--gv-con) 78%, #000) 50%); }
+.gv-knot { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; z-index: 3; pointer-events: none;
+  opacity: 0; transform: scale(.3); transition: opacity .3s ease, transform .45s cubic-bezier(.34,1.56,.5,1), left .75s cubic-bezier(.34,1.35,.5,1);
+  background: radial-gradient(circle at 35% 30%, #fff6dc, #d7b16a 55%, #8a6428);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 10px rgba(255,220,140,.7); }
+.gv-knot::before, .gv-knot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; margin: -1px 0 0 -6px; border-radius: 2px; background: rgba(90,60,20,.7); }
+.gv-knot::before { transform: rotate(45deg); } .gv-knot::after { transform: rotate(-45deg); }
+.gv.gv-locked .gv-knot { opacity: 1; transform: scale(1); }
+.gv.gv-locked .gv-needle { opacity: 0; }
+
+/* 밧줄 결 — 각자 자기 쪽으로 흐른다(당기는 느낌) */
+.gv.gv-locked .gv-fill::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,.9) 0 3px, transparent 3px 11px); background-size: 44px 100%; }
+.gv.gv-locked .gv-fill-pro::after { animation: gvRopeL 1.1s linear infinite; }
+.gv.gv-locked .gv-fill-con::after { animation: gvRopeR 1.1s linear infinite; }
+@keyframes gvRopeL { to { background-position: -44px 0; } }
+@keyframes gvRopeR { to { background-position: 44px 0; } }
+
+/* 서로 당기며 경계가 오간다 — 막대 전체를 1~3px 흔든다(가장자리 틈은 위 배경색이 메운다) */
+.gv.gv-locked .gv-fill, .gv.gv-locked .gv-knot { animation-name: gvTension; animation-duration: 2.6s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.gv.gv-locked .gv-fill-pro::after, .gv.gv-locked .gv-fill-con::after { animation-duration: 1.1s; }
+@keyframes gvTension { 0%,100% { translate: 0 0; } 20% { translate: -3px 0; } 35% { translate: 2px 0; } 55% { translate: -1px 0; } 75% { translate: 3px 0; } }
+
+/* 투표한 순간 — 막대 떨림 */
+.gv-bar.gv-tugging { animation: gvStrain .12s linear 8; }
+@keyframes gvStrain { 0%,100% { transform: translateY(0); } 25% { transform: translateY(-1px) scaleY(1.04); } 75% { transform: translateY(1px) scaleY(.97); } }
+@media (prefers-reduced-motion: reduce) {
+  .gv.gv-locked .gv-fill, .gv.gv-locked .gv-knot, .gv.gv-locked .gv-fill::after, .gv-bar.gv-tugging { animation: none !important; }
+}

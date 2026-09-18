@@ -24,6 +24,7 @@
         <div class="gv-pct gv-pct-pro${pp < 14 ? " gv-hide" : ""}">${pp}%</div>
         <div class="gv-pct gv-pct-con${cp < 14 ? " gv-hide" : ""}">${cp}%</div>
         <div class="gv-needle" style="left:${pp}%"></div>
+        <div class="gv-knot" style="left:${pp}%"></div>
         <div class="gv-pop gv-pop-pro">+1</div><div class="gv-pop gv-pop-con">+1</div>
       </div>
       <div class="gv-stats">
@@ -62,6 +63,25 @@
     requestAnimationFrame(step);
   }
 
+  /* 🪢 줄다리기 한 판 — 고른 쪽으로 확 끌려갔다(+10) 되받아치며(−6 +4 −2) 실제 비율에 멈춘다.
+     WAAPI 라 도는 동안 CSS transition 을 덮고, 끝나면 이미 적어 둔 최종 폭에 그대로 선다(튐 없음). */
+  function tug(el, from, to, side) {
+    if (reduce() || !Element.prototype.animate) return;
+    const fp = el.querySelector(".gv-fill-pro"), fc = el.querySelector(".gv-fill-con"), bar = el.querySelector(".gv-bar");
+    const marks = [el.querySelector(".gv-needle"), el.querySelector(".gv-knot")].filter(Boolean);
+    const d = side === "pro" ? 1 : -1, clamp = (v) => Math.max(4, Math.min(96, v));
+    const seq = [from, to + 10 * d, to - 6 * d, to + 4 * d, to - 2 * d, to].map(clamp);
+    const off = [0, .28, .5, .68, .84, 1];
+    const opt = { duration: 1500, easing: "cubic-bezier(.3,.7,.3,1)" };
+    const kf = (fn) => seq.map((v, i) => Object.assign({ offset: off[i] }, fn(v)));
+    try {
+      fp && fp.animate(kf(v => ({ width: v + "%" })), opt);
+      fc && fc.animate(kf(v => ({ width: (100 - v) + "%" })), opt);
+      marks.forEach(m => m.animate(kf(v => ({ left: v + "%" })), opt));
+    } catch (_) { return; }
+    if (bar) { bar.classList.remove("gv-tugging"); void bar.offsetWidth; bar.classList.add("gv-tugging"); setTimeout(() => bar.classList.remove("gv-tugging"), 1100); }
+  }
+
   // 통계 갱신 + 화려한 애니메이션. voted: 방금 투표한 진영('pro'|'con'), animate: 튐/팝 효과.
   function update(el, stats, opts) {
     if (!el) return; opts = opts || {}; stats = stats || {};
@@ -69,8 +89,10 @@
     const pp = pct(pro, con), cp = 100 - pp;
     const q = (s) => el.querySelector(s);
     const bar = q(".gv-bar"); if (bar) { bar.dataset.pro = pro; bar.dataset.con = con; }
-    const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle");
-    if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%";
+    const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle"), kn = q(".gv-knot");
+    const fromPP = fp ? (parseFloat(fp.style.width) || pp) : pp;
+    if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%"; if (kn) kn.style.left = pp + "%";
+    if (opts.voted === "pro" || opts.voted === "con") tug(el, fromPP, pp, opts.voted);
     const pctP = q(".gv-pct-pro"), pctC = q(".gv-pct-con");
     if (pctP) { pctP.classList.toggle("gv-hide", pp < 14); countUp(pctP, pp, "%"); }
     if (pctC) { pctC.classList.toggle("gv-hide", cp < 14); countUp(pctC, cp, "%"); }
