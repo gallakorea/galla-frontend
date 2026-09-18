@@ -1863,7 +1863,7 @@ function renderPredictCard(m) {
                 <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                 <button type="button" class="fi-btn bookmark-btn" data-kind="predict" data-id="${m.id}" aria-label="저장">${bookmarkSvg}</button>
                 <button type="button" class="fi-btn share-btn" data-kind="predict" data-id="${m.id}" aria-label="공유">${shareSvg}</button>
-                ${m.ai_generated || !m.created_by ? '' : SPB('market', m.id, m.created_by, m.creatorName || '')}
+                ${!m.created_by ? '' : SPB('market', m.id, m.created_by, m.creatorName || '갈라')}
                 ${galvisBtn('predict', m.id, m.question)}
             </div>
             <button class="more-btn card-more" data-kind="predict" data-id="${m.id}" data-uid="${escHtml(m.created_by || '')}" aria-label="더보기">${moreIcon}</button>
