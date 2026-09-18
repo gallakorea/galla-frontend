@@ -29,10 +29,10 @@
       '<path d="M12 20.2 L8.6 29.5 M12 20.2 L15.6 29.5"/>' +
       '<g class="gv-wave-arm"><path d="M12 12.6 L19.5 6.4"/><circle cx="20.6" cy="5.4" r="1.7" fill="currentColor" stroke="none"/></g>' +
     '</g></svg>';
-  const TUG = '<div class="gv-tug" aria-hidden="true"><div class="gv-team gv-team-pro">' + FIG + FIG + WAVE + WAVE +
-    '<span class="gv-bub">이쪽이야!</span></div>' +
-    '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + WAVE + WAVE +
-    '<span class="gv-bub">우리 편 와!</span></div></div>';
+  /* 말풍선은 팀 밖(.gv-tug 기준)에 둔다 — 좌우 반전된 반대팀 안에 두면 화면 오른쪽 끝에서 잘렸다(QA) */
+  const TUG = '<div class="gv-tug" aria-hidden="true"><div class="gv-team gv-team-pro">' + FIG + FIG + WAVE + WAVE + '</div>' +
+    '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + WAVE + WAVE + '</div>' +
+    '<span class="gv-bub gv-bub-pro">이쪽이야!</span><span class="gv-bub gv-bub-con">우리 편 와!</span></div>';
   const FX = '<i class="gv-bglow"></i><i class="gv-bshine"></i><i class="gv-spark s1"></i><i class="gv-spark s2"></i><i class="gv-spark s3"></i>';
   // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
   function html(o) {
