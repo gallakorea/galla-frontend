@@ -1036,3 +1036,12 @@ body.shorts-open .header { display: none !important; }
 :is(#best-list, #recommend-list) > .predict-feed-card::before { border-radius: 0; padding: 1px 0; }
 /* 화면 끝까지 닿는 카드는 눌림 축소가 가장자리를 들뜨게 보인다 — 끈다 */
 :is(#best-list, #recommend-list) > :is(.card, .predict-feed-card):active { transform: none; }
+
+/* 📏 홈 피드 미디어 높이 = 인스타 그대로(26.9.18 사장님, 인스타 화면 실측).
+   릴스(세로 영상) 폭×1.56 ≈ 9:14 — 9:16 전체보다 살짝 잘라 한 화면에 헤더·버튼까지 들어오게.
+   사진·캐러셀 폭×1.32 ≈ 3:4 (예전 4:5 는 인스타보다 낮았다).
+   롱판(16:9 가로)은 그대로. 로딩 뼈대(.sk-media)도 같은 비율 — 불러올 때 화면이 튀지 않게. */
+:is(#best-list, #recommend-list) .card-media { aspect-ratio: 3 / 4; }
+:is(#best-list, #recommend-list) .card-media--video:not(.glr-long) { aspect-ratio: 9 / 14; }
+:is(#best-list, #recommend-list) .card-media.glr-long { aspect-ratio: 16 / 9; }
+.sk-card .sk-media { aspect-ratio: 3 / 4; }

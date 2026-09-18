@@ -30,13 +30,30 @@ async function sha1(s: string) {
   return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
-async function mirror(src: string): Promise<string | null> {
-  const g = await fetch(src, { headers: { "User-Agent": UA }, redirect: "follow", signal: AbortSignal.timeout(20000) });
+/* 원본을 받는다. 위키미디어 429(속도 제한)·12MB 넘는 원본은 갈라 엣지 프록시로 1600px 로 줄여 받는다
+   (26.9.18 실측: 막바지 309장이 429·13~15MB 원본으로 실패). */
+async function fetchImg(u: string, viaProxy: boolean) {
+  const url = viaProxy ? "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=1600" : u;
+  const g = await fetch(url, {
+    headers: viaProxy ? { "Referer": "https://galla.im/", "Accept": "image/webp,image/jpeg,image/*" } : { "User-Agent": UA },
+    redirect: "follow", signal: AbortSignal.timeout(25000),
+  });
   if (!g.ok) throw new Error("get " + g.status);
   const ct = g.headers.get("content-type") || "";
   if (!/^image\//.test(ct)) throw new Error("not image " + ct);
   const buf = new Uint8Array(await g.arrayBuffer());
   if (!buf.length || buf.length > 12 * 1024 * 1024) throw new Error("size " + buf.length);
+  return { ct, buf };
+}
+
+async function mirror(src: string): Promise<string | null> {
+  let got: Awaited<ReturnType<typeof fetchImg>>;
+  try { got = await fetchImg(src, false); }
+  catch (e) {
+    if (!/get 429|size /.test(String((e as Error).message))) throw e;
+    got = await fetchImg(src, true);
+  }
+  const ct = got.ct, buf = got.buf;
   const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : ct.includes("gif") ? "gif" : "jpg";
   const key = `travel/mirror/${(await sha1(src)).slice(0, 32)}.${ext}`;
   const put = await r2.fetch(`https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`, {
