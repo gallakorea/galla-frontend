@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="galla-ver" content="0924500"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0924600"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>재생 · GALLA</title>
 <style>
@@ -35,6 +35,9 @@
 <script>
 (function(){
   var id = (new URLSearchParams(location.search).get("v") || "").trim();
+  /* 🔇 mute=1 — 스크롤로 보여서 저절로 트는 경우(홈 핫튜브, 26.9.19). 사용자 탭이 없어 소리 자동재생은 어차피 막힌다 —
+     처음부터 음소거로 시작하고 「소리 켜기」를 바로 띄운다(인스타 피드와 같은 동작). */
+  var startMuted = new URLSearchParams(location.search).get("mute") === "1";
   var watch = "https://www.youtube.com/watch?v=" + encodeURIComponent(id);
   document.getElementById("errGo").href = watch;
   if(!id){ document.getElementById("err").classList.add("on"); return; }
@@ -71,11 +74,12 @@
       player = new YT.Player("p", {
         videoId: id, width: "100%", height: "100%",
         playerVars: {
-          autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, fs: 1,
+          autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, fs: 1, mute: startMuted ? 1 : 0,
           origin: location.origin, enablejsapi: 1
         },
         events: {
           onReady: function(e){
+            if (startMuted) { try{ e.target.mute(); e.target.playVideo(); }catch(_){} showSoundPill(); return; }
             try{ e.target.playVideo(); }catch(_){}
             // 소리 있는 자동재생이 막혔는지 본다 — 막혔으면 음소거로 다시 시작.
             setTimeout(function(){

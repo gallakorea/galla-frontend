@@ -1576,6 +1576,40 @@ function renderVideoCard(v) {
     </div>`;
 }
 
+/* ▶️ 핫튜브 카드 — 스크롤해서 화면에 60% 이상 들어오면 그 자리에서 저절로 재생(26.9.19 사장님: 「스크롤 내려오면 바로 재생」).
+   재생·정지는 공용 GALLA_playInline(js/supabase.js)이 한다 — 1/4 미만으로 걸치면 스스로 끄고, 한 번에 하나만 튼다.
+   사용자 탭이 없는 재생이라 소리 자동재생은 막힌다 → 음소거로 시작하고 프록시(yt.html ?mute=1)가 「소리 켜기」를 띄운다.
+   ⚠️ IntersectionObserver 대신 0.7초 rect 검사 — 공용 재생기 주석과 같은 이유(SPA 스크롤 컨테이너에서 콜백이 안 오는 환경).
+   ⚠️ 탭을 옆으로 넘기면 홈 판이 가로로 화면 밖이다 — 세로만 보면 계속 틀어 두므로 가로도 본다. */
+function hotAutoTick() {
+    if (document.hidden || !window.GALLA_playInline) return;
+    if (IDXROOT === document && !__IDX_MPA) return;                       // 앱에서 홈 판이 아직 안 붙었다
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const rootEl = IDXROOT === document ? document.body : IDXROOT;
+    const rr = rootEl.getBoundingClientRect();
+    const homeOn = rr.right > vw * 0.5 && rr.left < vw * 0.5;           // 홈 판이 지금 화면 한가운데에 있나
+    const stack = document.querySelector('#stack-root.on');                // 상세가 위에 덮였나
+    const playing = IDXROOT.querySelector('.video-feed-card [data-vplay].vplaying');
+    if (!homeOn || stack || document.getElementById('shortsOverlay')) {
+        if (playing && window.GALLA_stopInlineVideos) window.GALLA_stopInlineVideos();
+        return;
+    }
+    if (playing) return;                                                   // 이미 도는 카드가 있으면 그대로
+    let best = null, bestShown = 0;
+    IDXROOT.querySelectorAll('.video-feed-card [data-vplay]').forEach(h => {
+        const r = h.getBoundingClientRect();
+        if (!r.height) return;
+        const shown = (Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
+        if (shown >= 0.6 && shown > bestShown) { best = h; bestShown = shown; }
+    });
+    if (!best) return;
+    const card = best.closest('[data-vid]'); if (!card) return;
+    window.GALLA_playInline(best, card.getAttribute('data-vid'), card.getAttribute('data-vtitle') || '');
+    const ifr = best.querySelector('iframe');
+    if (ifr && !/[?&]mute=1/.test(ifr.src)) ifr.src = ifr.src + '&mute=1';
+}
+if (!window.__hotAutoTimer) window.__hotAutoTimer = setInterval(hotAutoTick, 700);
+
 /* ⚡ 숏판·🎬 롱판 카드 — 이슈처럼 '한 판에 한 장'으로 낸다.
    ⚠️ 처음엔 가로로 훑는 선반 하나로 묶었다가 걷어냈다(사장님). 묶으면 피드에서
       자리 하나만 차지해 사실상 안 보인다 — 실측: 피드 115칸 중 9번째 한 자리. */
