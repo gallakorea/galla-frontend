@@ -121,8 +121,7 @@
       "</b> — 기상청은 " + esc(clash[0].w.t) + "이라는데 사람들은 " + (clash[0].peopleWet ? "온다고" : "안 온다고") + " 합니다</div>");
     GRID.innerHTML = rs.map(function (r) { return card(r); }).join("");
     sky(rs.length ? wetObs / rs.length : 0, snowy > wetObs / 2);
-    /* 출처 표기는 MET Norway 이용 조건(CC BY 4.0) — 기상청 키가 들어오면 기상청으로 바뀐다 */
-    FOOT.textContent = "실황 10분마다 · 제보 30분 · 한마디 2시간 집계 · 날씨 데이터 MET Norway";
+    FOOT.textContent = "실황 10분마다 · 제보 30분 · 한마디 2시간 집계";
   }
 
   async function loadFav() {

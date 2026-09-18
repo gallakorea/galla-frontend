@@ -7,12 +7,7 @@
      1) 기상청 초단기실황(KMA) — KMA_SERVICE_KEY 가 있을 때.
         PTY(강수형태)가 '지금 실제로 비/눈이 오는지'를 직접 준다. 이 기능의 재미("기상청은
         안 온다는데 우리 동네는 쏟아짐")가 성립하려면 비교 대상이 기상청이어야 한다.
-     2) 노르웨이 기상청(MET Norway, api.met.no) — 키 없이 동작하는 폴백. 모델 예측값이라 결이 다르지만 없는 것보단 낫다.
-        ⚠️ 26.9.18 Open-Meteo 에서 바꿨다 — Open-Meteo 무료는 **비상업 전용**이라 출시하면 약관 위반이다.
-           MET 는 상업 이용 가능(CC BY 4.0, 출처 표기), 대신 규칙이 있다:
-           · User-Agent 에 앱과 연락처를 밝힐 것(없으면 403) · 좌표는 소수 4자리까지
-           · 필요 이상 부르지 말 것 → 받은 지 25분 안 된 지점은 건너뛴다(10분 크론이라도 지점당 시간당 2회 남짓)
-           · 초당 20회 넘기지 말 것 → 동시 10건씩 */
+     2) Open-Meteo — 키 없이 동작하는 폴백. 모델 예측값이라 결이 다르지만 없는 것보단 낫다. */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -84,48 +79,29 @@ async function fromKMA(rs: Region[]) {
   return out;
 }
 
-/* MET symbol_code → WMO 코드(프론트는 WMO 한 벌만 안다). 접미사 _day/_night/_polartwilight 는 떼고 본다 */
-function metToWmo(sym: string): number {
-  const k = String(sym || "").replace(/_(day|night|polartwilight)$/, "");
-  if (!k) return 3;
-  if (k.includes("thunder")) return 95;
-  const T: Record<string, number> = {
-    clearsky: 0, fair: 1, partlycloudy: 2, cloudy: 3, fog: 45,
-    lightrainshowers: 80, rainshowers: 81, heavyrainshowers: 82,
-    lightrain: 61, rain: 63, heavyrain: 65,
-    lightsleetshowers: 66, sleetshowers: 66, heavysleetshowers: 67,
-    lightsleet: 66, sleet: 66, heavysleet: 67,
-    lightsnowshowers: 85, snowshowers: 85, heavysnowshowers: 86,
-    lightsnow: 71, snow: 73, heavysnow: 75,
-  };
-  return T[k] ?? 3;
-}
-const MET_UA = "GallaApp/1.0 https://galla.im admin@galla.im";
-
-export async function metNow(lat: number, lon: number) {
-  const u = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
-  const res = await fetch(u, { headers: { "User-Agent": MET_UA }, signal: AbortSignal.timeout(12000) });
-  if (!res.ok) throw new Error("met_" + res.status);
-  const d = await res.json();
-  const t0 = d?.properties?.timeseries?.[0]?.data;
-  if (!t0) throw new Error("met_empty");
-  const sym = t0.next_1_hours?.summary?.symbol_code || t0.next_6_hours?.summary?.symbol_code || "";
-  return {
-    temp: Number(t0.instant?.details?.air_temperature),
-    precip: Number(t0.next_1_hours?.details?.precipitation_amount ?? 0),
-    code: metToWmo(sym), wind: Number(t0.instant?.details?.wind_speed),
-    obs_at: new Date().toISOString(),
-  };
-}
-
-async function fromMet(rs: Region[], skip: Set<string>) {
+async function fromOpenMeteo(rs: Region[]) {
+  /* 한 요청에 좌표를 여러 개 넣을 수 있다(실측 229개 OK). 지점이 244곳(시도 17 + 시군구 227)이라
+     URL 길이·타임아웃 여유를 두고 100개씩 끊는다 — 한 덩이가 실패해도 나머지는 살아남는다. */
   const out: Record<string, any> = {};
-  const todo = rs.filter((r) => !skip.has(r.code));
-  const N = 10;
-  for (let i = 0; i < todo.length; i += N) {
-    await Promise.all(todo.slice(i, i + N).map(async (r) => {
-      try { out[r.code] = await metNow(r.lat, r.lon); } catch { /* 이 지점만 건너뛴다 */ }
-    }));
+  const CH = 100;
+  for (let i = 0; i < rs.length; i += CH) {
+    const part = rs.slice(i, i + CH);
+    const u = "https://api.open-meteo.com/v1/forecast"
+      + `?latitude=${part.map((r) => r.lat).join(",")}&longitude=${part.map((r) => r.lon).join(",")}`
+      + "&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FSeoul";
+    try {
+      const res = await fetch(u, { signal: AbortSignal.timeout(20000) });
+      const arr = await res.json();
+      const list = Array.isArray(arr) ? arr : [arr];
+      list.forEach((x: any, k: number) => {
+        const c = x?.current; if (!c || !part[k]) return;
+        out[part[k].code] = {
+          temp: c.temperature_2m, precip: c.precipitation,
+          code: c.weather_code, wind: c.wind_speed_10m,
+          obs_at: new Date().toISOString(),
+        };
+      });
+    } catch { /* 이 덩이만 건너뛴다 */ }
   }
   return out;
 }
@@ -156,20 +132,12 @@ Deno.serve(async (req) => {
 
   let src = "kma", obs: Record<string, any> = {};
   if (KMA_KEY) { try { obs = await fromKMA(rs as Region[]); } catch { /* 폴백 */ } }
-  // 기상청이 없거나 절반도 못 받으면 MET 로 (부분 실패에 화면이 비지 않게)
+  // 기상청이 없거나 절반도 못 받으면 Open-Meteo 로 (부분 실패에 화면이 비지 않게)
   if (Object.keys(obs).length < rs.length / 2) {
-    src = KMA_KEY ? "met(kma-fallback)" : "met";
-    /* 정기 수집이면 25분 안에 받은 지점은 건너뛴다(MET 호출 절약). 한 곳 요청(동네 방)은 항상 받는다 */
-    const skip = new Set<string>();
-    if (!body?.region) {
-      const { data: fresh } = await sb.from("weather_obs").select("region")
-        .in("region", rs.map((r) => r.code)).gt("updated_at", new Date(Date.now() - 25 * 60e3).toISOString());
-      (fresh || []).forEach((x: any) => skip.add(x.region));
-    }
-    try { obs = { ...(await fromMet(rs as Region[], skip)), ...obs }; } catch (e) {
+    src = KMA_KEY ? "openmeteo(kma-fallback)" : "openmeteo";
+    try { obs = { ...(await fromOpenMeteo(rs as Region[])), ...obs }; } catch (e) {
       return j({ ok: false, reason: "fetch_failed", detail: String(e).slice(0, 120) }, 502);
     }
-    if (!Object.keys(obs).length && skip.size) return j({ ok: true, source: src, updated: 0, fresh: skip.size });
   }
 
   const rows = Object.entries(obs).map(([region, v]: [string, any]) => ({
