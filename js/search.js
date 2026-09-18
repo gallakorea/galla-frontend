@@ -1441,6 +1441,7 @@ window.GALLA_PAGE_TREND = {
     try { if (__searchLiftDrop) __searchLiftDrop(); } catch (_) {}
     // 맛집 오버레이도 같은 이유로 닫는다 — 얘들은 body 에 붙어 있어 뷰를 바꿔도 안 사라진다
     try { if (window.GALLA_FOOD_CLOSE_ALL) window.GALLA_FOOD_CLOSE_ALL(); } catch (_) {}
+    try { if (window.GALLA_WEATHER_CLOSE_MAP) window.GALLA_WEATHER_CLOSE_MAP(); } catch (_) {}   // 🗺 날씨 지도(네이티브면 웹뷰 뒤에 남는다)
   },
   scrolltop() {
     const h = __trendRoot && (__trendRoot.closest(".view-host") || __trendRoot);

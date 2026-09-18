@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0919002"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0919003"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>트렌드 · 검색·핫트렌드·갈라뉴스·광장 | GALLA 갈라</title>
   <meta name="description" content="갈라 통합검색 — 실시간 급상승 키워드, 여러 언론을 AI가 종합한 갈라뉴스, 지금 뜨는 이슈와 인기 영상을 한 곳에서. 대한민국 실시간 트렌드.">
@@ -10,10 +10,10 @@
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
   <link rel="stylesheet" href="./css/search.css?v=0909010" />
-  <link rel="stylesheet" href="./css/weather.css?v=0828020" />
+  <link rel="stylesheet" href="./css/weather.css?v=0918200" />
   <link rel="stylesheet" href="./css/vote-bar.css?v=0831109" />
   <link rel="stylesheet" href="./css/food.css?v=0918930" />
-  <link rel="stylesheet" href="./css/travel.css?v=0919002" />
+  <link rel="stylesheet" href="./css/travel.css?v=0919003" />
   <link rel="stylesheet" href="css/plaza.css?v=0828020"><!-- 광장 패널(통합) -->
   <link rel="stylesheet" href="./css/composer-page.css?v=080412">
   <link rel="stylesheet" href="./css/header.css?v=080412">
@@ -232,6 +232,8 @@
     <div class="tab-panel" data-panel="weather">
       <canvas id="wx-sky" aria-hidden="true"></canvas>
       <div class="wx-head">
+        <button type="button" class="wx-mapbtn" id="wx-openmap" aria-label="전국 날씨 지도">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>지도</button>
         <div class="wx-title">지금 우리 동네</div>
         <p class="wx-sub">기상청은 이렇다는데 — <b>진짜 오는지</b>는 거기 사람들이 안다.</p>
       </div>
@@ -427,13 +429,13 @@
 <script src="js/dm.js?v=0910420"></script>
 <script src="js/noti-icons.js?v=080412"></script>
 <script src="js/notifications.js?v=0909100"></script>
-<script src="./js/search.js?v=0919002"></script>
-<script src="./js/weather.js?v=0910040"></script>
+<script src="./js/search.js?v=0919003"></script>
+<script src="./js/weather.js?v=0918200"></script>
 <!-- 🍜 우리 동네 맛집 — 지도는 전체화면 오버레이(탭 스와이프 충돌 회피) -->
 <script src="js/media-upload.js?v=0831119"></script>
 <script src="./js/vote-bar.js?v=0831109"></script>
-<script src="./js/food.js?v=0919002"></script>
-<script src="./js/travel.js?v=0919002"></script>
+<script src="./js/food.js?v=0919003"></script>
+<script src="./js/travel.js?v=0919003"></script>
 <!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
 <script src="js/plaza-render.js?v=080412"></script>
 <script src="js/share-sheet.js?v=0909100"></script>

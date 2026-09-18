@@ -10,7 +10,7 @@
 }
 .tab-panel[data-panel="weather"] > *:not(#wx-sky) { position: relative; z-index: 1; }
 
-.wx-head { padding: 14px 2px 6px; }
+.wx-head { padding: 14px 2px 6px; position: relative; }
 .wx-title { font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: #eaf2ff; }
 .wx-sub { margin: 4px 0 0; font-size: 13px; color: #8d97ab; }
 .wx-sub b { color: #5fd8ff; }
@@ -206,3 +206,51 @@
   flex: 0 0 auto; height: 30px; padding: 0 14px; border: 0; border-radius: 15px;
   background: #5a78ff; color: #fff; font-weight: 800; font-size: 12.5px; cursor: pointer;
 }
+
+
+/* ═══ 🗺 전국 날씨 지도(26.9.18) — 네이버 지도 위에 시도/시군구 실황 알약 ═══
+   앱은 네이티브 네이버 지도(웹뷰 뒤) — 투명 처리는 food.css 의 body.fd-native-map 규칙을 같이 쓴다. */
+.wx-mapbtn {
+  position: absolute; right: 2px; top: 12px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 999px;
+  border: 0; background: var(--accent-grad, #4361ff); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(67,97,255,.35);
+}
+.wx-mapbtn svg { width: 15px; height: 15px; }
+.wx-map { position: fixed; left: 0; top: 0; width: 100vw; height: 100dvh; z-index: 10000; display: none; background: #0b0c10; }
+.wx-map.open { display: block; }
+body.fd-native-map .wx-map { background: transparent; }
+/* ⚠️ 네이버 SDK 가 컨테이너에 인라인 position:relative 를 박아 inset:0 이 무효 → 높이 0(실측). 크기를 직접 준다 */
+.wx-map-c { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wx-map-c.native { background: transparent; }
+.wx-map-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 500; pointer-events: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 12px;
+  background: linear-gradient(#000 10%, rgba(0,0,0,.66) 60%, transparent);
+}
+.wx-map-top > * { pointer-events: auto; }
+.wx-map-row { display: flex; align-items: center; gap: 8px; }
+/* 닫기 — 맛집·여행 지도와 같은 자리·모양 */
+.wx-map-x {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; cursor: pointer;
+  background: var(--surface-3, #23252d); border: 1px solid var(--line-2, #2c2f38); color: var(--text-hi, #fff);
+  font-size: 17px; line-height: 1; display: grid; place-items: center; padding: 0;
+}
+.wx-map-t { color: #fff; font-size: 16px; font-weight: 800; }
+.wx-map-t span { margin-left: 6px; color: #9aa1b2; font-size: 12px; font-weight: 600; }
+.wx-map-sum { margin-top: 8px; color: #cfd5e3; font-size: 12.5px; font-weight: 600; }
+.wx-map-legend {
+  position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); z-index: 500;
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 14px;
+  background: rgba(10,11,15,.82); backdrop-filter: blur(8px); color: #cfd5e3; font-size: 11px; font-weight: 700;
+  pointer-events: none;
+}
+.wx-map-legend i { flex: 1; height: 8px; border-radius: 8px;
+  background: linear-gradient(90deg,#3b5bdb,#3fa2e8,#2fb8c4,#35b779,#8cc63f,#e0a020,#f07c2a,#e0413a); }
+/* 웹(네이버 JS) 마커 — 네이티브 renderWx 와 같은 모양 */
+.wxm { display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); cursor: pointer; white-space: nowrap; }
+.wxm b { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px; border-radius: 12px;
+  border: 1.5px solid #fff; color: #fff; font: 900 13px/1 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  box-shadow: 0 1.5px 4px rgba(0,0,0,.45); }
+.wxm i { margin-top: 1px; font-style: normal; color: #fff; font: 800 10.5px/1.2 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 2px #000; }

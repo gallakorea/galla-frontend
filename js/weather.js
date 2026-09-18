@@ -236,6 +236,205 @@
     if (el) { el.classList.remove("on"); setTimeout(function () { el.remove(); }, 220); }
   }
 
+  /* ── 🗺 전국 날씨 지도 ─────────────────────────────────────
+     사장님(26.9.18): "날씨 탭도 네이버 지도를 띄워서 날씨 정보를 넣어. 전국 날씨현황을 한눈에".
+     · 멀리서(줌<9) 시도 17곳, 가까이 가면 시군구 232곳 — weather_map 한 번에 249점(가볍다)
+     · 알약 = [하늘 이모지 기온] + 지역 이름, 색 = 기온. 누르면 그 동네 방(openRoom)
+     · 앱은 네이티브 네이버 지도(GallaNaverMap, 웹뷰 뒤 — 웹 SDK 는 capacitor origin 인증 불가),
+       웹은 네이버 JS SDK. 키는 맛집과 같은 food_map_config 에서 받는다.
+     ⚠️ 네이티브 지도는 한 번에 하나다(맛집과 공유). 닫을 때 반드시 destroy — 안 하면 다음 판 뒤에 남는다. */
+  var WMAP = null, WMB = null, WPTS = [], wmTimer = 0;
+  function tempColor(t) {
+    if (t == null) return "#5b6170";
+    if (t <= -5) return "#3b5bdb"; if (t <= 0) return "#4c7ef3"; if (t <= 5) return "#3fa2e8";
+    if (t <= 10) return "#2fb8c4"; if (t <= 15) return "#35b779"; if (t <= 20) return "#6aae35";
+    if (t <= 25) return "#e0a020"; if (t <= 30) return "#f07c2a"; return "#e0413a";
+  }
+  function isApp() {
+    try { return location.protocol === "capacitor:" || location.protocol === "ionic:" ||
+                 (typeof window.GALLA_isApp === "function" && window.GALLA_isApp()); } catch (_) { return false; }
+  }
+  var naverP = null;
+  function loadNaverSdk(cid, param) {
+    if (window.naver && window.naver.maps) return Promise.resolve();
+    if (naverP) return naverP;
+    naverP = new Promise(function (res, rej) {
+      var sc = document.createElement("script");
+      sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?" + encodeURIComponent(param || "ncpKeyId") + "=" + encodeURIComponent(cid);
+      sc.onload = function () { (window.naver && window.naver.maps) ? res() : rej(new Error("no_maps")); };
+      sc.onerror = function () { rej(new Error("load_fail")); };
+      document.head.appendChild(sc);
+      setTimeout(function () { (window.naver && window.naver.maps) ? res() : rej(new Error("timeout")); }, 8000);
+    });
+    return naverP;
+  }
+  /* 앱: 네이티브 지도 어댑터 */
+  function wmNative(P, lat, lon, zoom) {
+    var last = { ok: false, zoom: zoom }, idleFns = [], clicks = {}, handles = [], seq = 0;
+    P.addListener("idle", function (e) {
+      last = { swLat: +e.swLat, swLon: +e.swLon, neLat: +e.neLat, neLon: +e.neLon, zoom: +e.zoom,
+               ok: (+e.neLat > +e.swLat) && (+e.neLon > +e.swLon) };
+      idleFns.forEach(function (f) { try { f(); } catch (_) {} });
+    }).then(function (h) { handles.push(h); });
+    P.addListener("markerClick", function (e) { var f = clicks[e && e.id]; if (f) try { f(); } catch (_) {} })
+      .then(function (h) { handles.push(h); });
+    P.create({ x: 0, y: 0, width: window.innerWidth, height: window.innerHeight, lat: lat, lng: lon, zoom: zoom })
+      .catch(function (e) { console.warn("[weather] 네이티브 지도 create 실패", e); });
+    document.body.classList.add("fd-native-map"); document.documentElement.classList.add("fd-native-map");
+    /* 터치: 위 막대 아래는 지도로. 방(#wx-room)이 떠 있으면 전부 웹으로(안 그러면 방의 버튼을 지도가 먹는다) */
+    function touch() {
+      if (!P.setTouchTop) return;
+      var room = document.querySelector("#wx-room.on");
+      var top = WMAP && WMAP.querySelector(".wx-map-top");
+      var y = room ? 100000 : (top ? Math.round(top.getBoundingClientRect().bottom) : 0);
+      P.setTouchTop({ y: y }).catch(function () {});
+    }
+    setTimeout(touch, 0);
+    var mo = null;
+    try { mo = new MutationObserver(touch); mo.observe(document.body, { childList: true, subtree: false, attributes: true, attributeFilter: ["class"] }); } catch (_) {}
+    var roomMo = setInterval(touch, 700);   // 방은 body 자식으로 붙었다 빠진다 — class 변화까지 확실히 잡는다
+    return {
+      onIdle: function (f) { idleFns.push(f); },
+      bounds: function () { return last.ok ? last : null; },
+      zoom: function () { return last.zoom || zoom; },
+      refresh: function () {
+        P.getBounds().then(function (b) {
+          if (b && b.ok) { last = { swLat: +b.swLat, swLon: +b.swLon, neLat: +b.neLat, neLon: +b.neLon, zoom: +b.zoom, ok: true };
+                           idleFns.forEach(function (f) { try { f(); } catch (_) {} }); }
+        }).catch(function () {});
+      },
+      draw: function (list, onClick) {
+        clicks = {};
+        P.setMarkers({ markers: list.map(function (r) {
+          var id = "w" + (++seq); clicks[id] = function () { onClick(r); };
+          return { id: id, kind: "wx", lat: +r.lat, lng: +r.lon, size: 24,
+                   text: wx(r.code_wmo).e + " " + (r.temp == null ? "–" : Math.round(r.temp) + "°"),
+                   badge: r.name, bg: tempColor(r.temp), ring: "#ffffff", fg: "#ffffff" };
+        }) }).catch(function () {});
+      },
+      teardown: function () {
+        try { mo && mo.disconnect(); } catch (_) {}
+        clearInterval(roomMo);
+        handles.forEach(function (h) { try { h.remove(); } catch (_) {} });
+        document.body.classList.remove("fd-native-map"); document.documentElement.classList.remove("fd-native-map");
+        P.destroy().catch(function () {});
+      }
+    };
+  }
+  /* 웹: 네이버 JS 어댑터 */
+  function wmWeb(el, lat, lon, zoom) {
+    var nv = window.naver.maps, markers = [];
+    var map = new nv.Map(el, { center: new nv.LatLng(lat, lon), zoom: zoom, mapDataControl: false, scaleControl: false,
+                               logoControlOptions: { position: nv.Position.BOTTOM_LEFT } });
+    setTimeout(function () { try { map.refresh(true); } catch (_) {} }, 60);
+    return {
+      onIdle: function (f) { nv.Event.addListener(map, "idle", f); },
+      bounds: function () {
+        try { var b = map.getBounds(), mn = b.getMin(), mx = b.getMax();
+              var r = { swLat: mn.y, swLon: mn.x, neLat: mx.y, neLon: mx.x, zoom: map.getZoom(), ok: true };
+              return (r.neLat > r.swLat && r.neLon > r.swLon) ? r : null; } catch (_) { return null; }
+      },
+      zoom: function () { return map.getZoom(); },
+      refresh: function () { try { map.refresh(true); } catch (_) {} },
+      draw: function (list, onClick) {
+        markers.forEach(function (m) { try { m.setMap(null); } catch (_) {} }); markers = [];
+        list.forEach(function (r) {
+          var w = wx(r.code_wmo);
+          var html = '<div class="wxm"><b style="background:' + tempColor(r.temp) + '">' + w.e + " " +
+                     (r.temp == null ? "–" : Math.round(r.temp) + "°") + "</b><i>" + esc(r.name) + "</i></div>";
+          var m = new nv.Marker({ position: new nv.LatLng(+r.lat, +r.lon), map: map, icon: { content: html, anchor: new nv.Point(0, 0) } });
+          nv.Event.addListener(m, "click", function () { onClick(r); });
+          markers.push(m);
+        });
+      },
+      teardown: function () { markers.forEach(function (m) { try { m.setMap(null); } catch (_) {} }); try { map.destroy(); } catch (_) {} el.innerHTML = ""; }
+    };
+  }
+  function wmPaint() {
+    if (!WMB || !WPTS.length) return;
+    var b = WMB.bounds(), z = WMB.zoom();
+    var city = z >= 9;
+    var list = WPTS.filter(function (r) {
+      if (city ? r.kind !== "city" : r.kind !== "sido") return false;
+      if (!b) return true;
+      var mLat = (b.neLat - b.swLat) * 0.1, mLon = (b.neLon - b.swLon) * 0.1;
+      return r.lat >= b.swLat - mLat && r.lat <= b.neLat + mLat && r.lon >= b.swLon - mLon && r.lon <= b.neLon + mLon;
+    });
+    /* 겹침 솎기 — 서울(25구)처럼 촘촘한 곳은 알약이 포개져 읽히지 않는다. 화면 64×40px 칸마다 하나만.
+       좌표→화면은 경계로 선형 환산(이 축척에선 충분히 정확, 네이티브도 경계만 알면 된다). 더 확대하면 나머지가 나온다 */
+    if (b) {
+      var W = window.innerWidth || 375, H = window.innerHeight || 800, seen = {};
+      list = list.filter(function (r) {
+        var x = (r.lon - b.swLon) / (b.neLon - b.swLon) * W, y = (b.neLat - r.lat) / (b.neLat - b.swLat) * H;
+        var k = Math.floor(x / 64) + ":" + Math.floor(y / 40);
+        if (seen[k]) return false; seen[k] = 1; return true;
+      });
+    }
+    WMB.draw(list, function (r) { openRoom(r.code); });
+    var sum = WMAP.querySelector("#wx-map-sum");
+    if (sum) sum.textContent = (city ? "시·군·구 " : "시·도 ") + list.length + "곳" + (city ? "" : " · 확대하면 시·군·구까지");
+  }
+  async function wmLoad() {
+    var d = await rpc("weather_map");
+    if (!d || !d.ok) return;
+    WPTS = (d.points || []).filter(function (r) { return r.lat != null; });
+    var at = WMAP && WMAP.querySelector("#wx-map-at");
+    var t = WPTS.reduce(function (m, r) { return r.obs_at && r.obs_at > m ? r.obs_at : m; }, "");
+    if (at && t) at.textContent = new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + " 실황";
+    wmPaint();
+  }
+  async function openWxMap() {
+    if (!WMAP) {
+      WMAP = document.createElement("div");
+      WMAP.className = "wx-map"; WMAP.setAttribute("data-no-ptr", "");
+      WMAP.innerHTML = '<div class="wx-map-c" id="wx-map-c"></div>' +
+        '<div class="wx-map-top"><div class="wx-map-row">' +
+          '<button type="button" class="wx-map-x" id="wx-map-x" aria-label="닫기">✕</button>' +
+          '<div class="wx-map-t">전국 날씨<span id="wx-map-at"></span></div></div>' +
+          '<div class="wx-map-sum" id="wx-map-sum"></div></div>' +
+        '<div class="wx-map-legend">-5°<i></i>30°+</div>';
+      document.body.appendChild(WMAP);
+      WMAP.querySelector("#wx-map-x").addEventListener("click", function () { closeWxMap(); });
+      /* 뒤로가기로 닫힌다 — 판정은 이벤트 state 로(라우터가 먼저 replaceState 한다, 맛집·여행과 같은 함정).
+         방(#wx-room)이 떠 있으면 뒤로가기는 방부터 — 방은 기록 칸이 없어 여기서 같이 처리한다 */
+      window.addEventListener("popstate", function (ev) {
+        if (!WMAP.classList.contains("open")) return;
+        try { if (ev && ev.state && ev.state.wxMap) return; } catch (_) {}
+        closeWxMap(true);
+      });
+    }
+    if (WMAP.classList.contains("open")) return;
+    WMAP.classList.add("open");
+    try { history.pushState({ wxMap: 1 }, ""); } catch (_) {}
+    var cfg = await rpc("food_map_config");
+    var cid = cfg && cfg.naver_client_id;
+    var el = WMAP.querySelector("#wx-map-c");
+    var CENTER = [35.85, 127.75], ZOOM = 7;   // 남한 전체 + 제주가 폰 세로 화면에 꽉 차게
+    try {
+      var P = isApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GallaNaverMap;
+      if (P && cid) {
+        await P.setup({ ncpKeyId: String(cid) });
+        el.classList.add("native");
+        WMB = wmNative(P, CENTER[0], CENTER[1], ZOOM);
+      } else if (cid && !isApp()) {
+        await loadNaverSdk(String(cid), cfg.param);
+        WMB = wmWeb(el, CENTER[0], CENTER[1], ZOOM);
+      }
+    } catch (e) { console.warn("[weather] 지도 실패", e); WMB = null; }
+    if (!WMB) { window.GALLA_toast && GALLA_toast("지도를 불러오지 못했어요"); closeWxMap(); return; }
+    WMB.onIdle(function () { clearTimeout(wmTimer); wmTimer = setTimeout(wmPaint, 180); });
+    await wmLoad();
+    setTimeout(function () { WMB && WMB.refresh(); }, 120);
+  }
+  function closeWxMap(fromPop) {
+    if (!WMAP) return;
+    if (WMB) { try { WMB.teardown(); } catch (_) {} WMB = null; }
+    WMAP.classList.remove("open");
+    var el = WMAP.querySelector("#wx-map-c"); if (el) el.classList.remove("native");
+    if (!fromPop) { try { if (history.state && history.state.wxMap) history.back(); } catch (_) {} }
+  }
+  window.GALLA_WEATHER_CLOSE_MAP = function () { closeWxMap(true); };
+
   /* ── 검색 ── */
   var qT = null;
   async function doSearch(q) {
@@ -262,6 +461,7 @@
     QX = document.getElementById("wx-qx"); QR = document.getElementById("wx-results");
 
     PANEL.addEventListener("click", function (e) {
+      if (e.target.closest("#wx-openmap")) { openWxMap(); return; }
       var c = e.target.closest(".wx-card, .wx-hit");
       if (c && c.dataset.r) openRoom(c.dataset.r);
     });
