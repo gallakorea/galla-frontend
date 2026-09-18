@@ -145,12 +145,12 @@ async function GALLA_mypageInit(root, spaParams) {
     // ============================
     const profileActions = byId("profileActions");
     profileActions.innerHTML = "";
-    let PRIVATE_LOCK = false;
+    let PRIVATE_LOCK = false;   // 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
     /* 🔒 공개 범위 아이콘은 SVG(이모지 금지 — 기기마다 모양이 달라진다, 사장님 26.9.18) */
     const LOCK_SVG = '<svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
     const USERS_SVG = '<svg class="lk-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
     const LOCK_BADGE = '<span class="ig-lock" title="나만 보기">' + LOCK_SVG + '</span>';
-    const LOCK_INLINE = '<span class="vis-lock-i" title="나만 보기">' + LOCK_SVG + '</span>';   // 🔒 남의 비공개 계정이고 승인된 팔로워가 아님 → 콘텐츠 자리에 잠금 안내
+    const LOCK_INLINE = '<span class="vis-lock-i" title="나만 보기">' + LOCK_SVG + '</span>';
 
     if (isMyPage) {
         const editBtn = document.createElement("button");
