@@ -144,8 +144,9 @@
   /* ── 지지/반발 설명 ── */
   function openVoteExplain() {
     ensureSheet();
-    const sup = document.getElementById("statSupports")?.textContent || "0";
-    const opp = document.getElementById("statOppose")?.textContent || "0";
+    const full = (id) => { const el = document.getElementById(id); return el ? (el.dataset.n ? Number(el.dataset.n).toLocaleString("ko-KR") : el.textContent) : "0"; };
+    const sup = full("statSupports");
+    const opp = full("statOppose");
     sheet.querySelector("#psHead").innerHTML = `<div class="ps-title">👍👎 지지·반발이 뭐예요?</div>`;
     sheet.querySelector("#psBody").innerHTML = `
       <div class="ps-explain">

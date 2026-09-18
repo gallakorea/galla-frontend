@@ -1,3 +1,15 @@
+/* 🔢 마이 상단 숫자 — 커지면 1.2만·3.4억으로 줄여 칸을 안 넘친다(26.9.19 사장님: 「숫자 커지면 개판」). 원래 값은 data-n·title 에 */
+window.GALLA_setStatNum = window.GALLA_setStatNum || function (el, v) {
+    if (!el) return;
+    const n = Number(v) || 0, a = Math.abs(n);
+    const one = (x) => (Math.floor(x * 10) / 10).toFixed(1).replace(/\.0$/, "");   // 소수 한 자리(내림)
+    const t = a < 1e4 ? n.toLocaleString("ko-KR")
+        : a < 1e6 ? one(n / 1e4) + "만"            // 1.2만 ~ 99.9만
+        : a < 1e8 ? Math.floor(n / 1e4) + "만"     // 100만 ~ 9999만 — 소수 빼서 칸 안에
+        : a < 1e10 ? one(n / 1e8) + "억"           // 1.2억 ~ 99.9억
+        : Math.floor(n / 1e8).toLocaleString("ko-KR") + "억";
+    el.textContent = t; el.dataset.n = String(n); el.title = n.toLocaleString("ko-KR");
+};
 /* ═══ 이중 모드(MPA/SPA) ═══
    · MPA(mypage.html 단독 문서): 파일 하단에서 기존처럼 DOMContentLoaded 자동 초기화.
    · SPA(app.html, body[data-page="spa"]): 자동 초기화를 건너뛰고
@@ -108,7 +120,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 if (!left) w.querySelector(".mp-req-list").innerHTML = `<div class="mp-req-empty">받은 요청이 없어요</div>`;
                 if (btn) btn.innerHTML = USERS_SVG + " 팔로우 요청" + (left ? ` <b>${left}</b>` : "");
                 if (ok) { try { const { count } = await supabase.from("follows").select("id", { count: "exact", head: true }).eq("following", userId);
-                    const st = D.querySelector("#statFollowers"); if (st && count != null) st.textContent = count; } catch (_) {} }
+                    const st = D.querySelector("#statFollowers"); if (st && count != null) window.GALLA_setStatNum(st, count); } catch (_) {} }
             } else row.style.opacity = "1";
         });
     }
@@ -167,13 +179,13 @@ async function GALLA_mypageInit(root, spaParams) {
         /* 상점 직행 — 기존엔 설정 안까지 들어가야 했다(사장님 UX 지적) */
         const shopBtn = document.createElement("button");
         shopBtn.className = "action-btn secondary";
-        shopBtn.textContent = "🛒 상점";
+        shopBtn.textContent = "상점";
         shopBtn.onclick = () => window.openShop ? window.openShop() : ((window.GALLA_nav||function(u){location.href=u})("settings.html"));
 
         /* 🎟 이용권 — 갈비스 등급·남은 대화. 상점(GP)과 성격이 달라 별도 진입점이 필요하다. */
         const planBtn = document.createElement("button");
         planBtn.className = "action-btn secondary";
-        planBtn.textContent = "🎟️ 갈비스 구독";
+        planBtn.textContent = "갈비스 구독";
         planBtn.onclick = () => window.GALLA_openPlans && window.GALLA_openPlans();
 
         profileActions.appendChild(editBtn);
@@ -257,7 +269,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     const { count } = await supabase.from("follows")
                         .select("id", { count: "exact", head: true }).eq("following", viewUserId);
                     const stat = D.querySelector("#statFollowers");
-                    if (stat && count != null) stat.textContent = count;
+                    if (stat && count != null) window.GALLA_setStatNum(stat, count);
                 } catch (_) { /* 숫자 갱신 실패는 조용히 — 다음 진입 때 다시 센다 */ }
             } else location.reload();
         };
@@ -499,7 +511,7 @@ async function GALLA_mypageInit(root, spaParams) {
         // Update DOM elements (fallback to 0)
         const setStat = (selector, value) => {
             const el = D.querySelector(selector);
-            if (el) el.textContent = value ?? 0;
+            window.GALLA_setStatNum(el, value ?? 0);
         };
         setStat("#statDrop", dropCount ?? 0);
         setStat("#statFollowers", followerCount ?? 0);
@@ -1477,7 +1489,7 @@ async function GALLA_mypageInit(root, spaParams) {
                         .select("id", { count: "exact", head: true }).eq("following", viewUserId);
                     const n = count ?? 0;
                     const stat = D.querySelector("#statFollowers");
-                    if (stat) stat.textContent = n;
+                    if (stat) window.GALLA_setStatNum(stat, n);
                     const ftab = D.querySelector('.tab[data-tab="follower"]');
                     if (ftab) ftab.innerHTML = ftab.innerHTML.replace(/ <span class="tab-count">.*<\/span>/, "") + ` <span class="tab-count">${n}</span>`;
                     if (ftab && ftab.classList.contains("active") && typeof renderFollower === "function") renderFollower();
