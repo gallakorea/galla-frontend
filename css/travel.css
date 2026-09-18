@@ -602,3 +602,27 @@ body.tv-lock { overflow: hidden; }
 
 /* 확대·축소 버튼이 아래 칩 두 줄(크리에이터·여정)과 겹쳐 눌리지 않았다 — 칩 위로 올린다(26.9.18) */
 .tv-map .maplibregl-ctrl-bottom-right { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
+
+/* 핀 묶음 개수 — 가까운 핀은 하나로 묶고 개수를 단다(누르면 확대, 26.9.18) */
+.tv-map .tv-pin-c {
+  position: absolute; right: -8px; top: -8px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; background: #ff5c2b; color: #fff; font: 800 11px/20px system-ui, sans-serif;
+  font-style: normal; text-align: center; box-shadow: 0 0 0 2px #0b0c10;
+}
+/* 핀 미리보기 카드 — 누르자마자 페이지를 넘기지 않는다 */
+.tv-pv {
+  position: absolute; left: 12px; right: 56px; bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); z-index: 4;
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 10px; border-radius: 16px;
+  background: rgba(16,17,22,.94); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45); cursor: pointer;
+}
+.tv-pv[hidden] { display: none; }
+.tv-pv-i { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 10px; object-fit: cover;
+  display: flex; align-items: center; justify-content: center; font-size: 24px; background: #1b1d24; }
+.tv-pv-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tv-pv-t b { color: #fff; font-size: 14.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-pv-t i { color: #aab0bf; font-size: 12px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-pv-go { flex: 0 0 auto; padding: 8px 12px; border: 0; border-radius: 999px; background: #38d6b0; color: #06231c;
+  font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.tv-pv-x { flex: 0 0 auto; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent;
+  color: #8a90a0; font-size: 14px; cursor: pointer; }

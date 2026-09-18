@@ -611,9 +611,16 @@
       '<div class="tv-map-hint" id="tv-map-hint">여행 유튜버가 간 곳</div>' +
       '<div class="tv-subs chip-scroll" id="tv-subs"></div>' +
       '<div class="tv-trips chip-scroll" id="tv-trips"></div>' +
-      '<div class="tv-routes chip-scroll" id="tv-routes"></div>';
+      '<div class="tv-routes chip-scroll" id="tv-routes"></div>' +
+      '<div class="tv-pv" id="tv-pv" hidden></div>';
     document.body.appendChild(MAPBOX);
     MAPBOX.querySelector("#tv-map-x").addEventListener("click", function () { closeMap(); });
+    MAPBOX.querySelector("#tv-pv").addEventListener("click", function (e) {
+      var go = e.target.closest("[data-pvgo]");
+      if (go) { hidePreview(); openDetail(go.dataset.pvgo); return; }
+      if (e.target.closest(".tv-pv-x")) hidePreview();
+      else { var t = e.target.closest(".tv-pv"); if (t && !e.target.closest("button")) { var b = t.querySelector("[data-pvgo]"); if (b) { hidePreview(); openDetail(b.dataset.pvgo); } } }
+    });
     /* 🔴 상세를 닫으면 back() 이 도는데, 그 popstate 를 지도가 **자기 것으로 오해**해 같이 닫힌다
        (맛집에서 실제로 겪은 사고). 상세에서 돌아오면 state 는 다시 {tvMap:1} 이다 —
        그 자리로 돌아온 거면 지도는 그대로 둔다. 리스너 등록 순서에 기대지 않는 판별이다. */
@@ -694,6 +701,7 @@
       MAP.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       /* moveend 마다 bbox 로 다시 물어본다 — 전 세계를 한 번에 내려받으면 안 된다. */
       MAP.on("moveend", refreshPins);
+      MAP.on("click", hidePreview);        // 빈 곳을 누르면 미리보기만 닫는다(지도는 그대로)
       MAP.on("load", function () { MAP.resize(); refreshPins(); loadRouteChips(); paintSubsChips(); });
       /* dvh 는 주소창이 접히고 펴질 때 값이 바뀐다 — 그때마다 다시 맞춘다.
          이게 없으면 스크롤 한 번에 지도 아래가 잘린 채로 남는다. */
@@ -915,6 +923,24 @@
   }
 
   var pinBusy = false;
+  /* 핀 미리보기 — 누르자마자 페이지를 넘기면 지도가 닫힌 것처럼 느껴진다. 아래에 카드로 먼저 보여준다 */
+  function showPreview(p) {
+    var box = document.getElementById("tv-pv"); if (!box) return;
+    var img = p.cover || p.ch_thumb;
+    box.innerHTML =
+      (img ? '<img class="tv-pv-i" src="' + esc(img) + '" alt="" referrerpolicy="no-referrer">' : '<span class="tv-pv-i">' + (p.cert || flag(p.country_code || "")) + "</span>") +
+      '<div class="tv-pv-t"><b>' + esc(p.name || "") + "</b>" +
+        (p.ch_name ? "<i>" + esc(p.ch_name) + (p.ch_n > 1 ? " 외 " + (p.ch_n - 1) + "명" : "") + "</i>" : "") + "</div>" +
+      '<button type="button" class="tv-pv-go" data-pvgo="' + esc(p.id) + '">자세히</button>' +
+      '<button type="button" class="tv-pv-x" aria-label="닫기">✕</button>';
+    var ii = box.querySelector("img.tv-pv-i");
+    if (ii) ii.addEventListener("error", function () { ii.remove(); });
+    box.hidden = false;
+  }
+  function hidePreview() {
+    var box = document.getElementById("tv-pv"); if (box) box.hidden = true;
+  }
+
   async function refreshPins() {
     if (ROUTE) return;              // 경로 모드에선 일반 핀을 얹지 않는다
     if (!MAP || pinBusy) return;
@@ -929,7 +955,20 @@
       var ps = (r && r.places) || [];
       MARKERS.forEach(function (m) { m.remove(); });
       MARKERS = [];
+      hidePreview();
+      /* 🔴 핀 300개가 화면을 빈틈없이 덮어서, 한 손으로 두 번 탭해 확대하려 해도 거의 항상 핀이 눌려
+         장소 페이지로 넘어갔다 — 사장님 눈엔 「지도를 누르면 닫힌다」(26.9.18). 화면 거리로 묶는다:
+         56px 칸마다 대표 핀 하나 + 개수. 묶음을 누르면 그 자리로 확대한다. 충분히 확대하면(13+) 안 묶는다. */
+      var CELL = 56, groups = {}, order = [];
+      var noCluster = MAP.getZoom() >= 13;
       ps.forEach(function (p) {
+        var pt = MAP.project([Number(p.lon), Number(p.lat)]);
+        var k = noCluster ? p.id : Math.floor(pt.x / CELL) + ":" + Math.floor(pt.y / CELL);
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(p);
+      });
+      order.forEach(function (k) {
+        var g = groups[k], p = g[0];
         var el = document.createElement("button");
         el.type = "button";
         el.className = "tv-pin" + (p.scale !== "spot" ? " area" : "");
@@ -953,11 +992,22 @@
         if (im) im.addEventListener("error", function () {
           el.innerHTML = "<span>" + fb + "</span>";
         });
-        if (p.ch_n > 1) el.innerHTML += '<i class="tv-pin-n">' + p.ch_n + "</i>";
+        if (g.length > 1) { el.className += " grp"; el.innerHTML += '<i class="tv-pin-c">' + g.length + "</i>"; }
+        else if (p.ch_n > 1) el.innerHTML += '<i class="tv-pin-n">' + p.ch_n + "</i>";
         el.title = p.name + (p.ch_name ? " · " + p.ch_name : "");
         el.addEventListener("click", function (e) {
           e.stopPropagation();
-          openDetail(p.id);
+          if (g.length > 1) {
+            /* 묶음 → 그 핀들이 다 보이게 확대(최소 +2단계) */
+            var bb = new maplibregl.LngLatBounds();
+            g.forEach(function (q) { bb.extend([Number(q.lon), Number(q.lat)]); });
+            var cam = MAP.cameraForBounds(bb, { padding: 80 });
+            var z = Math.max(MAP.getZoom() + 2, Math.min(cam ? cam.zoom : 0, 16));
+            MAP.easeTo({ center: bb.getCenter(), zoom: Math.min(z, 16), duration: 450 });
+            return;
+          }
+          /* 한 곳 → 바로 넘어가지 않고 미리보기 카드. 넘어가는 건 「자세히」에서만 */
+          showPreview(p);
         });
         MARKERS.push(new maplibregl.Marker({ element: el, anchor: "bottom" })
           .setLngLat([Number(p.lon), Number(p.lat)]).addTo(MAP));
