@@ -21,9 +21,13 @@
   var IDX = 0, SHOWN_AT = 0, BUSY = false;
   var STAGE_NM = ["16강", "8강", "4강", "결승"];
 
-  /* 🗺 위키미디어 사진은 갈라 엣지 프록시로 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
+  /* 🗺 여행 사진(위키미디어·관광공사·우리 CDN)은 줄여서 받는다 — 한국 엣지 캐시 + 크기 줄이기(26.9.18 대만 카드 느림). */
   function wm(u, w) {
-    if (!u || !/^https:\/\/[a-z0-9.-]*wikimedia\.org\//i.test(u)) return u;
+    if (!u) return u;
+    /* 우리 CDN 원본(170KB대)은 Cloudflare 변환으로 줄인다(→ 약 28KB) */
+    var g = /^https:\/\/cdn\.galla\.im\/(?!cdn-cgi\/)(.+)$/.exec(u);
+    if (g) return "https://cdn.galla.im/cdn-cgi/image/width=" + (w || 480) + ",quality=78,format=auto/" + g[1];
+    if (!/^https:\/\/[a-z0-9.-]*(wikimedia\.org|visitkorea\.or\.kr)\//i.test(u)) return u;
     return "https://galla.im/imgproxy?u=" + encodeURIComponent(u) + "&w=" + (w || 480);
   }
   /* 프록시가 첫 조회에 시간 초과(502)하면 원본 주소로 한 번 더 받는다 */
@@ -32,10 +36,12 @@
     document.addEventListener("error", function (e) {
       var im = e.target;
       if (!im || im.tagName !== "IMG" || im.dataset.wmfb) return;
-      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(im.getAttribute("src") || "");
-      if (!m) return;
+      var src = im.getAttribute("src") || "";
+      var m = /^https:\/\/galla\.im\/imgproxy\?u=([^&]+)/.exec(src);
+      var c = /^https:\/\/cdn\.galla\.im\/cdn-cgi\/image\/[^/]+\/(.+)$/.exec(src);
+      if (!m && !c) return;
       im.dataset.wmfb = "1";
-      try { im.src = decodeURIComponent(m[1]); } catch (_) {}
+      try { im.src = m ? decodeURIComponent(m[1]) : "https://cdn.galla.im/" + c[1]; } catch (_) {}
     }, true);
   }
   function esc(s) {

@@ -7,7 +7,7 @@
 const ALLOW = /(^|\.)(dcinside\.com|inven\.co\.kr|ruliweb\.com|instiz\.net|pann\.com|nate\.com|namu\.la|donga\.com|82cook\.com)$/i;
 /* 🗺 여행 사진(위키미디어 공용) — 원본 서버가 멀어 장당 1~2초 걸렸다(26.9.18 대만 카드).
    엣지에서 받아 캐시하고 &w= 로 줄여 보낸다. 공개 이미지 서버라 Referer 검사 없이 허용한다. */
-const WIKI = /(^|\.)wikimedia\.org$/i;
+const WIKI = /(^|\.)(wikimedia\.org|visitkorea\.or\.kr)$/i;   // 한국관광공사 사진도 같은 방식(원본 200KB대)
 
 function refererFor(host) {
   if (/inven/.test(host)) return "https://www.inven.co.kr/";
