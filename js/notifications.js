@@ -22,11 +22,12 @@
     reply: "comment", comment: "comment", plaza_comment: "comment",
     like: "like", plaza_like: "like",
     dislike: "dislike",
-    follow: "follow",
+    follow: "follow", follow_request: "follow", follow_accept: "follow",
     vote: "vote", plaza_vote: "vote",
     attack: "battle", defend: "battle", support: "battle",
     duel: "battle", duel_result: "battle", duel_challenge: "battle",
     duel_live: "battle", duel_voting: "battle", duel_decline: "battle",
+    duel_watch: "battle", duel_forfeit: "battle", duel_extend: "battle", duel_cheer_win: "reward",
     issue_win: "reward", donation: "reward", withdrawal: "reward",
     market_resolved: "predict",
   };
