@@ -22,14 +22,6 @@
        font-size:13px;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;
        cursor:pointer}
   #snd.on{display:flex}
-  /* 📺 TV로 보기 — 앱 안 임베드엔 유튜브의 캐스트(TV 연결) 버튼이 안 나온다. 유튜브 앱으로 넘겨
-     (보던 시점부터) 그 앱의 TV 연결 버튼을 쓰게 한다(사장님 26.9.18 「페어링 버튼 있자나」). */
-  #tv{position:absolute;right:10px;top:54px;z-index:5;display:flex;align-items:center;gap:5px;
-      padding:7px 11px 7px 9px;border-radius:999px;border:0;background:rgba(0,0,0,.66);backdrop-filter:blur(4px);
-      color:#fff;font:800 12.5px/1 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;cursor:pointer;
-      text-decoration:none;transition:opacity .25s}
-  #tv svg{width:17px;height:17px}
-  #tv.dim{opacity:.35}
 </style>
 </head>
 <body>
@@ -40,46 +32,12 @@
   <a id="errGo" href="#" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>
 </div>
 <button id="snd" type="button">🔊 소리 켜기</button>
-<a id="tv" href="#" target="_blank" rel="noopener" aria-label="TV로 보기">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2.01" y2="20"/></svg>TV로 보기</a>
 <script>
 (function(){
   var id = (new URLSearchParams(location.search).get("v") || "").trim();
   var watch = "https://www.youtube.com/watch?v=" + encodeURIComponent(id);
   document.getElementById("errGo").href = watch;
   if(!id){ document.getElementById("err").classList.add("on"); return; }
-
-  /* 📺 TV로 보기
-     · 앱 안(부모가 capacitor/localhost)이면 부모에게 알린다 — 부모(js/yt-tv.js)가 유튜브 앱을 연다.
-       iframe 안에서 바로 이동하면 웹뷰가 그 프레임 안에 유튜브 페이지를 띄워 버린다.
-     · 웹이면 그냥 새 탭 링크(모바일은 OS 가 유튜브 앱으로 넘긴다, PC 크롬은 유튜브의 캐스트 버튼) */
-  var tvA = document.getElementById("tv");
-  function tvUrl(){
-    var t = 0; try{ t = Math.floor(player && player.getCurrentTime ? player.getCurrentTime() : 0); }catch(_){}
-    return { t: t, url: watch + (t > 3 ? "&t=" + t + "s" : "") };
-  }
-  var inApp = false;
-  try{
-    var ao = location.ancestorOrigins;
-    var top0 = ao && ao.length ? ao[ao.length - 1] : document.referrer;
-    inApp = /^(capacitor|ionic):|^https?:\/\/localhost(:\d+)?\/?$/.test(top0 || "");
-  }catch(_){}
-  tvA.href = watch;
-  tvA.addEventListener("click", function(e){
-    var u = tvUrl();
-    try{ player && player.pauseVideo && player.pauseVideo(); }catch(_){}
-    if (inApp && window.parent !== window) {
-      e.preventDefault();
-      try{ window.parent.postMessage({ galla: "yt-tv", v: id, t: u.t }, "*"); }catch(_){}
-      return;
-    }
-    tvA.href = u.url;          // 웹: 보던 시점을 실어 새 탭으로
-  });
-  /* 재생 중엔 흐리게 — 영상을 가리지 않게. 멈추면 다시 선명하게 */
-  var tvDim = null;
-  function tvWake(){ tvA.classList.remove("dim"); clearTimeout(tvDim); tvDim = setTimeout(function(){ tvA.classList.add("dim"); }, 3000); }
-  document.addEventListener("touchstart", tvWake, { passive: true });
-  document.addEventListener("mousemove", tvWake, { passive: true });
 
   function showErr(){ document.getElementById("err").classList.add("on"); var pp=document.getElementById("p"); if(pp) pp.style.display="none"; }
 
