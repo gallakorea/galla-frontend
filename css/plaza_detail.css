@@ -646,3 +646,6 @@ html, body {
 @media (min-width: 481px) and (max-width: 1099.98px) {
   .header { max-width: 480px; margin-left: auto; margin-right: auto; }
 }
+
+/* 액션바 아이콘 크기 통일 — 갈비스만 22px 로 커 보였다(26.9.19 사장님: 「크기가 동떨어져」) */
+.circle-btn svg, .circle-btn .icon { width: 18px; height: 18px; }

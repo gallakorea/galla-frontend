@@ -86,9 +86,7 @@
     padding: 6px 12px 22px; text-decoration: none;
   }
   #pc-left .pcl-logo img { width: 34px; height: 34px; border-radius: 10px; }
-  #pc-left .pcl-logo b {
-    font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: #fff;
-  }
+  #pc-left .pcl-logo img.pcl-word { width: auto; height: 20px; border-radius: 0; }
   #pc-left .pcl-item {
     display: flex; align-items: center; gap: 14px;
     padding: 12px 14px; margin: 2px 0;
@@ -112,6 +110,7 @@
     font-size: 10.5px; font-weight: 900;
     display: flex; align-items: center; justify-content: center;
   }
+  #pc-left .pcl-badge[hidden] { display: none; }   /* 위 display:flex 가 hidden 을 이겨 빈 빨간 원이 늘 떠 있었다(26.9.19) */
   #pc-left .pcl-write {
     margin-top: 14px; padding: 13px;
     border: none; border-radius: 14px; cursor: pointer;
@@ -224,7 +223,7 @@
   /* 레일이 겹치는 애매한 폭(1100~1279px)에서는 우측 패널만 유지하고 레일 라벨 축소 */
   @media (max-width: 1279px) {
     :root { --pc-left: 68px; }
-    #pc-left .pcl-item span, #pc-left .pcl-logo b, #pc-left .pcl-foot,
+    #pc-left .pcl-item span, #pc-left .pcl-logo .pcl-word, #pc-left .pcl-foot,
     #pc-left .pcl-galvis span, #pc-left .pcl-getapp span { display: none; }
     #pc-left .pcl-item { justify-content: center; padding: 13px 0; }
     #pc-left .pcl-galvis, #pc-left .pcl-getapp { justify-content: center; padding: 12px 0; }

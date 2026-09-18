@@ -302,3 +302,8 @@ input, textarea, select,
 .vis-lock-i { display: inline-flex; margin-right: 4px; color: #c9cfdb; vertical-align: -0.1em; }
 .mp-sh-cell, .glf-tile { position: relative; }
 .st-ic .lk-ic { width: 18px; height: 18px; }
+
+/* 🙈 hidden 속성은 언제나 숨김 — 컴포넌트 CSS 의 display:flex 등이 hidden 을 덮어써
+   안 읽은 게 없는데도 PC 사이드바 「메시지」 옆에 빈 빨간 원이 떠 있었다(26.9.19 사장님 제보).
+   issue.css 가 같은 규칙을 이미 전역으로 쓰고 있다. */
+[hidden] { display: none !important; }

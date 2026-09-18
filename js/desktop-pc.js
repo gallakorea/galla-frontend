@@ -59,7 +59,7 @@
     el.innerHTML = `
       <a class="pcl-logo" href="index.html">
         <img src="assets/app-icons/icon-192.png" alt="">
-        <b>GALLA</b>
+        <img class="pcl-word" src="/assets/logo.png" alt="GALLA"><!-- 글꼴 글자 대신 우리 로고(워드마크) — 가운데 헤더와 같은 그림(26.9.19 사장님) -->
       </a>
       ${NAV.map(n => `
         <a class="pcl-item${cur === n.key ? ' on' : ''}" href="${n.href}" data-key="${n.key}">

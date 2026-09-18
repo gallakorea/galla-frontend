@@ -1080,3 +1080,15 @@ body.shorts-open .header { display: none !important; }
 .mah-line2 .ktag { height: 18px; margin-right: 5px; transform: translateY(-1px); }
 .pf-top .ktag, .pz-head .ktag, .nf-head .ktag { margin-right: 0; }
 .pf-ctag .kic { vertical-align: -1px; margin-right: 3px; }
+
+/* ═══ 액션바 크기 통일(26.9.19 사장님: 「하트·광장 추천 크기가 동떨어져」) ═══
+   ① 하트가 작던 원인: 좋아요 아이콘 클래스 lk-ic 가 자물쇠 아이콘(theme.css .lk-ic{1em})과 이름이 겹쳐 16px 로 줄었다 — 여기서 24px 고정.
+   ② 광장 추천(▲ 점수 ▼)이 16px·회색 알약이라 옆 아이콘보다 한참 작았다 — 같은 24px·흰 선으로.
+   ③ ⋯ 버튼만 검은 네모 배경이라 색 있는 카드(예측)에서 혼자 튀었다 — 다른 아이콘처럼 배경 없이. */
+.fi-btn .fi-ic, .fi-btn .lk-ic { width: 24px; height: 24px; vertical-align: 0; }
+.card-footer .pv-vote { gap: 0; background: none; padding: 0; margin-right: 2px; }
+.card-footer .pv-btn { width: 34px; height: 40px; align-items: center; justify-content: center; color: #fff; padding: 0; }
+.card-footer .pv-btn svg { width: 24px; height: 24px; stroke-width: 1.8; }
+.card-footer .pv-score { min-width: 18px; font-size: 13px; font-weight: 700; color: #d6dae2; }
+.more-btn { width: 40px; height: 40px; background: none; border: 0; border-radius: 10px; }
+.more-btn svg { width: 22px; height: 22px; }
