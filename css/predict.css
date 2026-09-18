@@ -665,3 +665,37 @@
 .pm-lobby .pm-card.has-cover .pm-card-q { font-size: 17px; }
 .pm-lobby .pm-card.has-cover.pm-hot::before { z-index: 3; }
 .pm-lobby .pm-card.resolved .pm-cover img { filter: grayscale(.6) brightness(.8); }
+
+/* ✨ 참여 전 예측 — 반짝이며 눌러 보게(26.9.18 사장님, 홈 진영 막대와 같은 결). 참여했거나 마감이면 꺼진다.
+   계속 도는 효과는 보이는 카드(.pm-on)에서만. */
+.pm-lobby .pm-tease .pm-odds-bar { position: relative; isolation: isolate; padding: 2px; background: transparent; box-shadow: none; }
+.pm-lobby .pm-tease .pm-odds-bar::before { content: ""; position: absolute; left: 50%; top: 50%; width: 140%; aspect-ratio: 1; margin: -70% 0 0 -70%; z-index: -2;
+  background: repeating-conic-gradient(from 0deg, #ffd66b 0 3deg, transparent 3deg 9deg); }
+.pm-lobby .pm-tease .pm-odds-bar::after { content: ""; position: absolute; inset: 2px; border-radius: 10px; z-index: -1; background: #0b0d13; }
+.pm-lobby .pm-tease.pm-on .pm-odds-bar::before { animation: pmChase 4s linear infinite; }
+@keyframes pmChase { to { transform: rotate(360deg); } }
+.pm-lobby .pm-tease .pm-odds-side:first-child { border-radius: 10px 0 0 10px; }
+.pm-lobby .pm-tease .pm-odds-side.no { border-radius: 0 10px 10px 0; }
+/* 예·아니오 번갈아 밝게 */
+.pm-lobby .pm-tease.pm-on .pm-odds-side.yes { animation: pmAltY 2.4s ease-in-out infinite; }
+.pm-lobby .pm-tease.pm-on .pm-odds-side.no  { animation: pmAltY 2.4s ease-in-out 1.2s infinite; }
+@keyframes pmAltY { 0%,100% { filter: brightness(1); } 30% { filter: brightness(1.55) saturate(1.2); } 55% { filter: brightness(1); } }
+/* 경계선 흔들기 */
+.pm-lobby .pm-tease.pm-on .pm-odds-side.yes::before { animation: pmSplit 1.8s ease-in-out infinite, pmTease 2.4s ease-in-out infinite; }
+@keyframes pmTease { 0%,100% { translate: 0 0; } 25% { translate: -10px 0; } 75% { translate: 6px 0; } }
+/* 별빛 */
+.pm-spk { display: none; }
+.pm-lobby .pm-tease .pm-spk { display: block; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; z-index: 3; pointer-events: none;
+  background: #fff; box-shadow: 0 0 7px 2px rgba(255,236,180,.95); opacity: 0; }
+.pm-lobby .pm-tease.pm-on .pm-spk { animation: pmTwinkle 2.1s ease-in-out infinite; }
+.pm-lobby .pm-tease .pm-spk.k1 { left: 18%; } .pm-lobby .pm-tease .pm-spk.k2 { left: 52%; animation-delay: .7s; } .pm-lobby .pm-tease .pm-spk.k3 { left: 83%; animation-delay: 1.4s; }
+@keyframes pmTwinkle { 0%,100% { opacity: 0; transform: scale(.2); } 40% { opacity: 1; transform: scale(1.3); } 60% { opacity: .2; transform: scale(.6); } }
+/* 「지금 참여 ›」 — 금빛 맥박 */
+.pm-cta { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 900; color: #1a1206;
+  background: linear-gradient(100deg, #ffd66b, #ffb43d); box-shadow: 0 0 0 0 rgba(255,200,80,.6); }
+.pm-card.pm-on .pm-cta { animation: pmCta 1.6s ease-out infinite; }
+@keyframes pmCta { 0% { box-shadow: 0 0 0 0 rgba(255,200,80,.55); transform: scale(1); } 40% { transform: scale(1.06); } 70% { box-shadow: 0 0 0 9px rgba(255,200,80,0); transform: scale(1); } 100% { box-shadow: 0 0 0 0 rgba(255,200,80,0); } }
+/* 참여한 예측 — 내 선택 표시 */
+.pm-mine { margin-top: 8px; font-size: 12px; color: #9aa3b8; }
+.pm-mine b { color: #ffd66b; font-weight: 900; }
+@media (prefers-reduced-motion: reduce) { .pm-tease .pm-odds-bar::before, .pm-tease .pm-odds-side, .pm-spk, .pm-cta { animation: none !important; } }

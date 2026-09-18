@@ -259,6 +259,7 @@ function oddsBar(m, outs){
     <div class="pm-odds-bar">
       <div class="pm-odds-side yes" style="width:${Math.max(16,Math.min(84,yp))}%"><span class="lab">예 ${yp}%</span></div>
       <div class="pm-odds-side no" style="width:${Math.max(16,Math.min(84,100-yp))}%"><span class="lab">아니오 ${100-yp}%</span></div>
+      <i class="pm-spk k1"></i><i class="pm-spk k2"></i><i class="pm-spk k3"></i>
     </div>
     <div class="pm-odds-mult">
       <span class="y">예 적중 시 <b>×${oy?oy.toFixed(2):'–'}</b></span>
@@ -304,14 +305,17 @@ async function loadMarkets(){
   renderGuide(); renderCombo(); renderDaily(); renderJackpot(); renderMarkets();
 }
 
-let RX_AGG={}, MY_RX={}, MY_SAVED={};
+let RX_AGG={}, MY_RX={}, MY_SAVED={}, MY_BET={};
 async function loadReactionsAndSaves(ids){
-  RX_AGG={}; MY_RX={}; MY_SAVED={}; if(!ids.length) return;
-  const [rx,myrx,sv]=await Promise.all([
+  RX_AGG={}; MY_RX={}; MY_SAVED={}; MY_BET={}; if(!ids.length) return;
+  const [rx,myrx,sv,mb]=await Promise.all([
     supa.from('market_reactions').select('market_id,value').in('market_id',ids),
     ME?supa.from('market_reactions').select('market_id,value').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
     ME?supa.from('market_bookmarks').select('market_id').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
+    /* 내가 참여한 예측 — 참여 전 카드만 반짝이게, 참여한 카드엔 「내 선택」 표시 */
+    ME?supa.from('predict_bets').select('market_id,outcome_id').eq('user_id',ME.id).in('market_id',ids):Promise.resolve({data:[]}),
   ]);
+  (mb.data||[]).forEach(b=>{ MY_BET[b.market_id]=b.outcome_id; });
   (rx.data||[]).forEach(r=>{ const a=RX_AGG[r.market_id]||={up:0,down:0}; if(r.value===1)a.up++; else a.down++; });
   (myrx.data||[]).forEach(r=>MY_RX[r.market_id]=r.value);
   (sv.data||[]).forEach(b=>MY_SAVED[b.market_id]=true);
@@ -407,6 +411,9 @@ function marketCardHtml(m){
     const outs=OUT_BY_M[m.id]||[];
     const hot=!m.resolved && (m.total_pool||0)>0 && HOT_IDS.has(m.id);
     const soon=!m.resolved && !(new Date(m.close_at)<=Date.now()) && (new Date(m.close_at)-Date.now()) < 86400000;
+    /* ✨ 참여 전(진행 중·내 참여 없음) = 반짝이며 눌러 보게 / 참여함 = 차분하게 + 내 선택 표시 */
+    const myOut = MY_BET[m.id] ? (outs.find(o=>o.id===MY_BET[m.id])||null) : null;
+    const tease = !closed && !MY_BET[m.id];
     const bettors=outs.reduce((s,o)=>s+(o.bettor_count||0),0);
     const closed=m.resolved || new Date(m.close_at)<=Date.now();
     let statusBadge;
@@ -419,7 +426,7 @@ function marketCardHtml(m){
     const tags=`${m.category?`<span class="pm-meta-cat">${esc(m.category)}</span>`:''}${statusBadge}${hot?'<span class="pm-hot-tag">HOT</span>':''}${soon?'<span class="pm-soon-tag">마감 임박</span>':''}${m.is_jackpot?'<span class="pm-meta-cat">보너스</span>':''}`;
     /* 🖼 썸네일 있는 예측 = 카드 위 16:9 커버 + 딱지를 사진 위에(26.9.18 사장님). 사진은 CDN 변환으로 줄여 받는다. */
     const cover=m.image_url ? `<div class="pm-cover"><img src="${esc(pmThumb(m.image_url))}" alt="" loading="lazy" decoding="async" onerror="this.closest('.pm-cover').remove()"><div class="pm-cover-tags">${tags}</div></div>` : '';
-    return `<div class="pm-card ${m.resolved?'resolved':''}${hot?' pm-hot':''}${cover?' has-cover':''}" data-id="${m.id}">
+    return `<div class="pm-card ${m.resolved?'resolved':''}${hot?' pm-hot':''}${cover?' has-cover':''}${tease?' pm-tease':''}" data-id="${m.id}">
       ${cover}
       <div class="pm-card-top">
         ${cover?'':`<div class="pm-card-thumb">${IC_TARGET}</div>`}
@@ -430,10 +437,12 @@ function marketCardHtml(m){
         </div>
       </div>
       ${oddsBar(m, outs)}
+      ${myOut?`<div class="pm-mine">내 선택: <b>${esc(myOut.label)}</b></div>`:''}
       <div class="pm-card-foot">
         <span class="pm-card-stats">
           <span class="pm-stat gp">${IC_COIN}<b>${fmt(m.total_pool)}</b>GP</span>
           <span class="pm-stat">${IC_PPL}<b>${fmt(bettors)}</b>명</span>
+          ${tease?'<span class="pm-cta">지금 참여 ›</span>':''}
         </span>
         <span class="pm-card-stats">
           <button class="pm-card-act mc-act ${MY_SAVED[m.id]?'on':''}" data-act="save" data-id="${m.id}" aria-label="저장">${IC_SAVE}</button>
