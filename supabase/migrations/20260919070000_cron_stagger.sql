@@ -1,0 +1,36 @@
+-- ⏱ 크론 시작 분 흩기(26.9.19) — 정각에 최대 31개가 동시에 시작해 연결 한도에 걸려 'connection failed'(버그헌터 11건).
+--    */N 작업마다 시작 분을 다르게(k-59/N). 한 분 최대 동시 시작 31 → 6.
+select cron.alter_job(36, schedule := '1-59/5 * * * *');  -- collect_raw_news_job: */5 * * * *
+select cron.alter_job(38, schedule := '1-59/10 * * * *');  -- categorize_raw_news_job: */10 * * * *
+select cron.alter_job(39, schedule := '2-59/15 * * * *');  -- group_related_news_job: */15 * * * *
+select cron.alter_job(40, schedule := '2-59/5 * * * *');  -- fetch_missing_thumbnails_job: */5 * * * *
+select cron.alter_job(66, schedule := '2-59/10 * * * *');  -- collect_rss_news_job: */10 * * * *
+select cron.alter_job(67, schedule := '3-59/30 * * * *');  -- generate_galla_news_job: */30 * * * *
+select cron.alter_job(68, schedule := '3 9,21 * * *');  -- community_hot_collect: 0 9,21 * * *
+select cron.alter_job(73, schedule := '8-59/30 * * * *');  -- collect_youtube_hot_job: */30 * * * *
+select cron.alter_job(75, schedule := '4-59/20 * * * *');  -- collect_external_trends_job: */20 * * * *
+select cron.alter_job(85, schedule := '3-59/10 * * * *');  -- ga_sync_job: */10 * * * *
+select cron.alter_job(86, schedule := '12-59/30 * * * *');  -- indexnow_ping: */30 * * * *
+select cron.alter_job(87, schedule := '3-59/5 * * * *');  -- dm-expire-sweep: */5 * * * *
+select cron.alter_job(91, schedule := '19-59/30 * * * *');  -- bug_hunt: */30 * * * *
+select cron.alter_job(99, schedule := '6 19 * * 0');  -- galvis-redteam-weekly: 0 19 * * 0
+select cron.alter_job(108, schedule := '4-59/5 * * * *');  -- video_migrate_job: */5 * * * *
+select cron.alter_job(110, schedule := '8 20 * * *');  -- purge_orphan_media: 0 20 * * *
+select cron.alter_job(111, schedule := '9-59/20 * * * *');  -- gallian_cache_refresh: */20 * * * *
+select cron.alter_job(113, schedule := '4-59/10 * * * *');  -- hot_scores: */10 * * * *
+select cron.alter_job(114, schedule := '6-59/15 * * * *');  -- feed_signals_rollup: */15 * * * *
+select cron.alter_job(115, schedule := '5-59/10 * * * *');  -- weather_sync_job: */10 * * * *
+select cron.alter_job(120, schedule := '23-59/30 * * * *');  -- indexnow_ping_job: */30 * * * *
+select cron.alter_job(129, schedule := '8-59/15 * * * *');  -- reap_stalled_agent_jobs: */15 * * * *
+select cron.alter_job(151, schedule := '6-59/10 * * * *');  -- travel_summaries_job: */10 * * * *
+select cron.alter_job(152, schedule := '7-59/10 * * * *');  -- travel_localize_job: */10 * * * *
+select cron.alter_job(154, schedule := '1-59/3 * * * *');  -- travel_harvest_places_job: */3 * * * *
+select cron.alter_job(164, schedule := '1-59/5 * * * *');  -- food_video_blurb: */5 * * * *
+select cron.alter_job(166, schedule := '11-59/15 * * * *');  -- travel_classify_job: */15 * * * *
+select cron.alter_job(170, schedule := '8-59/10 * * * *');  -- food_harvest_title: */10 * * * *
+select cron.alter_job(176, schedule := '14-59/20 * * * *');  -- food_harvest_creator: */20 * * * *
+select cron.alter_job(177, schedule := '9-59/10 * * * *');  -- travel_pending_geo: */10 * * * *
+select cron.alter_job(182, schedule := '1-59/10 * * * *');  -- cheap_geocode: */10 * * * *
+select cron.alter_job(186, schedule := '4-59/6 * * * *');  -- travel_video_tags: */6 * * * *
+select cron.alter_job(187, schedule := '17-59/20 * * * *');  -- counts_refresh: */20 * * * *
+select cron.alter_job(193, schedule := '13-59/15 * * * *');  -- tug_lines_job: */15 * * * *
