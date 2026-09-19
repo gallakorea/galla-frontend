@@ -129,10 +129,13 @@
       <div class="pcr-body"><div class="pcr-empty">불러오는 중…</div></div>
     </section>`;
   }
+  /* ⚠️ 새 패널(#pc-right) 안에서만 찾는다 — 90초 새로고침 때 옛 패널(#pc-right-old)에도 같은 id 카드가 있어,
+     document 전체에서 찾으면 옛 패널을 채우고 옛 패널은 곧 치워져 새 패널이 「불러오는 중」에 갇혔다(26.9.19 사장님 제보) */
   function fill(id, html, moreHref, moreLabel) {
-    const el = document.querySelector(`#${id} .pcr-body`);
+    const card = document.querySelector(`#pc-right #${id}`);
+    const el = card && card.querySelector('.pcr-body');
     if (!el) return;
-    if (!html) { document.getElementById(id)?.remove(); return; }
+    if (!html) { card.remove(); return; }
     el.innerHTML = html + (moreHref ? `<a class="pcr-more" href="${moreHref}">${moreLabel} →</a>` : '');
   }
 
