@@ -1578,7 +1578,7 @@ function renderVideoCard(v) {
 
 /* ▶️ 핫튜브 카드 — 스크롤해서 화면에 60% 이상 들어오면 그 자리에서 저절로 재생(26.9.19 사장님: 「스크롤 내려오면 바로 재생」).
    재생·정지는 공용 GALLA_playInline(js/supabase.js)이 한다 — 1/4 미만으로 걸치면 스스로 끄고, 한 번에 하나만 튼다.
-   사용자 탭이 없는 재생이라 소리 자동재생은 막힌다 → 음소거로 시작하고 프록시(yt.html ?mute=1)가 「소리 켜기」를 띄운다.
+   소리는 앱 전역 설정(켬/끔)을 따른다. 소리 버튼은 프록시(yt.html) 안 SVG — 누르면 전역도 바뀐다.
    ⚠️ IntersectionObserver 대신 0.7초 rect 검사 — 공용 재생기 주석과 같은 이유(SPA 스크롤 컨테이너에서 콜백이 안 오는 환경).
    ⚠️ 탭을 옆으로 넘기면 홈 판이 가로로 화면 밖이다 — 세로만 보면 계속 틀어 두므로 가로도 본다. */
 function hotAutoTick() {
@@ -1604,9 +1604,8 @@ function hotAutoTick() {
     });
     if (!best) return;
     const card = best.closest('[data-vid]'); if (!card) return;
+    // 소리는 앱 전역 설정을 따른다(GALLA_playInline 이 mute 를 정한다) — 켬인데 브라우저가 소리 자동재생을 막으면 프록시가 음소거로 되돌린다
     window.GALLA_playInline(best, card.getAttribute('data-vid'), card.getAttribute('data-vtitle') || '');
-    const ifr = best.querySelector('iframe');
-    if (ifr && !/[?&]mute=1/.test(ifr.src)) ifr.src = ifr.src + '&mute=1';
 }
 if (!window.__hotAutoTimer) window.__hotAutoTimer = setInterval(hotAutoTick, 700);
 

@@ -165,7 +165,9 @@
       host.classList.add("vplaying");
       host.innerHTML = "";
       const ifr = document.createElement("iframe");
-      ifr.src = YT_PROXY + "?v=" + encodeURIComponent(id);
+      /* 🔈 앱 전역 소리 설정을 따른다(26.9.19 사장님: 「다른 게 켬이면 여기도 켬」) — 끔이면 음소거로 시작 */
+      const soundOn = window.GALLA_soundOn ? window.GALLA_soundOn() : (sessionStorage.getItem("gallaSound") === "1");
+      ifr.src = YT_PROXY + "?v=" + encodeURIComponent(id) + (soundOn ? "" : "&mute=1");
       ifr.title = title || "";
       ifr.setAttribute("frameborder", "0");
       ifr.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen");
@@ -195,6 +197,21 @@
          재생 중일 때만 도는 0.5초 검사라 비용은 무시할 수준이고, 정지하면 같이 멈춘다. */
       host.__vtimer = setInterval(check, 500);
     };
+
+    /* 🔗 유튜브 프록시 ↔ 앱 전역 소리 — 프록시에서 소리를 켜고 끄면 전역 설정을 바꾸고(다른 영상도 따라감),
+       다른 영상에서 바꾸면 재생 중인 프록시에 알린다. 프록시 창은 galla.im/yt 뿐이라 그 출처만 받는다. */
+    window.addEventListener("message", (e) => {
+      const d = e.data || {};
+      if (d.galla !== "yt-sound" || !/^https:\/\/(www\.)?galla\.im$/.test(e.origin)) return;
+      if (window.GALLA_setSound) window.GALLA_setSound(!!d.on);
+      else { try { sessionStorage.setItem("gallaSound", d.on ? "1" : "0"); } catch (_) {} }
+    });
+    document.addEventListener("galla:sound", (e) => {
+      const on = !!(e.detail && e.detail.on);
+      document.querySelectorAll("[data-vplay].vplaying iframe").forEach((f) => {
+        try { f.contentWindow.postMessage({ galla: "yt-sound-set", on }, "https://galla.im"); } catch (_) {}
+      });
+    });
 
     /* 앱을 백그라운드로 보내거나 탭을 가리면 정지 — 안 그러면 화면이 꺼져도 소리가 난다. */
     document.addEventListener("visibilitychange", () => {
