@@ -1080,7 +1080,7 @@ async function GALLA_mypageInit(root, spaParams) {
         row.onclick = onClick;
         return row;
     };
-    const mpAgo = (iso) => {
+    const mpAgo = (iso) => { if (window.GALLA_ago) return window.GALLA_ago(iso); 
         if (!iso) return "";
         const s = (Date.now() - new Date(iso).getTime()) / 1000;
         if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "분 전";
@@ -1595,7 +1595,7 @@ async function GALLA_mypageInit(root, spaParams) {
         tabContent.innerHTML = MP_SPINNER;
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
         const views = n => { n = +n || 0; if (n >= 10000) return "조회수 " + (n / 10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, "") + "만회"; if (n >= 1000) return "조회수 " + (n / 1000).toFixed(1).replace(/\.0$/, "") + "천회"; return "조회수 " + n + "회"; };
-        const ago = ts => {
+        const ago = ts => { if (window.GALLA_ago) return window.GALLA_ago(ts); 
             const d = Math.floor((Date.now() - new Date(ts)) / 1000);
             if (d < 60) return "방금"; if (d < 3600) return Math.floor(d / 60) + "분 전";
             if (d < 86400) return Math.floor(d / 3600) + "시간 전"; if (d < 2592000) return Math.floor(d / 86400) + "일 전";

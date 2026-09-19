@@ -1753,7 +1753,7 @@ function scEsc(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-function scTimeAgo(iso) {
+function scTimeAgo(iso) { if (window.GALLA_ago) return window.GALLA_ago(iso); 
   if (!iso) return "";
   const t = new Date(iso.endsWith?.("Z") || iso.includes?.("+") ? iso : iso + "Z").getTime();
   const s = (Date.now() - t) / 1000;

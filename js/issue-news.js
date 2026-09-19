@@ -25,7 +25,7 @@ function srcLabel(a) {
   if (s === "naver_api" || s === "rss" || !s) return host(a.url) || "뉴스";
   return s;
 }
-function ago(ts) {
+function ago(ts) { if (window.GALLA_ago) return window.GALLA_ago(ts); 
   if (!ts) return "";
   const d = (Date.now() - new Date(ts).getTime()) / 1000;
   if (d < 3600) return Math.max(1, Math.floor(d / 60)) + "분 전";

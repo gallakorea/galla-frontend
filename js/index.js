@@ -1231,7 +1231,7 @@ async function loadData() {
         author: profileMap[row.user_id]?.nickname || '익명',
         level: profileMap[row.user_id]?.level || 1,
         avatar_url: profileMap[row.user_id]?.avatar_url || null,
-        time: new Date(row.created_at).toLocaleDateString(),
+        time: window.GALLA_ago ? window.GALLA_ago(row.created_at) : new Date(row.created_at).toLocaleDateString('ko-KR'),
         title: row.title,
         oneLine: row.one_line,
         pro: row.pro_count || 0,
@@ -1529,7 +1529,7 @@ async function loadVideoCards() {
     return pool.sort(() => Math.random() - 0.5).slice(0, 6);
 }
 
-function vfAgo(t) {
+function vfAgo(t) { if (window.GALLA_ago) return window.GALLA_ago(t); 
     const m = Math.max(0, Math.round((Date.now() - new Date(t).getTime()) / 60000));
     if (m < 1) return '방금';
     if (m < 60) return m + '분 전';
@@ -1643,7 +1643,7 @@ function gallariIsCarousel(p) {
     return false;
 }
 
-function gallariAgo(ts) {
+function gallariAgo(ts) { if (window.GALLA_ago) return window.GALLA_ago(ts); 
     const d = Math.floor((Date.now() - new Date(ts)) / 1000);
     if (d < 60) return '방금';
     if (d < 3600) return Math.floor(d / 60) + '분 전';

@@ -44,7 +44,7 @@
   const COLOR = Object.fromEntries(TIERS.map(t => [t.key, t.color]));
   const tierColor = (k) => COLOR[k] || "#3b82f6";
   const A = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const ago = (ts) => { if (!ts) return ""; const d = (Date.now() - new Date(ts).getTime()) / 1000;
+  const ago = (ts) => { if (!ts) return ""; if (window.GALLA_ago) return window.GALLA_ago(ts);  const d = (Date.now() - new Date(ts).getTime()) / 1000;
     if (d < 3600) return Math.max(1, (d / 60) | 0) + "분 전"; if (d < 86400) return ((d / 3600) | 0) + "시간 전"; return ((d / 86400) | 0) + "일 전"; };
 
   function css() {

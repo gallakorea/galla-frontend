@@ -57,7 +57,7 @@
     return h ? `${h}:${p(mi)}:${p(s)}` : `${mi}:${p(s)}`;
   }
 
-  function timeAgo(iso) {
+  function timeAgo(iso) { if (window.GALLA_ago) return window.GALLA_ago(iso); 
     if (!iso) return "";
     const d = (Date.now() - new Date(iso).getTime()) / 1000;
     if (d < 3600) return Math.max(1, Math.floor(d / 60)) + "분 전";

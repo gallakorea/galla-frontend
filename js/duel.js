@@ -21,7 +21,7 @@
     const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
     return `${m}:${String(s % 60).padStart(2, "0")}`;
   }
-  function relTime(ts) {
+  function relTime(ts) { if (window.GALLA_ago) return window.GALLA_ago(ts); 
     const s = (Date.now() - new Date(ts).getTime()) / 1000;
     if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전";
     if (s < 86400) return Math.floor(s / 3600) + "시간 전"; return Math.floor(s / 86400) + "일 전";

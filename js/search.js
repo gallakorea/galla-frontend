@@ -19,7 +19,7 @@ function esc(s) {
   return (s == null ? "" : String(s))
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-function timeAgo(ts) {
+function timeAgo(ts) { if (window.GALLA_ago) return window.GALLA_ago(ts); 
   if (!ts) return "";
   const d = (Date.now() - new Date(ts)) / 1000;
   if (d < 60) return "방금";

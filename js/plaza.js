@@ -553,7 +553,7 @@ function plazaExcerpt(body) {
 }
 function escP(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-function timeAgoK(iso) {
+function timeAgoK(iso) { if (window.GALLA_ago) return window.GALLA_ago(iso); 
   if (!iso) return "";
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
   if (s < 60) return "방금 전";

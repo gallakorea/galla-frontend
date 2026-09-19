@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0926000"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0926100"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -165,6 +165,7 @@
 
 <!-- 에러 로거 — SPA 부팅/런타임 에러를 client_errors에 남겨 실기기 진단 가능하게 -->
 <script src="/js/error-logger.js?v=080412"></script>
+<script src="/js/time-ago.js?v=0926100"></script>
 <!-- 🐞 버그 신고 — 앱 어디서든 흔들기·스크린샷·오류 알림에서 바로 열린다(26.9.19: 예전엔 설정·글쓰기 화면에 가야만 실려 앱에선 사실상 꺼져 있었다) -->
 <script src="/js/bug-report.js?v=0925800" defer></script>
 <!-- 📦 OTA(무선 업데이트) — 네이티브 번들 앱에서만. notifyAppReady(롤백방지)+백그라운드 업데이트 확인 -->

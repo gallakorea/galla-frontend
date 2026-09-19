@@ -16,7 +16,7 @@
     if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "천";
     return String(n);
   };
-  const timeAgo = (iso) => {
+  const timeAgo = (iso) => { if (window.GALLA_ago) return window.GALLA_ago(iso); 
     if (!iso) return "";
     const d = (Date.now() - new Date(iso).getTime()) / 1000;
     if (d < 3600) return Math.max(1, Math.floor(d / 60)) + "분 전";

@@ -36,7 +36,7 @@
   /* 타임존 오프셋(+00:00 등)이 이미 붙은 ISO에 'Z'를 또 붙이면 Invalid Date(NaN) */
   const ts = iso => { const s = String(iso);
     return new Date(/Z$|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z').getTime(); };
-  const ago = iso => {
+  const ago = iso => { if (window.GALLA_ago) return window.GALLA_ago(iso); 
     const t = ts(iso); if (!isFinite(t)) return '';
     const d = (Date.now() - t) / 1000;
     if (d < 60) return '방금'; if (d < 3600) return Math.floor(d / 60) + '분 전';

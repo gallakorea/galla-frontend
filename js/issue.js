@@ -1,5 +1,5 @@
 import { loadAiArguments } from "./issue-argument.js?v=080325";
-import { loadAiNews } from "./issue-news.js?v=080325";
+import { loadAiNews } from "./issue-news.js?v=0926100";
 import { loadStats } from "./issue.stats.js?v=0920000";
 import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0916100";
 
@@ -718,7 +718,7 @@ if (explainWrap) {
 }
 
   if (issue.created_at) {
-    qs("issue-time").innerText = new Date(issue.created_at).toLocaleDateString();
+    qs("issue-time").innerText = window.GALLA_ago ? window.GALLA_ago(issue.created_at) : new Date(issue.created_at).toLocaleDateString("ko-KR");
   }
 
   // 조회수(유튜브식): 세션당 1회 증가, 즉시 표시
