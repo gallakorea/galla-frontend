@@ -509,6 +509,9 @@
         const g = document.getElementById("nav-glider"); if (g) g.style.transition = "";
         const idx = Math.max(0, Math.min(TABS.length - 1, Math.round(track.scrollLeft / W())));
         if (Date.now() < progScrollUntil) { paintNav(); return; }
+        /* ✋ 손가락이 안 닿았는데 판이 움직였다 = 사용자가 넘긴 게 아니다(새로고침 직후 아이폰 배치가 늦어 스크롤이 0 으로 튐 등).
+           이때 탭을 바꾸면 마이에서 새로고침했는데 홈으로 튕겼다(26.9.19 사장님). 원래 자리로 되돌린다. */
+        if (!touching && Date.now() - touchedAt > 1200) { if (idx !== cur) settle(false); paintNav(); return; }
         if (idx !== cur) activateTab(idx, { fromScroll: true });
         else paintNav();
       }, 90);
@@ -516,7 +519,11 @@
     /* 넘긴 직후 판이 아직 미끄러지는 중에 손가락을 대면 폰은 그 손길을 가로 트랙에 붙인다 —
        그대로 위로 쓸면 세로 대신 옆 판으로 넘어갔다(26.9.19 사장님). 닿는 순간 판을 도착 자리에 바로 세우고
        이번 손길 동안은 가로를 잠가, 손길이 판 안 세로 스크롤로 가게 한다. 손을 떼면 풀린다. */
-    let lockedX = false;
+    let lockedX = false, touching = false, touchedAt = 0;
+    track.addEventListener("touchstart", () => { touching = true; touchedAt = Date.now(); }, { passive: true, capture: true });
+    const untouch = () => { touching = false; touchedAt = Date.now(); };
+    track.addEventListener("touchend", untouch, { passive: true, capture: true });
+    track.addEventListener("touchcancel", untouch, { passive: true, capture: true });
     track.addEventListener("touchstart", () => {
       if (stack.length) return;
       const w = W(), sl = track.scrollLeft, idx = Math.max(0, Math.min(TABS.length - 1, Math.round(sl / w)));
@@ -530,6 +537,10 @@
     const unlock = () => { if (!lockedX) return; lockedX = false; track.style.overflowX = ""; };
     track.addEventListener("touchend", unlock, { passive: true, capture: true });
     track.addEventListener("touchcancel", unlock, { passive: true, capture: true });
+    /* 🧷 새로고침 직후·화면 크기 변화(회전·주소창) 뒤 판이 어긋나 있으면 지금 탭 자리로 다시 세운다 — 손가락이 닿아 있을 땐 건드리지 않는다 */
+    const reseat = () => { if (!touching && !stack.length && Math.abs(track.scrollLeft - cur * W()) > 2) settle(false); };
+    [250, 800, 1600, 3000].forEach(ms => setTimeout(reseat, ms));
+    window.addEventListener("resize", () => setTimeout(reseat, 120), { passive: true });
   })();
 
   /* ── 네비 클릭(재탭 = 맨위로) ──────────────────────────────── */
