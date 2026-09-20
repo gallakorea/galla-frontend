@@ -260,6 +260,8 @@ function renderHero(){
     ? `<div class="pm-crowd">${window.GALLA_PredictCrowd.html({
         outcomes: outs.map(o=>({ id:o.id, label:o.label, p: allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/Math.max(1,outs.length)) })),
         mine: myOc, mid: STATE?.id || marketId || null, max: isMulti() ? 5 : 2,
+        /* 상세는 접지 않고 전부 세운다 — 선택지가 많으면 옆으로 민다(26.9.20 사장님: 스포츠 우승팀) */
+        scroll: isMulti() && outs.length > 5,
         resolved: !!MARKET?.resolved, winner: STATE?.resolved_outcome_id || (outs.find(o=>o.is_winner)||{}).id || null })}</div>`
     : '';
   el.innerHTML=`${sparkles}

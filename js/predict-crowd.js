@@ -133,31 +133,49 @@
     o = o || {};
     const all = (o.outcomes || []).filter(Boolean);
     if (!all.length) return "";
-    /* 📏 깃발이 너무 많으면 이름표가 사라지고 사람이 뭉개진다(26.9.20 QA: 10개면 깃발 폭 21px).
-       화면 폭이 허락하는 만큼만 세우고 나머지는 「+N개 깃발 더」로 접는다 — 깃발 하나에 최소 62px. */
-    const fit = Math.max(2, Math.floor(((o.width || window.innerWidth || 375) - 24) / 62));
+    /* 📏 깃발이 너무 많으면 이름표가 사라지고 사람이 뭉개진다(26.9.20 QA: 10개를 폰에 세우면 깃발 폭 21px).
+       화면 폭이 허락하는 만큼만 세운다 — 깃발 하나에 최소 62px. */
+    const wide = o.width || window.innerWidth || 375;
+    const fit = Math.max(2, Math.floor((wide - 24) / 62));
     const max = Math.min(o.max || 4, fit);
     const sorted = all.slice().sort((a, b) => (b.p || 0) - (a.p || 0));
-    const show = sorted.slice(0, max), rest = sorted.length - show.length;
+
+    /* 🏕️ 선택지가 많은 판(스포츠 우승팀 등 20~30개) — 폴리마켓처럼 주요 몇 개만 세우고
+       나머지는 「기타」 깃발 하나로 묶는다(26.9.20 사장님). 기타는 비율을 합쳐 높이·사람 수에 반영하되
+       유력·경합 같은 판세 딱지는 달지 않는다(여럿을 뭉친 자리라 순위로 다룰 수 없다).
+       상세(scroll:true)에선 접지 않고 전부 세운 뒤 옆으로 밀어 본다. */
+    let show, others = [];
+    if (o.scroll) { show = sorted; }
+    else if (sorted.length > max) { show = sorted.slice(0, Math.max(1, max - 1)); others = sorted.slice(Math.max(1, max - 1)); }
+    else { show = sorted; }
+
     const ranks = ranksOf(show, o.resolved ? { winner: o.winner } : null);
-    const camps = show.map((oc, i) => {
+    const camp = (oc, i, rank, hue) => {
       const p = Math.round(oc.p || 0);
-      const n = folkCount(p);
+      const isOtherC = oc.id === "__other";
+      /* 기타는 여럿을 묶은 자리다 — 합계가 크다고 깃대를 높이거나 사람을 채우면 「기타가 1등」처럼 보인다(26.9.20 QA).
+         자리는 작게 고정하고, 합계는 숫자로만 말한다. */
+      const n = isOtherC ? 2 : folkCount(p);
       const mine = o.mine != null && String(o.mine) === String(oc.id);
-      const rank = ranks[i];
       const strong = rank === "top" && (p - Math.max(...show.filter(x => x !== oc).map(x => Math.round(x.p || 0)), 0)) >= 8;
+      const isOther = isOtherC;
       /* flex 비중을 비율에 맞춰 — 붐비는 깃발이 자리를 더 차지한다(몰림이 눈에 보이게, 최소 폭은 보장) */
-      return `<div class="pc-camp pc-${rank}${strong ? " pc-strong" : ""}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
-        data-strong="${strong ? 1 : 0}" data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
+      return `<div class="pc-camp pc-${rank}${strong ? " pc-strong" : ""}${mine ? " pc-mine" : ""}${isOther ? " pc-other" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
+        data-strong="${strong ? 1 : 0}" data-label="${esc(oc.label || "")}" style="--pc-h:${hue};--pc-fh:${isOtherC ? 22 : flagH(p)}px;flex:${isOtherC ? 18 : Math.max(1, p) + 14} 1 0">
         <span class="pc-bub" aria-hidden="true"></span>
         <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank, strong)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
-        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank))}</div>
+        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${isOther ? "" : badgeHtml(badgeOf(rank))}</div>
       </div>`;
-    }).join("");
-    return `<div class="pc${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
+    };
+    let camps = show.map((oc, i) => camp(oc, i, ranks[i], hueOf(all.indexOf(oc)))).join("");
+    if (others.length) {
+      const sum = others.reduce((a, x) => a + (x.p || 0), 0);
+      camps += camp({ id: "__other", label: `기타 ${others.length}곳`, p: sum }, show.length, "mid", 220);
+    }
+    return `<div class="pc${o.resolved ? " pc-done" : ""}${o.scroll ? " pc-scroll" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
       <div class="pc-ground">${camps}</div>
-      ${rest > 0 ? `<div class="pc-rest">+${rest}개 깃발 더</div>` : ""}
+      ${others.length ? `<div class="pc-rest">기타 ${others.length}곳은 아래 목록에서</div>` : ""}
     </div>`;
   }
 

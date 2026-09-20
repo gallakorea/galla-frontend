@@ -199,6 +199,23 @@
 /* 끝난 판은 깃발 높이를 건드리지 않는다 — 결과가 곧 서열이다 */
 .pc-done .pc-camp .pc-flag { transition: none; }
 
+
+/* 🏕️ 기타 깃발 — 여럿을 묶은 자리라 색을 죽이고 점선으로 구분한다(26.9.20 사장님: 선택지가 30개까지 갈 수 있다) */
+.pc-camp.pc-other { --pc-c: #98a1b3; }
+.pc-camp.pc-other .pc-flag { opacity: .8; }
+.pc-camp.pc-other::before { background: repeating-linear-gradient(90deg, rgba(152,161,179,.7) 0 5px, transparent 5px 9px); }
+.pc-camp.pc-other .pc-lab { color: #c3cad8; }
+
+/* ↔️ 선택지가 많은 상세 — 접지 않고 전부 세우고 옆으로 민다 */
+.pc-scroll .pc-ground { overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 10px; }
+.pc-scroll .pc-ground::-webkit-scrollbar { display: none; }
+.pc-scroll .pc-camp { flex: 0 0 74px !important; scroll-snap-align: center; }
+/* 밀어 볼 수 있다는 힌트 — 오른쪽 끝을 살짝 어둡게 */
+.pc-scroll { position: relative; }
+.pc-scroll::after { content: ""; position: absolute; top: 0; right: 0; bottom: 18px; width: 26px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(8,10,14,.85)); }
+
 @media (prefers-reduced-motion: reduce) {
   .pc-cloth, .pc-folk-body, .pc-folk-arm, .pc-folk.pc-run, .pc-camp.pc-talk .pc-bub,
   .pc-arm-l, .pc-arm-r, .pc-pump, .pc-sweat, .pc-tear, .pc-conf,
