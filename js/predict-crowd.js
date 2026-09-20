@@ -73,7 +73,8 @@
     if (rank === "lost") return CRY.repeat(n);         // 진 깃발은 전원 눈물
     if (rank === "low") return CRY.repeat(n);
     if (rank === "top") { const party = Math.ceil(n / 2); return PARTY.repeat(party) + FOLK.repeat(n - party); }
-    const fight = Math.ceil(n / 2);                       // 중간은 절반이 주먹 쥐고 힘낸다, 절반은 계속 부른다
+    /* 경합·중간은 절반이 주먹 쥐고 힘내고 절반은 계속 부른다 — 경합끼리는 완전히 같은 몸짓이어야 한다(26.9.20) */
+    const fight = Math.ceil(n / 2);
     return FIGHT.repeat(fight) + FOLK.repeat(n - fight);
   }
   /* 🏳️ 깃발 — 장대에 천이 나부낀다(천은 CSS 로 흔든다) */
@@ -82,9 +83,8 @@
     '<path class="pc-cloth" d="M4 3.4 C9 1.4 13 5.4 19 3.4 L19 12 C13 14 9 10 4 12 Z" fill="currentColor"/>' +
   '</svg>';
 
-  /* 선택지 색 — 상세(predict-market)의 색과 같은 규칙(순번 기반)으로 돌린다 */
-  const HUES = [212, 344, 152, 38, 276, 190, 18, 96];
-  const hueOf = (i) => HUES[i % HUES.length];
+  /* 🎨 색은 「어느 선택지냐」가 아니라 「판세가 어떠냐」다(26.9.20 사장님: 「비율은 같은데 왜 하나만 다른 색이야 —
+     밀어주는 느낌이잖아」). 동률이면 전부 같은 색이고, 차이가 벌어져야 색이 갈린다. 색은 CSS 가 등급별로 준다. */
 
   /* 사람 수 = 비율(0~100) → 2~10명. 0% 라도 깃발지기 한 명은 남는다(텅 빈 깃발 대사가 살아야 한다).
      26.9.20 사장님: 「비율에 따라 사람 숫자가 더 늘어나는 구조로」 — 1등과 꼴찌의 머릿수 차이가 한눈에 보이게 폭을 넓혔다. */
@@ -105,18 +105,24 @@
     const hi = Math.max(...ps), lo = Math.min(...ps);
     const leaders = ps.filter(p => p === hi).length;
     const second = ps.filter(p => p !== hi).length ? Math.max(...ps.filter(p => p !== hi)) : hi;
-    const topOK = leaders === 1 && (hi - second) >= 8;
-    const lowOK = (hi - lo) >= 12;
-    return ps.map(p => (topOK && p === hi) ? "top" : (lowOK && p === lo) ? "low" : "mid");
+    const topOK = leaders === 1 && (hi - second) >= 8;      // 단독으로 8%p 앞서야 '유력'
+    const lowOK = (hi - lo) >= 12;                          // 선두와 12%p 넘게 벌어져야 '열세'
+    const tieCount = ps.filter(p => (hi - p) <= 3).length;  // 선두권(3%p 이내) 머릿수
+    return ps.map(p => {
+      if (topOK && p === hi) return "top";
+      /* 선두와 3%p 이내가 둘 이상일 때만 '경합' — 혼자 조금 앞선 걸 경합이라 부를 순 없다(26.9.20 QA) */
+      if (!topOK && tieCount >= 2 && (hi - p) <= 3) return "tie";
+      if (lowOK && p === lo) return "low";
+      return "mid";
+    });
   }
   /* 🏷️ 상태 딱지(26.9.20 사장님: 「마감도 안 됐는데 왜 왕관이야 — 유력, 비등비등하면 경합」)
      · 진행 중 단독 선두 = 유력 / 팽팽하면 선두권 = 경합 / 끝난 판의 정답 = 적중.
      왕관은 정산이 끝난 판에서만 뜬다. */
-  function badgeOf(rank, tight) {
+  function badgeOf(rank) {
     if (rank === "won") return { t: "적중", c: "win" };
-    if (rank === "lost") return null;
     if (rank === "top") return { t: "유력", c: "lead" };
-    if (tight && rank === "mid") return { t: "경합", c: "tight" };
+    if (rank === "tie") return { t: "경합", c: "tight" };
     return null;
   }
   const badgeHtml = (b) => b ? `<span class="pc-badge pc-b-${b.c}">${b.t}</span>` : "";
@@ -129,9 +135,6 @@
     const sorted = all.slice().sort((a, b) => (b.p || 0) - (a.p || 0));
     const show = sorted.slice(0, max), rest = sorted.length - show.length;
     const ranks = ranksOf(show, o.resolved ? { winner: o.winner } : null);
-    /* 아무도 앞서지 못하면(전부 mid) 경합 — 선두권 두 곳에만 딱지를 단다 */
-    const tight = !o.resolved && ranks.every(r => r === "mid");
-    const tightIdx = tight ? show.map((_, i) => i).slice(0, 2) : [];
     const camps = show.map((oc, i) => {
       const p = Math.round(oc.p || 0);
       const n = folkCount(p);
@@ -139,11 +142,11 @@
       const rank = ranks[i];
       /* flex 비중을 비율에 맞춰 — 붐비는 깃발이 자리를 더 차지한다(몰림이 눈에 보이게, 최소 폭은 보장) */
       return `<div class="pc-camp pc-${rank}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
-        data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
+        data-label="${esc(oc.label || "")}" style="--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
         <span class="pc-bub" aria-hidden="true"></span>
         <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
-        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank, tightIdx.indexOf(i) >= 0))}</div>
+        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank))}</div>
       </div>`;
     }).join("");
     return `<div class="pc${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
@@ -174,7 +177,7 @@
       const pct = camp.querySelector(".pc-pct"); if (pct) pct.textContent = p + "%";
       const rank = rankById[String(oc.id)] || "mid";
       if (camp.dataset.rank !== rank) {
-        camp.classList.remove("pc-top", "pc-mid", "pc-low", "pc-won", "pc-lost");
+        camp.classList.remove("pc-top", "pc-tie", "pc-mid", "pc-low", "pc-won", "pc-lost");
         camp.classList.add("pc-" + rank);
         camp.dataset.rank = rank;
         const fk = camp.querySelector(".pc-folks");
@@ -189,12 +192,10 @@
       }
       camp.classList.toggle("pc-mine", mine != null && String(mine) === String(oc.id));
       /* 상태 딱지도 다시 — 판세가 바뀌면 유력·경합이 옮겨 다닌다 */
-      const tight2 = !(done && done.winner != null) && rk.every(r => r === "mid");
       const meta = camp.querySelector(".pc-meta");
       if (meta) {
         const old = meta.querySelector(".pc-badge"); if (old) old.remove();
-        const order = list.slice().sort((a, b) => (b.p || 0) - (a.p || 0)).findIndex(x => String(x.id) === String(oc.id));
-        const bh = badgeHtml(badgeOf(rank, tight2 && order < 2));
+        const bh = badgeHtml(badgeOf(rank));
         if (bh) meta.insertAdjacentHTML("beforeend", bh);
       }
     });
