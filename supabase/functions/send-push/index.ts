@@ -52,7 +52,8 @@ async function pushApns(userIds: string[], payload: Record<string, unknown>) {
   const alert: Record<string, string> = { title, body: bodyTxt };
   if (subtitle) alert.subtitle = subtitle;   // 프리뷰 부제(뉴스 헤드라인 등)
   const aps: Record<string, unknown> = {
-    aps: { alert, sound: "default", "thread-id": String(payload.tag || "galla"), "mutable-content": 1 },
+    /* 🔔 갈라 알림음(앱 번들의 galla-alert.caf) — 기본음이면 어느 앱 알림인지 소리로 구분이 안 된다(26.9.20 사장님) */
+    aps: { alert, sound: "galla-alert.caf", "thread-id": String(payload.tag || "galla"), "mutable-content": 1 },
     url: payload.url || "/",
   };
   if (payload.image) aps.image = String(payload.image);   // 잠금화면 이미지 프리뷰 — NSE 확장이 이 URL을 첨부
@@ -116,6 +117,15 @@ async function fcmAuth(): Promise<string | null> {
   } catch (e) { console.error("[fcm] auth", String(e).slice(0, 200)); return null; }
 }
 
+/* 알림 종류별 채널 — 사용자가 「갈라톡만 끄기」 같은 걸 할 수 있게 나눠 둔다.
+   앱(MainActivity.ensureNotificationChannels)이 만드는 채널 id 와 한 글자도 달라선 안 된다. */
+function androidChannel(payload: Record<string, unknown>): string {
+  const tag = String(payload.tag || "");
+  if (/^(dm|chat|room)/.test(tag)) return "galla_dm_v1";
+  if (/^call/.test(tag)) return "galla_call_v1";
+  return "galla_alert_v1";
+}
+
 async function pushFcm(userIds: string[], payload: Record<string, unknown>): Promise<number> {
   const tok = await fcmAuth();
   if (!tok) return 0;                                   // 미설정 — 조용히 건너뛴다
@@ -139,7 +149,10 @@ async function pushFcm(userIds: string[], payload: Record<string, unknown>): Pro
             },
             /* 탭했을 때 어디로 갈지 — 앱은 data.url 을 읽는다(iOS 의 aps.url 과 같은 규약) */
             data: { url: String(payload.url || "/"), tag: String(payload.tag || "galla") },
-            android: { priority: "high", notification: { channel_id: "galla", sound: "default" } },
+            /* 채널 id 는 앱이 만든 것과 정확히 같아야 한다(MainActivity.ensureNotificationChannels).
+               예전엔 만들지도 않은 "galla" 로 보내 채널 설정이 통째로 무시됐다(26.9.20 전수 조사).
+               sound 는 res/raw 의 파일 이름(확장자 없이) — 채널 소리와 같은 것을 가리킨다. */
+            android: { priority: "high", notification: { channel_id: androidChannel(payload), sound: "galla_alert" } },
           },
         }),
       });
