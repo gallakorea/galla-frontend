@@ -253,10 +253,10 @@ function multiRows(m, outs){
   const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
   const rows=outs.slice().sort((a,b)=>(b.pool_gp||0)-(a.pool_gp||0));
   const top=rows.slice(0,4);
-  /* 🥇 1등 줄 금색은 「확실히 앞설 때만」 — 25% 대 19% 인데 한 줄만 금색이면 미는 것처럼 보인다(26.9.20 사장님) */
+  /* 🥇 1등 줄 금색 — 동률이면 안 붙이고, 조금이라도 앞서면 바로 붙인다(26.9.20 사장님: 「격차 벌어지면 바로 적용」) */
   const pcts=rows.map(o=>tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length));
   const hiP=Math.max(...pcts, 0), second=pcts.length>1?pcts.slice().sort((a,b)=>b-a)[1]:hiP;
-  const leadOK = tot>0 && (hiP-second)>=8 && pcts.filter(x=>x===hiP).length===1;
+  const leadOK = tot>0 && hiP>second && pcts.filter(x=>x===hiP).length===1;
   return `<div class="pm-multi">${top.map((o,i)=>{
     const p=tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length);
     const od=oddsOf(m,o);

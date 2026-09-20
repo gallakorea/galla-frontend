@@ -68,11 +68,12 @@
     '<circle class="pc-tear t2" cx="14.4" cy="11" r="1.5" fill="currentColor"/>' +
   '</svg>';
   /* 한 깃발의 사람들 — 1등은 절반이 만세, 꼴찌는 전부 운다 */
-  function folksHtml(n, rank) {
+  function folksHtml(n, rank, strong) {
     if (rank === "won") return PARTY.repeat(n);        // 이긴 깃발은 전원 만세
     if (rank === "lost") return CRY.repeat(n);         // 진 깃발은 전원 눈물
     if (rank === "low") return CRY.repeat(n);
-    if (rank === "top") { const party = Math.ceil(n / 2); return PARTY.repeat(party) + FOLK.repeat(n - party); }
+    /* 파티는 크게 앞설 때만 — 한두 걸음 앞섰다고 잔치를 벌이면 미는 것처럼 보인다(26.9.20) */
+    if (rank === "top" && strong) { const party = Math.ceil(n / 2); return PARTY.repeat(party) + FOLK.repeat(n - party); }
     /* 경합·중간은 절반이 주먹 쥐고 힘내고 절반은 계속 부른다 — 경합끼리는 완전히 같은 몸짓이어야 한다(26.9.20) */
     const fight = Math.ceil(n / 2);
     return FIGHT.repeat(fight) + FOLK.repeat(n - fight);
@@ -106,12 +107,12 @@
     const hi = Math.max(...ps), lo = Math.min(...ps);
     const leaders = ps.filter(p => p === hi).length;
     const second = ps.filter(p => p !== hi).length ? Math.max(...ps.filter(p => p !== hi)) : hi;
-    const topOK = leaders === 1 && (hi - second) >= 8;      // 단독으로 8%p 앞서야 '유력'
+    const topOK = leaders === 1 && hi > second;             // 조금이라도 앞선 단독 선두면 '유력'(26.9.20 사장님)
     const lowOK = (hi - lo) >= 12;                          // 선두와 12%p 넘게 벌어져야 '열세'
     const tieCount = ps.filter(p => (hi - p) <= 3).length;  // 선두권(3%p 이내) 머릿수
     return ps.map(p => {
       if (topOK && p === hi) return "top";
-      /* 선두와 3%p 이내가 둘 이상일 때만 '경합' — 혼자 조금 앞선 걸 경합이라 부를 순 없다(26.9.20 QA) */
+      /* 동률 선두가 둘 이상이면 '경합' */
       if (!topOK && tieCount >= 2 && (hi - p) <= 3) return "tie";
       if (lowOK && p === lo) return "low";
       return "mid";
@@ -141,11 +142,12 @@
       const n = folkCount(p);
       const mine = o.mine != null && String(o.mine) === String(oc.id);
       const rank = ranks[i];
+      const strong = rank === "top" && (p - Math.max(...show.filter(x => x !== oc).map(x => Math.round(x.p || 0)), 0)) >= 8;
       /* flex 비중을 비율에 맞춰 — 붐비는 깃발이 자리를 더 차지한다(몰림이 눈에 보이게, 최소 폭은 보장) */
-      return `<div class="pc-camp pc-${rank}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
-        data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
+      return `<div class="pc-camp pc-${rank}${strong ? " pc-strong" : ""}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
+        data-strong="${strong ? 1 : 0}" data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
         <span class="pc-bub" aria-hidden="true"></span>
-        <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank)}</span>
+        <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank, strong)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
         <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank))}</div>
       </div>`;
@@ -177,17 +179,26 @@
       camp.style.setProperty("--pc-fh", flagH(p) + "px");   // 비율이 오르면 깃발도 높아진다
       const pct = camp.querySelector(".pc-pct"); if (pct) pct.textContent = p + "%";
       const rank = rankById[String(oc.id)] || "mid";
+      const others = list.filter(x => String(x.id) !== String(oc.id)).map(x => Math.round(x.p || 0));
+      const strong = rank === "top" && (p - Math.max(...others, 0)) >= 8;   // 파티는 크게 앞설 때만
       if (camp.dataset.rank !== rank) {
         camp.classList.remove("pc-top", "pc-tie", "pc-mid", "pc-low", "pc-won", "pc-lost");
         camp.classList.add("pc-" + rank);
         camp.dataset.rank = rank;
+        camp.classList.toggle("pc-strong", !!strong);
+        camp.dataset.strong = strong ? 1 : 0;
         const fk = camp.querySelector(".pc-folks");
-        if (fk) fk.innerHTML = folksHtml(folkCount(p), rank);          // 몸짓이 바뀌니 통째로 다시 세운다
+        if (fk) fk.innerHTML = folksHtml(folkCount(p), rank, strong);  // 몸짓이 바뀌니 통째로 다시 세운다
+      } else if (String(camp.dataset.strong || 0) !== String(strong ? 1 : 0)) {
+        camp.classList.toggle("pc-strong", !!strong);                  // 앞선 폭이 바뀌면 파티 여부만 다시
+        camp.dataset.strong = strong ? 1 : 0;
+        const fk = camp.querySelector(".pc-folks");
+        if (fk) fk.innerHTML = folksHtml(folkCount(p), rank, strong);
       } else {
         const folks = camp.querySelector(".pc-folks");
         if (folks) {
           const want = folkCount(p), have = folks.querySelectorAll(".pc-folk").length;
-          if (want > have) folks.insertAdjacentHTML("beforeend", folksHtml(want - have, rank));
+          if (want > have) folks.insertAdjacentHTML("beforeend", folksHtml(want - have, rank, strong));
           else for (let i = 0; i < have - want; i++) folks.lastElementChild && folks.lastElementChild.remove();
         }
       }

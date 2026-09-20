@@ -240,8 +240,8 @@ function renderHero(){
   const bars = isMulti()
     ? (()=>{ const sortedOuts=outs.slice().sort((a,b)=>(b.pool||0)-(a.pool||0));
         const pcts=sortedOuts.map(o=>allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/outs.length));
-        /* 1등 금색은 확실히 앞설 때만(26.9.20 사장님) */
-        const leadOK=allTot>0 && pcts.length>1 && (pcts[0]-pcts[1])>=8;
+        /* 1등 금색은 동률만 아니면 바로(26.9.20 사장님: 「격차 벌어지면 바로 적용」) */
+        const leadOK=allTot>0 && pcts.length>1 && pcts[0]>pcts[1];
         return `<div class="pb-mrows">${sortedOuts.map((o,i)=>{
           const p=pcts[i];
           return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span></div>`;
