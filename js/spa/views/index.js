@@ -21,6 +21,8 @@ const CLASSIC = [
   "/js/support-btn.js",     // GALLA_support(후원 버튼 공용)
   "/js/vote-lines.js",      // GALLA_VOTE_LINES(줄다리기 대사)
   "/js/vote-bar.js",        // GALLA_VoteBar(진영바)
+  "/js/predict-lines.js",   // 🏳️ 예측 깃발 진영 대사(크라우드보다 먼저)
+  "/js/predict-crowd.js",   // GALLA_PredictCrowd(예측 카드의 깃발·사람들)
   "/js/media-sound.js",     // GALLA_soundOn/setSound/muteIcon
   "/js/ghost.js",           // GALLA_userMap/userBadge(카드 작성자 배지)
   "/js/follow.js",          // 카드 팔로우 버튼

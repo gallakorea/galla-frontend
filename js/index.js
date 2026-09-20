@@ -1950,7 +1950,7 @@ async function loadPredictionCards() {
     return markets.map(m => {
         const os = byM[m.id] || [];
         const tot = os.reduce((a, o) => a + (o.pool_gp || 0), 0);
-        const list = os.map(o => ({ label: o.label, p: tot > 0 ? Math.round((o.pool_gp || 0) / tot * 100) : Math.round(100 / Math.max(1, os.length)) }));
+        const list = os.map(o => ({ id: o.id, label: o.label, p: tot > 0 ? Math.round((o.pool_gp || 0) / tot * 100) : Math.round(100 / Math.max(1, os.length)) }));
         const bettors = os.reduce((a, o) => a + (o.bettor_count || 0), 0);
         const prof = profMap[m.created_by];
         return {
@@ -1968,6 +1968,12 @@ async function loadPredictionCards() {
 function renderPredictCard(m) {
     const multi = m.market_type === 'multi';
     let body, styleVar = '';
+    /* 🏳️ 깃발 진영(26.9.20 사장님: 「예측에도 사람들이 호객하고 싸우는 애니메이션·말풍선」)
+       — 선택지마다 깃발 하나, 그 밑에 사람이 모인다. 비율·라벨을 그대로 품으므로 옛 막대/줄 대신 쓴다.
+       모듈이 아직 안 실렸으면(구버전 캐시) 예전 막대로 돌아간다. */
+    if (window.GALLA_PredictCrowd && m.outcomes && m.outcomes.length) {
+        return predictCardShell(m, window.GALLA_PredictCrowd.html({ outcomes: m.outcomes, mid: m.id, max: 4 }), multi, '');
+    }
     if (multi) {
         const top = m.outcomes.slice().sort((a, b) => b.p - a.p).slice(0, 3);
         body = `<div class="pf-multi">
@@ -1980,6 +1986,11 @@ function renderPredictCard(m) {
         body = `<div class="pf-bar"><div class="pf-bar-yes"></div></div>
             <div class="pf-legend"><span class="pf-yes">👍 YES <span class="pf-pct" data-cu="${p}">0</span>%</span><span class="pf-no">👎 NO <span class="pf-pct" data-cu="${100 - p}">0</span>%</span></div>`;
     }
+    return predictCardShell(m, body, multi, styleVar);
+}
+
+/* 예측 카드 겉틀 — 본문(깃발 진영 또는 옛 막대)만 갈아 끼운다 */
+function predictCardShell(m, body, multi, styleVar) {
     const cName = escHtml(m.creatorName || '갈라 예언자');
     const cInit = [...(m.creatorName || '갈').trim()][0] || '갈';
     const cAv = m.creatorAvatar && window.GALLA_avatarSrc

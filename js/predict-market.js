@@ -248,7 +248,17 @@ function renderHero(){
         <div class="pm-odds-side no shine" style="width:${Math.max(16,Math.min(84,100-yp))}%"><span class="lab">${esc(no?.label||'아니오')} ${100-yp}%</span></div>
       </div>
     </div>`;
+  /* 🏳️ 깃발 진영(26.9.20 사장님) — 선택지마다 깃발, 그 밑에 사람이 모여 호객하고 가끔 옆 깃발로 갈아탄다.
+     내가 이미 참여한 선택지는 금빛으로 표시한다(어디 섰는지 한눈에). */
+  const myB=STATE?.my_bets||{};
+  const myOc=Object.keys(myB).find(k=>Number(myB[k])>0)||null;
+  const crowd = window.GALLA_PredictCrowd
+    ? `<div class="pm-crowd">${window.GALLA_PredictCrowd.html({
+        outcomes: outs.map(o=>({ id:o.id, label:o.label, p: allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/Math.max(1,outs.length)) })),
+        mine: myOc, mid: STATE?.id || null, max: isMulti() ? 5 : 2 })}</div>`
+    : '';
   el.innerHTML=`${sparkles}
+    ${crowd}
     ${bars}
     <div class="pb-pool-row">
       <div>

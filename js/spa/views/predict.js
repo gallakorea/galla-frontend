@@ -25,6 +25,8 @@ const SCRIPTS = [
   "/js/media-upload.js",   // GALLA_UPLOAD_MEDIA (마켓 생성 이미지)
   "/js/draft.js",          // GALLA_draft (작성 임시저장)
   "/js/dm.js",            // DM 배지·GALLA_openDM — MPA 는 이 페이지에서도 싣는다(웹/앱 동작 일치)
+  "/js/predict-lines.js",  // 🏳️ 깃발 진영 대사(본체보다 먼저)
+  "/js/predict-crowd.js",  // GALLA_PredictCrowd
   "/js/galla-predict.js",  // 페이지 본체 — GALLA_PAGE_PREDICT 노출
 ];
 // ⚠️ composer-page.js는 SPA compose(라우터 DOM-이동 스택 뷰)엔 불필요 — 마운트 실패 지점만 늘림. 웹 MPA는 galla-predict.html이 직접 로드.

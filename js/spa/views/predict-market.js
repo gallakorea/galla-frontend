@@ -28,6 +28,8 @@ const SCRIPTS = [
   "/js/ghost.js",           // GALLA_ghost / GALLA_ghostBind (유령 의견)
   "/js/items.js",           // openShop (유령권 등)
   "/js/dm.js",            // DM 배지·GALLA_openDM — MPA 는 이 페이지에서도 싣는다(웹/앱 동작 일치)
+  "/js/predict-lines.js",   // 🏳️ 깃발 진영 대사(본체보다 먼저)
+  "/js/predict-crowd.js",   // GALLA_PredictCrowd
   "/js/predict-market.js",  // 페이지 본체 — GALLA_PAGE_PREDICT_MARKET 노출
 ];
 

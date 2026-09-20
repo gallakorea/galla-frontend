@@ -1,0 +1,109 @@
+/* ============================================================
+   🏳️ 예측 깃발 진영 — js/predict-crowd.js 의 옷
+   깃발 아래 사람이 모여 호객하고, 가끔 한 명이 옆 깃발로 갈아탄다.
+   이슈 줄다리기(css/vote-bar.css)와 같은 톤 — 선 굵기·말풍선·먼지.
+   ============================================================ */
+/* 말풍선이 깃발 위로 솟으므로 윗줄(작성자·질문)과 겹치지 않게 자리를 비워 둔다(26.9.20 QA) */
+.pc { margin: 26px 0 2px; }
+.pc-ground { position: relative; display: flex; align-items: flex-end; gap: 4px;
+  padding: 0 2px 6px; border-bottom: 1px solid rgba(255,255,255,.10); }
+/* 바닥 흙먼지 결 — 사람들이 서 있는 땅 */
+.pc-ground::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent); }
+
+.pc-camp { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 2px 2px 0; border-radius: 10px; transition: flex .5s cubic-bezier(.3,.7,.3,1), background .3s; }
+.pc-camp::before { content: ""; position: absolute; inset: auto 6px 4px; height: 3px; border-radius: 3px;
+  background: hsl(var(--pc-h) 80% 62% / .35); }
+
+/* 내가 참여한 깃발 — 금빛으로 표시(어디 섰는지 한눈에) */
+.pc-camp.pc-mine { background: linear-gradient(180deg, rgba(255,209,102,.13), transparent 70%); }
+.pc-camp.pc-mine::before { background: #ffd166; box-shadow: 0 0 10px -1px rgba(255,209,102,.8); }
+
+.pc-stage { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 0;
+  height: 42px; color: hsl(var(--pc-h) 78% 66%); }
+.pc-camp.pc-mine .pc-stage { color: #ffd98a; }
+/* 가장 붐비는 깃발은 금빛 — 목록 줄도 1등만 금색이라 눈이 같은 곳을 본다 */
+.pc-camp.pc-top:not(.pc-mine) .pc-stage { color: #ffc850; }
+.pc-camp.pc-top:not(.pc-mine) .pc-pct { color: #ffd66b; }
+.pc-camp.pc-top::before { background: rgba(255,200,80,.45); }
+
+/* 🏳️ 깃발 — 장대는 그대로, 천만 나부낀다 */
+.pc-flag { width: 20px; height: 30px; flex: 0 0 auto; overflow: visible; }
+.pc-cloth { transform-origin: 4px 6px; animation: pcWave 1.6s ease-in-out infinite; }
+.pc-top .pc-cloth { animation-duration: 1.1s; }            /* 1등 깃발은 더 힘차게 */
+.pc-low .pc-cloth { animation-duration: 2.6s; opacity: .8; } /* 꼴찌 깃발은 축 늘어진다 */
+@keyframes pcWave {
+  0%, 100% { transform: skewY(0deg) scaleY(1); }
+  35%      { transform: skewY(-5deg) scaleY(.94); }
+  70%      { transform: skewY(4deg) scaleY(1.04); }
+}
+
+/* 🙋 사람들 — 겹쳐 세워 좁은 카드에서도 넘치지 않게 */
+.pc-folks { display: flex; align-items: flex-end; }
+.pc-folk { width: 19px; height: 26px; margin-left: -6px; flex: 0 0 auto; overflow: visible; }
+.pc-folk:first-child { margin-left: -2px; }
+.pc-folk-body { animation: pcHop .9s ease-in-out infinite; transform-origin: 12px 29px; }
+.pc-folk:nth-child(2n) .pc-folk-body { animation-delay: .22s; }
+.pc-folk:nth-child(3n) .pc-folk-body { animation-delay: .45s; }
+.pc-folk-arm { transform-origin: 12px 12.6px; animation: pcBeckon .45s ease-in-out infinite alternate; }
+.pc-folk:nth-child(2n) .pc-folk-arm { animation-delay: .18s; }
+.pc-low .pc-folk-body { animation-duration: 1.5s; }        /* 텅 빈 깃발은 기운이 없다 */
+@keyframes pcHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+@keyframes pcBeckon { from { transform: rotate(-16deg); } to { transform: rotate(14deg); } }
+
+/* 🏃 갈아타기 — 옆 깃발로 뛰어간다(가는 동안 살짝 뛴다) */
+.pc-folk.pc-run { animation: pcRun 1.1s cubic-bezier(.4,.1,.4,1) forwards; z-index: 3; position: relative; }
+@keyframes pcRun {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(calc(var(--pc-dx) * .5), -7px); }
+  100% { transform: translate(var(--pc-dx), 0); opacity: .25; }
+}
+
+/* 라벨·퍼센트 */
+.pc-meta { display: flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 3px 2px 0; }
+.pc-lab { font-size: 10px; font-weight: 800; color: #cfd6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-pct { font-size: 11px; font-weight: 900; color: hsl(var(--pc-h) 80% 72%); flex: 0 0 auto; }
+.pc-camp.pc-mine .pc-pct { color: #ffd166; }
+.pc-rest { margin-top: 5px; font-size: 11px; font-weight: 700; color: #8b93a7; text-align: right; }
+
+/* 💬 말풍선 — 평소엔 숨고, JS 가 .pc-talk 를 붙일 때 한 번 튀어나온다 */
+.pc-bub { position: absolute; bottom: calc(100% - 6px); left: 50%; transform: translateX(-50%);
+  max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 900; color: #10131a; background: #fff;
+  box-shadow: 0 4px 14px -6px rgba(0,0,0,.8); opacity: 0; pointer-events: none; z-index: 4; }
+.pc-bub::after { content: ""; position: absolute; left: 50%; bottom: -4px; margin-left: -4px;
+  border: 4px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.pc-camp.pc-talk .pc-bub { animation: pcBubOnce 2.2s ease-out forwards; }
+@keyframes pcBubOnce {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.88); }
+  12%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.04); }
+  20%  { transform: translateX(-50%) translateY(0) scale(1); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(.96); }
+}
+/* 가장자리 깃발의 말풍선이 카드 밖으로 잘리지 않게 안쪽으로 붙인다 */
+.pc-camp:first-child .pc-bub { left: 0; transform: none; }
+.pc-camp:first-child .pc-bub::after { left: 16px; }
+.pc-camp:first-child.pc-talk .pc-bub { animation-name: pcBubOnceL; }
+.pc-camp:last-child .pc-bub { left: auto; right: 0; transform: none; }
+.pc-camp:last-child .pc-bub::after { left: auto; right: 16px; }
+.pc-camp:last-child.pc-talk .pc-bub { animation-name: pcBubOnceL; }
+@keyframes pcBubOnceL {
+  0%   { opacity: 0; transform: translateY(6px) scale(.88); }
+  12%  { opacity: 1; transform: translateY(0) scale(1.04); }
+  20%  { transform: translateY(0) scale(1); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px) scale(.96); }
+}
+
+/* 상세 페이지에선 조금 크게 — 자리가 넉넉하다 */
+.pmd .pc-stage, .pm-crowd .pc-stage { height: 52px; }
+.pmd .pc-flag, .pm-crowd .pc-flag { width: 24px; height: 36px; }
+.pmd .pc-folk, .pm-crowd .pc-folk { width: 22px; height: 30px; }
+.pmd .pc-lab, .pm-crowd .pc-lab, .pmd .pc-pct, .pm-crowd .pc-pct { font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-cloth, .pc-folk-body, .pc-folk-arm, .pc-folk.pc-run, .pc-camp.pc-talk .pc-bub { animation: none !important; }
+  .pc-camp.pc-talk .pc-bub { opacity: 1; }
+}

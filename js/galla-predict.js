@@ -259,6 +259,14 @@ function multiRows(m, outs){
     return `<div class="pm-mrow" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
   }).join('')}${rows.length>4?`<div class="pm-mmore">+${rows.length-4}개 선택지</div>`:''}</div>`;
 }
+/* 🏳️ 깃발 진영(26.9.20 사장님: 「예측에도 사람들이 호객하고 싸우는 애니메이션·말풍선」)
+   선택지마다 깃발 하나, 그 밑에 사람이 모인다. 아래 줄(배당·비율)은 그대로 두고 그림만 얹는다. */
+function crowdOf(m, outs){
+  if(!window.GALLA_PredictCrowd || !outs || !outs.length) return '';
+  const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
+  const list=outs.map(o=>({ id:o.id, label:o.label, p: tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length) }));
+  return window.GALLA_PredictCrowd.html({ outcomes:list, mid:m.id, max: m.market_type==='multi' ? 4 : 2 });
+}
 function oddsBar(m, outs){
   const yes = outs.find(o=>o.label==='예')||outs[0];
   const no  = outs.find(o=>o.label==='아니오')||outs[1];
@@ -452,6 +460,7 @@ function marketCardHtml(m){
           ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>
       </div>
+      ${crowdOf(m, outs)}
       ${m.market_type==='multi' ? multiRows(m, outs) : oddsBar(m, outs)}
       ${myPick?`<div class="pm-mine">${myPick}</div>`:''}
       <div class="pm-card-foot">
