@@ -914,8 +914,13 @@
     setTimeout(async () => {
       try {
         let ain = 0, aout = 0, pin = 0, pout = 0, jbd = 0, jbe = 0, rtt = 0, relay = '?';
+        /* ⚠️ iosrtc(아이폰 앱)는 RTP 통계를 안 내놓는다 — in/out 이 나란히 0으로 찍힌다.
+           그걸 '소리가 안 온다'로 읽으면 멀쩡한 통화를 결함으로 오진한다(26.9.21 실제로 그랬다).
+           그래서 '통계 자체가 비었는지'를 따로 표시한다: hasRtp=false 면 0은 측정 실패지 무음이 아니다. */
+        let hasRtp = false;
         const st = pc && await pc.getStats();
         st && st.forEach(r => {
+          if (r.type === 'inbound-rtp' || r.type === 'outbound-rtp') hasRtp = true;
           if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { ain = r.bytesReceived || 0; pin = r.packetsReceived || 0; jbd = r.jitterBufferDelay || 0; jbe = r.jitterBufferEmittedCount || 0; }
           if (r.type === 'outbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { aout = r.bytesSent || 0; pout = r.packetsSent || 0; }
           if (r.type === 'candidate-pair' && (r.nominated || r.selected || r.state === 'succeeded')) { rtt = r.currentRoundTripTime || rtt; }
@@ -929,7 +934,7 @@
         const lt = localStream && localStream.getAudioTracks && localStream.getAudioTracks()[0];
         const sndr = pc && pc.getSenders && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
         const rt = remoteStream && remoteStream.getAudioTracks && remoteStream.getAudioTracks()[0];
-        wb('AUD in=' + ain + '/' + pin + 'p out=' + aout + '/' + pout + 'p brg=' + brg +
+        wb('AUD ' + (hasRtp ? 'in=' + ain + '/' + pin + 'p out=' + aout + '/' + pout + 'p' : 'rtp=n/a(이 엔진은 통계 미제공 — 0을 무음으로 읽지 말 것)') + ' brg=' + brg +
            ' Lmute=' + (lt ? lt.muted : '-') + ' Len=' + (lt ? lt.enabled : '-') + ' Lrs=' + (lt ? lt.readyState : '-') +
            ' snd=' + (sndr && sndr.track ? sndr.track.readyState : 'none') +
            ' Rmute=' + (rt ? rt.muted : '-') + ' Rrs=' + (rt ? rt.readyState : '-'));
@@ -1126,7 +1131,10 @@
           if (pc && pc.getStats) pc.getStats().then(st => {
             let inA = null;
             st.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) inA = r; });
-            wb('APKT in=' + !!inA + ' pkts=' + (inA ? (inA.packetsReceived || 0) : '?') + ' bytes=' + (inA ? (inA.bytesReceived || 0) : '?') + ' lvl=' + (inA ? (inA.audioLevel != null ? inA.audioLevel : '?') : '?'));
+            let anyRtp = false; st.forEach(r => { if (r.type === 'inbound-rtp' || r.type === 'outbound-rtp') anyRtp = true; });
+            // 🔬 inA 가 없어도 통계 자체가 비었으면(anyRtp=false) '측정 불가'다 — 무음 아님
+            wb('APKT ' + (inA ? 'in=true pkts=' + (inA.packetsReceived || 0) + ' bytes=' + (inA.bytesReceived || 0) + ' lvl=' + (inA.audioLevel != null ? inA.audioLevel : '?')
+                              : (anyRtp ? 'in=false (오디오 수신 통계 없음 — 진짜 의심 구간)' : 'n/a (엔진이 RTP 통계를 아예 안 준다 — 판단 불가)')));
           }, () => {});
         } catch (_) {}
         // 🔬 프레임 유입 측정 — videoWidth가 0이 아니면 프레임이 실제로 들어와 디코드된 것.
