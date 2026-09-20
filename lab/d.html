@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><title>d</title><link rel="stylesheet" href="_base.css"><link rel="stylesheet" href="_neb.css"></head>
+<body><div class="st" id="s">
+<div class="aur a1"></div><div class="aur a2"></div><div class="aur a3"></div><div class="aur a4" id="a4"></div>
+<div class="core" id="core"></div><div class="warp" id="warp"></div>
+<div class="vig"></div><div class="grain"></div>
+<img class="lg" src="logo.png"><div class="line"></div><div class="tag">무엇을 하든 판이 되는 곳</div>
+</div><script>
+var V="d", s=document.getElementById('s'), warp=document.getElementById('warp');
+if(V==='d'){ document.getElementById('core').remove(); warp.remove(); document.getElementById('a4').remove(); }
+else{
+  var SC=["#ffffff","#bfe4ff","#00e5ff","#ff6fae","#ffd28a","#b39bff"],h='';
+  for(var i=0;i<44;i++){var ang=(i*137.5)%360,s0=30+(i%5)*16,d1=420+(i%7)*95,dl=((i*53)%100)/100*1.6,th=(i%6===0)?3:2;
+  h+='<i class="star" style="--a:'+ang.toFixed(1)+'deg;--s:'+s0+'px;--d:'+d1+'px;height:'+th+'px;color:'+SC[i%SC.length]+';animation-delay:'+dl.toFixed(2)+'s"></i>';}
+  warp.innerHTML=h;
+}
+if(V==='b'){
+  var PC=["#ff5fa2","#00e5ff","#ffb14d","#a98bff","#7fd0ff","#ff7b7b"],SP=[[18,22],[78,18],[30,74],[70,68],[50,12],[12,52],[88,44],[58,88],[40,40]],p='';
+  for(var k=0;k<SP.length;k++){var px=SP[k][0],py=SP[k][1],sz=40+(k%4)*34,c=PC[k%PC.length],dy=(k*0.17).toFixed(2);
+  p+='<i class="pop" style="left:'+px+'%;top:'+py+'%;width:'+sz+'px;height:'+sz+'px;margin-left:'+(-sz/2)+'px;margin-top:'+(-sz/2)+'px;color:'+c+';animation-delay:'+dy+'s"></i>';
+  if(k%2===0){var rs=sz*1.4,sw=sz*2.6;
+  p+='<i class="ring" style="left:'+px+'%;top:'+py+'%;width:'+rs+'px;height:'+rs+'px;margin-left:'+(-rs/2)+'px;margin-top:'+(-rs/2)+'px;color:'+c+';animation-delay:'+dy+'s"></i>';
+  p+='<i class="spk" style="left:'+px+'%;top:'+py+'%;width:'+sw+'px;margin-left:'+(-sw/2)+'px;animation-delay:'+dy+'s"></i>';
+  p+='<i class="spk v" style="left:'+px+'%;top:'+py+'%;width:'+sw+'px;margin-left:'+(-sw/2)+'px;animation-delay:'+dy+'s"></i>';}}
+  s.insertAdjacentHTML('beforeend',p);
+}
+</script></body></html>
