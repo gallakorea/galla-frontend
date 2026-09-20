@@ -120,8 +120,12 @@
     `data-id="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}"`;
 
   function heroHTML(v) {
+    /* 🎬 1위는 열자마자 저절로 돈다(26.9.20 사장님: 「핫튜브 1위 영상은 자동 재생으로」).
+       소리는 앱 전역 설정을 따르고(처음엔 음소거 — 브라우저가 소리 자동재생을 막는다),
+       프레임 안 소리 버튼으로 켜면 다른 화면 영상들과 같이 맞춰진다(galla.im/yt). */
     return `
-      <button type="button" class="hv-hero" ${attrs(v)}>
+      <button type="button" class="hv-hero hv-hero-auto" ${attrs(v)}>
+        <span class="hv-hero-fr" aria-hidden="true"></span>
         <img src="${esc(v.thumbnail || "")}" alt="">
         <span class="hv-hero-sh"></span>
         <span class="hv-hero-badge">🔥 지금 1위</span>
@@ -272,6 +276,40 @@
     );
   }
 
+  /* ── 1위 자동재생 ─────────────────────────────────────
+     화면에 60% 넘게 들어오면 프레임을 꽂고, 벗어나거나 다른 탭으로 가면 뺀다.
+     홈 피드의 핫튜브 카드(js/index.js)와 같은 규칙 — 소리는 전역 설정을 따른다. */
+  let heroIO = null;
+  function heroOn(hero) {
+    if (!hero || hero.__on) return;
+    const id = hero.dataset.id; if (!id) return;
+    const slot = hero.querySelector(".hv-hero-fr"); if (!slot) return;
+    const on = window.GALLA_soundOn && window.GALLA_soundOn();
+    hero.__on = true;
+    hero.classList.add("hv-playing");
+    slot.innerHTML = '<iframe src="https://galla.im/yt?v=' + encodeURIComponent(id) + '&mute=' + (on ? "0" : "1") +
+      '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>';
+  }
+  function heroOff(hero) {
+    if (!hero || !hero.__on) return;
+    hero.__on = false;
+    hero.classList.remove("hv-playing");
+    const slot = hero.querySelector(".hv-hero-fr");
+    if (slot) slot.innerHTML = "";
+  }
+  function watchHero(root) {
+    const hero = (root || document).querySelector(".hv-hero-auto");
+    if (heroIO) { heroIO.disconnect(); heroIO = null; }
+    if (!hero || !("IntersectionObserver" in window)) return;
+    heroIO = new IntersectionObserver((ents) => {
+      ents.forEach((e) => { if (e.isIntersecting && e.intersectionRatio > .6) heroOn(hero); else heroOff(hero); });
+    }, { threshold: [0, .6, 1] });
+    heroIO.observe(hero);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) heroOff(hero); }, { once: true });
+  }
+  /* 다른 판(릴스·상세)이 열리면 조용히 — 전역 소리 모듈이 부르는 신호 */
+  window.addEventListener("galla:hush", () => { const h = document.querySelector(".hv-hero-auto"); heroOff(h); });
+
   async function render() {
     const el = $("#hot-video-list");
     if (!el) return;
@@ -279,6 +317,7 @@
     renderChips();
     if (current === "all") await renderAll(el);
     else await renderFeed(el, current);
+    watchHero(el);
   }
 
   function goto(feed) {
@@ -487,6 +526,7 @@
         push → 슬라이드인·엣지 스와이프 백·pop 이 전부 라우터 스택으로 관리된다(사장님: "느낌 말고 SPA로"). */
   function openPlayer(id, title, ch) {
     if (!id) return;
+    heroOff(document.querySelector(".hv-hero-auto"));   // 큰 화면으로 가면 1위 미리보기는 멈춘다
     /* 이동 경로는 js/supabase.js 의 GALLA_openVideoPage 한 곳만 쓴다 —
        화면마다 URL 을 따로 조립하다 PC 레일만 옛 경로(search.html?video=)에
        남아 같은 영상을 눌러도 결과가 달랐다. */
