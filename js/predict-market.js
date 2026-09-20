@@ -244,7 +244,8 @@ function renderHero(){
         const leadOK=allTot>0 && pcts.length>1 && pcts[0]>pcts[1];
         return `<div class="pb-mrows">${sortedOuts.map((o,i)=>{
           const p=pcts[i];
-          return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span></div>`;
+          const none = !(Number(STATE?.participants) > 0);   // 참여 0이면 균등값을 숨긴다(26.9.20)
+          return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${none?0:p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${none?'–':p+'%'}</span></div>`;
         }).join('')}</div>`; })()
     : `<div class="pm-odds">
       <div class="pm-odds-bar" style="height:40px">

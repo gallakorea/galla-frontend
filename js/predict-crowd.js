@@ -195,7 +195,8 @@
         qrest = `기타 ${others2.length}곳은 아래 목록에서`;
       }
       const qranks = ranksOf(qshow.filter(x => x.id !== "__other"), o.resolved ? { winner: o.winner } : null);
-      const ranks2 = qshow.map((x, i) => x.id === "__other" ? "mid" : qranks[i]);
+      /* 아직 아무도 안 온 판은 순위가 없다 — 유력·경합 딱지도 달지 않는다(26.9.20 QA) */
+      const ranks2 = o.empty ? qshow.map(() => "mid") : qshow.map((x, i) => x.id === "__other" ? "mid" : qranks[i]);
       return queueHtml(o, qshow, ranks2, qrest);
     }
 

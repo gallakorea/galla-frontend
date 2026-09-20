@@ -262,7 +262,8 @@ function multiRows(m, outs){
   return `<div class="pm-multi">${top.map((o,i)=>{
     const p=tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length);
     const od=oddsOf(m,o);
-    return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
+    const none = outs.reduce((a,x)=>a+(x.bettor_count||0),0) <= 0;   // 아직 아무도 안 온 판(26.9.20)
+    return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${none?0:p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${none?'–':p+'%'}</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
   }).join('')}${rows.length>4?`<div class="pm-mmore">+${rows.length-4}개 선택지</div>`:''}</div>`;
 }
 /* 🏳️ 깃발 진영(26.9.20 사장님: 「예측에도 사람들이 호객하고 싸우는 애니메이션·말풍선」)
