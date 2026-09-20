@@ -133,7 +133,10 @@
     o = o || {};
     const all = (o.outcomes || []).filter(Boolean);
     if (!all.length) return "";
-    const max = o.max || 4;
+    /* 📏 깃발이 너무 많으면 이름표가 사라지고 사람이 뭉개진다(26.9.20 QA: 10개면 깃발 폭 21px).
+       화면 폭이 허락하는 만큼만 세우고 나머지는 「+N개 깃발 더」로 접는다 — 깃발 하나에 최소 62px. */
+    const fit = Math.max(2, Math.floor(((o.width || window.innerWidth || 375) - 24) / 62));
+    const max = Math.min(o.max || 4, fit);
     const sorted = all.slice().sort((a, b) => (b.p || 0) - (a.p || 0));
     const show = sorted.slice(0, max), rest = sorted.length - show.length;
     const ranks = ranksOf(show, o.resolved ? { winner: o.winner } : null);
