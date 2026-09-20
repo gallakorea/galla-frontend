@@ -130,35 +130,64 @@
   const badgeHtml = (b) => b ? `<span class="pc-badge pc-b-${b.c}">${b.t}</span>` : "";
   /* o: { outcomes:[{id,label,p}], mine:<선택한 outcome id|null>, max:노출 깃발 수(기본 4), compact:true 면 라벨 짧게 } */
   /* 🧍 줄서기용 사람 — 가로로 늘어서니 몸을 작게, 줄 서서 발을 구른다 */
-  const QMAN = '<svg class="pc-qman" viewBox="0 0 16 24" aria-hidden="true">' +
-    '<g class="pc-qbody" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<circle cx="8" cy="5" r="3" fill="currentColor" stroke="none"/>' +
-      '<path d="M8 8.4 L8 15.6"/><path d="M8 15.6 L5.4 22 M8 15.6 L10.8 22"/>' +
+  const QMAN = '<svg class="pc-qman" viewBox="0 0 18 26" aria-hidden="true">' +
+    '<g fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="9" cy="5.2" r="3.9" fill="currentColor" stroke="none"/>' +   // 머리를 키워 사람으로 읽히게
+      '<path d="M9 9.6 L9 16.4"/>' +                                            // 몸통
+      '<path d="M9 11.4 L4.6 14.2 M9 11.4 L13.4 14.2"/>' +                      // 어깨에서 내린 두 팔
+      '<path class="pc-qleg" d="M9 16.4 L5.6 24 M9 16.4 L12.4 24"/>' +          // 벌린 두 다리
     '</g></svg>';
   const qCount = (p) => Math.max(1, Math.min(16, Math.round((p || 0) / 100 * 26) || 1));
 
-  /* 🚶 줄서기 판 — 선택지가 많을 때(6개 이상) 깃발 대신 이 그림을 쓴다(26.9.20 사장님:
-     「깃발만 고집할 필요 없다, 다지선다가 많아지면 최적화된 걸로」).
-     선택지마다 창구 하나에 줄이 서고, 줄 길이가 곧 비율이다. 세로로 쌓이니 20개도 읽힌다. */
-  function queueHtml(o, sorted, ranks, rest) {
+  /* ⚔️ 맞대결 + 도전자 대기줄 — 선택지가 많을 때(6개 이상) 쓰는 그림(26.9.20 사장님: 「대결 구도여야 해」).
+     · 1·2위가 정면으로 맞붙고, 그 아래 막대의 매듭이 우세한 쪽으로 밀린다(이슈 줄다리기와 같은 언어).
+     · 3위 이하는 아래에서 차례를 기다리는 도전자 — 바로 다음 순번은 몸을 푼다.
+     · 순위가 바뀌면 링에 오르는 얼굴이 바뀐다. 선택지가 30개여도 대기줄로 감당된다. */
+  const PUSHER = '<svg class="pc-vsman" viewBox="0 0 42 54" aria-hidden="true">' +
+    '<g class="pc-vsbody" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="17" cy="11" r="7" fill="currentColor" stroke="none"/>' +
+      '<path d="M17 19 L20 33"/>' +
+      '<path d="M18 23 L36 27 M19 28 L36 30"/>' +       // 두 팔로 상대를 민다
+      '<path d="M20 33 L11 51 M20 33 L28 50"/>' +       // 버틴 다리
+    '</g></svg>';
+  const qCount2 = (p) => Math.max(1, Math.min(9, Math.round((p || 0) / 100 * 22) || 1));
+
+  function duelHtml(o, sorted, ranks, rest) {
     const empty = !!o.empty;
-    const rows = sorted.map((oc, i) => {
-      const p = Math.round(oc.p || 0);
-      const rank = ranks[i];
+    const a = sorted[0], b = sorted[1];
+    const pa = Math.round(a.p || 0), pb = Math.round(b.p || 0);
+    const k = (pa + pb) > 0 ? Math.round(pa / (pa + pb) * 100) : 50;
+    const rest2 = sorted.slice(2);
+    const side = (oc, p, cls, rank) => {
       const mine = o.mine != null && String(o.mine) === String(oc.id);
+      return `<div class="pc-side pc-${cls} pc-${rank}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}"
+        data-rank="${rank}" data-label="${esc(oc.label || "")}">
+        <span class="pc-bub" aria-hidden="true"></span>
+        ${PUSHER}
+        <div class="pc-vsmeta"><span class="pc-lab">${esc(oc.label || "")}</span><b class="pc-pct">${empty ? "–" : p + "%"}</b>${badgeHtml(badgeOf(rank))}</div>
+      </div>`;
+    };
+    const rows = rest2.map((oc, i) => {
+      const p = Math.round(oc.p || 0);
       const isOtherC = oc.id === "__other";
-      const n = isOtherC ? 2 : qCount(p);
-      const strong = rank === "top" && (p - Math.max(...sorted.filter(x => x !== oc).map(x => Math.round(x.p || 0)), 0)) >= 8;
-      return `<div class="pc-camp pc-q ${"pc-" + rank}${strong ? " pc-strong" : ""}${mine ? " pc-mine" : ""}${isOtherC ? " pc-other" : ""}"
-        data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}" data-strong="${strong ? 1 : 0}" data-label="${esc(oc.label || "")}"
-        style="--pc-h:${isOtherC ? 220 : hueOf(i)}">
+      const mine = o.mine != null && String(o.mine) === String(oc.id);
+      return `<div class="pc-camp pc-q pc-mid${mine ? " pc-mine" : ""}${isOtherC ? " pc-other" : ""}${i === 0 ? " pc-next" : ""}"
+        data-oc="${esc(oc.id)}" data-p="${p}" data-rank="mid" data-strong="0" data-label="${esc(oc.label || "")}"
+        style="--pc-h:${isOtherC ? 220 : hueOf(i + 2)}">
+        <span class="pc-qno">${i + 3}</span>
         <span class="pc-qlab pc-lab">${esc(oc.label || "")}</span>
-        <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span><i class="pc-desk"></i><span class="pc-folks">${QMAN.repeat(n)}</span></div>
-        <b class="pc-pct">${empty ? "–" : p + "%"}</b>${isOtherC ? "" : badgeHtml(badgeOf(rank))}
+        <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span><span class="pc-folks">${QMAN.repeat(isOtherC ? 2 : qCount2(p))}</span></div>
+        <b class="pc-pct">${empty ? "–" : p + "%"}</b>
       </div>`;
     }).join("");
-    return `<div class="pc pc-queue${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
-      ${rows}
+    return `<div class="pc pc-duel${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
+      <div class="pc-ring">
+        ${side(a, pa, "l", ranks[0])}
+        <div class="pc-vs">VS</div>
+        ${side(b, pb, "r", ranks[1])}
+      </div>
+      <div class="pc-vsbar" style="--pc-k:${empty ? 50 : k}%"><i class="pc-vsknot"></i></div>
+      ${rows ? `<div class="pc-queue-rows">${rows}</div>` : ""}
       ${rest ? `<div class="pc-rest">${rest}</div>` : ""}
     </div>`;
   }
@@ -183,7 +212,7 @@
        유력·경합 같은 판세 딱지는 달지 않는다(여럿을 뭉친 자리라 순위로 다룰 수 없다).
        상세(scroll:true)에선 접지 않고 전부 세운 뒤 옆으로 밀어 본다. */
     /* 🔀 선택지 수에 맞는 그림을 고른다(26.9.20 사장님) —
-       2~5개: 깃발 진영(사람이 깃발 아래 모여 호객) / 6개 이상: 줄서기(창구마다 줄, 세로로 쌓여 20개도 읽힌다). */
+       2~5개: 깃발 진영(사람이 깃발 아래 모여 호객) / 6개 이상: 맞대결(1·2위가 붙고 나머지는 도전자 대기줄). */
     const QUEUE_FROM = 6;
     if (!o.force && sorted.length >= QUEUE_FROM) {
       const cap = o.queueMax || 8;                       // 줄은 세로로 쌓이니 넉넉히, 넘치면 기타로 묶는다
@@ -197,7 +226,7 @@
       const qranks = ranksOf(qshow.filter(x => x.id !== "__other"), o.resolved ? { winner: o.winner } : null);
       /* 아직 아무도 안 온 판은 순위가 없다 — 유력·경합 딱지도 달지 않는다(26.9.20 QA) */
       const ranks2 = o.empty ? qshow.map(() => "mid") : qshow.map((x, i) => x.id === "__other" ? "mid" : qranks[i]);
-      return queueHtml(o, qshow, ranks2, qrest);
+      return duelHtml(o, qshow, ranks2, qrest);
     }
 
     let show, others = [];
@@ -379,10 +408,11 @@
       const r = board.getBoundingClientRect();
       if (!r.width || r.bottom < 0 || r.top > vh) return;      // 화면 밖은 건너뛴다
       if (board._busy) return;
-      const camps = [...board.querySelectorAll(".pc-camp")];
+      /* 맞대결 판에선 링 위 두 선수(.pc-side)가 주인공이다 — 대기줄보다 자주 말하게 앞에 둔다 */
+      const camps = [...board.querySelectorAll(".pc-side"), ...board.querySelectorAll(".pc-camp")];
       if (!camps.length) return;
       const roll = Math.random();
-      if (roll < .22 && camps.length > 1 && !board.classList.contains("pc-done")) {   // 갈아타기(끝난 판은 안 한다)
+      if (roll < .22 && camps.length > 1 && !board.classList.contains("pc-done") && !board.classList.contains("pc-duel")) {   // 갈아타기(끝난 판·맞대결 판은 안 한다)
         board._busy = true;
         defect(board);
         setTimeout(() => { board._busy = false; }, 3200);

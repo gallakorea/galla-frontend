@@ -239,7 +239,7 @@
 /* 창구 — 줄이 시작되는 자리 */
 .pc-desk { flex: 0 0 auto; width: 9px; height: 18px; margin-right: 3px; border-radius: 2px; background: currentColor;
   box-shadow: 0 0 8px -2px currentColor; }
-.pc-qman { width: 15px; height: 22px; margin-left: -4px; flex: 0 0 auto; overflow: visible; }
+.pc-qman { width: 17px; height: 25px; margin-left: -3px; flex: 0 0 auto; overflow: visible; }
 .pc-qbody { animation: pcShuffle 1.7s ease-in-out infinite; transform-origin: 8px 22px; }
 .pc-qman:nth-child(2n) .pc-qbody { animation-delay: .35s; }
 .pc-qman:nth-child(3n) .pc-qbody { animation-delay: .8s; }
@@ -264,4 +264,65 @@
   .pc-arm-l, .pc-arm-r, .pc-pump, .pc-sweat, .pc-tear, .pc-conf, .pc-qbody,
   .pc-camp.pc-strong .pc-stage::before, .pc-done .pc-camp.pc-won .pc-stage::after { animation: none !important; }
   .pc-camp.pc-talk .pc-bub { opacity: 1; }
+}
+
+/* ═══ ⚔️ 맞대결 + 도전자 대기줄 — 선택지 6개 이상(26.9.20 사장님: 「대결 구도여야 해」) ═══ */
+.pc-duel { margin: 10px 0 2px; }
+.pc-ring { position: relative; display: grid; grid-template-columns: 1fr 46px 1fr; align-items: end; gap: 6px;
+  padding: 8px 6px 6px; border-radius: 12px;
+  background: radial-gradient(90% 120% at 50% 100%, rgba(255,200,80,.10), transparent 70%); }
+.pc-side { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.pc-side.pc-l { color: var(--pro-solid, #7d93ff); }
+.pc-side.pc-r { color: var(--con-solid, #ff7a94); transform: scaleX(-1); }
+.pc-side.pc-r .pc-vsmeta, .pc-side.pc-r .pc-bub { transform: scaleX(-1); }
+.pc-side.pc-mine { color: #ffd166; }
+.pc-vsman { width: 42px; height: 54px; overflow: visible; }
+.pc-vsbody { animation: pcVsPush 1.05s ease-in-out infinite alternate; transform-origin: 21px 52px; }
+.pc-side.pc-r .pc-vsbody { animation-delay: .12s; }
+@keyframes pcVsPush { from { transform: rotate(-4deg); } to { transform: rotate(5deg); } }
+.pc-side.pc-top .pc-vsbody { animation-duration: .6s; }     /* 앞선 쪽이 더 세게 민다 */
+.pc-side.pc-low .pc-vsbody { animation-duration: 1.8s; }
+.pc-vsmeta { display: flex; flex-direction: column; align-items: center; gap: 1px; max-width: 100%;
+  padding: 2px 6px; border-radius: 8px; background: rgba(5,7,11,.82); }
+.pc-vs { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 18px;
+  font-size: 15px; font-weight: 900; color: #ffc850; text-shadow: 0 0 12px rgba(255,200,80,.6);
+  animation: pcVsPulse 1.4s ease-in-out infinite; }
+@keyframes pcVsPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+/* 둘 사이의 줄다리기 막대 — 매듭이 우세한 쪽으로 밀린다 */
+.pc-vsbar { position: relative; height: 10px; margin: 8px 2px 0; border-radius: 6px; overflow: visible;
+  background: linear-gradient(90deg, var(--pro-solid, #7d93ff) var(--pc-k), var(--con-solid, #ff7a94) var(--pc-k));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.10); transition: background .6s ease; }
+.pc-vsknot { position: absolute; top: 50%; left: var(--pc-k, 50%); width: 12px; height: 12px; margin: -6px 0 0 -6px;
+  border-radius: 50%; background: #ffc850; box-shadow: 0 0 10px rgba(255,200,80,.9);
+  animation: pcKnotJit .35s linear infinite; transition: left .6s cubic-bezier(.3,.7,.3,1); }
+@keyframes pcKnotJit { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(1px,-1px); } }
+
+/* 도전자 대기줄 */
+.pc-queue-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.pc-duel .pc-camp.pc-q { position: relative; display: grid; grid-template-columns: 18px 76px 1fr auto;
+  gap: 7px; align-items: center; padding: 0; background: none; flex: none; }
+.pc-duel .pc-camp.pc-q::before { content: none; }
+.pc-qno { font-size: 10.5px; font-weight: 900; color: #8b93a7; text-align: right; }
+.pc-duel .pc-qlab { font-size: 11.5px; font-weight: 900; color: #e8ecf5; text-align: right;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+.pc-duel .pc-qline { position: relative; display: flex; align-items: flex-end; min-height: 22px; min-width: 0;
+  overflow: hidden; color: var(--accent-2, #6f86ff); }
+.pc-duel .pc-camp.pc-mine .pc-qline { color: #ffd166; }
+.pc-duel .pc-camp.pc-other .pc-qline { color: #98a1b3; }
+.pc-duel .pc-pct { font-size: 12px; min-width: 34px; text-align: right; color: #cfd6e6; }
+.pc-duel .pc-camp.pc-mine .pc-qlab { color: #ffd166; }
+/* 바로 다음 차례(3위)는 몸을 푼다 — 곧 링에 오를 사람 */
+.pc-duel .pc-next .pc-qman { animation: pcWarm .8s ease-in-out infinite alternate; }
+.pc-duel .pc-next .pc-qman:nth-child(2n) { animation-delay: .2s; }
+@keyframes pcWarm { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
+/* 정산이 끝난 판 — 진 쪽은 회색 */
+.pc-duel.pc-done .pc-side.pc-lost { filter: grayscale(.6) brightness(.8); }
+.pc-duel.pc-done .pc-side.pc-won { color: #ffd166; }
+.pc-duel .pc-bub { bottom: 100%; }
+.pc-duel .pc-camp.pc-q .pc-bub { bottom: 22px; left: 0; transform: none; }
+.pc-duel .pc-camp.pc-q .pc-bub::after { left: 14px; margin-left: 0; }
+.pc-duel .pc-camp.pc-talk .pc-bub, .pc-side.pc-talk .pc-bub { animation-name: pcBubOnceL; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-vsbody, .pc-vs, .pc-vsknot, .pc-duel .pc-next .pc-qman { animation: none !important; }
 }
