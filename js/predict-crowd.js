@@ -115,7 +115,10 @@
     if (Math.random() < .35) return draw("CALL", L().CALL);
     return draw(rank.toUpperCase(), L()[rank.toUpperCase()] || L().MID);
   }
-  /* 🏃 갈아타기 — 한 명이 옆 깃발로 뛰어간다. 떠난 쪽은 야유, 받은 쪽은 환영. */
+  /* 🏃 갈아타기 — 한 명이 옆 깃발로 뛰어간다. 떠난 쪽은 야유, 받은 쪽은 환영.
+     ⚠️ 깃발 아래 사람 수는 그 선택지의 비율이다 — 실제로 옮기면 같은 25% 인데 한쪽 1명·한쪽 3명이 되어
+     숫자가 거짓말을 한다(26.9.20 사장님 지적). 그래서 뛰어가는 건 복제한 그림자 한 명이고,
+     양쪽 정원은 그대로 둔다. 인원이 진짜 바뀌는 건 비율이 바뀔 때(update)뿐이다. */
   function defect(board) {
     const camps = [...board.querySelectorAll(".pc-camp")];
     if (camps.length < 2) return;
@@ -125,20 +128,23 @@
     const pool = camps.filter(c => c !== from);
     const to = pool[Math.floor(Math.random() * pool.length)];
     const folk = from.querySelector(".pc-folk:last-child");
-    if (!folk || from.querySelectorAll(".pc-folk").length < 2) return;   // 깃발지기 한 명은 안 뺀다
-    const a = folk.getBoundingClientRect(), t = to.querySelector(".pc-folks");
-    if (!t) return;
-    const b = t.getBoundingClientRect();
-    const dx = (b.left + b.width) - (a.left + a.width / 2);
-    folk.classList.add("pc-run");
-    folk.style.setProperty("--pc-dx", dx.toFixed(0) + "px");
+    const dest = to.querySelector(".pc-folks");
+    if (!folk || !dest) return;
+    const a = folk.getBoundingClientRect(), b = dest.getBoundingClientRect();
+    const ghost = folk.cloneNode(true);
+    ghost.classList.add("pc-run");
+    ghost.style.left = a.left - board.getBoundingClientRect().left + "px";
+    ghost.style.top = a.top - board.getBoundingClientRect().top + "px";
+    ghost.style.setProperty("--pc-dx", ((b.left + b.width) - a.left).toFixed(0) + "px");
+    board.appendChild(ghost);
+    folk.classList.add("pc-gone");                       // 원래 자리는 잠깐 흐려졌다 돌아온다
     say(from, draw("DEFECT_LEAVE", L().DEFECT_LEAVE), 1600);
     setTimeout(() => say(from, draw("DEFECT_STAY", L().DEFECT_STAY), 1800), 700);
     setTimeout(() => {
-      folk.remove();
-      t.insertAdjacentHTML("beforeend", FOLK);
+      ghost.remove();
+      folk.classList.remove("pc-gone");
       say(to, draw("DEFECT_WELCOME", L().DEFECT_WELCOME), 1800);
-    }, 1100);
+    }, 1150);
   }
   function tick() {
     if (document.hidden || reduce()) return;

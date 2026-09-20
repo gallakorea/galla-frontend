@@ -52,8 +52,11 @@
 @keyframes pcHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
 @keyframes pcBeckon { from { transform: rotate(-16deg); } to { transform: rotate(14deg); } }
 
-/* 🏃 갈아타기 — 옆 깃발로 뛰어간다(가는 동안 살짝 뛴다) */
-.pc-folk.pc-run { animation: pcRun 1.1s cubic-bezier(.4,.1,.4,1) forwards; z-index: 3; position: relative; }
+/* 🏃 갈아타기 — 옆 깃발로 뛰어간다(가는 동안 살짝 뛴다).
+   뛰는 건 복제한 그림자다 — 깃발 아래 정원(=비율)은 건드리지 않는다. */
+.pc { position: relative; }
+.pc-folk.pc-run { position: absolute; animation: pcRun 1.15s cubic-bezier(.4,.1,.4,1) forwards; z-index: 5; margin: 0; pointer-events: none; }
+.pc-folk.pc-gone { opacity: .25; transition: opacity .2s; }
 @keyframes pcRun {
   0%   { transform: translate(0, 0); }
   50%  { transform: translate(calc(var(--pc-dx) * .5), -7px); }
