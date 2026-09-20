@@ -70,6 +70,76 @@
   box-shadow:0 6px 18px rgba(255,157,46,.3); }
 .pm-jp-go:active{ transform:scale(.98); }
 
+
+/* ═══ ✨ 보너스 매치 카드 역동성(26.9.20 사장님: 「아래는 화려한데 여기는 너무 단조로워」) ═══ */
+/* 테두리를 도는 금빛 — 카드가 살아 있다는 첫 신호 */
+.pm-jackpot::after{ content:""; position:absolute; inset:-1px; border-radius:21px; padding:1px; pointer-events:none;
+  background:conic-gradient(from var(--pm-a,0deg), transparent 0 62%, rgba(255,207,63,.85) 72%, rgba(255,157,46,.35) 80%, transparent 88% 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:pmRing 4.2s linear infinite; }
+@property --pm-a { syntax:"<angle>"; inherits:false; initial-value:0deg; }
+@keyframes pmRing { to { --pm-a:360deg; } }
+/* @property 를 못 쓰는 브라우저 폴백 — 각도 대신 밝기가 돈다 */
+@supports not (background: conic-gradient(from var(--x,0deg), red, blue)) {
+  .pm-jackpot::after{ animation:pmRingFade 2.6s ease-in-out infinite;
+    background:linear-gradient(120deg, transparent 30%, rgba(255,207,63,.8), transparent 70%); }
+  @keyframes pmRingFade { 0%,100%{opacity:.25} 50%{opacity:1} }
+}
+/* 위쪽 금빛 무리가 천천히 숨 쉰다 */
+.pm-jackpot::before{ animation:pmHalo 3.6s ease-in-out infinite; }
+@keyframes pmHalo { 0%,100%{ opacity:.7; transform:translateY(0) } 50%{ opacity:1; transform:translateY(4px) } }
+/* 상금풀 숫자 — 맥박 + 금빛 훑기 */
+.pm-jp-pool-n{ position:relative; display:inline-block;
+  background:linear-gradient(100deg,#ffcf3f 0%, #fff3c0 42%, #ff9d2e 62%, #ffcf3f 100%);
+  background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+  animation:pmPoolSheen 3.2s linear infinite, pmPoolBeat 2.4s ease-in-out infinite; }
+@keyframes pmPoolSheen { from{ background-position:180% 0 } to{ background-position:-20% 0 } }
+@keyframes pmPoolBeat { 0%,100%{ transform:scale(1) } 46%{ transform:scale(1.035) } }
+/* 뱃지·타이머도 리듬을 탄다 */
+.pm-jp-badge{ animation:pmBadgePop 3s ease-in-out infinite; transform-origin:left center; }
+@keyframes pmBadgePop { 0%,88%,100%{ transform:scale(1) rotate(0) } 92%{ transform:scale(1.06) rotate(-1.5deg) } }
+.pm-jp-timer{ animation:pmTick 1.6s steps(2) infinite; }
+@keyframes pmTick { 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
+/* 버튼 — 빛이 한 번씩 스쳐 지나고 살짝 들썩인다 */
+.pm-jp-go{ overflow:hidden; animation:pmGoBob 2.8s ease-in-out infinite; }
+.pm-jp-go > span{ position:relative; z-index:1; }
+.pm-jp-go::after{ content:""; position:absolute; top:0; bottom:0; left:-60%; width:45%;
+  background:linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent);
+  transform:skewX(-18deg); animation:pmGoSweep 2.6s ease-in-out infinite; }
+@keyframes pmGoSweep { 0%{ left:-60% } 55%,100%{ left:130% } }
+@keyframes pmGoBob { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-2px) } }
+/* 금화가 천천히 떠오른다 — 카드 안쪽에서만 */
+.pm-jp-coin{ position:absolute; bottom:-14px; width:9px; height:9px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle at 34% 30%, #fff3c0, #ffcf3f 55%, #b8860b);
+  box-shadow:0 0 8px rgba(255,207,63,.7); opacity:0; animation:pmCoin 5.4s linear infinite; }
+.pm-jp-coin.k1{ left:12%; animation-delay:0s }
+.pm-jp-coin.k2{ left:34%; animation-delay:1.4s }
+.pm-jp-coin.k3{ left:63%; animation-delay:2.7s }
+.pm-jp-coin.k4{ left:84%; animation-delay:4s }
+@keyframes pmCoin {
+  0%{ opacity:0; transform:translateY(0) scale(.7) }
+  12%{ opacity:.9 }
+  70%{ opacity:.55 }
+  100%{ opacity:0; transform:translateY(-190px) scale(1.05) }
+}
+/* 오즈 바 — 경계가 살짝 밀고 당긴다(줄다리기 느낌) */
+.pm-jackpot .pm-odds-bar{ animation:pmOddsBreath 3.4s ease-in-out infinite; }
+@keyframes pmOddsBreath { 0%,100%{ transform:scaleX(1) } 50%{ transform:scaleX(.995) } }
+.pm-jackpot .pm-odds-side.shine, .pm-jackpot .pm-odds-side{ position:relative; overflow:hidden; }
+.pm-jackpot .pm-odds-side::after{ content:""; position:absolute; inset:0;
+  background:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.16) 50%, transparent 80%);
+  background-size:220% 100%; animation:pmSideSheen 2.8s linear infinite; }
+.pm-jackpot .pm-odds-side.no::after{ animation-delay:1.4s }
+@keyframes pmSideSheen { from{ background-position:180% 0 } to{ background-position:-40% 0 } }
+
+@media (prefers-reduced-motion: reduce){
+  .pm-jackpot::after, .pm-jackpot::before, .pm-jp-pool-n, .pm-jp-badge, .pm-jp-timer,
+  .pm-jp-go, .pm-jp-go::after, .pm-jp-coin, .pm-jackpot .pm-odds-bar, .pm-jackpot .pm-odds-side::after{ animation:none !important; }
+  .pm-jp-pool-n{ color:var(--pm-gold); -webkit-text-fill-color:currentColor; }
+  .pm-jp-coin{ display:none }
+}
+
 /* ===== 오즈 바 (예 vs 아니오, 진영형) ===== */
 .pm-odds{ margin:10px 0 2px; }
 .pm-odds-bar{ position:relative; height:34px; border-radius:9px; overflow:hidden; display:flex;

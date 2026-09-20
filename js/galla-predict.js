@@ -240,8 +240,10 @@ function renderJackpot(){
       <div class="pm-jp-pool-lbl">${hero.jackpot_bonus>0?'보너스 포함 상금풀':'현재 상금풀'}</div>
       <div class="pm-jp-pool-n" data-to="${Math.round(prize(hero))}">0<small> GP</small></div>
     </div>
+    ${crowdOf(hero, outs)}
     ${oddsBar(hero, outs)}
-    <button class="pm-jp-go">지금 예측하기 →</button>
+    <button class="pm-jp-go"><span>지금 예측하기 →</span></button>
+    <i class="pm-jp-coin k1"></i><i class="pm-jp-coin k2"></i><i class="pm-jp-coin k3"></i><i class="pm-jp-coin k4"></i>
   </div>`;
   el.querySelector('.pm-jackpot').onclick=()=>goDetail(`predict-market.html?id=${hero.id}`);
   countUp(el);
