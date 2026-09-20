@@ -801,6 +801,42 @@ function shareIssue(id) {
 /* ===========================
  * 이벤트 바인딩
  * =========================== */
+/* 📊 홈 카드 신호 — 무엇을 보여 줬고(노출) 무엇을 열었는지(열람)를 남긴다. 이게 랭킹의 연료다(js/signals.js).
+   종류 이름은 서버 랭커(home_rank)와 같은 말을 쓴다: vertical·horizontal(숏판·롱판)·plaza·news·predict·video·issue. */
+function idxSignalKind(card) {
+    const k = card.dataset.kind || '';
+    if (k === 'post') return card.querySelector('.glr-long, .card-media.glr-long') ? 'horizontal' : 'vertical';
+    if (k === 'plaza' || k === 'news' || k === 'predict' || k === 'video') return k;
+    if (!k && card.dataset.link) return 'issue';
+    return '';
+}
+function idxSignalId(card) {
+    return card.dataset.vid || card.dataset.id || card.dataset.mid || '';
+}
+function idxWatchCards(root) {
+    if (!window.GALLA_signal) return;
+    (root || IDXROOT).querySelectorAll('.card, .predict-feed-card').forEach(card => {
+        if (card.__sigOn) return;
+        const kind = idxSignalKind(card), id = idxSignalId(card);
+        if (!kind || !id) return;
+        card.__sigOn = 1;
+        window.GALLA_signal.card(card, { kind, id, surface: 'home' });
+    });
+}
+/* 카드를 여는 순간 = 'open'. 위임 한 벌로 모든 종류를 받는다(카드마다 달면 재렌더 때 샌다) */
+function idxBindOpenSignal() {
+    if (window.__idxOpenSig) return;
+    window.__idxOpenSig = 1;
+    document.addEventListener('click', (e) => {
+        if (!window.GALLA_signal) return;
+        const card = e.target.closest && e.target.closest('.card, .predict-feed-card');
+        if (!card || !IDXROOT.contains(card)) return;
+        if (e.target.closest('.fi-btn, .more-btn, .follow-btn, .vote-btn, [data-support], [data-galvis]')) return;
+        const kind = idxSignalKind(card), id = idxSignalId(card);
+        if (kind && id) window.GALLA_signal.act(kind, id, 'open', 'home');
+    }, true);
+}
+
 function attachEvents() {
     // 투표 버튼
     IDXROOT.querySelectorAll('.vote-btn').forEach(btn => {
@@ -1291,7 +1327,7 @@ async function loadData() {
     GALLA_signalReady();
 
     // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
-    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards]) => {
+    Promise.all([extrasP, loadHomeRank().then(m => { RANK = m; })]).then(([[predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards]]) => {
         feed = interleave(cards, {
             predict: predictionCards, plaza: plazaCards,
             news: newsCards, video: videoCards, duel: duelCards, gallari: gallariCards
@@ -1335,11 +1371,44 @@ function shuffle(arr) {
     return a;
 }
 
-// 이슈(시간순 고정) 사이사이에 타 콘텐츠를 라운드로빈으로 끼워 배치
-// — 일기토 라이브는 최상단 근처, 순환 순서 자체도 매 진입 랜덤
+/* 🧠 홈 랭킹(26.9.20 사장님: 「유튜브·인스타처럼 사람들이 좋아하는 걸로, 이슈 빼고」)
+   서버 랭커 home_rank 가 이슈 외 콘텐츠를 한 줄로 세워 준다 — 반응(노출 대비 열람·완주·참여) × 신선도 × 내 취향,
+   그리고 종류가 한쪽으로 쏠리지 않게 믹서가 번갈아 뽑는다. 실패하면 예전처럼 라운드로빈으로 돈다(피드는 반드시 뜬다). */
+let RANK = null;              // 'kind:id' → 순번
+async function loadHomeRank() {
+    try {
+        const { data } = await window.supabaseClient.rpc('home_rank', { p_limit: 80 });
+        if (!data || !data.ok || !Array.isArray(data.items)) return null;
+        const m = new Map();
+        data.items.forEach((it, i) => m.set(it.kind + ':' + String(it.id), i));
+        return m.size ? m : null;
+    } catch (_) { return null; }
+}
+/* 랭킹 키 — 서버 종류 이름에 맞춘다(숏판·롱판은 둘 다 post) */
+function rankKey(type, d) {
+    if (type === 'gallari') return 'post:' + d.id;
+    if (type === 'plaza') return 'plaza:' + d.id;
+    if (type === 'news') return 'news:' + d.id;
+    if (type === 'predict') return 'predict:' + d.id;
+    if (type === 'video') return 'video:' + (d.video_id || d.id);
+    return null;
+}
+
+// 이슈(시간순 고정) 사이사이에 타 콘텐츠를 끼워 배치 — 순서는 랭킹, 없으면 라운드로빈
+// — 일기토 라이브는 최상단 근처
 function interleave(issues, ex = {}) {
     const queue = [];
     (ex.duel || []).forEach(d => queue.push({ type: 'duel', data: d }));
+    if (RANK) {
+        const pool = [];
+        ['gallari', 'plaza', 'news', 'predict', 'video'].forEach(t => (ex[t] || []).forEach(d => {
+            const k = rankKey(t, d);
+            // 랭킹에 없는 것(새로 올라온 것 등)은 뒤로 — 단, 맨 뒤로 밀지 않게 큰 값 하나만 준다
+            pool.push({ type: t, data: d, r: (k && RANK.has(k)) ? RANK.get(k) : 900 });
+        }));
+        pool.sort((a, b) => a.r - b.r);
+        pool.forEach(x => queue.push({ type: x.type, data: x.data }));
+    } else {
     /* 숏판·롱판은 순서를 섞지 않고 맨 앞에 고정한다 — 섞어 두면 첫 화면에서
        한 장도 안 보이는 진입이 생긴다(사장님 "인덱스에 왜 안 나와"의 실체). */
     const order = ['gallari'].concat(shuffle(['news', 'predict', 'video', 'plaza']));
@@ -1351,6 +1420,7 @@ function interleave(issues, ex = {}) {
             const arr = ex[t] || [];
             if (idx[t] < arr.length) { queue.push({ type: t, data: arr[idx[t]++] }); added = true; }
         }
+    }
     }
     const out = [];
     issues.forEach(c => {
@@ -1999,6 +2069,7 @@ function loadBest() {
     const html = viewFeed.slice(0, 3).map(renderFeedItem).join('');
     if (bestList.innerHTML !== html) bestList.innerHTML = html;
     attachEvents();
+    idxWatchCards(bestList); idxBindOpenSignal();
     pfObserveCards(bestList);
 }
 
@@ -2013,6 +2084,7 @@ function loadRecommend() {
     }
     if (html) recommendList.insertAdjacentHTML('beforeend', html);
     attachEvents();
+    idxWatchCards(recommendList); idxBindOpenSignal();
     pfObserveCards(recommendList);
 }
 
