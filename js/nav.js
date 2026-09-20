@@ -51,6 +51,8 @@
     load("/js/android-back.js");                    // 🔙 안드로이드 하드웨어 뒤로가기(없으면 한 번에 앱 종료)
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
     load("/js/signals.js");                         // 📊 공통 신호 층(노출·시청·행동) — 추천 랭킹의 연료
+    load("/js/media-sound.js");                     // 🔊 전역 소리 선호(이슈·숏판·핫튜브·릴스 통일) — 없으면 화면마다 따로 논다(26.9.20)
+    load("/js/time-ago.js");                        // 🕒 시간 표시 한 벌
     load("/js/iap.js");                             // 💳 인앱 결제(구독) — GALLA_buySub / GALLA_restorePurchases
     load("/js/plans.js");                           // 이용권(등급·잔여 대화) — GALLA_openPlans / GALLA_planPill
     load("/js/workbench.js");                       // 🎬 숏판 작업대 — GALLA_openWorkbench / ?wb=<jobId>

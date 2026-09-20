@@ -15,6 +15,7 @@
    제스처가 들어오면 선호가 ON인 재생 영상은 자동으로 소리가 켜진다.
    ========================================================= */
 (function () {
+  if (window.GALLA_setSound) return;   // 두 번 실리는 페이지(직접 태그 + nav.js 로더)에서 리스너가 겹치지 않게
   const KEY = "gallaSound";
   // 기본 음소거 — 세션 저장이라 새 탭/앱 실행마다 다시 음소거로 시작.
   window.GALLA_soundOn = () => sessionStorage.getItem(KEY) === "1";
