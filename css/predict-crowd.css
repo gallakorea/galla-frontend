@@ -21,15 +21,16 @@
 .pc-camp.pc-mine::before { background: #ffd166; box-shadow: 0 0 10px -1px rgba(255,209,102,.8); }
 
 .pc-stage { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 0;
-  height: 42px; color: hsl(var(--pc-h) 78% 66%); }
+  height: 58px; color: hsl(var(--pc-h) 78% 66%); }
 .pc-camp.pc-mine .pc-stage { color: #ffd98a; }
 /* 가장 붐비는 깃발은 금빛 — 목록 줄도 1등만 금색이라 눈이 같은 곳을 본다 */
 .pc-camp.pc-top:not(.pc-mine) .pc-stage { color: #ffc850; }
 .pc-camp.pc-top:not(.pc-mine) .pc-pct { color: #ffd66b; }
 .pc-camp.pc-top::before { background: rgba(255,200,80,.45); }
 
-/* 🏳️ 깃발 — 장대는 그대로, 천만 나부낀다 */
-.pc-flag { width: 20px; height: 30px; flex: 0 0 auto; overflow: visible; }
+/* 🏳️ 깃발 — 천만 나부낀다. 높이는 그 선택지의 비율(--pc-fh): 몰릴수록 장대가 높이 선다(26.9.20 사장님) */
+.pc-flag { height: var(--pc-fh, 30px); width: calc(var(--pc-fh, 30px) * .68); flex: 0 0 auto; overflow: visible;
+  transition: height .6s cubic-bezier(.3,.7,.3,1), width .6s cubic-bezier(.3,.7,.3,1); }
 .pc-cloth { transform-origin: 4px 6px; animation: pcWave 1.6s ease-in-out infinite; }
 .pc-top .pc-cloth { animation-duration: 1.1s; }            /* 1등 깃발은 더 힘차게 */
 .pc-low .pc-cloth { animation-duration: 2.6s; opacity: .8; } /* 꼴찌 깃발은 축 늘어진다 */
@@ -41,7 +42,7 @@
 
 /* 🙋 사람들 — 겹쳐 세워 좁은 카드에서도 넘치지 않게 */
 .pc-folks { display: flex; align-items: flex-end; }
-.pc-folk { width: 19px; height: 26px; margin-left: -6px; flex: 0 0 auto; overflow: visible; }
+.pc-folk { width: 19px; height: 26px; margin-left: -7px; flex: 0 0 auto; overflow: visible; }
 .pc-folk:first-child { margin-left: -2px; }
 .pc-folk-body { animation: pcHop .9s ease-in-out infinite; transform-origin: 12px 29px; }
 .pc-folk:nth-child(2n) .pc-folk-body { animation-delay: .22s; }
@@ -49,6 +50,54 @@
 .pc-folk-arm { transform-origin: 12px 12.6px; animation: pcBeckon .45s ease-in-out infinite alternate; }
 .pc-folk:nth-child(2n) .pc-folk-arm { animation-delay: .18s; }
 .pc-low .pc-folk-body { animation-duration: 1.5s; }        /* 텅 빈 깃발은 기운이 없다 */
+
+/* 🎉 가장 붐비는 깃발 — 우글우글 파티(26.9.20 사장님). 두 팔 만세로 방방 뛰고 머리 위로 색종이가 떨어진다 */
+.pc-top .pc-folk-body { animation-duration: .5s; }
+.pc-party .pc-arm-l { transform-origin: 12px 12.8px; animation: pcArmL .32s ease-in-out infinite alternate; }
+.pc-party .pc-arm-r { transform-origin: 12px 12.8px; animation: pcArmR .32s ease-in-out infinite alternate; }
+.pc-party:nth-child(2n) .pc-arm-l, .pc-party:nth-child(2n) .pc-arm-r { animation-delay: .16s; }
+@keyframes pcArmL { from { transform: rotate(10deg); } to { transform: rotate(-12deg); } }
+@keyframes pcArmR { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
+.pc-conf { display: none; position: absolute; top: -4px; width: 5px; height: 7px; border-radius: 1px; z-index: 2; pointer-events: none; }
+.pc-top .pc-conf { display: block; animation: pcConf 1.6s linear infinite; }
+.pc-top .pc-conf.c1 { left: 26%; background: #ffd166; }
+.pc-top .pc-conf.c2 { left: 44%; background: #ff5c8a; animation-delay: .4s; }
+.pc-top .pc-conf.c3 { left: 62%; background: #38d9a9; animation-delay: .8s; }
+.pc-top .pc-conf.c4 { left: 78%; background: #6aa8ff; animation-delay: 1.2s; }
+@keyframes pcConf {
+  0%   { opacity: 0; transform: translateY(-6px) rotate(0deg); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(46px) rotate(320deg); }
+}
+/* 파티 깃발엔 바닥 불빛도 한 겹 */
+.pc-camp.pc-top .pc-stage::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: -2px; height: 14px; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,200,80,.35), transparent 70%); animation: pcGlow 1.2s ease-in-out infinite; }
+@keyframes pcGlow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* 💪 중간 깃발 — 주먹 펌프질 + 이마의 땀. 몸도 조금 빠르게 뛴다 */
+.pc-mid .pc-folk-body { animation-duration: .72s; }
+.pc-fight .pc-pump { transform-origin: 12px 12.8px; animation: pcPump .36s ease-in-out infinite alternate; }
+.pc-fight:nth-child(2n) .pc-pump { animation-delay: .18s; }
+@keyframes pcPump { from { transform: rotate(6deg) translateY(1px); } to { transform: rotate(-22deg) translateY(-2px); } }
+.pc-sweat { opacity: 0; animation: pcSweat 1.8s ease-in infinite; }
+.pc-fight:nth-child(3n) .pc-sweat { animation-delay: .9s; }
+@keyframes pcSweat {
+  0%   { opacity: 0; transform: translate(0, 0) scale(.7); }
+  18%  { opacity: .9; transform: translate(-.5px, 1px) scale(1); }
+  100% { opacity: 0; transform: translate(-2px, 9px) scale(.8); }
+}
+
+/* 😢 텅 빈 깃발 — 고개 숙이고 어깨를 들썩이며 운다, 눈물이 뚝뚝 */
+.pc-cry .pc-folk-body { animation: pcSob 1.1s ease-in-out infinite; transform-origin: 12px 29px; }
+@keyframes pcSob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(1.5px) rotate(-6deg); } }
+.pc-tear { animation: pcTear 1.6s ease-in infinite; opacity: 0; }
+.pc-tear.t2 { animation-delay: .8s; }
+.pc-cry:nth-child(2n) .pc-tear { animation-delay: .5s; }
+@keyframes pcTear {
+  0%   { opacity: 0; transform: translateY(0) scale(.6); }
+  20%  { opacity: .95; transform: translateY(1px) scale(1); }
+  100% { opacity: 0; transform: translateY(12px) scale(.85); }
+}
 @keyframes pcHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
 @keyframes pcBeckon { from { transform: rotate(-16deg); } to { transform: rotate(14deg); } }
 
@@ -64,9 +113,23 @@
 }
 
 /* 라벨·퍼센트 */
-.pc-meta { display: flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 3px 2px 0; }
-.pc-lab { font-size: 10px; font-weight: 800; color: #cfd6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pc-pct { font-size: 11px; font-weight: 900; color: hsl(var(--pc-h) 80% 72%); flex: 0 0 auto; }
+/* 라벨 줄 — 카드 배경(사진)이 비쳐 글씨가 묻히던 것(26.9.20 사장님: 「뒤에 글자가 잘 안 보이네」).
+   어두운 알약을 깔고 글자를 키웠다. */
+.pc-meta { display: flex; align-items: center; gap: 4px; max-width: 100%; margin-top: 4px; padding: 2px 6px;
+  border-radius: 8px; background: rgba(8,10,14,.72); backdrop-filter: blur(3px); }
+.pc-lab { font-size: 11px; font-weight: 800; color: #eef2fa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+.pc-pct { font-size: 12px; font-weight: 900; color: hsl(var(--pc-h) 85% 76%); flex: 0 0 auto;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9); font-variant-numeric: tabular-nums; }
+
+/* 🏷️ 상태 딱지 — 유력 / 경합 / 적중 */
+.pc-badge { flex: 0 0 auto; font-size: 9px; font-weight: 900; letter-spacing: -.2px; padding: 1px 5px; border-radius: 6px;
+  line-height: 1.5; }
+.pc-b-lead { background: rgba(255,200,80,.18); color: #ffd166; box-shadow: inset 0 0 0 1px rgba(255,209,102,.5); }
+.pc-b-tight { background: rgba(120,160,255,.16); color: #9ec0ff; box-shadow: inset 0 0 0 1px rgba(140,175,255,.45);
+  animation: pcTight 1.6s ease-in-out infinite; }
+@keyframes pcTight { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+.pc-b-win { background: rgba(255,200,80,.28); color: #ffe19a; box-shadow: inset 0 0 0 1px rgba(255,209,102,.8); }
 .pc-camp.pc-mine .pc-pct { color: #ffd166; }
 .pc-rest { margin-top: 5px; font-size: 11px; font-weight: 700; color: #8b93a7; text-align: right; }
 
@@ -101,12 +164,39 @@
 }
 
 /* 상세 페이지에선 조금 크게 — 자리가 넉넉하다 */
-.pmd .pc-stage, .pm-crowd .pc-stage { height: 52px; }
-.pmd .pc-flag, .pm-crowd .pc-flag { width: 24px; height: 36px; }
+.pmd .pc-stage, .pm-crowd .pc-stage { height: 70px; }
+.pmd .pc-flag, .pm-crowd .pc-flag { height: calc(var(--pc-fh, 30px) * 1.2); width: calc(var(--pc-fh, 30px) * .82); }
 .pmd .pc-folk, .pm-crowd .pc-folk { width: 22px; height: 30px; }
 .pmd .pc-lab, .pm-crowd .pc-lab, .pmd .pc-pct, .pm-crowd .pc-pct { font-size: 12px; }
 
+
+/* ═══ 🏁 정산이 끝난 판 — 승자의 여유, 패자의 눈물(26.9.20 사장님) ═══ */
+/* 이긴 깃발: 금빛으로 갈아입고 왕관이 뜬다. 색종이가 쉬지 않고 떨어진다. */
+.pc-done .pc-camp.pc-won .pc-stage { color: #ffd166; }
+.pc-done .pc-camp.pc-won::before { background: #ffd166; box-shadow: 0 0 12px rgba(255,209,102,.9); }
+.pc-done .pc-camp.pc-won { background: linear-gradient(180deg, rgba(255,209,102,.18), transparent 72%); }
+.pc-done .pc-camp.pc-won .pc-pct { color: #ffd166; }
+.pc-done .pc-camp.pc-won .pc-stage::after {          /* 👑 왕관 — 깃발 위에 얹힌다 */
+  content: ""; position: absolute; top: -9px; left: 50%; width: 16px; height: 10px; margin-left: -8px;
+  background: #ffd166; clip-path: polygon(0 100%, 12% 24%, 32% 62%, 50% 0, 68% 62%, 88% 24%, 100% 100%);
+  filter: drop-shadow(0 0 6px rgba(255,209,102,.9)); animation: pcCrown 1.6s ease-in-out infinite; }
+@keyframes pcCrown { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(3deg); } }
+.pc-done .pc-camp.pc-won .pc-conf { display: block; animation: pcConf 1.3s linear infinite; }
+.pc-done .pc-camp.pc-won .pc-cloth { animation-duration: .9s; }
+
+/* 진 깃발: 깃대가 기울고 천이 축 늘어진다. 색이 빠지고 눈물만 떨어진다. */
+.pc-done .pc-camp.pc-lost { filter: grayscale(.55) brightness(.8); }
+.pc-done .pc-camp.pc-lost .pc-flag { transform: rotate(14deg); transform-origin: 4px 100%; transition: transform .8s ease; }
+.pc-done .pc-camp.pc-lost .pc-cloth { animation-duration: 3.4s; opacity: .55; }
+.pc-done .pc-camp.pc-lost .pc-folk-body { animation-duration: 1.4s; }
+.pc-done .pc-camp.pc-lost .pc-tear { animation-duration: 1.1s; }
+.pc-done .pc-camp.pc-lost .pc-lab { opacity: .75; }
+/* 끝난 판은 깃발 높이를 건드리지 않는다 — 결과가 곧 서열이다 */
+.pc-done .pc-camp .pc-flag { transition: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .pc-cloth, .pc-folk-body, .pc-folk-arm, .pc-folk.pc-run, .pc-camp.pc-talk .pc-bub { animation: none !important; }
+  .pc-cloth, .pc-folk-body, .pc-folk-arm, .pc-folk.pc-run, .pc-camp.pc-talk .pc-bub,
+  .pc-arm-l, .pc-arm-r, .pc-pump, .pc-sweat, .pc-tear, .pc-conf,
+  .pc-camp.pc-top .pc-stage::before, .pc-done .pc-camp.pc-won .pc-stage::after { animation: none !important; }
   .pc-camp.pc-talk .pc-bub { opacity: 1; }
 }

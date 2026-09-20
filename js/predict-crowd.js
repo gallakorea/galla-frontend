@@ -28,15 +28,54 @@
     return b.pop();
   }
 
-  /* 🙋 호객하는 사람 — 똑바로 서서 한 팔로 「이리 와」 손짓하며 통통 뛴다(이슈 줄다리기의 WAVE 와 같은 몸) */
-  const FOLK = '<svg class="pc-folk" viewBox="0 0 26 32" aria-hidden="true">' +
-    '<g class="pc-folk-body" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+  /* 🙋 사람 3종 — 어느 깃발에 서 있느냐로 몸짓이 다르다(26.9.20 사장님: 「많은 데는 우글우글 파티, 없는 데는 울고 있는」)
+     · FOLK  : 호객(한 팔로 「이리 와」) — 보통 깃발
+     · PARTY : 두 팔 만세로 방방 뛴다 — 가장 붐비는 깃발
+     · CRY   : 고개 숙이고 어깨를 들썩이며 운다(눈물 두 방울) — 텅 빈 깃발 */
+  const BODY = (inner) => '<g class="pc-folk-body" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
+  const FOLK = '<svg class="pc-folk" viewBox="0 0 26 32" aria-hidden="true">' + BODY(
       '<circle cx="12" cy="6.5" r="3.6" fill="currentColor" stroke="none"/>' +
       '<path d="M12 10.4 L12 20.2"/>' +
       '<path d="M12 12.6 L8 18.4"/>' +
       '<path d="M12 20.2 L8.6 29.5 M12 20.2 L15.6 29.5"/>' +
-      '<g class="pc-folk-arm"><path d="M12 12.6 L19.5 6.4"/><circle cx="20.6" cy="5.4" r="1.7" fill="currentColor" stroke="none"/></g>' +
-    '</g></svg>';
+      '<g class="pc-folk-arm"><path d="M12 12.6 L19.5 6.4"/><circle cx="20.6" cy="5.4" r="1.7" fill="currentColor" stroke="none"/></g>'
+    ) + '</svg>';
+  const PARTY = '<svg class="pc-folk pc-party" viewBox="0 0 26 32" aria-hidden="true">' + BODY(
+      '<circle cx="12" cy="6.5" r="3.6" fill="currentColor" stroke="none"/>' +
+      '<path d="M12 10.4 L12 20.2"/>' +
+      '<path d="M12 20.2 L8 29.5 M12 20.2 L16.4 29.5"/>' +
+      '<g class="pc-arm-l"><path d="M12 12.8 L5.4 6.2"/></g>' +
+      '<g class="pc-arm-r"><path d="M12 12.8 L18.6 6.2"/></g>'
+    ) + '</svg>';
+  /* 💪 중간 깃발 — 주먹 불끈 쥐고 「아직 안 끝났다」(26.9.20 사장님: 「중간 애들은 열심히 화이팅 넘치는 모습」).
+     한 팔을 위아래로 펌프질하고 이마에 땀 한 방울. */
+  const FIGHT = '<svg class="pc-folk pc-fight" viewBox="0 0 26 32" aria-hidden="true">' + BODY(
+      '<circle cx="12" cy="6.5" r="3.6" fill="currentColor" stroke="none"/>' +
+      '<path d="M12 10.4 L12 20.2"/>' +
+      '<path d="M12 20.2 L7.6 29.5 M12 20.2 L16.8 29.5"/>' +
+      '<path d="M12 13.2 L7.2 17.2"/>' +
+      '<g class="pc-pump"><path d="M12 12.8 L17.4 8.6"/><circle cx="18.6" cy="7.6" r="2.1" fill="currentColor" stroke="none"/></g>'
+    ) +
+    '<path class="pc-sweat" d="M5.6 4.6c-.8 1.2-1.1 1.9-.5 2.4.6.5 1.3.1 1.3-.7 0-.4-.3-1-.8-1.7z" fill="currentColor"/>' +
+  '</svg>';
+  const CRY = '<svg class="pc-folk pc-cry" viewBox="0 0 26 32" aria-hidden="true">' + BODY(
+      '<circle cx="11" cy="8" r="3.6" fill="currentColor" stroke="none"/>' +
+      '<path d="M11.4 11.6 L12 20.4"/>' +
+      '<path d="M12 20.4 L8.8 29.5 M12 20.4 L15.4 29.5"/>' +
+      '<path d="M11.6 13.4 L7.4 9.6"/><path d="M12 13.4 L16.2 9.6"/>'
+    ) +
+    '<circle class="pc-tear t1" cx="7.6" cy="11" r="1.5" fill="currentColor"/>' +
+    '<circle class="pc-tear t2" cx="14.4" cy="11" r="1.5" fill="currentColor"/>' +
+  '</svg>';
+  /* 한 깃발의 사람들 — 1등은 절반이 만세, 꼴찌는 전부 운다 */
+  function folksHtml(n, rank) {
+    if (rank === "won") return PARTY.repeat(n);        // 이긴 깃발은 전원 만세
+    if (rank === "lost") return CRY.repeat(n);         // 진 깃발은 전원 눈물
+    if (rank === "low") return CRY.repeat(n);
+    if (rank === "top") { const party = Math.ceil(n / 2); return PARTY.repeat(party) + FOLK.repeat(n - party); }
+    const fight = Math.ceil(n / 2);                       // 중간은 절반이 주먹 쥐고 힘낸다, 절반은 계속 부른다
+    return FIGHT.repeat(fight) + FOLK.repeat(n - fight);
+  }
   /* 🏳️ 깃발 — 장대에 천이 나부낀다(천은 CSS 로 흔든다) */
   const FLAG = '<svg class="pc-flag" viewBox="0 0 22 30" aria-hidden="true">' +
     '<path class="pc-pole" d="M4 29 L4 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>' +
@@ -47,10 +86,40 @@
   const HUES = [212, 344, 152, 38, 276, 190, 18, 96];
   const hueOf = (i) => HUES[i % HUES.length];
 
-  /* 사람 수 = 비율(0~100) → 1~6명. 0% 라도 깃발지기 한 명은 남는다(텅 빈 깃발 대사가 살아야 한다).
-     선택지가 넷이면 다들 20~30% 언저리라, 비율을 그대로 곱하면 어디나 한 명씩 서서 「모임」이 안 보였다(26.9.20 QA) → 1 + 비율×5. */
-  const folkCount = (p) => Math.max(1, Math.min(6, 1 + Math.round((p || 0) / 100 * 5)));
+  /* 사람 수 = 비율(0~100) → 2~10명. 0% 라도 깃발지기 한 명은 남는다(텅 빈 깃발 대사가 살아야 한다).
+     26.9.20 사장님: 「비율에 따라 사람 숫자가 더 늘어나는 구조로」 — 1등과 꼴찌의 머릿수 차이가 한눈에 보이게 폭을 넓혔다. */
+  const folkCount = (p) => Math.max(1, Math.min(10, 1 + Math.round((p || 0) / 100 * 9)));
+  /* 깃발 높이 = 비율(26.9.20 사장님: 「비율에 따라 깃발의 높낮이가 달라지게」). 22px(텅 빔) ~ 54px(독식). */
+  const flagH = (p) => Math.round(22 + Math.max(0, Math.min(100, p || 0)) * 0.32);
 
+  /* 🏅 누가 파티하고 누가 우는가 — 비율 차이로 정한다(26.9.20 사장님: 「50 대 50 인데 왜 파티 중이야」).
+     · top(파티)  : 2등보다 8%p 이상 앞선 단독 선두일 때만. 동률이면 아무도 파티하지 않는다.
+     · low(울음)  : 선두보다 12%p 이상 뒤처진 꼴찌(동률 꼴찌면 함께 운다).
+     · mid(파이팅): 그 밖에 전부 — 팽팽하면 다 같이 주먹 쥐고 힘낸다. */
+  function ranksOf(list, done) {
+    /* 🏁 정산이 끝났으면 순위가 아니라 결과다 — 맞힌 깃발은 won, 나머지는 lost(26.9.20 사장님) */
+    if (done && done.winner != null) {
+      return list.map(o => String(o.id) === String(done.winner) ? "won" : "lost");
+    }
+    const ps = list.map(o => Math.round(o.p || 0));
+    const hi = Math.max(...ps), lo = Math.min(...ps);
+    const leaders = ps.filter(p => p === hi).length;
+    const second = ps.filter(p => p !== hi).length ? Math.max(...ps.filter(p => p !== hi)) : hi;
+    const topOK = leaders === 1 && (hi - second) >= 8;
+    const lowOK = (hi - lo) >= 12;
+    return ps.map(p => (topOK && p === hi) ? "top" : (lowOK && p === lo) ? "low" : "mid");
+  }
+  /* 🏷️ 상태 딱지(26.9.20 사장님: 「마감도 안 됐는데 왜 왕관이야 — 유력, 비등비등하면 경합」)
+     · 진행 중 단독 선두 = 유력 / 팽팽하면 선두권 = 경합 / 끝난 판의 정답 = 적중.
+     왕관은 정산이 끝난 판에서만 뜬다. */
+  function badgeOf(rank, tight) {
+    if (rank === "won") return { t: "적중", c: "win" };
+    if (rank === "lost") return null;
+    if (rank === "top") return { t: "유력", c: "lead" };
+    if (tight && rank === "mid") return { t: "경합", c: "tight" };
+    return null;
+  }
+  const badgeHtml = (b) => b ? `<span class="pc-badge pc-b-${b.c}">${b.t}</span>` : "";
   /* o: { outcomes:[{id,label,p}], mine:<선택한 outcome id|null>, max:노출 깃발 수(기본 4), compact:true 면 라벨 짧게 } */
   function html(o) {
     o = o || {};
@@ -59,21 +128,25 @@
     const max = o.max || 4;
     const sorted = all.slice().sort((a, b) => (b.p || 0) - (a.p || 0));
     const show = sorted.slice(0, max), rest = sorted.length - show.length;
-    const top = show[0], low = show[show.length - 1];
+    const ranks = ranksOf(show, o.resolved ? { winner: o.winner } : null);
+    /* 아무도 앞서지 못하면(전부 mid) 경합 — 선두권 두 곳에만 딱지를 단다 */
+    const tight = !o.resolved && ranks.every(r => r === "mid");
+    const tightIdx = tight ? show.map((_, i) => i).slice(0, 2) : [];
     const camps = show.map((oc, i) => {
       const p = Math.round(oc.p || 0);
       const n = folkCount(p);
       const mine = o.mine != null && String(o.mine) === String(oc.id);
-      const rank = oc === top ? "top" : (oc === low && show.length > 1 ? "low" : "mid");
+      const rank = ranks[i];
       /* flex 비중을 비율에 맞춰 — 붐비는 깃발이 자리를 더 차지한다(몰림이 눈에 보이게, 최소 폭은 보장) */
       return `<div class="pc-camp pc-${rank}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
-        style="--pc-h:${hueOf(all.indexOf(oc))};flex:${Math.max(1, p) + 14} 1 0">
+        data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
         <span class="pc-bub" aria-hidden="true"></span>
-        <div class="pc-stage">${FLAG}<span class="pc-folks">${FOLK.repeat(n)}</span></div>
-        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b></div>
+        <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank)}</span>
+          <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
+        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank, tightIdx.indexOf(i) >= 0))}</div>
       </div>`;
     }).join("");
-    return `<div class="pc"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
+    return `<div class="pc${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
       <div class="pc-ground">${camps}</div>
       ${rest > 0 ? `<div class="pc-rest">+${rest}개 깃발 더</div>` : ""}
     </div>`;
@@ -83,23 +156,72 @@
   function mount(el, o) { if (!el) return; el.innerHTML = html(o); }
 
   /* 비율이 바뀌면 사람 수·폭·퍼센트를 따라가게 한다(상세는 30초마다 새로 읽는다) */
-  function update(root, outcomes, mine) {
+  function update(root, outcomes, mine, done) {
     if (!root) return;
+    if (done && done.winner != null) root.classList.add("pc-done");
+    /* 순위가 바뀌면 몸짓도 바뀐다 — 앞서면 파티, 크게 밀리면 울음, 팽팽하면 다 같이 파이팅(26.9.20) */
+    const list = (outcomes || []).slice();
+    const rk = ranksOf(list, done);
+    const rankById = {};
+    list.forEach((oc, i) => { rankById[String(oc.id)] = rk[i]; });
     (outcomes || []).forEach((oc) => {
       const camp = root.querySelector(`.pc-camp[data-oc="${CSS.escape(String(oc.id))}"]`);
       if (!camp) return;
       const p = Math.round(oc.p || 0);
       camp.dataset.p = p;
       camp.style.flex = `${Math.max(1, p) + 14} 1 0`;
+      camp.style.setProperty("--pc-fh", flagH(p) + "px");   // 비율이 오르면 깃발도 높아진다
       const pct = camp.querySelector(".pc-pct"); if (pct) pct.textContent = p + "%";
-      const folks = camp.querySelector(".pc-folks");
-      if (folks) {
-        const want = folkCount(p), have = folks.querySelectorAll(".pc-folk").length;
-        if (want > have) folks.insertAdjacentHTML("beforeend", FOLK.repeat(want - have));
-        else for (let i = 0; i < have - want; i++) folks.lastElementChild && folks.lastElementChild.remove();
+      const rank = rankById[String(oc.id)] || "mid";
+      if (camp.dataset.rank !== rank) {
+        camp.classList.remove("pc-top", "pc-mid", "pc-low", "pc-won", "pc-lost");
+        camp.classList.add("pc-" + rank);
+        camp.dataset.rank = rank;
+        const fk = camp.querySelector(".pc-folks");
+        if (fk) fk.innerHTML = folksHtml(folkCount(p), rank);          // 몸짓이 바뀌니 통째로 다시 세운다
+      } else {
+        const folks = camp.querySelector(".pc-folks");
+        if (folks) {
+          const want = folkCount(p), have = folks.querySelectorAll(".pc-folk").length;
+          if (want > have) folks.insertAdjacentHTML("beforeend", folksHtml(want - have, rank));
+          else for (let i = 0; i < have - want; i++) folks.lastElementChild && folks.lastElementChild.remove();
+        }
       }
       camp.classList.toggle("pc-mine", mine != null && String(mine) === String(oc.id));
+      /* 상태 딱지도 다시 — 판세가 바뀌면 유력·경합이 옮겨 다닌다 */
+      const tight2 = !(done && done.winner != null) && rk.every(r => r === "mid");
+      const meta = camp.querySelector(".pc-meta");
+      if (meta) {
+        const old = meta.querySelector(".pc-badge"); if (old) old.remove();
+        const order = list.slice().sort((a, b) => (b.p || 0) - (a.p || 0)).findIndex(x => String(x.id) === String(oc.id));
+        const bh = badgeHtml(badgeOf(rank, tight2 && order < 2));
+        if (bh) meta.insertAdjacentHTML("beforeend", bh);
+      }
     });
+  }
+
+  /* 🧠 그 예측 주제에 맞춘 대사 — 엣지 함수 crowd-lines 가 마켓마다 한 번 만들어 market_crowd_lines 에 넣어 둔다.
+     (26.9.20 사장님: 「주제에 해당하는 대화들이 오갈 수 있는 시스템」)
+     판마다 한 번만 읽고 캐시한다. 없으면 공용 창고(js/predict-lines.js)로 돈다 — 화면은 어느 쪽이든 똑같이 움직인다. */
+  const TOPIC = {}, TOPIC_P = {};
+  /* 센 욕이 새어 나오면 초성으로(서버가 이미 바꿔 저장하지만 옛 행 대비 한 번 더) */
+  const SOFT = [[/씨발|시발|씨바|시바/g, "ㅅㅂ"], [/존나|존내|졸라/g, "ㅈㄴ"], [/썅|씹/g, "ㅆ"], [/개새끼|개새기/g, "ㄱㅅㄲ"],
+    [/새끼|색기/g, "ㅅㄲ"], [/좆|좃/g, "ㅈ"], [/지랄/g, "ㅈㄹ"], [/병신/g, "ㅂㅅ"], [/염병/g, "ㅇㅂ"]];
+  const soft1 = (t) => SOFT.reduce((x, [re, to]) => x.replace(re, to), String(t || ""));
+  function softAll(v) {
+    if (Array.isArray(v)) return v.map(softAll);
+    if (v && typeof v === "object") { const o = {}; for (const k of Object.keys(v)) o[k] = softAll(v[k]); return o; }
+    return soft1(v);
+  }
+  function topicOf(camp) {
+    const board = camp.closest(".pc"); if (!board) return null;
+    const mid = board.dataset.mid; if (!mid) return null;
+    if (TOPIC[mid] !== undefined) return TOPIC[mid];
+    if (!TOPIC_P[mid] && window.supabaseClient) {
+      TOPIC_P[mid] = window.supabaseClient.from("market_crowd_lines").select("lines").eq("market_id", Number(mid)).maybeSingle()
+        .then(r => { TOPIC[mid] = softAll((r && r.data && r.data.lines) || null); }, () => { TOPIC[mid] = null; });
+    }
+    return null;   // 아직 안 왔으면 이번 턴은 공용 창고로
   }
 
   /* ── 말풍선·갈아타기 틱 ─────────────────────────────────────
@@ -112,8 +234,20 @@
   }
   function lineFor(camp) {
     const rank = camp.dataset.rank;
-    if (Math.random() < .35) return draw("CALL", L().CALL);
-    return draw(rank.toUpperCase(), L()[rank.toUpperCase()] || L().MID);
+    const T = topicOf(camp);
+    if (rank === "won") return pickOne(T && T.won, L().WON);
+    if (rank === "lost") return pickOne(T && T.lost, L().LOST);
+    /* 🧠 그 예측 주제로 만든 대사를 먼저 섞는다 — 선택지 이름을 들먹이는 말이 가장 재밌다(26.9.20 사장님) */
+    const key = camp.dataset.label || "";
+    if (T && T.by_label && T.by_label[key] && Math.random() < .35) return draw("bl" + key, T.by_label[key]);
+    if (Math.random() < .35) return pickOne(T && T.call, L().CALL);
+    const K = rank.toUpperCase();
+    return pickOne(T && T[rank], L()[K] || L().MID);
+  }
+  /* 주제 대사가 있으면 그걸(60%), 없으면 공용 창고 */
+  function pickOne(topicArr, fallback) {
+    if (topicArr && topicArr.length && Math.random() < .6) return draw("t" + topicArr.length + topicArr[0], topicArr);
+    return draw("s" + (fallback && fallback[0]), fallback);
   }
   /* 🏃 갈아타기 — 한 명이 옆 깃발로 뛰어간다. 떠난 쪽은 야유, 받은 쪽은 환영.
      ⚠️ 깃발 아래 사람 수는 그 선택지의 비율이다 — 실제로 옮기면 같은 25% 인데 한쪽 1명·한쪽 3명이 되어
@@ -138,12 +272,13 @@
     ghost.style.setProperty("--pc-dx", ((b.left + b.width) - a.left).toFixed(0) + "px");
     board.appendChild(ghost);
     folk.classList.add("pc-gone");                       // 원래 자리는 잠깐 흐려졌다 돌아온다
-    say(from, draw("DEFECT_LEAVE", L().DEFECT_LEAVE), 1600);
-    setTimeout(() => say(from, draw("DEFECT_STAY", L().DEFECT_STAY), 1800), 700);
+    const T = topicOf(from);
+    say(from, pickOne(T && T.defect_leave, L().DEFECT_LEAVE), 1600);
+    setTimeout(() => say(from, pickOne(T && T.defect_stay, L().DEFECT_STAY), 1800), 700);
     setTimeout(() => {
       ghost.remove();
       folk.classList.remove("pc-gone");
-      say(to, draw("DEFECT_WELCOME", L().DEFECT_WELCOME), 1800);
+      say(to, pickOne(topicOf(to) && topicOf(to).defect_welcome, L().DEFECT_WELCOME), 1800);
     }, 1150);
   }
   function tick() {
@@ -156,12 +291,16 @@
       const camps = [...board.querySelectorAll(".pc-camp")];
       if (!camps.length) return;
       const roll = Math.random();
-      if (roll < .22 && camps.length > 1) {                     // 갈아타기
+      if (roll < .22 && camps.length > 1 && !board.classList.contains("pc-done")) {   // 갈아타기(끝난 판은 안 한다)
         board._busy = true;
         defect(board);
         setTimeout(() => { board._busy = false; }, 3200);
       } else if (roll < .5 && camps.length > 1) {               // 주고받기(두 깃발이 한마디씩)
-        const pair = draw("DUO", L().DUO); if (!pair || pair.length < 2) return;
+        const T = topicOf(camps[0]);
+        const doneBoard = board.classList.contains("pc-done");
+        const bank = doneBoard ? L().DONE_DUO : ((T && T.duo && T.duo.length && Math.random() < .6) ? T.duo : L().DUO);
+        const pair = draw(doneBoard ? "DDUO" : (bank === (T && T.duo) ? "tduo" + board.dataset.mid : "DUO"), bank);
+        if (!pair || pair.length < 2) return;
         const i = Math.floor(Math.random() * camps.length);
         let j = Math.floor(Math.random() * camps.length); if (j === i) j = (i + 1) % camps.length;
         board._busy = true;

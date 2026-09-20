@@ -265,7 +265,8 @@ function crowdOf(m, outs){
   if(!window.GALLA_PredictCrowd || !outs || !outs.length) return '';
   const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
   const list=outs.map(o=>({ id:o.id, label:o.label, p: tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length) }));
-  return window.GALLA_PredictCrowd.html({ outcomes:list, mid:m.id, max: m.market_type==='multi' ? 4 : 2 });
+  return window.GALLA_PredictCrowd.html({ outcomes:list, mid:m.id, max: m.market_type==='multi' ? 4 : 2,
+    resolved: !!m.resolved, winner: m.resolved_outcome_id || (outs.find(o=>o.is_winner)||{}).id || null });
 }
 function oddsBar(m, outs){
   const yes = outs.find(o=>o.label==='예')||outs[0];

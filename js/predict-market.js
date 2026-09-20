@@ -255,7 +255,8 @@ function renderHero(){
   const crowd = window.GALLA_PredictCrowd
     ? `<div class="pm-crowd">${window.GALLA_PredictCrowd.html({
         outcomes: outs.map(o=>({ id:o.id, label:o.label, p: allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/Math.max(1,outs.length)) })),
-        mine: myOc, mid: STATE?.id || null, max: isMulti() ? 5 : 2 })}</div>`
+        mine: myOc, mid: STATE?.id || marketId || null, max: isMulti() ? 5 : 2,
+        resolved: !!MARKET?.resolved, winner: STATE?.resolved_outcome_id || (outs.find(o=>o.is_winner)||{}).id || null })}</div>`
     : '';
   el.innerHTML=`${sparkles}
     ${crowd}
