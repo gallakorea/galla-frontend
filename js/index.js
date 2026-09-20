@@ -1400,14 +1400,26 @@ function interleave(issues, ex = {}) {
     const queue = [];
     (ex.duel || []).forEach(d => queue.push({ type: 'duel', data: d }));
     if (RANK) {
-        const pool = [];
-        ['gallari', 'plaza', 'news', 'predict', 'video'].forEach(t => (ex[t] || []).forEach(d => {
-            const k = rankKey(t, d);
-            // 랭킹에 없는 것(새로 올라온 것 등)은 뒤로 — 단, 맨 뒤로 밀지 않게 큰 값 하나만 준다
-            pool.push({ type: t, data: d, r: (k && RANK.has(k)) ? RANK.get(k) : 900 });
-        }));
-        pool.sort((a, b) => a.r - b.r);
-        pool.forEach(x => queue.push({ type: x.type, data: x.data }));
+        /* 종류별로 랭킹 순서대로 줄을 세운 뒤 돌아가며 한 장씩 뽑는다 — 이슈·숏판·롱판·뉴스·예측·핫튜브·광장이
+           고르게 나오게(26.9.20 사장님: 「모든 요소가 골고루 나와야」). 랭킹에 없는 것도 제 줄 뒤에 서므로 맨 끝으로 밀리지 않는다. */
+        const lanes = ['gallari', 'plaza', 'news', 'predict', 'video'].map(t => {
+            const arr = (ex[t] || []).map((d, i) => {
+                const k = rankKey(t, d);
+                return { type: t, data: d, r: (k && RANK.has(k)) ? RANK.get(k) : 500 + i };
+            });
+            arr.sort((x, y) => x.r - y.r);
+            return arr;
+        }).filter(a => a.length);
+        // 첫 바퀴 순서는 각 줄의 1등 점수(=랭킹 순번)로 정한다 — 가장 좋은 것이 먼저 나온다
+        lanes.sort((x, y) => x[0].r - y[0].r);
+        let left = true;
+        while (left) {
+            left = false;
+            for (const lane of lanes) {
+                const x = lane.shift();
+                if (x) { queue.push({ type: x.type, data: x.data }); left = true; }
+            }
+        }
     } else {
     /* 숏판·롱판은 순서를 섞지 않고 맨 앞에 고정한다 — 섞어 두면 첫 화면에서
        한 장도 안 보이는 진입이 생긴다(사장님 "인덱스에 왜 안 나와"의 실체). */

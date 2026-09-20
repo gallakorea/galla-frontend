@@ -78,6 +78,11 @@ begin
   ),
   scored as (
     select c.*,
+           /* 🌱 기본 점수 — 반응이 0 이어도(갓 올라온 숏판 등) 신선도로 올라올 수 있어야 한다.
+              없었을 땐 좋아요·댓글·조회가 0 인 숏판 71개가 점수 0 으로 통째로 잘려 홈에 거의 안 나왔다(26.9.20 사장님 제보). */
+           0.25 base_floor,
+           /* 🔭 탐색 — 아직 덜 보여 준 것에 가산점(유튜브가 신규 영상에 주는 몫). 다 보여 준 뒤엔 반응으로 판가름난다. */
+           case when coalesce(s.imps, 0) < 20 then 0.15 else 0 end explore,
            /* 반응 배수 — 노출이 10 이상 쌓인 것만 신호를 믿는다 */
            case when coalesce(s.imps,0) >= 10
                 then 1 + 2.0 * (coalesce(s.opens,0) / s.imps) + 1.5 * (coalesce(s.eng,0) / s.imps)
@@ -95,7 +100,7 @@ begin
   ),
   norm as (   -- 종류 안에서 0~1 로(단위가 달라 그대로 섞으면 한 종류가 독점한다)
     select kind, id, author, at, sig_kind,
-           (base / nullif(max(base) over (partition by kind), 0)) * eng_mul * fresh * me_mul + bonus sc
+           ((base_floor + base) / nullif(max(base_floor + base) over (partition by kind), 0) + explore) * eng_mul * fresh * me_mul + bonus sc
       from scored
   ),
   ranked as (   -- 종류별 줄 세우기
