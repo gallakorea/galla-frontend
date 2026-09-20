@@ -18,3 +18,6 @@ grant select on public.market_crowd_lines to anon, authenticated;
 
 comment on table public.market_crowd_lines is
   '예측 깃발 진영 말풍선(주제 맞춤). lines = {call[],top[],mid[],low[],defect_leave[],defect_stay[],defect_welcome[],duo[[a,b]],by_label{라벨:[...]}}';
+
+-- ⏰ 새 예측이 생기면 대사도 자동으로 — 20분마다 6개씩(정각 몰림 금지: 41분 시작, tug_lines 는 13분)
+-- select cron.schedule('crowd_lines_job', '41-59/20 * * * *', $$ ... crowd-lines?n=6 ... $$);  ← 운영에 이미 등록됨
