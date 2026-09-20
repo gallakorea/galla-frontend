@@ -1972,7 +1972,7 @@ function renderPredictCard(m) {
        — 선택지마다 깃발 하나, 그 밑에 사람이 모인다. 비율·라벨을 그대로 품으므로 옛 막대/줄 대신 쓴다.
        모듈이 아직 안 실렸으면(구버전 캐시) 예전 막대로 돌아간다. */
     if (window.GALLA_PredictCrowd && m.outcomes && m.outcomes.length) {
-        return predictCardShell(m, window.GALLA_PredictCrowd.html({ outcomes: m.outcomes, mid: m.id, max: 4,
+        return predictCardShell(m, window.GALLA_PredictCrowd.html({ outcomes: m.outcomes, mid: m.id, max: 4, empty: !(Number(m.bettors) > 0),
             resolved: !!m.resolved, winner: m.resolved_outcome_id || null }), multi, '');
     }
     if (multi) {

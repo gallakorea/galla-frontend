@@ -9,16 +9,37 @@
   width: var(--lgp-w, 120px); height: var(--lgp-h, 34px); pointer-events: none; z-index: 3; }
 /* 발이 로고 윗선에 닿게 — 더 올리면 헤더 밖으로 머리가 잘린다(26.9.20 QA).
    색은 금빛 — 흰 워드마크 위에서 눈에 들어오고 갈라 톤과 맞는다. */
-.lgp-slot { position: absolute; bottom: 62%; width: 17px; height: 23px; color: #ffd166; opacity: .92; }
-.lgp-slot.s1 { left: 4%; }
-.lgp-slot.s2 { left: 29%; }
-.lgp-slot.s3 { left: 56%; }
-.lgp-slot.s4 { left: 79%; }
+.lgp-slot { position: absolute; bottom: 54%; width: 21px; height: 28px; color: var(--accent-2, #6f86ff); opacity: .96;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.65)); }
+/* 셋만 둔다 — 넷이 붙어 서면 작은 폭에서 빗줄기처럼 뭉쳐 보였다(26.9.20 사장님: 「저게 사람이야?」)
+   색은 갈라의 두 진영 색을 번갈아 — 우리 정체성이 한 색이 아니라 두 편이다(26.9.20 사장님) */
+/* 진영 색을 그대로 쓰면(#3a54ad·#b04a60) 검은 헤더에서 가라앉는다 — 같은 계열의 밝은 톤으로 */
+.lgp-slot.s1 { left: 2%;  color: #7d93ff; }
+.lgp-slot.s2 { left: 40%; color: #ff7a94; }
+.lgp-slot.s3 { left: 76%; color: #7d93ff; }
+.lgp-slot.s4 { display: none; }
 .lgp-one { width: 100%; height: 100%; overflow: visible; display: block; }
 
-/* 매달린 사람은 로고 글자에 걸려 아래로 늘어진다 */
-.lgp-slot .lgp-hang { transform: translateY(6px); }
+/* 자세별 기준 위치 — 헐리우드 사인처럼 글자에 걸터앉고, 매달리고, 기어오른다(26.9.20 사장님) */
+.lgp-slot .lgp-hang { transform: translateY(9px); }       /* 매달린 사람은 글자 아래로 늘어진다 */
 .lgp-slot .lgp-hand { transform: translateY(2px); }
+.lgp-slot .lgp-sit { transform: translateY(7px); }        /* 앉은 사람은 엉덩이가 글자 윗선에 */
+.lgp-slot .lgp-climb { transform: translateY(5px); }
+
+/* 🪑 걸터앉아 다리 흔들기 */
+.lgp-sit .lgp-legs { transform-origin: 11.5px 19px; animation: lgpSwingLeg 1.5s ease-in-out infinite alternate; }
+@keyframes lgpSwingLeg { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+.lgp-sit .lgp-body { animation: lgpSitBob 3.4s ease-in-out infinite; }
+@keyframes lgpSitBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+
+/* 🧗 글자 기어오르기 — 붙어서 조금씩 위아래로 */
+.lgp-climb .lgp-body { animation: lgpClimb 3.2s ease-in-out infinite; transform-origin: 12px 26px; }
+@keyframes lgpClimb {
+  0%   { transform: translateY(4px) rotate(-3deg); }
+  40%  { transform: translateY(-3px) rotate(3deg); }
+  70%  { transform: translateY(-1px) rotate(-2deg); }
+  100% { transform: translateY(4px) rotate(-3deg); }
+}
 
 /* 평소 — 각자 다른 리듬으로 꼼지락(눈에 거슬리지 않게 아주 작게) */
 .lgp-body { animation: lgpIdle 2.6s ease-in-out infinite; transform-origin: 12px 30px; }
@@ -91,6 +112,30 @@
   25% { transform: rotate(-12deg); }
   55% { transform: rotate(10deg); }
   80% { transform: rotate(-6deg); }
+}
+
+
+/* 🧗 위로 확 올라갔다 내려온다(클라이밍) */
+.lgp-slot.lgp-up { animation: lgpUp 2s ease-in-out both; }
+@keyframes lgpUp {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-9px); }
+  65% { transform: translateY(-6px); }
+}
+/* 🪂 매달렸다 손을 놓고 떨어졌다 다시 붙는다 */
+.lgp-slot.lgp-drop { animation: lgpDrop 1.6s cubic-bezier(.5,0,.7,1) both; }
+@keyframes lgpDrop {
+  0% { transform: translateY(0) rotate(0); }
+  35% { transform: translateY(11px) rotate(10deg); opacity: .85; }
+  60% { transform: translateY(13px) rotate(-6deg); opacity: .8; }
+  100% { transform: translateY(0) rotate(0); opacity: 1; }
+}
+/* 🦵 앉은 채로 다리를 크게 찬다 */
+.lgp-slot.lgp-kick { animation: lgpKick 1.2s ease-in-out both; }
+@keyframes lgpKick {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-9deg) translateY(-2px); }
+  60% { transform: rotate(6deg); }
 }
 
 /* 헤더가 스크롤로 접히면 사람들도 같이 사라진다 */

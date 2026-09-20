@@ -271,7 +271,9 @@ function crowdOf(m, outs){
   if(!window.GALLA_PredictCrowd || !outs || !outs.length) return '';
   const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
   const list=outs.map(o=>({ id:o.id, label:o.label, p: tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length) }));
-  return window.GALLA_PredictCrowd.html({ outcomes:list, mid:m.id, max: m.market_type==='multi' ? 4 : 2,
+  /* 상금풀은 갈라가 미리 얹어 둔 씨앗이 있어 0 이 아니다 — 「아직 아무도 안 왔다」의 기준은 참여자 수다(26.9.20) */
+  const joined = outs.reduce((a,o)=>a+(o.bettor_count||0),0);
+  return window.GALLA_PredictCrowd.html({ outcomes:list, mid:m.id, empty: joined<=0, max: m.market_type==='multi' ? 4 : 2,
     resolved: !!m.resolved, winner: m.resolved_outcome_id || (outs.find(o=>o.is_winner)||{}).id || null });
 }
 function oddsBar(m, outs){

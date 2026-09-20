@@ -141,6 +141,7 @@
      「깃발만 고집할 필요 없다, 다지선다가 많아지면 최적화된 걸로」).
      선택지마다 창구 하나에 줄이 서고, 줄 길이가 곧 비율이다. 세로로 쌓이니 20개도 읽힌다. */
   function queueHtml(o, sorted, ranks, rest) {
+    const empty = !!o.empty;
     const rows = sorted.map((oc, i) => {
       const p = Math.round(oc.p || 0);
       const rank = ranks[i];
@@ -153,7 +154,7 @@
         style="--pc-h:${isOtherC ? 220 : hueOf(i)}">
         <span class="pc-qlab pc-lab">${esc(oc.label || "")}</span>
         <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span><i class="pc-desk"></i><span class="pc-folks">${QMAN.repeat(n)}</span></div>
-        <b class="pc-pct">${p}%</b>${isOtherC ? "" : badgeHtml(badgeOf(rank))}
+        <b class="pc-pct">${empty ? "–" : p + "%"}</b>${isOtherC ? "" : badgeHtml(badgeOf(rank))}
       </div>`;
     }).join("");
     return `<div class="pc pc-queue${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
@@ -166,6 +167,10 @@
     o = o || {};
     const all = (o.outcomes || []).filter(Boolean);
     if (!all.length) return "";
+    /* 🈳 아직 아무도 참여하지 않은 판 — 서버가 선택지 수로 똑같이 나눠 준 값(4개면 25%씩)이
+       「비 올 확률 25%」처럼 읽힌다(26.9.20 사장님: 「전국이 맑음인데 왜 비가 와?」).
+       참여가 없으면 숫자를 감추고 전부 같은 자리에 세운다. */
+    const empty = !!o.empty;
     /* 📏 깃발이 너무 많으면 이름표가 사라지고 사람이 뭉개진다(26.9.20 QA: 10개를 폰에 세우면 깃발 폭 21px).
        화면 폭이 허락하는 만큼만 세운다 — 깃발 하나에 최소 62px. */
     const wide = o.width || window.innerWidth || 375;
@@ -199,7 +204,8 @@
     else if (sorted.length > max) { show = sorted.slice(0, Math.max(1, max - 1)); others = sorted.slice(Math.max(1, max - 1)); }
     else { show = sorted; }
 
-    const ranks = ranksOf(show, o.resolved ? { winner: o.winner } : null);
+    const ranks0 = ranksOf(show, o.resolved ? { winner: o.winner } : null);
+    const ranks = empty ? show.map(() => "mid") : ranks0;
     const camp = (oc, i, rank, hue) => {
       const p = Math.round(oc.p || 0);
       const isOtherC = oc.id === "__other";
@@ -215,7 +221,7 @@
         <span class="pc-bub" aria-hidden="true"></span>
         <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank, strong)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
-        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${isOther ? "" : badgeHtml(badgeOf(rank))}</div>
+        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${empty ? "–" : p + "%"}</b>${isOther ? "" : badgeHtml(badgeOf(rank))}</div>
       </div>`;
     };
     let camps = show.map((oc, i) => camp(oc, i, ranks[i], hueOf(all.indexOf(oc)))).join("");

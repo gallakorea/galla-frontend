@@ -24,8 +24,13 @@
 .pc-camp.pc-mine { background: linear-gradient(180deg, rgba(255,209,102,.13), transparent 70%); }
 .pc-camp.pc-mine::before { background: #ffd166; box-shadow: 0 0 10px -1px rgba(255,209,102,.8); }
 
+/* 🎨 사람은 갈라 색(인디고) 하나로 — 우리 사람들이니까. 선택지 구분은 깃발 천이 한다(26.9.20 사장님) */
 .pc-stage { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 0;
   height: 58px; color: var(--pc-c); }
+.pc-folks { color: var(--accent-2, #6f86ff); }
+.pc-camp.pc-mine .pc-folks { color: #ffd166; }            /* 내가 선 자리만 금빛 */
+.pc-camp.pc-won .pc-folks { color: #ffd166; }             /* 적중한 자리도 */
+.pc-camp.pc-lost .pc-folks { color: #7b8496; }
 .pc-camp.pc-mine .pc-stage { color: #ffd98a; }
 /* 가장 붐비는 깃발은 금빛 — 목록 줄도 1등만 금색이라 눈이 같은 곳을 본다 */
 .pc-camp.pc-top:not(.pc-mine) .pc-stage { color: #ffc850; }
@@ -227,6 +232,10 @@
   overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
 .pc-qline { position: relative; display: flex; align-items: flex-end; min-height: 26px; min-width: 0; overflow: hidden;
   color: var(--pc-c); }
+.pc-queue .pc-folks { color: var(--accent-2, #6f86ff); }  /* 줄 선 사람도 갈라 색 */
+.pc-queue .pc-camp.pc-mine .pc-folks { color: #ffd166; }
+.pc-queue .pc-camp.pc-won .pc-folks { color: #ffd166; }
+.pc-queue .pc-camp.pc-lost .pc-folks { color: #7b8496; }
 /* 창구 — 줄이 시작되는 자리 */
 .pc-desk { flex: 0 0 auto; width: 9px; height: 18px; margin-right: 3px; border-radius: 2px; background: currentColor;
   box-shadow: 0 0 8px -2px currentColor; }

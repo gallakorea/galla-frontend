@@ -13,26 +13,41 @@
   if (window.GALLA_LogoPlay) return;                  // 중복 로드 가드(MPA·SPA 양쪽)
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const BODY = (inner) => '<g class="lgp-body" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
-  const HEAD = '<circle cx="12" cy="6.5" r="3.4" fill="currentColor" stroke="none"/>';
+  const BODY = (inner) => '<g class="lgp-body" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">' + inner + '</g>';
+  const HEAD = '<circle cx="12" cy="6.2" r="4.4" fill="currentColor" stroke="none"/>';
   /* 기본 자세 — 서서 꼼지락 */
   const STAND = '<svg class="lgp-one" viewBox="0 0 24 32" aria-hidden="true">' + BODY(
-    HEAD + '<path d="M12 10 L12 19.6"/><path d="M12 12.4 L8.2 17.4"/><path d="M12 12.4 L15.8 17.4"/>' +
-    '<path d="M12 19.6 L8.8 28.6 M12 19.6 L15.2 28.6"/>') + '</svg>';
+    HEAD + '<path d="M12 11 L12 19.8"/><path d="M12 13.4 L6.6 17.8"/><path d="M12 13.4 L17.4 17.8"/>' +
+    '<path d="M12 19.8 L7.4 29 M12 19.8 L16.6 29"/>') + '</svg>';
   /* 매달리기 — 로고 글자 위 선을 잡고 대롱대롱 */
   const HANG = '<svg class="lgp-one lgp-hang" viewBox="0 0 24 32" aria-hidden="true">' + BODY(
-    '<circle cx="12" cy="11" r="3.4" fill="currentColor" stroke="none"/>' +
+    '<circle cx="12" cy="11" r="4.4" fill="currentColor" stroke="none"/>' +
     '<path d="M12 14.4 L12 23"/><path d="M12 14.4 L8.6 6.4 M12 14.4 L15.4 6.4"/>' +
     '<path d="M12 23 L9.2 30 M12 23 L14.8 30"/>') + '</svg>';
   /* 물구나무 */
   const HAND = '<svg class="lgp-one lgp-hand" viewBox="0 0 24 32" aria-hidden="true">' + BODY(
-    '<circle cx="12" cy="25.5" r="3.4" fill="currentColor" stroke="none"/>' +
+    '<circle cx="12" cy="25.5" r="4.4" fill="currentColor" stroke="none"/>' +
     '<path d="M12 22 L12 12.4"/><path d="M12 22 L8.4 28.6 M12 22 L15.6 28.6"/>' +
     '<path d="M12 12.4 L8.6 5.4 M12 12.4 L15.4 5.4"/>') + '</svg>';
 
-  const PARTS = [STAND, STAND, HANG, HAND];
+  /* 🪑 글자 위에 걸터앉기 — 헐리우드 사인에 사람이 앉아 노는 그림(26.9.20 사장님).
+     엉덩이가 글자 윗선에 닿고 다리는 아래로 늘어뜨려 흔든다. */
+  const SIT = '<svg class="lgp-one lgp-sit" viewBox="0 0 24 32" aria-hidden="true">' + BODY(
+    '<circle cx="11" cy="7.4" r="4.4" fill="currentColor" stroke="none"/>' +
+    '<path d="M11 12 L11.5 19"/>' +
+    '<path d="M11.2 14.4 L16.6 16.6"/>' +           // 한 팔은 짚고
+    '<path d="M11.2 14.8 L6.2 17.6"/>' +           // 한 팔은 무릎에
+    '<g class="lgp-legs"><path d="M11.5 19 L9 27.6 M11.5 19 L14.6 27.2"/></g>') + '</svg>';
+  /* 🧗 글자를 기어오른다 — 팔다리를 벌려 매달리듯 붙어 위아래로 조금씩 오른다 */
+  const CLIMB = '<svg class="lgp-one lgp-climb" viewBox="0 0 24 32" aria-hidden="true">' + BODY(
+    '<circle cx="12" cy="7" r="4.4" fill="currentColor" stroke="none"/>' +
+    '<path d="M12 11.6 L12 21"/>' +
+    '<path d="M12 13.6 L6.4 9.6"/><path d="M12 14.6 L17.8 11"/>' +
+    '<path d="M12 21 L7 26.4"/><path d="M12 21 L17 27.2"/>') + '</svg>';
+
+  const PARTS = [CLIMB, SIT, HANG, STAND];
   /* 장난 — 순서대로 돌지 않고 섞어 뽑는다(같은 장난이 연달아 보이면 금방 질린다) */
-  const TRICKS = ["lgp-run", "lgp-jump", "lgp-slide", "lgp-spin", "lgp-push", "lgp-trip", "lgp-wave"];
+  const TRICKS = ["lgp-run", "lgp-jump", "lgp-slide", "lgp-spin", "lgp-push", "lgp-trip", "lgp-wave", "lgp-up", "lgp-drop", "lgp-kick"];
 
   let wrap = null, timer = null, host = null;
 
