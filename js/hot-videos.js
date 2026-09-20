@@ -300,11 +300,24 @@
   function watchHero(root) {
     const hero = (root || document).querySelector(".hv-hero-auto");
     if (heroIO) { heroIO.disconnect(); heroIO = null; }
-    if (!hero || !("IntersectionObserver" in window)) return;
-    heroIO = new IntersectionObserver((ents) => {
-      ents.forEach((e) => { if (e.isIntersecting && e.intersectionRatio > .6) heroOn(hero); else heroOff(hero); });
-    }, { threshold: [0, .6, 1] });
-    heroIO.observe(hero);
+    if (!hero) return;
+    /* 이미 화면 안에 있으면 바로 튼다 — 관찰자만 믿으면 탭을 열자마자 보이는 경우를 놓쳐
+       스크롤을 한 번 해야 재생됐다(26.9.20 에뮬 QA). */
+    const check = () => {
+      const r = hero.getBoundingClientRect();
+      const vh = window.innerHeight || 800;
+      const vis = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / (r.height || 1);
+      if (vis > .6) heroOn(hero); else heroOff(hero);
+    };
+    check();
+    setTimeout(check, 600);
+    setTimeout(check, 1600);
+    if ("IntersectionObserver" in window) {
+      heroIO = new IntersectionObserver((ents) => {
+        ents.forEach((e) => { if (e.isIntersecting && e.intersectionRatio > .6) heroOn(hero); else heroOff(hero); });
+      }, { threshold: [0, .6, 1] });
+      heroIO.observe(hero);
+    }
     document.addEventListener("visibilitychange", () => { if (document.hidden) heroOff(hero); }, { once: true });
   }
   /* 다른 판(릴스·상세)이 열리면 조용히 — 전역 소리 모듈이 부르는 신호 */
