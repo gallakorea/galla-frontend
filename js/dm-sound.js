@@ -71,6 +71,29 @@
 
   /* 수신 벨소리(루프) — 갈라 시그니처: 서브thump + E5→G5→B5 상승 모티프('링에 등장').
      2.2초 주기 반복. 배틀 에너지지만 과하지 않게. */
+  /* 🔕 즉시 침묵 — 타이머만 끄면 '이미 예약된' 오실레이터가 끝까지 울린다.
+     받기를 눌렀는데도 벨이 계속 나던 진짜 이유 중 하나(26.9.21 사장님 「폰의 소리도 옛날거였음」).
+     그래서 벨을 끌 땐 ①타이머 정리 ②마스터를 즉시 0으로 떨어뜨려 예약분까지 죽이고
+     ③_silent 로 늦게 들어온 콜백까지 막은 뒤, 잠시 후 음량을 되살린다(다음 소리는 정상). */
+  let _silent = false, _unmuteT = null;
+  function unmuteNow() {
+    clearTimeout(_unmuteT); _silent = false;
+    try { const c = ac(); if (c && master) { master.gain.cancelScheduledValues(c.currentTime); master.gain.setValueAtTime(0.9, c.currentTime); } } catch (_) {}
+  }
+  function hardMute() {
+    _silent = true;
+    try {
+      const c = ctx; if (!c || !master) return;
+      const t = c.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(0.0001, t);
+    } catch (_) {}
+    clearTimeout(_unmuteT);
+    _unmuteT = setTimeout(() => {
+      _silent = false;
+      try { if (master && ctx) master.gain.setValueAtTime(0.9, ctx.currentTime); } catch (_) {}
+    }, 900);
+  }
   let ringInT = null;
   function ringInMotif() {
     sub(0, 150, 0.11);
@@ -79,16 +102,16 @@
     voice(N.B5, 0.30, 0.34, { gain: 0.17, cutoff: 3200 });
     voice(N.E6, 0.30, 0.34, { gain: 0.06, cutoff: 4000, detune: -6 });  // 옥타브 배음 반짝
   }
-  function ringInStart() { ringInStop(); try { ringInMotif(); } catch (_) {} ringInT = setInterval(() => { try { ringInMotif(); } catch (_) {} }, 2200); }
-  function ringInStop() { if (ringInT) { clearInterval(ringInT); ringInT = null; } }
+  function ringInStart() { ringInStop(); unmuteNow(); try { ringInMotif(); } catch (_) {} ringInT = setInterval(() => { if (_silent) return; try { ringInMotif(); } catch (_) {} }, 2200); }
+  function ringInStop() { if (ringInT) { clearInterval(ringInT); ringInT = null; } hardMute(); }
 
   /* 발신 링백 — 차분한 인디고 2음 펄스(연결 대기), 3초 주기 */
   let ringOutT = null;
   function ringOutMotif() { voice(N.E5, 0, 0.5, { gain: 0.08, cutoff: 1600 }); voice(N.B5, 0, 0.5, { gain: 0.05, cutoff: 2000 }); }
-  function ringOutStart() { ringOutStop(); try { ringOutMotif(); } catch (_) {} ringOutT = setInterval(() => { try { ringOutMotif(); } catch (_) {} }, 3000); }
-  function ringOutStop() { if (ringOutT) { clearInterval(ringOutT); ringOutT = null; } }
+  function ringOutStart() { ringOutStop(); unmuteNow(); try { ringOutMotif(); } catch (_) {} ringOutT = setInterval(() => { if (_silent) return; try { ringOutMotif(); } catch (_) {} }, 3000); }
+  function ringOutStop() { if (ringOutT) { clearInterval(ringOutT); ringOutT = null; } hardMute(); }
 
   // 🔬 진단 — 링백/벨 무음 원인 추적용. ctx 상태(running/suspended/interrupted/closed/none)를 노출.
   function debugState() { try { return (ctx ? ctx.state : 'none') + (_callHold ? '/hold' : ''); } catch (_) { return 'err'; } }
-  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock, suspendForCall, resumeAfterCall, debugState };
+  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock, suspendForCall, resumeAfterCall, debugState, hardMute };
 })();

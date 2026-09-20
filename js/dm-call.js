@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=080325'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=0930100'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -280,8 +280,9 @@
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
       try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화 suspend 해제(벨 무음 방지)
-      try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
-      startRingHaptic();                                       // 📳 진동 링
+      armRings();
+      try { if (!_ringDead) window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
+      if (!_ringDead) startRingHaptic();                                       // 📳 진동 링
       ringT = setTimeout(() => endCall('timeout'), 40000);
       // 🔬 자가 테스트 '자동 수신' 모드 — CallKit 탭 없이 벨 뜨면 바로 수락(디버그 전용)
       if (_ctMode === 'accept') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting) accept('selftest'); } catch (_) {} }, 900); }
@@ -315,7 +316,10 @@
     }
     if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }   // 🔬 QA 배너 동기화(수신폰에도 같은 단계 표시)
     if (p.t === 'accepted') {
-      // 📞 상대가 '받기'를 누른 순간. Agora면 발신자도 이제 채널 join(→ 양쪽 미디어 연결).
+      /* 📞 상대가 '받기'를 누른 순간 — 무슨 상태든 링백부터 끈다.
+         예전엔 '아직 연결 전'일 때만 껐는데, 연결이 먼저 잡힌 통화에선 그 분기를 건너뛰어
+         받은 뒤에도 거는 쪽에서 링백이 계속 울렸다(26.9.21 사장님). */
+      stopRings();
       if (CUR.dir === 'out') {
         if (AGORA) { clearTimeout(ringT); agoraConnect(CUR); return; }
         try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
@@ -599,6 +603,7 @@
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     _nativeCall({ action: 'ringSession' });   // 📞 발신 벨 동안 .playback 세션(무음스위치 무시) → 링백이 무음모드서도 울림(카톡식)
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
+    armRings();
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
     if (!AGORA) {
     const o = await pc.createOffer();
@@ -724,9 +729,10 @@
     CUR._accepting = true;
     /* 🔕 벨부터 끈다 — 연결이 끝나길 기다리면 그 사이(실측 4초) 계속 울린다(26.9.21 사장님).
        받기를 누른 순간이 「이 통화는 내가 받는다」가 확정되는 지점이므로, 여기서 바로 끊는 게 맞다. */
-    try { window.GALLA_SFX?.ringInStop?.(); } catch (_) {}
-    stopRingHaptic();
+    stopRings();          // 🔕 웹 벨 + 예약된 소리 + 진동까지 한 번에, 그리고 몇 초간 반복해서
     ringOffNative(via);
+    // 📞 네이티브 벨(CallKit)도 늦게 도착한 VoIP 푸시가 다시 울릴 수 있다 — 잠깐 동안 다시 알린다.
+    [800, 2000].forEach(d => setTimeout(() => { try { if (CUR) ringOffNative(via); } catch (_) {} }, d));
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게). 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) { wb('ACC abort not-app'); CUR._accepting = false; return appOnlyNotice(); }
     clearTimeout(ringT);
@@ -839,7 +845,23 @@
       _nativeCall({ action: 'answered', callId: cid });
     } catch (_) {}
   }
-  function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
+  /* 🔕 벨·링백 정지 — 한 번 끄고 끝내지 않는다.
+     받았는데도 계속 울린 결함(26.9.21 사장님)은 '끄는 순간' 이후에 늦게 도착한 신호·재시도가
+     다시 소리를 내던 것이라, 껐다는 사실을 _ringDead 로 못 박고 잠시 동안 반복해서 끈다.
+     네이티브(CallKit) 벨도 같이 끊는다 — 소리의 출처가 웹인지 iOS 인지 매번 따지느니 둘 다 끈다. */
+  let _ringDead = false, _ringKillT = [];
+  function killAudioRing() {
+    try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); window.GALLA_SFX?.hardMute?.(); } catch (_) {}
+    stopRingHaptic();
+  }
+  function stopRings() {
+    _ringDead = true;
+    killAudioRing();
+    _ringKillT.forEach(clearTimeout); _ringKillT = [];
+    [250, 700, 1500, 3000].forEach(d => _ringKillT.push(setTimeout(killAudioRing, d)));
+  }
+  // 새 통화가 시작될 때만 벨 금지를 푼다
+  function armRings() { _ringDead = false; _ringKillT.forEach(clearTimeout); _ringKillT = []; }
   // 📞 네이티브 CallKit 콜 종료 신호 — 웹 통화가 끝나면 CallKit UI도 내려야(수신자에 통화 잔류 방지).
   //    커스텀 URL 스킴을 숨김 iframe으로 열어 AppDelegate에 알린다(메인 프레임 이동 없음).
   function _nativeCall(payload) {
@@ -1122,6 +1144,7 @@
     }
   }
   function startTimer() {
+    stopRings();   // 🔕 통화 시간이 가기 시작하면 벨·링백은 끝 — 어느 경로로 연결됐든 여기서 확실히 끊는다
     t0 = Date.now();
     clearInterval(timerT);
     timerT = setInterval(() => {
