@@ -253,10 +253,14 @@ function multiRows(m, outs){
   const tot=outs.reduce((a,o)=>a+(o.pool_gp||0),0);
   const rows=outs.slice().sort((a,b)=>(b.pool_gp||0)-(a.pool_gp||0));
   const top=rows.slice(0,4);
+  /* 🥇 1등 줄 금색은 「확실히 앞설 때만」 — 25% 대 19% 인데 한 줄만 금색이면 미는 것처럼 보인다(26.9.20 사장님) */
+  const pcts=rows.map(o=>tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length));
+  const hiP=Math.max(...pcts, 0), second=pcts.length>1?pcts.slice().sort((a,b)=>b-a)[1]:hiP;
+  const leadOK = tot>0 && (hiP-second)>=8 && pcts.filter(x=>x===hiP).length===1;
   return `<div class="pm-multi">${top.map((o,i)=>{
     const p=tot>0?Math.round((o.pool_gp||0)/tot*100):Math.round(100/outs.length);
     const od=oddsOf(m,o);
-    return `<div class="pm-mrow" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
+    return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span><span class="pm-mx">×${od?od.toFixed(2):'–'}</span></div>`;
   }).join('')}${rows.length>4?`<div class="pm-mmore">+${rows.length-4}개 선택지</div>`:''}</div>`;
 }
 /* 🏳️ 깃발 진영(26.9.20 사장님: 「예측에도 사람들이 호객하고 싸우는 애니메이션·말풍선」)

@@ -238,10 +238,14 @@ function renderHero(){
   /* 🎯 다지선다는 두 칸 막대로 그리면 앞의 두 선택지만 50:50 처럼 보였다(26.9.19 사장님 캡처) — 선택지별 줄로 */
   const allTot=outs.reduce((a,o)=>a+(o.pool||0),0);
   const bars = isMulti()
-    ? `<div class="pb-mrows">${outs.slice().sort((a,b)=>(b.pool||0)-(a.pool||0)).map((o,i)=>{
-        const p=allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/outs.length);
-        return `<div class="pm-mrow" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span></div>`;
-      }).join('')}</div>`
+    ? (()=>{ const sortedOuts=outs.slice().sort((a,b)=>(b.pool||0)-(a.pool||0));
+        const pcts=sortedOuts.map(o=>allTot>0?Math.round((o.pool||0)/allTot*100):Math.round(100/outs.length));
+        /* 1등 금색은 확실히 앞설 때만(26.9.20 사장님) */
+        const leadOK=allTot>0 && pcts.length>1 && (pcts[0]-pcts[1])>=8;
+        return `<div class="pb-mrows">${sortedOuts.map((o,i)=>{
+          const p=pcts[i];
+          return `<div class="pm-mrow${leadOK&&i===0?' pm-lead':''}" style="--p:${p}%;--i:${i}"><span class="pm-mlab">${esc(o.label)}</span><span class="pm-mpct">${p}%</span></div>`;
+        }).join('')}</div>`; })()
     : `<div class="pm-odds">
       <div class="pm-odds-bar" style="height:40px">
         <div class="pm-odds-side yes shine" style="width:${Math.max(16,Math.min(84,yp))}%"><span class="lab">${esc(yes?.label||'예')} ${yp}%</span></div>

@@ -83,8 +83,9 @@
     '<path class="pc-cloth" d="M4 3.4 C9 1.4 13 5.4 19 3.4 L19 12 C13 14 9 10 4 12 Z" fill="currentColor"/>' +
   '</svg>';
 
-  /* 🎨 색은 「어느 선택지냐」가 아니라 「판세가 어떠냐」다(26.9.20 사장님: 「비율은 같은데 왜 하나만 다른 색이야 —
-     밀어주는 느낌이잖아」). 동률이면 전부 같은 색이고, 차이가 벌어져야 색이 갈린다. 색은 CSS 가 등급별로 준다. */
+  /* 선택지 색 — 깃발마다 다른 색(사장님: 사람·깃발은 원래대로). 판세는 딱지(유력·경합)와 높낮이가 말한다. */
+  const HUES = [212, 344, 152, 38, 276, 190, 18, 96];
+  const hueOf = (i) => HUES[i % HUES.length];
 
   /* 사람 수 = 비율(0~100) → 2~10명. 0% 라도 깃발지기 한 명은 남는다(텅 빈 깃발 대사가 살아야 한다).
      26.9.20 사장님: 「비율에 따라 사람 숫자가 더 늘어나는 구조로」 — 1등과 꼴찌의 머릿수 차이가 한눈에 보이게 폭을 넓혔다. */
@@ -142,7 +143,7 @@
       const rank = ranks[i];
       /* flex 비중을 비율에 맞춰 — 붐비는 깃발이 자리를 더 차지한다(몰림이 눈에 보이게, 최소 폭은 보장) */
       return `<div class="pc-camp pc-${rank}${mine ? " pc-mine" : ""}" data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}"
-        data-label="${esc(oc.label || "")}" style="--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
+        data-label="${esc(oc.label || "")}" style="--pc-h:${hueOf(all.indexOf(oc))};--pc-fh:${flagH(p)}px;flex:${Math.max(1, p) + 14} 1 0">
         <span class="pc-bub" aria-hidden="true"></span>
         <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>

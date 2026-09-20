@@ -13,14 +13,10 @@
 
 .pc-camp { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center;
   padding: 2px 2px 0; border-radius: 10px; transition: flex .5s cubic-bezier(.3,.7,.3,1), background .3s; }
-/* 🎨 색 = 판세. 동률이면 모두 같은 색, 차이가 벌어져야 갈린다(26.9.20 사장님)
-   기본(mid) 은 중립 은빛, 경합은 푸른빛, 유력·적중은 금빛, 열세·탈락은 탁한 회색. */
-.pc-camp { --pc-c: #aab3c5; }
-.pc-camp.pc-tie  { --pc-c: #8fb4ff; }
-.pc-camp.pc-top  { --pc-c: #ffc850; }
-.pc-camp.pc-low  { --pc-c: #6d7789; }
+/* 깃발 색은 선택지마다(--pc-h). 판세는 높낮이·사람 수·딱지가 말한다 — 색으로 편들지 않는다. */
+.pc-camp { --pc-c: hsl(var(--pc-h, 212) 78% 68%); }
 .pc-camp.pc-won  { --pc-c: #ffd166; }
-.pc-camp.pc-lost { --pc-c: #6d7789; }
+.pc-camp.pc-lost { --pc-c: #7b8496; }
 .pc-camp::before { content: ""; position: absolute; inset: auto 6px 4px; height: 3px; border-radius: 3px;
   background: color-mix(in srgb, var(--pc-c) 60%, transparent); }
 
@@ -123,12 +119,13 @@
 /* 라벨·퍼센트 */
 /* 라벨 줄 — 카드 배경(사진)이 비쳐 글씨가 묻히던 것(26.9.20 사장님: 「뒤에 글자가 잘 안 보이네」).
    어두운 알약을 깔고 글자를 키웠다. */
-.pc-meta { display: flex; align-items: center; gap: 4px; max-width: 100%; margin-top: 4px; padding: 2px 6px;
-  border-radius: 8px; background: rgba(8,10,14,.72); backdrop-filter: blur(3px); }
-.pc-lab { font-size: 11px; font-weight: 800; color: #eef2fa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0,0,0,.9); }
-.pc-pct { font-size: 12px; font-weight: 900; color: var(--pc-c); flex: 0 0 auto;
-  text-shadow: 0 1px 2px rgba(0,0,0,.9); font-variant-numeric: tabular-nums; }
+.pc-meta { display: flex; align-items: center; gap: 5px; max-width: 100%; margin-top: 4px; padding: 3px 7px;
+  border-radius: 9px; background: rgba(5,7,11,.88); box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 2px 8px -4px #000;
+  backdrop-filter: blur(4px); }
+.pc-lab { font-size: 11.5px; font-weight: 900; letter-spacing: -.2px; color: #fff; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,1); }
+.pc-pct { font-size: 12.5px; font-weight: 900; color: color-mix(in srgb, var(--pc-c) 55%, #fff); flex: 0 0 auto;
+  text-shadow: 0 1px 3px rgba(0,0,0,1); font-variant-numeric: tabular-nums; }
 
 /* 🏷️ 상태 딱지 — 유력 / 경합 / 적중 */
 .pc-badge { flex: 0 0 auto; font-size: 9px; font-weight: 900; letter-spacing: -.2px; padding: 1px 5px; border-radius: 6px;
