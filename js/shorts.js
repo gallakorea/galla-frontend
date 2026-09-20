@@ -489,6 +489,7 @@ function __openShortsInternal(list, startId, startTime, entry, opts) {
   shortsNavHide(true);   // 셸 하단 nav 숨김(릴스는 풀스크린)
   window.__CURRENT_SHORT_ISSUE_ID__ = issueIdOf(shortsList[currentIndex]);   // 숏판이면 null — 투표·댓글이 엉뚱한 이슈로 가지 않게
 
+  if (window.GALLA_hushOutside) { try { window.GALLA_hushOutside(); } catch (_) {} }
   bindGestures();
   bindWheel();
   bindTapControls();
@@ -878,6 +879,14 @@ function releaseFeedVideos() {
   document.querySelectorAll(".card-media video[data-src]").forEach(v => {
     if (v._hlsUrl || v.getAttribute("src")) releaseVideo(v);
   });
+  /* ⚠️ 위 선택자는 '홈 피드 규약을 따르는' 영상만 잡는다 — 캐러셀 영상·다른 화면 영상·제자리 재생 유튜브는 남아
+     릴스 뒤에서 계속 소리를 냈다(26.9.20 사장님: 화면 누르면 소리 겹침). 릴스 밖은 전부 멈추고 음소거한다. */
+  const ov = document.getElementById("shortsOverlay");
+  document.querySelectorAll("video").forEach(v => {
+    if (ov && ov.contains(v)) return;
+    try { v.muted = true; if (!v.paused) v.pause(); } catch (_) {}
+  });
+  if (window.GALLA_stopInlineVideos) { try { window.GALLA_stopInlineVideos(); } catch (_) {} }
 }
 
 /* 진행바: 현재 영상의 재생 위치를 하단 바에 반영 */

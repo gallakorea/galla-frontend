@@ -27,6 +27,23 @@
   const ICON_ON = SVG(`${SPK}<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>`);
   window.GALLA_muteIcon = (muted) => (muted ? ICON_OFF : ICON_ON);
 
+  /* 🔊 지금 소리를 낼 수 있는 화면 = 릴스가 열려 있으면 릴스, 아니면 그 밖(피드).
+     릴스를 열어도 뒤 피드 영상이 살아 있으면, 화면을 누르는 순간(첫 제스처·소리 켜기) 둘 다 소리가 나
+     겹쳐 들렸다(26.9.20 사장님). 바깥 영상은 소리를 주지 않고 멈춘다. */
+  const reelsOverlay = () => document.getElementById("shortsOverlay");
+  function inActiveScope(v) {
+    const ov = reelsOverlay();
+    return ov ? ov.contains(v) : !document.body.classList.contains("shorts-open");
+  }
+  /* 활성 화면 밖 영상은 정지·음소거 — 소리 겹침의 뿌리를 여기서 끊는다 */
+  window.GALLA_hushOutside = function () {
+    document.querySelectorAll("video").forEach(v => {
+      if (inActiveScope(v)) return;
+      try { v.muted = true; if (!v.paused) v.pause(); } catch (_) {}
+    });
+    if (window.GALLA_stopInlineVideos) { try { window.GALLA_stopInlineVideos(); } catch (_) {} }   // 제자리 재생 유튜브(핫튜브)도 함께
+  };
+
   function syncBtn(v) {
     // 알려진 음소거 버튼 아이콘 동기화 (index: mute-<id>, issue: issue-vid-mute)
     const set = (el) => { if (el) el.innerHTML = window.GALLA_muteIcon(v.muted); };
@@ -40,6 +57,7 @@
     sessionStorage.setItem(KEY, on ? "1" : "0");
     window.__REELS_MUTED__ = !on; // 릴스 엔진 브리지
     document.querySelectorAll("video").forEach(v => {
+      if (!inActiveScope(v)) { try { v.muted = true; if (!v.paused) v.pause(); } catch (_) {} syncBtn(v); return; }
       if (on) { if (!v.paused) v.muted = false; }  // 재생 중인 것만 즉시 언뮤트(정책 안전)
       else { v.muted = true; }
       syncBtn(v);
@@ -58,8 +76,9 @@
   function onGesture() {
     if (window.GALLA_gestured) return;
     window.GALLA_gestured = true;
+    window.GALLA_hushOutside();
     if (window.GALLA_soundOn()) {
-      document.querySelectorAll("video").forEach(v => { if (!v.paused) v.muted = false; syncBtn(v); });
+      document.querySelectorAll("video").forEach(v => { if (inActiveScope(v) && !v.paused) v.muted = false; syncBtn(v); });
     }
     document.dispatchEvent(new CustomEvent("galla:gesture"));
   }
