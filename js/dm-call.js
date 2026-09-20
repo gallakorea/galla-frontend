@@ -740,6 +740,7 @@
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
       wb('ACC done preconnect');
+      ringOffNative(via);
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -769,6 +770,7 @@
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
       wb('ACC done fallback');
+      ringOffNative(via);
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -815,6 +817,15 @@
   function stopRingHaptic() {
     if (ringHapT) { clearInterval(ringHapT); ringHapT = null; }
     try { navigator.vibrate && navigator.vibrate(0); } catch (_) {}
+  }
+  /* 🔕 받기가 끝났으면 네이티브에 알려 남은 벨을 끊는다(26.9.21 사장님: 「받았는데 벨소리 계속」).
+     인앱에서 받았으면 그 통화의 CallKit 을 억제하고, CallKit 으로 받았으면 연결됐다고 알린다. */
+  function ringOffNative(via) {
+    try {
+      if (!CUR) return;
+      if (via === 'tap' || via === 'selftest') _nativeCall({ action: 'callHandledInApp', callId: CUR.callId || '' });
+      else _nativeCall({ action: 'answered', callId: CUR.callId || '' });
+    } catch (_) {}
   }
   function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
   // 📞 네이티브 CallKit 콜 종료 신호 — 웹 통화가 끝나면 CallKit UI도 내려야(수신자에 통화 잔류 방지).
@@ -1528,11 +1539,15 @@
     });
   };
   function armCallKitAnswer() {
+    wb('CK arm (offer 대기)');
     callKitPendingAnswer = true;
     if (CUR && CUR.dir === 'in' && !CUR._accepting) { try { accept('arm'); } catch (_) {} }   // offer 이미 와 있으면 즉시 수락
     setTimeout(() => { callKitPendingAnswer = false; }, 45000);   // 콜드스타트 여유(앱 죽은 상태서 깨어나 구독까지)
   }
   window.GALLA_callKitAnswer = function (callerId) {
+    /* 🔬 잠금화면 경로 추적(26.9.21) — 네이티브의 '받기'가 웹까지 왔는지, 그때 통화가 있었는지.
+       이게 안 찍히면 네이티브→웹 전달이 끊긴 것이고, 찍히는데 통화가 없으면 offer 가 아직인 것이다. */
+    wb('CK answer rx cur=' + (CUR ? 1 : 0) + ' dir=' + (CUR && CUR.dir) + ' acc=' + (CUR && CUR._accepting ? 1 : 0));
     // 영속 스태시 — 통화엔진 로드 전에 이 함수가 다른 정의(app-shell 포워더)로 불렸어도 유실 안 되게
     try { window.__ckAnswer = { callerId: callerId || '', at: Date.now() }; } catch (_) {}
     // 이미 offer가 도착해 수신벨이 떠 있으면 바로 수락
