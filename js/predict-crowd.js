@@ -150,6 +150,17 @@
       '<path d="M18 23 L36 27 M19 28 L36 30"/>' +       // 두 팔로 상대를 민다
       '<path d="M20 33 L11 51 M20 33 L28 50"/>' +       // 버틴 다리
     '</g></svg>';
+  /* 🏃 도전자 — 링을 향해 달린다(26.9.20 사장님: 「여기는 달리는 연출은 어때?」).
+     몸을 앞으로 기울이고 팔다리를 교차해 뛴다. 비율이 높을수록 링(오른쪽)에 가까이 가 있다. */
+  const RUNNER = '<svg class="pc-runner" viewBox="0 0 26 26" aria-hidden="true">' +
+    '<g class="pc-runbody" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="15.5" cy="5" r="3.7" fill="currentColor" stroke="none"/>' +
+      '<path d="M14.6 9 L11.6 15.4"/>' +                                   // 앞으로 기운 몸통
+      '<g class="pc-arms"><path d="M13.6 11 L18.8 9.2"/><path d="M13.2 12 L8.4 13.6"/></g>' +
+      '<g class="pc-legs"><path d="M11.6 15.4 L15 22.4"/><path d="M11.6 15.4 L6.2 20.4"/></g>' +
+    '</g>' +
+    '<i></i></svg>';
+
   const qCount2 = (p) => Math.max(1, Math.min(9, Math.round((p || 0) / 100 * 22) || 1));
 
   function duelHtml(o, sorted, ranks, rest) {
@@ -167,16 +178,22 @@
         <div class="pc-vsmeta"><span class="pc-lab">${esc(oc.label || "")}</span><b class="pc-pct">${empty ? "–" : p + "%"}</b>${badgeHtml(badgeOf(rank))}</div>
       </div>`;
     };
+    /* 추격 트랙 — 2위에 얼마나 붙었는지가 달린 거리다(2위와 같아지면 링 앞) */
+    const target = Math.max(1, pb);
     const rows = rest2.map((oc, i) => {
       const p = Math.round(oc.p || 0);
       const isOtherC = oc.id === "__other";
       const mine = o.mine != null && String(o.mine) === String(oc.id);
+      const pos = empty ? 0 : Math.max(0, Math.min(88, Math.round(p / target * 88)));
       return `<div class="pc-camp pc-q pc-mid${mine ? " pc-mine" : ""}${isOtherC ? " pc-other" : ""}${i === 0 ? " pc-next" : ""}"
         data-oc="${esc(oc.id)}" data-p="${p}" data-rank="mid" data-strong="0" data-label="${esc(oc.label || "")}"
         style="--pc-h:${isOtherC ? 220 : hueOf(i + 2)}">
         <span class="pc-qno">${i + 3}</span>
         <span class="pc-qlab pc-lab">${esc(oc.label || "")}</span>
-        <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span><span class="pc-folks">${QMAN.repeat(isOtherC ? 2 : qCount2(p))}</span></div>
+        <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span>
+          <i class="pc-track"></i>
+          <span class="pc-folks" style="left:${pos}%">${RUNNER.repeat(isOtherC ? 1 : Math.min(3, qCount2(p)))}</span>
+        </div>
         <b class="pc-pct">${empty ? "–" : p + "%"}</b>
       </div>`;
     }).join("");
@@ -268,10 +285,57 @@
   /* 컨테이너에 붙이기 — 이후 update 로 숫자만 갈아끼운다 */
   function mount(el, o) { if (!el) return; el.innerHTML = html(o); }
 
+  /* 맞대결 판 갱신 — 순위가 바뀌면 링에 오르는 얼굴까지 바뀌므로 통째로 다시 그린다.
+     숫자만 바뀐 경우(같은 1·2위)는 퍼센트·매듭·달린 거리만 손본다. */
+  function updateDuel(root, outcomes, mine, done) {
+    const list = (outcomes || []).slice().sort((a, b) => (b.p || 0) - (a.p || 0));
+    if (list.length < 2) return;
+    const sides = [...root.querySelectorAll(".pc-side")];
+    const sameTop = sides.length === 2 && String(sides[0].dataset.oc) === String(list[0].id) && String(sides[1].dataset.oc) === String(list[1].id);
+    if (!sameTop) {
+      const o = { outcomes: list, mine, mid: root.dataset.mid, resolved: !!(done && done.winner != null), winner: done && done.winner };
+      const box = document.createElement("div");
+      box.innerHTML = html(o);
+      const fresh = box.firstElementChild;
+      if (fresh) root.replaceWith(fresh);
+      return;
+    }
+    const empty = list.every(x => !(x.p > 0));
+    const pa = Math.round(list[0].p || 0), pb = Math.round(list[1].p || 0);
+    const k = (pa + pb) > 0 ? Math.round(pa / (pa + pb) * 100) : 50;
+    const ranks = ranksOf(list, done && done.winner != null ? done : null);
+    [pa, pb].forEach((p, i) => {
+      const el = sides[i]; if (!el) return;
+      el.dataset.p = p; el.dataset.rank = ranks[i];
+      el.classList.remove("pc-top", "pc-tie", "pc-mid", "pc-low", "pc-won", "pc-lost");
+      el.classList.add("pc-" + ranks[i]);
+      const pct = el.querySelector(".pc-pct"); if (pct) pct.textContent = empty ? "–" : p + "%";
+      const meta = el.querySelector(".pc-vsmeta");
+      if (meta) { const b = meta.querySelector(".pc-badge"); if (b) b.remove(); const bh = badgeHtml(badgeOf(ranks[i])); if (bh) meta.insertAdjacentHTML("beforeend", bh); }
+      el.classList.toggle("pc-mine", mine != null && String(mine) === String(list[i].id));
+    });
+    const bar = root.querySelector(".pc-vsbar");
+    if (bar) bar.style.setProperty("--pc-k", (empty ? 50 : k) + "%");
+    /* 추격 트랙 — 2위에 붙을수록 링 가까이 */
+    const target = Math.max(1, pb);
+    list.slice(2).forEach((oc) => {
+      const row = root.querySelector(`.pc-camp[data-oc="${CSS.escape(String(oc.id))}"]`);
+      if (!row) return;
+      const p = Math.round(oc.p || 0);
+      row.dataset.p = p;
+      const pct = row.querySelector(".pc-pct"); if (pct) pct.textContent = empty ? "–" : p + "%";
+      const run = row.querySelector(".pc-folks");
+      if (run) run.style.left = (empty ? 0 : Math.max(0, Math.min(88, Math.round(p / target * 88)))) + "%";
+      row.classList.toggle("pc-mine", mine != null && String(mine) === String(oc.id));
+    });
+  }
+
   /* 비율이 바뀌면 사람 수·폭·퍼센트를 따라가게 한다(상세는 30초마다 새로 읽는다) */
   function update(root, outcomes, mine, done) {
     if (!root) return;
     if (done && done.winner != null) root.classList.add("pc-done");
+    /* ⚔️ 맞대결 판은 구조가 달라 따로 갱신한다 — 링 위 둘, 매듭, 추격 트랙 위치(26.9.20) */
+    if (root.classList.contains("pc-duel")) return updateDuel(root, outcomes, mine, done);
     /* 순위가 바뀌면 몸짓도 바뀐다 — 앞서면 파티, 크게 밀리면 울음, 팽팽하면 다 같이 파이팅(26.9.20) */
     const list = (outcomes || []).slice();
     const rk = ranksOf(list, done);

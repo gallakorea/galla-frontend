@@ -305,16 +305,31 @@
 .pc-qno { font-size: 10.5px; font-weight: 900; color: #8b93a7; text-align: right; }
 .pc-duel .pc-qlab { font-size: 11.5px; font-weight: 900; color: #e8ecf5; text-align: right;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
-.pc-duel .pc-qline { position: relative; display: flex; align-items: flex-end; min-height: 22px; min-width: 0;
-  overflow: hidden; color: var(--accent-2, #6f86ff); }
+/* 🏃 추격 트랙 — 도전자가 링(오른쪽)을 향해 달린다. 2위에 붙을수록 앞으로 간다(26.9.20 사장님) */
+.pc-duel .pc-qline { position: relative; height: 26px; min-width: 0; overflow: hidden; color: var(--accent-2, #6f86ff); }
+.pc-track { position: absolute; left: 0; right: 0; bottom: 3px; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.22)); }
+.pc-duel .pc-folks { position: absolute; bottom: 1px; display: flex; align-items: flex-end;
+  transition: left .8s cubic-bezier(.3,.7,.3,1); }
+.pc-runner { width: 22px; height: 22px; margin-left: -6px; flex: 0 0 auto; overflow: visible; }
+.pc-runner:first-child { margin-left: 0; }
+.pc-runbody { animation: pcRunBob .42s ease-in-out infinite alternate; transform-origin: 13px 22px; }
+.pc-runner:nth-child(2) .pc-runbody { animation-delay: .1s; }
+.pc-runner:nth-child(3) .pc-runbody { animation-delay: .21s; }
+@keyframes pcRunBob { from { transform: translateY(0) rotate(-1deg); } to { transform: translateY(-2px) rotate(2deg); } }
+.pc-runner .pc-legs { transform-origin: 11.6px 15.4px; animation: pcStride .42s ease-in-out infinite alternate; }
+.pc-runner .pc-arms { transform-origin: 13.4px 11.5px; animation: pcStride .42s ease-in-out infinite alternate-reverse; }
+@keyframes pcStride { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+/* 발밑 먼지 */
+.pc-runner i { position: absolute; left: -4px; bottom: 1px; width: 7px; height: 2px; border-radius: 2px;
+  background: currentColor; opacity: 0; animation: pcDust .42s linear infinite; }
+@keyframes pcDust { 0% { opacity: .5; transform: translateX(0) scaleX(1); } 100% { opacity: 0; transform: translateX(-8px) scaleX(.5); } }
+/* 바로 다음 차례는 더 빨리 달린다 */
+.pc-duel .pc-next .pc-runbody, .pc-duel .pc-next .pc-legs, .pc-duel .pc-next .pc-arms { animation-duration: .3s; }
 .pc-duel .pc-camp.pc-mine .pc-qline { color: #ffd166; }
 .pc-duel .pc-camp.pc-other .pc-qline { color: #98a1b3; }
 .pc-duel .pc-pct { font-size: 12px; min-width: 34px; text-align: right; color: #cfd6e6; }
 .pc-duel .pc-camp.pc-mine .pc-qlab { color: #ffd166; }
-/* 바로 다음 차례(3위)는 몸을 푼다 — 곧 링에 오를 사람 */
-.pc-duel .pc-next .pc-qman { animation: pcWarm .8s ease-in-out infinite alternate; }
-.pc-duel .pc-next .pc-qman:nth-child(2n) { animation-delay: .2s; }
-@keyframes pcWarm { from { transform: translateY(0); } to { transform: translateY(-2.5px); } }
 /* 정산이 끝난 판 — 진 쪽은 회색 */
 .pc-duel.pc-done .pc-side.pc-lost { filter: grayscale(.6) brightness(.8); }
 .pc-duel.pc-done .pc-side.pc-won { color: #ffd166; }
@@ -324,5 +339,5 @@
 .pc-duel .pc-camp.pc-talk .pc-bub, .pc-side.pc-talk .pc-bub { animation-name: pcBubOnceL; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pc-vsbody, .pc-vs, .pc-vsknot, .pc-duel .pc-next .pc-qman { animation: none !important; }
+  .pc-vsbody, .pc-vs, .pc-vsknot, .pc-runbody, .pc-runner .pc-legs, .pc-runner .pc-arms, .pc-runner i { animation: none !important; }
 }
