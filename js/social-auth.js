@@ -12,6 +12,11 @@
     return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   }
   const NATIVE_REDIRECT = "im.galla.app://auth-callback";
+  /* 🖥 갈라톡 PC(데스크톱 셸) — 앱 안에서 구글 로그인 화면을 띄우면 구글이 막는다
+     ("브라우저 또는 앱이 안전하지 않을 수 있습니다", 26.9.21 사장님 제보).
+     그래서 모바일 앱과 같은 길로 간다: 기본 브라우저로 열고 im.galla.app:// 딥링크로 복귀.
+     이 분기는 PC 앱에서만 켜진다(window.gallaDesktop 은 그 앱 안에만 있다). */
+  const isDesktopApp = () => !!(window.gallaDesktop && window.gallaDesktop.isDesktop);
 
   // 딥링크 복귀 리스너 — OAuth 끝나고 im.galla.app://auth-callback?code=... 로 앱이 열리면 세션 확립
   let _nativeAuthListener = false;
@@ -123,6 +128,15 @@
     try {
       // 매번 계정 선택 화면 강제 → 다른 구글 계정 선택/추가 가능(안 그러면 같은 계정으로 자동로그인)
       const qp = { prompt: "select_account" };
+      // 갈라톡 PC: 기본 브라우저로 열고 딥링크(im.galla.app://auth-callback)로 복귀
+      if (isDesktopApp()) {
+        const { data, error } = await c.auth.signInWithOAuth({
+          provider, options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true, queryParams: qp },
+        });
+        if (error) throw error;
+        if (data?.url) window.gallaDesktop.openExternal(data.url);
+        return;
+      }
       // 네이티브 앱: 인앱 브라우저로 열고 딥링크로 복귀(사파리로 안 튐)
       if (isNativeApp()) {
         setupNativeAuthListener();
@@ -139,6 +153,8 @@
     } catch (e) { alert("로그인 실패 — " + (e?.message || "잠시 후 다시 시도해 주세요.")); }
   }
   window.GALLA_signInSocial = signInSocial;
+  /* 갈라톡 PC 셸이 브라우저에서 돌아온 딥링크를 여기로 넘긴다(모바일의 appUrlOpen 자리) */
+  window.GALLA_handleAuthUrl = handleAuthUrl;
 
   /* ══════════ 🟢 네이버 로그인 (커스텀 — Supabase 기본 provider 아님) ══════════
      흐름: naver-auth(action:authorize)로 인가URL 발급(client_id는 서버 보관) → 네이버 동의 →
@@ -327,7 +343,7 @@
       (androidApp ? '' :
       '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
       '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
-    if (hasPasskey())
+    if (hasPasskey() && !isDesktopApp())
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);
