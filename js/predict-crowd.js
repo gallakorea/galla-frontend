@@ -280,6 +280,7 @@
     return `<div class="pc${o.resolved ? " pc-done" : ""}${o.scroll ? " pc-scroll" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
       <div class="pc-ground">${camps}</div>
       ${others.length ? `<div class="pc-rest">기타 ${others.length}곳은 아래 목록에서</div>` : ""}
+      ${empty ? `<div class="pc-empty-note">아직 아무도 안 왔어요 — <b>지금 비율은 똑같이 나눈 값</b></div>` : ""}
     </div>`;
   }
 
