@@ -57,6 +57,9 @@ function applySoundPref(vid) {
 function playWithSound(vid) {
     if (!vid.paused) { applySoundPref(vid); return; }   // 이미 재생 중이어도 소리는 이어준다
     vid.muted = true;                     // 항상 음소거로 시작 → iOS 자동재생 허용(리젝트/재시도 없음)
+    /* 🔊 소리는 '재생이 실제로 시작되는 순간' 바로 켠다 — play() 약속만 기다리면 버퍼링이 끝난 뒤에야
+       풀려서, 빠르게 스크롤할 때 소리가 한참 늦게 따라왔다(26.9.20 사장님: 「못 쫓아옴」). */
+    vid.addEventListener('playing', () => applySoundPref(vid), { once: true });
     const p = vid.play();
     if (p && typeof p.then === 'function') {
         p.then(() => applySoundPref(vid)).catch(() => {});
@@ -162,18 +165,28 @@ function ensureFeedVideoFallback() {
             if (v.classList.contains('carousel-vid')) return;   // 캐러셀 영상=syncCarouselVideos 전담
             const r = v.getBoundingClientRect();
             if (!r.height) return;
-            if (r.top < vh + 700 && r.bottom > -700) ensureVideoSrc(v);        // 넉넉히 미리 버퍼(깜빡임 방지)
+            if (r.top < vh + 1100 && r.bottom > -800) ensureVideoSrc(v);       // 넉넉히 미리 버퍼(빠른 스크롤에서 늦게 시작하던 것)
             const ratio = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
             // 화면 밖(35% 미만)만 정지 — 보이는 영상은 건드리지 않아 깜빡임 없음
             if (ratio < 0.35) { if (!v.paused) v.pause(); }
             if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
         });
-        if (best && best.paused && !document.body.classList.contains('shorts-open')) playWithSound(best);
+        if (best && !document.body.classList.contains('shorts-open')) {
+            if (best.paused) playWithSound(best);
+            else applySoundPref(best);        // 이미 재생 중인 영상으로 스크롤해 왔으면 소리를 바로 옮긴다
+        }
         syncCarouselVideos();
     };
     if (!__feedVideoFallbackBound) {
         __feedVideoFallbackBound = true;
-        let t; const onScroll = () => { clearTimeout(t); t = setTimeout(sweep, 100); };
+        /* 스크롤 중에도 바로 한 번(150ms 간격), 멈춘 뒤 한 번 더 — 예전엔 멈춘 뒤 100ms 에만 돌아
+           빠르게 내리면 재생·소리가 늦게 따라왔다(26.9.20) */
+        let t, last = 0;
+        const onScroll = () => {
+            const now = Date.now();
+            if (now - last > 150) { last = now; sweep(); }
+            clearTimeout(t); t = setTimeout(() => { last = Date.now(); sweep(); }, 90);
+        };
         // capture: SPA에선 .view-host 내부 스크롤이 window로 버블되지 않음 — 캡처로 잡는다(MPA 동작 동일)
         window.addEventListener('scroll', onScroll, { passive: true, capture: true });
         window.addEventListener('resize', onScroll, { passive: true });
@@ -443,6 +456,19 @@ function renderCard(data) {
     </div>`;
 }
 
+/* 🐢 첫 화면 뒤로 미룬 모듈(릴스 엔진·투표 코어)을 그 전에 눌렀을 때 — 그 자리에서 바로 받아 이어간다.
+   미루기(=홈이 1.4초 빨라짐)의 대가가 '눌렀는데 아무 일도 안 남'이 되면 안 된다(26.9.20). */
+async function ensureModule(kind) {
+    const V = window.GALLA_V ? '?v=' + window.GALLA_V : '';
+    try {
+        if (kind === 'reels' && !window.openShorts && !window.GALLA_openReels) {
+            if (!window.GALLA_ReelPost) { await new Promise((res, rej) => { const el = document.createElement('script'); el.src = '/js/reels-mix.js' + V; el.onload = res; el.onerror = rej; document.head.appendChild(el); }); }
+            await import('/js/shorts.js' + V);
+        }
+        if (kind === 'vote' && typeof window.GALLA_VOTE !== 'function') await import('/js/vote.core.js' + V);
+    } catch (_) {}
+}
+
 /* ===========================
  * 비디오 컨트롤
  * =========================== */
@@ -500,7 +526,11 @@ window.openReels = function (startId) {
     } else if (typeof window.openShorts === 'function') {
         window.openShorts(vids, Number(startId), startTime, 'detail');
     } else {
-        window.GALLA_goto(`issue.html?id=${startId}`);
+        ensureModule('reels').then(() => {
+            if (window.GALLA_openReels) window.GALLA_openReels({ items: vids.map(v => ({ _type: 'issue', ...v })), startType: 'issue', startId: Number(startId), at: startTime, mixPosts: true });
+            else if (typeof window.openShorts === 'function') window.openShorts(vids, Number(startId), startTime, 'detail');
+            else window.GALLA_goto(`issue.html?id=${startId}`);
+        });
     }
 };
 
@@ -846,7 +876,7 @@ function attachEvents() {
             const type = btn.dataset.type;
             const card = btn.closest('.card');
             const id = Number(card.dataset.id);
-            if (typeof window.GALLA_VOTE !== 'function') return;
+            if (typeof window.GALLA_VOTE !== 'function') { await ensureModule('vote'); if (typeof window.GALLA_VOTE !== 'function') return; }
             const gv = card.querySelector('.gv');
             // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정). 셸이면 최상위 이동.
             {
@@ -1211,6 +1241,7 @@ async function loadData() {
 
     // 타 콘텐츠(예측·광장·뉴스·영상·일기토)는 이슈와 독립 — 지금 바로 병렬 시작.
     // (예전엔 이슈 체인이 다 끝난 뒤에야 시작해 첫 렌더가 ~4초까지 밀렸다)
+    const rankP = loadHomeRank();   // 랭킹은 다른 콘텐츠와 '동시에' 시작한다(예전엔 이슈 렌더 뒤에 시작해 1초 늦었다)
     const extrasP = Promise.all([
         loadPredictionCards(),
         loadPlazaCards(),
@@ -1327,7 +1358,7 @@ async function loadData() {
     GALLA_signalReady();
 
     // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
-    Promise.all([extrasP, loadHomeRank().then(m => { RANK = m; })]).then(([[predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards]]) => {
+    Promise.all([extrasP, rankP.then(m => { RANK = m; })]).then(([[predictionCards, plazaCards, newsCards, videoCards, duelCards, gallariCards]]) => {
         feed = interleave(cards, {
             predict: predictionCards, plaza: plazaCards,
             news: newsCards, video: videoCards, duel: duelCards, gallari: gallariCards
@@ -1339,11 +1370,14 @@ async function loadData() {
         const activeChip = IDXROOT.querySelector('.category-section .chip.active');
         const activeCat = activeChip?.dataset?.cat || activeChip?.textContent?.trim() || '전체';
         viewFeed = (activeCat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === activeCat);
-        const shown = rec;
-        rec = 3;
-        if (recommendList) recommendList.innerHTML = '';
-        loadBest();
-        while (rec < shown && viewFeed[rec]) loadRecommend();
+        /* ⚡ 이미 그려진 카드를 살려 둔 채 자리만 맞춘다(영상 재다운로드 방지) */
+        const shown = Math.max(rec, 3);
+        reconcileList(bestList, viewFeed.slice(0, 3));
+        reconcileList(recommendList, viewFeed.slice(3, shown));
+        rec = shown;
+        attachEvents();
+        idxWatchCards(bestList); idxWatchCards(recommendList); idxBindOpenSignal();
+        pfObserveCards(bestList); pfObserveCards(recommendList);
     }).catch(() => {});
 }
 
@@ -2074,12 +2108,64 @@ async function loadWarData(issueIds) {
     return warMap;
 }
 
+/* 🔖 피드 항목 식별표 — 종류+id. '바뀐 부분만 다시 그리기'의 기준이다 */
+function feedKey(item) {
+    const d = item && item.data || {};
+    return (item ? item.type : '?') + ':' + (d.video_id || d.id || '');
+}
+/* 🧩 이미 그려진 카드는 그대로 두고, 자리만 옮기거나 사이에 끼워 넣는다.
+   예전엔 타 콘텐츠가 도착하면 목록을 통째로 다시 그려, 받고 있던 이슈 영상이 버려지고 같은 주소를 다시 받았다
+   (실측 26.9.20: HLS 요청의 절반이 중복, 첫 영상 요청 4.7초). 이슈 카드를 살려 두면 영상이 끊기지 않는다. */
+function reconcileList(listEl, items) {
+    if (!listEl) return;
+    const keys = items.map(feedKey);
+    const keep = new Set(keys);
+    const pool = new Map();
+    Array.from(listEl.children).forEach(el => {
+        const k = el.dataset.fkey;
+        if (k && keep.has(k) && !pool.has(k)) pool.set(k, el); else el.remove();
+    });
+    let ref = listEl.firstChild;
+    items.forEach((item, i) => {
+        const k = keys[i];
+        let el = pool.get(k);
+        if (el) { pool.delete(k); if (el !== ref) listEl.insertBefore(el, ref); else ref = ref.nextSibling; }
+        else {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = renderFeedItem(item);
+            el = tmp.firstElementChild;
+            if (!el) return;
+            el.dataset.fkey = k;
+            listEl.insertBefore(el, ref);
+        }
+        ref = el.nextSibling;
+    });
+}
+
+function tagRendered(listEl, items) {
+    if (!listEl) return;
+    const kids = listEl.children;
+    for (let i = 0; i < kids.length && i < items.length; i++) kids[i].dataset.fkey = feedKey(items[i]);
+}
+
+/* ⏩ 첫 화면 영상 즉시 시작 — 관찰자(IntersectionObserver)나 스크롤을 기다리지 않는다.
+   기다리면 첫 영상 요청이 1초 가까이 늦다(26.9.20 속도 QA). 맨 위 두 개만 미리 받고, 보이는 것 하나를 바로 튼다. */
+function primeFirstVideos() {
+    if (document.body.classList.contains('shorts-open')) return;
+    const vids = Array.from(IDXROOT.querySelectorAll('.card-media video')).slice(0, 2);
+    vids.forEach(v => { if (!v.classList.contains('carousel-vid')) ensureVideoSrc(v); });
+    const vh = window.innerHeight || 0;
+    const first = vids.find(v => { const r = v.getBoundingClientRect(); return r.height && r.top < vh * 0.9 && r.bottom > vh * 0.1; });
+    if (first && first.paused) playWithSound(first);
+}
+
 function loadBest() {
     /* ⚠️ innerHTML += 를 카드마다 반복하면 매번 컨테이너 전체가 재파싱돼
        이미지가 카드 수만큼 다시 그려진다 = 깜빡임(사장님 재현. 스냅샷 캐시로
        지난 화면이 먼저 떠 있으면 더 도드라짐). 문자열로 완성해 한 번에 심는다. */
     const html = viewFeed.slice(0, 3).map(renderFeedItem).join('');
-    if (bestList.innerHTML !== html) bestList.innerHTML = html;
+    if (bestList.innerHTML !== html) { bestList.innerHTML = html; tagRendered(bestList, viewFeed.slice(0, 3)); }
+    primeFirstVideos();
     attachEvents();
     idxWatchCards(bestList); idxBindOpenSignal();
     pfObserveCards(bestList);
@@ -2094,7 +2180,12 @@ function loadRecommend() {
         html += renderFeedItem(viewFeed[rec]);
         rec++;
     }
-    if (html) recommendList.insertAdjacentHTML('beforeend', html);
+    if (html) {
+        const from = recommendList.children.length;
+        recommendList.insertAdjacentHTML('beforeend', html);
+        const added = Array.from(recommendList.children).slice(from);
+        added.forEach((el, i) => { el.dataset.fkey = feedKey(viewFeed[rec - added.length + i]); });
+    }
     attachEvents();
     idxWatchCards(recommendList); idxBindOpenSignal();
     pfObserveCards(recommendList);
