@@ -832,9 +832,11 @@
      인앱에서 받았으면 그 통화의 CallKit 을 억제하고, CallKit 으로 받았으면 연결됐다고 알린다. */
   function ringOffNative(via) {
     try {
-      if (!CUR) return;
-      if (via === 'tap' || via === 'selftest') _nativeCall({ action: 'callHandledInApp', callId: CUR.callId || '' });
-      else _nativeCall({ action: 'answered', callId: CUR.callId || '' });
+      const cid = (CUR && CUR.callId) || '';
+      /* 인앱에서 받았으면 그 통화의 CallKit 을 눌러 두고, CallKit 으로 받았으면 받았다고 알린다.
+         어느 쪽이든 네이티브가 '남아 있는 다른 iOS 통화'까지 정리해 벨을 끊는다(26.9.21). */
+      if (via === 'tap' || via === 'selftest') _nativeCall({ action: 'callHandledInApp', callId: cid });
+      _nativeCall({ action: 'answered', callId: cid });
     } catch (_) {}
   }
   function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
