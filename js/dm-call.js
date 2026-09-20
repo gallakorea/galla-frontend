@@ -150,7 +150,12 @@
     pollSeen = new Set();
     let ticks = 0;
     pollT = setInterval(async () => {
-      if (!CUR || CUR.connectedAt || ++ticks > 48) { stopSigPoll(); return; }   // 연결됐거나 12초 지나면 중단
+      /* 📴 통화가 연결된 뒤에도 계속 돈다 — 예전엔 연결되는 순간 폴링을 껐다.
+         그래서 통화 중 상대가 끊었을 때 실시간 채널이 한 번만 유실되면 그 끊김을 영영 못 받아
+         한쪽만 통화 화면이 남았다(26.9.21 사장님). 연결 뒤엔 간격을 늘려 부담은 줄인다. */
+      if (!CUR) { stopSigPoll(); return; }
+      if (!CUR.connectedAt && ++ticks > 48) { stopSigPoll(); return; }          // 연결 전 12초 지나면 중단
+      if (CUR.connectedAt && (++ticks % 4)) return;                             // 연결 뒤에는 1초에 한 번
       try {
         const { data } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gte('created_at', since).order('id', { ascending: true });
         const fresh = (data || []).filter(r => !pollSeen.has(r.id));
@@ -717,6 +722,11 @@
     if (!CUR || CUR.dir !== 'in') { wb('ACC abort no-cur'); return; }
     if (CUR._accepting) { wb('ACC abort dup'); return; }   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
+    /* 🔕 벨부터 끈다 — 연결이 끝나길 기다리면 그 사이(실측 4초) 계속 울린다(26.9.21 사장님).
+       받기를 누른 순간이 「이 통화는 내가 받는다」가 확정되는 지점이므로, 여기서 바로 끊는 게 맞다. */
+    try { window.GALLA_SFX?.ringInStop?.(); } catch (_) {}
+    stopRingHaptic();
+    ringOffNative(via);
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게). 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) { wb('ACC abort not-app'); CUR._accepting = false; return appOnlyNotice(); }
     clearTimeout(ringT);
@@ -969,7 +979,13 @@
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
     try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
-    if (!remote && CUR) send({ t: 'hangup' });
+    /* 📴 끊기는 반드시 가야 한다 — 실시간 채널이 한 번 유실되면 상대는 통화 화면이 그대로 남는다
+       (26.9.21 사장님: 「에뮬은 끊겼는데 아이폰은 계속 통화중」). 같은 상대에게 짧게 세 번 보낸다. */
+    if (!remote && CUR) {
+      const _peer = CUR.peer, _cid = CUR.callId;
+      send({ t: 'hangup' });
+      [250, 900].forEach(d => setTimeout(() => { try { send({ t: 'hangup', to: _peer, callId: _cid }); } catch (_) {} }, d));
+    }
     // 📞👻 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시' — 단, 상대가 realtime로 도달 가능하면 보내지 않는다.
     //    iOS는 '모든 VoIP 푸시에 reportNewIncomingCall 강제'라 취소 푸시도 수신화면을 잠깐 띄운다(이름을 안 불러와 '갈라 친구'
     //    유령 수신벨 = 사장님이 본 '끊으면 바로 다시 전화'). 통화가 연결됐거나(connectedAt) ring-ack를 받았으면(_foreground)
