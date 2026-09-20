@@ -178,7 +178,7 @@ body { display: block; }
 .vid-mute {
     position: absolute;
     bottom: 10px;
-    left: 10px;
+    right: 10px;   /* 🔈 음소거 버튼은 모든 화면에서 오른쪽 아래로 통일(26.9.20 사장님: 「뭐는 좌측 뭐는 우측」) */
     background: rgba(0,0,0,0.55);
     border: none;
     color: #fff;

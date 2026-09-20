@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="galla-ver" content="0926600"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0926700"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>재생 · GALLA</title>
 <style>
@@ -16,7 +16,7 @@
   #err p{margin:0;color:#cfd6e6}
   #err a{margin-top:4px;padding:9px 16px;border-radius:999px;background:#1e2532;color:#fff;font-weight:700;text-decoration:none}
   /* 🔈 소리 버튼 — 홈 피드 영상의 음소거 버튼과 같은 SVG·자리(오른쪽 아래). 글자 알약은 없앴다(26.9.19 사장님) */
-  #snd{position:absolute;right:10px;bottom:52px;width:34px;height:34px;display:none;align-items:center;justify-content:center;
+  #snd{position:absolute;right:10px;bottom:52px;   /* 다른 화면 음소거 버튼과 같은 쪽(오른쪽 아래). 유튜브 컨트롤바를 피해 조금 위 */width:34px;height:34px;display:none;align-items:center;justify-content:center;
        padding:0;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;z-index:5}
   #snd svg{width:18px;height:18px}
   #snd.on{display:flex}
@@ -42,13 +42,42 @@
   var SPK = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>';
   var ICON_OFF = SVGW(SPK + '<line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>');
   var ICON_ON = SVGW(SPK + '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>');
-  function paintSnd() { try { var m = player ? player.isMuted() : startMuted; var b = document.getElementById("snd"); b.innerHTML = m ? ICON_OFF : ICON_ON; b.setAttribute("aria-label", m ? "소리 켜기" : "소리 끄기"); } catch (_) {} }
-  function tellParent(on) { try { parent.postMessage({ galla: "yt-sound", on: !!on }, "*"); } catch (_) {} }
+  var lastMuted = null, pollTimer = null;
+  function readMuted() { try { return player ? (player.isMuted() || player.getVolume() === 0) : startMuted; } catch (_) { return startMuted; } }
+  function paintSnd() {
+    var m = readMuted(), b = document.getElementById("snd");
+    if (!b) return;
+    b.innerHTML = m ? ICON_OFF : ICON_ON;
+    b.setAttribute("aria-label", m ? "소리 켜기" : "소리 끄기");
+    return m;
+  }
+  /* 🔁 상태 추적 — 사용자가 '유튜브 자체 소리 버튼'을 눌러도 우리 아이콘과 앱 전역 설정이 따라가야 한다.
+     플레이어는 그런 변화를 알려 주지 않으므로 0.6초마다 직접 읽는다(재생 중일 때만·가볍다).
+     26.9.20 사장님: 「svg 눌러도 소리가 안 나고, 유튜브 소리켬을 눌러도 svg 는 따로 논다」 */
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(function () {
+      if (document.hidden) return;
+      var m = readMuted();
+      if (m === lastMuted) return;
+      lastMuted = m;
+      paintSnd();
+      tellParent(!m);      // 앱 전역(다른 영상들)도 같이 맞춘다
+    }, 600);
+  }
+  /* 부모가 시킨 변경을 다시 부모에게 되돌려 말하지 않는다 — 소리 자동재생이 막혀 음소거로 남으면
+     「사용자가 껐다」로 잘못 읽혀 앱 전역 설정이 꺼져 버린다(되먹임). 1.2초 동안은 보고하지 않는다. */
+  var fromParentUntil = 0;
+  function tellParent(on) {
+    if (Date.now() < fromParentUntil) return;
+    try { parent.postMessage({ galla: "yt-sound", on: !!on }, "*"); } catch (_) {}
+  }
   window.addEventListener("message", function (e) {
     var d = e.data || {};
     if (d.galla !== "yt-sound-set" || !player) return;
+    fromParentUntil = Date.now() + 1200;
     try { if (d.on) { player.unMute(); player.setVolume(100); } else player.mute(); } catch (_) {}
-    setTimeout(paintSnd, 60);
+    setTimeout(function () { lastMuted = paintSnd(); }, 300);
   });
   var watch = "https://www.youtube.com/watch?v=" + encodeURIComponent(id);
   document.getElementById("errGo").href = watch;
@@ -76,12 +105,20 @@
   function showSoundPill(){
     var b = document.getElementById("snd");
     b.classList.add("on");
-    paintSnd();
+    lastMuted = paintSnd();
+    startPolling();
     b.onclick = function(){
-      var toOn = false;
-      try{ toOn = player.isMuted(); if (toOn) { player.unMute(); player.setVolume(100); player.playVideo(); } else player.mute(); }catch(_){}
-      tellParent(toOn);
-      setTimeout(paintSnd, 60);
+      var toOn = readMuted();
+      try{
+        if (toOn) { player.unMute(); player.setVolume(100); player.playVideo(); }
+        else { player.mute(); }
+      }catch(_){}
+      /* 브라우저가 '소리 자동재생 금지'로 막으면 unMute 가 먹지 않는다 — 0.4초 뒤 실제 상태를 다시 읽어
+         아이콘과 전역을 진짜 상태에 맞춘다(먹은 척하지 않는다). */
+      setTimeout(function () {
+        var m = readMuted();
+        lastMuted = m; paintSnd(); tellParent(!m);
+      }, 400);
     };
   }
 
