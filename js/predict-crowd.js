@@ -129,6 +129,39 @@
   }
   const badgeHtml = (b) => b ? `<span class="pc-badge pc-b-${b.c}">${b.t}</span>` : "";
   /* o: { outcomes:[{id,label,p}], mine:<선택한 outcome id|null>, max:노출 깃발 수(기본 4), compact:true 면 라벨 짧게 } */
+  /* 🧍 줄서기용 사람 — 가로로 늘어서니 몸을 작게, 줄 서서 발을 구른다 */
+  const QMAN = '<svg class="pc-qman" viewBox="0 0 16 24" aria-hidden="true">' +
+    '<g class="pc-qbody" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="8" cy="5" r="3" fill="currentColor" stroke="none"/>' +
+      '<path d="M8 8.4 L8 15.6"/><path d="M8 15.6 L5.4 22 M8 15.6 L10.8 22"/>' +
+    '</g></svg>';
+  const qCount = (p) => Math.max(1, Math.min(16, Math.round((p || 0) / 100 * 26) || 1));
+
+  /* 🚶 줄서기 판 — 선택지가 많을 때(6개 이상) 깃발 대신 이 그림을 쓴다(26.9.20 사장님:
+     「깃발만 고집할 필요 없다, 다지선다가 많아지면 최적화된 걸로」).
+     선택지마다 창구 하나에 줄이 서고, 줄 길이가 곧 비율이다. 세로로 쌓이니 20개도 읽힌다. */
+  function queueHtml(o, sorted, ranks, rest) {
+    const rows = sorted.map((oc, i) => {
+      const p = Math.round(oc.p || 0);
+      const rank = ranks[i];
+      const mine = o.mine != null && String(o.mine) === String(oc.id);
+      const isOtherC = oc.id === "__other";
+      const n = isOtherC ? 2 : qCount(p);
+      const strong = rank === "top" && (p - Math.max(...sorted.filter(x => x !== oc).map(x => Math.round(x.p || 0)), 0)) >= 8;
+      return `<div class="pc-camp pc-q ${"pc-" + rank}${strong ? " pc-strong" : ""}${mine ? " pc-mine" : ""}${isOtherC ? " pc-other" : ""}"
+        data-oc="${esc(oc.id)}" data-p="${p}" data-rank="${rank}" data-strong="${strong ? 1 : 0}" data-label="${esc(oc.label || "")}"
+        style="--pc-h:${isOtherC ? 220 : hueOf(i)}">
+        <span class="pc-qlab pc-lab">${esc(oc.label || "")}</span>
+        <div class="pc-qline"><span class="pc-bub" aria-hidden="true"></span><i class="pc-desk"></i><span class="pc-folks">${QMAN.repeat(n)}</span></div>
+        <b class="pc-pct">${p}%</b>${isOtherC ? "" : badgeHtml(badgeOf(rank))}
+      </div>`;
+    }).join("");
+    return `<div class="pc pc-queue${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
+      ${rows}
+      ${rest ? `<div class="pc-rest">${rest}</div>` : ""}
+    </div>`;
+  }
+
   function html(o) {
     o = o || {};
     const all = (o.outcomes || []).filter(Boolean);
@@ -144,6 +177,23 @@
        나머지는 「기타」 깃발 하나로 묶는다(26.9.20 사장님). 기타는 비율을 합쳐 높이·사람 수에 반영하되
        유력·경합 같은 판세 딱지는 달지 않는다(여럿을 뭉친 자리라 순위로 다룰 수 없다).
        상세(scroll:true)에선 접지 않고 전부 세운 뒤 옆으로 밀어 본다. */
+    /* 🔀 선택지 수에 맞는 그림을 고른다(26.9.20 사장님) —
+       2~5개: 깃발 진영(사람이 깃발 아래 모여 호객) / 6개 이상: 줄서기(창구마다 줄, 세로로 쌓여 20개도 읽힌다). */
+    const QUEUE_FROM = 6;
+    if (!o.force && sorted.length >= QUEUE_FROM) {
+      const cap = o.queueMax || 8;                       // 줄은 세로로 쌓이니 넉넉히, 넘치면 기타로 묶는다
+      let qshow = sorted, qrest = "";
+      if (sorted.length > cap) {
+        qshow = sorted.slice(0, cap - 1);
+        const others2 = sorted.slice(cap - 1);
+        qshow = qshow.concat([{ id: "__other", label: `기타 ${others2.length}곳`, p: others2.reduce((a, x) => a + (x.p || 0), 0) }]);
+        qrest = `기타 ${others2.length}곳은 아래 목록에서`;
+      }
+      const qranks = ranksOf(qshow.filter(x => x.id !== "__other"), o.resolved ? { winner: o.winner } : null);
+      const ranks2 = qshow.map((x, i) => x.id === "__other" ? "mid" : qranks[i]);
+      return queueHtml(o, qshow, ranks2, qrest);
+    }
+
     let show, others = [];
     if (o.scroll) { show = sorted; }
     else if (sorted.length > max) { show = sorted.slice(0, Math.max(1, max - 1)); others = sorted.slice(Math.max(1, max - 1)); }

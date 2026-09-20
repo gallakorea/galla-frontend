@@ -216,9 +216,43 @@
 .pc-scroll::after { content: ""; position: absolute; top: 0; right: 0; bottom: 18px; width: 26px; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(8,10,14,.85)); }
 
+
+/* ═══ 🚶 줄서기 판 — 선택지가 6개 이상이면 깃발 대신 이 그림(26.9.20 사장님) ═══
+   창구마다 줄이 서고 줄 길이가 곧 비율. 세로로 쌓이니 20개도 읽힌다. */
+.pc-queue { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 6px; }
+.pc-queue .pc-camp { position: relative; display: grid; grid-template-columns: 62px 1fr auto auto; align-items: center;
+  gap: 7px; padding: 0; background: none; flex: none; }
+.pc-queue .pc-camp::before { content: none; }
+.pc-qlab { font-size: 11.5px; font-weight: 900; color: #e8ecf5; text-align: right; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+.pc-qline { position: relative; display: flex; align-items: flex-end; min-height: 26px; min-width: 0; overflow: hidden;
+  color: var(--pc-c); }
+/* 창구 — 줄이 시작되는 자리 */
+.pc-desk { flex: 0 0 auto; width: 9px; height: 18px; margin-right: 3px; border-radius: 2px; background: currentColor;
+  box-shadow: 0 0 8px -2px currentColor; }
+.pc-qman { width: 15px; height: 22px; margin-left: -4px; flex: 0 0 auto; overflow: visible; }
+.pc-qbody { animation: pcShuffle 1.7s ease-in-out infinite; transform-origin: 8px 22px; }
+.pc-qman:nth-child(2n) .pc-qbody { animation-delay: .35s; }
+.pc-qman:nth-child(3n) .pc-qbody { animation-delay: .8s; }
+@keyframes pcShuffle { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
+/* 1등 줄은 들썩이고, 텅 빈 줄은 축 처진다 */
+.pc-queue .pc-strong .pc-qbody { animation: pcQHop .5s ease-in-out infinite; }
+@keyframes pcQHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+.pc-queue .pc-low .pc-qbody { animation-duration: 2.6s; opacity: .8; }
+.pc-queue .pc-pct { font-size: 12px; min-width: 34px; text-align: right; }
+.pc-queue .pc-badge { margin-left: 2px; }
+.pc-queue .pc-bub { bottom: 24px; left: 6px; transform: none; max-width: 190px; }
+.pc-queue .pc-bub::after { left: 14px; margin-left: 0; }
+.pc-queue .pc-camp.pc-talk .pc-bub { animation-name: pcBubOnceL; }
+.pc-queue .pc-camp.pc-mine .pc-qlab { color: #ffd166; }
+.pc-queue .pc-rest { text-align: right; }
+/* 정산 끝난 판 — 맞힌 줄만 살아 있다 */
+.pc-queue.pc-done .pc-camp.pc-lost { filter: grayscale(.55) brightness(.8); }
+.pc-queue.pc-done .pc-camp.pc-won .pc-qlab { color: #ffd166; }
+
 @media (prefers-reduced-motion: reduce) {
   .pc-cloth, .pc-folk-body, .pc-folk-arm, .pc-folk.pc-run, .pc-camp.pc-talk .pc-bub,
-  .pc-arm-l, .pc-arm-r, .pc-pump, .pc-sweat, .pc-tear, .pc-conf,
+  .pc-arm-l, .pc-arm-r, .pc-pump, .pc-sweat, .pc-tear, .pc-conf, .pc-qbody,
   .pc-camp.pc-strong .pc-stage::before, .pc-done .pc-camp.pc-won .pc-stage::after { animation: none !important; }
   .pc-camp.pc-talk .pc-bub { opacity: 1; }
 }
