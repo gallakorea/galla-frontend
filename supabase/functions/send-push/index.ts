@@ -51,12 +51,13 @@ async function pushApns(userIds: string[], payload: Record<string, unknown>) {
   const subtitle = payload.subtitle ? String(payload.subtitle) : undefined;
   const alert: Record<string, string> = { title, body: bodyTxt };
   if (subtitle) alert.subtitle = subtitle;   // 프리뷰 부제(뉴스 헤드라인 등)
-  const aps: Record<string, unknown> = {
-    /* 🔔 갈라 알림음(앱 번들의 galla-alert.caf) — 기본음이면 어느 앱 알림인지 소리로 구분이 안 된다(26.9.20 사장님) */
-    aps: { alert, sound: "galla-alert.caf", "thread-id": String(payload.tag || "galla"), "mutable-content": 1 },
+  const picked = await soundFor(userIds);
+  const apsFor = (uid: string): Record<string, unknown> => ({
+    /* 🔔 사용자가 고른 알림음 — 기본음이면 어느 앱 알림인지 소리로 구분이 안 된다(26.9.20 사장님) */
+    aps: { alert, sound: `alert-${picked[uid] || "galla"}.caf`, "thread-id": String(payload.tag || "galla"), "mutable-content": 1 },
     url: payload.url || "/",
-  };
-  if (payload.image) aps.image = String(payload.image);   // 잠금화면 이미지 프리뷰 — NSE 확장이 이 URL을 첨부
+    ...(payload.image ? { image: String(payload.image) } : {}),
+  });
 
   // dev 빌드=sandbox 토큰 / 배포=production 토큰. 환경 불일치(BadDeviceToken) 시 다른 호스트로 재시도 → 둘 다 커버.
   const hosts = [APNS.host, APNS.host === "api.push.apple.com" ? "api.sandbox.push.apple.com" : "api.push.apple.com"];
@@ -65,7 +66,7 @@ async function pushApns(userIds: string[], payload: Record<string, unknown>) {
   await Promise.all(toks.map(async (t) => {
     for (const host of hosts) {
       try {
-        const r = await fetch(`https://${host}/3/device/${t.token}`, { method: "POST", headers: hdr, body: JSON.stringify(aps) });
+        const r = await fetch(`https://${host}/3/device/${t.token}`, { method: "POST", headers: hdr, body: JSON.stringify(apsFor(t.user_id)) });
         if (r.status === 200) { sent++; return; }
         const txt = await r.text().catch(() => "");
         if (/BadDeviceToken/.test(txt)) continue;   // 환경 불일치 → 다른 호스트 시도
@@ -117,16 +118,32 @@ async function fcmAuth(): Promise<string | null> {
   } catch (e) { console.error("[fcm] auth", String(e).slice(0, 200)); return null; }
 }
 
-/* 알림 종류별 채널 — 사용자가 「갈라톡만 끄기」 같은 걸 할 수 있게 나눠 둔다.
+/* 🔊 사용자가 고른 알림음(notify_prefs.alert_sound) — 없으면 기본 galla.
+   이름은 앱 번들 파일과 1:1(iOS: alert-<이름>.caf, 안드로이드: res/raw/alert_<이름>.ogg). */
+const SOUND_OK = new Set(["galla", "space", "warp", "laser", "arcade", "pager", "bell", "boing", "quack"]);
+async function soundFor(userIds: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  try {
+    const { data } = await sb.from("notify_prefs").select("user_id,alert_sound").in("user_id", userIds);
+    (data || []).forEach((r: { user_id: string; alert_sound: string }) => {
+      if (SOUND_OK.has(r.alert_sound)) out[r.user_id] = r.alert_sound;
+    });
+  } catch (_) { /* 못 읽으면 기본음 */ }
+  return out;
+}
+
+/* 알림 종류별·소리별 채널 — 안드로이드는 채널마다 소리가 고정이라(8.0+ 규칙),
+   사용자가 소리를 고르게 하려면 소리 수만큼 채널을 미리 만들어 두고 그 채널로 보내야 한다.
    앱(MainActivity.ensureNotificationChannels)이 만드는 채널 id 와 한 글자도 달라선 안 된다. */
-function androidChannel(payload: Record<string, unknown>): string {
+function androidChannel(payload: Record<string, unknown>, sound?: string): string {
   const tag = String(payload.tag || "");
-  if (/^(dm|chat|room)/.test(tag)) return "galla_dm_v1";
   if (/^call/.test(tag)) return "galla_call_v1";
-  return "galla_alert_v1";
+  const s = sound && SOUND_OK.has(sound) ? sound : "galla";
+  return `galla_${s}_v1`;
 }
 
 async function pushFcm(userIds: string[], payload: Record<string, unknown>): Promise<number> {
+  const pickedA = await soundFor(userIds);
   const tok = await fcmAuth();
   if (!tok) return 0;                                   // 미설정 — 조용히 건너뛴다
   const { data: toks } = await sb.from("native_push_tokens")
@@ -152,7 +169,7 @@ async function pushFcm(userIds: string[], payload: Record<string, unknown>): Pro
             /* 채널 id 는 앱이 만든 것과 정확히 같아야 한다(MainActivity.ensureNotificationChannels).
                예전엔 만들지도 않은 "galla" 로 보내 채널 설정이 통째로 무시됐다(26.9.20 전수 조사).
                sound 는 res/raw 의 파일 이름(확장자 없이) — 채널 소리와 같은 것을 가리킨다. */
-            android: { priority: "high", notification: { channel_id: androidChannel(payload), sound: "galla_alert" } },
+            android: { priority: "high", notification: { channel_id: androidChannel(payload, pickedA[t.user_id]) } },
           },
         }),
       });

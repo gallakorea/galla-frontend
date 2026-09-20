@@ -3,7 +3,36 @@
    카테고리는 send-push / push_allowed(uid,cat)와 1:1로 맞물린다. */
 (function () {
   const sb = () => window.supabaseClient;
-  const DEFAULTS = { dm: true, call: true, room: true, activity: true, pager: true, duel: true, friend: true, news: false, dnd_on: false, dnd_from: "23:00", dnd_to: "07:00", tz_off: 540 };
+  const DEFAULTS = { dm: true, call: true, room: true, activity: true, pager: true, duel: true, friend: true, news: false, dnd_on: false, dnd_from: "23:00", dnd_to: "07:00", tz_off: 540, alert_sound: "galla", ring_sound: "galla" };
+  /* 🔊 소리 고르기(26.9.20 사장님) — 이름은 파일 이름과 같다(assets/sound/alert-<이름>.wav,
+     앱 번들의 alert-<이름>.caf / res/raw 의 alert_<이름>.ogg). 셋이 어긋나면 무음이 된다. */
+  const ALERT_SOUNDS = [
+    { k: "galla",  ic: "🔔", label: "갈라",   desc: "기본 — 짧은 3음" },
+    { k: "space",  ic: "🛸", label: "우주 신호", desc: "솟아올라 반짝" },
+    { k: "warp",   ic: "🌀", label: "워프",   desc: "훅 빨려 들어갔다 쿵" },
+    { k: "laser",  ic: "🔫", label: "광선",   desc: "짧게 쏘고 튕김" },
+    { k: "arcade", ic: "🕹", label: "오락실", desc: "동전 먹는 8비트" },
+    { k: "pager",  ic: "📟", label: "삐삐",   desc: "90년대 삐삐삐" },
+    { k: "bell",   ic: "🛎", label: "맑은 종", desc: "조용한 자리용" },
+    { k: "boing",  ic: "🤪", label: "뿅",     desc: "스프링 튕기는 병맛" },
+    { k: "quack",  ic: "🦆", label: "꽥",     desc: "오리 같은 병맛" },
+  ];
+  const RING_SOUNDS = [
+    { k: "galla", ic: "🔔", label: "갈라",   desc: "3음 반복" },
+    { k: "space", ic: "🛸", label: "우주선", desc: "호출 신호" },
+    { k: "retro", ic: "☎️", label: "따르릉", desc: "옛날 전화" },
+  ];
+  /* 미리듣기 — 웹에선 wav 를 그대로 튼다(앱도 같은 파일이 번들에 있다) */
+  let _preview = null;
+  function preview(kind, name) {
+    try {
+      if (_preview) { _preview.pause(); _preview = null; }
+      const v = window.GALLA_V ? "?v=" + window.GALLA_V : "";
+      _preview = new Audio(`/assets/sound/${kind}-${name}.wav` + v);
+      _preview.volume = 0.9;
+      _preview.play().catch(() => {});
+    } catch (_) {}
+  }
   const CATS = [
     { k: "dm", ic: "💬", label: "채팅", desc: "DM 메시지 오면" },
     { k: "call", ic: "📞", label: "통화", desc: "육성톡·면상톡 걸려오면" },
@@ -37,6 +66,19 @@
       .nts-sw.on{background:#3d6bff}
       .nts-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .18s}
       .nts-sw.on::after{transform:translateX(18px)}
+      .nts-snd{margin-top:16px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px}
+      .nts-snd-h{font-size:13.5px;font-weight:900;color:#fff;margin-bottom:8px;display:flex;align-items:baseline;gap:6px}
+      .nts-snd-h i{font-style:normal;font-size:11px;font-weight:700;color:#8a8f9a}
+      .nts-snd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+      .nts-snd-b{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;cursor:pointer;
+        background:#1c1d23;border:1px solid rgba(255,255,255,.08);color:#cfd6e6;transition:border-color .15s,background .15s,transform .1s}
+      .nts-snd-b:active{transform:scale(.96)}
+      .nts-snd-b.on{border-color:#3d6bff;background:linear-gradient(180deg,rgba(61,107,255,.22),rgba(61,107,255,.06));color:#fff}
+      .nts-snd-b.on::after{content:"✓";position:absolute}
+      .nts-snd-ic{font-size:19px;line-height:1}
+      .nts-snd-b b{font-size:12.5px;font-weight:800}
+      .nts-snd-d{font-size:10px;color:#8a8f9a;text-align:center;line-height:1.25}
+      .nts-snd-b.on .nts-snd-d{color:#aebaff}
       .nts-dnd{margin-top:14px;background:#1c1d23;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px}
       .nts-dnd-times{display:flex;align-items:center;gap:8px;margin-top:10px;color:#c9d1e0;font-size:13px}
       .nts-dnd-times input{background:#0e0f13;border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;padding:6px 8px;font-size:14px}
@@ -73,7 +115,36 @@
           <input type="time" data-t="to" value="${prefs.dnd_to || "07:00"}">
         </div>
       </div>
+      <div class="nts-snd">
+        <div class="nts-snd-h">🔊 알림음 <i>탭하면 들어볼 수 있어요</i></div>
+        <div class="nts-snd-grid">
+          ${ALERT_SOUNDS.map((x) => `
+            <button type="button" class="nts-snd-b${prefs.alert_sound === x.k ? " on" : ""}" data-snd="alert" data-v="${x.k}">
+              <span class="nts-snd-ic">${x.ic}</span><b>${x.label}</b><span class="nts-snd-d">${x.desc}</span>
+            </button>`).join("")}
+        </div>
+        <div class="nts-snd-h" style="margin-top:14px">📞 전화 벨소리</div>
+        <div class="nts-snd-grid">
+          ${RING_SOUNDS.map((x) => `
+            <button type="button" class="nts-snd-b${prefs.ring_sound === x.k ? " on" : ""}" data-snd="ring" data-v="${x.k}">
+              <span class="nts-snd-ic">${x.ic}</span><b>${x.label}</b><span class="nts-snd-d">${x.desc}</span>
+            </button>`).join("")}
+        </div>
+      </div>
       <button class="nts-close">닫기</button>`;
+    /* 소리 고르기 — 누르면 바로 들려주고 저장한다(따로 확인 버튼을 두면 안 누른다) */
+    sheet.querySelectorAll("[data-snd]").forEach((b) => {
+      b.onclick = () => {
+        const kind = b.dataset.snd, v = b.dataset.v;
+        preview(kind, v);
+        save(kind === "alert" ? { alert_sound: v } : { ring_sound: v });
+        /* 전화 벨은 네이티브(CallKit)가 울린다 — 고른 값을 앱에 알려 둬야 다음 통화부터 반영된다 */
+        if (kind === "ring") {
+          try { window.webkit?.messageHandlers?.gallaCall?.postMessage({ action: "ringPick", v }); } catch (_) {}
+        }
+        sheet.querySelectorAll(`[data-snd="${kind}"]`).forEach((x) => x.classList.toggle("on", x === b));
+      };
+    });
     // 토글
     sheet.querySelectorAll(".nts-row").forEach((row) => {
       const k = row.dataset.k; const sw = row.querySelector(".nts-sw");
