@@ -175,7 +175,7 @@
         data-rank="${rank}" data-label="${esc(oc.label || "")}">
         <span class="pc-bub" aria-hidden="true"></span>
         ${PUSHER}
-        <div class="pc-vsmeta"><span class="pc-lab">${esc(oc.label || "")}</span><b class="pc-pct">${empty ? "–" : p + "%"}</b>${badgeHtml(badgeOf(rank))}</div>
+        <div class="pc-vsmeta"><span class="pc-lab">${esc(oc.label || "")}</span><b class="pc-pct">${p}%</b>${badgeHtml(badgeOf(rank))}</div>
       </div>`;
     };
     /* 추격 트랙 — 2위에 얼마나 붙었는지가 달린 거리다(2위와 같아지면 링 앞) */
@@ -194,7 +194,7 @@
           <i class="pc-track"></i>
           <span class="pc-folks" style="left:${pos}%">${RUNNER.repeat(isOtherC ? 1 : Math.min(3, qCount2(p)))}</span>
         </div>
-        <b class="pc-pct">${empty ? "–" : p + "%"}</b>
+        <b class="pc-pct">${p}%</b>
       </div>`;
     }).join("");
     return `<div class="pc pc-duel${o.resolved ? " pc-done" : ""}"${o.mid ? ` data-mid="${esc(o.mid)}"` : ""}>
@@ -206,6 +206,7 @@
       <div class="pc-vsbar" style="--pc-k:${empty ? 50 : k}%"><i class="pc-vsknot"></i></div>
       ${rows ? `<div class="pc-queue-rows">${rows}</div>` : ""}
       ${rest ? `<div class="pc-rest">${rest}</div>` : ""}
+      ${empty ? `<div class="pc-empty-note">아직 아무도 안 왔어요 — <b>지금 비율은 똑같이 나눈 값</b></div>` : ""}
     </div>`;
   }
 
@@ -268,7 +269,7 @@
         <span class="pc-bub" aria-hidden="true"></span>
         <div class="pc-stage">${FLAG}<span class="pc-folks">${folksHtml(n, rank, strong)}</span>
           <i class="pc-conf c1"></i><i class="pc-conf c2"></i><i class="pc-conf c3"></i><i class="pc-conf c4"></i></div>
-        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${empty ? "–" : p + "%"}</b>${isOther ? "" : badgeHtml(badgeOf(rank))}</div>
+        <div class="pc-meta">${o.labels === false ? "" : `<span class="pc-lab">${esc(oc.label || "")}</span>`}<b class="pc-pct">${p}%</b>${isOther ? "" : badgeHtml(badgeOf(rank))}</div>
       </div>`;
     };
     let camps = show.map((oc, i) => camp(oc, i, ranks[i], hueOf(all.indexOf(oc)))).join("");
@@ -309,7 +310,7 @@
       el.dataset.p = p; el.dataset.rank = ranks[i];
       el.classList.remove("pc-top", "pc-tie", "pc-mid", "pc-low", "pc-won", "pc-lost");
       el.classList.add("pc-" + ranks[i]);
-      const pct = el.querySelector(".pc-pct"); if (pct) pct.textContent = empty ? "–" : p + "%";
+      const pct = el.querySelector(".pc-pct"); if (pct) pct.textContent = p + "%";
       const meta = el.querySelector(".pc-vsmeta");
       if (meta) { const b = meta.querySelector(".pc-badge"); if (b) b.remove(); const bh = badgeHtml(badgeOf(ranks[i])); if (bh) meta.insertAdjacentHTML("beforeend", bh); }
       el.classList.toggle("pc-mine", mine != null && String(mine) === String(list[i].id));
@@ -323,7 +324,7 @@
       if (!row) return;
       const p = Math.round(oc.p || 0);
       row.dataset.p = p;
-      const pct = row.querySelector(".pc-pct"); if (pct) pct.textContent = empty ? "–" : p + "%";
+      const pct = row.querySelector(".pc-pct"); if (pct) pct.textContent = p + "%";
       const run = row.querySelector(".pc-folks");
       if (run) run.style.left = (empty ? 0 : Math.max(0, Math.min(88, Math.round(p / target * 88)))) + "%";
       row.classList.toggle("pc-mine", mine != null && String(mine) === String(oc.id));
