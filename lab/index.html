@@ -5,6 +5,10 @@
 body{background:#0a0a0c;color:#e8ecf5;font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;padding:18px 14px 40px}
 h1{font-size:17px;font-weight:800;margin-bottom:4px}
 p.sub{font-size:12px;color:#8a92a8;margin-bottom:18px;line-height:1.5}
+.words{background:#111319;border:1px solid #21252f;border-radius:12px;padding:12px 14px;margin-bottom:18px}
+.words b{display:block;font-size:12px;color:#9aa4ba;margin-bottom:8px}
+.words label{display:block;font-size:13px;padding:5px 0;cursor:pointer}
+.words input{margin-right:8px;accent-color:#2f6bff}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
 .card{background:#111319;border:1px solid #21252f;border-radius:14px;overflow:hidden}
 .ph{position:relative;width:100%;aspect-ratio:9/19.5;background:#000}
@@ -15,10 +19,32 @@ p.sub{font-size:12px;color:#8a92a8;margin-bottom:18px;line-height:1.5}
 </style></head><body>
 <h1>갈라 스플래시 시안</h1>
 <p class="sub">전부 실제로 움직입니다. 마음에 드는 것의 알파벳을 알려주세요.<br>안 되겠으면 「전부 아님」이라고 하셔도 됩니다.</p>
+<div class="words">
+  <b>워딩 후보</b>
+  <label><input type="radio" name="w" value="세상의 모든 이슈를 갈라보자" checked> 세상의 모든 이슈를 갈라보자</label>
+  <label><input type="radio" name="w" value="갈라야 보인다"> 갈라야 보인다</label>
+  <label><input type="radio" name="w" value="오늘, 어느 편입니까"> 오늘, 어느 편입니까</label>
+  <label><input type="radio" name="w" value="판이 열렸다"> 판이 열렸다</label>
+  <label><input type="radio" name="w" value=""> (문구 없음)</label>
+</div>
 <div class="grid">
 <div class="card"><div class="ph"><iframe src="a.html"></iframe></div><div class="meta"><b>A · 판세가 화면을 가른다</b><span>오늘 판세대로 화면이 갈라진다. 열 때마다 다름 — 갈라만 가능</span></div></div>
 <div class="card"><div class="ph"><iframe src="b.html"></iframe></div><div class="meta"><b>B · 성운 + 워프 + 팡팡</b><span>가디언즈 톤에 폭발·충격파까지</span></div></div>
 <div class="card"><div class="ph"><iframe src="c.html"></iframe></div><div class="meta"><b>C · 성운 + 워프</b><span>폭발 없이 별만 쏟아짐</span></div></div>
 <div class="card"><div class="ph"><iframe src="d.html"></iframe></div><div class="meta"><b>D · 성운만</b><span>가장 절제됨</span></div></div>
 <div class="card"><div class="ph"><iframe src="e.html"></iframe></div><div class="meta"><b>E · 붉은 진영 ⚔ 푸른 진영</b><span>좌우 충돌 후 로고 등장</span></div></div>
-</div></body></html>
+</div>
+<script>
+// 문구를 고르면 모든 시안에 즉시 반영해 비교할 수 있게 한다
+document.querySelectorAll('input[name=w]').forEach(function (r) {
+  r.addEventListener('change', function () {
+    document.querySelectorAll('iframe').forEach(function (f) {
+      try {
+        var t = f.contentDocument && f.contentDocument.querySelector('.tag');
+        if (t) { t.textContent = r.value; t.style.display = r.value ? '' : 'none'; }
+      } catch (_) {}
+    });
+  });
+});
+</script>
+</body></html>
