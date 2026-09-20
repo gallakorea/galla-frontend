@@ -711,11 +711,14 @@
   }
 
   async function accept(via) {
-    if (!CUR || CUR.dir !== 'in') return;
-    if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
+    /* 🔬 받기 경로 진단(26.9.21) — 「받았는데 벨이 계속 울리고 상대는 거는 중」 재현 추적.
+       어디서 멈추는지 보려고 갈림길마다 한 줄씩 남긴다. 원인 잡으면 정리한다. */
+    wb('ACC enter via=' + via + ' cur=' + (CUR ? 1 : 0) + ' dir=' + (CUR && CUR.dir) + ' acc=' + (CUR && CUR._accepting ? 1 : 0) + ' pre=' + (CUR && (CUR._preconnected ? 'y' : (CUR._preRunning ? 'run' : 'n'))));
+    if (!CUR || CUR.dir !== 'in') { wb('ACC abort no-cur'); return; }
+    if (CUR._accepting) { wb('ACC abort dup'); return; }   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게). 안내만 띄우고 벨은 유지.
-    if (!(window.GALLA_isApp && window.GALLA_isApp())) { CUR._accepting = false; return appOnlyNotice(); }
+    if (!(window.GALLA_isApp && window.GALLA_isApp())) { wb('ACC abort not-app'); CUR._accepting = false; return appOnlyNotice(); }
     clearTimeout(ringT);
     // 📞 인앱(포그라운드) '받기' 탭 순간, 이 통화의 CallKit 푸시를 네이티브가 억제 → 뒤늦게 온 VoIP 푸시의 중복벨 방지.
     //    CallKit로 받은 경우(ckAnswer/consume/arm)는 억제하지 않는다(그 CallKit이 실제 통화 UI라서).
@@ -724,16 +727,19 @@
     //       이건 제품 결함이 아니라 테스트가 실제 경로를 흉내내지 못한 것이었다.
     if ((via === 'tap' || via === 'selftest') && CUR.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {} }
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
+    wb('ACC sent-accepted');
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
     // 🔊 Agora: 수신자도 채널 join → 양쪽 미디어 연결(iosrtc 프리커넥트·getMedia·buildAnswer 전부 우회)
     if (AGORA) { await withTimeout(primePermHint(CUR.video), 3000).catch(() => {}); await agoraConnect(CUR); return; }
     // 프리커넥트가 진행 중이면 완료를 기다려 그 결과 재사용(최대 ~2.4초 — 동시 셋업 경합 방지)
     for (let i = 0; i < 30 && CUR._preRunning; i++) await new Promise(r => setTimeout(r, 80));
+    wb('ACC after-wait pre=' + (CUR && CUR._preconnected ? 'y' : 'n') + ' ls=' + (localStream ? 1 : 0));
     if (CUR && CUR._preconnected && localStream) {
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
+      wb('ACC done preconnect');
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -762,6 +768,7 @@
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
+      wb('ACC done fallback');
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
