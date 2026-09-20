@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>J</title><link rel="stylesheet" href="_base.css"><style>
+.st{background:#05060a}
+.rip{position:absolute;left:50%;top:50%;border-radius:50%;border:1px solid rgba(120,170,255,.55);opacity:0;
+ animation:rp 3s cubic-bezier(.2,.7,.2,1) infinite}
+.lg{position:relative;z-index:3;opacity:0;filter:drop-shadow(0 0 3px rgba(255,255,255,.7)) drop-shadow(0 8px 34px rgba(60,120,255,.55));
+ animation:lg 3s cubic-bezier(.16,1.05,.3,1) infinite}
+.tag{position:relative;z-index:3;margin-top:22px;color:#8b95ad;font-size:12px;letter-spacing:2px;opacity:0;animation:tg 3s ease-out infinite;font-family:-apple-system,sans-serif}
+.core{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#fff;
+ box-shadow:0 0 22px #fff,0 0 60px #4d8bff;opacity:0;animation:cr 3s ease-out infinite}
+@keyframes rp{0%{opacity:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-width:2px}
+ 8%{opacity:.9}
+ 100%{opacity:0;width:190vw;height:190vw;margin:-95vw 0 0 -95vw;border-width:1px}}
+@keyframes cr{0%{opacity:0;transform:scale(.2)}6%{opacity:1;transform:scale(1.6)}22%{opacity:0;transform:scale(.6)}100%{opacity:0}}
+@keyframes lg{0%,16%{opacity:0;transform:scale(.86)}32%{opacity:1;transform:scale(1.04)}42%,100%{opacity:1;transform:scale(1)}}
+@keyframes tg{0%,46%{opacity:0}60%,100%{opacity:1}}
+</style></head><body><div class="st" id="s">
+<img class="lg" src="logo.png"><div class="tag">세상의 모든 이슈를 갈라보자</div>
+</div><script>
+var s=document.getElementById('s'),h='<div class="core"></div>';
+for(var i=0;i<5;i++) h+='<div class="rip" style="animation-delay:'+(i*0.42).toFixed(2)+'s"></div>';
+s.insertAdjacentHTML('afterbegin',h);
+</script></body></html>

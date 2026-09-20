@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>G</title><link rel="stylesheet" href="_base.css"><style>
+.st{background:#000}
+.wrap{position:relative;z-index:3}
+.lg{opacity:1;clip-path:inset(0 100% 0 0);animation:rv 2.8s cubic-bezier(.65,0,.35,1) infinite}
+.bar{position:absolute;top:-8%;height:116%;width:3px;background:#fff;box-shadow:0 0 16px #fff,0 0 40px #6ea8ff;animation:bar 2.8s cubic-bezier(.65,0,.35,1) infinite}
+.tag{margin-top:24px;color:#8b95ad;font-size:12px;letter-spacing:2px;opacity:0;animation:tg 2.8s ease-out infinite;font-family:-apple-system,sans-serif;position:relative;z-index:3}
+.gl{position:absolute;left:50%;top:50%;width:min(90vw,460px);height:200px;margin-left:calc(min(90vw,460px)/-2);margin-top:-100px;
+ background:radial-gradient(ellipse,rgba(47,107,255,.35) 0%,rgba(0,0,0,0) 70%);filter:blur(30px);opacity:0;animation:gl 2.8s ease-out infinite}
+@keyframes rv{0%,8%{clip-path:inset(0 100% 0 0)}52%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@keyframes bar{0%,8%{left:22%;opacity:0}12%{opacity:1}52%{left:78%;opacity:1}62%,100%{left:78%;opacity:0}}
+@keyframes gl{0%,20%{opacity:0}56%{opacity:1}100%{opacity:.7}}
+@keyframes tg{0%,58%{opacity:0}72%,100%{opacity:1}}
+</style></head><body><div class="st">
+<div class="gl"></div>
+<div class="wrap"><img class="lg" src="logo.png"><div class="bar"></div></div>
+<div class="tag">세상의 모든 이슈를 갈라보자</div>
+</div></body></html>

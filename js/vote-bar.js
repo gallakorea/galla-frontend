@@ -40,6 +40,9 @@
     const A = esc(o.factionA || "찬성이오"), B = esc(o.factionB || "난 반댈세");
     const pro = o.pro || 0, con = o.con || 0, total = pro + con;
     const pp = pct(pro, con), cp = 100 - pp;
+    /* 🎬 다음 실행 스플래시에 쓸 '지금 판세' — 스플래시는 네트워크보다 먼저 떠서 서버를 못 부른다.
+       그래서 진영바를 그릴 때마다 최신 비율을 적어 둔다(표본이 너무 작으면 판세라 할 수 없어 건너뛴다). */
+    try { if (total >= 10) localStorage.setItem("galla_splash_split", String(pp)); } catch (_) {}
     const buttons = o.buttons === false ? "" : `<div class="gv-btns">
       <button class="gv-btn gv-pro ${o.proClass || ""}" data-haptic="vote" ${o.proAttr || ""}>${FX}<span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
       <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="vote" ${o.conAttr || ""}>${FX}<span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>

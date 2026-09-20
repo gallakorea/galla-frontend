@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>H</title><link rel="stylesheet" href="_base.css"><style>
+.st{background:#000}
+.dot{position:absolute;width:4px;height:4px;border-radius:50%;background:#cfe0ff;filter:drop-shadow(0 0 5px #6ea8ff);opacity:0;
+ animation:asm 3.2s cubic-bezier(.3,.7,.2,1) infinite}
+.lg{position:relative;z-index:3;opacity:0;filter:drop-shadow(0 0 4px rgba(255,255,255,.8)) drop-shadow(0 8px 34px rgba(60,120,255,.6));animation:lg 3.2s ease-out infinite}
+.tag{position:relative;z-index:3;margin-top:22px;color:#8b95ad;font-size:12px;letter-spacing:2px;opacity:0;animation:tg 3.2s ease-out infinite;font-family:-apple-system,sans-serif}
+@keyframes asm{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(1.6)}
+ 14%{opacity:1}
+ 56%{opacity:1;transform:translate(0,0) scale(.5)}
+ 66%,100%{opacity:0;transform:translate(0,0) scale(.2)}}
+@keyframes lg{0%,52%{opacity:0;transform:scale(.94)}66%{opacity:1;transform:scale(1.03)}74%,100%{opacity:1;transform:scale(1)}}
+@keyframes tg{0%,72%{opacity:0}84%,100%{opacity:1}}
+</style></head><body><div class="st" id="s">
+<img class="lg" src="logo.png"><div class="tag">세상의 모든 이슈를 갈라보자</div>
+</div><script>
+var s=document.getElementById('s'),h='';
+for(var i=0;i<70;i++){var a=Math.random()*Math.PI*2,d=160+Math.random()*320;
+h+='<i class="dot" style="left:50%;top:44%;--fx:'+Math.round(Math.cos(a)*d)+'px;--fy:'+Math.round(Math.sin(a)*d)+'px;animation-delay:'+(Math.random()*0.8).toFixed(2)+'s"></i>';}
+s.insertAdjacentHTML('afterbegin',h);
+</script></body></html>
