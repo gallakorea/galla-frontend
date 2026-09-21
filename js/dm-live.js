@@ -1045,13 +1045,24 @@
     hand(on) { if (CUR && !!CUR.hand !== !!on) return toggleHand(); },
     async promote(uid) { if (!CUR) return null; const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: "speaker" }); broadcastSync(); refreshState(); return data; },
     async unmute() { if (CUR && CUR.muted) return toggleMute(); },
+    heard(f) {   // 마이크 스펙트럼에서 f Hz 세기(dB)와 주변(±300Hz) 중앙값 차이
+      const pc = CUR && CUR.cf && CUR.cf.pc; const snd = pc && pc.getSenders().find(x => x._qaTone && x._qaTone.an); if (!snd) return null;
+      const an = snd._qaTone.an, a = new Float32Array(an.frequencyBinCount); an.getFloatFrequencyData(a);
+      const hz = an.context.sampleRate / an.fftSize, k = Math.round(f / hz);
+      const peak = Math.max(a[k - 1], a[k], a[k + 1]);
+      const nb = []; for (let i = Math.round((f - 300) / hz); i <= Math.round((f + 300) / hz); i++) if (Math.abs(i - k) > 6) nb.push(a[i]);
+      nb.sort((x, y) => x - y); return { peak: Math.round(peak), floor: Math.round(nb[nb.length >> 1]), snr: Math.round(peak - nb[nb.length >> 1]) };
+    },
     // 판정용 시험음 — 보내는 마이크 트랙을 440Hz 로 바꿔 끼운다(웹뷰만: iosrtc 는 WebAudio 트랙 불가)
     async tone(on) {
       const pc = CUR && CUR.cf && CUR.cf.pc; if (!pc || window.__iosrtcReady) return "skip";
       const snd = pc.getSenders().find(x => x.track && x.track.kind === "audio") || pc.getSenders().find(x => x._qaTone);
       if (!snd) return "nosender";
       if (on) { const AC = window.AudioContext || window.webkitAudioContext; const ctx = new AC(); try { await ctx.resume(); } catch (e) {} const o = ctx.createOscillator(); o.frequency.value = 440; const g = ctx.createGain(); g.gain.value = 0.5; const d = ctx.createMediaStreamDestination(); o.connect(g); g.connect(d); o.start();
-        snd._qaOrig = snd.track; snd._qaTone = { ctx, o }; await snd.replaceTrack(d.stream.getAudioTracks()[0]); return "tone on"; }
+        snd._qaOrig = snd.track; snd._qaTone = { ctx, o }; await snd.replaceTrack(d.stream.getAudioTracks()[0]);
+        // 🎧 귀로 판정 — 내 원래 마이크로 상대 폰 스피커의 440Hz 가 들리나(주변 대비 배수)
+        try { const an = ctx.createAnalyser(); an.fftSize = 8192; ctx.createMediaStreamSource(new MediaStream([snd._qaOrig])).connect(an); snd._qaTone.an = an; } catch (e) {}
+        return "tone on"; }
       if (snd._qaTone) { try { snd._qaTone.o.stop(); snd._qaTone.ctx.close(); } catch (e) {} await snd.replaceTrack(snd._qaOrig); snd._qaTone = null; } return "tone off";
     },
     state() { if (!CUR) return null; const cf = CUR.cf || {}; return { room: CUR.roomId, role: CUR.role, muted: CUR.muted, hand: CUR.hand, n: (CUR.state || []).length, rows: (CUR.state || []).map(r => ({ u: String(r.user_id).slice(0, 6), role: r.role, hand: r.hand_raised, muted: r.muted })), tx: !!(cf.diag && cf.diag.tx), rx: cf.diag ? cf.diag.rx : 0, ice: cf.diag ? cf.diag.ice : '-', err: cf.diag ? cf.diag.err : '-', subs: cf.subs ? cf.subs.size : 0, els: (cf.els || []).length }; },

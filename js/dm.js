@@ -6022,7 +6022,7 @@
       qlog('P live speaking');
       await qaLiveLog('P live', 5);
       qlog('P live tone ' + await L.tone(true));   // 판정용 440Hz — 받는 폰의 수신 소리 크기가 뚜렷이 올라야 한다
-      await qaLiveLog('P live tone', 5);
+      for (let i = 0; i < 8; i++) { await qsleep(2000); qlog('P live heard440 ' + JSON.stringify(L.heard(440)) + ' (snr 이 크면 상대 폰 스피커에서 내 시험음이 나오는 것)'); }
       qlog('P live tone ' + await L.tone(false));
       await qaLiveLog('P live', 2);
       await L.end(); qlog('P live end');
