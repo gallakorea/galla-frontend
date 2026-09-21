@@ -5949,6 +5949,7 @@
     for (let i = 0; i < n; i++) {
       const L = window.GALLA_liveQA; const st = L && L.state(); if (!st) { qlog(tag + ' stage-closed'); return; }
       const sx = await L.stats();
+      try { const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall; if (h) h.postMessage({ action: 'statsProbe' }); } catch (_) {}   // 아이폰: 표준 통계(inbound audioLevel·totalAudioEnergy — 실제 재생 여부)
       qlog(tag + ' role=' + st.role + ' muted=' + st.muted + ' n=' + st.n + ' tx=' + st.tx + ' rx=' + st.rx + ' subs=' + st.subs + ' ice=' + st.ice + (st.err ? ' err=' + st.err : '') + ' | ' + JSON.stringify(sx));
       await qsleep(3000);
     }
