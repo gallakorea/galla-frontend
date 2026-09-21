@@ -314,7 +314,20 @@
       if (CUR.dir === 'out') { CUR._foreground = true; wb('ring-ack fg'); }   // 📞 푸시는 그대로 보낸다(잠금 대비) — 억제는 수신자 인앱 수락 시 네이티브가
       return;
     }
-    if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }   // 🔬 QA 배너 동기화(수신폰에도 같은 단계 표시)
+    if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }
+    /* 🔬 측정 모드 원격 명령 — 발신폰이 수신폰의 음소거·스피커를 '원하는 상태로' 맞춘다(자가테스트 수신 모드에서만) */
+    if (p.t === 'qacmd') {
+      if (_ctMode !== 'accept') return;
+      try {
+        const t = localStream && localStream.getAudioTracks()[0];
+        if (p.a === 'mute' && t && t.enabled) callAction('mute');
+        else if (p.a === 'unmute' && t && !t.enabled) callAction('mute');
+        else if (p.a === 'spkon' && !SPK) callAction('spk');
+        else if (p.a === 'spkoff' && SPK) callAction('spk');
+        wb('QACMD ' + p.a + ' mic=' + (t ? t.enabled : '?') + ' spk=' + SPK);
+      } catch (_) {}
+      return;
+    }   // 🔬 QA 배너 동기화(수신폰에도 같은 단계 표시)
     if (p.t === 'accepted') {
       /* 📞 상대가 '받기'를 누른 순간 — 무슨 상태든 링백부터 끈다.
          예전엔 '아직 연결 전'일 때만 껐는데, 연결이 먼저 잡힌 통화에선 그 분기를 건너뛰어
@@ -1452,7 +1465,7 @@
 
   function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
-    if (_ctMode !== 'caller' && _ctMode !== 'callerV') return;   // callerV = 면상톡(영상) 자동테스트
+    if (_ctMode !== 'caller' && _ctMode !== 'callerV' && _ctMode !== 'callerM') return;   // callerM = 소리 실측(통계)   // callerV = 면상톡(영상) 자동테스트
     if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
     if (!_ctPeer) { wb('selftest caller NO-PEER'); _ctLoopT = setTimeout(_ctCallerCycle, 15000); return; }
     if (!CUR) {
@@ -1460,7 +1473,7 @@
       const vid = (_ctMode === 'callerV');
       wb('selftest DIAL ' + String(_ctPeer).slice(0, 8) + (vid ? ' [VIDEO]' : ''));
       try { start(_ctPeer, '자가테스트', vid); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
-      if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
+      if (_ctMode === 'callerM') _ctMeasureQA(); else if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
     }
     // 68초 통화 → 끊고 15초 쉬고 반복(면상톡 버튼+소리 QA 시퀀스 ~55초 확보)
     _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 68000);
@@ -1475,6 +1488,33 @@
       if (text) { el.textContent = text; el.style.display = 'block'; } else { el.style.display = 'none'; }
     } catch (_) {}
   }
+  /* 🔬 소리 실측 QA(callerM) — 사람 귀 대신 네이티브 통계(STATS: 받은 오디오 패킷·수신 음량·마이크 음량)로 판정.
+     맥 스피커로 소리를 틀어 둔 채 돌린다. 양쪽 스피커를 켜고, 한쪽씩 음소거해 방향별로 끊기고 살아나는지 본다:
+       BOTH(둘 다 켬) → A-MUTE(발신 음소거: 수신폰 inA 음량이 0 근처로) → B-MUTE(수신 음소거: 발신폰 inA 가 0 근처로) → BOTH */
+  async function _ctMeasureQA() {
+    const cur = CUR; const nap = ms => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < 30 && (!cur || !cur.connectedAt); i++) await nap(500);
+    if (!cur || cur !== CUR || !cur.connectedAt) return;
+    const phase = (name, text) => { _qaBanner(text); try { send({ t: 'qastep', text }); } catch (_) {} wb('PHASE ' + name); };
+    const t = () => localStream && localStream.getAudioTracks()[0];
+    if (!SPK) callAction('spk');
+    try { send({ t: 'qacmd', a: 'spkon' }); send({ t: 'qacmd', a: 'unmute' }); } catch (_) {}
+    phase('BOTH', '🔬 소리 실측 — 양쪽 켬'); await nap(10000);
+    if (cur !== CUR) return;
+    if (t() && t().enabled) callAction('mute');
+    phase('A-MUTE', '🔬 발신폰 음소거'); await nap(10000);
+    if (cur !== CUR) return;
+    if (t() && !t().enabled) callAction('mute');
+    try { send({ t: 'qacmd', a: 'mute' }); } catch (_) {}
+    phase('B-MUTE', '🔬 수신폰 음소거'); await nap(10000);
+    if (cur !== CUR) return;
+    try { send({ t: 'qacmd', a: 'unmute' }); } catch (_) {}
+    phase('BOTH2', '🔬 양쪽 다시 켬'); await nap(8000);
+    phase('DONE', ''); _qaBanner('');
+    wb('QAM done');
+  }
+  // 🔬 자가테스트 중 통화가 연결돼 있으면 2초마다 네이티브 실측 통계를 로그로 올린다(양쪽 폰 모두).
+  setInterval(() => { try { if (_ctMode && CUR && CUR.connectedAt) _nativeCall({ action: 'statsProbe' }); } catch (_) {} }, 2000);
   // 🔬 버튼+소리 자동 QA — 프로그램이 각 버튼을 눌러 상태를 로그로 검증하고, 배너로 사장님 청취를 안내(무인 조작).
   async function _ctButtonQA() {
     const cur = CUR; const nap = ms => new Promise(r => setTimeout(r, ms));
@@ -1523,7 +1563,7 @@
   }
   function _ctApply(mode, peer) {
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
-    if (mode === 'caller' || mode === 'callerV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
+    if (mode === 'caller' || mode === 'callerV' || mode === 'callerM') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
     else if (_ctMode) { _ctStop(); }
   }
