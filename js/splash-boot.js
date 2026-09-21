@@ -33,7 +33,8 @@
      전부 CSS 애니메이션이다 — 스플래시는 첫 페인트라 JS 루프를 돌리면 그 자체가 느려진다. */
   var css =
     "html.splash-lock,html.splash-lock body{overflow:hidden!important}" +
-    "#galla-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;" +
+    /* z 2147483646: theme.css 의 노치 채움 막(body::before, 2147483000)보다 위 — 같은 값이면 막이 스플래시 노치 부분을 덮어 색 띠가 났다(26.9.21) */
+    "#galla-splash{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;" +
       "align-items:center;justify-content:center;background:#0a0a0b;overflow:hidden;" +
       "opacity:1;transition:opacity .5s ease;-webkit-tap-highlight-color:transparent;user-select:none}" +
     "#galla-splash.gone{opacity:0;pointer-events:none}" +

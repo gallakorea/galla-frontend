@@ -39,7 +39,7 @@
   function show() {
     var st = document.createElement("style");
     st.textContent =
-      "#gpn{position:fixed;inset:0;z-index:2147481500;background:#08090d;color:#e9edf6;overflow:auto;" +
+      "#gpn{position:fixed;inset:0;z-index:2147481500;background:#0a0a0b;color:#e9edf6;overflow:auto;" +
         "font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;" +
         "padding:calc(34px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));" +
         "opacity:0;transition:opacity .28s ease}" +
