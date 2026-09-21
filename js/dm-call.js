@@ -1470,7 +1470,7 @@
   // 👁 수신 벨이 울리는 중에 앱을 내리거나 올리면 발신자에게 다시 알린다(끊을 때 취소 푸시 필요 여부)
   document.addEventListener('visibilitychange', () => { try { if (CUR && CUR.dir === 'in' && !CUR.connectedAt) send({ t: 'ring', vis: document.visibilityState }); } catch (_) {} });
 
-  function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
+  function _ctStop() { try { _nativeCall({ action: 'qaAutoAnswer', on: false }); } catch (_) {} _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
     if (_ctMode !== 'caller' && _ctMode !== 'callerV' && _ctMode !== 'callerM' && _ctMode !== 'callerMV') return;   // callerM(V) = 소리 실측(통계) 음성/영상   // callerV = 면상톡(영상) 자동테스트
     if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
@@ -1571,7 +1571,7 @@
   function _ctApply(mode, peer) {
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
     if (mode === 'caller' || mode === 'callerV' || mode === 'callerM' || mode === 'callerMV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
-    else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
+    else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) { wb('selftest ACCEPT-MODE'); _nativeCall({ action: 'qaAutoAnswer', on: true }); } }   // 🔬 잠금화면 CallKit 도 자동 받기(네이티브, 20분)
     else if (mode === 'listen') { _ctMode = 'listen'; if (changed) wb('selftest LISTEN-MODE'); }   // 🔬 관찰만(자동 수락 없음) — 잠금·백그라운드 수신 기록용
     else if (_ctMode) { _ctStop(); }
   }
