@@ -1418,11 +1418,44 @@
       if (view && lock === 'h') { const v = view; v.style.transition = CURVE; v.style.transform = ''; setTimeout(() => cleanup(v, true), 320); }
       view = null; lock = null;
     }
+    window.__dmDragBusy = () => !!view || busy;
     window.addEventListener('touchend', endDrag, { capture: true, passive: true });
     window.addEventListener('touchcancel', cancelDrag, { capture: true, passive: true });
     // 🛟 앱이 내려가면(전화·홈) 끌던 대화창을 제자리로 — 돌아왔을 때 반쯤 밀린 채 남지 않게
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') cancelDrag(); });
   }
+
+  /* 🛟 반쯤 밀린 채 멈춘 화면 자동 복구 + 기록(26.9.21) — 손을 떼고 0.7초 뒤에도 대화 뷰가 어중간한
+     translateX 에 남아 있으면 제자리로 되돌리고, 무엇이 얼마나 밀렸는지 남긴다(kind 'dm-heal').
+     원인이 하나가 아닐 수 있어(첫 수정 뒤에도 재현) — 사용자는 멈춘 화면을 안 보게 하고, 원인은 기록으로 좁힌다. */
+  function healStuck(src) {
+    if (window.__dmDragBusy && window.__dmDragBusy()) return;
+    const W = window.innerWidth;
+    const bad = [];
+    document.querySelectorAll('[style*="translate"]').forEach(el => {
+      const m = (el.style.transform || '').match(/translateX\((-?[\d.]+)px\)/);
+      if (!m) return;
+      const x = +m[1];
+      if (Math.abs(x) > 1 && Math.abs(x) < W - 1) bad.push({ el, x });
+    });
+    const inbox = ROOT && ROOT.querySelector('.dm-view[data-view="inbox"]');
+    const inboxLeak = !!(inbox && !inbox.hidden && CUR_VIEW !== 'inbox');
+    if (!bad.length && !inboxLeak) return;
+    try {
+      const desc = bad.slice(0, 3).map(b => (b.el.className || b.el.tagName).toString().slice(0, 40) + (b.el.dataset && b.el.dataset.view ? '[' + b.el.dataset.view + ']' : '') + '@' + Math.round(b.x)).join(' ; ');
+      (window.supabaseClient || supabase).rpc('log_client_error', { p_kind: 'dm-heal', p_message: src + ' view=' + CUR_VIEW + ' inboxLeak=' + inboxLeak + ' ' + desc, p_ver: String(window.GALLA_V || '') }).then(() => {}, () => {});
+    } catch (_) {}
+    bad.forEach(({ el }) => {
+      // 되돌리는 건 대화 뷰·말풍선뿐 — 일부러 옮겨 둔 다른 요소(슬라이더 등)는 기록만 한다
+      if (!(el.classList.contains('dm-view') || el.classList.contains('dm-bubble'))) return;
+      el.style.transition = 'transform .25s ease'; el.style.transform = '';
+      el.classList.remove('dm-sliding');
+      setTimeout(() => { el.style.transition = ''; }, 280);
+    });
+    if (inboxLeak) inbox.hidden = true;
+  }
+  window.addEventListener('touchend', () => setTimeout(() => healStuck('touchend'), 700), { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(() => healStuck('resume'), 300); });
 
   function goBack(fallbackTab) {
     if (DEPTH > 0) { history.back(); return; }
@@ -3816,7 +3849,7 @@
     await profilesFor(list.map(m => m.sender_id));
     wrap.innerHTML = list.map(roomBubbleHTML).join('');
     [...wrap.children].slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
-    wrap.scrollTop = wrap.scrollHeight;
+    stickBottom(wrap);
     hydratePolls(wrap);
   }
   /* 단체방 문법: 남의 말은 아바타+닉네임을 단다(1:1엔 없던 것) */
@@ -4583,6 +4616,28 @@
       wrap.addEventListener(t, () => clearTimeout(pressT), { passive: true }));
   }
 
+  /* 📌 방을 열면 마지막 대화에 붙어 있게 — 예전엔 렌더 직후 한 번만 맨 아래로 보냈다.
+     그 뒤 사진·위치 카드·음성이 늦게 로드되며 내용이 길어져 '어중간한 위치'에 멈췄다(26.9.21 사장님).
+     몇 초 동안은 내용이 늘어날 때마다 맨 아래로 다시 붙이고, 사용자가 손대면 즉시 풀어준다. */
+  function stickBottom(wrap, ms) {
+    if (!wrap) return;
+    wrap.__stickUntil = Date.now() + (ms || 4000);
+    const go = () => { if (wrap.__stickUntil && Date.now() < wrap.__stickUntil) wrap.scrollTop = wrap.scrollHeight; };
+    if (!wrap.__stickBound) {
+      wrap.__stickBound = 1;
+      const stop = () => { wrap.__stickUntil = 0; };
+      wrap.addEventListener('touchstart', stop, { passive: true });
+      wrap.addEventListener('wheel', stop, { passive: true });
+      // 이미지·음성은 load 가 버블링되지 않는다 → 캡처로 잡는다
+      wrap.addEventListener('load', () => { if (wrap.__stickUntil && Date.now() < wrap.__stickUntil) wrap.scrollTop = wrap.scrollHeight; }, true);
+      wrap.addEventListener('loadedmetadata', () => { if (wrap.__stickUntil && Date.now() < wrap.__stickUntil) wrap.scrollTop = wrap.scrollHeight; }, true);
+    }
+    go();
+    [60, 200, 500, 1000, 2000, 3500].forEach(d => setTimeout(go, d));
+    if (window.ResizeObserver) {
+      try { const ro = new ResizeObserver(go); [...wrap.children].slice(-30).forEach(c => ro.observe(c)); setTimeout(() => ro.disconnect(), ms || 4000); } catch (_) {}
+    }
+  }
   function renderMsgs(msgs) {
     const wrap = ROOT.querySelector('#dm-msgs');
     // 리액션을 먼저 받아와 첫 렌더부터 함께 그린다(뒤늦게 튀어나오면 지저분하다)
@@ -4594,7 +4649,7 @@
     // 마지막 12개만 폭포 등장(--i) — 긴 대화 전체를 애니메이션하면 소음이다
     const kids = [...wrap.children];
     kids.slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
-    wrap.scrollTop = wrap.scrollHeight;
+    stickBottom(wrap);
     paintReceipts();
     decryptPass();
   }
@@ -5686,10 +5741,74 @@
       au.src = url;
     }
   }
+  // 🔬 대화창 화면 상태 한 줄 — 보이는 뷰, 맨 아래와의 거리(gap), 밀린 요소, 네비·몸통 클래스
+  function qaState(tag) {
+    try {
+      const vs = [...ROOT.querySelectorAll('.dm-view')].filter(v => !v.hidden).map(v => v.dataset.view).join('+');
+      const tf = [...document.querySelectorAll('[style*="translate"]')].map(e => (e.className || e.tagName).toString().slice(0, 20) + ':' + e.style.transform).slice(0, 3).join(';');
+      const w = ROOT.querySelector('#dm-msgs');
+      const gap = (w && !w.closest('[hidden]')) ? Math.round(w.scrollHeight - w.scrollTop - w.clientHeight) : -1;
+      const nav = document.querySelector('.nav');
+      qlog(tag + ' cur=' + CUR_VIEW + ' vis=' + vs + ' gap=' + gap + ' nav=' + (nav ? (nav.style.display || 'on') : '-') + ' body=' + (document.body.className || '').replace(/\s+/g, ',').slice(0, 70) + (tf ? ' tf=' + tf : ''));
+    } catch (e) { qlog(tag + ' state-err ' + String(e).slice(0, 40)); }
+  }
+  const qsnap = async (tag) => { try { if (window.GALLA_qaSnap) { const id = await window.GALLA_qaSnap(tag); qlog('snap ' + tag + ' id=' + id); } } catch (_) {} };
+  const qclick = (sel, tag) => { const el = ROOT.querySelector(sel) || document.querySelector(sel); if (!el) { qlog(tag + ' NO-EL ' + sel); return false; } el.click(); return true; };
+  async function qaUI(peer) {
+    // A. 방 열기 — 마지막 대화에 붙어 있나(gap 0 근처여야)
+    await startDM(peer);
+    await qsleep(300); qaState('A open+0.3s');
+    await qsleep(1200); qaState('A open+1.5s');
+    await qsleep(3000); qaState('A open+4.5s'); await qsnap('A-thread-open');
+    // B. 뒤로(버튼) — 목록만 보여야, 밀린 요소 없어야
+    qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'B');
+    await qsleep(1000); qaState('B after-back'); await qsnap('B-after-back');
+    // C. 빠르게 열고 닫기 3번
+    for (let i = 0; i < 3; i++) { await startDM(peer); await qsleep(700); qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'C'); await qsleep(700); }
+    await qsleep(600); qaState('C after-3cycles'); await qsnap('C-after-cycles');
+    // D. 대화 설정 열고 닫기
+    await startDM(peer); await qsleep(1500);
+    qclick('.dm-view[data-view="thread"] [data-act="chatset"]', 'D'); await qsleep(1000); qaState('D chatset-open'); await qsnap('D-chatset');
+    const back = [...ROOT.querySelectorAll('.dm-view:not([hidden]) .dm-back, .dm-view:not([hidden]) [data-act="toThread"]')][0];
+    if (back) back.click(); else qlog('D NO-BACK');
+    await qsleep(1000); qaState('D after-chatset-back'); await qsnap('D-after');
+    // E. 첨부(+) 시트
+    if (CUR_VIEW !== 'thread') { await startDM(peer); await qsleep(1200); }
+    qclick('#dm-attach', 'E'); await qsleep(900); qaState('E attach-open'); await qsnap('E-attach');
+    qclick('#dm-attach', 'E2'); await qsleep(700); qaState('E attach-toggle');
+    // G. 반응(하트) 달기·떼기
+    const bubs = [...ROOT.querySelectorAll('#dm-msgs .dm-bubble[data-id]')];
+    const last = bubs[bubs.length - 1];
+    if (last) {
+      const id = last.dataset.id;
+      await toggleReact(id, '❤️'); await qsleep(900);
+      const chip = ROOT.querySelector(`.dm-reacts[data-for="${id}"]`);
+      qlog('G react-on chip=' + !!(chip && chip.textContent.trim())); await qsnap('G-react');
+      await toggleReact(id, '❤️'); await qsleep(700);
+      qlog('G react-off chip=' + !!(ROOT.querySelector(`.dm-reacts[data-for="${id}"]`)?.textContent.trim()));
+      // H. 길게 눌러 반응 고르기 창
+      try { openReactPicker(id, ROOT.querySelector(`.dm-bubble[data-id="${id}"]`)); await qsleep(800); await qsnap('H-picker'); document.body.click(); await qsleep(500); } catch (e) { qlog('H err ' + String(e).slice(0, 40)); }
+    }
+    // I. 사진 크게 보기
+    const img = [...ROOT.querySelectorAll('#dm-msgs .dm-bub-img:not(.dm-stkimg)')].pop();
+    if (img) { img.click(); await qsleep(1000); qlog('I lightbox=' + !!document.querySelector('#dm-lightbox:not([hidden]), #dm-lightbox.on, .dm-lightbox')); await qsnap('I-image');
+      const lb = document.getElementById('dm-lightbox'); if (lb) lb.click(); await qsleep(700); qaState('I after-close'); }
+    // J. 위치 카드 → 지도
+    const loc = [...ROOT.querySelectorAll('#dm-msgs .dm-loc-card')].pop();
+    if (loc) { loc.click(); await qsleep(3000); qlog('J map=' + !!document.querySelector('.glm-x')); await qsnap('J-map');
+      qclick('.glm-x', 'J'); await qsleep(900); qaState('J after-map-close'); await qsnap('J-after'); }
+    // K. 음성 재생
+    const vp = [...ROOT.querySelectorAll('#dm-msgs .dm-vplay')].pop();
+    if (vp) { vp.click(); await qsleep(1500); qlog('K voice-playing=' + [...document.querySelectorAll('audio')].some(a => !a.paused) + ' btn=' + vp.className); vp.click(); await qsleep(400); }
+    // Z. 목록으로
+    qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'Z'); await qsleep(1000); qaState('Z end'); await qsnap('Z-end');
+    qlog('ui all done');
+  }
   window.GALLA_dmQA = {
     async run(mode, peer) {
       qlog('run ' + mode + ' peer=' + String(peer || '').slice(0, 6));
       if (!peer) return;
+      if (mode === 'dmUI') return qaUI(peer);
       await startDM(peer);
       await qsleep(1500);
       qlog('thread open ' + !!curThread + ' chan=' + !!msgChan);

@@ -1581,11 +1581,12 @@
       // 이미 벨이 울리는 중이면 지금 받는다(화면에 보일 때만) — '늦게 받기' 시나리오용
       try { if (CUR && CUR.dir === 'in' && !CUR._accepting && document.visibilityState === 'visible') accept('selftest'); } catch (_) {}
     }
-    else if (mode === 'dmSend' || mode === 'dmRecv') {   // 🔬 갈라톡 두 폰 QA — DM 뷰로 가서(dm.js) 한 번 실행
+    else if (mode === 'dmSend' || mode === 'dmRecv' || mode === 'dmUI') {   // 🔬 갈라톡 두 폰 QA — DM 뷰로 가서(dm.js) 한 번 실행
       if (_ctMode !== mode) { _ctMode = mode; _dmQADone = false; }
       if (window.GALLA_dmQA) { if (!_dmQADone) { _dmQADone = true; window.GALLA_dmQA.run(mode, peer); } }
       else { try { if (window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm'); else if (window.GALLA_shellGo) window.GALLA_shellGo('dm'); } catch (_) {} }
     }
+    else if (mode === 'snap' || mode === 'snap2') { if (changed) { _ctMode = mode; window.GALLA_qaSnap && window.GALLA_qaSnap('remote-' + mode); } }   // 🔬 원격 화면 캡처(snap↔snap2 로 바꿀 때마다 한 장)
     else if (mode === 'listen') { _ctMode = 'listen'; if (changed) wb('selftest LISTEN-MODE'); }   // 🔬 관찰만(자동 수락 없음) — 잠금·백그라운드 수신 기록용
     else if (_ctMode) { _ctStop(); }
   }
@@ -1614,6 +1615,23 @@
     setTimeout(_ctPoll, 15000);
   }
   setTimeout(_ctPoll, 4000);
+  /* 🔬 QA 화면 캡처 — 네이티브가 웹 화면을 찍어 주면 qa_snaps(비공개)에 넣는다. 사람 눈 대신. */
+  window.GALLA_qaSnap = function (label) {
+    return new Promise(resolve => {
+      const tm = setTimeout(() => { window.__qaSnapDone = null; resolve(null); }, 8000);
+      window.__qaSnapDone = async (dataUrl) => {
+        clearTimeout(tm); window.__qaSnapDone = null;
+        if (!dataUrl) return resolve(null);
+        try {
+          // 공개 미디어 저장소가 아니라 읽기 정책 없는 qa_snaps 에 넣는다(남의 대화 목록이 찍힌 캡처 — 관리 API 로만 본다)
+          const c = sb || window.supabaseClient;
+          const { data, error } = await c.from('qa_snaps').insert({ label: String(label || '').slice(0, 80), img: dataUrl }).select('id').single();
+          resolve(error ? null : data.id);
+        } catch (e) { resolve(null); }
+      };
+      _nativeCall({ action: 'qaSnap' });
+    });
+  };
   // 수동 오버라이드(콘솔/디버그 패널용)
   window.GALLA_callTest = {
     accept() { _ctApply('accept'); },
