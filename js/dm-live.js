@@ -909,7 +909,10 @@
           lvlog("pub rx-before " + rx());
           const revive = () => { try { cf.pc.getReceivers().forEach(r => { if (r.track && r.track.kind === "audio") r.track.enabled = true; });
             (cf.els || []).forEach(el => { const so = el.srcObject; if (so && so.getAudioTracks) so.getAudioTracks().forEach(t => { t.enabled = true; }); }); } catch (e) {} };
-          revive(); setTimeout(() => { revive(); lvlog("pub rx-after " + rx()); }, 1200);
+          revive();
+          // 트랙을 켜도 재생이 안 살아났다 → 지금 듣던 목소리를 새 채널로 다시 구독한다(새 채널 수신은 재생된다)
+          setTimeout(() => { if (!CUR || CUR.cf !== cf) return; lvlog("pub resub " + cf.subs.size + " rx=" + rx()); cf.subs.clear(); cf.resub = (cf.resub || 0) + 1;
+            try { CUR.channel.send({ type: "broadcast", event: "pubask", payload: {} }); } catch (e) {} }, 1000);
         }
         announcePub();
       } else {
@@ -927,7 +930,7 @@
     const cf = CUR && CUR.cf; if (!cf || !p || p.uid === ME) return;
     // 같은 사람이 '재발행'(내려갔다 다시 올라옴 → 새 trackName)하면 다시 구독해야 한다
     // — uid로만 중복 제거하면 새 트랙을 영영 못 받는다(승계 방장 소리 안 남).
-    const key = p.uid + "|" + p.trackName;
+    const key = p.uid + "|" + p.trackName + "|" + (cf.resub || 0);
     if (cf.subs.has(key)) return;
     cf.subs.add(key);
     // 재협상은 한 번에 하나 — 큐로 직렬화
