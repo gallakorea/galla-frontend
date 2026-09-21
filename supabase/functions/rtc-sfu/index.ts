@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
     const r = await fetch(url, {
       method,
       headers: { Authorization: `Bearer ${APP_SECRET}`, "Content-Type": "application/json" },
-      body: method === "GET" ? undefined : JSON.stringify(payload.body ?? {}),
+      // 본문 없이 여는 세션(아이폰: 오퍼 없는 /sessions/new)은 본문을 아예 안 보낸다 — "{}" 는 CF 가 decoding_error 로 거절
+      body: (method === "GET" || payload.body === null) ? undefined : JSON.stringify(payload.body ?? {}),
     });
     const text = await r.text();
     let data: unknown; try { data = JSON.parse(text); } catch { data = { raw: text }; }

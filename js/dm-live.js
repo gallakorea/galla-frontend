@@ -781,7 +781,7 @@
   // 🔬 QA 진단 기록(GALLA_liveQA 로 들어왔을 때만)
   function lvlog(m) { try { if (window.__lvQA) sb().rpc("log_client_error", { p_kind: "dm-qa", p_message: "LV " + m, p_ver: "diag" }).then(() => {}, () => {}); } catch (e) {} }
   function sfu(path, method, body) {
-    return sb().functions.invoke("rtc-sfu", { body: { path, method, body: body || {} } })
+    return sb().functions.invoke("rtc-sfu", { body: { path, method, body: body === null ? null : (body || {}) } })
       .then(r => r && r.data).catch(() => null);
   }
   async function iceServers() {
@@ -807,7 +807,7 @@
       pc.addTransceiver("audio", { direction: "recvonly" });
       try { offer = await pc.createOffer(); await pc.setLocalDescription(offer); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
     }
-    const sess = await sfu("/sessions/new", "POST", offer ? { sessionDescription: { type: "offer", sdp: offer.sdp } } : {});
+    const sess = await sfu("/sessions/new", "POST", offer ? { sessionDescription: { type: "offer", sdp: offer.sdp } } : null);
     lvlog("sess " + (IOSRTC ? "(no-boot) " : "") + (sess ? (sess.reason || (sess.data && sess.data.sessionId ? "ok" : JSON.stringify(sess).slice(0, 80))) : "null"));
     if (!sess || sess.reason === "unconfigured") { try { pc.close(); } catch (e) {} return fallback(); }
     if (!sess.data || !sess.data.sessionId || (offer && !sess.data.sessionDescription)) { try { pc.close(); } catch (e) {} return fallback("🔊 음성 연결 실패 — 재입장 시 재시도돼요."); }
