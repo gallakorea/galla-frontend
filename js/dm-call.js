@@ -290,7 +290,9 @@
       if (!_ringDead) startRingHaptic();                                       // 📳 진동 링
       ringT = setTimeout(() => endCall('timeout'), 40000);
       // 🔬 자가 테스트 '자동 수신' 모드 — CallKit 탭 없이 벨 뜨면 바로 수락(디버그 전용)
-      if (_ctMode === 'accept') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting) accept('selftest'); } catch (_) {} }, 900); }
+      // ⚠️ 앱이 화면에 없을 때(잠금·백그라운드)는 웹이 받지 않는다 — 웹 수락은 CallKit 통화를 닫아 iOS 가 앱을 재우고,
+      //    그러면 통화가 7초 만에 죽는다(26.9.21 실측). 그 상황의 실제 경로는 CallKit '받기'뿐이다.
+      if (_ctMode === 'accept' && document.visibilityState === 'visible') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting && document.visibilityState === 'visible') accept('selftest'); } catch (_) {} }, 900); }
       // 🎤 벨 중 '마이크만' 미리 준비(음소거) → 받기 시 getMedia 대기 0 = 전환 즉시.
       //    PC·answer는 안 만든다(프리커넥트 레이스 없음). 권한 있을 때만(프롬프트로 벨 방해 X).
       //    ⚠️ AGORA면 절대 프리웜 금지 — iosrtc getMedia가 마이크를 잡고 있으면 Agora createMicrophoneAudioTrack이
