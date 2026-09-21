@@ -4985,7 +4985,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
         .eq("user_id", uid).eq("status", "active").in("kind", ["event", "promise"])
         .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
         .order("created_at", { ascending: false }).limit(3);
-      followups = fu || [];
+      /* 💛 속상했던 일은 먼저 안 꺼낸다(26.9.22 사장님: 「팀장 얘기 좀 하지 마」) — 인사·재방문 소재에서 뺀다 */
+      followups = (fu || []).filter((f: any) => f?.kind !== "disliked" && !/(짜증|열받|빡|갈아엎|스트레스|싫|화나|화났|그만두|퇴사|힘들|우울|속상|서운|팀장|상사|욕|싸웠|헤어|이별|아프|아팠)/.test(String(f?.content || "")));
 
       /* 🧭 '그 사이 뭘 하고 지냈나' — 대화 기억이 아니라 갈라 안에서의 실제 행동.
          컴패니언이 먼저 말을 걸려면 재료가 있어야 한다. 기억만 뒤지면 매번 같은 얘기가 나온다.
@@ -6610,7 +6611,7 @@ ${parts.join("\n")}`;
     /* 🏷 스토어 용어(베팅→참여) — 예측·GP 문맥의 「걸기/걸어볼래/걸었어」는 「참여」로(26.9.22 사장님: 「걸기라는 표현 문제 될듯」).
        예측 화면은 이미 '참여/예측하기'다. 「말 걸어·전화 걸어」는 문맥이 달라 안 건드린다. */
     reply = String(reply || "").split(/(?<=[.!?…\n])/).map((sen) => {
-      if (!/(GP|지피|예측|판|선택지|마감|적중|대박)/.test(sen) || /(말\s*걸|전화|통화|육성톡|면상톡)/.test(sen)) return sen;
+      if (!/(GP|지피|예측|판|선택지|마감|적중|대박|%|넘는다|안\s*넘|쪽에)/.test(sen) || /(말\s*걸|전화|통화|육성톡|면상톡)/.test(sen)) return sen;
       return sen.replace(/걸었어/g, "참여했어").replace(/걸어\s*볼래/g, "참여해볼래").replace(/걸어\s*볼까/g, "참여해볼까")
         .replace(/걸어\s*줄게/g, "참여해줄게").replace(/걸어\s*줘/g, "참여해줘").replace(/걸게/g, "참여할게").replace(/걸래/g, "참여할래")
         .replace(/걸려(?=\s*[!~.ㅋㅎ]|$)/g, "참여돼").replace(/걸\s*준비/g, "참여 준비").replace(/걸\s*수/g, "참여할 수").replace(/걸기/g, "참여").replace(/베팅|배팅/g, "참여")

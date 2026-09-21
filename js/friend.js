@@ -473,7 +473,9 @@
     if(mini) mini.classList.remove("on");
     var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
     var back=null; try{ back=JSON.parse(sessionStorage.getItem("fr_mini")||"null"); sessionStorage.removeItem("fr_mini"); }catch(e){}
+    window.__frSuppressGreet=true;                       // 미니에서 돌아온 건 '이어가기' — 새 인사 안 붙인다(「어땠어?」 뒤에 딴 인사가 붙었다)
     open();                                              // 로그·입력 보존된 채 그대로 복귀
+    window.__frSuppressGreet=false;
     /* 보고 돌아오면 갈비스가 먼저 묻는다 — 흐름이 이어지게(서버 호출 없음) */
     if(back && back.say && (Date.now()-back.at)>2500){
       setTimeout(function(){
