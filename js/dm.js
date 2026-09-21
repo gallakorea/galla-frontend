@@ -5943,7 +5943,8 @@
     }
   }
   async function qaPagerRoomLive(peer) {
-    const t0 = QA_T0(); window.__dmQASend = true; qlog('run dmP peer=' + String(peer).slice(0, 6));
+    await startDM(peer); await qsleep(1500);   // 갈라톡 모듈 초기화(ME) — 이게 없으면 내 id 가 비어 전송이 전부 실패한다
+    const t0 = QA_T0(); window.__dmQASend = true; qlog('run dmP peer=' + String(peer).slice(0, 6) + ' me=' + String(ME).slice(0, 6));
     // ── P1 삐삐: 상대 인사말 새로 녹음될 때까지 → 번호로 걸기 → 인사말 들어 보기 → 음성 남기기
     const box = await qwait(async () => { const { data } = await supabase.from('pager_boxes').select('number,greeting_url,updated_at').eq('user_id', peer).maybeSingle(); return data && data.greeting_url && data.updated_at > t0 ? data : null; }, 90000);
     qlog('P greet-seen=' + !!box + ' number=' + (box && box.number));
@@ -6011,7 +6012,8 @@
     qlog('dmP all done');
   }
   async function qaPagerRoomLiveRecv(peer) {
-    const t0 = QA_T0(); window.__dmQARecv = true; qlog('run dmPr');
+    const t0 = QA_T0(); await startDM(peer); await qsleep(1500);
+    window.__dmQARecv = true; qlog('run dmPr me=' + String(ME).slice(0, 6));
     // ── R1 삐삐: 내 인사말 녹음 → 상대 음성 삐삐 도착 → 사서함 목록·재생·들은 표시
     const gu = await qaUpload(await qaVoice(), 'audio');
     if (gu) { const g = await supabase.rpc('pager_set_greeting', { p_url: gu, p_dur: 2 }); qlog('R greeting set ok=' + !!(g.data && g.data.ok) + ' ' + ((g.data && g.data.reason) || g.error?.message || '')); }
