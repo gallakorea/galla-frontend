@@ -1226,6 +1226,17 @@
     bindReact(ROOT.querySelector('#dm-msgs'));
     applyChatPrefs();
     applyDisplay();
+    /* 🖼 말풍선 사진을 누르면 크게 보기 — 크게 보기(openLightbox)는 대화 설정의 사진 모아보기에만 연결돼
+       있어서 대화 속 사진은 눌러도 아무 일이 없었다(26.9.21 두 폰 QA). 두 번 탭(하트)과 겹치지 않게 잠깐 기다린다. */
+    let _imgTapT = null, _imgTapEl = null;
+    ROOT.addEventListener('click', e => {
+      const im = e.target.closest('#dm-msgs .dm-bub-img, #dm-room-msgs .dm-bub-img');
+      if (!im || im.classList.contains('dm-stkimg')) return;
+      if (_imgTapT && _imgTapEl === im) { clearTimeout(_imgTapT); _imgTapT = null; return; }   // 두 번 탭 = 반응
+      _imgTapEl = im;
+      _imgTapT = setTimeout(() => { _imgTapT = null; openLightbox(im.currentSrc || im.src); }, 260);
+    });
+    window.__dmVaudio = () => VAUDIO;   // 🔬 QA: 음성 재생 상태 확인용
     // 음성 재생 — 1:1(#dm-msgs)·난장(#dm-room-msgs) 공용 위임(ROOT 레벨)
     ROOT.addEventListener('click', e => {
       const b = e.target.closest('.dm-vplay'); if (!b) return;
@@ -5791,7 +5802,7 @@
     }
     // I. 사진 크게 보기
     const img = [...ROOT.querySelectorAll('#dm-msgs .dm-bub-img:not(.dm-stkimg)')].pop();
-    if (img) { img.click(); await qsleep(1000); qlog('I lightbox=' + !!document.querySelector('#dm-lightbox:not([hidden]), #dm-lightbox.on, .dm-lightbox')); await qsnap('I-image');
+    if (img) { img.click(); await qsleep(1000); qlog('I lightbox=' + !!document.querySelector('#dm-lightbox.on')); await qsnap('I-image');
       const lb = document.getElementById('dm-lightbox'); if (lb) lb.click(); await qsleep(700); qaState('I after-close'); }
     // J. 위치 카드 → 지도
     const loc = [...ROOT.querySelectorAll('#dm-msgs .dm-loc-card')].pop();
@@ -5799,7 +5810,7 @@
       qclick('.glm-x', 'J'); await qsleep(900); qaState('J after-map-close'); await qsnap('J-after'); }
     // K. 음성 재생
     const vp = [...ROOT.querySelectorAll('#dm-msgs .dm-vplay')].pop();
-    if (vp) { vp.click(); await qsleep(1500); qlog('K voice-playing=' + [...document.querySelectorAll('audio')].some(a => !a.paused) + ' btn=' + vp.className); vp.click(); await qsleep(400); }
+    if (vp) { vp.click(); await qsleep(1500); const va = window.__dmVaudio && window.__dmVaudio(); qlog('K voice-playing=' + !!(va && !va.paused && va.currentTime > 0) + ' t=' + (va ? va.currentTime.toFixed(2) : '-') + ' err=' + (va && va.error ? va.error.code : '-')); if (va && !va.paused) vp.click(); await qsleep(400); }
     // Z. 목록으로
     qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'Z'); await qsleep(1000); qaState('Z end'); await qsnap('Z-end');
     qlog('ui all done');
