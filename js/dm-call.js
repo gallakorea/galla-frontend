@@ -122,6 +122,7 @@
      통화 중(CUR)이거나 localStorage 로 강제 켠 경우에만 기록한다. */
   function DIAG_ON() {
     if (CUR) return true;                                  // 통화 진행 중 — 원래 목적
+    if (_ctMode) return true;                              // 🔬 자가테스트·관찰 모드 중(푸시 도착 지연 등 네이티브 기록까지)
     try { return localStorage.getItem('galla_call_diag') === '1'; } catch (_) { return false; }
   }
   function wb(m) { if (!DIAG_ON()) return; try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
@@ -1571,6 +1572,7 @@
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
     if (mode === 'caller' || mode === 'callerV' || mode === 'callerM' || mode === 'callerMV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
+    else if (mode === 'listen') { _ctMode = 'listen'; if (changed) wb('selftest LISTEN-MODE'); }   // 🔬 관찰만(자동 수락 없음) — 잠금·백그라운드 수신 기록용
     else if (_ctMode) { _ctStop(); }
   }
   // 서버 폴 — 관리자가 SQL로 심은 플래그를 15초마다 읽어 반영(원격 on/off).
