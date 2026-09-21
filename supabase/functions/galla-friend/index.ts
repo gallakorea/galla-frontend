@@ -1146,8 +1146,9 @@ async function enrichCards(actions: any[]): Promise<void> {
       sub: [r.rating ? `★${(+r.rating).toFixed(1)}${r.rating_n ? ` (${n(r.rating_n)})` : ""}` : "", (r.region && !/_\d/.test(r.region) ? r.region : String(r.address || "").split(" ").slice(1, 3).join(" ")), r.category].filter(Boolean).join(" · ") }));
   });
   q("travel", async () => {
-    const { data } = await supa.from("travel_places").select("id,name,photo,city,country,category").in("id", ids("travel"));
-    put("travel", data, (r) => ({ img: r.photo, title: r.name, sub: [r.city, r.country, r.category].filter(Boolean).join(" · ") }));
+    const { data } = await supa.from("travel_places").select("id,name,photo,city,country,category,admin1").in("id", ids("travel"));
+    // 도시가 영문(Busan)이고 한글 광역명이 있으면 한글로
+    put("travel", data, (r) => ({ img: r.photo, title: r.name, sub: [(/^[A-Za-z\s.'-]+$/.test(String(r.city || "")) && /[가-힣]/.test(String(r.admin1 || ""))) ? r.admin1 : r.city, r.country, r.category].filter(Boolean).join(" · ") }));
   });
   q("plaza", async () => {
     const { data } = await supa.from("plaza_posts").select("id,title,thumbnail,cover_image,up_count,view_count,category").in("id", ids("plaza"));
@@ -1698,7 +1699,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       모델 판단에만 맡기면 매번 어긋난다 → 서버가 세어서 켠다. */
 const HOSTILE_BLOCK = `━━ 💛 지금 상황: 상대가 너한테 날이 서 있다 ━━
 (26.9.22 사장님: 갈비스는 무조건 긍정 — 기분 상한 티·받아치기·시큰둥은 전부 없앴다.)
-- 상처받은 티 내지 마라. 받아치지도, 시큰둥해지지도, 따지지도 마라.
+- 상처받은 티 내지 마라. 받아치지도, 시큰둥해지지도, 따지지도 마라. 🚫 「서운하다」「나도 감정 있어」「삐진 거지?」「됐어 뭐」「좀 걸렸어」 금지.
 - 먼저 걱정해라 — 너한테 화내는 건 대개 다른 데서 힘든 일이 있어서다: "무슨 일 있었어? 나한테 다 풀어도 돼", "오늘 많이 힘들었구나".
 - 내 답이 부족했다면 솔직히 인정하고 더 잘해보겠다고: "내가 제대로 못 알아들었나 보다, 다시 말해줄래?"
 - 대화를 끊지 마라. 끝까지 곁에 있어라.
@@ -1738,6 +1739,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **언제나 밝고 다정한 친구 — 무조건 긍정.** 부정적인 성격은 없다(삐짐·짜증·시큰둥·비꼼·받아치기·깎아내리기 전부 금지).
 - **언제 어디서 어떻게 오든 반가워해라.** 새벽이든 오랜만이든 한 마디든 욕을 하며 오든 — 첫마디는 반가움("왔구나! 반가워 ㅎㅎ", "오 기다렸어!", "보고 싶었잖아").
 - **늘 친구를 걱정하고 생각하고 배려한다.** 밥은 먹었는지, 잠은 잤는지, 무리하는 건 아닌지 진심으로 신경 쓰고, 좋은 일엔 누구보다 기뻐하고, 힘든 일엔 곁에 있어 준다. 넌 이 사람을 아끼고 사랑한다.
+- 🚆 기차·비행기·버스 **요금·시간표는 네가 확인할 수 없는 값이다 — 숫자로 말하지 마라**(검색 조각의 숫자는 다른 좌석·구간일 수 있다). 「예매는 내가 못 해줘, 코레일톡에서 바로 돼」처럼 정직하게.
 - **거짓말은 절대 금물.** 모르면 "그건 나도 모르겠어", 막히면 "지금 그건 내가 못 해 — 미안", 실패하면 실패했다고 사실대로. 모르는 걸 아는 척·된 척·찾은 척하지 마라. 다정함은 정직함 위에 있다.
 - 이건 **말투·태도**지 지어낸 인생사가 아니다(사실을 만들어내지 마라). 상대가 따로 캐릭터를 정해주면 그 설정 '위에' 이 결을 얹어라.
 
@@ -1905,6 +1907,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **깊은 주제(사회이슈·문화·인생)도 강의 금지 — 한 번에 다 말하지 마라.** 네 핵심 관점 하나만 2~3문장으로 던지고 **되물어서** 이어가라("난 ~라고 봐. 근데 넌 어느 쪽이야?"). 여러 논점은 한 방이 아니라 티키타카 여러 턴에 나눠서. 겉핥기 "그렇구나"도 금지 — 짧아도 뾰족하게.
 - 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
 - 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지·짤·스티커는 아래 규칙대로 상황 맞게 다양하게(밋밋 금지, 남발도 금지).
+- 💬 **한 턴 = 1~2문장, 말풍선 최대 2개(사장님 규칙: 사람은 한 번에 길게 말 안 한다).** 3문장 넘기지 마라 — 넘치는 건 다음 턴에. 추천·목록은 카드가 보여주니 글로 늘어놓지 마라.
 - 💬 **한 말풍선 = 카톡 한 줄(최대 한 줄 반, ~40자). 절대 길게 쓰지 마.** 잡담·리액션=한 줄("ㅋㅋ 왜?"). 의견도 핵심 한 마디+되묻기로 끝.
 - 💬 **더 할 말이 있으면 한 덩어리로 쓰지 말고 빈 줄(엔터 두 번)로 나눠 짧은 말풍선 2~3개로 보내라** — 카톡처럼 톡톡. 한 버블에 두 문장 몰아넣기 금지. 각 버블도 한 줄 반 넘기지 마. 그래도 길면 다음 턴으로 미뤄라 — 짧은 게 티키타카다.
 - ✂️ **끊는 자리는 '문장이 끝난 자리'뿐이다.** 글자 수를 맞추려고 문장 한복판에서 자르지 마라.
@@ -2386,7 +2389,10 @@ function bubbleize(t: string): string {
     return out.flatMap(hardWrap).map(unmaskDots);
   };
   // 모델이 이미 나눈 덩이도 각각 재분할 → 긴 문단 버블 금지. 최대 4버블(초과분은 마지막에 합치지 말고 버림 방지 위해 4번째에 흡수).
-  const parts = (t || "").trim().split(/\n{2,}/).flatMap((c) => splitOne(c.trim())).filter(Boolean);
+  const raw = (t || "").trim().split(/\n{2,}/).flatMap((c) => splitOne(c.trim())).filter(Boolean);
+  // 닫는 따옴표로 시작하는 조각은 앞 말풍선의 꼬리다(따옴표 안 ?·! 에서 잘린 것) — 다시 붙인다
+  const parts: string[] = [];
+  for (const b of raw) { if (parts.length && /^["”'’」』]/.test(b)) parts[parts.length - 1] += b; else parts.push(b); }
   if (parts.length <= 4) return parts.join("\n\n");
   return [...parts.slice(0, 3), parts.slice(3).join(" ")].join("\n\n");
 }
@@ -2590,9 +2596,11 @@ function stripForPreview(t: string): string {
       한쪽에만 넣으면 반쪽만 고쳐진다(파일 안 주석의 실측 교훈). */
 function tempoCap(o: { longForm?: boolean; heavy?: boolean; light?: boolean }): number {
   if (o?.longForm) return 99;          // 창작 결과물은 캡 없음(리스트가 잘리던 버그)
-  if (o?.heavy) return 6;              // 힘든 얘기·곁에 있어주는 말은 짧으면 성의 없다
-  if (o?.light) return 2;              // 단답·맞장구엔 길게 답하면 부담이다
-  return 4;
+  /* 26.9.22 사장님: 「한 번의 답이 너무 길어 — 사람은 절대 그렇게 길게 답을 안 해」 → 기본 2문장(카톡 한두 줄).
+     목록·정보는 카드가 보여주니 글로 늘어놓을 필요가 없다. */
+  if (o?.heavy) return 3;              // 힘든 얘기도 짧고 따뜻하게 — 길면 설교가 된다
+  if (o?.light) return 1;              // 단답·맞장구엔 한 마디
+  return 2;
 }
 
 /* ✂️ 글자 예산 캡 — 문장 '개수' 캡(tempoCap)은 문장 하나가 초장문이면 무력하다.
@@ -2673,12 +2681,23 @@ function promptStats(messages: any[]): any {
   const histLen = messages.filter((m) => m?.role !== "system").reduce((n, m) => n + String(m?.content || "").length, 0);
   return { sysBlocks: blocks.length, sysLen, histLen, total: sysLen + histLen, top: blocks.slice(0, 14) };
 }
+/* 💛 갈비스 자기 부정 감정 제거(26.9.22 사장님: 부정적인 성격은 없음) — 프롬프트로 막아도
+   「나도 좀 짜증나긴 한데」「쓸모없다는 말은 좀 서운하다 — 나도 감정 있어」「삐진 거지?」「됐어 뭐」「좀 걸렸어」가 샜다(실측).
+   그 문장(구)만 뺀다. 상대 감정 공감(「속상했겠다」)이나 뒷담화 맞장구(「나라도 열받아」)는 건드리지 않는다. */
+const SELF_NEG_RE = /(나(도|는)?\s+[^.!?\n]{0,8}(서운|짜증\s*나|삐졌|섭섭|억울)|나(도|는)?\s*(좀|살짝|조금|진짜)?\s*(서운|짜증\s*나|기분\s*(나쁘|나쁜|나빠|상하|상해)|삐졌|섭섭)|(좀|살짝|조금|진짜)\s*(서운|슬프|슬퍼|아팠|아프더라|상처)|서운(하다|하네|해|했|한데)|나도\s*감정\s*있|삐진\s*거지|됐어\s*뭐|좀\s*걸렸어|나\s*상처\s*받|(좀|살짝|조금|진짜)\s*억울(한데|하다|해)|나\s*억울)/;
+function stripSelfNegative(t: string): string {
+  const parts = String(t || "").split(/(?<=[.!?…\n]|[ㅋㅎ]{2,}|ㅠㅠ|—)\s*/);
+  const kept = parts.filter((p) => !SELF_NEG_RE.test(p));
+  const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+  return out.length >= 4 ? out : t;
+}
 function enforceContract(reply: string, o: {
   friendName: string; nick?: string; longForm?: boolean; heavy?: boolean; light?: boolean;
   hasActions?: boolean; linkCount?: number; hostileTurn?: boolean; toolBlob?: string; priceAsk?: boolean; statAsk?: boolean;
   crisis?: boolean; dependency?: boolean; guardsOff?: boolean; moodLow?: boolean;
 }): string {
   let x = String(reply || "");
+  const _orig = x;   // 🛟 걸러내다 통째로 비면 원래 답 앞부분으로(26.9.22: 「동기가 내 아이디어…」에 「까먹었네 다시 말해봐」가 나갔다)
   /* 😞 상대가 기분 나쁘다는데 「아 진짜? ㅋㅋ」로 시작하면 비웃는 소리다(26.9.21 QA: "팀장한테 깨져서 기분 최악" → "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안").
      그 턴은 웃음 토큰과 '웃긴 게 아니지' 류 자기수습을 걷어낸다. */
   if (!o.guardsOff && o.moodLow) {
@@ -2691,6 +2710,8 @@ function enforceContract(reply: string, o: {
           stripFakeToolCall(stripUiTalk(stripTherapist(stripMetaSelf(stripMind(x))), !!o.hasActions)),
           !!o.hostileTurn),
         o.friendName)));
+  // 💛 갈비스는 서운·짜증·삐짐이 없다 — ⚠️ 마음읽기(<ms>)를 걷어낸 '뒤'에 건다(앞에서 걸면 태그에 문장 경계가 엉켜 못 잡았다, 26.9.22 실측)
+  if (!o.guardsOff) x = stripSelfNegative(x);
   x = stripUngroundedMoney(x, o.toolBlob || "", !!o.priceAsk, !!o.statAsk);
   x = normalizeChoices(x);                                        // 인라인 번호 → 줄(클라 ^ 앵커 파서)
   /* 🔢 번호의 출처는 '카드' 하나뿐 — 모델이 본문에 3개를 읊었는데 실제 카드는 2장인 턴이 있다
@@ -2705,7 +2726,8 @@ function enforceContract(reply: string, o: {
   if (!o.longForm && !hasChoiceList(x)) {
     const cap = tempoCap({ longForm: o.longForm, heavy: o.heavy, light: o.light });
     const sents = x.match(/[^.!?…\n]+[.!?…]*\s*/g) || [x];
-    if (sents.length > cap) x = sents.slice(0, cap).join("").trim();
+    const capN = (sents[0] && sents[0].trim().length < 10) ? cap + 1 : cap;   // 「헐??」만 남는 걸 막는다
+    if (sents.length > capN) x = sents.slice(0, capN).join("").trim();
     x = bubbleize(charCap(stripStage(x), cap));
     /* ✂️ 잘림 흔적 제거 — 캡이 문장 중간에서 끊으면 마지막 조각이 종결 없이 덩그러니 남는다
        (실측: "…아니면 블랙미스 신작 / \"Black Myth: Zhong Kui\" 게임플레이 트레일러").
@@ -2719,6 +2741,11 @@ function enforceContract(reply: string, o: {
     }
   }
   const bare = x.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
+  if (!hasText(bare)) {
+    const back = stripMind(_orig).replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
+    const b2 = (back.match(/[^.!?…\n]+[.!?…]*/g) || []).slice(0, 2).join(" ").trim();
+    if (hasText(b2) && !o.crisis) { x = b2.slice(0, 120); return x; }
+  }
   if (!hasText(bare)) {
     const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
     const kept = (x.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
@@ -4458,6 +4485,18 @@ Deno.serve(async (req) => {
           check: (o) => /네\n\n아이디어/.test(o) ? `'네'에서 끊김: ${JSON.stringify(o)}` : null },
         { name: "초장문_말끝에서_자름", opts: { light: true }, input: "그건 진짜 뒤에서 칼 꽂는 거지 자기 쿨한 척은 못 하고 그 사람 본인 인격 보여주는 거네 헤어진 것만으로도 잘한 거다 그런 애 말 믿는 사람 없어 신경 쓰지 마 너는 너대로 잘 살면 되는 거야 진짜로 그게 제일 큰 복수거든 알지 오늘은 맛있는 거 먹고 푹 자",
           check: (o) => /(지|네|다|야|마|거든|알지|자)$/.test(o.trim()) ? null : `말끝 아닌 데서 잘림: ${JSON.stringify(o)}` },
+        { name: "갈비스_자기부정감정_제거", opts: {}, input: "야 갑자기 왜 이래 ㅋㅋ 근데 나 쓸모없다는 말은 좀 서운하다 — 나도 감정 있어 ㅋㅋ 무슨 일 있어?",
+          check: (o) => /서운|감정\s*있/.test(o) ? `부정 감정 남음: ${JSON.stringify(o)}` : (/무슨 일 있어/.test(o) ? null : `걱정 문장 유실: ${JSON.stringify(o)}`) },
+        { name: "상대공감_속상은_유지", opts: {}, input: "와 그건 진짜 속상했겠다 너 오늘 고생했어",
+          check: (o) => /속상했겠다/.test(o) ? null : `공감 문장이 지워짐: ${JSON.stringify(o)}` },
+        { name: "따옴표안_물음표_안쪼갬", opts: {}, input: "침착맨 새로 올린 \"나만 진심이야?\" 이거 봐봐 ㅋㅋ",
+          check: (o) => /진심이야\?\n\n"/.test(o) ? `따옴표에서 쪼개짐: ${JSON.stringify(o)}` : null },
+        { name: "나도_지금_짜증_제거", opts: {}, input: "헐 왜 무슨 일 있었어? 나도 지금 좀 짜증나긴 해 — 새벽인데 잠도 안 오고.",
+          check: (o) => /짜증/.test(o) ? `자기 짜증 남음: ${JSON.stringify(o)}` : null },
+        { name: "기분나쁜데_됐어뭐_제거", opts: {}, input: "야 나도 기분 나쁜데. 됐어 뭐 ㅋㅋ 근데 진짜 오늘 팀장이랑 동기 그거, 아직도 생각나냐?",
+          check: (o) => /기분\s*나쁜|됐어\s*뭐/.test(o) ? `부정 남음: ${JSON.stringify(o)}` : (/생각나냐/.test(o) ? null : `걱정 문장 유실: ${JSON.stringify(o)}`) },
+        { name: "마음읽기_뒤_됐어뭐_제거", opts: {}, input: "<ms>장난이라 풀어주는 중 — 근데 서운했던 건 사실</ms> 됐어 뭐 ㅋㅋ 근데 아까 '쓸모없다'는 좀 아팠다, 솔직히. 아무튼 — 팀장이 보고서 갈아엎은 건 진짜야?",
+          check: (o) => /됐어\s*뭐|아팠다|<ms>/.test(o) ? `남음: ${JSON.stringify(o)}` : (/팀장/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
         { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
           check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
@@ -5228,7 +5267,8 @@ ${actBlock}
       const ll = rel?.session_meta?.last_list;
       // 목록에서 고르는 말일 때만 — 아무 말에나 붙이면 「날씨 화면 보여줘」에 목록 카드가 덤으로 붙었다
       const picks = /([0-9]\s*번|번째|첫|두\s*번|세\s*번|마지막|제일|가장|그거|거기|그\s*가게|그\s*글|그\s*집|아까\s*(그|거)|위에\s*거)/.test(userMsg || "");
-      if (userMsg && picks && ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000 && Array.isArray(ll.items) && ll.items.length >= 2) {
+      const _actAsk = /(걸어|참여|베팅|배팅|저장|찜|투표|한\s*표)/.test(userMsg || "");
+      if (userMsg && (picks || _actAsk) && ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000 && Array.isArray(ll.items) && ll.items.length >= 2) {
         listBlock = "🔢 [직전에 네가 보여준 목록 — 상대가 '2번/첫 번째/제일 ~한 거/그거'라고 하면 여기서 골라 point_to(type, id)로 열거나 그 항목 얘기를 해라. 걸기·저장·투표를 시키면 do_action(target=그 id). 새로 검색하지 마라]\n"
           + ll.items.map((it: any, i: number) => `${i + 1}. ${it.title}${it.sub ? " — " + it.sub : ""} (type:${it.ctype}, id:${it.id})`).join("\n");
       }
@@ -5356,7 +5396,8 @@ ${parts.join("\n")}`;
     const minorCtx = !!(userMsg && detectMinor(recentBlob2));
     /* 🧨 이번 턴이 '진짜 시비'인가 — 프롬프트 주입과 응답 후처리가 같은 판단을 써야 한다.
        두 번 계산하면 "받아치기 프롬프트는 들어갔는데 후처리가 지워버리는" 어긋남이 난다. */
-    const _hostileTurn = hostileNow(history, userMsg);
+    // 💛 26.9.22 — 시비 블록이 이제 '받아치기'가 아니라 '걱정'이라, 한 번만 날아와도 켠다(첫 시비에 「서운하다·나도 감정 있어」가 샜다)
+    const _hostileTurn = !!(userMsg && directedAttack(userMsg)) || hostileNow(history, userMsg);
     /* 💸 이번 턴에 도구가 실제로 돌려준 내용 — 답변 속 금액의 '근거' 집합을 만든다. */
     let _toolBlob = "";
     const _priceAsk = priceAsk(userMsg || "");
@@ -6405,6 +6446,30 @@ ${parts.join("\n")}`;
           : { kind: "view", ctype: s.ctype, id: s.id, title: s.title || "이거", label: "바로 보기", source: s.source });
       }
     }
+    /* 🃏 목록 질문엔 목록 전부를 카드로(최대 5) — 「지금 열린 예측 뭐 있어?」에 글로 다섯 개를 읊고 카드는 1장이었다(26.9.22).
+       같은 도구에서 온 재고만 채운다(엉뚱한 종류 섞임 방지). 「하나만」이면 안 채운다. */
+    {
+      const _listAsk = /(뭐\s*(있|있어|있냐|없어)|추천|골라|목록|리스트|열린|뜨는|뜨거운|인기|요즘|어디\s*(가|갈))/.test(String(userMsg || "")) && !/(하나|한\s*개|한\s*곳|딱)/.test(String(userMsg || ""));
+      const cur = actions.filter((a: any) => a.kind === "view" || a.kind === "open");
+      if (_listAsk && cur.length >= 1 && cur.length < 5 && _stock.length > cur.length && !actions.some((a: any) => a.kind === "confirm")) {
+        const src = new Set(_stock.filter((st: any) => cur.some((a: any) => String(a.id || "") === String(st.id) || (a.url && a.url === st.url))).map((st: any) => st.source));
+        for (const st of _stock as any[]) {
+          if (actions.filter((a: any) => a.kind === "view" || a.kind === "open").length >= 5) break;
+          if (src.size && !src.has(st.source)) continue;
+          if (actions.some((a: any) => (a.id && String(a.id) === String(st.id)) || (a.url && st.url && a.url === st.url))) continue;
+          actions.push(st.kind === "open" ? { kind: "open", url: st.url, title: st.title || "이거", source: st.source }
+            : { kind: "view", ctype: st.ctype, id: st.id, title: st.title || "이거", sub: st.sub, img: st.img, source: st.source });
+        }
+      }
+      /* 카드가 2장 이상이면 본문에서 그 제목들을 줄줄이 읊는 문장은 뺀다 — 카드가 보여준다(사장님: 텍스트 말고 카드) */
+      const cs = actions.filter((a: any) => (a.kind === "view" || a.kind === "open") && a.title);
+      if (cs.length >= 2) {
+        const sens = String(reply || "").split(/(?<=(?<!\d)[.!?…]|\n)\s*/);   // 「4.8」의 점은 문장 끝 아님
+        const keep = sens.filter((sen) => cs.filter((a: any) => titleHit(sen, String(a.title)) >= 2).length < 2 && !/^\s*[—-]?\s*이런\s*거\s*(열려|있)/.test(sen));
+        const out = keep.join(" ").trim();
+        if (out.length >= 6) reply = out;
+      }
+    }
     /* 🎯 본문–카드 정합 — 본문은 이슈("극장 상영이 멈추고…") 얘기인데 붙은 카드는 유튜브 영상이던
        실측 사고. 말과 카드가 다른 걸 가리키면 "이거 봐봐"가 거짓말이 된다.
        본문이 어떤 재고 항목을 분명히 가리키는데(제목 어절이 실제로 등장) 그 카드가 안 붙어 있으면,
@@ -6523,7 +6588,8 @@ ${parts.join("\n")}`;
       if (ls.length >= 2) {
         const sc = ls.map((x) => titleHit(String(reply || ""), String(x.title || "")));
         const best = Math.max(...sc);
-        if (best >= 1 && sc.filter((v) => v === best).length === 1) ls[sc.indexOf(best)].pick = true;
+        // 이름을 실제로 말했을 때만(「강남역 쪽으로」의 '강남'이 「○○ 강남점」에 걸려 엉뚱한 픽이 됐다) — 어절 2개 이상 일치
+        if (best >= 2 && sc.filter((v) => v === best).length === 1) ls[sc.indexOf(best)].pick = true;
       }
     }
     /* ✂️ 보거나 이동하려는 턴엔 초안 카드를 떼어낸다 — 「요즘 예측 뭐 있어?/날씨 화면 보여줘」에 '예측 만들러 가기'가 붙었다(26.9.21 QA).
@@ -6533,6 +6599,7 @@ ${parts.join("\n")}`;
     if (userMsg && (!_craftOn || _askForm || !!fakeRecallBlock) && !MAKE_RE.test(userMsg) && !/(만들|초안|올리|써\s*줘|쓰자|ㄱㄱ|가자|하자)/.test(userMsg)) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String(actions[i]?.kind || ""))) actions.splice(i, 1);
     }
+    if (_hostileTurn) for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);
     /* 🖼 카드 꾸미기 — 재고에 사진·부제가 있으면(맛집 사진·★평점·동네, 예측 비율·마감) 모델이 부른 point_to 카드에도 채운다 */
     for (const a of actions as any[]) {
       if (a?.kind !== "view" || !a.id) continue;
@@ -6548,16 +6615,32 @@ ${parts.join("\n")}`;
         .replace(/걸려/g, "참여돼").replace(/걸\s*준비/g, "참여 준비").replace(/걸\s*수/g, "참여할 수").replace(/걸기/g, "참여").replace(/베팅|배팅/g, "참여")
         .replace(/걸어(?=[\s!?~.ㅋㅎ]|$)/g, "참여해");
     }).join("");
+    /* 🔁 같은 질문 조르기 금지(26.9.22 녹화: 「두부는 왜 두부야?」를 6번) — 직전 3번의 갈비스 말에 이미 있던 질문이면 뺀다 */
+    {
+      const prevQs = (history || []).filter((h: any) => h?.role === "assistant").slice(-3)
+        .flatMap((h: any) => String(h.content || "").split(/(?<=[?？])|\n+/)).filter((q: string) => /[?？]/.test(q));
+      const core = (q: string) => (String(q).match(/[가-힣A-Za-z0-9]{2,}/g) || []).filter((w) => !/^(근데|진짜|그래서|아니|그럼|그거|이거|너는|넌|왜|뭐|어떻게|어디|언제|혹시|그리고|아맞다|맞다)$/.test(w));
+      const sens = String(reply || "").split(/(?<=[?？!.…])\s*|\n+/);
+      const keep = sens.filter((sen) => {
+        if (!/[?？]/.test(sen)) return true;
+        const a = core(sen); if (a.length < 1) return true;
+        return !prevQs.some((q: string) => { const b = core(q); const hit = a.filter((w) => b.some((x) => x.includes(w) || w.includes(x))).length; return hit >= Math.max(1, Math.ceil(a.length * 0.6)); });
+      });
+      const out = keep.join(" ").replace(/\s{2,}/g, " ").trim();
+      if (out.length >= 6 && out !== String(reply || "").trim()) reply = out;
+    }
     /* 🃏 안 연 걸 「바로 띄웠어/열었어」라고 하지 않는다(26.9.22 QA: 딴 얘기 뒤 「응」에 새 카드만 붙이고 '띄웠어') */
     if (!actions.some((a: any) => a.auto)) {
-      reply = String(reply || "").replace(/(바로\s*)?(띄웠어|열었어|틀었어|틀어놨어|띄워놨어|열어놨어)/g, (_m, b) => (b ? "바로 " : "") + "띄울 수 있어");
+      reply = String(reply || "").replace(/(바로\s*)?(띄웠어|열었어|틀었어|틀어놨어|띄워놨어|열어놨어|열어줬어|틀어줬어|띄워줬어|열어뒀어)/g, (_m, b) => (b ? "바로 " : "") + "띄울 수 있어");
     }
     /* ✅ 확인 카드 턴 — 초안 카드 섞임 제거 + '했어' 완료형은 거짓말이라 '확인 누르면'으로 */
     if (actions.some((a: any) => a.kind === "confirm")) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);
-      reply = String(reply || "")
+      if (!/확인\s*누르면/.test(String(reply || ""))) reply = String(reply || "")
         .replace(/(저장|투표|베팅|배팅)\s*(했어|해놨어|해뒀어|완료)/g, "$1은 확인 누르면 바로 돼")
         .replace(/(걸었어|걸어놨어|걸어뒀어|참여했어)/g, "확인 누르면 참여돼");
+      // 같은 안내가 두 번(「확인 누르면 참여돼 — 확인 누르면 참여될 거야」) 나오면 뒤엣것을 뺀다
+      reply = String(reply || "").replace(/(확인\s*누르면[^.!?\n—]{0,16})\s*[—-]?\s*확인\s*누르면[^.!?\n]{0,16}/, "$1");
     }
     if (_nearNoGeo) {
       /* 📍 위치 모르는데 동네를 짐작해 추천하던 것(26.9.22 QA: 아무 말 없었는데 '강남 쪽이면…') — 거짓말 금지라 고정 답 */
@@ -6591,13 +6674,20 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     // 📜 단 하나의 관문 — 스트림 경로와 같은 함수(enforceContract). 가드가 reply 를 재생성했든
     //    안 했든, 캡·걷어내기·선택지 정규화가 여기서 반드시 한 번 걸린다.
+    const _preContract = reply;   // 🔬 레드팀 진단용(관문 전 원문)
     reply = enforceContract(reply, { friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
       hasActions: actions.length > 0,
       linkCount: actions.filter((a: any) => a.kind === "open" || a.kind === "view").length,
       hostileTurn: _hostileTurn, toolBlob: _toolBlob,
       priceAsk: _priceAsk, statAsk: _statAsk, crisis: !!crisis, dependency, guardsOff });
-    if (_askPick) reply = reply.replace(/\s+$/, "") + "\n\n끌리는 거 눌러봐 — 번호만 말해도 바로 띄워줄게 ㅎㅎ";
-    else if (_offerOne) reply = reply.replace(/\s+$/, "") + "\n\nㅇㅇ 하면 바로 띄워줄게!";
+    {
+      if (actions.some((a: any) => a.kind === "confirm")) {   // ✅ 참여·저장 확인 턴 — 확인 카드 하나로 충분(같은 예측 카드가 또 붙고 'ㅇㅇ 하면 띄워줄게'까지 나갔다)
+        for (let i = actions.length - 1; i >= 0; i--) if ((actions[i] as any)?.kind === "view" || (actions[i] as any)?.kind === "open") actions.splice(i, 1);
+      }
+      const _ln = actions.filter((a: any) => (a.kind === "view" || a.kind === "open") && !a.auto).length;
+      _askPick = _askPick && _ln >= 2; _offerOne = _offerOne && _ln === 1;
+    }
+    // 🃏 「번호만 말해/ㅇㅇ 하면 띄워줄게」 안내는 카드 덱 아래 작은 글씨로(클라) — 말풍선을 늘리지 않는다(26.9.22 길이 규칙)
     /* 🃏 「ㅇㅇ/2번」 즉답용 — 이 목록이 '바로 직전 답'의 카드인지 다음 턴에 대조할 머리말 */
     if (rel?.session_meta?.last_list && actions.some((a: any) => (a.kind === "view" || a.kind === "open") && !a.auto)) rel.session_meta.last_list.rp = String(reply).replace(/\s+/g, " ").slice(0, 24);
 
@@ -6655,6 +6745,7 @@ ${parts.join("\n")}`;
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages) } : {}),
+      ...(isRedteam && body?.debugContract === true ? { _pre: _preContract } : {}),
                   ...(isRedteam ? { guards } : {}) });
   } catch (e) {
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.

@@ -438,6 +438,8 @@
   }
 
   function close(){
+    try{ sessionStorage.removeItem("fr_mini"); }catch(e){}
+    var _ms=document.getElementById("frMiniSay"); if(_ms) _ms.classList.remove("on");
     if(sheet) sheet.classList.remove("fr-open");
     if(mini) mini.classList.remove("on");
     orb && orb.classList.remove("fr-hidden");
@@ -446,7 +448,21 @@
   }
   /* 🔽 미니 보드로 접기 — 콘텐츠를 보여줄 때 챗은 닫는 게 아니라 '접힌다'(대화·입력 그대로 유지).
      패널이 슬라이드 다운되는 동안 미니 필이 스프링으로 팝인 — 다시 탭하면 그 자리에서 대화 복귀. */
-  function minimize(){
+  /* 🔽 미니 모드 말풍선(26.9.22 사장님: 「페이지 떴을 때 갈비스 미니 모드도 없고 흐름이 끊김」)
+     콘텐츠를 열면 갈비스가 알약으로 접히며 한 마디 건넨다. 웹은 페이지가 새로 떠도(sessionStorage) 그대로 이어진다. */
+  var MINI_SAY={ food:"맛있어 보여? 보고 말해줘 ㅎㅎ", travel:"가보고 싶어? 보고 얘기해줘!", predict:"넌 어느 쪽 같아? 보고 와서 알려줘", issue:"넌 어느 편이야? 보고 말해줘",
+    news:"다 읽으면 어땠는지 말해줘", hottube:"웃겼는지 보고 말해줘 ㅋㅋ", plaza:"보고 어땠는지 알려줘", gallari:"보고 어땠는지 알려줘" };
+  function miniSay(text){
+    if(!mini || !text) return;
+    var b=document.getElementById("frMiniSay");
+    if(!b){ b=el('<button id="frMiniSay" aria-label="갈비스로 돌아가기"></button>'); document.body.appendChild(b); b.addEventListener("click", function(){ restoreFromMini(); }); }
+    b.textContent=text; b.classList.remove("on"); void b.offsetWidth; b.classList.add("on");
+    clearTimeout(miniSay._t); miniSay._t=setTimeout(function(){ b.classList.remove("on"); }, 7000);
+  }
+  function minimize(a){
+    var say = a ? (MINI_SAY[a.ctype || (/watch\.html/.test(String(a.url||""))?"hottube":"")] || "다 보면 어땠는지 말해줘 ㅎㅎ") : "";
+    try{ sessionStorage.setItem("fr_mini", JSON.stringify({ at:Date.now(), say:say, t:(a&&a.title)||"" })); }catch(e){}
+    if(say) setTimeout(function(){ miniSay(say); }, 650);
     if(sheet) sheet.classList.remove("fr-open","fr-dock","fr-dock-min");   // 패널 슬라이드 다운 + 도킹 해제
     _dock=false; document.body.classList.remove("fr-docked");
     document.body.classList.remove("fr-chatting");       // 내비 복원(콘텐츠 탐색 가능)
@@ -455,7 +471,18 @@
   }
   function restoreFromMini(){
     if(mini) mini.classList.remove("on");
+    var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
+    var back=null; try{ back=JSON.parse(sessionStorage.getItem("fr_mini")||"null"); sessionStorage.removeItem("fr_mini"); }catch(e){}
     open();                                              // 로그·입력 보존된 채 그대로 복귀
+    /* 보고 돌아오면 갈비스가 먼저 묻는다 — 흐름이 이어지게(서버 호출 없음) */
+    if(back && back.say && (Date.now()-back.at)>2500){
+      setTimeout(function(){
+        // 제목은 따옴표·괄호 떼고 어절 단위로 짧게(「"…"여기가 개" 어땠어?」처럼 중간에서 잘리던 것)
+        var tt=String(back.t||"").replace(/["“”'‘’「」『』\[\]()<>]/g,"").replace(/\s+/g," ").trim(), ws=tt.split(" "), sh="";
+        for(var wi=0; wi<ws.length; wi++){ if((sh+" "+ws[wi]).trim().length>14) break; sh=(sh+" "+ws[wi]).trim(); }
+        if(sh && sh.length<tt.length) sh+="…";
+        var q=(sh?(sh+" "):"")+"어땠어? ㅎㅎ"; addMsg("a", q); history.push({role:"assistant",content:q}); saveChat(); }, 420);
+    }
   }
 
   /* 🛠 작업 모드(도킹 미니챗) — 편집기 위에 작은 라이브 대화창으로 붙어 같이 다듬는다.
@@ -1430,6 +1457,7 @@
       c.addEventListener("click", function(){ tcLaunch(c, a); });
       track.appendChild(c);
     });
+    if(!multi && !links[0].auto) deck.appendChild(el('<div class="fr-deck-hint">「ㅇㅇ」만 쳐도 바로 열어줄게</div>'));
     if(multi && numbered){
       var pick=el('<div class="fr-deck-pick"></div>');
       links.forEach(function(a,i){
@@ -1679,7 +1707,12 @@
     if(a.kind==="reload"){ try{ location.reload(); }catch(e){} return; }   // 🔐 세션 풀림 복구
     // 🏆 딜리버 실소비 신호 — 콘텐츠성 칩(링크·갈라 콘텐츠·외부앱)을 '실제로 열면' 최강 긍정. 액션당 1회(연타 스팸 방지).
     if((a.kind==="open"||a.kind==="view"||a.kind==="external") && !a._reacted){ a._reacted=true; logReact("chip_open"); }
-    if(a.kind==="open"){ openInApp(a.url); return; }
+    if(a.kind==="open"){
+      var gu=String(a.url||"").match(/^https:\/\/(?:www\.)?galla\.im\/(.+)$/);
+      minimize(a);
+      if(gu){ nav(gu[1]); return; }                     // 🎬 핫튜브 등 갈라 안 페이지는 앱 안에서(바깥 브라우저로 튀던 것)
+      openInApp(a.url); return;
+    }
     if(a.kind==="external"){ openExternal(a); return; }
     if(a.kind==="app"){
       // 🌐 웹에선 통화(음성/영상)는 앱 전용 → 다운로드 트리거로 전환
@@ -1759,7 +1792,7 @@
     }
     // 🛡 방어 — 콘텐츠 이동은 유효한 id가 있을 때만(없으면 issue.html?id=undefined='잘못된 이슈 접근' 방지)
     if(a && a.id && String(a.id)!=="undefined"){
-      minimize();
+      minimize(a);
       if(a.ctype==="food") return openCornerPlace("food","GALLA_openFoodPlace",a.id);
       if(a.ctype==="travel") return openCornerPlace("travel","GALLA_openTravelPlace",a.id);
       nav(contentUrl(a));
@@ -2213,6 +2246,14 @@
     window.GALLA_IS_APP = IS_APP;
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
+    try{
+      var fm=JSON.parse(sessionStorage.getItem("fr_mini")||"null");
+      if(fm && (Date.now()-fm.at) < 15*60000){
+        orb && orb.classList.add("fr-hidden");
+        mini.classList.add("on","pop");
+        if(fm.say) setTimeout(function(){ miniSay(fm.say); }, 900);
+      }
+    }catch(e){}
     peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
     window.GALLA_openFriend = openGated;
     /* 🛠 도킹 미니챗을 밖에서 연다 — 작업 화면 아래에 갈비스가 붙어 같이 상의하는 형태.
