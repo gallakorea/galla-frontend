@@ -902,7 +902,15 @@
         cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf); lvlog("pub ok " + trackName);
         // 🍎 아이폰: 마이크를 켜며 오디오 유닛이 재구성돼 재생 출력을 놓친다 → 네이티브가 유닛을 한 번 내렸다 올린다
         try { lvlog("pub answerDirs=" + (res.data.sessionDescription.sdp.match(/^a=(sendonly|recvonly|sendrecv|inactive)$/gm) || []).join(",") + " trs=" + cf.pc.getTransceivers().map(t => t.mid + ":" + (t.currentDirection || t.direction)).join(",")); } catch (e) {}
-        if (window.__iosrtcReady) setTimeout(() => { try { window.webkit.messageHandlers.gallaCall.postMessage({ action: "liveAudio", on: true, restart: true }); } catch (e) {} }, 800);
+        // 🍎 아이폰: 마이크를 켜며 재협상하면 iosrtc 가 기존 수신 트랙을 꺼 버려(isEnabled=false) 상대 목소리 재생이 0이 됐다
+        //    (26.9.21 두 폰 실측: 청중일 땐 재생 0.12, 무대에 오르면 패킷은 오는데 0). 수신 트랙을 다시 켠다.
+        if (window.__iosrtcReady) {
+          const rx = () => { try { return cf.pc.getReceivers().map(r => r.track ? (r.track.kind + ":" + r.track.readyState + ":" + r.track.enabled) : "-").join(","); } catch (e) { return "err"; } };
+          lvlog("pub rx-before " + rx());
+          const revive = () => { try { cf.pc.getReceivers().forEach(r => { if (r.track && r.track.kind === "audio") r.track.enabled = true; });
+            (cf.els || []).forEach(el => { const so = el.srcObject; if (so && so.getAudioTracks) so.getAudioTracks().forEach(t => { t.enabled = true; }); }); } catch (e) {} };
+          revive(); setTimeout(() => { revive(); lvlog("pub rx-after " + rx()); }, 1200);
+        }
         announcePub();
       } else {
         cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf); lvlog("pub FAIL " + JSON.stringify(res).slice(0, 160));
