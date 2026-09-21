@@ -65,10 +65,16 @@
     } catch (e) {
       // 권한 거부·기기 없음 — 왜 안 되는지 말해준다(그냥 검은 화면이면 버그로 오해한다)
       $("clipDenied").hidden = false;
-      $("clipDeniedWhy").textContent =
-        (e && e.name === "NotAllowedError")
-          ? "카메라·마이크 권한이 꺼져 있어요."
-          : "카메라를 열 수 없어요 — " + ((e && e.name) || "알 수 없는 오류");
+      var denied = e && (e.name === "NotAllowedError" || e.name === "SecurityError");
+      $("clipDeniedWhy").textContent = denied
+        ? "카메라·마이크 권한이 꺼져 있어요."
+        : "카메라를 열 수 없어요 — " + ((e && e.name) || "알 수 없는 오류");
+      /* 🔧 권한 거부면 켜러 가는 길을 준다 — 「설정에서 켜주세요」 글자만으로는 되돌릴 수 없다(26.9.21) */
+      var fix = $("clipPermFix");
+      if (fix) {
+        fix.hidden = !denied;
+        fix.onclick = function () { try { window.GALLA_permHelp && window.GALLA_permHelp("camera"); } catch (_) {} };
+      }
       return false;
     }
     const v = $("clipCam");

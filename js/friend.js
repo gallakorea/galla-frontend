@@ -772,7 +772,7 @@
         recBtn.textContent="⏹ 녹음 끝";
         tick=setInterval(function(){ timeEl.textContent=((Date.now()-t0)/1000).toFixed(0)+"s / 목표 30s"; },500);
         status("대본을 소리내어 읽어줘 — 구절마다 또박또박!");
-      }catch(e){ status("마이크를 못 열었어 ㅜ 권한을 확인해줘"); }
+      }catch(e){ status("마이크를 못 열었어 ㅜ"); try { window.GALLA_permHelp && window.GALLA_permHelp("mic"); } catch (_) {} }
     });
     wrap.querySelector(".fr-reel-redo").addEventListener("click", function(){
       blob=null; doneEl.hidden=true; recBtn.parentElement.hidden=false; recBtn.textContent="🎙 녹음 시작"; timeEl.textContent=""; status("");
@@ -1944,7 +1944,7 @@
       };
       rec.start();
       recording=true; mic&&mic.classList.add("fr-rec");
-    }catch(e){ addMsg("a","마이크를 못 켰어 ㅠㅠ 권한 확인해줄래?"); }
+    }catch(e){ addMsg("a","마이크를 못 켰어 ㅠㅠ"); try { window.GALLA_permHelp && window.GALLA_permHelp("mic"); } catch (_) {} }
   }
   async function sttSend(blob){
     var jwt=await token(); if(!jwt) return;

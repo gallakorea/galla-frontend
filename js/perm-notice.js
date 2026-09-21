@@ -86,8 +86,21 @@
     });
   }
 
-  // 스플래시가 내려간 뒤에 — 첫 화면부터 덮으면 앱이 뭘 하는 곳인지 못 보고 판단하게 된다
-  function boot() { setTimeout(show, 900); }
+  /* 언제 띄우나
+       ① 스플래시가 내려간 뒤 — 첫 화면부터 덮으면 앱이 뭘 하는 곳인지 못 보고 판단하게 된다
+       ② 온보딩 투어가 떠 있으면 그게 끝나기를 기다린다.
+          투어(z-index 2147483000)가 이 화면보다 위라, 동시에 띄우면 고지가 뒤에 깔려
+          사용자는 본 적도 없는데 '봤음' 처리된다(26.9.21 에뮬 실측으로 잡음).
+       ③ 권한을 실제로 요청하기 전이기만 하면 되므로, 투어 뒤라도 고지 의무는 지켜진다. */
+  function tourUp() { return !!document.querySelector(".gtour"); }
+  function boot() {
+    var tries = 0;
+    (function wait() {
+      if (++tries > 600) return;                 // 10분이면 포기(무한 폴링 방지)
+      if (tourUp()) return setTimeout(wait, 1000);
+      setTimeout(function () { if (!tourUp()) show(); }, 900);
+    })();
+  }
   if (document.readyState === "complete") boot();
   else window.addEventListener("load", boot, { once: true });
 })();

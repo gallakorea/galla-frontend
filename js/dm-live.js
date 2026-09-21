@@ -855,7 +855,10 @@
     cf.pubBusy = true;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (e) { cf.pubBusy = false; cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf); toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    catch (e) { cf.pubBusy = false; cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf);
+      /* 🎙 마이크가 이 기능의 전부다 — 「확인해 주세요」로 끝내면 되돌릴 방법이 없다(26.9.21) */
+      try { window.GALLA_permHelp ? window.GALLA_permHelp("mic") : toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); } catch (_) {}
+      return; }
     // 승격을 기다리는 사이 강등됐거나 무대가 닫혔으면 즉시 회수
     if (!CUR || CUR.cf !== cf || cf.pubTrack || !(CUR.role === "host" || CUR.role === "speaker")) {
       try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
