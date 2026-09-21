@@ -895,6 +895,8 @@
         await cf.pc.setRemoteDescription(res.data.sessionDescription);
         cf.pubTrack = track; cf.myTrackName = trackName;
         cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf); lvlog("pub ok " + trackName);
+        // 🍎 아이폰: 마이크를 켜며 오디오 유닛이 재구성돼 재생 출력을 놓친다 → 네이티브가 유닛을 한 번 내렸다 올린다
+        if (window.__iosrtcReady) { try { window.webkit.messageHandlers.gallaCall.postMessage({ action: "liveAudio", on: true, restart: true }); } catch (e) {} }
         announcePub();
       } else {
         cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf); lvlog("pub FAIL " + JSON.stringify(res).slice(0, 160));
