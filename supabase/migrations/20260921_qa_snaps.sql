@@ -12,3 +12,6 @@ drop policy if exists qa_snaps_ins on public.qa_snaps;
 create policy qa_snaps_ins on public.qa_snaps for insert to authenticated with check (user_id = auth.uid() and length(img) < 1500000);
 grant insert on public.qa_snaps to authenticated;
 grant usage on sequence public.qa_snaps_id_seq to authenticated;
+-- 앱이 insert 후 .select('id') 로 되읽는다 — 자기 캡처만 읽게 허용(남의 것은 여전히 못 본다)
+drop policy if exists qa_snaps_sel on public.qa_snaps;
+create policy qa_snaps_sel on public.qa_snaps for select to authenticated using (user_id = auth.uid());
