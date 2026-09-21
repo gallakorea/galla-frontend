@@ -6020,7 +6020,11 @@
       if (hand) { const pr = await L.promote(peer); qlog('P live promote ' + JSON.stringify(pr).slice(0, 60)); }
       await qsleep(4000); await qsnap('P-live');
       qlog('P live speaking');
-      await qaLiveLog('P live', 12);
+      await qaLiveLog('P live', 5);
+      qlog('P live tone ' + await L.tone(true));   // 판정용 440Hz — 받는 폰의 수신 소리 크기가 뚜렷이 올라야 한다
+      await qaLiveLog('P live tone', 5);
+      qlog('P live tone ' + await L.tone(false));
+      await qaLiveLog('P live', 2);
       await L.end(); qlog('P live end');
     }
     qlog('dmP all done');

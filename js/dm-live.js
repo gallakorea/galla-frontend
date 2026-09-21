@@ -1036,6 +1036,15 @@
     hand(on) { if (CUR && !!CUR.hand !== !!on) return toggleHand(); },
     async promote(uid) { if (!CUR) return null; const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: "speaker" }); broadcastSync(); refreshState(); return data; },
     async unmute() { if (CUR && CUR.muted) return toggleMute(); },
+    // 판정용 시험음 — 보내는 마이크 트랙을 440Hz 로 바꿔 끼운다(웹뷰만: iosrtc 는 WebAudio 트랙 불가)
+    async tone(on) {
+      const pc = CUR && CUR.cf && CUR.cf.pc; if (!pc || window.__iosrtcReady) return "skip";
+      const snd = pc.getSenders().find(x => x.track && x.track.kind === "audio") || pc.getSenders().find(x => x._qaTone);
+      if (!snd) return "nosender";
+      if (on) { const AC = window.AudioContext || window.webkitAudioContext; const ctx = new AC(); try { await ctx.resume(); } catch (e) {} const o = ctx.createOscillator(); o.frequency.value = 440; const g = ctx.createGain(); g.gain.value = 0.5; const d = ctx.createMediaStreamDestination(); o.connect(g); g.connect(d); o.start();
+        snd._qaOrig = snd.track; snd._qaTone = { ctx, o }; await snd.replaceTrack(d.stream.getAudioTracks()[0]); return "tone on"; }
+      if (snd._qaTone) { try { snd._qaTone.o.stop(); snd._qaTone.ctx.close(); } catch (e) {} await snd.replaceTrack(snd._qaOrig); snd._qaTone = null; } return "tone off";
+    },
     state() { if (!CUR) return null; const cf = CUR.cf || {}; return { room: CUR.roomId, role: CUR.role, muted: CUR.muted, hand: CUR.hand, n: (CUR.state || []).length, rows: (CUR.state || []).map(r => ({ u: String(r.user_id).slice(0, 6), role: r.role, hand: r.hand_raised, muted: r.muted })), tx: !!(cf.diag && cf.diag.tx), rx: cf.diag ? cf.diag.rx : 0, ice: cf.diag ? cf.diag.ice : '-', err: cf.diag ? cf.diag.err : '-', subs: cf.subs ? cf.subs.size : 0, els: (cf.els || []).length }; },
     async stats() {
       const pc = CUR && CUR.cf && CUR.cf.pc; if (!pc || !pc.getStats) return null;
