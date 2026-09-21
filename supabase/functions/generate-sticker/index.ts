@@ -8,6 +8,7 @@
    · 생성 권한은 이 함수에만(테이블 INSERT 권한을 클라에 주지 않음)
    · 하루 상한: 유저별=charge RPC, 플랫폼 전체=ai_budget_take(GP 차감 전 검사) */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+import { verifiedUid, isServiceKey } from "../_shared/auth.ts";   // 🔒 서명 검증 인증(26.9.21)
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 import { logSpendUnits } from "../_shared/spend.ts";
@@ -120,7 +121,7 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  const me = callerUid(req);
+  const me = await verifiedUid(req);   // 🔒 서명 미검증 payload 로 남의 GP 를 쓸 수 있었다
   if (!me) return j({ error: "auth" }, 401);
 
   let body: { prompt?: string; count?: number };

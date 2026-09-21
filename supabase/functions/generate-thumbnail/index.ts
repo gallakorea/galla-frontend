@@ -3,6 +3,7 @@
    지금은 무료(완성형 우선) — 남용가드는 플랫폼 캡(ai_daily_caps.generate-thumbnail) + 유저 24h 한도.
    과금(GP)은 나중에 붙인다. 생성 권한은 이 함수에만(클라에 이미지생성/INSERT 권한 없음). */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+import { verifiedUid, isServiceKey } from "../_shared/auth.ts";   // 🔒 서명 검증 인증(26.9.21)
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 import { logSpendUnits } from "../_shared/spend.ts";
@@ -222,7 +223,7 @@ Deno.serve(async (req) => {
       { status: 503, headers: { "content-type": "application/json" } });
   }
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  const me = callerUid(req);
+  const me = await verifiedUid(req);   // 🔒 서명 미검증 payload 로 남의 GP 를 쓸 수 있었다
   if (!me) return j({ error: "auth" }, 401);
 
   let body: { prompt?: string; ratio?: string; image_urls?: string[] };

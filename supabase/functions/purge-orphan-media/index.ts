@@ -16,6 +16,7 @@
      ⑤ 한 번에 지우는 상한(기본 500) — 사고가 나도 피해가 유한하다.
 */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { isServiceKey } from "../_shared/auth.ts";   // 🔒 26.9.21
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
@@ -84,11 +85,9 @@ serve(async (req) => {
       allowed = data === true;
     }
     if (!allowed) {
-      const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
-      try {
-        const p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-        allowed = p?.role === "service_role";
-      } catch (_) { /* 형식이 아니면 거부 */ }
+      // 🔒 예전엔 토큰 payload 에 role:service_role 이 '적혀만' 있으면 통과였다 → 가짜 토큰으로 미디어 삭제 가능.
+      //    이제 실제 서비스 키와 정확히 같을 때만(크론은 x-cron-secret 을 쓴다).
+      allowed = isServiceKey(req);
     }
     if (!allowed) return j({ error: "forbidden" }, 403);
 

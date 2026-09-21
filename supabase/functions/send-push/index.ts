@@ -3,6 +3,7 @@
    남용 방지: 함수가 '정말 그 메시지의 발신자인가'를 서버에서 재확인한다 —
    임의 payload로 남의 기기에 푸시를 쏘는 건 불가능. 알림 내용도 DB에서 읽는다. */
 import webpush from "npm:web-push@3.6.7";
+import { verifiedUid, isServiceKey } from "../_shared/auth.ts";   // 🔒 서명 검증 인증(26.9.21)
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { importPKCS8, SignJWT } from "https://esm.sh/jose@5.9.6";
 
@@ -366,7 +367,7 @@ Deno.serve(async (req) => {
     return j({ ok: true, sent });
   }
 
-  const me = callerUid(req);
+  const me = await verifiedUid(req);   // 🔒 발신자 사칭 방지(서명 검증)
   if (!me) return j({ error: "auth" }, 401);
 
   // 📞 통화 벨 푸시 — 메시지 행이 없는 유일한 종류라 '둘 사이에 스레드가 있는가'로 남용을 막는다

@@ -1,3 +1,4 @@
+import { verifiedUid } from "../_shared/auth.ts";   // 🔒 서명 검증 인증(26.9.21) — 가짜 토큰으로 라이브 방 SFU 사용 차단
 /* 🎙 rtc-sfu — Cloudflare Calls SFU 프록시 (라이브 난장 다대다 음성)
    왜 서버에서: Calls 앱 시크릿(App Secret)은 클라이언트로 내려가면 안 된다.
    클라이언트가 SDP offer/answer·트랙 요청을 보내면, 여기서 시크릿을 붙여
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return j({ ok: false, reason: "method" }, 405);
 
   // 로그인 유저만 (라이브 난장은 로그인 필수)
-  if (!callerUid(req)) return j({ ok: false, reason: "auth" }, 401);
+  if (!(await verifiedUid(req))) return j({ ok: false, reason: "auth" }, 401);
 
   const APP_ID = Deno.env.get("CF_CALLS_APP_ID");
   const APP_SECRET = Deno.env.get("CF_CALLS_APP_SECRET");
