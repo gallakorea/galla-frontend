@@ -1017,7 +1017,7 @@ const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim(
 const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
 const _km = (a: number, b: number, c: number, d: number) => { const R = 6371, r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r; const h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 const _dist = (km: number) => km < 1 ? Math.round(km * 1000 / 10) * 10 + "m" : km.toFixed(1) + "km";
-async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null, nearAsk = false) {
+async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null, nearAsk = false, openAsk = false) {
   const q = _likeSafe(query || ""); const like = `%${q}%`; const n = Math.min(Math.max(limit || 5, 1), 8);
   try {
     /* 📍 근처 맛집 — 앱이 위치를 실어 보냈으면(권한이 이미 있을 때만) 반경 ~2km 를 지도에서 직접 본다(26.9.21 고도화) */
@@ -1028,6 +1028,8 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
       let ps: any[] = ((data as any)?.places || []).map((p: any) => ({ ...p, _km: _km(geo.lat, geo.lon, +p.lat, +p.lon) }));
       if (menu.length) ps = ps.filter((p) => menu.some((w) => (FOOD_SYN[w] || [w]).some((a) => String(p.name + " " + p.category).includes(a))));
       ps.sort((a, b) => (a._km + (b.rating_n ? 0 : 0.4)) - (b._km + (a.rating_n ? 0 : 0.4)));
+      // 「지금 문 연 데」 — 영업 중으로 확인된 곳을 맨 앞으로(확인 안 된 곳은 뒤, 영업 끝·휴무는 뺀다)
+      if (openAsk) { const st = (p: any) => { const o = openNow(p.hours); return o && /^(영업 중|24시간)/.test(o) ? 0 : o && /^(영업 끝|오늘 휴무|영업 전)/.test(o) ? 9 : 1; }; ps = ps.filter((p) => st(p) < 9).sort((a, b) => st(a) - st(b)); }
       const top = ps.slice(0, n);
       return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음" })),
         cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover || null })),
@@ -1489,7 +1491,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
-  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true); return { result: r }; }
+  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
@@ -3454,7 +3456,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기·가짜1위 금지." };
   if (/(인스타|인스타그램|instagram|인플루언서|인플루)/i.test(m))
     return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
-  if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페))/.test(m))
+  if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페)|문\s*연\s*(데|곳|집)|여는\s*(데|곳|집)|영업\s*중인)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도부터** 봐라(갈라가 직접 모은 데이터). 결과가 비면 그때 web_search(kind:local). 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
@@ -5705,6 +5707,7 @@ ${parts.join("\n")}`;
         if (c.function?.name === "galla_browse") {   // 📍 근처 맛집 — 상대 원래 말 기준
           const _near = /(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서|제일\s*가까)/.test(String(userMsg || ""));
           if (_near) { (args as any).__near = true; if (_reqGeo) (args as any).__geo = _reqGeo; }
+          if (/(문\s*연|여는\s*(데|곳|집)|영업\s*중|지금\s*(갈|먹)\s*수)/.test(String(userMsg || ""))) (args as any).__open = true;
         }
         if (c.function?.name === "weather_now") { _usedWeather = true; if (_reqGeo) (args as any).__geo = _reqGeo; }
         const out = (_nearNoGeo && c.function?.name === "web_search")
