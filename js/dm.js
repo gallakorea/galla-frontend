@@ -1593,6 +1593,7 @@
     let name = nickCache[row.sender_id];
     if (!name) { await profilesFor([row.sender_id]); name = nickCache[row.sender_id]; }
     window.GALLA_PAGER.popup({ name, kind: row.kind, code: row.code });
+    try { if (window.__dmQARecv) setTimeout(() => qlog('rx pager kind=' + row.kind + ' code=' + (row.code || '-') + ' popup=' + !!document.querySelector('.pgr-pop.on, .pgr-popup.on, #pager-pop.on, [class*="pgr"][class*="pop"]')), 600); } catch (_) {}
   }
   function attachPagerRealtime() {
     if (!ME || window.__pagerRingOn) return;   // dm-call.js가 이미 전 페이지 구독 중이면 중복 금지
@@ -4023,6 +4024,7 @@
           if (curRoom?.id !== rid) return;
           await profilesFor([m.sender_id]);
           appendRoomMsg(m);
+          try { if (window.__dmQARecv || window.__dmQASend) { const w = ROOT.querySelector('#dm-room-msgs'); qlog('rx room ' + (m.sender_id === ME ? 'mine' : 'peer') + ' lag=' + (Date.now() - Date.parse(m.created_at)) + 'ms bubbles=' + (w ? w.querySelectorAll('[data-id="' + m.id + '"]').length : -1)); } } catch (_) {}
         })
       .subscribe();
     roomChan = ch;
@@ -4537,6 +4539,7 @@
       if (curThread === tid) {
         const m = { id: rec.id, sender_id: peer, kind: 'e2e', body: '', created_at: new Date(rec.ts).toISOString() };
         MSGS[m.id] = m; appendMsg(m);
+        try { if (window.__dmQARecv) setTimeout(() => { const el = ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`); qlog('rx e2e plain=' + JSON.stringify(rec.b).slice(0, 40) + ' dom=' + !!el + ' shown=' + !!(el && el.textContent.includes(rec.b.slice(0, 6)))); }, 500); } catch (_) {}
       } else {
         toastMini('비밀 메시지가 도착했어요');
       }
@@ -5529,6 +5532,7 @@
 
   /* ---------- 실시간: 수신·읽음·삭제·입력중·온라인 ---------- */
   function applyUpdate(m) {
+    try { if (window.__dmQARecv && m.deleted_at && MSGS[m.id] && !MSGS[m.id].deleted_at) setTimeout(() => { const el = ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`); qlog('rx unsend dom=' + !!el + ' text=' + JSON.stringify((el && el.textContent || '').trim()).slice(0, 30)); }, 400); } catch (_) {}
     try { if (window.__dmQASend && m.read_at && QA_SENT[m.id] && !QA_SENT[m.id].read) { QA_SENT[m.id].read = 1; qlog('read ' + QA_SENT[m.id].k + ' after=' + (Date.now() - QA_SENT[m.id].t) + 'ms'); } } catch (_) {}
     MSGS[m.id] = { ...(MSGS[m.id] || {}), ...m };
     const el = ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`);
@@ -5876,8 +5880,68 @@
     qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'Z'); await qsleep(1000); qaState('Z end'); await qsnap('Z-end');
     qlog('ui all done');
   }
+  async function qaExtra(peer, roomId) {
+    await startDM(peer); await qsleep(6000);
+    // 1) 보내기 취소
+    const u = await qaSend('unsend-target', { body: '[QA] 곧 취소될 메시지' });
+    await qsleep(2500);
+    if (u) { const { data, error } = await supabase.rpc('dm_unsend', { p_msg: u.id }); qlog('tx unsend ok=' + !!(data && data.ok) + (error ? ' err=' + error.message : '') + ' reason=' + (data && data.reason || '-'));
+      if (data && data.ok) applyUpdate({ ...u, deleted_at: new Date().toISOString(), body: '', meta: null }); }
+    await qsleep(2500);
+    // 2) 비밀대화 — 실제 입력창·전송 경로로
+    try {
+      if (!window.GALLA_e2e?.supported()) qlog('tx e2e unsupported');
+      else {
+        await window.GALLA_e2e.ready(supabase, ME);
+        const pr = await window.GALLA_e2e.peerReady(supabase, ME, peer);
+        qlog('tx e2e peerReady=' + !!pr);
+        if (pr) {
+          setSecret(curThread, true); paintSecretUI();
+          const ta = ROOT.querySelector('#dm-input'); ta.value = '[QA] 비밀 ' + Date.now().toString(36).slice(-4);
+          const before = await supabase.from('dm_messages').select('id', { count: 'exact', head: true }).eq('thread_id', curThread);
+          ROOT.querySelector('#dm-form').requestSubmit();
+          await qsleep(2500);
+          const after = await supabase.from('dm_messages').select('id', { count: 'exact', head: true }).eq('thread_id', curThread);
+          qlog('tx e2e sent dm_messages_delta=' + ((after.count || 0) - (before.count || 0)) + ' (기대 0 — 서버 대화 기록에 안 남아야)');
+          setSecret(curThread, false); paintSecretUI();
+        }
+      }
+    } catch (e) { qlog('tx e2e err ' + String(e && e.message || e).slice(0, 50)); }
+    await qsleep(3000);
+    // 3) 삐삐 — 암호 호출, 음성 호출
+    try {
+      const r1 = await supabase.rpc('pager_leave', { p_to: peer, p_kind: 'code', p_url: null, p_dur: null, p_code: '8282' });
+      qlog('tx pager code ok=' + !!(r1.data && r1.data.ok) + ' ' + (r1.data && r1.data.reason || r1.error?.message || ''));
+      await qsleep(4000);
+      const vf = await qaVoice(); const vu = await qaUpload(vf, 'audio');
+      if (vu) { const r2 = await supabase.rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: vu, p_dur: 1.5, p_code: null });
+        qlog('tx pager voice ok=' + !!(r2.data && r2.data.ok) + ' ' + (r2.data && r2.data.reason || r2.error?.message || '')); }
+    } catch (e) { qlog('tx pager err ' + String(e && e.message || e).slice(0, 50)); }
+    await qsleep(4000);
+    // 4) 단체방
+    if (roomId) {
+      try {
+        await openRoomById(roomId); await qsleep(3000);
+        const d = await sendAny({ body: '[QA] 단체방 ' + Date.now().toString(36).slice(-4) });
+        qlog('tx room ok=' + !!d);
+        await qsleep(2500);
+        const w = ROOT.querySelector('#dm-room-msgs');
+        qlog('tx room my-bubbles=' + (d && w ? w.querySelectorAll('[data-id="' + d.id + '"]').length : -1) + ' (기대 1 — 2면 내 메시지 중복)');
+      } catch (e) { qlog('tx room err ' + String(e && e.message || e).slice(0, 50)); }
+    }
+    qlog('extra all done');
+  }
+  async function qaRoomId() {
+    try { const { data } = await supabase.from('open_rooms').select('id').eq('title', '[QA] 단체방').order('created_at', { ascending: false }).limit(1); return data && data[0] ? data[0].id : null; } catch (_) { return null; }
+  }
   window.GALLA_dmQA = {
-    async run(mode, peer) {
+    async run(mode, peer, roomId) {
+      if ((mode === 'dmX' || mode === 'dmXr') && !roomId) roomId = await qaRoomId();
+      if (mode === 'dmX') { qlog('run dmX peer=' + String(peer || '').slice(0, 6)); return qaExtra(peer, roomId); }
+      if (mode === 'dmXr') { qlog('run dmXr'); window.__dmQARecv = true; await startDM(peer);
+        try { await window.GALLA_e2e?.ready(supabase, ME); } catch (_) {}
+        if (roomId) setTimeout(async () => { try { await openRoomById(roomId); qlog('recv room open'); } catch (e) { qlog('recv room err ' + e); } }, 26000);
+        return; }
       qlog('run ' + mode + ' peer=' + String(peer || '').slice(0, 6));
       if (!peer) return;
       if (mode === 'dmUI') return qaUI(peer);
