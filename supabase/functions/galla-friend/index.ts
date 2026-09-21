@@ -1118,6 +1118,33 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
   return { section, items: [], note: "unknown section" };
 }
 
+/* 🏝 무료 등급 자동 첫마디 — AI 없이 데이터로 한마디(26.9.22 비용 절감, 사장님 승인) */
+async function dataOpener(type: string, id: string): Promise<string | null> {
+  try {
+    if (type === "issue") {
+      const { data: r } = await supa.from("issues").select("pro_count,con_count,faction_a,faction_b").eq("id", Number(id)).maybeSingle();
+      if (!r) return null; const p = +r.pro_count || 0, c = +r.con_count || 0, t = p + c;
+      return t ? `${r.faction_a || "찬성"} ${Math.round(p * 100 / t)}% 대 ${r.faction_b || "반대"} ${Math.round(c * 100 / t)}% — 넌 어느 편이야?` : "아직 아무도 편을 안 골랐어 — 네가 첫 표 던져볼래?";
+    }
+    if (type === "predict") {
+      const { data: oc } = await supa.from("market_outcomes").select("label,pool_gp").eq("market_id", Number(id));
+      const tot = (oc || []).reduce((a: number, o: any) => a + (+o.pool_gp || 0), 0);
+      if (!tot) return "아직 아무도 안 건드린 빈 판이야 — 넌 어느 쪽 같아?";
+      const top = [...(oc || [])].sort((a: any, b: any) => (+b.pool_gp || 0) - (+a.pool_gp || 0))[0];
+      return `지금 '${top.label}' 쪽에 ${Math.round((+top.pool_gp || 0) * 100 / tot)}% 몰렸어 — 넌 어느 쪽 같아?`;
+    }
+    if (type === "food") {
+      const { data: f } = await supa.from("food_places").select("rating,rating_n,hours").eq("id", id).maybeSingle();
+      if (!f) return null; const on = openNow(f.hours);
+      return `${f.rating ? `평점 ★${(+f.rating).toFixed(1)}${f.rating_n ? `(리뷰 ${f.rating_n}개)` : ""}` : "평점 정보는 아직 없어"}${on ? ` · 지금 ${on}` : ""} — 저장해둘까?`;
+    }
+    if (type === "travel") return "여기 가보고 싶어? 저장해두면 나중에 바로 찾아줄게";
+    if (type === "news") return "다 읽으면 어떻게 봤는지 말해줘";
+    if (type === "video" || type === "hottube") return "보고 웃겼는지 말해줘 ㅋㅋ";
+    return "다 보면 어땠는지 말해줘 ㅎㅎ";
+  } catch { return null; }
+}
+
 /* 🃏 카드 꾸미기(26.9.22 사장님: 「텍스트 말고 형식을 갖춘 멋진 카드로 — 보고 사용자가 판단하게」)
    어떤 도구에서 왔든 콘텐츠 카드엔 사진·종류 배지·핵심 한 줄을 채운다. 종류별로 한 번씩만 조회(최대 7쿼리). */
 const CARD_BADGE: Record<string, string> = { issue: "이슈", news: "갈라뉴스", predict: "예측", food: "맛집", travel: "여행", plaza: "광장", gallari: "숏판·롱판", hottube: "핫튜브", link: "링크" };
@@ -4856,9 +4883,22 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
        인사로 분류하면 ambient 한도·침묵 판정에 걸려 {reply:""} 로 조용히 버려졌다(2026-09-10 QA: POST 200·951ms·화면 무반응). */
     const hasHandoff = !!(body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id);
     const isGreeting = !String(body?.message || "").trim() && !hasHandoff;
-    const gate = await aiGate("u:" + uid, isGreeting ? AI_FN + "-ambient" : AI_FN);
+    /* 🏝 아일랜드 자동 첫마디 — 우리가 먼저 건 말이라 무료 한도에서 안 깎는다(인사와 같은 넉넉한 창). 26.9.22 사장님 승인 */
+    const autoOpen = hasHandoff && (body as any).handoff.auto === true && !String(body?.message || "").trim();
+    const _ocKey = autoOpen ? `${String((body as any).handoff.type)}:${String((body as any).handoff.id)}` : "";
+    if (autoOpen) {
+      try {   // 공유 캐시(30분) — AI 0회
+        const { data: oc } = await supa.from("galvis_opener_cache").select("reply,actions,at").eq("key", _ocKey).maybeSingle();
+        if (oc && Date.now() - Date.parse(oc.at) < 30 * 60000) return json({ ok: true, reply: oc.reply, actions: oc.actions || [], friendName: "갈비스", cached: true });
+      } catch { /* */ }
+    }
+    const gate = await aiGate("u:" + uid, (isGreeting || autoOpen) ? AI_FN + "-ambient" : AI_FN);
+    if (autoOpen && !/(companion|plus|pro|lite|friend|premium)/i.test(String(gate?.tier || ""))) {
+      const t = await dataOpener(String((body as any).handoff.type), String((body as any).handoff.id));
+      if (t) return json({ ok: true, reply: t, actions: [], friendName: "갈비스", templated: true });
+    }
     if (!gate.ok) {
-      if (isGreeting) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
+      if (isGreeting || autoOpen) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
       return json({ ok: true, reply: gateReply(gate, false, "", tzMin), gate,
         // 기다릴지 올릴지는 사람이 정한다. 칩 하나로 이용권 시트를 연다(값은 그 안에서 본다).
         actions: [{ kind: "plans", label: "지금 더 얘기하기" }] });
@@ -6833,6 +6873,9 @@ ${parts.join("\n")}`;
        실시간 미러링(applyRemoteChat)이 '내 에코가 아니다'로 보고 화면을 그 날것으로 다시 그렸다
        → 혼잣말 태그가 유저에게 노출되고, 방금 붙은 카드·칩도 재렌더에 지워졌다(2026-09-11 QA 9-2-7 실측). */
     settleCraft(reply, actions);
+    if (autoOpen && reply && !(nick && reply.includes(String(nick)))) {
+      try { await supa.from("galvis_opener_cache").upsert({ key: _ocKey, reply, actions: cleanActions || [], at: new Date().toISOString() }); } catch { /* */ }
+    }
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages) } : {}),

@@ -437,6 +437,14 @@
   }
 
   function close(){
+    /* 🔁 콘텐츠 화면에서 크게 봤다가 닫으면 → 다시 아일랜드(미니)로 돌아간다(26.9.22 사장님: 「창↔미니 회귀 매우 중요」) */
+    if(_assist && _asEl){
+      if(sheet) sheet.classList.remove("fr-open");
+      document.body.classList.remove("fr-chatting");
+      orb && orb.classList.add("fr-hidden");
+      _asEl.classList.add("on"); friExpand(false); syncAssist();
+      return;
+    }
     try{ sessionStorage.removeItem("fr_mini"); }catch(e){}
     var _ms=document.getElementById("frMiniSay"); if(_ms) _ms.classList.remove("on");
     if(sheet) sheet.classList.remove("fr-open");
@@ -544,7 +552,7 @@
         '<div class="fri-cf" hidden><button class="fri-cf-yes"></button><button class="fri-cf-no">취소</button></div>'+
         '<button class="fra-cards" hidden>카드 보기 ›</button>'+
         '<div class="fra-quick"></div>'+
-        '<div class="fra-in"><span class="fra-pr">›</span><input placeholder="갈비스한테 명령해" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
+        '<div class="fra-in"><span class="fra-pr">›</span><input placeholder="갈비스한테 말해봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
       '</div>'+
     '</div>');
     document.body.appendChild(_asEl);
@@ -555,8 +563,10 @@
     _asEl.querySelector(".fra-send").onclick=go;
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter" && !e.isComposing){ e.preventDefault(); go(); } });
     _asEl.querySelector(".fri-cap").onclick=function(){ friExpand(!_asEl.classList.contains("fri-open")); };
-    _asEl.querySelector(".fra-big").onclick=function(){ hideAssist(); open(); };
-    _asEl.querySelector(".fra-cards").onclick=function(){ hideAssist(); open(); };
+    // 아일랜드 → 크게: 이어가는 대화라 새 인사 없이(「또 왔네 반가워」가 붙던 것)
+    var bigOpen=function(){ hideAssist(); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
+    _asEl.querySelector(".fra-big").onclick=bigOpen;
+    _asEl.querySelector(".fra-cards").onclick=bigOpen;
     _asEl.querySelector(".fra-x").onclick=function(){ closeAssist(); orb && orb.classList.remove("fr-hidden"); };
     // 페이지를 스크롤하면 캡슐로(보는 걸 가리지 않게) — 입력 중이면 그대로
     // 페이지든 상세 시트(맛집·여행)든 — 스크롤하는 그 요소 기준으로 본다(시트 안 스크롤에 안 접히던 것)
@@ -652,7 +662,7 @@
       if(!logEl.children.length){ try{ await restoreOrGreet(true); }catch(e){} }
       var say=function(q){ addMsg("a", q); history.push({role:"assistant",content:q}); saveChat(); };
       if(!_assist || !_assist.id){ say(MINI_SAY[_assist&&_assist.type]||"다 보면 어땠는지 말해줘 ㅎㅎ"); syncAssist(); return; }
-      var r=null; try{ r=await callFriend("", history, null, true, { type:_assist.type, id:_assist.id, title:_assist.title }); }catch(e){}
+      var r=null; try{ r=await callFriend("", history, null, true, { type:_assist.type, id:_assist.id, title:_assist.title, auto:true }); }catch(e){}   // auto = 우리가 먼저 거는 말(무료 한도 미차감·공유 캐시)
       if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
       else say(MINI_SAY[_assist.type]||"다 보면 어땠는지 말해줘 ㅎㅎ");
       syncAssist();
