@@ -403,6 +403,7 @@
   }
   function open(){
     if(!sheet) build();
+    hideAssist();
     bindKb();                                     // 키보드 트래킹(1회 등록)
     bindStick(); _stick=true;                     // 하단 고정 감시자(1회 등록) — 열 때는 항상 바닥부터
     if(mini) mini.classList.remove("on");
@@ -459,9 +460,98 @@
     b.textContent=text; b.classList.remove("on"); void b.offsetWidth; b.classList.add("on");
     clearTimeout(miniSay._t); miniSay._t=setTimeout(function(){ b.classList.remove("on"); }, 7000);
   }
+  /* 🧭 보조 모드(26.9.22 사장님: 「창이 띄워지면 갈비스가 미니 모드로 — 페이지가 뜬 상태에서 보조 역할」)
+     콘텐츠를 열면 갈비스가 사라지지 않고 화면 아래 작은 창으로 남는다. 그 콘텐츠를 서버가 읽어(핸드오프) 먼저 한마디 +
+     요약·참여·저장·관련 찾기를 그 자리에서 돕는다. 접기(한 줄 바)·크게 보기·닫기는 기존 도킹 버튼 그대로. */
+  var _assist=null, _asEl=null, _asObs=null;
+  /* 🧭 보조 창 — 화면 오른쪽 아래 반투명 유리 창. 페이지는 뒤로 비친다.
+     갈비스 최신 말(3줄) + 작은 입력. [크게](전체 대화) [접기](알약) [닫기]. 답에 카드가 있으면 「카드 보기」. */
+  function buildAssist(){
+    if(_asEl) return _asEl;
+    _asEl=el('<div id="frAssist" role="dialog" aria-label="갈비스 보조 창">'+
+      '<div class="fra-head"><span class="fr-mav"><span class="fr-ring fr-r1"></span><span class="fr-core"></span></span><b>갈비스</b>'+
+        '<button class="fra-big" aria-label="크게 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>'+
+        '<button class="fra-min" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
+        '<button class="fra-x" aria-label="닫기">×</button></div>'+
+      '<div class="fra-msg"></div>'+
+      '<button class="fra-cards" hidden>카드 보기 ›</button>'+
+      '<div class="fra-quick"></div>'+
+      '<div class="fra-in"><input placeholder="갈비스한테 물어봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
+    '</div>');
+    document.body.appendChild(_asEl);
+    var inp=_asEl.querySelector("input");
+    var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
+    _asEl.querySelector(".fra-send").onclick=go;
+    inp.addEventListener("keydown", function(e){ if(e.key==="Enter" && !e.isComposing){ e.preventDefault(); go(); } });
+    _asEl.querySelector(".fra-big").onclick=function(){ hideAssist(); open(); };
+    _asEl.querySelector(".fra-cards").onclick=function(){ hideAssist(); open(); };
+    _asEl.querySelector(".fra-min").onclick=function(){ hideAssist(); if(mini){ mini.classList.remove("pop"); void mini.offsetWidth; mini.classList.add("on","pop"); } };
+    _asEl.querySelector(".fra-x").onclick=function(){ closeAssist(); orb && orb.classList.remove("fr-hidden"); };
+    /* 페이지를 스크롤하는 동안엔 흐려져 비켜선다(보는 걸 가리지 않게) — 멈추면 돌아온다 */
+    var dimT=0; window.addEventListener("scroll", function(){ if(!_asEl.classList.contains("on")) return; _asEl.classList.add("fra-dim"); clearTimeout(dimT); dimT=setTimeout(function(){ _asEl.classList.remove("fra-dim"); }, 900); }, {passive:true, capture:true});
+    _asEl.addEventListener("pointerdown", function(){ _asEl.classList.remove("fra-dim"); });
+    // 말이 3줄에서 잘리면 눌러서 전부 펼친다(다시 누르면 접힘)
+    _asEl.querySelector(".fra-msg").addEventListener("click", function(){ _asEl.classList.toggle("fra-open"); });
+    return _asEl;
+  }
+  /* 대화 로그(숨은 본창)에 새 말이 붙으면 보조 창에 최신 갈비스 말을 비춘다 */
+  function syncAssist(){
+    if(!_asEl || !logEl) return;
+    var msgs=logEl.querySelectorAll(".fr-msg"); var lastU=-1;
+    for(var i=msgs.length-1;i>=0;i--){ if(!msgs[i].classList.contains("fr-a")&&!msgs[i].querySelector(".fr-typing")&&msgs[i].classList.contains("fr-u")){ lastU=i; break; } }
+    var parts=[], hasCards=false;
+    for(var j=Math.max(lastU+1,0); j<msgs.length; j++){
+      var bb=msgs[j].querySelector(".fr-bubble"); if(!bb) continue;
+      if(bb.querySelector(".fr-tc,.fr-confirm,.fr-card")) hasCards=true;
+      var t=""; bb.childNodes.forEach(function(n){ if(n.nodeType===3) t+=n.textContent; else if(n.classList && !n.classList.contains("fr-acts")) t+=n.textContent; });
+      t=t.trim(); if(t) parts.push(t);
+    }
+    var typingNow=!!logEl.querySelector(".fr-typing");
+    var box=_asEl.querySelector(".fra-msg");
+    box.innerHTML = typingNow && !parts.length ? '<span class="fra-dots"><i></i><i></i><i></i></span>' : "";
+    if(parts.length){ box.textContent=parts.slice(-2).join("\n"); }
+    _asEl.querySelector(".fra-cards").hidden=!hasCards;
+    var mb=_asEl.querySelector(".fra-msg"); mb.classList.toggle("fra-more", mb.scrollHeight > mb.clientHeight + 4 || _asEl.classList.contains("fra-open"));
+  }
+  function hideAssist(){ if(_asEl) _asEl.classList.remove("on"); }
+  function openAssist(a, fromBoot){
+    if(!sheet) build();
+    _assist={ type:(a&&a.k)||(a&&(a.ctype||(/watch\.html/.test(String(a.url||""))?"hottube":"")))||"", id:(a&&a.id)||((String((a&&a.url)||"").match(/[?&]v=([^&]+)/)||[])[1])||"", title:(a&&(a.title||a.t))||"" };
+    try{ sessionStorage.setItem("fr_assist", JSON.stringify({ at:Date.now(), k:_assist.type, id:_assist.id, t:_assist.title })); sessionStorage.removeItem("fr_mini"); }catch(e){}
+    // 본창은 내리고(대화는 그대로 보존) 보조 창을 띄운다
+    if(sheet) sheet.classList.remove("fr-open","fr-dock","fr-dock-min");
+    _dock=false; document.body.classList.remove("fr-chatting","fr-docked");
+    if(mini) mini.classList.remove("on");
+    var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
+    orb && orb.classList.add("fr-hidden");
+    buildAssist(); _asEl.classList.remove("on"); void _asEl.offsetWidth; _asEl.classList.add("on");
+    if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
+    _asEl.querySelector(".fra-msg").innerHTML='<span class="fra-dots"><i></i><i></i><i></i></span>';
+    /* 한 번 누르면 되는 도움 — 콘텐츠 종류별 */
+    var QK={ issue:["세 줄 요약","넌 어느 편?"], news:["요약해줘","쟁점만"], predict:["판세 알려줘","나도 참여할래"], food:["저장해줘","근처 다른 데"],
+      travel:["저장해줘","근처 맛집"], hottube:["비슷한 거 더"], video:["비슷한 거 더"], plaza:["요약해줘","댓글 분위기"], gallari:["비슷한 거 더"] };
+    var qk=_asEl.querySelector(".fra-quick"); qk.innerHTML="";
+    (QK[_assist.type]||["요약해줘"]).forEach(function(t){ var b=el('<button class="fra-q"></button>'); b.textContent=t;
+      b.onclick=function(){ sendText(t==="세 줄 요약"?"이거 세 줄로 요약해줘":t==="넌 어느 편?"?"넌 이거 어느 편이야?":t==="판세 알려줘"?"이 예측 판세 어때?":t==="근처 다른 데"?"이 근처 다른 맛집도 보여줘":t==="근처 맛집"?"이 근처 맛집 찾아줘":t==="비슷한 거 더"?"이거랑 비슷한 거 더 보여줘":t==="쟁점만"?"이 뉴스 쟁점만 짚어줘":t==="댓글 분위기"?"여기 댓글 분위기 어때?":t); };
+      qk.appendChild(b); });
+    (async function(){
+      await sleep(fromBoot ? 900 : 650);          // 화면이 뜬 뒤에 말한다
+      if(!logEl.children.length){ try{ await restoreOrGreet(true); }catch(e){} }
+      var say=function(q){ addMsg("a", q); history.push({role:"assistant",content:q}); saveChat(); };
+      if(!_assist || !_assist.id){ say(MINI_SAY[_assist&&_assist.type]||"다 보면 어땠는지 말해줘 ㅎㅎ"); syncAssist(); return; }
+      var r=null; try{ r=await callFriend("", history, null, true, { type:_assist.type, id:_assist.id, title:_assist.title }); }catch(e){}
+      if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
+      else say(MINI_SAY[_assist.type]||"다 보면 어땠는지 말해줘 ㅎㅎ");
+      syncAssist();
+    })();
+  }
+  function closeAssist(){
+    _assist=null; try{ sessionStorage.removeItem("fr_assist"); }catch(e){}
+    hideAssist();
+  }
   function minimize(a){
     var say = a ? (MINI_SAY[a.ctype || (/watch\.html/.test(String(a.url||""))?"hottube":"")] || "다 보면 어땠는지 말해줘 ㅎㅎ") : "";
-    try{ sessionStorage.setItem("fr_mini", JSON.stringify({ at:Date.now(), say:say, t:(a&&a.title)||"" })); }catch(e){}
+    try{ sessionStorage.setItem("fr_mini", JSON.stringify({ at:Date.now(), say:say, t:(a&&a.title)||"", k:(a&&(a.ctype||(/watch\.html/.test(String(a.url||""))?"hottube":"")))||"" })); }catch(e){}
     if(say) setTimeout(function(){ miniSay(say); }, 650);
     if(sheet) sheet.classList.remove("fr-open","fr-dock","fr-dock-min");   // 패널 슬라이드 다운 + 도킹 해제
     _dock=false; document.body.classList.remove("fr-docked");
@@ -483,7 +573,9 @@
         var tt=String(back.t||"").replace(/["“”'‘’「」『』\[\]()<>]/g,"").replace(/\s+/g," ").trim(), ws=tt.split(" "), sh="";
         for(var wi=0; wi<ws.length; wi++){ if((sh+" "+ws[wi]).trim().length>14) break; sh=(sh+" "+ws[wi]).trim(); }
         if(sh && sh.length<tt.length) sh+="…";
-        var q=(sh?(sh+" "):"")+"어땠어? ㅎㅎ"; addMsg("a", q); history.push({role:"assistant",content:q}); saveChat(); }, 420);
+        // 무거운 이슈·뉴스에 「어땠어? ㅎㅎ」는 안 맞는다 — 종류별로
+        var BACK_Q={ issue:"보고 왔어? 넌 어느 편이야?", news:"다 읽었어? 어떻게 봤어?", predict:"봤어? 넌 어느 쪽 같아?", food:"어때, 맛있어 보여? ㅎㅎ", travel:"어때, 가보고 싶어? ㅎㅎ", hottube:"어땠어? 웃겼어? ㅋㅋ" };
+        var q=(sh?(sh+" "):"")+(BACK_Q[back.k]||"어땠어? ㅎㅎ"); addMsg("a", q); history.push({role:"assistant",content:q}); saveChat(); }, 420);
     }
   }
 
@@ -537,6 +629,7 @@
     setTimeout(scrollBottom,260);
   }
   function exitDock(){
+    closeAssist();
     _dock=false; _work=null;
     if(sheet) sheet.classList.remove("fr-dock","fr-dock-min","fr-open","fr-hasform");
     orb && orb.classList.remove("fr-hidden");
@@ -1730,7 +1823,7 @@
     if((a.kind==="open"||a.kind==="view"||a.kind==="external") && !a._reacted){ a._reacted=true; logReact("chip_open"); }
     if(a.kind==="open"){
       var gu=String(a.url||"").match(/^https:\/\/(?:www\.)?galla\.im\/(.+)$/);
-      minimize(a);
+      if(gu) openAssist(a); else minimize(a);
       if(gu){ nav(gu[1]); return; }                     // 🎬 핫튜브 등 갈라 안 페이지는 앱 안에서(바깥 브라우저로 튀던 것)
       openInApp(a.url); return;
     }
@@ -1813,7 +1906,7 @@
     }
     // 🛡 방어 — 콘텐츠 이동은 유효한 id가 있을 때만(없으면 issue.html?id=undefined='잘못된 이슈 접근' 방지)
     if(a && a.id && String(a.id)!=="undefined"){
-      minimize(a);
+      openAssist(a);
       if(a.ctype==="food") return openCornerPlace("food","GALLA_openFoodPlace",a.id);
       if(a.ctype==="travel") return openCornerPlace("travel","GALLA_openTravelPlace",a.id);
       nav(contentUrl(a));
@@ -2267,6 +2360,10 @@
     window.GALLA_IS_APP = IS_APP;
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
+    try{
+      var fa=JSON.parse(sessionStorage.getItem("fr_assist")||"null");
+      if(fa && (Date.now()-fa.at) < 15*60000){ setTimeout(function(){ openAssist({ k:fa.k, id:fa.id, t:fa.t }, true); }, 300); }
+    }catch(e){}
     try{
       var fm=JSON.parse(sessionStorage.getItem("fr_mini")||"null");
       if(fm && (Date.now()-fm.at) < 15*60000){

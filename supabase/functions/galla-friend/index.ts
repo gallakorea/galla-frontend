@@ -542,6 +542,17 @@ async function fetchContentById(type: string, id: string): Promise<{ kind: strin
       } catch { /* */ }
       return { kind: "광장 글", text: `제목: ${data.title}\n작성자: ${data.nickname || "익명"}\n본문: ${String(data.body || "").replace(/\s+/g, " ").slice(0, 300)}${voices}` };
     }
+    if (type === "food") {
+      const { data } = await supa.from("food_places").select("name,category,region,address,rating,rating_n,min_price,hours").eq("id", id).maybeSingle();
+      if (!data) return null;
+      const oh: string | null = (() => { try { return openNow(data.hours); } catch { return null; } })();
+      return { kind: "맛집", text: `[가게] ${data.name} (${data.category || ""})\n주소: ${data.address || data.region || ""}\n평점: ${data.rating ? `★${data.rating} (${data.rating_n || 0}명)` : "정보 없음"}${data.min_price ? `\n최저가: ${data.min_price}원` : ""}\n영업: ${oh || "확인 안 됨"}` };
+    }
+    if (type === "travel") {
+      const { data } = await supa.from("travel_places").select("name,city,country,category,summary,admin1").eq("id", id).maybeSingle();
+      if (!data) return null;
+      return { kind: "여행지", text: `[여행지] ${data.name} — ${[data.admin1 || data.city, data.country].filter(Boolean).join(", ")} (${data.category || ""})\n${String(data.summary || "").slice(0, 400)}` };
+    }
     if (type === "predict") {
       const { data } = await supa.from("markets").select("question,description,total_pool,close_at,resolved").eq("id", id).maybeSingle();
       if (!data) return null;
@@ -5193,6 +5204,8 @@ ${actBlock}
         news: "이 보도의 쟁점이 뭔지 한 줄 — 어디서 사람들이 갈릴지 짚어라. 그리고 '넌 어떻게 봐?'.",
         video: "이건 유튜브라 갈라 여론이 없다 — 인기 지표(조회·순위) 한 줄 + 갈라 안 반응(댓글) 있으면 그것도. 없으면 '갈라에선 아직 조용해'라고 솔직히. 그리고 '너 이거 봤어?'.",
         duel: "표심부터 — 몇 표에 어느 쪽이 앞서는지, 박빙인지 한 줄. 0표면 '아직 아무도 안 골랐다'고. 그 다음 네가 누구 편인지 밝히고 '넌 누구 편?'.",
+        food: "지금 이 가게 화면을 같이 보고 있다 — 평점·영업 여부 중 쓸모 있는 것 한 줄 + '저장해줄까/길찾기 열어줄까' 같은 도움 하나 제안.",
+        travel: "지금 이 여행지 화면을 같이 보고 있다 — 뭐가 좋은 곳인지 한 줄 + '저장해줄까/근처 맛집 찾아줄까' 같은 도움 하나 제안.",
         content: "숫자로 드러난 반응 한 줄 + 그게 뭘 뜻하는지. 그리고 '넌?'.",
       };
       const role = HROLE[String(handoff.type)] || HROLE.content;
