@@ -485,7 +485,7 @@
       '<g class="gf-spin2" fill="#3fe0ff">'+ticks+'</g>'+
       '<g class="gf-spin"><circle cx="50" cy="50" r="47.5" fill="none" stroke="#3fe0ff" stroke-width="1.6" stroke-dasharray="26 5 4 5 44 9 2 9" opacity=".95"/></g>'+
       '<g class="gf-spinr"><text class="gf-rtext"><textPath href="#'+id+'t">G.A.L.V.I.S · 연결됨 · 내 편 AI · G.A.L.V.I.S · 연결됨 ·</textPath></text></g>'+
-      '<g class="gf-spinr"><circle cx="50" cy="50" r="38.5" fill="none" stroke="#ffb347" stroke-width="1.5" stroke-dasharray="48 12 6 12" opacity=".9"/></g>'+
+      '<g class="gf-spinr"><circle cx="50" cy="50" r="38.5" fill="none" stroke="#9fe8ff" stroke-width="1.3" stroke-dasharray="48 12 6 12" opacity=".7"/></g>'+
       '<g class="gf-orbit"><circle cx="50" cy="2.8" r="1.8" fill="#fff"/><circle cx="50" cy="2.8" r="4" fill="#3fe0ff" opacity=".35"/></g>'+
       '<g fill="#3fe0ff" opacity=".85">'+bars+'</g>'+
       '<g class="gf-prog"><circle cx="50" cy="50" r="42.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/></g>'+
@@ -1703,7 +1703,7 @@
   /* 🃏 콘텐츠 카드 덱(26.9.22 사장님: 「텍스트 말고 형식을 갖춘 멋진 카드 — 썸네일, 돈 안 들게 최대 멋지고 동적인 애니메이션,
      대접받는 느낌 번쩍번쩍」·「다지선다도 고려」). 전부 CSS(비용 0). 여러 장 = 가로 넘김 + 번호 + 번호 빠른 선택 줄. */
   var TC_KIND={
-    issue:{n:"이슈",c:"#ff6b57"}, news:{n:"갈라뉴스",c:"#5ab0ff"}, predict:{n:"예측",c:"#b07cff"}, food:{n:"맛집",c:"#ffb020"},
+    issue:{n:"이슈",c:"#ff6b57"}, news:{n:"갈라뉴스",c:"#5ab0ff"}, predict:{n:"예측",c:"#b07cff"}, food:{n:"맛집",c:"#ff6b6b"},
     travel:{n:"여행",c:"#2fd3c6"}, plaza:{n:"광장",c:"#36c2a0"}, gallari:{n:"숏판",c:"#ff4fa3"}, hottube:{n:"핫튜브",c:"#ff5a3d"}, link:{n:"링크",c:"#9aa0ae"}
   };
   var TC_ICON={

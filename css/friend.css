@@ -4,7 +4,7 @@
 :root{
   --fr-cy:#5fd8ff;                 /* HUD 시안 */
   --fr-cy-dim:rgba(95,216,255,.22);
-  --fr-am:#ffb45c;                 /* 아크 코어 앰버 */
+  --fr-am:#7ff0ff;                 /* 강조색(26.9.22 금색 폐지 → 하늘빛) */
   --fr-bg:#04070d; --fr-glass:rgba(10,16,26,.92);
   --fr-txt:#eaf6ff; --fr-dim:#7f97a8;
 }
@@ -208,7 +208,7 @@ body.fr-docked.fr-docked-min .view-host{ padding-bottom: 78px !important; }
 
 /* 🔥 어그로 제목 후보 카드 */
 .fr-titles{ align-self:stretch; display:flex; flex-direction:column; gap:6px; margin-top:2px; }
-.fr-titles-h{ font-size:11.5px; font-weight:800; color:#ffb45c; padding:2px 2px 3px; }
+.fr-titles-h{ font-size:11.5px; font-weight:800; color:#7ff0ff; padding:2px 2px 3px; }
 .fr-title-card{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; width:100%;
   background:rgba(255,180,92,.07); border:1px solid rgba(255,180,92,.28); border-radius:12px; padding:10px 12px;
   cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .1s, background .14s; }
@@ -1004,3 +1004,25 @@ body.fr-chatting #frAssist, body.dm-detail #frAssist, body.hv-playing #frAssist{
 #frAssist .fra-in input{ border:0 !important; background:transparent !important; box-shadow:none !important; padding:0 6px !important; }
 #frAssist .fra-send{ border-radius:8px !important; width:36px !important; height:36px !important; box-shadow:0 0 14px rgba(63,224,255,.6); }
 @media (prefers-reduced-motion: reduce){ .gf *, #frOrb::after, #frAssist .hud-scan, #frAssist .hud-br{ animation:none !important; } }
+
+/* ══════════ 🚫 금색·앰버 걷어내기(26.9.22 사장님: 「반짝이라 했지 금색 강조한 게 아니다 — 촌스럽다」) ══════════ */
+/* 내 말풍선 — 짙은 파랑·남색 유리 */
+.fr-msg.fr-u{ color:#fff !important; font-weight:500; background:linear-gradient(135deg, rgba(47,107,255,.92), rgba(90,77,255,.92)) !important;
+  box-shadow:0 0 0 1px rgba(160,190,255,.25), 0 6px 18px rgba(47,107,255,.28) !important; }
+/* 갈비스 픽 리본·테두리 — 하늘색 */
+.fr-tc-pickrib{ color:#03131c !important; background:linear-gradient(90deg,#7ff0ff,#e9fdff,#7ff0ff) !important; background-size:200% 100% !important; box-shadow:0 0 16px rgba(95,216,255,.6) !important; }
+.fr-tc-pick{ box-shadow:0 12px 30px rgba(0,0,0,.5), 0 0 26px rgba(95,216,255,.4), 0 0 0 1px rgba(127,240,255,.45) !important; }
+.fr-tc-pick::before{ background:conic-gradient(from var(--fr-ang), transparent 0 45%, #7ff0ff 62%, #fff 70%, #3fa8ff 78%, transparent 95%) !important; }
+/* 반짝이 — 흰·하늘빛 */
+.fri-spark svg{ fill:#e9fdff !important; filter:drop-shadow(0 0 4px #7ff0ff) !important; }
+/* 숫자·평점·시간 강조 — 하늘빛 */
+.rx-star{ color:#9fe8ff !important; text-shadow:0 0 10px rgba(95,216,255,.55) !important; }
+.rx-star .rx-num{ color:#e9fdff !important; text-shadow:0 0 10px rgba(95,216,255,.7) !important; }
+.rx-time{ color:#dff7ff !important; background:rgba(63,224,255,.12) !important; box-shadow:inset 0 0 0 1px rgba(63,224,255,.4) !important; }
+/* 새 소식 점 */
+#frOrb .fr-dot{ background:#3fe0ff !important; box-shadow:0 0 10px #3fe0ff !important; }
+/* 네 색 → 세 색(금 빼기) */
+.fr-typing.fr-think::before, .fr-typing.fr-think::after, .fr-msg.fr-a.rx-glow .fr-bubble::before{
+  background:conic-gradient(from var(--rx-a), #3fd3ff, #8f7bff, #ff6fb0, #3fd3ff) !important; }
+#frAssist.fri::before{ background:conic-gradient(from var(--fri-a), #5fd8ff, #7b4dff, #ff5fa8, #5fd8ff) !important; }
+.fri-cf-yes{ background:linear-gradient(135deg,#2f6bff,#5a4dff) !important; }
