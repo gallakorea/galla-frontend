@@ -1492,7 +1492,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       const focus = ["photo", "nickname", "bio", "phone", "password"].includes(String(args?.focus)) ? String(args?.focus) : "";
       // 비번은 별도 페이지로 라우팅
       const finalPage = (focus === "password") ? "change-password.html" : page;
-      return { action: { kind: "app", op, page: finalPage, focus, label: String(args?.label || "바로 가기").slice(0, 30) } };
+      return { action: { kind: "app", op, page: finalPage, focus, auto: true, label: String(args?.label || "바로 가기").slice(0, 30) } };   // 갈비스가 app_action 을 부른 건 상대가 「열어줘」라 한 것 — 자동 이동
     }
     if (op === "dm" || op === "call_voice" || op === "call_video") {
       const id = String(args?.user_id || "");

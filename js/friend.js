@@ -485,7 +485,7 @@
       '<g class="gf-spin2" fill="#3fe0ff">'+ticks+'</g>'+
       '<g class="gf-spin"><circle cx="50" cy="50" r="47.5" fill="none" stroke="#3fe0ff" stroke-width="1.6" stroke-dasharray="26 5 4 5 44 9 2 9" opacity=".95"/></g>'+
       '<g class="gf-spinr"><text class="gf-rtext"><textPath href="#'+id+'t">G.A.L.V.I.S · 연결됨 · 내 편 AI · G.A.L.V.I.S · 연결됨 ·</textPath></text></g>'+
-      '<g class="gf-spinr"><circle cx="50" cy="50" r="38.5" fill="none" stroke="#9fe8ff" stroke-width="1.3" stroke-dasharray="48 12 6 12" opacity=".7"/></g>'+
+      '<g class="gf-spinr"><circle cx="50" cy="50" r="38.5" fill="none" stroke="#ffb347" stroke-width="1.5" stroke-dasharray="48 12 6 12" opacity=".9"/></g>'+
       '<g class="gf-orbit"><circle cx="50" cy="2.8" r="1.8" fill="#fff"/><circle cx="50" cy="2.8" r="4" fill="#3fe0ff" opacity=".35"/></g>'+
       '<g fill="#3fe0ff" opacity=".85">'+bars+'</g>'+
       '<g class="gf-prog"><circle cx="50" cy="50" r="42.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/></g>'+
@@ -1610,7 +1610,7 @@
   var _frNoAnim=false;
   function revealRich(box){
     if(!box || _frNoAnim || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
-    var d=0, STEP=26, MAX=1300;
+    var d=0, STEP=55, MAX=2400;   // 흘러나오는 게 눈에 보이게(26→55ms)
     (function walk(node){
       Array.prototype.slice.call(node.childNodes).forEach(function(n){
         if(n.nodeType===3){
@@ -1637,7 +1637,7 @@
     var to=parseFloat(x.getAttribute("data-n")); if(!isFinite(to) || to===0) return;
     var dec=(String(x.getAttribute("data-n")).split(".")[1]||"").length, fin=x.textContent, big=to>=1000;
     x.textContent=dec?(0).toFixed(dec):"0";
-    setTimeout(function(){ var t0=performance.now(), ms=Math.min(900, 380+String(Math.round(to)).length*90);
+    setTimeout(function(){ var t0=performance.now(), ms=Math.min(1600, 800+String(Math.round(to)).length*160);   // 올라가는 게 보이게
       (function f(t){ var p=Math.min(1,(t-t0)/ms), v=to*(1-Math.pow(1-p,3));
         x.textContent = p>=1 ? fin : (dec? v.toFixed(dec) : (big? Math.round(v).toLocaleString("ko-KR") : String(Math.round(v))));
         if(p<1) requestAnimationFrame(f); })(t0); }, delay+80);
@@ -1703,7 +1703,7 @@
   /* 🃏 콘텐츠 카드 덱(26.9.22 사장님: 「텍스트 말고 형식을 갖춘 멋진 카드 — 썸네일, 돈 안 들게 최대 멋지고 동적인 애니메이션,
      대접받는 느낌 번쩍번쩍」·「다지선다도 고려」). 전부 CSS(비용 0). 여러 장 = 가로 넘김 + 번호 + 번호 빠른 선택 줄. */
   var TC_KIND={
-    issue:{n:"이슈",c:"#ff6b57"}, news:{n:"갈라뉴스",c:"#5ab0ff"}, predict:{n:"예측",c:"#b07cff"}, food:{n:"맛집",c:"#ff6b6b"},
+    issue:{n:"이슈",c:"#ff6b57"}, news:{n:"갈라뉴스",c:"#5ab0ff"}, predict:{n:"예측",c:"#b07cff"}, food:{n:"맛집",c:"#ffb020"},
     travel:{n:"여행",c:"#2fd3c6"}, plaza:{n:"광장",c:"#36c2a0"}, gallari:{n:"숏판",c:"#ff4fa3"}, hottube:{n:"핫튜브",c:"#ff5a3d"}, link:{n:"링크",c:"#9aa0ae"}
   };
   var TC_ICON={
@@ -2323,7 +2323,7 @@
          두 분기를 독립시키고, app 자동실행은 서버가 op:"goto"로 지정했을 때만(클라 정규식 폐기 —
          콘텐츠 쪽에서 이미 폐기한 방식이다). */
       var appA = r.actions.filter(function(a){ return a.kind==="app"; })[0];
-      if(appA && (appA.op==="goto" || appA.auto===true)){
+      if(appA && appA.auto===true){   // 곁들인 「날씨 화면 보기」 같은 칩은 누를 때만(날씨로 멋대로 넘어가던 것, 26.9.22)
         appA._reacted=true;   // 🏆 자동실행은 유저 행동 아님 — 보상신호 스킵(가짜 +3 방지)
         setTimeout(function(){ runAction(appA); }, 700);
       }

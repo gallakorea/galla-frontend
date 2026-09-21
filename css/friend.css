@@ -4,7 +4,7 @@
 :root{
   --fr-cy:#5fd8ff;                 /* HUD 시안 */
   --fr-cy-dim:rgba(95,216,255,.22);
-  --fr-am:#7ff0ff;                 /* 강조색(26.9.22 금색 폐지 → 하늘빛) */
+  --fr-am:#ffb45c;                 /* 아크 코어 앰버 */
   --fr-bg:#04070d; --fr-glass:rgba(10,16,26,.92);
   --fr-txt:#eaf6ff; --fr-dim:#7f97a8;
 }
@@ -208,7 +208,7 @@ body.fr-docked.fr-docked-min .view-host{ padding-bottom: 78px !important; }
 
 /* 🔥 어그로 제목 후보 카드 */
 .fr-titles{ align-self:stretch; display:flex; flex-direction:column; gap:6px; margin-top:2px; }
-.fr-titles-h{ font-size:11.5px; font-weight:800; color:#7ff0ff; padding:2px 2px 3px; }
+.fr-titles-h{ font-size:11.5px; font-weight:800; color:#ffb45c; padding:2px 2px 3px; }
 .fr-title-card{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; width:100%;
   background:rgba(255,180,92,.07); border:1px solid rgba(255,180,92,.28); border-radius:12px; padding:10px 12px;
   cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .1s, background .14s; }
@@ -1005,24 +1005,35 @@ body.fr-chatting #frAssist, body.dm-detail #frAssist, body.hv-playing #frAssist{
 #frAssist .fra-send{ border-radius:8px !important; width:36px !important; height:36px !important; box-shadow:0 0 14px rgba(63,224,255,.6); }
 @media (prefers-reduced-motion: reduce){ .gf *, #frOrb::after, #frAssist .hud-scan, #frAssist .hud-br{ animation:none !important; } }
 
-/* ══════════ 🚫 금색·앰버 걷어내기(26.9.22 사장님: 「반짝이라 했지 금색 강조한 게 아니다 — 촌스럽다」) ══════════ */
-/* 내 말풍선 — 짙은 파랑·남색 유리 */
-.fr-msg.fr-u{ color:#fff !important; font-weight:500; background:linear-gradient(135deg, rgba(47,107,255,.92), rgba(90,77,255,.92)) !important;
-  box-shadow:0 0 0 1px rgba(160,190,255,.25), 0 6px 18px rgba(47,107,255,.28) !important; }
-/* 갈비스 픽 리본·테두리 — 하늘색 */
-.fr-tc-pickrib{ color:#03131c !important; background:linear-gradient(90deg,#7ff0ff,#e9fdff,#7ff0ff) !important; background-size:200% 100% !important; box-shadow:0 0 16px rgba(95,216,255,.6) !important; }
-.fr-tc-pick{ box-shadow:0 12px 30px rgba(0,0,0,.5), 0 0 26px rgba(95,216,255,.4), 0 0 0 1px rgba(127,240,255,.45) !important; }
-.fr-tc-pick::before{ background:conic-gradient(from var(--fr-ang), transparent 0 45%, #7ff0ff 62%, #fff 70%, #3fa8ff 78%, transparent 95%) !important; }
-/* 반짝이 — 흰·하늘빛 */
-.fri-spark svg{ fill:#e9fdff !important; filter:drop-shadow(0 0 4px #7ff0ff) !important; }
-/* 숫자·평점·시간 강조 — 하늘빛 */
-.rx-star{ color:#9fe8ff !important; text-shadow:0 0 10px rgba(95,216,255,.55) !important; }
-.rx-star .rx-num{ color:#e9fdff !important; text-shadow:0 0 10px rgba(95,216,255,.7) !important; }
-.rx-time{ color:#dff7ff !important; background:rgba(63,224,255,.12) !important; box-shadow:inset 0 0 0 1px rgba(63,224,255,.4) !important; }
-/* 새 소식 점 */
-#frOrb .fr-dot{ background:#3fe0ff !important; box-shadow:0 0 10px #3fe0ff !important; }
-/* 네 색 → 세 색(금 빼기) */
-.fr-typing.fr-think::before, .fr-typing.fr-think::after, .fr-msg.fr-a.rx-glow .fr-bubble::before{
-  background:conic-gradient(from var(--rx-a), #3fd3ff, #8f7bff, #ff6fb0, #3fd3ff) !important; }
-#frAssist.fri::before{ background:conic-gradient(from var(--fri-a), #5fd8ff, #7b4dff, #ff5fa8, #5fd8ff) !important; }
-.fri-cf-yes{ background:linear-gradient(135deg,#2f6bff,#5a4dff) !important; }
+/* ══════════ 내 말풍선만 금색 아님(26.9.22 사장님: 「금색은 좋은데 내 채팅까지 금색일 필요는 없다」) ══════════ */
+/* 💰 내 말풍선 = 럭셔리 워치식(26.9.22 — 금은 '채움'이 아니라 '귀한 포인트'. 디자인 원칙: 금 10%·채도 낮은 샴페인 골드)
+   스모크 블랙 유리 + 1px 샴페인 골드 머리카락 테두리 + 테두리를 따라 달리는 빛(번쩍). 보낼 땐 테두리가 한 번 확 빛난다. */
+@property --fr-gold-a { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+.fr-msg.fr-u{ position:relative; isolation:isolate; color:#f6efdd !important; font-weight:500; text-shadow:none;
+  background:linear-gradient(180deg, rgba(38,33,24,.9), rgba(16,14,10,.94)) !important;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  box-shadow:0 8px 22px rgba(0,0,0,.45), 0 0 18px rgba(212,175,95,.10) !important; }
+.fr-msg.fr-u::before{ content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none; z-index:1;
+  background:conic-gradient(from var(--fr-gold-a), rgba(184,148,85,.55) 0deg, rgba(232,207,152,.9) 40deg, #fff6dc 58deg, rgba(232,207,152,.9) 76deg, rgba(184,148,85,.55) 120deg, rgba(120,96,56,.45) 240deg, rgba(184,148,85,.55) 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:frGoldRun 4.5s linear infinite; }
+@keyframes frGoldRun{ to{ --fr-gold-a:360deg; } }
+.fr-msg.fr-u:last-child::before{ animation:frGoldFlare 1s ease-out, frGoldRun 4.5s linear 1s infinite; }
+@keyframes frGoldFlare{ 0%{ filter:brightness(2.2) drop-shadow(0 0 8px #ffe7a8); } 100%{ filter:none; } }
+
+/* ══════════ 🎬 답 등장 연출 크게(26.9.22 「동적 애니메이션 어디 갔냐」) ══════════ */
+/* ⚠️ 움직이는 속성(filter·transform·opacity)에 !important 를 걸면 애니메이션을 이겨서 흐린 채로 멈춘다 — 이름·시간만 바꾼다 */
+.fr-msg.rx-new .rx-w{ animation-name:rxIn2; animation-duration:.7s; animation-timing-function:cubic-bezier(.2,.9,.2,1); animation-fill-mode:both; }
+@keyframes rxIn2{ 0%{ opacity:0; filter:blur(9px); transform:translateY(8px) scale(.92); text-shadow:0 0 0 transparent; }
+  55%{ opacity:1; filter:blur(0); transform:none; text-shadow:0 0 14px rgba(127,240,255,.95); }
+  100%{ opacity:1; filter:blur(0); transform:none; text-shadow:none; } }
+.fr-msg.rx-new .rx-num.rx-w{ animation-name:rxNum; animation-duration:.9s; animation-timing-function:cubic-bezier(.2,1.5,.4,1); animation-fill-mode:both; }
+@keyframes rxNum{ 0%{ opacity:0; transform:translateY(10px) scale(.6); filter:blur(6px); } 60%{ opacity:1; transform:scale(1.35); filter:blur(0); } 100%{ opacity:1; transform:none; filter:none; } }
+/* 도착 순간 말풍선 위→아래 스캔 빛 */
+.fr-msg.fr-a.rx-new .fr-bubble::after{ inset:0 !important; transform:translateY(-110%) !important;
+  background:linear-gradient(180deg, transparent, rgba(127,240,255,.10) 60%, rgba(127,240,255,.55) 96%, transparent) !important;
+  animation:rxScanDown 1s cubic-bezier(.5,0,.5,1) .05s forwards !important; }
+@keyframes rxScanDown{ to{ transform:translateY(110%); } }
+/* 스캔 빛이 말풍선 밖으로 새던 것 — 빛 테두리를 안쪽으로 두고 말풍선은 가둔다 */
+.fr-msg.fr-a.rx-glow .fr-bubble{ overflow:hidden !important; }
+.fr-msg.fr-a.rx-glow .fr-bubble::before{ inset:0 !important; z-index:2 !important; }
