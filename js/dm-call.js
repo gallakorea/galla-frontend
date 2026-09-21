@@ -125,7 +125,7 @@
     if (_ctMode) return true;                              // 🔬 자가테스트·관찰 모드 중(푸시 도착 지연 등 네이티브 기록까지)
     try { return localStorage.getItem('galla_call_diag') === '1'; } catch (_) { return false; }
   }
-  function wb(m) { if (!DIAG_ON()) return; try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  function wb(m) { if (!DIAG_ON()) return; try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-') + ' c=' + new Date().toTimeString().slice(0, 8) + '.' + String(Date.now() % 1000).padStart(3, '0'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   function statusBeacon(tag) {
     try {
       const la = localStream && localStream.getAudioTracks()[0];
