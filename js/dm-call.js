@@ -235,6 +235,8 @@
               } catch (_) {}
               window.GALLA_PAGER.popup({ name, kind: row.kind, code: row.code });
               window.GALLA_pagerRefresh?.();   // 삐삐 화면이 열려 있으면 목록도
+              // 🔬 QA: 액정 팝업이 실제로 떴는지 기록(자가테스트 중에만)
+              if (_ctMode) setTimeout(() => { try { const pop = [...document.querySelectorAll('[class*="pgr"]')].find(e => /pop|lcd|alert/i.test(e.className) && e.getClientRects().length); wb('rx pager kind=' + row.kind + ' code=' + (row.code || '-') + ' name=' + name + ' popup=' + !!pop + (pop ? '(' + String(pop.className).slice(0, 30) + ')' : '')); } catch (_) {} }, 700);
             } catch (_) {}
           })
         .subscribe();

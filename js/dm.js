@@ -5914,7 +5914,7 @@
       qlog('tx pager code ok=' + !!(r1.data && r1.data.ok) + ' ' + (r1.data && r1.data.reason || r1.error?.message || ''));
       await qsleep(4000);
       const vf = await qaVoice(); const vu = await qaUpload(vf, 'audio');
-      if (vu) { const r2 = await supabase.rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: vu, p_dur: 1.5, p_code: null });
+      if (vu) { const r2 = await supabase.rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: vu, p_dur: 2, p_code: null });
         qlog('tx pager voice ok=' + !!(r2.data && r2.data.ok) + ' ' + (r2.data && r2.data.reason || r2.error?.message || '')); }
     } catch (e) { qlog('tx pager err ' + String(e && e.message || e).slice(0, 50)); }
     await qsleep(4000);
