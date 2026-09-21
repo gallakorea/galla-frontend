@@ -1465,15 +1465,15 @@
 
   function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
-    if (_ctMode !== 'caller' && _ctMode !== 'callerV' && _ctMode !== 'callerM') return;   // callerM = 소리 실측(통계)   // callerV = 면상톡(영상) 자동테스트
+    if (_ctMode !== 'caller' && _ctMode !== 'callerV' && _ctMode !== 'callerM' && _ctMode !== 'callerMV') return;   // callerM(V) = 소리 실측(통계) 음성/영상   // callerV = 면상톡(영상) 자동테스트
     if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
     if (!_ctPeer) { wb('selftest caller NO-PEER'); _ctLoopT = setTimeout(_ctCallerCycle, 15000); return; }
     if (!CUR) {
       if (!ME || !sb) { wb('selftest not-ready'); _ctLoopT = setTimeout(_ctCallerCycle, 6000); return; }
-      const vid = (_ctMode === 'callerV');
+      const vid = (_ctMode === 'callerV' || _ctMode === 'callerMV');
       wb('selftest DIAL ' + String(_ctPeer).slice(0, 8) + (vid ? ' [VIDEO]' : ''));
       try { start(_ctPeer, '자가테스트', vid); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
-      if (_ctMode === 'callerM') _ctMeasureQA(); else if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
+      if (_ctMode === 'callerM' || _ctMode === 'callerMV') _ctMeasureQA(); else if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
     }
     // 68초 통화 → 끊고 15초 쉬고 반복(면상톡 버튼+소리 QA 시퀀스 ~55초 확보)
     _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 68000);
@@ -1563,7 +1563,7 @@
   }
   function _ctApply(mode, peer) {
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
-    if (mode === 'caller' || mode === 'callerV' || mode === 'callerM') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
+    if (mode === 'caller' || mode === 'callerV' || mode === 'callerM' || mode === 'callerMV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
     else if (_ctMode) { _ctStop(); }
   }
