@@ -2787,7 +2787,9 @@
   /* 링크로 들어온 경우 — ?tab=food&place=<id> 면 그 가게를 바로 연다(갈비스 카드가 웹에서 목록에 멈추던 것, 26.9.22) */
   function openFromUrl() {
     try {
-      var id = new URLSearchParams(location.search).get("place");
+      var q = new URLSearchParams(location.search);
+      if (q.get("tab") !== "food") return;
+      var id = q.get("place");
       if (id && /^[0-9a-f-]{36}$/i.test(id)) return openDetail(id);
     } catch (_) {}
   }

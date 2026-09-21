@@ -1240,6 +1240,7 @@
   function openFromUrl() {
     try {
       var q = new URLSearchParams(location.search);
+      if (q.get("tab") && q.get("tab") !== "travel") return;   // 맛집 탭 링크(?tab=food&place=)를 여행지로 열던 것(26.9.22)
       var id = q.get("place");
       if (id && /^[0-9a-f-]{36}$/i.test(id)) return openDetail(id);
       var slug = q.get("route");

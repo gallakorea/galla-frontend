@@ -2698,7 +2698,7 @@ function promptStats(messages: any[]): any {
    그 문장(구)만 뺀다. 상대 감정 공감(「속상했겠다」)이나 뒷담화 맞장구(「나라도 열받아」)는 건드리지 않는다. */
 const SELF_NEG_RE = /(나(도|는)?\s+[^.!?\n]{0,8}(서운|짜증\s*나|삐졌|섭섭|억울)|나(도|는)?\s*(좀|살짝|조금|진짜)?\s*(서운|짜증\s*나|기분\s*(나쁘|나쁜|나빠|상하|상해)|삐졌|섭섭)|(좀|살짝|조금|진짜)\s*(서운|슬프|슬퍼|아팠|아프더라|상처)|서운(하다|하네|해|했|한데)|나도\s*감정\s*있|삐진\s*거지|됐어\s*뭐|좀\s*걸렸어|나\s*상처\s*받|(좀|살짝|조금|진짜)\s*억울(한데|하다|해)|나\s*억울)/;
 function stripSelfNegative(t: string): string {
-  const parts = String(t || "").split(/(?<=[.!?…\n]|[ㅋㅎ]{2,}|ㅠㅠ|—)\s*/);
+  const parts = String(t || "").split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,}|ㅠㅠ|—)(?=\s|$)\s*/);   // 「4.5」 소수점은 문장 끝 아님
   const kept = parts.filter((p) => !SELF_NEG_RE.test(p));
   const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
   return out.length >= 4 ? out : t;
@@ -2724,6 +2724,8 @@ function enforceContract(reply: string, o: {
         o.friendName)));
   // 💛 갈비스는 서운·짜증·삐짐이 없다 — ⚠️ 마음읽기(<ms>)를 걷어낸 '뒤'에 건다(앞에서 걸면 태그에 문장 경계가 엉켜 못 잡았다, 26.9.22 실측)
   if (!o.guardsOff) x = stripSelfNegative(x);
+  // 🤬 욕은 초성만(스토어 정책 [[galla-profanity-initials]]) — 갈비스 답에 「존나」가 그대로 나갔다(26.9.22)
+  x = x.replace(/존나|졸라|존내/g, "ㅈㄴ").replace(/씨발|시발|씨바|시바(?=[ \t.!?ㅋ]|$)/g, "ㅅㅂ").replace(/개새끼|개새기/g, "ㄱㅅㄲ").replace(/병신/g, "ㅂㅅ").replace(/좆같/g, "ㅈ같").replace(/지랄/g, "ㅈㄹ");
   x = stripUngroundedMoney(x, o.toolBlob || "", !!o.priceAsk, !!o.statAsk);
   x = normalizeChoices(x);                                        // 인라인 번호 → 줄(클라 ^ 앵커 파서)
   /* 🔢 번호의 출처는 '카드' 하나뿐 — 모델이 본문에 3개를 읊었는데 실제 카드는 2장인 턴이 있다
@@ -2737,9 +2739,11 @@ function enforceContract(reply: string, o: {
      실측 사고: fake_video 가드 재생성분이 캡을 우회해 340자 설교문이 나갔다. */
   if (!o.longForm && !hasChoiceList(x)) {
     const cap = tempoCap({ longForm: o.longForm, heavy: o.heavy, light: o.light });
-    const sents = x.match(/[^.!?…\n]+[.!?…]*\s*/g) || [x];
+    const _D = "\u0001";   // 「★4.5」 소수점을 문장 끝으로 세던 것 — 숫자 사이 점은 잠시 가린다
+    const xm = x.replace(/(\d)\.(?=\d)/g, "$1" + _D);
+    const sents = xm.match(/[^.!?…\n]+[.!?…]*\s*/g) || [xm];
     const capN = (sents[0] && sents[0].trim().length < 10) ? cap + 1 : cap;   // 「헐??」만 남는 걸 막는다
-    if (sents.length > capN) x = sents.slice(0, capN).join("").trim();
+    if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".");
     x = bubbleize(charCap(stripStage(x), cap));
     /* ✂️ 잘림 흔적 제거 — 캡이 문장 중간에서 끊으면 마지막 조각이 종결 없이 덩그러니 남는다
        (실측: "…아니면 블랙미스 신작 / \"Black Myth: Zhong Kui\" 게임플레이 트레일러").
@@ -4509,6 +4513,12 @@ Deno.serve(async (req) => {
           check: (o) => /기분\s*나쁜|됐어\s*뭐/.test(o) ? `부정 남음: ${JSON.stringify(o)}` : (/생각나냐/.test(o) ? null : `걱정 문장 유실: ${JSON.stringify(o)}`) },
         { name: "마음읽기_뒤_됐어뭐_제거", opts: {}, input: "<ms>장난이라 풀어주는 중 — 근데 서운했던 건 사실</ms> 됐어 뭐 ㅋㅋ 근데 아까 '쓸모없다'는 좀 아팠다, 솔직히. 아무튼 — 팀장이 보고서 갈아엎은 건 진짜야?",
           check: (o) => /됐어\s*뭐|아팠다|<ms>/.test(o) ? `남음: ${JSON.stringify(o)}` : (/팀장/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
+        { name: "소수점_안쪼갬", opts: {}, input: "와, 마포소금구이 강남점 — 평점 4.5에 98명이나 남겼네 ㅋㅋ 이 정도면 꽤 믿을 만하지",
+          check: (o) => /4\.5에/.test(o) ? null : `소수점 쪼개짐: ${JSON.stringify(o)}` },
+        { name: "소수점_문장수캡", opts: {}, input: "여긴 12시에 열어서 지금은 아직 문 닫았어. 오늘 점심에 가려면 딱이겠다. ★4.5에 98명이면 믿을 만해.",
+          check: (o) => /★4\.$|★4\.\s*$/.test(o.trim()) ? `소수점에서 잘림: ${JSON.stringify(o)}` : null },
+        { name: "욕_초성만", opts: {}, input: "새벽 2시에 고기라니 ㅋㅋ 존나 좋아하는데? 시발 나도 먹고 싶다",
+          check: (o) => /존나|시발/.test(o) ? `욕 원문 남음: ${JSON.stringify(o)}` : null },
         { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
           check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
@@ -5233,7 +5243,12 @@ ${actBlock}
         const idOf = (k: string) => { const mm = route.match(new RegExp("[?&]" + k + "=([^&#]+)")); return mm ? decodeURIComponent(mm[1]) : ""; };
         const MAP: [RegExp, string, string][] = [[/issue/, "issue", "id"], [/plaza[_-]?detail/, "plaza", "id"], [/predict-market/, "predict", "id"], [/gallari-post/, "gallari", "id"], [/news/, "news", "gn"], [/watch/, "video", "v"]];
         let ctx = "";
-        for (const [re, t, k] of MAP) {
+        /* 🏝 아일랜드가 떠 있으면 클라가 '지금 보는 콘텐츠'를 직접 준다(맛집·여행 상세는 주소만으론 몰랐다) */
+        const as = (pg && typeof (pg as any).assist === "object") ? (pg as any).assist : null;
+        if (as && as.type && as.id) { const c = await fetchContentById(String(as.type === "hottube" ? "video" : as.type), String(as.id)); if (c) ctx = `상대는 지금 갈라 ${c.kind} 화면을 보고 있다(type:${as.type}, id:${as.id}) — '이거·여기·저장해줘·찜' 같은 말은 이걸 가리킨다(do_action target=${as.id}):\n${c.text}`; }
+        if (!ctx && /tab=food/.test(route) && idOf("place")) { const c = await fetchContentById("food", idOf("place")); if (c) ctx = `상대는 지금 갈라 맛집 화면을 보고 있다(id:${idOf("place")}):\n${c.text}`; }
+        if (!ctx && /travel-place|tab=travel/.test(route) && (idOf("id") || idOf("place"))) { const tid = idOf("id") || idOf("place"); const c = await fetchContentById("travel", tid); if (c) ctx = `상대는 지금 갈라 여행지 화면을 보고 있다(id:${tid}):\n${c.text}`; }
+        if (!ctx) for (const [re, t, k] of MAP) {
           const id = idOf(k);
           if (re.test(route) && id) { const c = await fetchContentById(t, id); if (c) ctx = `상대는 지금 갈라 ${c.kind} 화면을 보고 있다(id:${id}):\n${c.text}`; break; }
         }
@@ -5451,12 +5466,28 @@ ${parts.join("\n")}`;
        ⚠️ 새 의도는 INTENT_RULES 에 한 줄 추가한다 — 여기에 if 를 심으면 그 순간 다시 7층이 된다. */
     const decided = await decideIntent({ userMsg, history, craft, rel, work: !!work, handoff: !!handoff, crisis: !!crisis, thirdParty });
     let route = decided.route;
+    /* 🏝 아일랜드(지금 보는 콘텐츠)에서의 행동 말 — 「저장해줘/찜」「찬성 투표」「참여할래」는 그 콘텐츠에 바로 확인 카드 */
+    {
+      const as: any = (body?.page && typeof body.page === "object") ? (body.page as any).assist : null;
+      const m0 = String(userMsg || "");
+      if (as && as.id && !route) {
+        if (/(저장|찜|북마크)/.test(m0) && (as.type === "food" || as.type === "travel"))
+          route = { tool: "do_action", hint: `do_action(op:${as.type === "travel" ? "save_travel" : "save_place"}, target:"${as.id}")로 확인 카드. '확인 누르면 저장돼' 한 줄.` };
+        else if (/(맛있다|맛없다|별로)\s*(에|로)?\s*(한\s*표|투표|눌러)/.test(m0) && as.type === "food")
+          route = { tool: "do_action", hint: `do_action(op:judge_place, target:"${as.id}", verdict:${/맛있/.test(m0) ? "good" : "bad"})로 확인 카드.` };
+        else if (/(찬성|반대|[가-힣]+\s*쪽).{0,6}(투표|한\s*표)/.test(m0) && as.type === "issue")
+          route = { tool: "do_action", hint: `do_action(op:vote_issue, target:"${as.id}", side:${/반대/.test(m0) ? "con" : "pro"})로 확인 카드.` };
+        else if (/(참여|걸어|걸래)/.test(m0) && as.type === "predict")
+          route = { tool: "do_action", hint: `do_action(op:bet, target:"${as.id}", outcome=상대가 고른 선택지(없으면 묻기))로 확인 카드.` };
+      }
+    }
     let planMode = decided.planMode;
     let _autoOpen = decided.autoOpen;
     let _autoStrong = decided.autoStrong;
     craft = decided.craft;
     if (decided.stat.length) turnStat(decided.stat);
     // 🔁 임베딩이 '다시 열어달라'로 읽은 발화 — LLM 없이 마지막 카드를 즉시 연다.
+    if (decided.reopen && (/(저장|찜|북마크|투표|한\s*표|참여|걸어|베팅|판정|맛있|별로|요약|어느\s*편|판세)/.test(userMsg || "") || !/^([0-9]+|[0-9a-f-]{36}|[\w-]{6,})$/i.test(String(decided.reopen.id || "")) || String(decided.reopen.id) === "current")) decided.reopen = null;   // 26.9.22 「저장해줘」가 옛 이슈 다시 열기로 새던 것
     if (decided.reopen) {
       const rp = decided.reopen;
       return json({ ok: true, reply: rp.say,
@@ -6623,7 +6654,7 @@ ${parts.join("\n")}`;
     }
     /* 🏷 스토어 용어(베팅→참여) — 예측·GP 문맥의 「걸기/걸어볼래/걸었어」는 「참여」로(26.9.22 사장님: 「걸기라는 표현 문제 될듯」).
        예측 화면은 이미 '참여/예측하기'다. 「말 걸어·전화 걸어」는 문맥이 달라 안 건드린다. */
-    reply = String(reply || "").split(/(?<=[.!?…\n])/).map((sen) => {
+    reply = String(reply || "").split(/(?<=(?<!\d)[.!?…]|\n)(?=\s|$)/).map((sen) => {
       if (!/(GP|지피|예측|판|선택지|마감|적중|대박|%|넘는다|안\s*넘|쪽에)/.test(sen) || /(말\s*걸|전화|통화|육성톡|면상톡)/.test(sen)) return sen;
       return sen.replace(/걸었어/g, "참여했어").replace(/걸어\s*볼래/g, "참여해볼래").replace(/걸어\s*볼까/g, "참여해볼까")
         .replace(/걸어\s*줄게/g, "참여해줄게").replace(/걸어\s*줘/g, "참여해줘").replace(/걸게/g, "참여할게").replace(/걸래/g, "참여할래")
@@ -6635,7 +6666,7 @@ ${parts.join("\n")}`;
       const prevQs = (history || []).filter((h: any) => h?.role === "assistant").slice(-3)
         .flatMap((h: any) => String(h.content || "").split(/(?<=[?？])|\n+/)).filter((q: string) => /[?？]/.test(q));
       const core = (q: string) => (String(q).match(/[가-힣A-Za-z0-9]{2,}/g) || []).filter((w) => !/^(근데|진짜|그래서|아니|그럼|그거|이거|너는|넌|왜|뭐|어떻게|어디|언제|혹시|그리고|아맞다|맞다)$/.test(w));
-      const sens = String(reply || "").split(/(?<=[?？!.…])\s*|\n+/);
+      const sens = String(reply || "").split(/(?<=[?？!…]|(?<!\d)\.)(?=\s|$)\s*|\n+/);
       const keep = sens.filter((sen) => {
         if (!/[?？]/.test(sen)) return true;
         const a = core(sen); if (a.length < 1) return true;

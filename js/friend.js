@@ -463,17 +463,27 @@
   /* 🧭 보조 모드(26.9.22 사장님: 「창이 띄워지면 갈비스가 미니 모드로 — 페이지가 뜬 상태에서 보조 역할」)
      콘텐츠를 열면 갈비스가 사라지지 않고 화면 아래 작은 창으로 남는다. 그 콘텐츠를 서버가 읽어(핸드오프) 먼저 한마디 +
      요약·참여·저장·관련 찾기를 그 자리에서 돕는다. 접기(한 줄 바)·크게 보기·닫기는 기존 도킹 버튼 그대로. */
-  var _assist=null, _asEl=null, _asObs=null;
+  var _assist=null, _asEl=null, _asObs=null, _asBase=0;
   /* 🧭 보조 창 — 화면 오른쪽 아래 반투명 유리 창. 페이지는 뒤로 비친다.
      갈비스 최신 말(3줄) + 작은 입력. [크게](전체 대화) [접기](알약) [닫기]. 답에 카드가 있으면 「카드 보기」. */
   /* 🏝 갈비스 아일랜드(26.9.22 — 다이내믹 아일랜드·리퀴드 글래스·제미나이 오버레이 참고)
      평소=아래 가운데 작은 유리 캡슐(눈 깜빡이는 갈비스 + 최신 한 줄) → 답이 오면 스프링으로 부풀어 카드(15px·상황 버튼)
      → 페이지를 스크롤하면 다시 캡슐로. 생각 중엔 테두리가 빛나며 돌고 파형이 춤춘다. 전부 SVG·CSS(비용 0). */
-  var FRI_ORB='<svg class="fri-orb" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="friG" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#e6fbff"/><stop offset=".35" stop-color="#6fe0ff"/><stop offset=".75" stop-color="#4a6bff"/><stop offset="1" stop-color="#7b4dff"/></radialGradient></defs>'+
-    '<circle class="fri-ring" cx="20" cy="20" r="18.4" fill="none" stroke="url(#friG)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="26 90"/>'+
-    '<circle class="fri-body" cx="20" cy="20" r="14.5" fill="url(#friG)"/><ellipse cx="15" cy="13.5" rx="4" ry="2.2" fill="#fff" opacity=".45"/>'+
-    '<g class="fri-eyes"><ellipse cx="15.4" cy="20.5" rx="1.9" ry="2.9" fill="#061422"/><ellipse cx="24.6" cy="20.5" rx="1.9" ry="2.9" fill="#061422"/></g>'+
-    '<path class="fri-smile" d="M16.5 25.2q3.5 2.6 7 0" fill="none" stroke="#061422" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  /* 🕺 갈비스 = 우리 졸라맨(투표바 줄다리기 사람과 같은 그림체 — 꽉 찬 동그란 머리 + 굵기 2.4 선).
+     평소 통통 뛰며 손 흔들기 · 생각 중 턱 괴고 고개 갸웃 + 「…」 · 답 오면 두 팔 번쩍 점프(26.9.22 사장님). */
+  var FRI_ORB='<svg class="fri-orb fri-man" viewBox="0 0 30 34" aria-hidden="true">'+
+    '<g class="fm-dots"><circle cx="21" cy="3.2" r="1.3"/><circle cx="25" cy="3.2" r="1.3"/><circle cx="29" cy="3.2" r="1.3"/></g>'+
+    '<g class="fm-all" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+
+      '<circle class="fm-head" cx="13" cy="8" r="4" fill="currentColor" stroke="none"/>'+
+      '<path d="M13 12 L13 22.2"/>'+
+      '<path class="fm-legs" d="M13 22.2 L9.4 31.5 M13 22.2 L16.8 31.5"/>'+
+      /* 평소: 한 팔 내리고 한 팔 흔들기 */
+      '<g class="fm-p-wave"><path d="M13 14.4 L9 20.2"/><g class="fm-arm"><path d="M13 14.4 L20.5 8.4"/><circle cx="21.6" cy="7.4" r="1.7" fill="currentColor" stroke="none"/></g></g>'+
+      /* 생각: 한 팔 턱에, 한 팔 허리 */
+      '<g class="fm-p-think"><path d="M13 14.4 L17.4 17 L15.2 11.6"/><path d="M13 14.4 L9.4 18.4 L12 20.6"/></g>'+
+      /* 답: 두 팔 번쩍 */
+      '<g class="fm-p-cheer"><path d="M13 14.4 L7.2 7.2"/><path d="M13 14.4 L18.8 7.2"/></g>'+
+    '</g></svg>';
   var FRI_WAVE='<svg class="fri-wave" viewBox="0 0 22 16" aria-hidden="true"><rect x="1" y="5" width="3" height="6" rx="1.5"/><rect x="7" y="2" width="3" height="12" rx="1.5"/><rect x="13" y="4" width="3" height="8" rx="1.5"/><rect x="19" y="6" width="2.4" height="4" rx="1.2"/></svg>';
   var FRI_IC={
     sum:'<svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7"/></svg>',
@@ -511,6 +521,7 @@
       '</div>'+
       '<div class="fri-card">'+
         '<div class="fra-msg"></div>'+
+        '<div class="fri-cf" hidden><button class="fri-cf-yes"></button><button class="fri-cf-no">취소</button></div>'+
         '<button class="fra-cards" hidden>카드 보기 ›</button>'+
         '<div class="fra-quick"></div>'+
         '<div class="fra-in"><input placeholder="갈비스한테 물어봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
@@ -526,10 +537,14 @@
     _asEl.querySelector(".fra-cards").onclick=function(){ hideAssist(); open(); };
     _asEl.querySelector(".fra-x").onclick=function(){ closeAssist(); orb && orb.classList.remove("fr-hidden"); };
     // 페이지를 스크롤하면 캡슐로(보는 걸 가리지 않게) — 입력 중이면 그대로
-    var lastY=window.scrollY||0;
-    window.addEventListener("scroll", function(){
+    // 페이지든 상세 시트(맛집·여행)든 — 스크롤하는 그 요소 기준으로 본다(시트 안 스크롤에 안 접히던 것)
+    var lastYs=new WeakMap();
+    window.addEventListener("scroll", function(e){
       if(!_asEl.classList.contains("on") || document.activeElement===inp) return;
-      var y=window.scrollY||0; if(Math.abs(y-lastY)>24){ friExpand(false); lastY=y; }
+      var t=(e.target===document||e.target===window)?(document.scrollingElement||document.documentElement):e.target;
+      if(_asEl.contains(t)) return;
+      var y=t.scrollTop||0, ly=lastYs.has(t)?lastYs.get(t):y;
+      if(Math.abs(y-ly)>24){ friExpand(false); lastYs.set(t,y); } else if(!lastYs.has(t)) lastYs.set(t,y);
     }, {passive:true, capture:true});
     // 쓸어내리면 접기, 쓸어올리면 전체 대화
     var sy=null;
@@ -546,6 +561,7 @@
     if(!_asEl || !logEl) return;
     var msgs=logEl.querySelectorAll(".fr-msg"); var lastU=-1;
     for(var i=msgs.length-1;i>=0;i--){ if(msgs[i].classList.contains("fr-u")){ lastU=i; break; } }
+    lastU=Math.max(lastU, (_asBase|0)-1);   // 아일랜드를 연 뒤의 말만(그 전 대화가 섞이던 것)
     var parts=[], hasCards=false;
     for(var j=Math.max(lastU+1,0); j<msgs.length; j++){
       var bb=msgs[j].querySelector(".fr-bubble"); if(!bb) continue;
@@ -563,7 +579,18 @@
       var last=parts[parts.length-1]||""; tick.textContent=last.replace(/\s+/g," ").slice(0,40);
       _asEl.classList.remove("fri-full"); friExpand(true); friSparkle();
       _asEl.classList.remove("fri-pop"); void _asEl.offsetWidth; _asEl.classList.add("fri-pop");
+      clearTimeout(syncAssist._p); syncAssist._p=setTimeout(function(){ if(_asEl) _asEl.classList.remove("fri-pop"); }, 1600);   // 번쩍 뒤엔 다시 손 흔들기
     }
+    /* ✅ 확인 카드(저장·참여·투표)는 아일랜드 안에서 바로 누른다 — 원래 카드의 버튼을 대신 눌러 준다 */
+    var cfs=logEl.querySelectorAll(".fr-confirm:not(.fr-done)"), cf=cfs.length?cfs[cfs.length-1]:null;
+    var cfBox=_asEl.querySelector(".fri-cf");
+    if(cf && msgs.length && cf.closest(".fr-msg")===msgs[msgs.length-1]){
+      var oy=cf.querySelector(".fr-cf-yes"), on=cf.querySelector(".fr-cf-no");
+      var yb=cfBox.querySelector(".fri-cf-yes"); yb.textContent="✓ "+((oy&&oy.textContent)||"확인");
+      yb.onclick=function(){ if(oy) oy.click(); cfBox.hidden=true; };
+      cfBox.querySelector(".fri-cf-no").onclick=function(){ if(on) on.click(); cfBox.hidden=true; };
+      cfBox.hidden=false; hasCards=false;
+    } else cfBox.hidden=true;
     _asEl.querySelector(".fra-cards").hidden=!hasCards;
   }
   function openAssist(a, fromBoot){
@@ -584,7 +611,7 @@
       var here=location.pathname+location.search+location.hash;
       if(here.indexOf(String(_assist.id))<0 && !/tab=(food|travel)/.test(here)){ closeAssist(); orb && orb.classList.remove("fr-hidden"); }
     }, 1000);
-    buildAssist(); _friLastTxt=""; _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
+    buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0; _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
     _asEl.querySelector(".fri-tick").textContent="보는 중…";
     if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
     _asEl.querySelector(".fra-msg").textContent="";
@@ -2050,6 +2077,7 @@
       var pg=(location.hash&&location.hash.length>1?location.hash:location.pathname+location.search).slice(0,160);
       var sub=document.querySelector('[data-panel].active'); var st=sub&&sub.closest('[data-page],body')?sub.dataset.panel:"";
       body.page={ route:pg, sub:(st||"").slice(0,20) };
+      if(_assist && _assist.id) body.page.assist={ type:_assist.type, id:_assist.id, title:String(_assist.title||"").slice(0,80) };   // 🏝 아일랜드가 보고 있는 콘텐츠
     }catch(e){}
     if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
     // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
