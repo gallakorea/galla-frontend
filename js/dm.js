@@ -1391,7 +1391,11 @@
       lastX = t.clientX; lastT = now;
       view.style.transform = 'translateX(' + dx + 'px)';
     }, { passive: true });
-    ROOT.addEventListener('touchend', () => {
+    /* 👆 손 뗌은 window(캡처)에서 받는다 — 예전엔 ROOT 에서만 받았다.
+       끄는 도중 손가락 밑 말풍선이 다시 그려지면(읽음·반응 실시간 갱신은 outerHTML 로 교체) 터치의
+       대상 요소가 문서에서 떨어져 touchend 가 ROOT 까지 올라오지 않았다 → 대화창이 끌던 자리에서
+       그대로 멈추고 뒤의 목록·탭이 드러났다(26.9.21 사장님 제보 스크린샷). */
+    function endDrag() {
       if (!view || lock !== 'h') { view = null; lock = null; return; }
       const v = view, cv = CUR_VIEW;
       view = null; lock = null; busy = true;
@@ -1409,11 +1413,15 @@
         requestAnimationFrame(() => { v.style.transform = 'translateX(0)'; });
         setTimeout(() => { cleanup(v, CUR_VIEW === cv); }, 320);
       }
-    }, { passive: true });
-    ROOT.addEventListener('touchcancel', () => {
+    }
+    function cancelDrag() {
       if (view && lock === 'h') { const v = view; v.style.transition = CURVE; v.style.transform = ''; setTimeout(() => cleanup(v, true), 320); }
       view = null; lock = null;
-    }, { passive: true });
+    }
+    window.addEventListener('touchend', endDrag, { capture: true, passive: true });
+    window.addEventListener('touchcancel', cancelDrag, { capture: true, passive: true });
+    // 🛟 앱이 내려가면(전화·홈) 끌던 대화창을 제자리로 — 돌아왔을 때 반쯤 밀린 채 남지 않게
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') cancelDrag(); });
   }
 
   function goBack(fallbackTab) {
@@ -1476,7 +1484,11 @@
       }
     }
     CUR_VIEW = name;
-    ROOT.querySelectorAll('.dm-view').forEach(v => { v.hidden = v.dataset.view !== name; });
+    ROOT.querySelectorAll('.dm-view').forEach(v => {
+      v.hidden = v.dataset.view !== name;
+      // 🛟 끌기 흔적(반쯤 밀린 transform·.dm-sliding)이 남아 있으면 전환할 때 지운다
+      if (v.classList.contains('dm-sliding') || v.style.transform) { v.classList.remove('dm-sliding'); v.style.transition = ''; v.style.transform = ''; }
+    });
     // 페이지 모드 크롬 규칙:
     // · 페이지 헤더(GALLA)는 메인(목록)에서만 — 상세(대화방·프로필…)는 자체 헤드가 유일한 헤더
     // · 네비는 입력바와 물리적으로 겹치는 '대화방'에서만 숨김 — 프로필·설정 등은 유지

@@ -397,7 +397,10 @@
       lastX = t.clientX; lastT = now;
       layer.style.transform = "translateX(" + dx + "px)";
     }, { passive: true });
-    layer.addEventListener("touchend", () => {
+    /* 👆 손 뗌은 window(캡처)에서 — 레이어 안 요소가 끄는 도중 다시 그려지면 touchend 가 레이어까지
+       올라오지 않아 화면이 반쯤 밀린 채 멈췄다(갈라톡 대화창에서 실측, 26.9.21). 레이어가 사라지면 리스너도 뗀다. */
+    const onEnd = () => {
+      if (!layer.isConnected) { window.removeEventListener("touchend", onEnd, true); window.removeEventListener("touchcancel", onCancel, true); return; }
       if (lock !== "h") { lock = null; return; }
       lock = null;
       layer.style.transition = "";
@@ -420,7 +423,10 @@
       } else {
         layer.style.transform = "";   // 스프링 복귀(클래스 .in의 0 위치로 전환)
       }
-    }, { passive: true });
+    };
+    const onCancel = () => { if (lock === "h") { layer.style.transition = ""; layer.style.transform = ""; } lock = null; };
+    window.addEventListener("touchend", onEnd, { capture: true, passive: true });
+    window.addEventListener("touchcancel", onCancel, { capture: true, passive: true });
   }
 
   function qs(params) {
