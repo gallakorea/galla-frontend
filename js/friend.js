@@ -1257,6 +1257,17 @@
     if(suppressGreet) return;      // askGalvis가 콘텐츠 오프너를 대신 낸다
     greet();
   }
+  /* 💛 폰에서 바로 하는 인사 — 시간대별, 다시 온 사람엔 「또 왔네」 */
+  function localGreet(back){
+    var h=new Date().getHours(), pick=function(a){ return a[Math.floor(Math.random()*a.length)]; };
+    var A = h<5 ? ["왔구나! 새벽인데 안 자고 ㅎㅎ 반가워","오 왔네 ㅎㅎ 새벽까지 뭐 해?"]
+          : h<11 ? ["좋은 아침! 왔구나 ㅎㅎ","오 왔네! 아침은 먹었어?"]
+          : h<15 ? ["왔구나! 점심은 먹었어? ㅎㅎ","오 반가워! 오늘 하루 잘 가고 있어?"]
+          : h<19 ? ["오 왔네! 오늘 하루 어땠어?","왔구나 ㅎㅎ 반가워, 오후 잘 버티고 있어?"]
+          : ["왔구나! 저녁은 먹었어? ㅎㅎ","오 반가워! 오늘 고생 많았지?"];
+    if(back) A = A.concat(["또 왔네 ㅎㅎ 반가워!","왔어? 기다리고 있었지 ㅎㅎ"]);
+    return pick(A);
+  }
   var _greetStale=false;   // 🔐 greet race — 인사 응답 오기 전에 유저가 먼저 말 걸면 인사를 버린다(요청 씹힘 방지, 실사용 E2E 마찰#1)
   var _greeting=false;
   async function greet(){
@@ -1307,7 +1318,15 @@
     if(r && r.friendName){ friendName=r.friendName; setTitle(); }
     /* 🤫 서버가 '지금은 말 걸 때가 아니다'라고 판단하면(quiet 또는 빈 reply) 조용히 물러난다.
        ⚠️ 여기서 기본 인사말로 대체하면 침묵 문턱이 통째로 무의미해진다(열 때마다 "안녕!" 스팸). */
-    if(r && (r.quiet===true || (typeof r.reply==="string" && !r.reply.trim()))) return;
+    /* 💛 26.9.22 사장님: 「창을 띄우면 갈비스가 먼저 반겨줘야」 — 서버가 조용히(3분 안 재오픈·무료 인사 한도 0) 하거나 실패해도
+       폰에서 바로 시간대 인사(비용 0). 20초 안에 여닫기만 반복할 때만 쉰다(인사 쌓임 방지). */
+    if(!r || r.ok===false || r.quiet===true || (typeof r.reply==="string" && !r.reply.trim())){
+      if(Date.now() - (window.__frLastGreet||0) < 20000) return;
+      window.__frLastGreet = Date.now();
+      var gl = localGreet(history.length>0); addMsg("a", gl); history.push({role:"assistant",content:gl}); saveChat(); scrollBottom();
+      return;
+    }
+    window.__frLastGreet = Date.now();
     /* 기본 인사는 '화면이 비어 있을 때'만 쓴다.
        비로그인·네트워크 실패면 서버가 판단을 못 하는데, 그때마다 폴백을 찍으면
        열 때마다 "안녕! 나 갈비스야"가 쌓인다(열 때마다 인사 시도로 바꾼 뒤 실측). */
