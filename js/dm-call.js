@@ -272,7 +272,10 @@
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [], callId: p.callId || '' };
       // 📞 웹이 offer를 처리함 = 앱이 살아있음(포그라운드/도달가능) → 발신자에게 'ring' ack.
       //    발신자는 이 ack가 오면 '끊을 때 realtime hangup으로 끝난다'고 보고 취소 푸시를 안 보낸다(깜빡임 방지).
-      try { send({ t: 'ring' }); } catch (_) {}
+      /* 👁 화면에 보이는지도 함께 보낸다 — 백그라운드 앱도 VoIP 푸시로 잠깐 깨어나 이 ack 를 보낸다.
+         그러면 발신자는 '살아 있다'고 보고 취소 푸시를 생략했는데, 곧 다시 잠들어 실시간 끊김을 못 받아
+         발신자가 끊은 뒤에도 CallKit 벨이 19초 더 울렸다(26.9.21 두 폰 실측). */
+      try { send({ t: 'ring', vis: document.visibilityState }); } catch (_) {}
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       // 📞 웹 수신벨 = 포그라운드 통화의 주 UI(realtime로 빠르게). CallKit(VoIP 푸시)은 잠금/백그라운드 보너스.
@@ -311,7 +314,8 @@
     if (p.t === 'ring') {
       // 📞 수신자 웹이 offer를 처리함(=포그라운드/도달가능) → 끊을 때 realtime hangup으로 CallKit이 끝나므로
       //    취소 VoIP 푸시를 보내지 않는다(취소 푸시의 reportNewIncomingCall이 깜빡임을 만드는 것 방지).
-      if (CUR.dir === 'out') { CUR._foreground = true; wb('ring-ack fg'); }   // 📞 푸시는 그대로 보낸다(잠금 대비) — 억제는 수신자 인앱 수락 시 네이티브가
+      // 👁 수신 앱이 화면에 보일 때만 '실시간으로 끝낼 수 있다'고 본다(vis 없는 옛 클라이언트는 예전처럼 보임 취급)
+      if (CUR.dir === 'out') { CUR._foreground = (p.vis !== 'hidden'); wb('ring-ack ' + (CUR._foreground ? 'fg' : 'bg')); }   // 📞 푸시는 그대로 보낸다(잠금 대비) — 억제는 수신자 인앱 수락 시 네이티브가
       return;
     }
     if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }
@@ -1462,6 +1466,8 @@
   }
   function _ctWakeOff() { try { _ctWake && _ctWake.release(); } catch (_) {} _ctWake = null; }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && _ctMode) _ctWakeOn(); });
+  // 👁 수신 벨이 울리는 중에 앱을 내리거나 올리면 발신자에게 다시 알린다(끊을 때 취소 푸시 필요 여부)
+  document.addEventListener('visibilitychange', () => { try { if (CUR && CUR.dir === 'in' && !CUR.connectedAt) send({ t: 'ring', vis: document.visibilityState }); } catch (_) {} });
 
   function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
