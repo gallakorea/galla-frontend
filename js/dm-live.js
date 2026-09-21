@@ -825,6 +825,8 @@
     };
     pc.ontrack = (e) => {
       lvlog("ontrack kind=" + (e.track && e.track.kind) + " streams=" + (e.streams ? e.streams.length : -1));
+      // 🍎 아이폰: 수신 스트림이 생긴 '뒤'에 오디오 유닛을 한 번 내렸다 올려야 재생 출력이 잡힌다(1:1 통화 발신자와 같은 처방)
+      if (window.__iosrtcReady) setTimeout(() => { try { window.webkit.messageHandlers.gallaCall.postMessage({ action: "liveAudio", on: true, restart: true }); } catch (_) {} }, 600);
       try {
         const el = document.createElement("audio");
         el.autoplay = true; el.playsInline = true;
@@ -901,7 +903,7 @@
         cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf); lvlog("pub ok " + trackName);
         // 🍎 아이폰: 마이크를 켜며 오디오 유닛이 재구성돼 재생 출력을 놓친다 → 네이티브가 유닛을 한 번 내렸다 올린다
         try { lvlog("pub answerDirs=" + (res.data.sessionDescription.sdp.match(/^a=(sendonly|recvonly|sendrecv|inactive)$/gm) || []).join(",") + " trs=" + cf.pc.getTransceivers().map(t => t.mid + ":" + (t.currentDirection || t.direction)).join(",")); } catch (e) {}
-        if (window.__iosrtcReady && window.__lvRestart) { try { window.webkit.messageHandlers.gallaCall.postMessage({ action: "liveAudio", on: true, restart: true }); } catch (e) {} }
+        if (window.__iosrtcReady) { try { window.webkit.messageHandlers.gallaCall.postMessage({ action: "liveAudio", on: true, restart: true }); } catch (e) {} }
         announcePub();
       } else {
         cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf); lvlog("pub FAIL " + JSON.stringify(res).slice(0, 160));
