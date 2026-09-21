@@ -1385,12 +1385,79 @@
   /* 🔢 직전 턴의 '고를 수 있는 카드 묶음' — "2번"이라고 치면 서버 왕복 없이 그 카드를 바로 연다.
      (사장님: 추천이 여러 개면 '열어줘' 하기 전에 선택지를 주는 게 나은 UX) */
   var _cardGroup=null;
+  var _offerOne=null;   // 🃏 카드 한 장 — 「ㅇㅇ」만 쳐도 연다
+  /* 🃏 콘텐츠 카드 덱(26.9.22 사장님: 「텍스트 말고 형식을 갖춘 멋진 카드 — 썸네일, 돈 안 들게 최대 멋지고 동적인 애니메이션,
+     대접받는 느낌 번쩍번쩍」·「다지선다도 고려」). 전부 CSS(비용 0). 여러 장 = 가로 넘김 + 번호 + 번호 빠른 선택 줄. */
+  var TC_KIND={
+    issue:{n:"이슈",c:"#ff6b57"}, news:{n:"갈라뉴스",c:"#5ab0ff"}, predict:{n:"예측",c:"#b07cff"}, food:{n:"맛집",c:"#ffb020"},
+    travel:{n:"여행",c:"#2fd3c6"}, plaza:{n:"광장",c:"#36c2a0"}, gallari:{n:"숏판",c:"#ff4fa3"}, hottube:{n:"핫튜브",c:"#ff5a3d"}, link:{n:"링크",c:"#9aa0ae"}
+  };
+  var TC_ICON={
+    food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10"/><path d="M17 21V3c-2 1.5-3 4-3 7s1 4 3 4"/></svg>',
+    travel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>'
+  };
+  function tcIcon(k){
+    if(TC_ICON[k]) return TC_ICON[k];
+    var m={gallari:"short"}[k]||k;
+    try{ if(window.GALLA_KIND&&GALLA_KIND.icon){ var ic=GALLA_KIND.icon(m,26); if(ic) return ic; } }catch(e){}
+    return ICON.globe;
+  }
+  function buildDeck(links, numbered){
+    var multi=links.length>=2;
+    var deck=el('<div class="fr-deck'+(multi?' fr-deck-multi':' fr-deck-one')+'"><div class="fr-deck-track"></div></div>');
+    var track=deck.querySelector(".fr-deck-track");
+    links.forEach(function(a, i){
+      var k=a.ctype||(/watch\.html\?v=/.test(String(a.url||""))?"hottube":(a.kind==="open"?"link":"issue"));
+      var km=TC_KIND[k]||TC_KIND.link;
+      var badge=a.badge||km.n;
+      var img=a.img && /^https:\/\//.test(String(a.img)) ? String(a.img) : "";
+      var title=a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
+      var c=el('<button class="fr-tc'+(a.pick?' fr-tc-pick':'')+(img?'':' fr-tc-noimg')+'" style="--i:'+i+';--kc:'+km.c+'">'+
+        '<span class="fr-tc-media">'+
+          (img?'<img alt="" loading="lazy" decoding="async">':'<span class="fr-tc-ph">'+tcIcon(k)+'</span>')+
+          '<span class="fr-tc-shade"></span><span class="fr-tc-shine"></span>'+
+          '<span class="fr-tc-badge"></span>'+
+          (numbered?'<b class="fr-tc-n">'+(i+1)+'</b>':'')+
+          (a.pick?'<span class="fr-tc-pickrib">갈비스 픽</span>':'')+
+        '</span>'+
+        '<span class="fr-tc-body"><span class="fr-tc-t"></span>'+(a.sub?'<span class="fr-tc-s"></span>':'')+
+          '<span class="fr-tc-cta">'+(k==="hottube"?"재생":"열어보기")+' '+ICON.go+'</span></span>'+
+      '</button>');
+      c.querySelector(".fr-tc-badge").textContent=badge;
+      c.querySelector(".fr-tc-t").textContent=title;
+      if(a.sub) c.querySelector(".fr-tc-s").textContent=a.sub;
+      if(img){ var im=c.querySelector("img"); im.onerror=function(){ c.classList.add("fr-tc-noimg"); var ph=el('<span class="fr-tc-ph">'+tcIcon(k)+'</span>'); im.replaceWith(ph); }; im.src=img; }
+      c.addEventListener("click", function(){ tcLaunch(c, a); });
+      track.appendChild(c);
+    });
+    if(multi && numbered){
+      var pick=el('<div class="fr-deck-pick"></div>');
+      links.forEach(function(a,i){
+        var b=el('<button class="fr-deck-num" style="--i:'+i+'"><b>'+(i+1)+'</b><span></span></button>');
+        b.querySelector("span").textContent=String(a.title||"").slice(0,12);
+        b.onclick=function(){ var cs=track.querySelectorAll(".fr-tc"); if(cs[i]){ try{ cs[i].scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); }catch(e){} tcLaunch(cs[i], a); } };
+        pick.appendChild(b);
+      });
+      deck.appendChild(pick);
+    }
+    return deck;
+  }
+  /* 누르면 번쩍 — 카드가 빛나며 튀어 오른 뒤 연다 */
+  function tcLaunch(card, a){
+    if(!card || card.classList.contains("fr-tc-go")){ runAction(a); return; }
+    _cardGroup=null; _offerOne=null;
+    card.classList.add("fr-tc-go");
+    try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+    setTimeout(function(){ runAction(a); setTimeout(function(){ card.classList.remove("fr-tc-go"); },400); }, 320);
+  }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
     var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); });
     var numbered = links.length>=2 && !actions.some(function(a){ return a.auto===true; });
     _cardGroup = numbered ? links : null;
+    _offerOne = (links.length===1 && !links[0].auto) ? links[0] : null;
     var wrap=el('<div class="fr-acts fr-in"></div>');
+    var _deckDone=false;
     actions.forEach(function(a){
       // 🎟 가입 유도 — 맛보기가 끝났을 때만 뜬다. 지금까지 나눈 대화가 아까워지는 지점에 딱 하나.
       if(a.kind==="signup"){
@@ -1404,7 +1471,7 @@
         };
         wrap.appendChild(sb2); return;
       }
-      // ✅ 채팅 안 행동 확인 카드(26.9.22) — 예측 걸기·가게 저장·맛 판정·여행지 저장·이슈 투표.
+      // ✅ 채팅 안 행동 확인 카드(26.9.22) — 예측 참여·가게 저장·맛 판정·여행지 저장·이슈 투표.
       //    서버는 카드만 만든다. '확인'을 눌러야 사용자 본인 세션으로 실행된다(GP 가 걸린 일이라 대신 걸지 않는다).
       if(a.kind==="confirm"){
         var cf=el('<div class="fr-confirm"><div class="fr-confirm-t"></div><div class="fr-confirm-s"></div><div class="fr-confirm-b"><button class="fr-chip fr-chip-cta fr-cf-yes"></button><button class="fr-chip fr-cf-no">취소</button></div></div>');
@@ -1420,8 +1487,8 @@
             if(a.op==="bet"){
               var r=await c.rpc("place_bet",{p_market_id:a.market_id,p_outcome_id:a.outcome_id,p_stake:a.stake});
               var d=r&&r.data;
-              if(d&&d.ok) msg="걸었어! "+(a.stake||"")+" GP — 남은 GP "+Math.round(d.balance||0).toLocaleString("ko-KR")+" 🔥";
-              else msg=({insufficient:"GP가 모자라서 못 걸었어 ㅠ",closed:"이미 마감돼서 못 걸었어",other_side:"이미 다른 쪽에 걸어서 반대편엔 못 걸어",below_min:"최소 금액보다 적어서 안 됐어",above_max:"한도를 넘어서 안 됐어",stake_cap:"이 예측에 걸 수 있는 한도를 넘었어",banned:"지금은 예측에 참여할 수 없는 상태야",predict_disabled:"예측이 잠시 닫혀 있어",unauthorized:"로그인이 필요해"})[d&&d.reason] || "안 됐어 — 잠시 뒤에 다시 해볼래?";
+              if(d&&d.ok) msg="참여 완료! "+(a.stake||"")+" GP — 남은 GP "+Math.round(d.balance||0).toLocaleString("ko-KR")+" 🔥";
+              else msg=({insufficient:"GP가 모자라서 참여 못 했어 ㅠ",closed:"이미 마감돼서 참여 못 했어",other_side:"이미 다른 쪽에 참여해서 반대편엔 참여할 수 없어",below_min:"최소 금액보다 적어서 안 됐어",above_max:"한도를 넘어서 안 됐어",stake_cap:"이 예측에 걸 수 있는 한도를 넘었어",banned:"지금은 예측에 참여할 수 없는 상태야",predict_disabled:"예측이 잠시 닫혀 있어",unauthorized:"로그인이 필요해"})[d&&d.reason] || "안 됐어 — 잠시 뒤에 다시 해볼래?";
             } else if(a.op==="save_place"||a.op==="save_travel"){
               var r2=await c.rpc(a.op==="save_place"?"food_toggle_save":"travel_save",{p_id:a.id});
               var d2=r2&&r2.data;
@@ -1440,7 +1507,7 @@
           }catch(e){ msg="안 됐어 — 네트워크가 불안정한가 봐"; }
           // 서버가 이유를 한국어로 줬으면 그대로 — 뭉뚱그린 "안 됐어"보다 사실대로(26.9.22 사장님: 거짓말 금지)
           var _er=[r,r2,r3,r4].filter(Boolean).map(function(x){ return x&&x.error&&x.error.message; }).filter(Boolean)[0];
-          if(_er && /[가-힣]/.test(_er) && !/^(걸었어|저장했어|맛있다|별로에|투표했어)/.test(msg)) msg="안 됐어 — "+_er;
+          if(_er && /[가-힣]/.test(_er) && !/^(참여 완료|저장했어|맛있다|별로에|투표했어)/.test(msg)) msg="안 됐어 — "+_er;
           cf.classList.add("fr-done");
           addMsg("a", msg);
         };
@@ -1479,6 +1546,10 @@
       var isLink = (a.kind==="open"||a.kind==="view");
       // 🔗 링크/콘텐츠 = 세련된 리치 카드(제목·부제·출처). 그 외(공유·앱·관리)는 알약칩.
       if(isLink && (a.title||a.sub)){
+        if(!_deckDone){ _deckDone=true; wrap.appendChild(buildDeck(links, numbered)); }
+        return;
+      }
+      if(false){
         var title = a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
         var num = numbered ? (links.indexOf(a)+1) : 0;
         var safeImg = a.img && /^https:\/\//.test(String(a.img)) ? String(a.img) : "";
@@ -1813,9 +1884,25 @@
       addMsg("u",text); history.push({role:"user",content:text});
       addMsg("a",(pa.title?('"'+pa.title+'" '):"")+"바로 연다!");
       history.push({role:"assistant",content:(pa.title||"그거")+" 열었어"}); saveChat();
-      setTimeout(function(){ runAction(pa); },350);
+      var pcs=logEl.querySelectorAll(".fr-tc"); var pc2=null;
+      for(var pi=pcs.length-1; pi>=0; pi--){ var pt=pcs[pi].querySelector(".fr-tc-t"); if(pt && pt.textContent===(pa.title||"")){ pc2=pcs[pi]; break; } }
+      setTimeout(function(){ tcLaunch(pc2, pa); },250);
       return;
     }
+    /* 🃏 「ㅇㅇ」 = 카드 한 장이면 그걸, 여러 장이면 1번(갈비스 픽이 있으면 그걸) 바로 연다 */
+    var _yes=/^(ㅇㅇ+|ㅇㅋ+|응+|웅+|어+|엉|그래|좋아|좋지|콜|ㄱㄱ+|고고|오케이|ok|okay|yes|띄워\s*줘|열어\s*줘|보여\s*줘|그거|그걸로)[!.~ㅋㅎ\s]*$/i.test(String(text).trim());
+    if(_yes && (_offerOne || _cardGroup)){
+      var ya=_offerOne || (_cardGroup.filter(function(x){ return x.pick; })[0]) || _cardGroup[0];
+      _offerOne=null; _cardGroup=null;
+      addMsg("u",text); history.push({role:"user",content:text});
+      addMsg("a",(ya.title?('"'+ya.title+'" '):"")+"바로 띄울게!");
+      history.push({role:"assistant",content:(ya.title||"그거")+" 열었어"}); saveChat();
+      var ycs=logEl.querySelectorAll(".fr-tc"); var yc=null;
+      for(var yi=ycs.length-1; yi>=0; yi--){ if(ycs[yi].querySelector(".fr-tc-t") && ycs[yi].querySelector(".fr-tc-t").textContent===(ya.title||"")){ yc=ycs[yi]; break; } }
+      setTimeout(function(){ tcLaunch(yc, ya); },250);
+      return;
+    }
+    _offerOne=null;
     var jwt=await token();
     var isGuest=!jwt;                    // 🎟 로그인 안 했어도 막지 않는다 — 서버가 맛보기 턴을 센다
     busy=true; sendEl.disabled=true;
@@ -1920,7 +2007,7 @@
              "클릭하고 열고 하는 UX 가 후지다"(사장님) — 자동 실행이 '작동하는 느낌'으로 보이게. */
           var cardEl=null;
           try{
-            var cards=logEl.querySelectorAll(".fr-acts .fr-card, .fr-acts .fr-chip");
+            var cards=logEl.querySelectorAll(".fr-acts .fr-tc, .fr-acts .fr-card, .fr-acts .fr-chip");
             cardEl=cards[cards.length-1]||null;
             if(cardEl){ cardEl.classList.add("fr-arming"); }
           }catch(e){}
