@@ -45,7 +45,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
   market_quote: "💹 시세 확인하는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
-  search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
+  search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_browse: "🧭 갈라 둘러보는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
   draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…", open_external: "📲 앱 여는 중…",
@@ -959,6 +959,53 @@ async function searchContent(query: string) {
   return { results: (data || []).map((x) => ({ type: "issue", id: x.id, title: x.title, 한줄: x.one_line })) };
 }
 
+/* 🧭 갈라 안의 코너(맛집·여행·숏판·롱판·예측·광장)를 '실제 데이터'로 훑는다(26.9.21 갈비스 전역화).
+   예전엔 이슈·뉴스·핫튜브만 읽을 수 있어 맛집은 네이버 검색으로 새고, 여행·예측·광장은 아예 몰랐다.
+   결과엔 id 를 꼭 싣는다 — point_to(type=section, id)로 그 화면에 데려가게. */
+const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim().slice(0, 40);
+async function gallaBrowse(section: string, query?: string, limit = 5) {
+  const q = _likeSafe(query || ""); const like = `%${q}%`; const n = Math.min(Math.max(limit || 5, 1), 8);
+  try {
+    if (section === "food") {
+      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price").eq("status", "live");
+      if (q) rq = rq.or(`name.ilike.${like},address.ilike.${like},category.ilike.${like}`);
+      const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
+      return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined })),
+        지침: "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
+    }
+    if (section === "travel") {
+      if (!q) { const { data } = await supa.rpc("travel_trend_top", { p_n: n, p_min: 0 }); return { section: "여행(뜨는 나라)", items: ((data as any)?.items || []).map((x: any) => ({ 나라: x.name, 코드: x.code, 장소수: x.places, 검색추세: x.delta })), 지침: "지금 뜨는 여행지 나라들이다. 더 구체적으로 물으면 query 로 다시 찾아라." }; }
+      const { data } = await supa.from("travel_places").select("id,name,name_local,country,city,category,summary").eq("status", "live")
+        .or(`name.ilike.${like},name_local.ilike.${like},city.ilike.${like},country.ilike.${like},admin1.ilike.${like}`)
+        .not("summary", "is", null).limit(n);
+      return { section: "여행", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 나라: x.country, 도시: x.city, 종류: x.category, 설명: String(x.summary || "").slice(0, 90) })),
+        지침: "갈라 여행 지도에 실제로 있는 곳들이다. 1~2곳만 골라 말하고, 보여달라면 point_to(type:travel, id)." };
+    }
+    if (section === "shorts" || section === "longs") {
+      let rq = supa.from("posts").select("id,kind,title,caption,like_count,comment_count,view_count").eq("is_published", true).eq("visibility", "public")
+        .eq("kind", section === "longs" ? "horizontal" : "vertical").neq("moderation_status", "rejected");
+      if (q) rq = rq.or(`title.ilike.${like},caption.ilike.${like}`);
+      const { data } = await rq.order("hot_score", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(n);
+      return { section: section === "longs" ? "롱판" : "숏판", items: (data || []).map((x: any) => ({ id: x.id, 제목: String(x.title || x.caption || "").replace(/\s+/g, " ").slice(0, 60), 좋아요: x.like_count, 댓글: x.comment_count, 조회: x.view_count })),
+        note: (data || []).length ? undefined : "아직 올라온 게 없음 — 지어내지 말고 없다고 말해라", 지침: "보여달라면 point_to(type:gallari, id)." };
+    }
+    if (section === "predict") {
+      let rq = supa.from("markets").select("id,question,category,close_at,pool_yes,pool_no,volume").eq("status", "open");
+      if (q) rq = rq.or(`question.ilike.${like},description.ilike.${like}`);
+      const { data } = await rq.order("volume", { ascending: false, nullsFirst: false }).limit(n);
+      return { section: "예측", items: (data || []).map((x: any) => { const y = +x.pool_yes || 0, no = +x.pool_no || 0, t = y + no; return { id: x.id, 질문: x.question, 분야: x.category, 마감: String(x.close_at || "").slice(0, 10), 예_비율: t ? Math.round(y / t * 100) + "%" : "아직 0", 거래량: x.volume }; }),
+        지침: "지금 열려 있는 예측들이다. 숫자는 이 값만 써라. 보여달라면 point_to(type:predict, id)." };
+    }
+    if (section === "plaza") {
+      let rq = supa.from("plaza_posts").select("id,title,category,up_count,view_count").eq("visibility", "public");
+      if (q) rq = rq.or(`title.ilike.${like},body.ilike.${like}`);
+      const { data } = await rq.order("hot_score", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(n);
+      return { section: "광장", items: (data || []).map((x: any) => ({ id: x.id, 제목: x.title, 분야: x.category, 추천: x.up_count, 조회: x.view_count })), 지침: "보여달라면 point_to(type:plaza, id)." };
+    }
+  } catch (e) { return { section, items: [], note: "조회 실패 — 지어내지 마라" }; }
+  return { section, items: [], note: "unknown section" };
+}
+
 /* 🌦 날씨: weather_now RPC(기상청 관측 + 유저 제보)에서 지역을 골라 돌려준다.
    지역명을 안 주거나 못 찾으면 전국 요약을 준다 — 지어내지 말라고 값만 넘긴다. */
 async function weatherNow(region?: string) {
@@ -993,11 +1040,12 @@ const TOOLS = [
   { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" } } } } },
   { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
+  { type: "function", function: { name: "galla_browse", description: "🧭 갈라 안의 코너를 '실제 데이터'로 훑는다 — section: food(갈라 맛집 지도: '○○ 맛집/근처 뭐 먹지/돈가스 맛집'), travel(갈라 여행 지도: '○○ 여행지/어디 놀러가/일본 가볼만한 곳', query 없으면 뜨는 나라), shorts(숏판: 세로 영상·사진), longs(롱판: 가로 영상), predict(예측: '요즘 예측 뭐 있어/○○ 예측'), plaza(광장 글). 맛집은 먼저 이걸로 갈라 지도를 보고, 없을 때만 web_search(kind:local). 결과에 없는 가게·장소·수치를 지어내지 마라. 보여달라면 point_to(type=해당 section, id).", parameters: { type: "object", properties: { section: { type: "string", enum: ["food", "travel", "shorts", "longs", "predict", "plaza"] }, query: { type: "string", description: "검색어(지역·가게·장소·나라·키워드). 없으면 인기순" }, limit: { type: "integer" } }, required: ["section"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
   // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(DM 열기·육성톡/면상톡 걸기·페이지 이동)
   { type: "function", function: { name: "find_user", description: "갈라 유저를 닉네임으로 찾는다(공개 정보). DM·통화 걸기 전에 대상 특정용.", parameters: { type: "object", properties: { nickname: { type: "string" } }, required: ["nickname"] } } },
-  { type: "function", function: { name: "app_action", description: "앱 기능·설정을 직접 열어준다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡/면상톡 걸어줘'=op:call_voice/call_video(user_id는 find_user로 먼저). '예측/광장/지갑/설정/프로필 열어줘'=op:goto+page. '프로필 사진 바꿔줘/닉네임 바꿔줘/소개 수정/전화번호 바꿔줘/비번 바꿔줘'=op:goto,page:account,focus:photo|nickname|bio|phone|password(해당 화면·필드를 바로 연다).", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search", "settings", "account", "password", "notifications", "login-history", "creator", "grade", "season", "shop", "duel", "withdraw"], description: "goto용 페이지(account=프로필 수정, settings=설정 홈)" }, focus: { type: "string", enum: ["photo", "nickname", "bio", "phone", "password"], description: "account 페이지에서 특정 항목을 바로 열/포커스" }, label: { type: "string", description: "칩 문구" } }, required: ["op"] } } },
+  { type: "function", function: { name: "app_action", description: "앱 기능·설정을 직접 열어준다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡/면상톡 걸어줘'=op:call_voice/call_video(user_id는 find_user로 먼저). '예측/광장/지갑/설정/프로필 열어줘'=op:goto+page. '맛집 지도/여행/날씨/핫튜브/삐삐/난장 열어줘'=op:goto+page:food|travel|weather|hottube|pager|rooms. '프로필 사진 바꿔줘/닉네임 바꿔줘/소개 수정/전화번호 바꿔줘/비번 바꿔줘'=op:goto,page:account,focus:photo|nickname|bio|phone|password(해당 화면·필드를 바로 연다).", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search", "settings", "account", "password", "notifications", "login-history", "creator", "grade", "season", "shop", "duel", "withdraw", "food", "travel", "weather", "hottube", "pager", "rooms"], description: "goto용 페이지(account=프로필 수정, settings=설정 홈)" }, focus: { type: "string", enum: ["photo", "nickname", "bio", "phone", "password"], description: "account 페이지에서 특정 항목을 바로 열/포커스" }, label: { type: "string", description: "칩 문구" } }, required: ["op"] } } },
   { type: "function", function: { name: "open_external", description: "외부 앱을 열어 상대의 볼일을 도와준다(핸드오프). ⚠️ 넌 앱을 '열어주기'만 한다 — 실제 호출·결제·예약은 상대가 그 앱에서 직접 확정한다. 그러니 '내가 택시 불러줄게'가 아니라 '카카오T 열어줄게, 거기서 호출 눌러' 식으로 안내해라. 상대가 명시적으로 요청할 때만. 매핑: '택시 불러줘/잡아줘'=service:taxi(카카오T). '길찾기/거기 어떻게 가/네비 켜줘'=service:navi(+query=목적지). '지도에서 찾아줘/근처 OO'=service:map(+query=장소·검색어). '배달 시켜줘/뭐 시켜먹자'=service:delivery(배민).", parameters: { type: "object", properties: { service: { type: "string", enum: ["taxi", "navi", "map", "delivery"] }, query: { type: "string", description: "목적지·장소·검색어(navi/map용, 없으면 그냥 앱만 연다)" }, label: { type: "string", description: "칩 문구(예: '카카오T 열기')" } }, required: ["service"] } } },
   // 🗑✏️ 내 콘텐츠 관리 — 삭제(확인 후)·수정(폼으로). 본인 것만.
   { type: "function", function: { name: "manage_content", description: "상대 '본인'의 갈라 콘텐츠를 삭제(op:delete)하거나 수정(op:edit)하게 해준다. '이거 지워줘/삭제해줘/수정할래/고칠래' 하면. id는 지금 대화의 콘텐츠(맥락에 온 것)거나 my_activity 결과의 것. ctype: issue|plaza|gallari|predict.", parameters: { type: "object", properties: { op: { type: "string", enum: ["delete", "edit"] }, ctype: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] }, id: { type: "string" }, title: { type: "string", description: "어떤 글인지 확인용 제목(있으면)" } }, required: ["op", "ctype", "id"] } } },
@@ -1027,7 +1075,7 @@ const TOOLS = [
   { type: "function", function: { name: "gen_video", description: "작업 모드(숏판 '세로' 전용)에서 '10초 이내 자동편집 숏폼 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘' 하면. ⚠️ 세로 숏폼만 — 가로 롱폼 영상은 자동생성 안 됨(그건 대본·썸네일로 지원). 이미지 두 방법: ①상대 사진 사용=use_user_photos:true ②AI로 그리기=image_prompts에 장면별 그림묘사 '정확히 3개'(글자·실존인물·유명캐릭터 금지 — 총 10초라 3장면이 최적). captions=장면별 자막 3개(짧고 훅 있게), music=upbeat/chill/dramatic. 렌더에 수십 초 걸린다 — \"10초짜리 숏폼 뽑아줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 숏판·롱판 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
   { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(숏판·롱판)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(숏판·롱판, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
-  { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news | hottube(핫튜브 영상 — id는 video_id). 재밌는 화제/영상을 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news", "hottube"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
+  { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news | hottube(핫튜브 영상 — id는 video_id) | food(맛집) | travel(여행 장소) | gallari(숏판·롱판) | predict(예측) | plaza(광장) — id는 galla_browse 등 도구 결과의 id 그대로. 재밌는 화제/영상을 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news", "hottube", "food", "travel", "gallari", "predict", "plaza"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
   // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
   { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
   // 🧠🔎 능동 회상 — 위 맥락에 안 떠오른 걸 상대가 물으면 네가 직접 기억을 뒤진다(Claude식 memory read).
@@ -1181,7 +1229,8 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   }
   if (name === "app_action") {
     const op = String(args?.op || "");
-    const PAGES: Record<string, string> = { home: "home.html", predict: "galla-predict.html", plaza: "plaza.html", news: "news.html", shorts: "shorts.html", mypage: "mypage.html", wallet: "wallet.html", saved: "saved.html", dm: "dm.html", quest: "quest.html", search: "search.html", settings: "settings.html", account: "account-edit.html", password: "change-password.html", notifications: "dm.html", "login-history": "login-history.html", creator: "creator.html", grade: "grade.html", season: "season.html", shop: "settings.html", duel: "duel.html", withdraw: "withdraw.html" };
+    const PAGES: Record<string, string> = { home: "home.html", predict: "galla-predict.html", plaza: "plaza.html", news: "news.html", shorts: "shorts.html", mypage: "mypage.html", wallet: "wallet.html", saved: "saved.html", dm: "dm.html", quest: "quest.html", search: "search.html", settings: "settings.html", account: "account-edit.html", password: "change-password.html", notifications: "dm.html", "login-history": "login-history.html", creator: "creator.html", grade: "grade.html", season: "season.html", shop: "settings.html", duel: "duel.html", withdraw: "withdraw.html",
+      /* 🧭 코너 탭(트렌드 판의 서브탭) — 26.9.21 */ food: "search.html?tab=food", travel: "search.html?tab=travel", weather: "search.html?tab=weather", hottube: "search.html?tab=hot", pager: "dm.html?pager=1", rooms: "dm.html?tab=rooms" };
     if (op === "goto") {
       const page = PAGES[String(args?.page || "")]; if (!page) return { result: { error: "unknown page" } };
       const focus = ["photo", "nickname", "bio", "phone", "password"].includes(String(args?.focus)) ? String(args?.focus) : "";
@@ -1322,6 +1371,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
+  if (name === "galla_browse") return { result: await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5)) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
@@ -1392,7 +1442,10 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       if (!vid) return { result: { error: "no video id" } };
       return { action: { kind: "open", url: `https://galla.im/watch.html?v=${encodeURIComponent(vid)}`, label: String(args?.label || "영상 보기").slice(0, 40), title: String(args?.label || "").replace(/\s*보기$/, "").trim(), source: "핫튜브" } };
     }
-    return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
+    const ct = String(args?.type || "issue");
+    // 공유 카드(/share/…)는 이슈·뉴스만 있다 — 나머지는 '가서 보기'로
+    const share = args?.mode === "share" && (ct === "issue" || ct === "news");
+    return { action: { kind: share ? "share" : "view", ctype: ct, id: String(args?.id || ""), label: args?.label || "" } };
   }
   return { result: { error: "unknown" } };
 }
@@ -3206,7 +3259,10 @@ const INTENT_SEED: Record<string, string[]> = {
   hot_videos: ["웃긴 영상 틀어줘", "재밌는 유튜브 없나", "요즘 뜨는 영상 뭐야", "심심한데 영상 하나 줘", "볼만한 거 틀어봐"],
   hot_issues: ["요즘 뜨거운 이슈 뭐야", "싸울만한 주제 없나", "논쟁거리 하나 줘", "사람들 요즘 뭐로 싸워", "찬반 갈리는 거 뭐 있어"],
   galla_news: ["오늘 무슨 일 있었어", "뉴스 좀 알려줘", "속보 있어?", "세상 돌아가는 얘기 해줘", "오늘자 사건사고 뭐 있냐"],
-  food_search: ["강남 맛집 알려줘", "저녁 뭐 먹을지 추천해줘", "근처 밥집 어디가 좋아", "회식 장소 추천", "야식 뭐 시킬까"],
+  food_search: ["강남 맛집 알려줘", "저녁 뭐 먹을지 추천해줘", "근처 밥집 어디가 좋아", "회식 장소 추천", "을지로 노포 어디 가"],
+  travel_browse: ["일본 여행 어디 가볼까", "요즘 뜨는 여행지 어디야", "부산 가볼만한 곳", "해외여행 추천해줘", "제주도 놀러갈 데"],
+  predict_browse: ["요즘 예측 뭐 있어", "걸만한 예측 있나", "예측 판 뭐 열려있어", "베팅할 거 뭐 있냐"],
+  shorts_browse: ["숏판 재밌는 거 있어", "요즘 숏판 뭐 떠", "갈라 숏폼 보여줘"],
   platform_buzz: ["갈라에서 요즘 뭐가 핫해", "사람들 무슨 얘기해", "재밌는 썰 없나", "요즘 판 도는 얘기 뭐야"],
   none: ["잤어", "오늘 회사 힘들었어", "뭐해", "심심하다", "기분이 꿀꿀해", "나 왔어", "ㅋㅋㅋ", "배고파", "피곤해",
          "사랑이 뭘까", "내일 뭐하지", "고마워", "미안", "너 이름 뭐야", "오늘 날씨 좋더라", "운동 갔다 옴", "재밌었어 오늘"],
@@ -3216,7 +3272,11 @@ const INTENT_ROUTE: Record<string, { tool: string; hint: string }> = {
   hot_videos: { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기 금지." },
   hot_issues: { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 지어내기 금지." },
   galla_news: { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 지어내기 금지." },
-  food_search: { tool: "web_search", hint: "web_search를 kind:local으로. 지어내기 금지." },
+  food_search: { tool: "galla_browse", hint: "galla_browse(section:food, query=지역·메뉴)로 갈라 맛집 지도부터 봐라. 비었을 때만 web_search(kind:local). 지어내기 금지." },
+  weather_now: { tool: "weather_now", hint: "weather_now로 '실제' 관측값만(지역 있으면 region). 기억·추측 기온 금지." },
+  travel_browse: { tool: "galla_browse", hint: "galla_browse(section:travel, query=나라·도시·장소)로 갈라 여행 지도의 실제 장소만. 지어내기 금지." },
+  predict_browse: { tool: "galla_browse", hint: "galla_browse(section:predict)로 지금 열린 예측만, 비율 숫자는 결과 그대로." },
+  shorts_browse: { tool: "galla_browse", hint: "galla_browse(section:shorts)로 실제 숏판만. 없으면 없다고." },
   platform_buzz: { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판만. 지어내기 금지." },
 };
 async function semanticIntent(msg: string): Promise<{ intent: string; sim: number } | null> {
@@ -3246,7 +3306,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   if (/(인스타|인스타그램|instagram|인플루언서|인플루)/i.test(m))
     return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
   if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페))/.test(m))
-    return { tool: "web_search", hint: "web_search를 kind:local으로. query=지역+메뉴. 없으면 지역/키워드 바꿔 재검색. 지어내기 금지." };
+    return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도부터** 봐라(갈라가 직접 모은 데이터). 결과가 비면 그때 web_search(kind:local). 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
@@ -3255,7 +3315,17 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
      이게 목록에 없어서 도구 없는 컴패니언 경로로 샜고, 모델은 도구를 못 부르니
      "검색해볼게 → 오래 걸리네 → 다시 찾아볼까?"를 무한 반복했다(사장님 실로그, 하이닉스 주가).
      현실 숫자를 물으면 반드시 검색해서 답한다. */
-  if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥|기온|날씨|미세먼지)/.test(m)
+  /* 🌦 날씨는 market_quote 가 아니라 weather_now — 예전엔 여기 묶여 시세 도구로 가서 web_search 로 샜다(26.9.21 조사) */
+  if (/(날씨|기온|비\s*(와|오|올|옴)|눈\s*(와|오|올)|우산|미세먼지|더워|추워|쌀쌀|덥)/.test(m) && !/(주가|코인|시세)/.test(m))
+    return { tool: "weather_now", hint: "weather_now로 '실제' 관측값만(지역 말했으면 region). 기억·추측 기온 절대 금지." };
+  /* 🧭 갈라 코너 — 여행·예측·숏판·롱판·광장 목록 */
+  if (/(여행|여행지|놀러\s*갈|가볼\s*만|관광|해외\s*어디)/.test(m))
+    return { tool: "galla_browse", hint: "galla_browse(section:travel, query=나라·도시·장소 — 없으면 비워서 뜨는 나라)로 갈라 여행 지도의 실제 장소만 말해라. 지어내기 금지." };
+  if (/(예측\s*(뭐|있|없|보여|추천|판|걸)|걸\s*만한|베팅\s*(할|뭐)|무슨\s*예측)/.test(m))
+    return { tool: "galla_browse", hint: "galla_browse(section:predict)로 지금 열린 예측만. 비율·마감은 결과 값 그대로." };
+  if (/(숏판|숏폼|릴스|롱판)\s*(뭐|있|없|보여|추천|재밌|떠|뜨는)/.test(m))
+    return { tool: "galla_browse", hint: "galla_browse(section:" + (/롱판/.test(m) ? "longs" : "shorts") + ")로 실제 글만. 없으면 없다고 솔직히." };
+  if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥)/.test(m)
       || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
     return { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 **도구가 돌려준 숫자만** 말해라. 기억·추측으로 숫자 말하기 절대 금지. 못 찾으면 못 찾았다고 솔직히. 주식·코인이 아닌 것(날씨·환율 등)이면 web_search를 kind:news로 써라." };
   /* 📺 딜리버 후속 — 방금 말한 콘텐츠를 '어떻게 보냐/안 보인다' 고 되물을 때.
@@ -3264,7 +3334,9 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
      열어달라는 말이니 지금 열어주면 된다. */
   if (/(어떻게\s*(보|봐|여|열)|어디서\s*(보|봐)|안\s*(보여|보이|열려|열림|나와)|안\s*떠|어디\s*있어|못\s*찾겠)/.test(m))
     return { tool: "point_to", hint: "직전에 네가 말한 그 콘텐츠를 **지금 point_to 로 열어라**(view). 설명·안내로 때우지 마라 — 상대는 보여달라는 거다. 뭘 말했는지 애매하면 hot_issues/hot_videos 로 하나 골라 바로 열어라. 'UI 어디를 눌러라' 같은 안내는 금지." };
-  if (/(광장\s*(뭐|무슨|글|재밌|화제|판)|무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
+  if (/광장\s*(뭐|무슨|글|재밌|화제|판|보여|있|추천)/.test(m))
+    return { tool: "galla_browse", hint: "galla_browse(section:plaza, query=주제 있으면)로 실제 광장 글만. 보여달라면 point_to(type:plaza, id)." };
+  if (/(무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
     return { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판·공개댓글·논객만. 없는 썰 지어내기 금지." };
   return null;
 }
@@ -4675,6 +4747,8 @@ ${actBlock}
       /* 🚫 '감상평' 금지(사장님 2026-08-18): "재밌네" 같은 소리는 아무 가치가 없다.
          사람들이 어떻게 갈리고 있는지, 참여가 어느 정도인지 — 위 실데이터를 읽고 말해라.
          데이터가 비었으면 그 사실 자체를 말하고(아직 조용하다) 언론 각도·쟁점으로 넘어가라. */
+      // 📺 핫튜브 화면의 갈비스 버튼은 type:"hottube" 로 보낸다 — 영상 조회는 "video" 라 null 이 나 빈손으로 말했다(26.9.21)
+      if (String(handoff.type) === "hottube") handoff.type = "video";
       const HROLE: Record<string, string> = {
         predict: "판세부터 — 어디에 얼마가 몰렸는지(비율) 한 줄, 그게 뭘 뜻하는지 한 줄. 아무도 안 걸었으면 '아직 빈 판'이라 말하고 네가 어디 걸지+왜. 끝에 '넌 어디 걸래?'.",
         gallari: "반응부터 — 조회·좋아요·댓글이 어떤지 한 줄(없으면 '아직 조용하다'고 솔직히). 그 다음 왜 그럴지 네 진단 한 줄. 필요하면 '표지·제목 내가 다시 뽑아줄까?'.",
@@ -4701,6 +4775,30 @@ ${actBlock}
   · 강의·나열 금지 — 친구처럼 짧게(1~2줄). 분석 끝엔 네 편(진영·의견)을 밝히고 '넌?'으로 넘겨라.${history.length ? " 지금 대화 중이었으면 '아 이거?' 하며 자연스럽게 화제를 전환." : ""}`
         : `🎯 [상대가 갈라 콘텐츠 '${String(handoff.title || "").slice(0, 80)}'(${handoff.type})에서 너를 불렀다 — 그 얘기로 짧게 먼저 말을 걸어라]\n오프너: ${role} 1~2줄, 리스트 금지.`;
     }
+    /* 🧭 지금 보고 있는 화면(body.page) — 버튼 없이 「여기 어때/이거 뭐야」가 통하게(26.9.21 전역화).
+       콘텐츠 상세면 실제 내용을 읽어 붙이고, 코너(맛집·여행·날씨…)면 이름만 알려 준다. */
+    let pageBlock = "";
+    try {
+      const pg = (!handoff && body?.page && typeof body.page === "object") ? body.page : null;
+      const route = String(pg?.route || "").slice(0, 160);
+      if (route) {
+        const idOf = (k: string) => { const mm = route.match(new RegExp("[?&]" + k + "=([^&#]+)")); return mm ? decodeURIComponent(mm[1]) : ""; };
+        const MAP: [RegExp, string, string][] = [[/issue/, "issue", "id"], [/plaza[_-]?detail/, "plaza", "id"], [/predict-market/, "predict", "id"], [/gallari-post/, "gallari", "id"], [/news/, "news", "gn"], [/watch/, "video", "v"]];
+        let ctx = "";
+        for (const [re, t, k] of MAP) {
+          const id = idOf(k);
+          if (re.test(route) && id) { const c = await fetchContentById(t, id); if (c) ctx = `상대는 지금 갈라 ${c.kind} 화면을 보고 있다(id:${id}):\n${c.text}`; break; }
+        }
+        if (!ctx) {
+          const sub = String(pg?.sub || "");
+          const CORNER: Record<string, string> = { food: "맛집 지도", travel: "여행", weather: "날씨", hot: "핫튜브", news: "갈라뉴스", plaza: "광장", trending: "트렌드" };
+          const where = /search|trend/.test(route) && CORNER[sub] ? CORNER[sub]
+            : /predict/.test(route) ? "예측" : /dm/.test(route) ? "갈라톡" : /mypage/.test(route) ? "마이페이지" : /shorts|reels/.test(route) ? "숏판" : /index|home|^#?\/?$/.test(route) ? "홈 피드" : "";
+          if (where) ctx = `상대는 지금 갈라 '${where}' 화면에 있다. '여기/이거'는 그 코너 얘기일 가능성이 크다 — 필요하면 galla_browse·weather_now 로 그 코너의 실제 데이터를 봐라.`;
+        }
+        if (ctx) pageBlock = `🧭 [현재 화면]\n${ctx}\n(묻지 않았으면 화면 얘기를 억지로 꺼내지 마라 — '여기/이거/이 가게/이 글'처럼 지칭할 때 쓰는 맥락이다.)`;
+      }
+    } catch { /* */ }
     const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)"
       : (body?.work && !userMsg) ? "(상대가 방금 편집기에 도착했다 — 네가 먼저 말해라. 위 [작업 모드] 초안 상태를 보고: ①뭘 채워놨는지 반 줄 ②지금 화면에서 남은 것(특히 미디어/표지가 없으면 그걸 콕) ③네가 해줄 수 있는 것(표지 그리기·제목 뽑기 등) 제안. 2~3줄, 인사·질문공세 금지, 바로 실무.)"
       : openMsg;
@@ -5252,6 +5350,7 @@ ${parts.join("\n")}`;
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
+      ...(pageBlock ? [{ role: "system", content: pageBlock }] : []),
       ...(planBlock ? [{ role: "system", content: planBlock }] : []),   // 🎨 기획 타임(일방 제작 금지)
       ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
       ...(makeUpBlock ? [{ role: "system", content: makeUpBlock }] : []),   // 🤝 화해

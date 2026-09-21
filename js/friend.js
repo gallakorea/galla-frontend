@@ -1458,7 +1458,30 @@
     logEl.scrollTop=logEl.scrollHeight;
   }
   function nav(u){ (window.GALLA_nav||function(x){location.href=x;})(u); }
-  function contentUrl(a){ return a.ctype==="news" ? ("news.html?gn="+a.id) : ("issue.html?id="+a.id); }
+  /* 🧭 갈비스가 데려갈 수 있는 곳(26.9.21 전역화) — 이슈·뉴스뿐 아니라 광장·예측·숏판·롱판·맛집·여행 */
+  function contentUrl(a){
+    var id=encodeURIComponent(a.id);
+    switch(a.ctype){
+      case "news": return "news.html?gn="+id;
+      case "plaza": return "plaza_detail.html?id="+id;
+      case "predict": return "predict-market.html?id="+id;
+      case "gallari": return "gallari-post.html?id="+id;
+      default: return "issue.html?id="+id;
+    }
+  }
+  /* 맛집·여행·날씨·핫튜브는 트렌드 판의 서브탭 — 탭으로 간 뒤, 그 탭 스크립트가 뜨면 장소를 연다 */
+  function goCorner(tab, then){
+    nav("search.html?tab="+tab);
+    var n=0; (function w(){
+      if(window.GALLA_trendSetTab){ try{ window.GALLA_trendSetTab(tab); }catch(e){} if(then) then(); return; }
+      if(++n<60) setTimeout(w,150);
+    })();
+  }
+  function openCornerPlace(tab, fnName, id){
+    goCorner(tab, function(){
+      var n=0; (function w(){ var f=window[fnName]; if(typeof f==="function"){ try{ f(id); }catch(e){} return; } if(++n<60) setTimeout(w,150); })();
+    });
+  }
   // 🗑 삭제 확인 — 챗 안에 위험 확인 UI. 확정 시 유저 세션으로 삭제 RPC(서버가 소유권 재검증).
   function confirmDelete(a){
     var rpc={issue:"delete_issue",plaza:"delete_plaza_post",gallari:"delete_post",predict:"delete_market"}[a.ctype];
@@ -1534,6 +1557,7 @@
       minimize();
       if(a.op==="dm" && a.id) nav("dm.html?dm="+a.id);
       else if((a.op==="call_voice"||a.op==="call_video") && a.id) nav("dm.html?dm="+a.id+"&call="+(a.op==="call_video"?"video":"voice"));
+      else if(a.op==="goto" && a.page && /^search\.html\?tab=/.test(a.page)) goCorner(a.page.split("tab=")[1]);
       else if(a.op==="goto" && a.page) nav(a.page + (a.focus ? (a.page.indexOf("?")>=0?"&":"?")+"focus="+a.focus : ""));
       return;
     }
@@ -1601,7 +1625,12 @@
       return;
     }
     // 🛡 방어 — 콘텐츠 이동은 유효한 id가 있을 때만(없으면 issue.html?id=undefined='잘못된 이슈 접근' 방지)
-    if(a && a.id && String(a.id)!=="undefined"){ minimize(); nav(contentUrl(a)); }
+    if(a && a.id && String(a.id)!=="undefined"){
+      minimize();
+      if(a.ctype==="food") return openCornerPlace("food","GALLA_openFoodPlace",a.id);
+      if(a.ctype==="travel") return openCornerPlace("travel","GALLA_openTravelPlace",a.id);
+      nav(contentUrl(a));
+    }
     // id 없는 미지의 액션은 조용히 무시(옛 클라가 새 액션 만나도 깨진 이동 안 함)
   }
 
@@ -1656,6 +1685,12 @@
     // 🌍 비로그인 방문자는 서버가 언어를 알 방법이 없다(users.locale이 없으니) → 브라우저 언어를 실어보낸다.
     //    로그인 유저는 서버가 users.locale을 쓰므로 이 값은 무시된다.
     try{ if(window.GALLA_locale) body.locale = GALLA_locale(); }catch(e){}
+    // 🧭 지금 보고 있는 화면 — 버튼을 안 눌러도 「여기 어때?」가 통하게(26.9.21). 경로+트렌드 서브탭만(개인정보 없음)
+    try{
+      var pg=(location.hash&&location.hash.length>1?location.hash:location.pathname+location.search).slice(0,160);
+      var sub=document.querySelector('[data-panel].active'); var st=sub&&sub.closest('[data-page],body')?sub.dataset.panel:"";
+      body.page={ route:pg, sub:(st||"").slice(0,20) };
+    }catch(e){}
     if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
     // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
     if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
