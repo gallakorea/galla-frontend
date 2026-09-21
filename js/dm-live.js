@@ -827,7 +827,11 @@
       lvlog("ontrack kind=" + (e.track && e.track.kind) + " streams=" + (e.streams ? e.streams.length : -1));
       try {
         const el = document.createElement("audio");
-        el.autoplay = true; el.playsInline = true; el.srcObject = new MediaStream([e.track]);
+        el.autoplay = true; el.playsInline = true;
+        // 🍎 iosrtc 는 플러그인이 준 원본 스트림(blobId 있는 e.streams[0])을 <audio> 에 붙여야만 재생한다 —
+        //    new MediaStream([track]) 은 blobId 가 없어 패킷은 받는데 소리 0(26.9.21 두 폰 실측, 1:1 통화와 같은 함정)
+        const s0 = e.streams && e.streams[0];
+        el.srcObject = (s0 && (typeof s0.getBlobId !== "function" || s0.getBlobId())) ? s0 : new MediaStream([e.track]);
         document.body.appendChild(el); cf.els.push(el);
         cf.diag.rx++; renderDiag(cf);
         el.play && el.play().catch(() => {});
