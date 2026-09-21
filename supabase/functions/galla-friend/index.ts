@@ -1027,6 +1027,14 @@ function openNow(hours: any): string | null {
   for (const [a, b] of t) { if (now >= a && now < b) return `영업 중(~${fmt(b)})`; if (now < a) return `영업 전(${fmt(a)} 오픈)`; }
   return "영업 끝";
 }
+/* 오늘 영업시간 원문(「오후 12:00~10:00」) — 「영업시간 알려줘」에 주소만 답하던 것(26.9.22) */
+function todayHours(hours: any): string | null {
+  if (!Array.isArray(hours) || !hours.length) return null;
+  const NAME = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  const dow = new Date(Date.now() + 9 * 3600000).getUTCDay();
+  const ln = hours.find((x: any) => String(x).startsWith(NAME[dow]));
+  return ln ? String(ln).split(":").slice(1).join(":").trim().slice(0, 40) || null : null;
+}
 const _lateNight = () => { const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return h >= 22 || h < 7; };
 const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim().slice(0, 40);
 const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
@@ -1046,7 +1054,7 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
       // 「지금 문 연 데」 — 영업 중으로 확인된 곳을 맨 앞으로(확인 안 된 곳은 뒤, 영업 끝·휴무는 뺀다)
       if (openAsk) { const st = (p: any) => { const o = openNow(p.hours); return o && /^(영업 중|24시간)/.test(o) ? 0 : o && /^(영업 끝|오늘 휴무|영업 전)/.test(o) ? 9 : 1; }; ps = ps.filter((p) => st(p) < 9).sort((a, b) => st(a) - st(b)); }
       const top = ps.slice(0, n);
-      return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음" })),
+      return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음", 오늘영업시간: todayHours(x.hours) || undefined })),
         cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover || null })),
         영업안내: _lateNight() ? "지금 늦은 시간이다 — '영업: 정보 없음'인 곳은 여는지 모른다고 솔직히 말하고, '영업 중'인 곳을 우선 권해라." : undefined,
         지침: "상대의 **현재 위치 기준** 가까운 갈라 지도 가게들이다(거리 포함, 가까운 순). 위치를 이미 알고 있으니 동네를 묻지 마라. 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
@@ -3669,7 +3677,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
   /* 🍖 가게 정보 질문 — 「○○ 평점이랑 영업시간 알려줘」가 맛집으로 안 잡혀 「찾아보고 알려줄게」 빈 약속만 나갔다(26.9.22) */
   if (/(평점|별점|리뷰\s*(몇|수)|영업\s*시간|몇\s*시(에|까지)?\s*(열|닫|해|문)|문\s*(열었|닫았|열어|닫아)|휴무|브레이크\s*타임|메뉴|가격대|얼마(야|예요|해)?\s*(거기|그\s*집)?)/.test(m) && !/(예측|이슈|영화|주식|코인|비트|앱|게임)/.test(m))
-    return { tool: "galla_browse", hint: "galla_browse(section:food, query=가게 이름)로 갈라 맛집 데이터에서 그 가게를 찾아 평점·영업 여부를 '데이터 그대로' 답해라. 없으면 없다고 솔직히." };
+    return { tool: "galla_browse", hint: "galla_browse(section:food, query=가게 이름)로 갈라 맛집 데이터에서 그 가게를 찾아라. **물어본 값(평점·리뷰수·오늘영업시간·영업 여부)을 첫 문장에 숫자 그대로** 말해라(예: 「★4.5에 리뷰 98개, 오늘은 오후 12:00~10:00이고 지금은 영업 전이야」). 데이터에 없으면 없다고 솔직히." };
   if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페)|문\s*연\s*(데|곳|집)|여는\s*(데|곳|집)|영업\s*중인)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도부터** 봐라(갈라가 직접 모은 데이터). 결과가 비면 그때 web_search(kind:local). 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
@@ -6679,6 +6687,26 @@ ${parts.join("\n")}`;
       const out = keep.join(" ").replace(/\s{2,}/g, " ").trim();
       if (out.length >= 6 && out !== String(reply || "").trim()) reply = out;
     }
+    /* 🍖 가게 정보 질문엔 데이터 문장을 맨 앞에 — 모델이 조회해 놓고 「가서 먹으면 평점 알려줘」로 되묻던 것(26.9.22 실측) */
+    try {
+      const um = String(userMsg || "");
+      if (/(평점|별점|리뷰|영업\s*시간|몇\s*시|문\s*(열었|닫았|열어|닫아)|휴무|영업\s*중)/.test(um)) {
+        const fc = actions.find((a: any) => a.kind === "view" && a.ctype === "food" && a.id && titleHit(um, String(a.title || "")) >= 1)
+          || (actions.filter((a: any) => a.kind === "view" && a.ctype === "food").length === 1 ? actions.find((a: any) => a.kind === "view" && a.ctype === "food") : null);
+        if (fc) {
+          const { data: fp } = await supa.from("food_places").select("name,rating,rating_n,hours").eq("id", fc.id).maybeSingle();
+          if (fp) {
+            const bits: string[] = [];
+            if (/(평점|별점|리뷰)/.test(um) || !/(영업|시)/.test(um)) bits.push(fp.rating ? `평점 ★${(+fp.rating).toFixed(1)}${fp.rating_n ? `(리뷰 ${fp.rating_n}개)` : ""}` : "평점은 아직 정보가 없어");
+            if (/(영업|몇\s*시|문\s*|휴무)/.test(um)) { const th = todayHours(fp.hours), on = openNow(fp.hours); bits.push(th ? `오늘은 ${th} 영업${on ? `이고 지금은 ${on.replace(/\(.*\)/, "").trim()}` : ""}` : "영업시간은 갈라 데이터에 아직 없어"); }
+            const fact = `${fp.name} — ${bits.join(", ")}이야.`.replace(/없어이야\.$/, "없어.").replace(/(영업 중|영업 전|영업 끝|휴무|24시간 영업)이야\.$/, "$1이야.");
+            // 되묻기(「평점 어땠는지 알려줘」)는 빼고, 사실 문장을 첫 말풍선으로
+            const rest = String(reply || "").split(/(?<=[.!?…])\s+|\n+/).filter((x) => !/(평점|영업).{0,12}(알려줘|어땠는지)/.test(x)).join(" ").trim();
+            reply = fact + (rest ? "\n\n" + rest : "");
+          }
+        }
+      }
+    } catch { /* */ }
     /* 🙅 빈 약속 금지(거짓말 금지 규칙) — 이번 턴에 아무 도구도 안 썼는데 「찾아보고 알려줄게/잠깐만 찾아볼게」로 끝나면
        다음 턴에 알아서 찾아오지 않는다. 사실대로: 못 찾았으면 못 찾았다고. */
     if (!_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {

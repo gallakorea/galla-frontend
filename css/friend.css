@@ -919,3 +919,88 @@ body.fr-chatting #frAssist, body.dm-detail #frAssist, body.hv-playing #frAssist{
   animation:rxOnce 1.8s cubic-bezier(.45,0,.2,1) forwards; box-shadow:0 0 18px rgba(155,123,255,.5); }
 @keyframes rxOnce{ 0%{ --rx-a:0deg; opacity:0 } 12%{ opacity:1 } 75%{ opacity:1 } 100%{ --rx-a:360deg; opacity:0 } }
 @media (prefers-reduced-motion: reduce){ .fr-typing.fr-think::before, .fr-typing.fr-think::after, .ft-track, .fr-msg.fr-a.rx-glow .fr-bubble::before{ animation:none !important; } }
+
+/* ══════════ 🤖 자비스 오마주 — 갈비스 얼굴 + HUD 통일(26.9.22) ══════════ */
+.gf{ display:block; overflow:visible; filter:drop-shadow(0 0 5px rgba(63,224,255,.55)); }
+.gf .gf-spin{ transform-origin:50px 50px; animation:gfRot 12s linear infinite; }
+.gf .gf-spinr{ transform-origin:50px 50px; animation:gfRot 7s linear infinite reverse; }
+.gf .gf-spin2{ transform-origin:50px 50px; animation:gfRot 20s linear infinite; }
+.gf .gf-orbit{ transform-origin:50px 50px; animation:gfRot 3.6s linear infinite; }
+@keyframes gfRot{ to{ transform:rotate(360deg); } }
+.gf .gf-rtext{ font-size:4.1px; letter-spacing:1.35px; font-weight:800; fill:#7ff0ff; opacity:.85; }
+.gf .vbar{ transform-box:fill-box; transform-origin:50% 100%; animation:gfV 2.8s ease-in-out infinite; }
+@keyframes gfV{ 0%,100%{ transform:scaleY(.35) } 50%{ transform:scaleY(.6) } }
+.gf .gf-eye{ transform-box:fill-box; transform-origin:center; animation:gfBlink 4.2s infinite; }
+@keyframes gfBlink{ 0%,91%,100%{ transform:scaleY(1) } 94%{ transform:scaleY(.08) } }
+.gf .gf-pupils{ animation:gfLook 6s ease-in-out infinite; }
+@keyframes gfLook{ 0%,40%,100%{ transform:translate(0,0) } 50%,70%{ transform:translate(1.6px,1.4px) } 80%{ transform:translate(-1.2px,0) } }
+.gf .gf-mouth rect{ transform-box:fill-box; transform-origin:center; animation:gfM 2.6s ease-in-out infinite; }
+@keyframes gfM{ 50%{ transform:scaleY(.5) } }
+.gf .gf-scan{ animation:gfScan 2.8s linear infinite; }
+@keyframes gfScan{ from{ transform:translateY(0) } to{ transform:translateY(62px) } }
+.gf .gf-happy, .gf .gf-prog{ display:none; }
+/* 생각 */
+.gf-think .gf .gf-spin{ animation-duration:2.2s } .gf-think .gf .gf-spinr{ animation-duration:1.4s }
+.gf-think .gf .gf-eye{ animation:none; transform:scaleY(.38) }
+.gf-think .gf .gf-eyes{ animation:gfScanE 1.1s ease-in-out infinite }
+@keyframes gfScanE{ 0%,100%{ transform:translateX(-3px) } 50%{ transform:translateX(3px) } }
+.gf-think .gf .gf-mouth rect{ animation:none; transform:scaleY(.3) }
+.gf-think .gf .gf-prog{ display:inline }
+.gf-think .gf .gf-prog circle{ transform-origin:50px 50px; animation:gfProg 1.4s cubic-bezier(.6,0,.4,1) infinite }
+@keyframes gfProg{ 0%{ stroke-dasharray:4 300; transform:rotate(0) } 50%{ stroke-dasharray:120 300 } 100%{ stroke-dasharray:4 300; transform:rotate(720deg) } }
+/* 말하기 */
+.gf-speak .gf .gf-mouth rect{ animation:gfMS .42s ease-in-out infinite }
+.gf-speak .gf .gf-mouth rect:nth-child(2n){ animation-delay:.1s } .gf-speak .gf .gf-mouth rect:nth-child(3n){ animation-delay:.2s }
+@keyframes gfMS{ 0%,100%{ transform:scaleY(.35) } 50%{ transform:scaleY(1.6) } }
+.gf-speak .gf .vbar{ animation:gfVS .5s ease-in-out infinite }
+@keyframes gfVS{ 0%,100%{ transform:scaleY(.3) } 50%{ transform:scaleY(1.25) } }
+/* 기쁨 */
+.gf-happy .gf .gf-eyes{ display:none } .gf-happy .gf .gf-happy{ display:inline } .gf-happy .gf .vbar{ animation:gfVS 1s ease-in-out infinite }
+
+/* 오브 — 얼굴이 곧 오브 */
+#frOrb{ width:64px !important; height:64px !important; background:radial-gradient(circle, rgba(6,26,42,.96), rgba(2,8,14,.98) 70%) !important;
+  box-shadow:0 0 0 1px rgba(63,224,255,.3), 0 0 28px rgba(63,224,255,.38) !important; }
+#frOrb > .fr-ring, #frOrb > .fr-core{ display:none !important; }
+#frOrb .gf-host{ position:absolute; inset:1px; display:block; }
+#frOrb::after{ content:""; position:absolute; inset:-6px; border-radius:50%; border:1px solid rgba(63,224,255,.28); animation:gfPing 2.6s ease-out infinite; pointer-events:none; }
+@keyframes gfPing{ from{ transform:scale(.9); opacity:.9 } to{ transform:scale(1.32); opacity:0 } }
+#frOrb .fr-dot{ background:#ffb347 !important; box-shadow:0 0 10px #ffb347 !important; }
+/* 대화창 머리 */
+.fr-head .fr-av.gf-host{ width:44px !important; height:44px !important; background:none !important; box-shadow:none !important; }
+.fr-head{ position:relative; }
+.fr-head::after{ content:""; position:absolute; left:14px; right:14px; bottom:-6px; height:8px; pointer-events:none; opacity:.55;
+  background:repeating-linear-gradient(90deg, rgba(63,224,255,.55) 0 1px, transparent 1px 8px);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 20%,#000 80%,transparent); mask:linear-gradient(90deg,transparent,#000 20%,#000 80%,transparent); }
+#frSheet .fr-panel{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%233fe0ff' stroke-opacity='.07' stroke-width='1'/%3E%3C/svg%3E"), linear-gradient(180deg, rgba(4,14,26,.97), rgba(2,7,13,.99)) !important; }
+/* 사용자 말풍선 = 앰버(자비스 HUD 포인트색) */
+.fr-msg.fr-u{ color:#1a0f00 !important; font-weight:600; background:linear-gradient(135deg,#ffd58a,#ffb347) !important; box-shadow:0 0 14px rgba(255,179,71,.35) !important; }
+/* 미니 알약 얼굴 */
+#frMini .fr-mav.gf-host{ width:34px !important; height:34px !important; background:none !important; box-shadow:none !important; }
+#frMini .fr-mav.gf-host > .fr-ring, #frMini .fr-mav.gf-host > .fr-core{ display:none; }
+
+/* 아일랜드 HUD */
+#frAssist.fri{ border-radius:14px !important; background:linear-gradient(180deg, rgba(4,14,26,.8), rgba(2,8,15,.88)) !important; }
+#frAssist.fri.fri-open{ border-radius:14px !important; }
+#frAssist .fri-face{ display:block; width:40px; height:40px; flex:0 0 auto; }
+#frAssist .fri-man{ display:none; }
+#frAssist .hud-hex{ position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:.08;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%233fe0ff' stroke-width='1'/%3E%3C/svg%3E"); }
+#frAssist .hud-br{ position:absolute; width:13px; height:13px; border:1.6px solid #3fe0ff; pointer-events:none; filter:drop-shadow(0 0 4px #3fe0ff); z-index:2; }
+#frAssist .hud-br.tl{ left:-1px; top:-1px; border-right:0; border-bottom:0 } #frAssist .hud-br.tr{ right:-1px; top:-1px; border-left:0; border-bottom:0 }
+#frAssist .hud-br.bl{ left:-1px; bottom:-1px; border-right:0; border-top:0 } #frAssist .hud-br.brr{ right:-1px; bottom:-1px; border-left:0; border-top:0 }
+#frAssist .hud-scan{ position:absolute; left:0; right:0; top:-50%; height:50%; pointer-events:none; z-index:1; opacity:0;
+  background:linear-gradient(180deg, transparent, rgba(63,224,255,.14) 70%, rgba(63,224,255,.5) 98%, transparent); }
+#frAssist.hud-boot .hud-scan{ animation:hudScan 1.1s cubic-bezier(.5,0,.5,1) both; }
+@keyframes hudScan{ 0%{ top:-50%; opacity:1 } 100%{ top:110%; opacity:1 } }
+#frAssist.hud-boot .hud-br.tl{ animation:hudTL .5s cubic-bezier(.2,1.4,.4,1) both } #frAssist.hud-boot .hud-br.tr{ animation:hudTR .5s cubic-bezier(.2,1.4,.4,1) both }
+#frAssist.hud-boot .hud-br.bl{ animation:hudBL .5s cubic-bezier(.2,1.4,.4,1) both } #frAssist.hud-boot .hud-br.brr{ animation:hudBR .5s cubic-bezier(.2,1.4,.4,1) both }
+@keyframes hudTL{ from{ transform:translate(-16px,-16px); opacity:0 } } @keyframes hudTR{ from{ transform:translate(16px,-16px); opacity:0 } }
+@keyframes hudBL{ from{ transform:translate(-16px,16px); opacity:0 } } @keyframes hudBR{ from{ transform:translate(16px,16px); opacity:0 } }
+#frAssist .fra-q{ border-radius:8px !important; position:relative; }
+#frAssist .fra-q::before, #frAssist .fra-q::after{ content:""; position:absolute; width:5px; height:5px; border-color:#3fe0ff; }
+#frAssist .fra-q::before{ left:-1px; top:-1px; border-left:1.5px solid; border-top:1.5px solid } #frAssist .fra-q::after{ right:-1px; bottom:-1px; border-right:1.5px solid; border-bottom:1.5px solid }
+#frAssist .fra-in{ border:1px solid rgba(63,224,255,.38); border-radius:10px; background:rgba(0,0,0,.35); padding:0 5px 0 12px; }
+#frAssist .fra-pr{ color:#3fe0ff; font-weight:900; font-size:15px; }
+#frAssist .fra-in input{ border:0 !important; background:transparent !important; box-shadow:none !important; padding:0 6px !important; }
+#frAssist .fra-send{ border-radius:8px !important; width:36px !important; height:36px !important; box-shadow:0 0 14px rgba(63,224,255,.6); }
+@media (prefers-reduced-motion: reduce){ .gf *, #frOrb::after, #frAssist .hud-scan, #frAssist .hud-br{ animation:none !important; } }

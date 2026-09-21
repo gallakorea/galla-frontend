@@ -248,9 +248,7 @@
 
   function build(){
     // 🔵 아크 리액터 오브 — 회전 틱 링 + 카운터 링 + 앰버 코어(자비스 HUD 오마주)
-    orb = el('<button id="frOrb" aria-label="G.A.L.V.I.S.">'+
-      '<span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span>'+
-      '<span class="fr-dot"></span></button>');
+    orb = el('<button id="frOrb" aria-label="G.A.L.V.I.S."><span class="gf-host">'+galvisFace(62)+'</span><span class="fr-dot"></span></button>');
     document.body.appendChild(orb);
     orb.addEventListener("click", openGated);
 
@@ -281,7 +279,7 @@
       '<div class="fr-panel">'+
         '<div class="fr-hud-line"></div>'+
         '<div class="fr-head">'+
-          '<div class="fr-av"><span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span></div>'+
+          '<div class="fr-av gf-host">'+galvisFace(44)+'</div>'+
           '<div class="fr-idwrap"><div class="fr-name">G.A.L.V.I.S.</div><div class="fr-sub">'+BACKRONYM+'</div></div>'+
           '<button class="fr-voice" aria-label="리얼보이스 켜기/끄기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="fr-vw1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="fr-vw2" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg></button>'+
           '<span class="fr-status"><i></i>ONLINE</span>'+
@@ -311,7 +309,7 @@
     document.body.appendChild(sheet);
     // 🔽 미니 보드 — 콘텐츠 보러 갈 때 챗이 여기로 '접힌다'(대화 유지). 탭하면 복귀.
     mini = el('<button id="frMini" aria-label="갈비스로 돌아가기">'+
-      '<span class="fr-mav"><span class="fr-ring fr-r1"></span><span class="fr-core"></span></span>'+
+      '<span class="fr-mav gf-host">'+galvisFace(34)+'</span>'+
       '<span class="fr-mini-txt">갈비스</span>'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 14l6-6 6 6"/></svg></button>');
     document.body.appendChild(mini);
@@ -471,19 +469,41 @@
      → 페이지를 스크롤하면 다시 캡슐로. 생각 중엔 테두리가 빛나며 돌고 파형이 춤춘다. 전부 SVG·CSS(비용 0). */
   /* 🕺 갈비스 = 우리 졸라맨(투표바 줄다리기 사람과 같은 그림체 — 꽉 찬 동그란 머리 + 굵기 2.4 선).
      평소 통통 뛰며 손 흔들기 · 생각 중 턱 괴고 고개 갸웃 + 「…」 · 답 오면 두 팔 번쩍 점프(26.9.22 사장님). */
-  var FRI_ORB='<svg class="fri-orb fri-man" viewBox="0 0 30 34" aria-hidden="true">'+
-    '<g class="fm-dots"><circle cx="21" cy="3.2" r="1.3"/><circle cx="25" cy="3.2" r="1.3"/><circle cx="29" cy="3.2" r="1.3"/></g>'+
-    '<g class="fm-all" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+
-      '<circle class="fm-head" cx="13" cy="8" r="4" fill="currentColor" stroke="none"/>'+
-      '<path d="M13 12 L13 22.2"/>'+
-      '<path class="fm-legs" d="M13 22.2 L9.4 31.5 M13 22.2 L16.8 31.5"/>'+
-      /* 평소: 한 팔 내리고 한 팔 흔들기 */
-      '<g class="fm-p-wave"><path d="M13 14.4 L9 20.2"/><g class="fm-arm"><path d="M13 14.4 L20.5 8.4"/><circle cx="21.6" cy="7.4" r="1.7" fill="currentColor" stroke="none"/></g></g>'+
-      /* 생각: 한 팔 턱에, 한 팔 허리 */
-      '<g class="fm-p-think"><path d="M13 14.4 L17.4 17 L15.2 11.6"/><path d="M13 14.4 L9.4 18.4 L12 20.6"/></g>'+
-      /* 답: 두 팔 번쩍 */
-      '<g class="fm-p-cheer"><path d="M13 14.4 L7.2 7.2"/><path d="M13 14.4 L18.8 7.2"/></g>'+
-    '</g></svg>';
+  /* 🤖 갈비스 얼굴(26.9.22 사장님: 「자비스 오마주 — 얼굴을 창조해라」) — 자비스 분절 링·도는 글자 링·궤도 빛·
+     둘레 음성 막대 36개(말할 때 출렁)·빛나는 눈(눈동자)·파형 입. 표정은 감싼 요소의 클래스로: gf-think / gf-speak / gf-happy.
+     ⚠️ <use> 로 재사용하면 표정 클래스가 안 먹는다 — 매번 직접 그린다(그라데이션 id 는 겹치지 않게). */
+  var _gfN=0;
+  function galvisFace(size){
+    var id="gf"+(++_gfN), bars="", ticks="";
+    for(var i=0;i<36;i++){ bars+='<rect class="vbar" x="49.1" y="12.6" width="1.8" height="5.4" rx=".9" transform="rotate('+(i*10)+' 50 50)" style="animation-delay:'+((i*37)%500)+'ms"/>'; }
+    for(var k=0;k<12;k++){ ticks+='<rect x="49.4" y="1.2" width="1.2" height="'+(k%3?3:5)+'" transform="rotate('+(k*30)+' 50 50)"/>'; }
+    return '<svg class="gf" width="'+size+'" height="'+size+'" viewBox="0 0 100 100" aria-hidden="true"><defs>'+
+      '<radialGradient id="'+id+'p" cx="50%" cy="40%" r="62%"><stop offset="0" stop-color="#0f3b58"/><stop offset=".7" stop-color="#041524"/><stop offset="1" stop-color="#020a12"/></radialGradient>'+
+      '<linearGradient id="'+id+'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#9ff4ff"/><stop offset="1" stop-color="#3fe0ff"/></linearGradient>'+
+      '<clipPath id="'+id+'c"><circle cx="50" cy="50" r="25.5"/></clipPath>'+
+      '<path id="'+id+'t" d="M50 50 m-44 0 a44 44 0 1 1 88 0 a44 44 0 1 1 -88 0"/></defs>'+
+      '<g class="gf-spin2" fill="#3fe0ff">'+ticks+'</g>'+
+      '<g class="gf-spin"><circle cx="50" cy="50" r="47.5" fill="none" stroke="#3fe0ff" stroke-width="1.6" stroke-dasharray="26 5 4 5 44 9 2 9" opacity=".95"/></g>'+
+      '<g class="gf-spinr"><text class="gf-rtext"><textPath href="#'+id+'t">G.A.L.V.I.S · 연결됨 · 내 편 AI · G.A.L.V.I.S · 연결됨 ·</textPath></text></g>'+
+      '<g class="gf-spinr"><circle cx="50" cy="50" r="38.5" fill="none" stroke="#ffb347" stroke-width="1.5" stroke-dasharray="48 12 6 12" opacity=".9"/></g>'+
+      '<g class="gf-orbit"><circle cx="50" cy="2.8" r="1.8" fill="#fff"/><circle cx="50" cy="2.8" r="4" fill="#3fe0ff" opacity=".35"/></g>'+
+      '<g fill="#3fe0ff" opacity=".85">'+bars+'</g>'+
+      '<g class="gf-prog"><circle cx="50" cy="50" r="42.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/></g>'+
+      '<circle cx="50" cy="50" r="26" fill="url(#'+id+'p)" stroke="#3fe0ff" stroke-opacity=".6" stroke-width="1"/>'+
+      '<g clip-path="url(#'+id+'c)"><rect class="gf-scan" x="20" y="20" width="60" height="4" fill="#3fe0ff" opacity=".2"/></g>'+
+      '<g class="gf-eyes"><rect class="gf-eye" x="37.5" y="39" width="8.4" height="12" rx="4.2" fill="url(#'+id+'e)"/><rect class="gf-eye" x="54.1" y="39" width="8.4" height="12" rx="4.2" fill="url(#'+id+'e)"/>'+
+        '<g class="gf-pupils"><circle cx="41.7" cy="44" r="1.9" fill="#04121c" opacity=".55"/><circle cx="58.3" cy="44" r="1.9" fill="#04121c" opacity=".55"/><circle cx="40.6" cy="42.2" r="1" fill="#fff"/><circle cx="57.2" cy="42.2" r="1" fill="#fff"/></g></g>'+
+      '<g class="gf-happy" fill="none" stroke="#bdf7ff" stroke-width="3" stroke-linecap="round"><path d="M37 46 q4.8 -6.6 9.6 0"/><path d="M53.4 46 q4.8 -6.6 9.6 0"/></g>'+
+      '<g class="gf-mouth" fill="#3fe0ff"><rect x="41" y="57.5" width="2.2" height="3.6" rx="1.1"/><rect x="44.6" y="56.6" width="2.2" height="5.4" rx="1.1"/><rect x="48.2" y="55.6" width="2.2" height="7.4" rx="1.1"/><rect x="51.8" y="55.6" width="2.2" height="7.4" rx="1.1"/><rect x="55.4" y="56.6" width="2.2" height="5.4" rx="1.1"/><rect x="59" y="57.5" width="2.2" height="3.6" rx="1.1"/></g>'+
+    '</svg>';
+  }
+  /* 얼굴 표정 — 모든 얼굴(오브·헤더·알약·아일랜드)에 한 번에 */
+  function faceMood(m){
+    document.querySelectorAll(".gf-host").forEach(function(h){ h.classList.remove("gf-think","gf-speak","gf-happy"); if(m) h.classList.add("gf-"+m); });
+    clearTimeout(faceMood._t);
+    if(m==="speak") faceMood._t=setTimeout(function(){ faceMood("happy"); faceMood._t=setTimeout(function(){ faceMood(""); }, 1600); }, 1800);
+  }
+  var FRI_ORB='<span class="gf-host fri-face">'+'</span>';
   var FRI_WAVE='<svg class="fri-wave" viewBox="0 0 22 16" aria-hidden="true"><rect x="1" y="5" width="3" height="6" rx="1.5"/><rect x="7" y="2" width="3" height="12" rx="1.5"/><rect x="13" y="4" width="3" height="8" rx="1.5"/><rect x="19" y="6" width="2.4" height="4" rx="1.2"/></svg>';
   var FRI_IC={
     sum:'<svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7"/></svg>',
@@ -524,10 +544,12 @@
         '<div class="fri-cf" hidden><button class="fri-cf-yes"></button><button class="fri-cf-no">취소</button></div>'+
         '<button class="fra-cards" hidden>카드 보기 ›</button>'+
         '<div class="fra-quick"></div>'+
-        '<div class="fra-in"><input placeholder="갈비스한테 물어봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
+        '<div class="fra-in"><span class="fra-pr">›</span><input placeholder="갈비스한테 명령해" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
       '</div>'+
     '</div>');
     document.body.appendChild(_asEl);
+    _asEl.querySelector(".fri-face").innerHTML=galvisFace(40);
+    _asEl.insertAdjacentHTML("afterbegin",'<i class="hud-hex"></i><i class="hud-br tl"></i><i class="hud-br tr"></i><i class="hud-br bl"></i><i class="hud-br brr"></i><i class="hud-scan"></i>');
     var inp=_asEl.querySelector("input");
     var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
     _asEl.querySelector(".fra-send").onclick=go;
@@ -571,13 +593,15 @@
     }
     var thinking=!!logEl.querySelector(".fr-typing") && !parts.length;
     _asEl.classList.toggle("fri-think", thinking);
+    if(thinking) faceMood("think");
     var box=_asEl.querySelector(".fra-msg"), tick=_asEl.querySelector(".fri-tick");
     if(thinking){ tick.textContent="생각하는 중…"; }
     var txt=parts.slice(-3).join("\n");
     if(txt && txt!==_friLastTxt){
       _friLastTxt=txt; box.innerHTML=fmtRich(fmtStage(txt)); revealRich(box);
       var last=parts[parts.length-1]||""; tick.textContent=last.replace(/\s+/g," ").slice(0,40);
-      _asEl.classList.remove("fri-full"); friExpand(true); friSparkle();
+      _asEl.classList.remove("fri-full"); friExpand(true); friSparkle(); faceMood("speak");
+      _asEl.classList.remove("hud-boot"); void _asEl.offsetWidth; _asEl.classList.add("hud-boot");
       _asEl.classList.remove("fri-pop"); void _asEl.offsetWidth; _asEl.classList.add("fri-pop");
       clearTimeout(syncAssist._p); syncAssist._p=setTimeout(function(){ if(_asEl) _asEl.classList.remove("fri-pop"); }, 1600);   // 번쩍 뒤엔 다시 손 흔들기
     }
@@ -1637,7 +1661,7 @@
     for(var i=0;i<parts.length;i++){
       if(i>0 && !instant){ typing(true); await sleep(380+Math.min(parts[i].length*6,420)); typing(false); }
       last=addMsg("a", parts[i]);
-      if(i===0 && last && !_frNoAnim) last.classList.add("rx-glow");   // 첫 말풍선에 네 색 빛 테두리 한 바퀴
+      if(i===0 && last && !_frNoAnim){ last.classList.add("rx-glow"); faceMood("speak"); }   // 첫 말풍선에 네 색 빛 테두리 한 바퀴
     }
     try{ var ch=parseChoices(text); if(ch) addChoices(last, ch); }catch(e){}
     return last;
@@ -2103,6 +2127,7 @@
   var FR_CREDITS=["생각하는 중","갈라 뒤져보는 중","비교하는 중","골라내는 중","정리하는 중"];
   function typing(on){
     var t=logEl.querySelector(".fr-typing");
+    if(on) faceMood("think"); else if(t) faceMood("");
     if(on&&!t){
       t=el('<div class="fr-typing fr-think"><span class="ft-dots"><i></i><i></i><i></i></span><span class="ft-roll"><span class="ft-track"></span></span></div>');
       var tr=t.querySelector(".ft-track"); FR_CREDITS.concat([FR_CREDITS[0]]).forEach(function(w){ var sp=document.createElement("span"); sp.textContent=w; tr.appendChild(sp); });
