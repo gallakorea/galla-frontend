@@ -802,7 +802,8 @@
       } catch (e) {
         stopStream();
         const n = e?.name || "";
-        if (n === "NotAllowedError" || n === "SecurityError") { try { window.GALLA_micHelp?.({ reason: "" }); } catch (_) {} alert("마이크 권한이 필요해요."); }
+        // 🎙 권한 거부 — 안내 시트만 띄운다. 예전엔 시트를 띄워놓고 alert 로 덮어 시트가 안 보였다(26.9.21)
+        if (n === "NotAllowedError" || n === "SecurityError") { try { (window.GALLA_permHelp || window.GALLA_micHelp)?.("mic"); } catch (_) {} }
         else alert("녹음을 시작하지 못했어요 (" + (n || "오류") + ")");
         resetRec();
       }

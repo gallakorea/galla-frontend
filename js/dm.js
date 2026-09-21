@@ -5213,23 +5213,21 @@
   }
 
   /* 📍 위치 공유 — 현재 좌표를 지도 링크로. (좌표는 메시지 본문에만, URL 파라미터 노출 최소) */
-  function shareLocation() {
-    if (!navigator.geolocation) return toastMini('이 기기는 위치를 지원하지 않아요');
+  async function shareLocation() {
+    /* 📍 GALLA_getPosition 이 웹/네이티브 차이를 흡수한다 — 앱에서는 Capacitor 플러그인을 쓴다.
+       예전엔 navigator.geolocation 을 그대로 불러 iOS 앱에서 콜백이 영영 안 왔다
+       (2026-09-11 QA 6-2-8: 권한 창 둘 다 허용 → 60초 무응답). 사용자는 앱이 고장난 줄 안다. */
+    if (!window.GALLA_getPosition) return toastMini('이 기기는 위치를 지원하지 않아요');
     toastMini('📍 위치 확인 중…');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: la, longitude: lo } = pos.coords;
-        const url = `https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`;
-        sendMessage({ kind: 'text', body: `📍 내 위치를 공유했어요\n${url}` });
-      },
-      /* 실패 이유를 가른다 — 예전엔 어떤 실패든 「위치 권한이 필요해요」라서, 권한을 허용했는데
-         위치를 못 잡은 경우(실내·시간초과·시뮬 위치 없음)에도 권한 탓으로 안내했다(2026-09-11 QA 6-2-8, iOS 시뮬:
-         iOS·WebKit 권한 창 둘 다 허용 → 60초 동안 전송 없음). 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT */
-      (err) => toastMini(err && err.code === 1
-        ? '위치 권한이 필요해요 (설정에서 허용)'
-        : '현재 위치를 찾지 못했어요. 잠시 후 다시 시도해 주세요'),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    try {
+      const { lat, lng } = await window.GALLA_getPosition({ highAccuracy: true, timeout: 10000 });
+      const url = `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+      sendMessage({ kind: 'text', body: `📍 내 위치를 공유했어요\n${url}` });
+    } catch (err) {
+      // 권한 거부면 켜는 길까지 안내한다 — 문구만 띄우면 사용자가 되돌릴 방법을 모른다
+      if (err && err.kind === 'denied' && window.GALLA_permHelp) return window.GALLA_permHelp('location');
+      toastMini(window.GALLA_geoMessage ? window.GALLA_geoMessage(err) : '현재 위치를 찾지 못했어요');
+    }
   }
 
   async function onPickImage(e) {

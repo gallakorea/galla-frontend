@@ -229,6 +229,11 @@
     var ov = window.__gtour || document.querySelector(".gtour");
     if (!ov) return;
     idx = i;
+    /* 🔑 권한 슬라이드(마지막)에 '도달했는지'를 따로 남긴다.
+       투어 플래그(KEY)는 오버레이가 뜨는 즉시 찍히므로, 첫 화면에서 나가버린 사람은
+       권한 안내를 본 적도 없이 다시는 못 보게 된다. 그런 사람에게는 나중에
+       기능을 쓸 때 경량 프라이밍을 한 번 띄운다(perm-help 쪽에서 이 키를 읽는다). */
+    try { if (i >= SLIDES.length - 1) localStorage.setItem("galla_perm_primed", "1"); } catch (e) {}
     var track = ov.querySelector(".gt-track");
     track.style.transform = "translateX(" + (-i * 100) + "%)";
     ov.querySelector(".gt-bg").style.background = SLIDES[i].bg;

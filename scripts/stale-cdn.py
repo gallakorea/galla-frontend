@@ -53,5 +53,5 @@ print(f"❌ 옛 내용이 박제된 주소 {len(bad)}개 — 고친 코드가 �
 for p, v in bad:
     print(f"   {p:<34} ?v={v}")
 print("\n?v= 를 현재 배포 도장으로 올리고 배포하라:")
-print('   grep -o \'name="galla-ver" content="0930600"\' index.html')
+print('   grep -o \'name="galla-ver" content="0930700"\' index.html')
 sys.exit(1)

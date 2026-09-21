@@ -379,10 +379,18 @@
     try { const st = await navigator.permissions.query({ name: 'microphone' }); return st.state; }
     catch (_) { return 'unknown'; }
   }
-  /* 권한 창이 뜨기 직전 안내 — '이번만 허용'을 누르면 통화마다 다시 묻는다는 걸 모른다 */
-  async function primePermHint(video) {
+  /* 권한 창이 뜨기 직전 안내 — '이번만 허용'을 누르면 통화마다 다시 묻는다는 걸 모른다.
+     ➕ 온보딩 투어를 놓친 사람에겐 토스트로는 부족하다. 맥락 없이 OS 팝업을 맞으면 거절률이 치솟아서,
+        처음 한 번은 「왜 필요한지」를 시트로 먼저 보여준다(26.9.21). 이미 안내받은 사람은 그냥 지나간다. */
+  async function primePermHint(video, skipSheet) {
     const st = await micPermState();
     if (st === 'prompt' || st === 'unknown') {
+      try {
+        if (!skipSheet && window.GALLA_permPrime) {
+          const go = await window.GALLA_permPrime(video ? 'camera' : 'mic');
+          if (!go) return 'postponed';   // 사용자가 미뤘다 — 호출부가 조용히 멈춘다
+        }
+      } catch (_) {}
       toast(`${video ? '카메라·마이크' : '마이크'} 창이 뜨면 [허용]을 눌러주세요 — '이번만'은 통화마다 다시 물어요`);
     }
     return st;
@@ -581,7 +589,8 @@
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [], callId: (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.round(1e9 * ((ME || 'x').charCodeAt(0) / 128))) };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
-    await primePermHint(!!video);
+    // 🙋 처음 거는 사람에겐 '왜 마이크가 필요한지'를 먼저 보여준다. 미루면 통화를 시작하지 않는다.
+    if ((await primePermHint(!!video)) === 'postponed') { CUR = null; paintUI('idle'); return; }
     if (!AGORA) {   // iosrtc 미디어 준비 — Agora면 미디어는 join 시 Agora가 잡으므로 우회
       try { localStream = await getMedia(!!video); }
       catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
@@ -746,7 +755,7 @@
     wb('ACC sent-accepted');
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
     // 🔊 Agora: 수신자도 채널 join → 양쪽 미디어 연결(iosrtc 프리커넥트·getMedia·buildAnswer 전부 우회)
-    if (AGORA) { await withTimeout(primePermHint(CUR.video), 3000).catch(() => {}); await agoraConnect(CUR); return; }
+    if (AGORA) { await withTimeout(primePermHint(CUR.video, true), 3000).catch(() => {}); await agoraConnect(CUR); return; }
     // 프리커넥트가 진행 중이면 완료를 기다려 그 결과 재사용(최대 ~2.4초 — 동시 셋업 경합 방지)
     for (let i = 0; i < 30 && CUR._preRunning; i++) await new Promise(r => setTimeout(r, 80));
     wb('ACC after-wait pre=' + (CUR && CUR._preconnected ? 'y' : 'n') + ' ls=' + (localStream ? 1 : 0));
@@ -761,7 +770,7 @@
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
     wb('accept fallback getmedia');
-    try { await withTimeout(primePermHint(CUR.video), 3000); } catch (_) {}   // 프롬프트가 걸려도 통화는 진행
+    try { await withTimeout(primePermHint(CUR.video, true), 3000); } catch (_) {}   // 프롬프트가 걸려도 통화는 진행
     // ⚠️ iosrtc getUserMedia가 '이전 통화 마이크 미해제'로 간헐적으로 영영 멈춤(사장님 로그: getmedia-ok 안 옴).
     //    → 타임아웃 걸고, 멈추면 네이티브 오디오를 강제로 내렸다가(마이크 해제) 간단 제약으로 재시도.
     if (!localStream) {

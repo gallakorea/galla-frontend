@@ -156,8 +156,22 @@
     });
     const perm = sheet.querySelector("[data-perm]");
     if (perm) perm.onclick = async () => {
-      if (isNative && window.GALLA_registerNativePush) { await window.GALLA_registerNativePush(); }
-      else { try { await Notification.requestPermission(); } catch (_) {} }
+      /* ⚠️ 이미 거부한 사람에게 requestPermissions() 를 또 부르면 OS 는 아무것도 안 띄운다.
+         예전엔 그래서 버튼을 눌러도 화면만 다시 그려졌고, 사용자는 버튼이 고장난 줄 알았다.
+         거부 상태면 요청 대신 '설정으로 가는 길'을 보여준다(26.9.21). */
+      let st = "off";
+      try { st = window.GALLA_pushStatus ? await window.GALLA_pushStatus() : "off"; } catch (_) {}
+      if (st === "denied") { if (window.GALLA_permHelp) window.GALLA_permHelp("notify"); return; }
+
+      let ok = false;
+      if (isNative && window.GALLA_registerNativePush) {
+        const r = await window.GALLA_registerNativePush();
+        ok = !!(r && r.ok);
+        if (!ok && r && r.reason === "denied" && window.GALLA_permHelp) { window.GALLA_permHelp("notify"); return; }
+      } else {
+        try { ok = (await Notification.requestPermission()) === "granted"; } catch (_) {}
+        if (!ok && window.GALLA_permHelp) { window.GALLA_permHelp("notify"); return; }
+      }
       render();
     };
     sheet.querySelector(".nts-close").onclick = close;

@@ -2682,27 +2682,35 @@
   /* 내 주변 — 가진 좌표(weather_regions)로 가장 가까운 동네를 고른다.
      역지오코딩을 부르지 않아도 된다. 동네 단위면 이 정도로 충분하다. */
   /* 가까운순을 처음 누르면 위치를 묻는다 — 미리 묻지 않는다(권한 피로) */
-  function askPos() {
-    if (!navigator.geolocation) { sortBy = "new"; return toast("이 기기는 위치를 못 받아요"); }
+  async function askPos() {
+    if (!window.GALLA_getPosition) { sortBy = "new"; return toast("이 기기는 위치를 못 받아요"); }
     toast("위치 확인 중…");
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    try {
+      var p = await window.GALLA_getPosition({ timeout: 8000 });
+      myPos = { lat: p.lat, lon: p.lng };
       loadList();
-    }, function () { sortBy = "new"; toast("위치 권한이 필요해요"); loadList(); },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+    } catch (err) {
+      /* ⚠️ 실패를 전부 「권한」 탓으로 돌리면 안 된다 — 실내·지하라 시간이 초과된 사람에게
+         거부한 적도 없는 권한을 탓하게 된다. 원인별로 문구를 가른다. */
+      sortBy = "new";
+      if (err && err.kind === "denied" && window.GALLA_permHelp) window.GALLA_permHelp("location");
+      else toast(window.GALLA_geoMessage ? window.GALLA_geoMessage(err) : "위치를 확인할 수 없어요");
+      loadList();
+    }
   }
 
   async function pickNearby() {
-    if (!navigator.geolocation) return toast("이 기기는 위치를 못 받아요");
+    if (!window.GALLA_getPosition) return toast("이 기기는 위치를 못 받아요");
     toast("위치 확인 중…");
-    navigator.geolocation.getCurrentPosition(async function (pos) {
-      var la = pos.coords.latitude, lo = pos.coords.longitude;
-      var r = await rpc("food_nearest_region", { p_lat: la, p_lon: lo });
+    try {
+      var p = await window.GALLA_getPosition({ timeout: 8000 });
+      var r = await rpc("food_nearest_region", { p_lat: p.lat, p_lon: p.lng });
       if (r && r.ok) pickRegion(r.code, r.name);
       else toast("가까운 동네를 못 찾았어요");
-    }, function () {
-      toast("위치 권한이 필요해요");
-    }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+    } catch (err) {
+      if (err && err.kind === "denied" && window.GALLA_permHelp) window.GALLA_permHelp("location");
+      else toast(window.GALLA_geoMessage ? window.GALLA_geoMessage(err) : "위치를 확인할 수 없어요");
+    }
   }
 
   function closeRegionPicker() {
