@@ -4359,6 +4359,8 @@
     try {
       if (!(window.GALLA_isApp && window.GALLA_isApp())) return;
       if (!window.GALLA_pushStatus || !window.GALLA_pushEnable) return;
+      // 첫 실행 권한 안내가 아직 안 끝났으면(떠 있거나 곧 뜰 차례) 끼어들지 않는다 — 거기서 한 번에 묻는다
+      if (document.getElementById('gpn') || !localStorage.getItem('galla_perm_notice_v1')) return;
       const last = +(localStorage.getItem(DM_PUSH_ASK_KEY) || 0);
       if (last && Date.now() - last < 7 * 86400000) return;
       const st = await window.GALLA_pushStatus();

@@ -131,6 +131,10 @@
   }
 
   window.GALLA_permPrime = function (kind) {
+    /* ✂️ 26.9.21 사장님: 「중간에 이거 승인 저거 승인하면 안 된다」 — 기능 쓰는 도중에 우리 확인 시트를 한 번 더
+       띄우지 않는다. 권한 설명은 첫 실행 권한 안내 화면에서 이미 했다. 바로 OS 권한 창으로 간다.
+       (이미 거부된 권한을 설정에서 켜는 복구 시트 GALLA_permHelp 는 다른 길이 없어 그대로 둔다) */
+    if (window.GALLA_PERM_PRIME_SHEET !== true) return Promise.resolve(true);
     kind = KINDS[kind] ? kind : "mic";
     var K = KINDS[kind];
     // 이미 투어에서 안내받았거나, 이 시트를 본 적 있으면 그냥 진행한다(두 번 설명하지 않는다)
