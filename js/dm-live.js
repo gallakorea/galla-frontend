@@ -797,15 +797,21 @@
     let pc;
     try { pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: "max-bundle" }); }
     catch (e) { return fallback(); }
-    // 세션 부트스트랩 — CF Realtime SFU는 /sessions/new에 offer 동봉 필수(recvonly로 시작).
-    pc.addTransceiver("audio", { direction: "recvonly" });
-    let offer;
-    try { offer = await pc.createOffer(); await pc.setLocalDescription(offer); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
-    const sess = await sfu("/sessions/new", "POST", { sessionDescription: { type: "offer", sdp: offer.sdp } });
-    lvlog("sess " + (sess ? (sess.reason || (sess.data && sess.data.sessionId ? "ok" : JSON.stringify(sess).slice(0, 80))) : "null"));
+    // 세션 부트스트랩 — 웹(안드로이드·PC)은 recvonly 오퍼를 동봉해 세션을 연다.
+    // 🍎 아이폰 앱(iosrtc)은 오퍼 없이 연다: 부트스트랩 recvonly 채널이 있으면 SFU 가 구독 트랙을 그 채널(mid 0)에
+    //    실어 보내는데, iosrtc 는 기존 채널에 붙은 수신 트랙을 재생 경로에 안 올린다 — 패킷은 오는데 재생 에너지 0
+    //    (26.9.21 두 폰 실측: inA pk 2,427·lvl 0·en 0). 오퍼 없이 열면 구독마다 새 채널이 생겨 ontrack·재생이 정상.
+    const IOSRTC = !!window.__iosrtcReady;   // app.html 이 iosrtc registerGlobals 를 마쳤을 때(= RTCPeerConnection 이 iosrtc 판)
+    let offer = null;
+    if (!IOSRTC) {
+      pc.addTransceiver("audio", { direction: "recvonly" });
+      try { offer = await pc.createOffer(); await pc.setLocalDescription(offer); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
+    }
+    const sess = await sfu("/sessions/new", "POST", offer ? { sessionDescription: { type: "offer", sdp: offer.sdp } } : {});
+    lvlog("sess " + (IOSRTC ? "(no-boot) " : "") + (sess ? (sess.reason || (sess.data && sess.data.sessionId ? "ok" : JSON.stringify(sess).slice(0, 80))) : "null"));
     if (!sess || sess.reason === "unconfigured") { try { pc.close(); } catch (e) {} return fallback(); }
-    if (!sess.data || !sess.data.sessionId || !sess.data.sessionDescription) { try { pc.close(); } catch (e) {} return fallback("🔊 음성 연결 실패 — 재입장 시 재시도돼요."); }
-    try { await pc.setRemoteDescription(sess.data.sessionDescription); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
+    if (!sess.data || !sess.data.sessionId || (offer && !sess.data.sessionDescription)) { try { pc.close(); } catch (e) {} return fallback("🔊 음성 연결 실패 — 재입장 시 재시도돼요."); }
+    if (offer) { try { await pc.setRemoteDescription(sess.data.sessionDescription); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); } }
     const cf = { sessionId: sess.data.sessionId, pc, pubTrack: null, myTrackName: null, subs: new Set(), q: Promise.resolve(), els: [] };
     if (!CUR) { try { pc.close(); } catch (e) {} return; }
     CUR.cf = cf;
