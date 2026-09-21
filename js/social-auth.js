@@ -97,6 +97,17 @@
         return;
       }
       if (!code && !at) return;
+      /* 🔁 같은 코드는 한 번만 — 셸과 SPA 뷰(iframe)가 이 파일을 각자 싣고, 둘 다 top 의
+         Capacitor 에 appUrlOpen 리스너를 건다. 그래서 딥링크 하나가 두 번 처리됐다:
+         첫 번째가 세션을 만들며 code_verifier 를 지우고, 두 번째가 「PKCE code verifier not
+         found in storage」 영어 경고를 띄웠다 — 로그인은 이미 성공한 상태로(26.9.21 12 mini 실측).
+         기록은 프레임끼리 공유되는 Capacitor 객체에 둔다. */
+      {
+        const C = capBridge();
+        const seen = C ? (C.__gallaAuthSeen || (C.__gallaAuthSeen = new Set())) : null;
+        const key = code || at;
+        if (seen) { if (seen.has(key)) return; seen.add(key); }
+      }
       try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
       try {
         const c = sb();
@@ -117,7 +128,10 @@
         if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
         location.replace("index.html");
       } catch (e) {
-        alert("로그인 처리 실패 — " + (e?.message || "다시 시도해 주세요."));
+        /* 세션이 이미 있으면 실패가 아니다(다른 경로가 먼저 처리함) — 경고 없이 넘어간다 */
+        try { const { data } = await sb().auth.getSession(); if (data && data.session) return; } catch (_) {}
+        alert("로그인에 실패했어요. 다시 시도해 주세요.");
+        try { window.GALLA_logError && window.GALLA_logError(e, "auth-exchange"); } catch (_) {}
       }
     }
   }
