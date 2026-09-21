@@ -767,6 +767,7 @@
       try { CUR.chatCh && sb().removeChannel(CUR.chatCh); } catch (e) {}
     }
     CUR = null;
+    nativeLive(false);   // 음성 연결 실패(후퇴) 경로도 네이티브 오디오를 닫는다
     const ov = document.getElementById("lv-stage");
     if (ov) { ov.classList.remove("on"); setTimeout(() => ov.remove(), 220); }
     navHide(false);
@@ -787,7 +788,10 @@
     try { const { data } = await sb().functions.invoke("turn-cred", { body: {} }); if (data && data.iceServers) return data.iceServers; } catch (e) {}
     return [{ urls: "stun:stun.cloudflare.com:3478" }];
   }
+  // 🎙 아이폰 앱: 오디오 유닛은 통화(CallKit) 때만 열리게 잠겨 있다 → 라이브 입장/퇴장 때 직접 연다/닫는다(26.9.21)
+  function nativeLive(on) { try { const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall; if (h) h.postMessage({ action: "liveAudio", on: !!on }); } catch (e) {} }
   async function connectAudio() {
+    nativeLive(true);
     const note = document.getElementById("lv-audio-note");
     const fallback = (msg) => { if (note) { note.hidden = false; note.textContent = msg || "🔊 음성 서버 준비 중 — 무대·손들기·역할·채팅은 동작해요."; } CUR && (CUR.audio = { setMuted() {}, stop() {} }); };
     let pc;
@@ -932,6 +936,7 @@
     cf.subs.delete(key);   // 실패 → 나중에 재-announce 시 다시 구독 가능
   }
   function stopAudio(cf) {
+    nativeLive(false);
     if (!cf) return;
     try { cf.pubTrack && cf.pubTrack.stop(); } catch (e) {}
     try { cf.pc && cf.pc.close(); } catch (e) {}
@@ -1033,6 +1038,10 @@
           if (t === "inbound-rtp" && k === "audio") { out.inB += r.bytesReceived || 0; out.inPk += r.packetsReceived || 0; if (r.audioLevel != null) out.inLvl = r.audioLevel; }
           if (t === "outbound-rtp" && k === "audio") { out.outB += r.bytesSent || 0; out.outPk += r.packetsSent || 0; }
           if (t === "media-source" && k === "audio" && r.audioLevel != null) out.srcLvl = r.audioLevel;
+          if (t === "ssrc") {   // iosrtc(옛 형식 통계)
+            if (r.bytesSent != null) { out.outB += +r.bytesSent || 0; out.outPk += +r.packetsSent || 0; if (r.audioInputLevel != null) out.srcLvl = +r.audioInputLevel; }
+            if (r.bytesReceived != null) { out.inB += +r.bytesReceived || 0; out.inPk += +r.packetsReceived || 0; if (r.audioOutputLevel != null) out.inLvl = +r.audioOutputLevel; }
+          }
         });
         if (!CUR.cf._typesLogged) { CUR.cf._typesLogged = 1; const ty = []; each(r => ty.push((r.type || "?") + ":" + (r.kind || r.mediaType || ""))); lvlog("stat types " + ty.join(",").slice(0, 300)); }
       } catch (e) { out.err = String(e && e.message || e).slice(0, 40); }
