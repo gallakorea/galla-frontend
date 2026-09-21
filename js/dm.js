@@ -6084,7 +6084,7 @@
     }
     }
     // ── R3 육성 난장: 목록에 뜨나 → 입장 → 손들기 → 무대 올라 말하기·듣기
-    const live = await qwait(async () => { const { data } = await supabase.rpc('list_live_rooms'); return (data || []).find(r => r.title === '[QA] 육성'); }, 180000);
+    const live = await qwait(async () => { const { data } = await supabase.rpc('list_live_rooms'); return (data || []).find(r => r.title === '[QA] 육성' && r.owner_id === peer && r.started_at > t0); }, 180000);
     qlog('R live seen=' + !!live);
     const L = window.GALLA_liveQA;
     if (live && L) {

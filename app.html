@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0934000"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0934100"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
@@ -174,7 +174,7 @@
 <script src="js/signals.js?v=0927300"></script><!-- 📊 신호 층: SPA 셸은 nav.js를 싣지 않아 직접 등록 -->
 <!-- 🔊 전역 소리(이슈·숏판·핫튜브·릴스 통일) — 판마다 따로 싣던 것을 셸로 올린다(26.9.20 전수 점검: 트렌드·예측·광장 판엔 없었다) -->
 <script src="./js/media-sound.js?v=0927400"></script>
-<script src="js/social-auth.js?v=0934000"></script><!-- 🔑 소셜 로그인 딥링크 복귀 — 셸(top 문서)에 있어야 Capacitor 리스너가 붙는다.
+<script src="js/social-auth.js?v=0934100"></script><!-- 🔑 소셜 로그인 딥링크 복귀 — 셸(top 문서)에 있어야 Capacitor 리스너가 붙는다.
      빠져 있어서 안드로이드에서 "No listeners found for event appUrlOpen" 이 났다(실측). -->
 <script src="./js/supabase.js?v=0926300"></script>
 <script src="/js/geo.js?v=0930800"></script><script src="/js/perm-help.js?v=0930800"></script><script src="/js/perm-notice.js?v=0931000"></script><script src="/js/loc-map.js?v=0930900"></script>
@@ -201,7 +201,7 @@
      화면이 그려지고 한가해지면 순서대로 붙인다. 그 전에 필요해지면 각 기능이 자기 자리에서 불러온다. -->
 <script>
 (function () {
-  var LATE = ["js/iap.js?v=0909020", "js/plans.js?v=0918600", "js/workbench.js?v=0827010", "js/agent-hub.js?v=0924700", "./js/write-hub.js?v=0918600", "./js/notify-settings.js?v=0930700", "./js/invite.js?v=0909100", "./js/push.js?v=0828022", "./js/native-push.js?v=0828027", "./js/notifications.js?v=0925900", "./js/dm-call.js?v=0934000", "./js/dm-sound.js?v=0930100", "./js/share-sheet.js?v=0909100", "/js/bug-report.js?v=0925800", "./js/friend.js?v=0930800"];
+  var LATE = ["js/iap.js?v=0909020", "js/plans.js?v=0918600", "js/workbench.js?v=0827010", "js/agent-hub.js?v=0924700", "./js/write-hub.js?v=0918600", "./js/notify-settings.js?v=0930700", "./js/invite.js?v=0909100", "./js/push.js?v=0828022", "./js/native-push.js?v=0828027", "./js/notifications.js?v=0925900", "./js/dm-call.js?v=0934100", "./js/dm-sound.js?v=0930100", "./js/share-sheet.js?v=0909100", "/js/bug-report.js?v=0925800", "./js/friend.js?v=0930800"];
   var i = 0;
   function next() {
     if (i >= LATE.length) {
