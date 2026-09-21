@@ -100,6 +100,8 @@
       var want = { notify: true, mic: true, camera: true, location: true };
       var res = await requestAll(want, function (t) { go.textContent = t; });
       try { localStorage.setItem("galla_perm_asked_all", JSON.stringify(res)); } catch (_) {}
+      // 📊 결과 기록 — 어느 권한이 거절·실패되는지 기기별로 본다(첫 실행이라 비로그인일 수 있다)
+      try { var c = window.supabaseClient; if (c) c.rpc("log_client_error", { p_kind: "perm-ask", p_message: JSON.stringify(res) + " ua=" + (/iphone/i.test(navigator.userAgent) ? "ios" : "android"), p_ver: "perm" }).then(function () {}, function () {}); } catch (_) {}
       close();
     });
   }
@@ -129,7 +131,8 @@
         var stop = function (st) { try { st.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} };
         if (gum) {
           try { var s1 = await withTimeout(gum.call(md, { audio: !!want.mic, video: !!want.camera }), 40000); if (s1 && s1.getTracks) { stop(s1); res.media = "granted"; } else res.media = s1; }
-          catch (_) {
+          catch (e1) {
+            res.mediaErr = (e1 && e1.name) || String(e1).slice(0, 30);
             // 카메라를 거부했으면 마이크만이라도
             if (want.mic && want.camera) { try { var s2 = await withTimeout(gum.call(md, { audio: true }), 30000); if (s2 && s2.getTracks) { stop(s2); res.media = "mic-only"; } } catch (e2) { res.media = "denied"; } }
             else res.media = "denied";
