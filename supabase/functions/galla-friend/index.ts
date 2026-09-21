@@ -1138,6 +1138,11 @@ async function dataOpener(type: string, id: string): Promise<string | null> {
       if (!f) return null; const on = openNow(f.hours);
       return `${f.rating ? `평점 ★${(+f.rating).toFixed(1)}${f.rating_n ? `(리뷰 ${f.rating_n}개)` : ""}` : "평점 정보는 아직 없어"}${on ? ` · 지금 ${on}` : ""} — 저장해둘까?`;
     }
+    if (type === "gallari") {
+      const { data: g } = await supa.from("posts").select("like_count,comment_count,view_count,kind").eq("id", Number(id)).maybeSingle();
+      if (!g) return null;
+      return `${g.kind === "vertical" ? "숏판" : "롱판"}이네 — 좋아요 ${g.like_count || 0} · 댓글 ${g.comment_count || 0}. 보고 어땠는지 말해줘`;
+    }
     if (type === "travel") return "여기 가보고 싶어? 저장해두면 나중에 바로 찾아줄게";
     if (type === "news") return "다 읽으면 어떻게 봤는지 말해줘";
     if (type === "video" || type === "hottube") return "보고 웃겼는지 말해줘 ㅋㅋ";
@@ -4896,6 +4901,10 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     if (autoOpen && !/(companion|plus|pro|lite|friend|premium)/i.test(String(gate?.tier || ""))) {
       const t = await dataOpener(String((body as any).handoff.type), String((body as any).handoff.id));
       if (t) return json({ ok: true, reply: t, actions: [], friendName: "갈비스", templated: true });
+    }
+    if (!gate.ok && autoOpen) {   // 자동 첫마디 한도가 다 차도 침묵 대신 데이터 한마디(AI 0회)
+      const t = await dataOpener(String((body as any).handoff.type), String((body as any).handoff.id));
+      return json({ ok: true, reply: t || "", actions: [], friendName: "갈비스", templated: true });
     }
     if (!gate.ok) {
       if (isGreeting || autoOpen) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
