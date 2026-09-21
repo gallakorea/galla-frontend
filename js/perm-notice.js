@@ -7,9 +7,10 @@
      선택 권한은 동의하지 않아도 서비스를 쓸 수 있다는 것까지 알려야 한다.
      카카오톡이 설치 직후 띄우는 「접근권한 안내」 화면이 이 조항 때문이다.
 
-   ⚠️ 이 화면은 권한을 '요청'하지 않는다. 고지만 한다.
-      실제 요청은 그 기능을 쓸 때 한다(첫 실행 몰아치기는 거절률을 3~4배로 올린다).
-      그래서 「확인」 버튼 하나뿐이고 거부 버튼이 없다 — 고지의 성격이 그렇다.
+   ✅ 26.9.21 사장님 결정: 고지만 하고 넘기면, 갈라톡을 쓰는 도중에 권한 창·「설정에서 켜 주세요」가
+      기능마다 번갈아 떠서 UX 가 최악이었다. 그래서 「허용하고 시작하기」로 알림→마이크·카메라→위치를
+      OS 권한 창으로 한 번에 묻는다. 선택 권한이라 「나중에 할게요」(아무것도 안 물음)도 둔다 —
+      OS 창에서 거부해도 앱은 그대로 쓸 수 있다(22조의2 선택 권한 요건).
 
    네이티브 앱에서 최초 1회만. 웹은 대상이 아니다(단말 권한 고지 의무는 앱 대상).
    ========================================================= */
@@ -53,7 +54,9 @@
       "#gpn .wy{font-size:12.5px;color:#8e97ab;line-height:1.5}" +
       "#gpn .note{font-size:12px;color:#6f7a93;line-height:1.7;background:#10131a;border-radius:12px;padding:14px 15px;margin-bottom:24px}" +
       "#gpn button{width:100%;border:0;border-radius:13px;padding:16px;font-size:15.5px;font-weight:800;" +
-        "background:#2f6bff;color:#fff;font-family:inherit;cursor:pointer}";
+        "background:#2f6bff;color:#fff;font-family:inherit;cursor:pointer}" +
+      "#gpn button:disabled{opacity:.7}" +
+      "#gpn .gpn-later{background:none;color:#7f8aa3;font-size:13.5px;font-weight:600;padding:14px;margin-top:6px}";
     document.head.appendChild(st);
 
     var el = document.createElement("div");
@@ -61,8 +64,8 @@
     el.setAttribute("role", "dialog");
     el.innerHTML =
       "<h2>갈라가 쓰는 권한을 알려드려요</h2>" +
-      '<p class="lead">아래 권한은 <b>해당 기능을 쓸 때만</b> 물어봐요.<br>' +
-        "지금 허용하지 않아도 갈라를 보고 읽는 데는 아무 지장이 없어요.</p>" +
+      '<p class="lead">지금 한 번에 허용해 두면 <b>갈라톡·통화 도중에 다시 묻지 않아요.</b><br>' +
+        "허용하지 않아도 갈라를 보고 읽는 데는 아무 지장이 없어요.</p>" +
       (REQUIRED.length
         ? "<h3>필수 접근권한</h3><ul>" + REQUIRED.map(row).join("") + "</ul>"
         : "") +
@@ -70,7 +73,8 @@
       '<div class="note">선택 권한은 동의하지 않아도 갈라를 이용할 수 있어요. ' +
         "다만 그 기능(통화·촬영·위치 보내기 등)은 쓸 수 없어요.<br>" +
         "허용한 뒤에도 <b>휴대폰 설정 → 갈라</b>에서 언제든 끌 수 있어요.</div>" +
-      "<button type=\"button\">확인했어요</button>";
+      '<button type="button" class="gpn-go">허용하고 시작하기</button>' +
+      '<button type="button" class="gpn-later">나중에 할게요</button>';
 
     function row(p) {
       return '<li><span class="ic">' + p.icon + '</span><div><div class="nm">' + p.name +
@@ -79,11 +83,61 @@
 
     document.body.appendChild(el);
     requestAnimationFrame(function () { el.classList.add("on"); });
-    el.querySelector("button").addEventListener("click", function () {
+    function close() {
       try { localStorage.setItem(KEY, "1"); } catch (_) {}
       el.classList.remove("on");
       setTimeout(function () { el.remove(); }, 300);
+    }
+    var go = el.querySelector(".gpn-go");
+    el.querySelector(".gpn-later").addEventListener("click", close);
+    go.addEventListener("click", async function () {
+      go.disabled = true; el.querySelector(".gpn-later").disabled = true;
+      var res = await requestAll(function (t) { go.textContent = t; });
+      try { localStorage.setItem("galla_perm_asked_all", JSON.stringify(res)); } catch (_) {}
+      close();
     });
+  }
+
+  /* 🔐 OS 권한 창을 차례로 — 하나가 실패·거부돼도 다음으로 넘어간다. 결과는 기록만 한다. */
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function withTimeout(p, ms) { return Promise.race([p, wait(ms).then(function () { return "timeout"; })]); }
+  async function requestAll(label) {
+    var res = {};
+    // ① 알림 — 네이티브 푸시 등록(권한 창 포함). 로그인 전이면 토큰 저장은 로그인 뒤 native-push 가 다시 한다.
+    label("알림 권한 묻는 중…");
+    try {
+      var PN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+      // OS 권한 창을 먼저(로그인 전이어도 뜨게) → 로그인돼 있으면 토큰 등록까지
+      if (PN && PN.requestPermissions) { await withTimeout(PN.requestPermissions(), 20000); }
+      if (window.GALLA_pushEnable) { await withTimeout(window.GALLA_pushEnable().catch(function () {}), 15000); }
+      if (PN && PN.checkPermissions) { var pr = await PN.checkPermissions(); res.notify = pr && pr.receive; }
+    } catch (_) { res.notify = "err"; }
+    await wait(250);
+    // ② 마이크·카메라 — 영상통화 명분으로 함께. 카메라를 거부하면 마이크만이라도.
+    label("마이크·카메라 권한 묻는 중…");
+    try {
+      var md = navigator.mediaDevices;
+      var gum = md && (md.__origGetUserMedia || md.getUserMedia);
+      if (gum) {
+        var stop = function (st) { try { st.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} };
+        try { var s1 = await withTimeout(gum.call(md, { audio: true, video: true }), 30000); if (s1 && s1.getTracks) { stop(s1); res.media = "granted"; } else res.media = s1; }
+        catch (_) {
+          try { var s2 = await withTimeout(gum.call(md, { audio: true }), 30000); if (s2 && s2.getTracks) { stop(s2); res.media = "mic-only"; } else res.media = s2; }
+          catch (e2) { res.media = "denied"; }
+        }
+      }
+    } catch (_) { res.media = "err"; }
+    await wait(250);
+    // ③ 위치 — 한 번 받아 보는 것으로 권한 창을 띄운다(좌표는 쓰지 않는다)
+    label("위치 권한 묻는 중…");
+    try {
+      if (window.GALLA_getPosition) { await withTimeout(window.GALLA_getPosition({ timeout: 15000 }), 20000); res.location = "granted"; }
+      else {
+        var G = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+        if (G && G.requestPermissions) { var gr = await withTimeout(G.requestPermissions(), 20000); res.location = gr && gr.location; }
+      }
+    } catch (e3) { res.location = (e3 && e3.kind) || "denied"; }
+    return res;
   }
 
   /* 언제 띄우나
