@@ -160,7 +160,7 @@ async function pushFcm(userIds: string[], payload: Record<string, unknown>): Pro
           message: {
             token: t.token,
             notification: {
-              title: String(payload.title || "GALLA"),
+              title: String(payload.title || "GALLA") + (payload.subtitle && payload.tag && /^dm-/.test(String(payload.tag)) ? " · " + String(payload.subtitle) : ""),   // 갈라톡은 「보낸 사람 · 갈라톡」(안드로이드엔 부제 칸이 없다)
               body: String(payload.body || ""),
               ...(payload.image ? { image: String(payload.image) } : {}),
             },
@@ -228,10 +228,39 @@ const NOTIFY: Record<string, { cat: string; t: string; b: (n: { nick: string; me
   /* 🫂 갈비스 선톡 — 문구는 갈비스가 그 사람 기억으로 이미 썼다.
      여기서 병맛 카피로 덮어쓰면 개인화가 통째로 날아간다. message 를 그대로 쓴다. */
   friend:          { cat: "friend",    t: "🫂 갈비스",          b: (n) => n.message || "잘 지내냐고 물어보러 옴" },
+  /* ── 26.9.21 알림 전수 점검 — 아래 종류들은 표에 없어서 전부 「🔔 갈라 소식」으로 나가고 있었다 ── */
+  reply:           { cat: "activity", t: "💬 답글 달림",         b: (n) => `${n.nick}이 네 댓글에 답글 닮 — 확인 ㄱㄱ` },
+  like:            { cat: "activity", t: "❤️ 좋아요 받음",       b: (n) => pick([`${n.nick}이 네 글 좋아함`, `${n.nick}한테 하트 받음 ❤️`]) },
+  plaza_like:      { cat: "activity", t: "👍 광장 반응 옴",     b: (n) => `${n.nick}이 네 광장글 밀어줌` },
+  follow_request:  { cat: "activity", t: "🙋 팔로우 요청",       b: (n) => `${n.nick}이 팔로우 요청함 — 수락할래?` },
+  follow_accept:   { cat: "activity", t: "🤝 팔로우 수락",       b: (n) => `${n.nick}이 네 요청 받아줌 — 이제 서로 봄` },
+  attack:          { cat: "activity", t: "⚔️ 네 댓글 공격당함",  b: (n) => `${n.nick}이 네 댓글 때림 — 반격 ㄱ?` },
+  defend:          { cat: "activity", t: "🛡️ 지원군 도착",       b: (n) => `${n.nick}이 네 댓글 지켜줌` },
+  issue_win:       { cat: "activity", t: "🏆 네 진영 승리",      b: (n) => n.message || "네가 고른 쪽이 이겼다 — 확인 ㄱㄱ" },
+  support:         { cat: "activity", t: "💸 후원 도착",         b: (n) => `${n.nick}이 널 밀어줌 💸` },
+  duel_challenge:  { cat: "duel",     t: "⚔️ 결투 신청장 도착", b: (n) => `${n.nick}이(가) 일기토 걸었다 — 튈래 붙을래?` },
+  duel_accept:     { cat: "duel",     t: "⚔️ 결투 수락",         b: (n) => `${n.nick}이 결투 받았다 — 준비해` },
+  duel_decline:    { cat: "duel",     t: "🏳️ 결투 거절",         b: (n) => `${n.nick}이 이번 결투는 피했다` },
+  duel_live:       { cat: "duel",     t: "🔴 일기토 시작",       b: (n) => n.message || "지금 붙는다 — 입장 ㄱㄱ" },
+  duel_voting:     { cat: "duel",     t: "🗳️ 일기토 판정 시작",  b: (n) => n.message || "누가 이겼는지 한 표 던져줘" },
+  duel_result:     { cat: "duel",     t: "🏁 일기토 결과",       b: (n) => n.message || "결과 나왔다 — 확인 ㄱㄱ" },
+  duel_extend:     { cat: "duel",     t: "⏱️ 일기토 연장",       b: (n) => n.message || "시간이 늘어났다" },
+  duel_forfeit:    { cat: "duel",     t: "🏳️ 상대 기권",         b: (n) => n.message || "상대가 기권했다" },
+  duel_watch:      { cat: "duel",     t: "👀 관전 중인 일기토",  b: (n) => n.message || "보던 일기토에 소식 있음" },
+  duel_cheer_win:  { cat: "duel",     t: "📣 응원한 쪽 승리",    b: (n) => n.message || "네가 밀어준 쪽이 이겼다" },
+  /* 관리자 전용 — 위기(자살·자해)는 즉시 알려야 하고, 신고·버그는 알되 조용히 */
+  crisis:          { cat: "admin",    t: "🆘 위기 감지",          b: (n) => n.message || "위기 신호 — 관제센터 확인" },
+  report:          { cat: "admin",    t: "🚨 신고 접수",          b: (n) => n.message || "새 신고 — 관제센터 확인" },
+  bug_report:      { cat: "admin",    t: "🐞 버그 신고 접수",     b: (n) => n.message || "새 버그 신고" },
   pager:           { cat: "pager",    t: "📟 삐-삐- 삐삐 왔다",  b: (n) => pick([`${n.nick}이(가) 삐삐 쳤다 — 음성사서함 확인 ㄱㄱ`, `📟 띠리리- 누가 널 찾는다 — 삐삐 도착`, `${n.nick}한테서 삐삐 옴 — 90년대냐 ㅋㅋ`]) },
 };
 const NOTIFY_DEFAULT = { cat: "activity", t: "🔔 갈라 소식", b: (n: { message: string }) => n.message || "새 소식 떴다 — 확인 ㄱㄱ" };
-const SKIP_NOTIFY = new Set(["follow"]);   // follow는 클라가 실시간 푸시함(중복 방지)
+/* 앱이 직접 보내는 종류는 브릿지에서 건너뛴다(같은 알림이 두 번 온다).
+   · follow — 팔로우 즉시 푸시(kind:"follow")
+   · dm — 갈라톡 메시지·부재중 전화는 발신 앱이 kind:"dm" 으로 보낸다. 여기서도 보내면 「🔔 갈라 소식」으로
+     한 번 더 왔다(26.9.21 두 폰 QA, 사장님: 「갈라톡이 왜 갈라 소식으로 오지」)
+   · bug_hunt — 자동 버그 스캔은 관리자 페이지로만(26.9.19 결정). 30분마다 폰이 울렸다 */
+const SKIP_NOTIFY = new Set(["follow", "dm", "bug_hunt"]);
 
 // 🔔 카테고리별 수신거부·방해금지(DND) 반영 — 서버가 발송 직전 걸러낸다.
 // push_allowed(uid, cat): 설정 없으면 true(기본 수신). 실패해도 보수적으로 발송(끊김 방지).
@@ -397,18 +426,22 @@ Deno.serve(async (req) => {
 
   // 기본: 1:1 DM
   const { data: m } = await sb.from("dm_messages")
-    .select("id,thread_id,sender_id,body,kind").eq("id", body.id).single();
+    .select("id,thread_id,sender_id,body,kind,meta").eq("id", body.id).single();
   if (!m || m.sender_id !== me) return j({ error: "not sender" }, 403);
   const { data: t } = await sb.from("dm_threads")
     .select("user_lo,user_hi").eq("id", m.thread_id).single();
   if (!t) return j({ error: "no thread" }, 404);
   const peer = t.user_lo === me ? t.user_hi : t.user_lo;
   const { data: sender } = await sb.from("users").select("nickname").eq("id", me).single();
+  /* 💬 갈라톡 — 제목은 보낸 사람, 부제는 「갈라톡」(어느 기능 알림인지 한눈에). 부재중 전화는 '전화' 분류로. */
+  const isCall = m.kind === "call";
+  const video = !!(m.meta && (m.meta as Record<string, unknown>).video);
   const sent = await pushTo([peer], {
     title: sender?.nickname || "새 메시지",
-    body: preview(m.kind, m.body),
+    subtitle: isCall ? (video ? "면상톡" : "육성톡") : "갈라톡",
+    body: isCall ? (video ? "📹 부재중 면상톡 — 다시 걸어볼래?" : "📞 부재중 육성톡 — 다시 걸어볼래?") : preview(m.kind, m.body),
     url: `/dm.html?dm=${me}`,
     tag: `dm-${m.thread_id}`,
-  }, "dm");
+  }, isCall ? "call" : "dm");
   return j({ ok: true, sent });
 });
