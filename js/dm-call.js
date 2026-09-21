@@ -1583,6 +1583,9 @@
   let _ctPollN = 0;
   async function _ctPoll() {
     _ctPollN++;
+    /* 🔬 자가테스트는 앱 안에서만 — 같은 계정으로 열린 PC 브라우저 탭도 플래그를 읽고 발신을 시도해
+       테스트가 꼬였다(26.9.21 맥 크롬 Chrome/153 이 15 Pro 와 동시에 발신). */
+    if (!(window.GALLA_isApp && window.GALLA_isApp())) { if (_ctPollN < 3) setTimeout(_ctPoll, 15000); return; }
     try {
       let _sb = sb || window.supabaseClient, _me = ME;
       if (_sb && !_me) { try { const { data } = await _sb.auth.getSession(); _me = data && data.session && data.session.user && data.session.user.id || null; } catch (_) {} }
