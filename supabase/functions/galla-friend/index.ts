@@ -985,24 +985,27 @@ async function searchContent(query: string) {
 /* 🧭 갈라 안의 코너(맛집·여행·숏판·롱판·예측·광장)를 '실제 데이터'로 훑는다(26.9.21 갈비스 전역화).
    예전엔 이슈·뉴스·핫튜브만 읽을 수 있어 맛집은 네이버 검색으로 새고, 여행·예측·광장은 아예 몰랐다.
    결과엔 id 를 꼭 싣는다 — point_to(type=section, id)로 그 화면에 데려가게. */
+/* 말하는 메뉴 ↔ 지도 분류 이름 별칭(고기집=육류·고기요리, 술집=주점·호프…) */
+const FOOD_SYN: Record<string, string[]> = { 고기집: ["고기", "육류", "삼겹", "갈비"], 고깃집: ["고기", "육류", "삼겹", "갈비"], 술집: ["주점", "호프", "이자카야", "포차", "술집"], 횟집: ["회", "횟집", "해산물"], 국밥: ["국밥", "순대", "해장"], 분식: ["분식", "떡볶이"], 빵집: ["베이커리", "빵"], 중국집: ["중식", "중국"], 일식: ["일식", "초밥", "스시"], 양식: ["양식", "파스타", "이탈리아"], 카페: ["카페", "커피", "디저트"], 치킨: ["치킨", "닭"], 삼겹살: ["삼겹", "돼지"], 소고기: ["소고기", "한우", "육류"] };
 const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim().slice(0, 40);
 const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
 const _km = (a: number, b: number, c: number, d: number) => { const R = 6371, r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r; const h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 const _dist = (km: number) => km < 1 ? Math.round(km * 1000 / 10) * 10 + "m" : km.toFixed(1) + "km";
-async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null) {
+async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null, nearAsk = false) {
   const q = _likeSafe(query || ""); const like = `%${q}%`; const n = Math.min(Math.max(limit || 5, 1), 8);
   try {
     /* 📍 근처 맛집 — 앱이 위치를 실어 보냈으면(권한이 이미 있을 때만) 반경 ~2km 를 지도에서 직접 본다(26.9.21 고도화) */
-    if (section === "food" && geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lon) && (!q || /(근처|주변|가까운|여기|내\s*위치|동네)/.test(q))) {
+    // ⚠️ '근처'는 모델이 넘긴 검색어가 아니라 **상대 원래 말**로 판정한다(nearAsk) — 모델이 query 를 "맛집"으로만 넘겨 위치가 무시됐다(26.9.22 QA)
+    if (section === "food" && geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lon) && (nearAsk || !q || /(근처|주변|가까운|여기|내\s*위치|동네)/.test(q))) {
       const { data } = await supa.rpc("food_map", { p_sw_lat: geo.lat - 0.018, p_sw_lon: geo.lon - 0.022, p_ne_lat: geo.lat + 0.018, p_ne_lon: geo.lon + 0.022, p_region: null, p_channel: null, p_only_unvisited: false, p_limit: 80, p_category: null, p_min_shows: null, p_spread: false, p_good_price: false, p_max_price: null });
       const menu = q.replace(/(근처|주변|가까운|여기|내\s*위치|동네|맛집|추천|해줘|알려줘|식당|밥집)/g, " ").trim().split(/\s+/).filter((w) => w.length >= 2);
       let ps: any[] = ((data as any)?.places || []).map((p: any) => ({ ...p, _km: _km(geo.lat, geo.lon, +p.lat, +p.lon) }));
-      if (menu.length) ps = ps.filter((p) => menu.some((w) => String(p.name + " " + p.category).includes(w)));
+      if (menu.length) ps = ps.filter((p) => menu.some((w) => (FOOD_SYN[w] || [w]).some((a) => String(p.name + " " + p.category).includes(a))));
       ps.sort((a, b) => (a._km + (b.rating_n ? 0 : 0.4)) - (b._km + (a.rating_n ? 0 : 0.4)));
       const top = ps.slice(0, n);
       return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined })),
         cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km)].filter(Boolean).join(" · "), img: x.cover || null })),
-        지침: "상대 위치 기준 가까운 갈라 지도 가게들이다(거리 포함). 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
+        지침: "상대의 **현재 위치 기준** 가까운 갈라 지도 가게들이다(거리 포함, 가까운 순). 위치를 이미 알고 있으니 동네를 묻지 마라. 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
     }
     if (section === "food") {
       let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price,cover_url").eq("status", "live");
@@ -1011,17 +1014,16 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
       const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, ""))   /* 「을지로」의 「로」까지 떼면 '을지'로 검색돼 선릉을지순대국이 나왔다 */.filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 3);
       /* 말하는 메뉴 ↔ 지도 분류 이름이 다르다(고기집=육류·고기요리, 술집=주점·호프) — 별칭을 풀어 같이 찾는다.
          「강남역」은 주소에 없다(강남대로) — 끝의 '역'을 뗀다. */
-      const SYN: Record<string, string[]> = { 고기집: ["고기", "육류", "삼겹", "갈비"], 고깃집: ["고기", "육류", "삼겹", "갈비"], 술집: ["주점", "호프", "이자카야", "포차", "술집"], 횟집: ["회", "횟집", "해산물"], 국밥: ["국밥", "순대", "해장"], 분식: ["분식", "떡볶이"], 빵집: ["베이커리", "빵"], 중국집: ["중식", "중국"], 일식: ["일식", "초밥", "스시"], 양식: ["양식", "파스타", "이탈리아"], 카페: ["카페", "커피", "디저트"], 치킨: ["치킨", "닭"], 삼겹살: ["삼겹", "돼지"], 소고기: ["소고기", "한우", "육류"] };
       for (const w0 of toks) {
         const w = /[가-힣]{2,}역$/.test(w0) ? w0.slice(0, -1) : w0;
-        const alts = SYN[w] || [w];
+        const alts = FOOD_SYN[w] || [w];
         const cond = alts.flatMap((a) => { const lw = `%${a}%`; return [`name.ilike.${lw}`, `address.ilike.${lw}`, `category.ilike.${lw}`]; }).join(",");
         rq = rq.or(cond);
       }
       const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
       return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined })),
         cards: (data || []).map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address)].filter(Boolean).join(" · "), img: x.cover_url || null })),
-        지침: /(근처|주변|가까운|내\s*위치)/.test(q)
+        지침: (nearAsk || /(근처|주변|가까운|내\s*위치)/.test(q))
           ? "⚠️ 상대 위치를 모른다(위치 권한 없음) — 전국 결과를 근처인 척 말하지 마라. '어느 동네야?'라고 묻거나 '위치 켜주면 근처로 찾아줄게'라고 해라."
           : "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
     }
@@ -1427,7 +1429,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
-  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null); return { result: r }; }
+  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
@@ -2418,7 +2420,8 @@ function charCap(t: string, cap: number): string {
   const budget = Math.max(2, cap) * 60;
   if (t.length <= budget) return t;
   const cut = t.slice(0, budget);
-  const m = cut.match(/[\s\S]*[.!?…\n](?=[^.!?…\n]*$)/);
+  // 「4.9」의 점은 문장 끝이 아니다 — 숫자 사이 점에서 자르면 "뼈탄집(4."로 잘렸다(26.9.22 QA)
+  const m = cut.match(/[\s\S]*(?:(?<![0-9])\.|[!?…\n])(?=(?:[^.!?…\n]|(?<=[0-9])\.)*$)/);
   const kept = (m ? m[0] : cut).trim();
   return kept.length >= 20 ? kept : cut.trim();   // 첫 문장부터 초장문이면 그냥 예산에서 컷
 }
@@ -4854,6 +4857,9 @@ ${actBlock}
     // 📍 앱이 실어 보낸 위치(권한이 이미 있을 때만, 소수 3자리 ≈ 100m 로 뭉개서 온다) — 근처 맛집용. 저장하지 않는다.
     const _reqGeo = (body?.geo && Number.isFinite(+body.geo.lat) && Number.isFinite(+body.geo.lon) && Math.abs(+body.geo.lat) <= 90 && Math.abs(+body.geo.lon) <= 180) ? { lat: +body.geo.lat, lon: +body.geo.lon } : null;
     let _usedWeather = false;
+    // 📍 위치 없이 「근처」를 물었다 — 전국 검색으로 근처인 척하지 않고 '위치 켜기' 칩을 준다(사장님 26.9.22)
+    const _nearNoGeo = !_reqGeo && /(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서)/.test(String(body?.message || ""))
+      && /(맛집|먹|밥|식당|술|카페|커피|고기|횟집|국밥|치킨|피자|빵|분식|집\s*(있|추천|어디)|가게)/.test(String(body?.message || ""));
     let handoffBlock = "";
     if (handoff && !userMsg) {
       /* 🚫 '감상평' 금지(사장님 2026-08-18): "재밌네" 같은 소리는 아무 가치가 없다.
@@ -4926,7 +4932,7 @@ ${actBlock}
       const picks = /([0-9]\s*번|번째|첫|두\s*번|세\s*번|마지막|제일|가장|그거|거기|그\s*가게|그\s*글|그\s*집|아까\s*(그|거)|위에\s*거)/.test(userMsg || "");
       if (userMsg && picks && ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000 && Array.isArray(ll.items) && ll.items.length >= 2) {
         listBlock = "🔢 [직전에 네가 보여준 목록 — 상대가 '2번/첫 번째/제일 ~한 거/그거'라고 하면 여기서 골라 point_to(type, id)로 열거나 그 항목 얘기를 해라. 새로 검색하지 마라]\n"
-          + ll.items.map((it: any, i: number) => `${i + 1}. ${it.title} (type:${it.ctype}, id:${it.id})`).join("\n");
+          + ll.items.map((it: any, i: number) => `${i + 1}. ${it.title}${it.sub ? " — " + it.sub : ""} (type:${it.ctype}, id:${it.id})`).join("\n");
       }
     } catch { /* */ }
     const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)"
@@ -5625,9 +5631,14 @@ ${parts.join("\n")}`;
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
         await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");   // 📡 대행 진행 라이브
-        if (c.function?.name === "galla_browse" && _reqGeo) (args as any).__geo = _reqGeo;   // 📍 근처 맛집
+        if (c.function?.name === "galla_browse") {   // 📍 근처 맛집 — 상대 원래 말 기준
+          const _near = /(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서|제일\s*가까)/.test(String(userMsg || ""));
+          if (_near) { (args as any).__near = true; if (_reqGeo) (args as any).__geo = _reqGeo; }
+        }
         if (c.function?.name === "weather_now") _usedWeather = true;
-        const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
+        const out = (_nearNoGeo && c.function?.name === "web_search")
+          ? { result: { results: [], note: "상대 위치를 모른다 — 검색하지 마라. '어느 동네야?'라고 묻고, 위치를 켜면 바로 근처로 찾아준다고 짧게 말해라(버튼은 붙어 있다)." } }
+          : await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
         // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
         if (out.result && (out.result as any)["중복주의"]) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null, dup: true };
@@ -6195,6 +6206,10 @@ ${parts.join("\n")}`;
       const st: any = _stock.find((x: any) => String(x.id) === String(a.id) && (!a.ctype || x.ctype === a.ctype));
       if (st) { if (!a.title && st.title) a.title = st.title; if (!a.sub && st.sub) a.sub = st.sub; if (!a.img && st.img) a.img = st.img; if (!a.source && st.source) a.source = st.source; }
     }
+    if (_nearNoGeo) {
+      for (let i = actions.length - 1; i >= 0; i--) if ((actions[i] as any)?.kind === "open") actions.splice(i, 1);   // 전국 네이버 결과는 '근처'가 아니다
+      if (!actions.some((a: any) => a.kind === "perm")) actions.unshift({ kind: "perm", perm: "location", resend: true, label: "📍 위치 켜고 근처 찾기" });
+    }
     /* 🌦 날씨를 답했으면 날씨 화면으로 가는 칩 하나(동네 제보·날씨방은 거기 있다) */
     if (_usedWeather && !actions.some((a: any) => a.kind === "app" && /tab=weather/.test(String(a.page || "")))) {
       actions.push({ kind: "app", op: "goto", page: "search.html?tab=weather", label: "🌦 날씨 화면 보기" });
@@ -6203,7 +6218,7 @@ ${parts.join("\n")}`;
     {
       const lk = actions.filter((a: any) => (a.kind === "view" && a.id) || (a.kind === "open" && a.url)).slice(0, 5);
       if (lk.length >= 2 && rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(),
-        items: lk.map((a: any) => a.kind === "view" ? { ctype: a.ctype || "issue", id: String(a.id), title: String(a.title || "").slice(0, 60) }
+        items: lk.map((a: any) => a.kind === "view" ? { ctype: a.ctype || "issue", id: String(a.id), title: String(a.title || "").slice(0, 60), sub: String(a.sub || "").slice(0, 60) }
           : { ctype: /watch\.html\?v=/.test(a.url) ? "hottube" : "link", id: (String(a.url).match(/[?&]v=([^&]+)/) || [])[1] || String(a.url).slice(0, 200), title: String(a.title || "").slice(0, 60) }) } };
     }
     const cleanActions = actions;

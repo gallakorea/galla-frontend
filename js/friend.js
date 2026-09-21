@@ -1404,6 +1404,23 @@
         };
         wrap.appendChild(sb2); return;
       }
+      // 📍 위치 켜기 칩 — 「근처 맛집」인데 위치 권한이 없을 때. 켜지면 방금 질문을 자동으로 다시 보낸다(26.9.22 사장님)
+      if(a.kind==="perm"){
+        var pc=el('<button class="fr-chip fr-chip-cta"></button>');
+        pc.textContent=a.label||"📍 위치 켜기";
+        pc.onclick=async function(){
+          pc.disabled=true;
+          var ok=false;
+          try{ if(window.GALLA_getPosition){ var p=await window.GALLA_getPosition({timeout:8000}); ok=!!(p&&isFinite(p.lat)); } }
+          catch(e){ if(e&&e.kind==="denied"&&window.GALLA_permHelp){ try{ window.GALLA_permHelp("location"); }catch(_){} } }
+          pc.disabled=false;
+          if(ok && a.resend){
+            var lastU=null; for(var i=history.length-1;i>=0;i--){ if(history[i].role==="user"){ lastU=history[i].content; break; } }
+            if(lastU) sendText(lastU);
+          }
+        };
+        wrap.appendChild(pc); return;
+      }
       // 🆘 위기 상담 카드 — 차분한 전용 카드 + 탭하면 바로 전화(tel:). 지어낸 번호 아님(서버가 고정 첨부).
       if(a.kind==="crisis"){
         var box=el('<div class="fr-crisis"></div>');
