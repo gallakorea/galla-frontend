@@ -466,39 +466,85 @@
   var _assist=null, _asEl=null, _asObs=null;
   /* 🧭 보조 창 — 화면 오른쪽 아래 반투명 유리 창. 페이지는 뒤로 비친다.
      갈비스 최신 말(3줄) + 작은 입력. [크게](전체 대화) [접기](알약) [닫기]. 답에 카드가 있으면 「카드 보기」. */
+  /* 🏝 갈비스 아일랜드(26.9.22 — 다이내믹 아일랜드·리퀴드 글래스·제미나이 오버레이 참고)
+     평소=아래 가운데 작은 유리 캡슐(눈 깜빡이는 갈비스 + 최신 한 줄) → 답이 오면 스프링으로 부풀어 카드(15px·상황 버튼)
+     → 페이지를 스크롤하면 다시 캡슐로. 생각 중엔 테두리가 빛나며 돌고 파형이 춤춘다. 전부 SVG·CSS(비용 0). */
+  var FRI_ORB='<svg class="fri-orb" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="friG" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#e6fbff"/><stop offset=".35" stop-color="#6fe0ff"/><stop offset=".75" stop-color="#4a6bff"/><stop offset="1" stop-color="#7b4dff"/></radialGradient></defs>'+
+    '<circle class="fri-ring" cx="20" cy="20" r="18.4" fill="none" stroke="url(#friG)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="26 90"/>'+
+    '<circle class="fri-body" cx="20" cy="20" r="14.5" fill="url(#friG)"/><ellipse cx="15" cy="13.5" rx="4" ry="2.2" fill="#fff" opacity=".45"/>'+
+    '<g class="fri-eyes"><ellipse cx="15.4" cy="20.5" rx="1.9" ry="2.9" fill="#061422"/><ellipse cx="24.6" cy="20.5" rx="1.9" ry="2.9" fill="#061422"/></g>'+
+    '<path class="fri-smile" d="M16.5 25.2q3.5 2.6 7 0" fill="none" stroke="#061422" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  var FRI_WAVE='<svg class="fri-wave" viewBox="0 0 22 16" aria-hidden="true"><rect x="1" y="5" width="3" height="6" rx="1.5"/><rect x="7" y="2" width="3" height="12" rx="1.5"/><rect x="13" y="4" width="3" height="8" rx="1.5"/><rect x="19" y="6" width="2.4" height="4" rx="1.2"/></svg>';
+  var FRI_IC={
+    sum:'<svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7"/></svg>',
+    side:'<svg viewBox="0 0 24 24"><path d="M12 4v16M5 8h14M5 8l-2.5 6a3 3 0 0 0 5 0zM19 8l-2.5 6a3 3 0 0 0 5 0z"/></svg>',
+    chart:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg>',
+    save:'<svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3.5L7 20z"/></svg>',
+    pin:'<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
+    more:'<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
+    join:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.4 2.4 4.6-5"/></svg>'
+  };
+  function friSparkle(){
+    if(!_asEl) return;
+    var box=_asEl.querySelector(".fri-spark"); if(!box) return; box.innerHTML="";
+    for(var i=0;i<7;i++){
+      var sp=el('<svg viewBox="0 0 10 10"><path d="M5 0l1.2 3.8L10 5 6.2 6.2 5 10 3.8 6.2 0 5l3.8-1.2z"/></svg>');
+      var ang=(i/7)*Math.PI*2 + Math.random()*.5, d=26+Math.random()*22;
+      sp.style.setProperty("--dx", Math.round(Math.cos(ang)*d)+"px"); sp.style.setProperty("--dy", Math.round(Math.sin(ang)*d*.6-8)+"px");
+      sp.style.animationDelay=(i*25)+"ms"; box.appendChild(sp);
+    }
+    setTimeout(function(){ box.innerHTML=""; }, 900);
+  }
+  function friExpand(on){
+    if(!_asEl) return;
+    _asEl.classList.toggle("fri-open", !!on);
+    if(on){ var mb=_asEl.querySelector(".fra-msg"); if(mb) mb.scrollTop=mb.scrollHeight; }
+  }
   function buildAssist(){
     if(_asEl) return _asEl;
-    _asEl=el('<div id="frAssist" role="dialog" aria-label="갈비스 보조 창">'+
-      '<div class="fra-head"><span class="fr-mav"><span class="fr-ring fr-r1"></span><span class="fr-core"></span></span><b>갈비스</b>'+
-        '<button class="fra-big" aria-label="크게 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>'+
-        '<button class="fra-min" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
-        '<button class="fra-x" aria-label="닫기">×</button></div>'+
-      '<div class="fra-msg"></div>'+
-      '<button class="fra-cards" hidden>카드 보기 ›</button>'+
-      '<div class="fra-quick"></div>'+
-      '<div class="fra-in"><input placeholder="갈비스한테 물어봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
+    _asEl=el('<div id="frAssist" class="fri" role="dialog" aria-label="갈비스">'+
+      '<div class="fri-spark"></div>'+
+      '<div class="fri-top">'+
+        '<button class="fri-cap" aria-label="갈비스 펼치기">'+FRI_ORB+'<span class="fri-tick">갈비스</span>'+FRI_WAVE+'</button>'+
+        '<button class="fra-big fri-ic" aria-label="전체 대화"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>'+
+        '<button class="fra-x fri-ic" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+      '</div>'+
+      '<div class="fri-card">'+
+        '<div class="fra-msg"></div>'+
+        '<button class="fra-cards" hidden>카드 보기 ›</button>'+
+        '<div class="fra-quick"></div>'+
+        '<div class="fra-in"><input placeholder="갈비스한테 물어봐" enterkeyhint="send"><button class="fra-send" aria-label="보내기">'+ICON.send+'</button></div>'+
+      '</div>'+
     '</div>');
     document.body.appendChild(_asEl);
     var inp=_asEl.querySelector("input");
     var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
     _asEl.querySelector(".fra-send").onclick=go;
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter" && !e.isComposing){ e.preventDefault(); go(); } });
+    _asEl.querySelector(".fri-cap").onclick=function(){ friExpand(!_asEl.classList.contains("fri-open")); };
     _asEl.querySelector(".fra-big").onclick=function(){ hideAssist(); open(); };
     _asEl.querySelector(".fra-cards").onclick=function(){ hideAssist(); open(); };
-    _asEl.querySelector(".fra-min").onclick=function(){ hideAssist(); if(mini){ mini.classList.remove("pop"); void mini.offsetWidth; mini.classList.add("on","pop"); } };
     _asEl.querySelector(".fra-x").onclick=function(){ closeAssist(); orb && orb.classList.remove("fr-hidden"); };
-    /* 페이지를 스크롤하는 동안엔 흐려져 비켜선다(보는 걸 가리지 않게) — 멈추면 돌아온다 */
-    var dimT=0; window.addEventListener("scroll", function(){ if(!_asEl.classList.contains("on")) return; _asEl.classList.add("fra-dim"); clearTimeout(dimT); dimT=setTimeout(function(){ _asEl.classList.remove("fra-dim"); }, 900); }, {passive:true, capture:true});
-    _asEl.addEventListener("pointerdown", function(){ _asEl.classList.remove("fra-dim"); });
-    // 말이 3줄에서 잘리면 눌러서 전부 펼친다(다시 누르면 접힘)
-    _asEl.querySelector(".fra-msg").addEventListener("click", function(){ _asEl.classList.toggle("fra-open"); });
+    // 페이지를 스크롤하면 캡슐로(보는 걸 가리지 않게) — 입력 중이면 그대로
+    var lastY=window.scrollY||0;
+    window.addEventListener("scroll", function(){
+      if(!_asEl.classList.contains("on") || document.activeElement===inp) return;
+      var y=window.scrollY||0; if(Math.abs(y-lastY)>24){ friExpand(false); lastY=y; }
+    }, {passive:true, capture:true});
+    // 쓸어내리면 접기, 쓸어올리면 전체 대화
+    var sy=null;
+    _asEl.querySelector(".fri-top").addEventListener("touchstart", function(e){ sy=e.touches[0].clientY; }, {passive:true});
+    _asEl.querySelector(".fri-top").addEventListener("touchend", function(e){ if(sy==null) return; var dy=e.changedTouches[0].clientY-sy; sy=null;
+      if(dy>28) friExpand(false); else if(dy<-40){ if(_asEl.classList.contains("fri-open")){ hideAssist(); open(); } else friExpand(true); } }, {passive:true});
+    // 말을 눌러도 펼침/접힘
+    _asEl.querySelector(".fra-msg").addEventListener("click", function(){ _asEl.classList.toggle("fri-full"); });
     return _asEl;
   }
-  /* 대화 로그(숨은 본창)에 새 말이 붙으면 보조 창에 최신 갈비스 말을 비춘다 */
+  var _friLastTxt="";
   function syncAssist(){
     if(!_asEl || !logEl) return;
     var msgs=logEl.querySelectorAll(".fr-msg"); var lastU=-1;
-    for(var i=msgs.length-1;i>=0;i--){ if(!msgs[i].classList.contains("fr-a")&&!msgs[i].querySelector(".fr-typing")&&msgs[i].classList.contains("fr-u")){ lastU=i; break; } }
+    for(var i=msgs.length-1;i>=0;i--){ if(msgs[i].classList.contains("fr-u")){ lastU=i; break; } }
     var parts=[], hasCards=false;
     for(var j=Math.max(lastU+1,0); j<msgs.length; j++){
       var bb=msgs[j].querySelector(".fr-bubble"); if(!bb) continue;
@@ -506,14 +552,19 @@
       var t=""; bb.childNodes.forEach(function(n){ if(n.nodeType===3) t+=n.textContent; else if(n.classList && !n.classList.contains("fr-acts")) t+=n.textContent; });
       t=t.trim(); if(t) parts.push(t);
     }
-    var typingNow=!!logEl.querySelector(".fr-typing");
-    var box=_asEl.querySelector(".fra-msg");
-    box.innerHTML = typingNow && !parts.length ? '<span class="fra-dots"><i></i><i></i><i></i></span>' : "";
-    if(parts.length){ box.textContent=parts.slice(-2).join("\n"); }
+    var thinking=!!logEl.querySelector(".fr-typing") && !parts.length;
+    _asEl.classList.toggle("fri-think", thinking);
+    var box=_asEl.querySelector(".fra-msg"), tick=_asEl.querySelector(".fri-tick");
+    if(thinking){ tick.textContent="생각하는 중…"; }
+    var txt=parts.slice(-3).join("\n");
+    if(txt && txt!==_friLastTxt){
+      _friLastTxt=txt; box.textContent=txt;
+      var last=parts[parts.length-1]||""; tick.textContent=last.replace(/\s+/g," ").slice(0,40);
+      _asEl.classList.remove("fri-full"); friExpand(true); friSparkle();
+      _asEl.classList.remove("fri-pop"); void _asEl.offsetWidth; _asEl.classList.add("fri-pop");
+    }
     _asEl.querySelector(".fra-cards").hidden=!hasCards;
-    var mb=_asEl.querySelector(".fra-msg"); mb.classList.toggle("fra-more", mb.scrollHeight > mb.clientHeight + 4 || _asEl.classList.contains("fra-open"));
   }
-  function hideAssist(){ if(_asEl) _asEl.classList.remove("on"); }
   function openAssist(a, fromBoot){
     if(!sheet) build();
     _assist={ type:(a&&a.k)||(a&&(a.ctype||(/watch\.html/.test(String(a.url||""))?"hottube":"")))||"", id:(a&&a.id)||((String((a&&a.url)||"").match(/[?&]v=([^&]+)/)||[])[1])||"", title:(a&&(a.title||a.t))||"" };
@@ -524,14 +575,16 @@
     if(mini) mini.classList.remove("on");
     var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
     orb && orb.classList.add("fr-hidden");
-    buildAssist(); _asEl.classList.remove("on"); void _asEl.offsetWidth; _asEl.classList.add("on");
+    buildAssist(); _friLastTxt=""; _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
+    _asEl.querySelector(".fri-tick").textContent="보는 중…";
     if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
-    _asEl.querySelector(".fra-msg").innerHTML='<span class="fra-dots"><i></i><i></i><i></i></span>';
+    _asEl.querySelector(".fra-msg").textContent="";
     /* 한 번 누르면 되는 도움 — 콘텐츠 종류별 */
     var QK={ issue:["세 줄 요약","넌 어느 편?"], news:["요약해줘","쟁점만"], predict:["판세 알려줘","나도 참여할래"], food:["저장해줘","근처 다른 데"],
       travel:["저장해줘","근처 맛집"], hottube:["비슷한 거 더"], video:["비슷한 거 더"], plaza:["요약해줘","댓글 분위기"], gallari:["비슷한 거 더"] };
     var qk=_asEl.querySelector(".fra-quick"); qk.innerHTML="";
-    (QK[_assist.type]||["요약해줘"]).forEach(function(t){ var b=el('<button class="fra-q"></button>'); b.textContent=t;
+    var QI={ "세 줄 요약":"sum","요약해줘":"sum","쟁점만":"sum","넌 어느 편?":"side","판세 알려줘":"chart","나도 참여할래":"join","저장해줘":"save","근처 다른 데":"pin","근처 맛집":"pin","비슷한 거 더":"more","댓글 분위기":"chart" };
+    (QK[_assist.type]||["요약해줘"]).forEach(function(t, qi){ var b=el('<button class="fra-q" style="--qi:'+qi+'">'+(FRI_IC[QI[t]]||FRI_IC.more)+'<span></span></button>'); b.querySelector("span").textContent=t;
       b.onclick=function(){ sendText(t==="세 줄 요약"?"이거 세 줄로 요약해줘":t==="넌 어느 편?"?"넌 이거 어느 편이야?":t==="판세 알려줘"?"이 예측 판세 어때?":t==="근처 다른 데"?"이 근처 다른 맛집도 보여줘":t==="근처 맛집"?"이 근처 맛집 찾아줘":t==="비슷한 거 더"?"이거랑 비슷한 거 더 보여줘":t==="쟁점만"?"이 뉴스 쟁점만 짚어줘":t==="댓글 분위기"?"여기 댓글 분위기 어때?":t); };
       qk.appendChild(b); });
     (async function(){
@@ -2374,6 +2427,7 @@
     }catch(e){}
     peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
     window.GALLA_openFriend = openGated;
+    window.GALLA_openAssist = function(a){ try{ openAssist(a||{}); }catch(e){} };   // 🏝 다른 화면에서 갈비스 아일랜드를 띄울 때
     /* 🛠 도킹 미니챗을 밖에서 연다 — 작업 화면 아래에 갈비스가 붙어 같이 상의하는 형태.
        화면은 위에 그대로 두고 대화만 반쪽으로 올라온다(스크림 pass-through). */
     window.GALLA_openDock = async function (work) { if (await guestBlocked()) return; try { openDock(work || { type: "agent" }); } catch (e) {} };
