@@ -193,6 +193,8 @@
       go(idx + 1);
     };
     ov.addEventListener("click", function (e) {
+      // ⚠️ 건너뛰기 클릭이 버블링돼 여기서 음악을 다시 켰다 — 투어는 닫혔는데 인덱스에서 BGM 이 계속 났다(26.9.21 사장님)
+      if (_finished || e.target.closest(".gt-skip")) return;
       startMusic();   // 첫 제스처에서 BGM 활성(자동재생 제약 우회)
       if (e.target.closest(".gt-mute")) return;
       if (e.target.closest(".gt-cta")) return finish(true);
@@ -249,6 +251,7 @@
   }
 
   function finish(completed) {
+    _finished = true;
     var ov = window.__gtour || document.querySelector(".gtour");
     try { localStorage.setItem(KEY, "1"); } catch (e) {}
     // 기존 "편 고르기" 온보딩과 겹치지 않게 — 이 투어가 첫경험을 대신한다
@@ -415,7 +418,7 @@
   //    OfflineAudioContext로 미리 WAV로 렌더해 HTMLAudioElement(미디어 경로)로 재생한다.
   //    미디어 경로는 네이티브 .playback 세션과 함께 무음 스위치도 넘어가 확실히 소리가 난다.
   var _music = { on: false };
-  var _bgmEl = null, _bgmUrl = null, _bgmBuilding = false;
+  var _bgmEl = null, _bgmUrl = null, _bgmBuilding = false, _finished = false;
   function octone(oc, freq, t0, dur, type, gain) {
     var o = oc.createOscillator(), g = oc.createGain();
     o.type = type || "sine"; o.frequency.setValueAtTime(freq, t0);
@@ -483,6 +486,7 @@
     try { var c = ac(); if (c && c.state === "suspended") c.resume(); } catch (e) {}
   }
   function startMusic() {
+    if (_finished) return;   // 끝난 뒤엔 어떤 경로로도 다시 켜지지 않게
     unlockAudio();
     if (_muted || _music.on) return;
     _music.on = true;
@@ -492,7 +496,7 @@
   }
   function stopMusic() {
     _music.on = false;
-    try { if (_bgmEl) _bgmEl.pause(); } catch (e) {}
+    try { if (_bgmEl) { _bgmEl.pause(); _bgmEl.currentTime = 0; } } catch (e) {}
   }
 
   function setMuted(m) {
