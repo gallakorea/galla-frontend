@@ -6075,9 +6075,10 @@
       if (media) {
         await qsleep(1500);
         qlog('R room image loaded=' + (media.im.complete && media.im.naturalWidth > 0) + ' ' + media.im.naturalWidth + 'x' + media.im.naturalHeight);
-        media.vp.click(); await qsleep(1800);
-        const va = window.__dmVaudio && window.__dmVaudio();
-        qlog('R room voice playing=' + !!(va && !va.paused && va.currentTime > 0) + ' t=' + (va ? va.currentTime.toFixed(2) : '-') + ' err=' + (va && va.error ? va.error.code : '-'));
+        media.vp.click();
+        let va = null;
+        for (let i = 0; i < 8; i++) { await qsleep(700); va = window.__dmVaudio && window.__dmVaudio(); if (va && !va.paused && va.currentTime > 0) break; }
+        qlog('R room voice playing=' + !!(va && !va.paused && va.currentTime > 0) + ' t=' + (va ? va.currentTime.toFixed(2) : '-') + ' err=' + (va && va.error ? va.error.code : '-') + ' rs=' + (va ? va.readyState : '-') + ' ns=' + (va ? va.networkState : '-') + ' paused=' + (va ? va.paused : '-') + ' src=' + (va ? String(va.src).slice(0, 12) : '-') + ' url=' + String(media.vp.dataset.url || '').slice(-12));
         if (va && !va.paused) media.vp.click();
         await qsnap('R-room-media');
         const card = media.po.closest('.dm-poll-card'); const pid = card && card.dataset.poll;
