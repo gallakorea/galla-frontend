@@ -4251,8 +4251,29 @@
     }
     note.innerHTML = `${ICONS.timer} 메시지가 <b>${EXP_LABEL[curExpire]}</b> 뒤 사라져요`;
   }
+  /* 🔔 갈라톡 알림 권한 — 대화방을 처음 열 때 한 번 묻는다(26.9.21 두 폰 QA).
+     예전엔 온보딩 투어의 '선택' 버튼으로만 물어서, 그걸 안 누른 사람은 알림 토큰이 아예 없었다 —
+     메시지가 와도 앱을 끄면 영영 모른다(새로 깐 12 mini 가 정확히 이 상태였다: native_push_tokens 0행).
+     거부한 적 없고 꺼져 있을 때만, 먼저 이유를 보여주고(GALLA_permPrime) 동의하면 OS 창. 미루면 7일 뒤 다시. */
+  const DM_PUSH_ASK_KEY = 'galla_dm_push_asked_at';
+  async function maybeAskDmPush() {
+    try {
+      if (!(window.GALLA_isApp && window.GALLA_isApp())) return;
+      if (!window.GALLA_pushStatus || !window.GALLA_pushEnable) return;
+      const last = +(localStorage.getItem(DM_PUSH_ASK_KEY) || 0);
+      if (last && Date.now() - last < 7 * 86400000) return;
+      const st = await window.GALLA_pushStatus();
+      if (st !== 'off') return;                    // on=이미 켬, denied=OS 가 더는 안 띄움(설정 화면 안내는 알림 설정에서)
+      localStorage.setItem(DM_PUSH_ASK_KEY, String(Date.now()));
+      const go = window.GALLA_permPrime ? await window.GALLA_permPrime('notify') : true;
+      if (!go) return;
+      try { await window.GALLA_pushEnable(); toastMini('알림을 켰어요 — 답장이 오면 바로 알려드릴게요'); } catch (_) {}
+    } catch (_) {}
+  }
+
   async function openThread(tid, peer, name) {
     curThread = tid; curPeer = peer;
+    setTimeout(maybeAskDmPush, 1200);   // 🔔 방이 뜬 뒤 살짝 늦게(화면 전환과 겹치지 않게)
     hideJump();   // 다른 방에서 세던 새 메시지 개수를 들고 오지 않게
     paintSecretUI();
     curExpire = null; paintExpBanner();
