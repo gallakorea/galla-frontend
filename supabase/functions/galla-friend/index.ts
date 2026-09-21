@@ -2201,6 +2201,21 @@ ${memBlock}${tasteBlock}${bannedBlock}`;
 
 // 💬 카톡식 짧은 말풍선 — 한 버블 '최대 한 줄 반(~40자)'. 넘으면 문장/어절 경계에서 잘라 여러 버블로(최대 4).
 const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
+/* 🇰🇷 어절 끝 말끝 — 모델이 마침표 없이 「…권력질이지 너 오늘 진짜 고생했다 이번엔 뭐라고…」처럼 이어 쓰면
+   문장 경계가 안 보여서 말풍선이 아무 어절에서나 잘렸다(26.9.22 QA: 「어이없는 / 짓이지」, 「밤새 만든 거 / 순식간에」).
+   이런 말끝으로 끝나는 어절 뒤를 '문장 끝'으로 본다. 관형형(-는·-ㄴ·-던)·조사로 끝나는 어절은 안 걸린다. */
+const KO_END = /(?:[다지야네냐래자까죠요줘봐임음듯함해돼워]|찮아|거든|잖아|더라|구나|는데|했어|했지|거야|거지|같아|좋아|싫어|몰라|있어|없어|했잖|[ㅋㅎ]{2,}|ㅠ+|ㅜ+|~|\.\.+)$/;
+function koBoundaries(s: string): string[] {
+  const words = String(s || "").split(/\s+/).filter(Boolean);
+  const out: string[] = []; let cur = "";
+  for (const w of words) {
+    cur = cur ? cur + " " + w : w;
+    // 한 글자 어절(「네 아이디어」의 네=너의)은 말끝으로 안 친다 — ㅋㅋ·ㅠ 는 예외
+    if (cur.length >= 12 && KO_END.test(w) && (w.length >= 2 || /[ㅋㅎㅠㅜ~]/.test(w))) { out.push(cur); cur = ""; }
+  }
+  if (cur) { if (out.length && cur.length < 8) out[out.length - 1] += " " + cur; else out.push(cur); }
+  return out;
+}
 // 👁 콘텐츠를 실제로 열어줬는데 답 끝에 '취향 되묻기'가 붙으면(딜리버 후 또 되묻기=답답) 그 꼬리를 잘라낸다.
 const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아(해|하는)|좋아하는\s*(편|거)\s*(이야|야|뭐|있)|뭐\s*보는\s*(거|게)\s*좋아|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐)|(먹방|여행|예능|게임|밈|영화)\s*(이야|아님|쪽)\??|뭐가?\s*(좋아|땡)|어떤\s*쪽)/;
 // 🛡 기억으로 저장하면 안 되는 '지시문' 패턴 — 사실이 아니라 갈비스의 행동을 규정하려는 문장.
@@ -2256,6 +2271,16 @@ function bubbleize(t: string): string {
      하드랩은 진짜 긴 덩이(90자↑)에만. 짧은 문장이 두 버블로 쪼개지는 게 더 어색하다. */
   const hardWrap = (s: string): string[] => {
     if (s.length <= 90) return [s];
+    /* 🇰🇷 먼저 말끝(~지·~야·~다·ㅋㅋ) 경계로 — 마침표 없이 이어 쓴 여러 문장을 문장 단위로 되돌린다 */
+    {
+      const ko = koBoundaries(s);
+      if (ko.length > 1 && ko.every((x) => x.length <= 90)) {
+        const out: string[] = []; let cur = "";
+        for (const c of ko) { if (cur && (cur + " " + c).length > 60) { out.push(cur); cur = c; } else cur = cur ? cur + " " + c : c; }
+        if (cur) out.push(cur);
+        return out;
+      }
+    }
     /* 긴 문장은 먼저 '말의 이음매'(— · , · ㅋㅋ 뒤 · 근데/그리고/아니면 앞)에서 나눈다 — 아무 어절에서나 자르면
        「근데 이 시간에 / 어디까지 여는지는」처럼 말 중간이 끊겼다(26.9.22 QA). 이음매가 없을 때만 어절 랩. */
     const soft = s.split(/(?<=\s—|—\s|,|[ㅋㅎ]{2,})\s+|\s+(?=(?:근데|그리고|아니면|그래서|그러니까|대신)\s)/).map((x) => x.trim()).filter(Boolean);
@@ -2266,8 +2291,11 @@ function bubbleize(t: string): string {
       return out;
     }
     const words = s.split(/\s+/); const out: string[] = []; let cur = "";
+    // 「어이없는 / 짓이지」 방지 — 관형형(-는·-은·-던·-ㄴ)·조사로 끝난 어절 뒤에선 한 어절 더 끌고 간다(최대 60자)
+    const HOLD = /(?:는|은|던|을|의|이|가|를|에|와|과|도|만|로|랑|한|된|된|운|쁜|만든|거|게|걸)$/;
     for (const w of words) {
-      if (cur && (cur + " " + w).length > BUBBLE_MAX) { out.push(cur); cur = w; }
+      const last = cur.split(" ").pop() || "";
+      if (cur && (cur + " " + w).length > BUBBLE_MAX && !(HOLD.test(last) && (cur + " " + w).length <= 60)) { out.push(cur); cur = w; }
       else cur = cur ? cur + " " + w : w;
     }
     if (cur) out.push(cur);
@@ -2551,7 +2579,11 @@ function charCap(t: string, cap: number): string {
   const cut = t.slice(0, budget);
   // 「4.9」의 점은 문장 끝이 아니다 — 숫자 사이 점에서 자르면 "뼈탄집(4."로 잘렸다(26.9.22 QA)
   const m = cut.match(/[\s\S]*(?:(?<![0-9])\.|[!?…\n])(?=(?:[^.!?…\n]|(?<=[0-9])\.)*$)/);
-  const kept = (m ? m[0] : cut).trim();
+  let kept = (m ? m[0] : "").trim();
+  /* 🇰🇷 마침표 없이 이어 쓴 답은 마침표 경계가 앞쪽에만 있다 → 말끝 어절 경계가 더 뒤면 그걸 쓴다(26.9.22 「…것마냥」 잘림) */
+  const ko = koBoundaries(cut); ko.pop();   // 마지막 조각은 예산에서 잘린 미완성일 수 있다
+  const koKept = ko.join(" ").trim();
+  if (koKept.length > kept.length) kept = koKept;
   return kept.length >= 20 ? kept : cut.trim();   // 첫 문장부터 초장문이면 그냥 예산에서 컷
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2613,9 +2645,11 @@ function enforceContract(reply: string, o: {
        (실측: "…아니면 블랙미스 신작 / \"Black Myth: Zhong Kui\" 게임플레이 트레일러").
        말풍선이 2개 이상일 때만 그 미완성 꼬리를 버린다(하나뿐이면 버릴 게 없다). */
     const bs = x.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-    if (bs.length >= 2 && !/[.!?…~ㅋㅎ)\]"'』」]$/.test(bs[bs.length - 1])) {
+    const _done = (b: string) => /[.!?…~ㅋㅎ)\]"'』」]$/.test(b) || KO_END.test(b.split(/\s+/).pop() || "");
+    while (bs.length >= 2 && !_done(bs[bs.length - 1])) {
       const cut = bs.slice(0, -1).join("\n\n");
-      if (hasText(cut)) x = cut;
+      if (!hasText(cut)) break;
+      bs.pop(); x = cut;
     }
   }
   const bare = x.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
@@ -4352,6 +4386,12 @@ Deno.serve(async (req) => {
           check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
         { name: "긴문장_이음매에서_나눔", opts: {}, input: "220m면 걸어서 5분이면 후루룩이네 해장이면 돈수백 순한 국물 원하면 육전국밥 쪽이고 — 근데 이 시간에 어디까지 여는지는 나도 장담 못 하겠어 진짜로 확인해봐야 돼",
           check: (o) => /이 시간에\n\n어디까지/.test(o) ? `말 중간 끊김: ${JSON.stringify(o)}` : null },
+        { name: "마침표없는_긴답_말끝에서_나눔", opts: {}, input: "아 진짜 ㅅㅂ 그 인간은 뭐가 문제냐 진짜 남이 밤새 만든 걸 손 한 번 까딱해서 엎는 게 제일 ㅈㄴ 어이없는 짓이지 자기 손으로 만든 것도 아니면서 자기 생각이 더 맞는 것마냥 구는 거 진짜 꼴 보기 싫다 너 오늘 진짜 고생했어",
+          check: (o) => /어이없는\n\n짓이지|만든\n\n걸|것마냥$/.test(o) ? `말 중간 끊김: ${JSON.stringify(o)}` : null },
+        { name: "한글자_네는_말끝아님", opts: {}, input: "그건 갈아엎는 거랑 급이 다른데 보고서 손대는 건 아직 참을 만한데, 네 아이디어를 지 이름 걸고 발표하는 건 도둑놈이지 진짜",
+          check: (o) => /네\n\n아이디어/.test(o) ? `'네'에서 끊김: ${JSON.stringify(o)}` : null },
+        { name: "초장문_말끝에서_자름", opts: { light: true }, input: "그건 진짜 뒤에서 칼 꽂는 거지 자기 쿨한 척은 못 하고 그 사람 본인 인격 보여주는 거네 헤어진 것만으로도 잘한 거다 그런 애 말 믿는 사람 없어 신경 쓰지 마 너는 너대로 잘 살면 되는 거야 진짜로 그게 제일 큰 복수거든 알지 오늘은 맛있는 거 먹고 푹 자",
+          check: (o) => /(지|네|다|야|마|거든|알지|자)$/.test(o.trim()) ? null : `말끝 아닌 데서 잘림: ${JSON.stringify(o)}` },
         { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
           check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
