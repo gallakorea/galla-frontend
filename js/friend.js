@@ -540,6 +540,7 @@
     _asEl.querySelector(".fra-msg").addEventListener("click", function(){ _asEl.classList.toggle("fri-full"); });
     return _asEl;
   }
+  function hideAssist(){ if(_asEl) _asEl.classList.remove("on","fri-open","fri-think"); }
   var _friLastTxt="";
   function syncAssist(){
     if(!_asEl || !logEl) return;
@@ -568,13 +569,21 @@
   function openAssist(a, fromBoot){
     if(!sheet) build();
     _assist={ type:(a&&a.k)||(a&&(a.ctype||(/watch\.html/.test(String(a.url||""))?"hottube":"")))||"", id:(a&&a.id)||((String((a&&a.url)||"").match(/[?&]v=([^&]+)/)||[])[1])||"", title:(a&&(a.title||a.t))||"" };
-    try{ sessionStorage.setItem("fr_assist", JSON.stringify({ at:Date.now(), k:_assist.type, id:_assist.id, t:_assist.title })); sessionStorage.removeItem("fr_mini"); }catch(e){}
+    try{ sessionStorage.setItem("fr_assist", JSON.stringify({ at:Date.now(), k:_assist.type, id:_assist.id, t:_assist.title, from:location.pathname })); sessionStorage.removeItem("fr_mini"); }catch(e){}
     // 본창은 내리고(대화는 그대로 보존) 보조 창을 띄운다
     if(sheet) sheet.classList.remove("fr-open","fr-dock","fr-dock-min");
     _dock=false; document.body.classList.remove("fr-chatting","fr-docked");
     if(mini) mini.classList.remove("on");
     var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
     orb && orb.classList.add("fr-hidden");
+    /* 그 콘텐츠를 떠나면(다른 화면으로 이동) 아일랜드도 물러난다 — 주소에 그 id 가 사라지면 닫고 오브 복귀 */
+    clearInterval(_asWatch);
+    var _asStart=Date.now();
+    _asWatch=setInterval(function(){
+      if(!_assist || !_assist.id || Date.now()-_asStart<2500) return;
+      var here=location.pathname+location.search+location.hash;
+      if(here.indexOf(String(_assist.id))<0 && !/tab=(food|travel)/.test(here)){ closeAssist(); orb && orb.classList.remove("fr-hidden"); }
+    }, 1000);
     buildAssist(); _friLastTxt=""; _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
     _asEl.querySelector(".fri-tick").textContent="보는 중…";
     if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
@@ -598,7 +607,9 @@
       syncAssist();
     })();
   }
+  var _asWatch=0;
   function closeAssist(){
+    clearInterval(_asWatch); _asWatch=0;
     _assist=null; try{ sessionStorage.removeItem("fr_assist"); }catch(e){}
     hideAssist();
   }
@@ -1806,6 +1817,8 @@
     })();
   }
   function openCornerPlace(tab, fnName, id){
+    /* 웹(페이지 새로 뜸)은 콜백이 사라진다 — 주소에 place 를 실어 그 페이지가 직접 연다 */
+    if(!window.GALLA_IS_APP && typeof window[fnName]!=="function"){ nav("search.html?tab="+tab+"&place="+encodeURIComponent(id)); return; }
     goCorner(tab, function(){
       var n=0; (function w(){ var f=window[fnName]; if(typeof f==="function"){ try{ f(id); }catch(e){} return; } if(++n<60) setTimeout(w,150); })();
     });
@@ -2415,7 +2428,11 @@
     build();
     try{
       var fa=JSON.parse(sessionStorage.getItem("fr_assist")||"null");
-      if(fa && (Date.now()-fa.at) < 15*60000){ setTimeout(function(){ openAssist({ k:fa.k, id:fa.id, t:fa.t }, true); }, 300); }
+      /* 이어받기는 '그 콘텐츠 페이지'에서만 — 여기가 떠난 페이지(from)거나 주소에 그 id 가 없으면 버린다(홈까지 따라오던 것) */
+      var here=location.pathname+location.search;
+      if(fa && (Date.now()-fa.at) < 2*60000 && fa.from!==location.pathname && (!fa.id || here.indexOf(String(fa.id))>=0 || /search\.html/.test(location.pathname))){
+        setTimeout(function(){ openAssist({ k:fa.k, id:fa.id, t:fa.t }, true); }, 300);
+      } else { try{ sessionStorage.removeItem("fr_assist"); }catch(e){} }
     }catch(e){}
     try{
       var fm=JSON.parse(sessionStorage.getItem("fr_mini")||"null");
