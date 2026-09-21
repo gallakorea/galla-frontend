@@ -4342,6 +4342,17 @@
             <span class="dm-share-title">${esc(m.meta.title || '콘텐츠')}</span>
             <span class="dm-share-src">GALLA에서 보기 ›</span>
           </span></a>`;
+    } else if (locOf(m.body)) {
+      /* 📍 위치 카드 — 예전엔 지도 주소를 글자 그대로 찍어서 눌리지도 않았다(26.9.21 사장님).
+         메시지 형식(kind:'text')은 그대로 두고 그릴 때만 카드로 바꾼다 — 옛 앱을 쓰는 상대도 깨지지 않게. */
+      const L = locOf(m.body);
+      inner = `<button type="button" class="dm-loc-card" data-lat="${L.lat}" data-lng="${L.lng}">
+          <span class="dm-loc-map" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+          </span>
+          <span class="dm-loc-txt"><b>${mine ? '내 위치' : '상대 위치'}</b><span>탭하면 지도에서 열려요</span></span>
+          <span class="dm-loc-go" aria-hidden="true">›</span>
+        </button>`;
     } else {
       inner = `<span class="dm-bub-body">${markKeywords(esc(m.body))}</span>`;
     }
@@ -5213,6 +5224,41 @@
   }
 
   /* 📍 위치 공유 — 현재 좌표를 지도 링크로. (좌표는 메시지 본문에만, URL 파라미터 노출 최소) */
+
+  /* 📍 위치 메시지 판별 — 본문의 구글 지도 좌표를 꺼낸다. 위치 메시지가 아니면 null. */
+  function locOf(body) {
+    const m = String(body || '').match(/📍[^\n]*\n\s*https:\/\/maps\.google\.com\/\?q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (!m) return null;
+    const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+    if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat: lat.toFixed(6), lng: lng.toFixed(6) };
+  }
+  /* 기기의 지도 앱으로 연다 — 아이폰은 애플 지도, 안드로이드는 기본 지도 앱 선택창, 웹은 구글 지도.
+     앱 웹뷰 안에서 주소를 열면 허용 목록에 없어 막히거나 앱 화면을 덮어버린다. 반드시 밖으로 보낸다. */
+  async function openMap(lat, lng) {
+    const ua = navigator.userAgent;
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+    const native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    const url = isIOS ? `https://maps.apple.com/?q=${lat},${lng}&ll=${lat},${lng}`
+      : (native ? `geo:${lat},${lng}?q=${lat},${lng}` : `https://maps.google.com/?q=${lat},${lng}`);
+    try {
+      const L = native && window.Capacitor.Plugins && window.Capacitor.Plugins.AppLauncher;
+      if (L) { await L.openUrl({ url }); return; }
+    } catch (_) {}
+    try { window.open(url, '_blank', 'noopener'); } catch (_) { location.href = url; }
+  }
+
+  // 📍 위치 카드 탭 → 갈라 안에서 네이버 지도로(사장님: 「네이버 지도 연동해서 띄워」)
+  //    지도 모듈이 없으면(구버전 번들) 기기 지도 앱으로 넘긴다 — 어느 쪽이든 막다른 길은 없다
+  document.addEventListener('click', (e) => {
+    const c = e.target.closest && e.target.closest('.dm-loc-card');
+    if (!c) return;
+    e.preventDefault(); e.stopPropagation();
+    const title = c.querySelector('.dm-loc-txt b')?.textContent || '위치';
+    if (window.GALLA_showLocation) window.GALLA_showLocation(c.dataset.lat, c.dataset.lng, title);
+    else openMap(c.dataset.lat, c.dataset.lng);
+  }, true);
+
   async function shareLocation() {
     /* 📍 GALLA_getPosition 이 웹/네이티브 차이를 흡수한다 — 앱에서는 Capacitor 플러그인을 쓴다.
        예전엔 navigator.geolocation 을 그대로 불러 iOS 앱에서 콜백이 영영 안 왔다
