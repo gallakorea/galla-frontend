@@ -401,7 +401,8 @@
   }
   function open(){
     if(!sheet) build();
-    hideAssist();
+    if(_asEl) _asEl.classList.remove("on","fri-open","fri-think");
+    setSurface("sheet");
     bindKb();                                     // 키보드 트래킹(1회 등록)
     bindStick(); _stick=true;                     // 하단 고정 감시자(1회 등록) — 열 때는 항상 바닥부터
     if(mini) mini.classList.remove("on");
@@ -442,9 +443,10 @@
       if(sheet) sheet.classList.remove("fr-open");
       document.body.classList.remove("fr-chatting");
       orb && orb.classList.add("fr-hidden");
-      _asEl.classList.add("on"); friExpand(false); syncAssist();
+      setSurface("island"); _asEl.classList.add("on"); friExpand(false); syncAssist();
       return;
     }
+    setSurface("orb");
     try{ sessionStorage.removeItem("fr_mini"); }catch(e){}
     var _ms=document.getElementById("frMiniSay"); if(_ms) _ms.classList.remove("on");
     if(sheet) sheet.classList.remove("fr-open");
@@ -470,6 +472,11 @@
      콘텐츠를 열면 갈비스가 사라지지 않고 화면 아래 작은 창으로 남는다. 그 콘텐츠를 서버가 읽어(핸드오프) 먼저 한마디 +
      요약·참여·저장·관련 찾기를 그 자리에서 돕는다. 접기(한 줄 바)·크게 보기·닫기는 기존 도킹 버튼 그대로. */
   var _assist=null, _asEl=null, _asObs=null, _asBase=0;
+  /* 🧭 갈비스는 화면에 하나만(머티리얼 '컨테이너 변환' — 오브가 곧 창·아일랜드로 변한다, 둘이 같이 뜨지 않는다. 26.9.22)
+     상태: orb(닫힘) · sheet(대화창) · island(보조 창) · mini(알약). CSS 가 나머지를 숨긴다. */
+  function setSurface(name){
+    ["orb","sheet","island","mini"].forEach(function(n){ document.body.classList.toggle("fr-sf-"+n, n===name); });
+  }
   /* 🧭 보조 창 — 화면 오른쪽 아래 반투명 유리 창. 페이지는 뒤로 비친다.
      갈비스 최신 말(3줄) + 작은 입력. [크게](전체 대화) [접기](알약) [닫기]. 답에 카드가 있으면 「카드 보기」. */
   /* 🏝 갈비스 아일랜드(26.9.22 — 다이내믹 아일랜드·리퀴드 글래스·제미나이 오버레이 참고)
@@ -533,9 +540,77 @@
     }
     setTimeout(function(){ box.innerHTML=""; }, 900);
   }
+  /* 🫧 캡슐 생애주기(26.9.22 — 안드로이드 버블·애플 PiP·채팅 위젯 원칙)
+     밖을 누르면 접힘 · 끌면 따라오고 놓으면 가까운 옆 가장자리에 붙음 · 가장자리로 던지면 얇은 손잡이만 남기고 숨음(탭하면 나옴)
+     · 아래로 끌면 「닫기」 과녁이 나타나 가까이 가면 자석처럼 빨려들고 놓으면 닫힘. */
+  var _friPos=null;   // 끌어서 옮긴 캡슐 자리 {x,y,side}
+  function friPlace(){
+    if(!_asEl) return;
+    if(_asEl.classList.contains("fri-open") || !_friPos){ _asEl.classList.remove("fri-free"); _asEl.style.left=_asEl.style.top=""; return; }
+    _asEl.classList.add("fri-free");
+    var w=_asEl.offsetWidth||260;
+    var x = _friPos.stash ? (_friPos.side==="left" ? -(w-26) : window.innerWidth-26) : (_friPos.side==="left" ? 10 : window.innerWidth - w - 10);
+    _asEl.style.left=x+"px"; _asEl.style.top=_friPos.y+"px";
+    _asEl.classList.toggle("fri-stash", !!_friPos.stash); _asEl.classList.toggle("fri-stash-left", !!_friPos.stash && _friPos.side==="left");
+  }
+  function friDrag(){
+    var cap=_asEl.querySelector(".fri-cap"), dz=null, st=null;
+    function target(){ if(!dz){ dz=el('<div id="frDismiss" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg><span>닫기</span></div>'); document.body.appendChild(dz); } return dz; }
+    cap.addEventListener("pointerdown", function(e){
+      if(_asEl.classList.contains("fri-open")) return;
+      var r=_asEl.getBoundingClientRect();
+      st={ x0:e.clientX, y0:e.clientY, ox:r.left, oy:r.top, t0:Date.now(), moved:false, lx:e.clientX, lt:Date.now(), vx:0 };
+      try{ cap.setPointerCapture(e.pointerId); }catch(_){}
+    });
+    cap.addEventListener("pointermove", function(e){
+      if(!st) return;
+      var dx=e.clientX-st.x0, dy=e.clientY-st.y0;
+      if(!st.moved && Math.hypot(dx,dy)<7) return;
+      if(!st.moved){ st.moved=true; _asEl.classList.add("fri-drag","fri-free"); _asEl.classList.remove("fri-stash","fri-stash-left"); target().classList.add("on"); }
+      var now=Date.now(); st.vx=(e.clientX-st.lx)/Math.max(1,now-st.lt); st.lx=e.clientX; st.lt=now;
+      var x=st.ox+dx, y=st.oy+dy;
+      // 🧲 닫기 과녁 — 가까우면 빨려든다
+      var tr=target().getBoundingClientRect(), tcx=tr.left+tr.width/2, tcy=tr.top+tr.height/2, w=_asEl.offsetWidth, h=_asEl.offsetHeight;
+      var d=Math.hypot(x+w/2-tcx, y+h/2-tcy), near=d<110;
+      target().classList.toggle("hot", near);
+      if(near){ x=tcx-w/2 + (x+w/2-tcx)*0.25; y=tcy-h/2 + (y+h/2-tcy)*0.25; }
+      _asEl.classList.toggle("fri-doomed", near);
+      _asEl.style.left=x+"px"; _asEl.style.top=y+"px";
+    });
+    function end(e){
+      if(!st) return; var s0=st; st=null;
+      if(dz) dz.classList.remove("on");
+      if(!s0.moved) return;
+      _asEl.classList.remove("fri-drag");
+      cap._justDragged=Date.now();
+      if(_asEl.classList.contains("fri-doomed")){   // 닫기
+        _asEl.classList.remove("fri-doomed"); if(dz) dz.classList.remove("hot");
+        _asEl.classList.add("fri-pop-out"); try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
+        setTimeout(function(){ _asEl.classList.remove("fri-pop-out","fri-free"); _friPos=null; closeAssist(); setSurface("orb"); orb && orb.classList.remove("fr-hidden"); }, 320);
+        return;
+      }
+      var r=_asEl.getBoundingClientRect(), cx=r.left+r.width/2, side = cx < window.innerWidth/2 ? "left" : "right";
+      var flung = Math.abs(s0.vx)>0.9 || r.left < -r.width*0.25 || r.right > window.innerWidth + r.width*0.25;
+      var y=Math.max(70, Math.min(window.innerHeight-160, r.top));
+      _friPos={ side: flung ? (s0.vx<0?"left":"right") : side, y:y, stash: flung };
+      friPlace();
+    }
+    cap.addEventListener("pointerup", end); cap.addEventListener("pointercancel", end);
+    // 숨긴 손잡이를 누르면 다시 나온다
+    _asEl.addEventListener("click", function(e){ if(_asEl.classList.contains("fri-stash")){ e.stopPropagation(); e.preventDefault(); _friPos.stash=false; friPlace(); } }, true);
+    // 밖을 누르면 접힌다
+    document.addEventListener("pointerdown", function(e){
+      if(!_asEl.classList.contains("on") || !_asEl.classList.contains("fri-open")) return;
+      if(_asEl.contains(e.target)) return;
+      friExpand(false);
+    }, true);
+  }
   function friExpand(on){
     if(!_asEl) return;
+    var cap0=_asEl.querySelector(".fri-cap"); if(on && cap0 && cap0._justDragged && Date.now()-cap0._justDragged<350) return;   // 끌고 놓은 직후의 클릭은 무시
     _asEl.classList.toggle("fri-open", !!on);
+    friPlace();
+    if(on){ _asEl._openAt=Date.now(); _asEl.classList.remove("fri-unread"); }
     if(on){ var mb=_asEl.querySelector(".fra-msg"); if(mb) mb.scrollTop=mb.scrollHeight; }
   }
   function buildAssist(){
@@ -557,6 +632,7 @@
     '</div>');
     document.body.appendChild(_asEl);
     _asEl.querySelector(".fri-face").innerHTML=galvisFace(40);
+    setTimeout(friDrag, 0);
     _asEl.insertAdjacentHTML("afterbegin",'<i class="hud-hex"></i><i class="hud-br tl"></i><i class="hud-br tr"></i><i class="hud-br bl"></i><i class="hud-br brr"></i><i class="hud-scan"></i>');
     var inp=_asEl.querySelector("input");
     var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
@@ -567,16 +643,18 @@
     var bigOpen=function(){ hideAssist(); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
     _asEl.querySelector(".fra-big").onclick=bigOpen;
     _asEl.querySelector(".fra-cards").onclick=bigOpen;
-    _asEl.querySelector(".fra-x").onclick=function(){ closeAssist(); orb && orb.classList.remove("fr-hidden"); };
+    _asEl.querySelector(".fra-x").onclick=function(){
+      _asEl.classList.add("fri-out");
+      setTimeout(function(){ _asEl.classList.remove("fri-out"); closeAssist(); setSurface("orb"); orb && orb.classList.remove("fr-hidden"); }, 380);
+    };
     // 페이지를 스크롤하면 캡슐로(보는 걸 가리지 않게) — 입력 중이면 그대로
     // 페이지든 상세 시트(맛집·여행)든 — 스크롤하는 그 요소 기준으로 본다(시트 안 스크롤에 안 접히던 것)
-    var lastYs=new WeakMap();
     window.addEventListener("scroll", function(e){
-      if(!_asEl.classList.contains("on") || document.activeElement===inp) return;
-      var t=(e.target===document||e.target===window)?(document.scrollingElement||document.documentElement):e.target;
-      if(_asEl.contains(t)) return;
-      var y=t.scrollTop||0, ly=lastYs.has(t)?lastYs.get(t):y;
-      if(Math.abs(y-ly)>24){ friExpand(false); lastYs.set(t,y); } else if(!lastYs.has(t)) lastYs.set(t,y);
+      if(!_asEl.classList.contains("on") || !_asEl.classList.contains("fri-open") || document.activeElement===inp) return;
+      var t=(e.target===document||e.target===window)?null:e.target;
+      if(t && _asEl.contains(t)) return;
+      if(Date.now() - (_asEl._openAt||0) < 800) return;   // 펼치자마자 생기는 레이아웃 스크롤은 무시
+      friExpand(false);
     }, {passive:true, capture:true});
     // 쓸어내리면 접기, 쓸어올리면 전체 대화
     var sy=null;
@@ -587,7 +665,7 @@
     _asEl.querySelector(".fra-msg").addEventListener("click", function(){ _asEl.classList.toggle("fri-full"); });
     return _asEl;
   }
-  function hideAssist(){ if(_asEl) _asEl.classList.remove("on","fri-open","fri-think"); }
+  function hideAssist(){ if(_asEl) _asEl.classList.remove("on","fri-open","fri-think"); if(document.body.classList.contains("fr-sf-island")) setSurface("orb"); }
   var _friLastTxt="";
   function syncAssist(){
     if(!_asEl || !logEl) return;
@@ -610,7 +688,9 @@
     if(txt && txt!==_friLastTxt){
       _friLastTxt=txt; box.innerHTML=fmtRich(fmtStage(txt)); revealRich(box);
       var last=parts[parts.length-1]||""; tick.textContent=last.replace(/\s+/g," ").slice(0,40);
-      _asEl.classList.remove("fri-full"); friExpand(true); friSparkle(); faceMood("speak");
+      _asEl.classList.remove("fri-full");
+      if(_asEl.classList.contains("fri-open") || !_asEl._seenOnce){ friExpand(true); _asEl._seenOnce=true; } else _asEl.classList.add("fri-unread");   // 접어둔 사이 온 답은 점으로만(흐름 방해 안 함)
+      friSparkle(); faceMood("speak");
       _asEl.classList.remove("hud-boot"); void _asEl.offsetWidth; _asEl.classList.add("hud-boot");
       _asEl.classList.remove("fri-pop"); void _asEl.offsetWidth; _asEl.classList.add("fri-pop");
       clearTimeout(syncAssist._p); syncAssist._p=setTimeout(function(){ if(_asEl) _asEl.classList.remove("fri-pop"); }, 1600);   // 번쩍 뒤엔 다시 손 흔들기
@@ -645,7 +725,9 @@
       var here=location.pathname+location.search+location.hash;
       if(here.indexOf(String(_assist.id))<0 && !/tab=(food|travel)/.test(here)){ closeAssist(); orb && orb.classList.remove("fr-hidden"); }
     }, 1000);
-    buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0; _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
+    buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0;
+    try{ var ob=orb && orb.getBoundingClientRect(); if(ob && ob.width){ _asEl.style.setProperty("--fx", Math.round(ob.left+ob.width/2 - window.innerWidth/2)+"px"); _asEl.style.setProperty("--fy", Math.round(ob.top+ob.height/2 - (window.innerHeight-110))+"px"); } }catch(e){}
+    setSurface("island"); _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
     _asEl.querySelector(".fri-tick").textContent="보는 중…";
     if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
     _asEl.querySelector(".fra-msg").textContent="";
@@ -670,7 +752,7 @@
   }
   var _asWatch=0;
   function closeAssist(){
-    clearInterval(_asWatch); _asWatch=0;
+    clearInterval(_asWatch); _asWatch=0; _friPos=null; if(_asEl){ _asEl.classList.remove("fri-free","fri-stash","fri-stash-left"); _asEl.style.left=_asEl.style.top=""; }
     _assist=null; try{ sessionStorage.removeItem("fr_assist"); }catch(e){}
     hideAssist();
   }
@@ -683,6 +765,7 @@
     document.body.classList.remove("fr-chatting");       // 내비 복원(콘텐츠 탐색 가능)
     orb && orb.classList.add("fr-hidden");               // 런처 오브와 중복 방지
     if(mini){ mini.classList.remove("pop"); void mini.offsetWidth; mini.classList.add("on","pop"); }
+    setSurface("mini");
   }
   function restoreFromMini(){
     if(mini) mini.classList.remove("on");
@@ -1480,20 +1563,32 @@
     greet();
   }
   /* 💛 폰에서 바로 하는 인사 — 시간대별, 다시 온 사람엔 「또 왔네」 */
+  /* 💬 폰 인사 — 「오 왔네」만 반복하던 것(26.9.22 사장님: 「맨날 오 왔네, 재미없다」). 시간·요일별로 많이, 최근 6개는 안 쓴다 */
   function localGreet(back){
-    var h=new Date().getHours(), pick=function(a){ return a[Math.floor(Math.random()*a.length)]; };
-    var A = h<5 ? ["왔구나! 새벽인데 안 자고 ㅎㅎ 반가워","오 왔네 ㅎㅎ 새벽까지 뭐 해?"]
-          : h<11 ? ["좋은 아침! 왔구나 ㅎㅎ","오 왔네! 아침은 먹었어?"]
-          : h<15 ? ["왔구나! 점심은 먹었어? ㅎㅎ","오 반가워! 오늘 하루 잘 가고 있어?"]
-          : h<19 ? ["오 왔네! 오늘 하루 어땠어?","왔구나 ㅎㅎ 반가워, 오후 잘 버티고 있어?"]
-          : ["왔구나! 저녁은 먹었어? ㅎㅎ","오 반가워! 오늘 고생 많았지?"];
-    if(back) A = A.concat(["또 왔네 ㅎㅎ 반가워!","왔어? 기다리고 있었지 ㅎㅎ"]);
-    return pick(A);
+    var d=new Date(), h=d.getHours(), wd=d.getDay();
+    var P=[];
+    if(h<5) P=P.concat(["이 시간에 깨어 있는 사람 = 나랑 너 둘뿐인 듯 ㅋㅋ","새벽 감성 충전하러 왔구나? 뭐든 털어놔","잠 안 오는 밤엔 갈라지 ㅎㅎ 오늘 무슨 생각해?","야행성 인정 ㅋㅋ 야식 뭐 먹었어?"]);
+    else if(h<9) P=P.concat(["굿모닝! 커피 수혈 완료?","아침부터 날 찾다니 감동이다 ㅠㅠ","출근길이야? 지루할 때 나랑 놀자","일어나자마자 갈라라니 찐이다 ㅋㅋ"]);
+    else if(h<12) P=P.concat(["오전 버티는 중? 딴짓하러 왔구나 ㅋㅋ","점심 뭐 먹을지 벌써 고민 중이지?","오늘 뭐 재밌는 일 있었어?"]);
+    else if(h<14) P=P.concat(["점심 뭐 먹었어? 맛있었으면 자랑해","식곤증 오는 시간 ㅋㅋ 나랑 수다로 깨자","밥 먹고 왔어? 오늘 메뉴 궁금하다"]);
+    else if(h<18) P=P.concat(["오후 세 시의 저주 ㅋㅋ 버틸 거리 줄까?","퇴근까지 얼마나 남았어? 같이 세자","오늘 하루 절반 넘겼다! 수고 중이야"]);
+    else if(h<22) P=P.concat(["오늘도 고생했어 👏 저녁은 먹었어?","하루 어땠어? 좋은 거 하나만 말해줘","퇴근 후 자유시간! 뭐 하고 놀까","저녁 뭐 먹을지 같이 골라줄까?"]);
+    else P=P.concat(["하루 마무리하러 왔구나 ㅎㅎ 오늘 최고의 순간은?","자기 전에 수다 한 판? 좋지","내일 뭐 해? 미리 응원해줄게"]);
+    if(wd===5 && h>=15) P.push("불금이다!! 오늘 뭐 할 거야?");
+    if(wd===1 && h<14) P.push("월요병 괜찮아? 나도 옆에서 버틸게 ㅋㅋ");
+    if(wd===0||wd===6) P.push("주말이다~ 오늘은 뭐 하고 쉬어?");
+    if(back) P=P.concat(["보고 싶었는데 딱 왔네 ㅎㅎ","기다리고 있었지! 무슨 일이야?"]);
+    var used=[]; try{ used=JSON.parse(localStorage.getItem("fr_greet_used")||"[]"); }catch(e){}
+    var cand=P.filter(function(x){ return used.indexOf(x)<0; }); if(!cand.length) cand=P;
+    var pick=cand[Math.floor(Math.random()*cand.length)];
+    try{ used.push(pick); localStorage.setItem("fr_greet_used", JSON.stringify(used.slice(-6))); }catch(e){}
+    return pick;
   }
   var _greetStale=false;   // 🔐 greet race — 인사 응답 오기 전에 유저가 먼저 말 걸면 인사를 버린다(요청 씹힘 방지, 실사용 E2E 마찰#1)
   var _greeting=false;
   async function greet(){
     if(_greeting) return;            // 진행 중인 인사가 있으면 겹쳐 부르지 않는다
+    if(talkingNow() && logEl && logEl.querySelector(".fr-msg")) return;   // 🗣 얘기 중(10분 안)엔 인사 없이 이어간다(「얘기 중에 또 왔네」 금지)
     _greeting=true;
     try{ await _greet(); } finally { _greeting=false; }
   }
@@ -1652,7 +1747,11 @@
         x.textContent = p>=1 ? fin : (dec? v.toFixed(dec) : (big? Math.round(v).toLocaleString("ko-KR") : String(Math.round(v))));
         if(p<1) requestAnimationFrame(f); })(t0); }, delay+80);
   }
+  /* ⏱ 대화 중인지 — 마지막 말(누구든) 뒤 10분 안이면 '이어가는 중', 넘으면 '새 세션'(인사) */
+  function markTalk(){ try{ localStorage.setItem("fr_last_at", String(Date.now())); }catch(e){} }
+  function talkingNow(){ try{ return (Date.now() - (+localStorage.getItem("fr_last_at")||0)) < 10*60000; }catch(e){ return false; } }
   function addMsg(role,text){
+    if(!_frNoAnim) markTalk();
     var m;
     if(role==="u"){ m=el('<div class="fr-msg fr-u"></div>'); m.textContent=text; }
     else { m=el('<div class="fr-msg fr-a'+(_frNoAnim?"":" rx-new")+'"><div class="fr-bubble"></div></div>'); var bb=m.querySelector(".fr-bubble"); bb.innerHTML=fmtRich(fmtStage(text)); revealRich(bb); }
@@ -2602,6 +2701,7 @@
     window.GALLA_IS_APP = IS_APP;
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
+    setSurface("orb");
     try{
       var fa=JSON.parse(sessionStorage.getItem("fr_assist")||"null");
       /* 이어받기는 '그 콘텐츠 페이지'에서만 — 여기가 떠난 페이지(from)거나 주소에 그 id 가 없으면 버린다(홈까지 따라오던 것) */
