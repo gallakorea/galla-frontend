@@ -89,7 +89,7 @@
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
-  let _ctMode = null, _ctPeer = null, _ctWake = null, _ctLoopT = null;   // 🔬 자가 테스트(디버그): 'caller'|'accept'
+  let _ctMode = null, _ctPeer = null, _ctWake = null, _ctLoopT = null, _dmQADone = false;   // 🔬 자가 테스트(디버그): 'caller'|'accept'
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 프라미스 타임아웃 — getUserMedia 등 iosrtc 호출이 간헐적으로 영영 멈추는 것을 깨기 위해.
   function withTimeout(p, ms, label) {
@@ -1580,6 +1580,11 @@
       if (changed) { wb('selftest ACCEPT-MODE'); _nativeCall({ action: 'qaAutoAnswer', on: true }); }   // 🔬 잠금화면 CallKit 도 자동 받기(네이티브, 20분)
       // 이미 벨이 울리는 중이면 지금 받는다(화면에 보일 때만) — '늦게 받기' 시나리오용
       try { if (CUR && CUR.dir === 'in' && !CUR._accepting && document.visibilityState === 'visible') accept('selftest'); } catch (_) {}
+    }
+    else if (mode === 'dmSend' || mode === 'dmRecv') {   // 🔬 갈라톡 두 폰 QA — DM 뷰로 가서(dm.js) 한 번 실행
+      if (_ctMode !== mode) { _ctMode = mode; _dmQADone = false; }
+      if (window.GALLA_dmQA) { if (!_dmQADone) { _dmQADone = true; window.GALLA_dmQA.run(mode, peer); } }
+      else { try { if (window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm'); else if (window.GALLA_shellGo) window.GALLA_shellGo('dm'); } catch (_) {} }
     }
     else if (mode === 'listen') { _ctMode = 'listen'; if (changed) wb('selftest LISTEN-MODE'); }   // 🔬 관찰만(자동 수락 없음) — 잠금·백그라운드 수신 기록용
     else if (_ctMode) { _ctStop(); }

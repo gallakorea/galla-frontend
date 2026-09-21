@@ -5387,6 +5387,7 @@
 
   /* ---------- 실시간: 수신·읽음·삭제·입력중·온라인 ---------- */
   function applyUpdate(m) {
+    try { if (window.__dmQASend && m.read_at && QA_SENT[m.id] && !QA_SENT[m.id].read) { QA_SENT[m.id].read = 1; qlog('read ' + QA_SENT[m.id].k + ' after=' + (Date.now() - QA_SENT[m.id].t) + 'ms'); } } catch (_) {}
     MSGS[m.id] = { ...(MSGS[m.id] || {}), ...m };
     const el = ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`);
     if (!el) return;
@@ -5469,6 +5470,7 @@
           setPeerSub('');   // 메시지가 왔으면 입력 중 표시는 끝
           hideTypingBubble();
           appendMsg(m);
+          try { if (window.__dmQARecv) qaCheckRx(m); } catch (_) {}   // 🔬 두 폰 QA — 도착·렌더·미디어 확인
           markRead(tid);
           // 🔊 수신음 — 소리 선호 + 방해금지 아님 + 이 대화 음소거 아님
           if (UI.sound && !isDnd() && !isThreadMuted(tid)) { try { window.GALLA_SFX?.ding(); } catch (_) {} }
@@ -5479,6 +5481,7 @@
         ({ new: m }) => applyUpdate(m))     // 읽음 영수증·보내기 취소가 여기로 흘러온다
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (!payload || payload.user === ME) return;
+        try { if (window.__dmQARecv) qlog('rx typing'); } catch (_) {}
         setPeerSub('입력 중…', 'typing');
         showTypingBubble();
         clearTimeout(typingHideTimer);
@@ -5570,6 +5573,97 @@
     openThread(tid, userId, nickCache[userId]);
   }
   window.startDM = startDM;
+
+  /* ── 🔬 갈라톡 두 폰 QA(자가테스트 전용, 26.9.21) ─────────────────────────
+     dm-call.js 의 원격 플래그(call_selftest: dmSend/dmRecv)로 켠다. 사람 손 없이
+     보내는 폰은 실제 전송 함수(sendMessage·GALLA_UPLOAD_MEDIA)로 텍스트·답장·위치·사진·음성을 보내고,
+     받는 폰은 도착 지연·화면 렌더·사진 로드·음성 메타데이터를, 보내는 폰은 읽음 도착을 기록한다(client_errors 'dm-qa'). */
+  const QA_SENT = {};
+  function qclock() { const d = new Date(); return d.toTimeString().slice(0, 8) + '.' + String(d.getMilliseconds()).padStart(3, '0'); }
+  function qlog(m) { try { (window.supabaseClient || supabase).rpc('log_client_error', { p_kind: 'dm-qa', p_message: m + ' c=' + qclock(), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  const qsleep = ms => new Promise(r => setTimeout(r, ms));
+  function qaImage() {
+    return new Promise(res => {
+      const c = document.createElement('canvas'); c.width = 640; c.height = 480;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 640, 480); g.addColorStop(0, '#6d5dfc'); g.addColorStop(1, '#ff4d6d');
+      x.fillStyle = g; x.fillRect(0, 0, 640, 480);
+      x.fillStyle = '#fff'; x.font = 'bold 64px sans-serif'; x.fillText('GALLA QA ' + qclock().slice(0, 8), 30, 260);
+      c.toBlob(b => res(new File([b], 'qa.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.85);
+    });
+  }
+  function qaWav() {   // 1초 440Hz 모노 16bit PCM
+    const sr = 16000, n = sr, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 440 * i / sr) * 12000), true);
+    return new File([buf], 'qa.wav', { type: 'audio/wav' });
+  }
+  async function qaSend(k, fields) {
+    const t = Date.now();
+    const d = await sendMessage(fields);
+    if (d && d.id) { QA_SENT[d.id] = { k, t }; qlog('tx ' + k + ' ok ' + (Date.now() - t) + 'ms id=' + String(d.id).slice(0, 8)); }
+    else qlog('tx ' + k + ' FAIL');
+    return d;
+  }
+  async function qaUpload(file, type) {
+    if (!window.GALLA_UPLOAD_MEDIA) { try { await loadScript('/js/media-upload.js'); } catch (_) {} }
+    const t = Date.now();
+    try { const url = await window.GALLA_UPLOAD_MEDIA(file, type); qlog('upload ' + type + ' ok ' + (Date.now() - t) + 'ms'); return url; }
+    catch (e) { qlog('upload ' + type + ' FAIL ' + String((e && e.message) || e).slice(0, 60)); return null; }
+  }
+  function qaCheckRx(m) {
+    const lag = Date.now() - Date.parse(m.created_at);
+    const el = ROOT && ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`);
+    let extra = '';
+    if (el) {
+      if (locOf(m.body)) extra += ' loccard=' + !!el.querySelector('.dm-loc-card');
+      if (m.reply_to) extra += ' quote=' + !!el.querySelector('.dm-quote');
+    }
+    qlog('rx ' + (m.kind || 'text') + ' lag=' + lag + 'ms dom=' + !!el + extra);
+    const url = m.meta && m.meta.url;
+    if (m.kind === 'image' && url) {
+      const im = new Image(); const t = Date.now();
+      im.onload = () => qlog('rx image load ok ' + im.naturalWidth + 'x' + im.naturalHeight + ' ' + (Date.now() - t) + 'ms');
+      im.onerror = () => qlog('rx image load FAIL');
+      im.src = url;
+    }
+    if (m.kind === 'voice' && url) {
+      const au = new Audio(); const t = Date.now(); au.preload = 'metadata';
+      au.onloadedmetadata = () => qlog('rx voice meta ok dur=' + (au.duration || 0).toFixed(2) + 's ' + (Date.now() - t) + 'ms');
+      au.onerror = () => qlog('rx voice meta FAIL code=' + (au.error && au.error.code));
+      au.src = url;
+    }
+  }
+  window.GALLA_dmQA = {
+    async run(mode, peer) {
+      qlog('run ' + mode + ' peer=' + String(peer || '').slice(0, 6));
+      if (!peer) return;
+      await startDM(peer);
+      await qsleep(1500);
+      qlog('thread open ' + !!curThread + ' chan=' + !!msgChan);
+      if (mode === 'dmRecv') { window.__dmQARecv = true; return; }
+      window.__dmQASend = true;
+      await qsleep(6000);                                   // 받는 폰이 방을 열고 구독할 시간
+      sendTyping(); qlog('tx typing');
+      await qsleep(2000);
+      const tag = Date.now().toString(36).slice(-5);
+      const t1 = await qaSend('text', { body: '[QA] 텍스트 ' + tag });
+      await qsleep(2000);
+      await qaSend('reply', { body: '[QA] 답장 ' + tag, reply_to: t1 && t1.id });
+      await qsleep(2000);
+      await qaSend('location', { body: '📍 [QA] 위치\nhttps://maps.google.com/?q=37.298100,127.637000' });
+      await qsleep(2000);
+      const iu = await qaUpload(await qaImage(), 'image');
+      if (iu) await qaSend('image', { kind: 'image', body: '📷 사진', meta: { url: iu } });
+      await qsleep(2000);
+      const vu = await qaUpload(qaWav(), 'audio');
+      if (vu) await qaSend('voice', { kind: 'voice', body: '🎤 음성 메시지', meta: { url: vu, dur: 1 } });
+      qlog('tx all done');
+    },
+  };
 
   /* ---------- 뱃지 ----------
      하단 네비의 메시지 탭은 '안 읽은 DM + 안 들은 삐삐'를 합쳐 보여준다.
