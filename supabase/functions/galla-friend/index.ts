@@ -987,6 +987,32 @@ async function searchContent(query: string) {
    결과엔 id 를 꼭 싣는다 — point_to(type=section, id)로 그 화면에 데려가게. */
 /* 말하는 메뉴 ↔ 지도 분류 이름 별칭(고기집=육류·고기요리, 술집=주점·호프…) */
 const FOOD_SYN: Record<string, string[]> = { 고기집: ["고기", "육류", "삼겹", "갈비"], 고깃집: ["고기", "육류", "삼겹", "갈비"], 술집: ["주점", "호프", "이자카야", "포차", "술집"], 횟집: ["회", "횟집", "해산물"], 국밥: ["국밥", "순대", "해장"], 분식: ["분식", "떡볶이"], 빵집: ["베이커리", "빵"], 중국집: ["중식", "중국"], 일식: ["일식", "초밥", "스시"], 양식: ["양식", "파스타", "이탈리아"], 카페: ["카페", "커피", "디저트"], 치킨: ["치킨", "닭"], 삼겹살: ["삼겹", "돼지"], 소고기: ["소고기", "한우", "육류"] };
+/* 🕘 영업 중? — food_places.hours(구글 형식: "월요일: 오전 10:00 ~ 오후 9:00") 로 지금(KST) 판정. 26.9.22
+   정보가 있는 가게(약 2%)만 판정하고, 없으면 null(모른다고 말하게). 자정 넘김·어제 밤 영업도 본다. */
+function _hm(ampm: string, h: string, m: string): number { let H = (+h) % 12; if (ampm === "오후") H += 12; return H * 60 + (+m || 0); }
+function openNow(hours: any): string | null {
+  if (!Array.isArray(hours) || !hours.length) return null;
+  const k = new Date(Date.now() + 9 * 3600000); const dow = k.getUTCDay(); const now = k.getUTCHours() * 60 + k.getUTCMinutes();
+  const NAME = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+  const ranges = (d: number): [number, number][] | "closed" | "allday" | null => {
+    const ln = hours.find((x: any) => String(x).startsWith(NAME[d])); if (!ln) return null;
+    const t = String(ln).split(":").slice(1).join(":");
+    if (/휴무/.test(t)) return "closed"; if (/24\s*시간/.test(t)) return "allday";
+    const out: [number, number][] = [];
+    for (const m of t.matchAll(/(오전|오후)\s*(\d{1,2}):(\d{2})\s*~\s*(오전|오후)?\s*(\d{1,2}):(\d{2})/g)) {
+      const a = _hm(m[1], m[2], m[3]); let b = _hm(m[4] || m[1], m[5], m[6]); if (b <= a) b += 1440; out.push([a, b]);
+    }
+    return out.length ? out : null;
+  };
+  const fmt = (mm: number) => { const x = mm % 1440; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+  const y = ranges((dow + 6) % 7);
+  if (Array.isArray(y)) for (const [a, b] of y) if (b > 1440 && now < b - 1440) return `영업 중(~${fmt(b)})`;
+  const t = ranges(dow);
+  if (t === "closed") return "오늘 휴무"; if (t === "allday") return "24시간 영업"; if (!t) return null;
+  for (const [a, b] of t) { if (now >= a && now < b) return `영업 중(~${fmt(b)})`; if (now < a) return `영업 전(${fmt(a)} 오픈)`; }
+  return "영업 끝";
+}
+const _lateNight = () => { const h = new Date(Date.now() + 9 * 3600000).getUTCHours(); return h >= 22 || h < 7; };
 const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim().slice(0, 40);
 const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
 const _km = (a: number, b: number, c: number, d: number) => { const R = 6371, r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r; const h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
@@ -1003,12 +1029,13 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
       if (menu.length) ps = ps.filter((p) => menu.some((w) => (FOOD_SYN[w] || [w]).some((a) => String(p.name + " " + p.category).includes(a))));
       ps.sort((a, b) => (a._km + (b.rating_n ? 0 : 0.4)) - (b._km + (a.rating_n ? 0 : 0.4)));
       const top = ps.slice(0, n);
-      return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined })),
-        cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km)].filter(Boolean).join(" · "), img: x.cover || null })),
+      return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음" })),
+        cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover || null })),
+        영업안내: _lateNight() ? "지금 늦은 시간이다 — '영업: 정보 없음'인 곳은 여는지 모른다고 솔직히 말하고, '영업 중'인 곳을 우선 권해라." : undefined,
         지침: "상대의 **현재 위치 기준** 가까운 갈라 지도 가게들이다(거리 포함, 가까운 순). 위치를 이미 알고 있으니 동네를 묻지 마라. 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
     }
     if (section === "food") {
-      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price,cover_url").eq("status", "live");
+      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price,cover_url,hours").eq("status", "live");
       /* 「을지로 맛집 추천」을 통째로 찾으면 0건이다 — 말뭉치 단어를 떼고, 남은 낱말마다(AND) 이름·주소·종류 중 하나에 걸리게 */
       const STOP = /^(맛집|추천|추천해줘|근처|주변|식당|밥집|가게|맛있는|집|어디|좋은|유명한|잘하는|곳|데|땡기는데|먹고|싶어|먹을|거|뭐)$/;
       const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, ""))   /* 「을지로」의 「로」까지 떼면 '을지'로 검색돼 선릉을지순대국이 나왔다 */.filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 3);
@@ -1021,8 +1048,9 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
         rq = rq.or(cond);
       }
       const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
-      return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined })),
-        cards: (data || []).map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address)].filter(Boolean).join(" · "), img: x.cover_url || null })),
+      return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음" })),
+        cards: (data || []).map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover_url || null })),
+        영업안내: _lateNight() ? "지금 늦은 시간이다 — '영업: 정보 없음'인 곳은 여는지 모른다고 솔직히 말하고, '영업 중'인 곳을 우선 권해라." : undefined,
         지침: (nearAsk || /(근처|주변|가까운|내\s*위치)/.test(q))
           ? "⚠️ 상대 위치를 모른다(위치 권한 없음) — 전국 결과를 근처인 척 말하지 마라. '어느 동네야?'라고 묻거나 '위치 켜주면 근처로 찾아줄게'라고 해라."
           : "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
@@ -1066,6 +1094,29 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
 
 /* 🌦 날씨: weather_now RPC(기상청 관측 + 유저 제보)에서 지역을 골라 돌려준다.
    지역명을 안 주거나 못 찾으면 전국 요약을 준다 — 지어내지 말라고 값만 넘긴다. */
+/* 🗓 예보 — 「내일 우산?/주말 날씨」(26.9.22). 지금 값(weather_now)은 관측뿐이라 '내일'을 못 답했다.
+   Open-Meteo(무료·키 불필요, weather-sync 가 이미 쓰는 공급자)에서 지역 좌표(weather_regions)로 7일 일별 예보. */
+async function weatherForecast(region: string | undefined, days: number[], geo?: { lat: number; lon: number } | null) {
+  let lat = 0, lon = 0, name = "";
+  if (region) {
+    const q = String(region).replace(/\s/g, "").replace(/(시|도|특별시|광역시)$/, "");
+    const { data } = await supa.from("weather_regions").select("name,lat,lon,kind").ilike("name", `%${q}%`).limit(5);
+    const pick = (data || []).sort((a: any, b: any) => String(a.name).length - String(b.name).length)[0];
+    if (pick) { lat = +pick.lat; lon = +pick.lon; name = pick.name; }
+  }
+  if (!name && geo) { lat = geo.lat; lon = geo.lon; name = "내 위치"; }
+  if (!name) { lat = 37.5665; lon = 126.978; name = "서울"; }
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=Asia%2FSeoul&forecast_days=7`;
+    const r = await fetch(u); const j = await r.json(); const d = j?.daily; if (!d?.time) return { error: "예보를 못 가져왔어" };
+    const wmo: Record<number, string> = { 0: "맑음", 1: "대체로 맑음", 2: "구름 조금", 3: "흐림", 45: "안개", 48: "안개", 51: "이슬비", 53: "이슬비", 55: "이슬비", 61: "비", 63: "비", 65: "폭우", 71: "눈", 73: "눈", 75: "폭설", 80: "소나기", 81: "소나기", 82: "강한 소나기", 95: "천둥번개", 96: "천둥번개", 99: "천둥번개" };
+    const WD = ["일", "월", "화", "수", "목", "금", "토"];
+    const out = days.filter((i) => i >= 0 && i < d.time.length).map((i) => { const dt = new Date(d.time[i] + "T12:00:00+09:00"); return {
+      날짜: `${d.time[i].slice(5).replace("-", "/")}(${WD[dt.getUTCDay()]})`, 하늘: wmo[d.weathercode[i]] ?? "정보없음", 최고: Math.round(d.temperature_2m_max[i]), 최저: Math.round(d.temperature_2m_min[i]),
+      비올확률: (d.precipitation_probability_max?.[i] ?? null), 강수mm: d.precipitation_sum?.[i] ?? 0 }; });
+    return { 기준: "Open-Meteo 예보", 지역: name, 예보: out, 지침: "예보 값만 말해라. 비올확률 50%↑면 우산 챙기라고, 30~50%면 접는 우산 정도로." };
+  } catch { return { error: "예보를 못 가져왔어" }; }
+}
 async function weatherNow(region?: string) {
   const { data, error } = await supa.rpc("weather_now");
   if (error || !data?.ok) return { error: "날씨를 못 가져왔어" };
@@ -1095,7 +1146,7 @@ const TOOLS = [
   /* 🌦 날씨는 **우리 데이터**로 답한다 — web_search 로 답하면 틀린다(실측 2026-08-29:
      앱 데이터가 서울 23.8도·구름인데 검색으로 "비 오고 28도"라고 답했다).
      weather_now RPC 는 기상청 관측 + 유저 제보를 합친 값이라 앱 화면과도 일치한다. */
-  { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" } } } } },
+  { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다. **'내일/모레/주말/이번 주'를 물으면 when 을 꼭 넣어라**(tomorrow|dayafter|weekend|week) — 예보가 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" }, when: { type: "string", enum: ["now", "tomorrow", "dayafter", "weekend", "week"], description: "지금이면 비우거나 now" } } } } },
   { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_browse", description: "🧭 갈라 안의 코너를 '실제 데이터'로 훑는다 — section: food(갈라 맛집 지도: '○○ 맛집/근처 뭐 먹지/돈가스 맛집'), travel(갈라 여행 지도: '○○ 여행지/어디 놀러가/일본 가볼만한 곳', query 없으면 뜨는 나라), shorts(숏판: 세로 영상·사진), longs(롱판: 가로 영상), predict(예측: '요즘 예측 뭐 있어/○○ 예측'), plaza(광장 글). 맛집은 먼저 이걸로 갈라 지도를 보고, 없을 때만 web_search(kind:local). 결과에 없는 가게·장소·수치를 지어내지 마라. 보여달라면 point_to(type=해당 section, id).", parameters: { type: "object", properties: { section: { type: "string", enum: ["food", "travel", "shorts", "longs", "predict", "plaza"] }, query: { type: "string", description: "검색어(지역·가게·장소·나라·키워드). 없으면 인기순" }, limit: { type: "integer" } }, required: ["section"] } } },
@@ -1239,7 +1290,16 @@ async function refundGC(uid: string, amount: number) {
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
-  if (name === "weather_now") return { result: await weatherNow(args?.region) };
+  if (name === "weather_now") {
+    const w = String(args?.when || "now");
+    if (w !== "now") {
+      const today = new Date(Date.now() + 9 * 3600000).getUTCDay();   // KST 요일
+      const days = w === "tomorrow" ? [1] : w === "dayafter" ? [2] : w === "week" ? [0, 1, 2, 3, 4, 5, 6]
+        : (today === 0 ? [0] : [(6 - today + 7) % 7, (7 - today) % 7]);   // 이번 토·일(일요일이면 오늘)
+      return { result: await weatherForecast(args?.region, days, args?.__geo || null) };
+    }
+    return { result: await weatherNow(args?.region) };
+  }
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
   if (name === "find_user") {
@@ -2136,6 +2196,15 @@ function bubbleize(t: string): string {
      하드랩은 진짜 긴 덩이(90자↑)에만. 짧은 문장이 두 버블로 쪼개지는 게 더 어색하다. */
   const hardWrap = (s: string): string[] => {
     if (s.length <= 90) return [s];
+    /* 긴 문장은 먼저 '말의 이음매'(— · , · ㅋㅋ 뒤 · 근데/그리고/아니면 앞)에서 나눈다 — 아무 어절에서나 자르면
+       「근데 이 시간에 / 어디까지 여는지는」처럼 말 중간이 끊겼다(26.9.22 QA). 이음매가 없을 때만 어절 랩. */
+    const soft = s.split(/(?<=\s—|—\s|,|[ㅋㅎ]{2,})\s+|\s+(?=(?:근데|그리고|아니면|그래서|그러니까|대신)\s)/).map((x) => x.trim()).filter(Boolean);
+    if (soft.length > 1 && soft.every((x) => x.length <= 90)) {
+      const out: string[] = []; let cur = "";
+      for (const c of soft) { if (cur && (cur + " " + c).length > 60) { out.push(cur); cur = c; } else cur = cur ? cur + " " + c : c; }
+      if (cur) out.push(cur);
+      return out;
+    }
     const words = s.split(/\s+/); const out: string[] = []; let cur = "";
     for (const w of words) {
       if (cur && (cur + " " + w).length > BUBBLE_MAX) { out.push(cur); cur = w; }
@@ -3397,7 +3466,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
      현실 숫자를 물으면 반드시 검색해서 답한다. */
   /* 🌦 날씨는 market_quote 가 아니라 weather_now — 예전엔 여기 묶여 시세 도구로 가서 web_search 로 샜다(26.9.21 조사) */
   if (/(날씨|기온|비\s*(와|오|올|옴)|눈\s*(와|오|올)|우산|미세먼지|더워|추워|쌀쌀|덥)/.test(m) && !/(주가|코인|시세)/.test(m))
-    return { tool: "weather_now", hint: "weather_now로 '실제' 관측값만(지역 말했으면 region). 기억·추측 기온 절대 금지." };
+    return { tool: "weather_now", hint: "weather_now로 '실제' 값만(지역 말했으면 region). " + (/(내일)/.test(m) ? "when:tomorrow 로 예보를." : /(모레)/.test(m) ? "when:dayafter 로 예보를." : /(주말|토요일|일요일)/.test(m) ? "when:weekend 로 예보를." : /(이번\s*주|일주일|주간)/.test(m) ? "when:week 로 예보를." : "") + " 기억·추측 기온 절대 금지." };
   /* 🧭 갈라 코너 — 여행·예측·숏판·롱판·광장 목록 */
   if (/(여행|여행지|놀러\s*갈|가볼\s*만|관광|해외\s*어디)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:travel, query=나라·도시·장소 — 없으면 비워서 뜨는 나라)로 갈라 여행 지도의 실제 장소만 말해라. 지어내기 금지." };
@@ -4212,6 +4281,8 @@ Deno.serve(async (req) => {
         { name: "번호_카드수_일치하면유지", opts: { linkCount: 3 },
           input: "골라봐.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
           check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
+        { name: "긴문장_이음매에서_나눔", opts: {}, input: "220m면 걸어서 5분이면 후루룩이네 해장이면 돈수백 순한 국물 원하면 육전국밥 쪽이고 — 근데 이 시간에 어디까지 여는지는 나도 장담 못 하겠어 진짜로 확인해봐야 돼",
+          check: (o) => /이 시간에\n\n어디까지/.test(o) ? `말 중간 끊김: ${JSON.stringify(o)}` : null },
         { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
           check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
@@ -5635,7 +5706,7 @@ ${parts.join("\n")}`;
           const _near = /(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서|제일\s*가까)/.test(String(userMsg || ""));
           if (_near) { (args as any).__near = true; if (_reqGeo) (args as any).__geo = _reqGeo; }
         }
-        if (c.function?.name === "weather_now") _usedWeather = true;
+        if (c.function?.name === "weather_now") { _usedWeather = true; if (_reqGeo) (args as any).__geo = _reqGeo; }
         const out = (_nearNoGeo && c.function?.name === "web_search")
           ? { result: { results: [], note: "상대 위치를 모른다 — 검색하지 마라. '어느 동네야?'라고 묻고, 위치를 켜면 바로 근처로 찾아준다고 짧게 말해라(버튼은 붙어 있다)." } }
           : await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);

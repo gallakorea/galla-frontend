@@ -1697,7 +1697,7 @@
   /* 📍 근처 질문일 때만, 위치 권한이 '이미' 허용돼 있으면 좌표를 싣는다(여기서 권한 창은 절대 안 띄운다).
      소수 3자리(≈100m)로 뭉개서 보낸다 — 서버는 저장하지 않는다. */
   async function nearGeo(text){
-    if(!/(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서)/.test(String(text||""))) return null;
+    if(!/(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서|(여기|우리\s*동네|이\s*동네)[^\n]{0,8}날씨)/.test(String(text||""))) return null;
     var ok=false;
     try{ var G=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation; if(G&&G.checkPermissions){ var p=await G.checkPermissions(); ok=(p&&(p.location==="granted"||p.coarseLocation==="granted")); } }catch(e){}
     if(!ok){ try{ if(navigator.permissions){ var q=await navigator.permissions.query({name:"geolocation"}); ok=(q.state==="granted"); } }catch(e){} }
