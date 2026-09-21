@@ -5605,7 +5605,17 @@
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `thread_id=eq.${tid}` },
         async ({ new: m }) => {
-          if (m.sender_id === ME) return;
+          /* 👥 같은 계정의 다른 기기(갈라톡 PC·다른 폰)에서 보낸 내 메시지도 실시간으로 그린다 — 예전엔 내 것이면
+             무조건 버려서, PC 에서 보낸 말이 폰의 열린 대화방엔 방을 다시 열어야 보였다(26.9.21 PC↔폰 QA).
+             이 기기에서 보낸 건 이미 MSGS 에 있으니 건너뛴다(중복 방지). 읽음·소리·진동은 남의 메시지에만. */
+          if (m.sender_id === ME) {
+            if (MSGS[m.id] || ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`)) return;
+            await new Promise(r => setTimeout(r, 600));                     // 이 기기의 insert 응답(appendMsg)이 늦게 올 수 있다
+            if (MSGS[m.id] || ROOT.querySelector(`.dm-bubble[data-id="${m.id}"]`)) return;
+            appendMsg(m);
+            try { if (window.__dmQARecv) qaCheckRx(m); } catch (_) {}
+            return;
+          }
           if (m.reply_to && !MSGS[m.reply_to]) {
             const { data: q } = await supabase.from('dm_messages')
               .select('id,sender_id,body,kind,meta,deleted_at').eq('id', m.reply_to).maybeSingle();
