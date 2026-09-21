@@ -118,7 +118,8 @@
         PROFILES[p.id] = { nickname: p.nickname || '익명', avatar_url: resolveAvatar(p.avatar_url), bio: p.bio || '' };
         nickCache[p.id] = p.nickname || '익명';
       });
-      need.forEach(id => { if (!(id in PROFILES)) { PROFILES[id] = { nickname: '익명', avatar_url: null, bio: '' }; nickCache[id] = '익명'; } });
+      // users 에 행이 없는 상대 = 탈퇴한 회원(계정 삭제 시 툼스톤 00000000-… 포함) — 예전엔 「익명」으로 떠 누군지 헷갈렸다(26.9.21 사장님)
+      if (data) need.forEach(id => { if (!(id in PROFILES)) { PROFILES[id] = { nickname: '탈퇴한 회원', avatar_url: null, bio: '', gone: true }; nickCache[id] = '탈퇴한 회원'; } });
     }
     return PROFILES;
   }
@@ -128,6 +129,7 @@
     const p = PROFILES[id] || {};
     const cls = 'dm-ava' + (size === 'lg' ? ' lg' : size === 'sm' ? ' sm' : '');
     const name = p.nickname || '익';
+    if (p.gone) return `<span class="${cls}" style="background:#2a2c33;color:#8b909b">탈</span>`;   // 탈퇴한 회원 — 회색
     const letter = `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}</span>`;
     if (!p.avatar_url) return letter;
     // 사진이 깨지면(404 등) 브라우저의 '?' 깨진 이미지 대신 글자 아바타로 — img를 글자 위에 얹고
@@ -2324,14 +2326,14 @@
     </span>`;
   }
   function bindEditChips(box) {
-    box.querySelectorAll('.dm-chip').forEach(b => b.addEventListener('click', e => {
+    box.querySelectorAll('.dm-chip').forEach(b => { if (b.__bound) return; b.__bound = 1; b.addEventListener('click', e => {
       e.stopPropagation(); e.preventDefault();
       const { ek, peer, tid } = b.dataset;
       if (peer) {
         const name = b.closest('.dm-friend')?.dataset.name || '';
         doFriendAct(ek, peer, name);
       } else if (tid) doThreadAct(ek, tid);
-    }, true));
+    }, true); });   // 목록이 줄 단위로 재사용되므로 같은 버튼에 두 번 붙지 않게(__bound)
   }
 
   /* ---------- 설정: 검색 허용 + 차단/숨김 관리 ---------- */
@@ -4247,7 +4249,7 @@
       return new Date(b.at) - new Date(a.at);
     });
 
-    box.innerHTML = items.map(it => {
+    const rowsHTML = items.map(it => {
       if (it.g) {
         const g = it.g;
         return `
@@ -4286,19 +4288,36 @@
             ${u ? `<span class="dm-dot">${u}</span>` : ''}
           </span>`}
         </button>`;
-    }).join('');
-    box.querySelectorAll('.dm-thread[data-tid]').forEach(el => {
-      el.addEventListener('click', () => { if (!EDIT) openThread(el.dataset.tid, el.dataset.peer, el.dataset.name); });
     });
-    box.querySelectorAll('.dm-gchat').forEach(el => {
-      el.addEventListener('click', () => {
-        if (EDIT) return;
-        const g = GROUPS.find(x => x.id === el.dataset.gid);
-        if (g) { MY_ROOMS.add(g.id); openRoom(g); }
-      });
+    /* ✨ 바뀐 줄만 교체 — 예전엔 대화방에서 돌아올 때마다 목록 HTML 을 통째로 갈아 끼우고 등장 애니메이션까지
+       다시 틀어 「깜빡이며 새로고침되는 느낌」이 났다(26.9.21 사장님). 같은 내용의 줄은 그대로 두고,
+       등장 애니메이션은 처음 그릴 때만. */
+    const keyOf = it => it.g ? 'g:' + it.g.id : 't:' + it.t.id;
+    const firstPaint = !box.querySelector('[data-k]');
+    const old = new Map([...box.children].filter(c => c.dataset && c.dataset.k).map(c => [c.dataset.k, c]));
+    [...box.children].forEach(c => { if (!(c.dataset && c.dataset.k)) c.remove(); });   // 빈 목록 안내 등
+    const fresh = [];
+    items.forEach((it, idx) => {
+      const k = keyOf(it), html = rowsHTML[idx].trim();
+      let el = old.get(k);
+      if (!el || el.__html !== html) {
+        const tpl = document.createElement('template'); tpl.innerHTML = html;
+        const n = tpl.content.firstElementChild; n.dataset.k = k; n.__html = html;
+        if (el) el.replaceWith(n); else fresh.push(n);
+        el = n;
+        if (el.matches('.dm-thread[data-tid]')) el.addEventListener('click', () => { if (!EDIT) openThread(el.dataset.tid, el.dataset.peer, el.dataset.name); });
+        else if (el.matches('.dm-gchat')) el.addEventListener('click', () => {
+          if (EDIT) return;
+          const g = GROUPS.find(x => x.id === el.dataset.gid);
+          if (g) { MY_ROOMS.add(g.id); openRoom(g); }
+        });
+      }
+      old.delete(k);
+      if (box.children[idx] !== el) box.insertBefore(el, box.children[idx] || null);
     });
+    old.forEach(el => el.remove());
     if (EDIT) bindEditChips(box);
-    staggerRows(box, '.dm-thread');
+    if (firstPaint) staggerRows(box, '.dm-thread');
   }
 
   /* ---------- 대화 ---------- */
@@ -4356,6 +4375,11 @@
       if (real && (!name || name === '익명') ) { nickCache[peer] = real; ROOT.querySelector('#dm-peer').textContent = real; }
     }
     ROOT.querySelector('#dm-peer-ava').innerHTML = avaHTML(peer, 'sm');
+    { // 탈퇴한 회원과의 방은 읽기만 — 보내 봐야 아무도 못 받는다
+      const gone = !!(PROFILES[peer] && PROFILES[peer].gone), ta = ROOT.querySelector('#dm-input'), form = ROOT.querySelector('#dm-form');
+      if (ta) { ta.disabled = gone; if (gone) ta.placeholder = '탈퇴한 회원에게는 메시지를 보낼 수 없어요'; else paintSecretUI(); }
+      if (form) form.classList.toggle('dm-gone', gone);
+    }
     setPeerSub('');
     showView('thread');
     const wrap = ROOT.querySelector('#dm-msgs');
@@ -5787,6 +5811,8 @@
   const qsnap = async (tag) => { try { if (window.GALLA_qaSnap) { const id = await window.GALLA_qaSnap(tag); qlog('snap ' + tag + ' id=' + id); } } catch (_) {} };
   const qclick = (sel, tag) => { const el = ROOT.querySelector(sel) || document.querySelector(sel); if (!el) { qlog(tag + ' NO-EL ' + sel); return false; } el.click(); return true; };
   async function qaUI(peer) {
+    // 목록 줄 재사용 확인용 — 방에 들어가기 전 줄 요소를 잡아 두고, 돌아와서 같은 요소가 살아 있는지 센다(깜빡임 = 전부 새 요소)
+    const rows0 = [...ROOT.querySelectorAll('#dm-inbox [data-k]')].slice(0, 6);
     // A. 방 열기 — 마지막 대화에 붙어 있나(gap 0 근처여야)
     await startDM(peer);
     await qsleep(300); qaState('A open+0.3s');
@@ -5800,6 +5826,7 @@
     // B. 뒤로(버튼) — 목록만 보여야, 밀린 요소 없어야
     qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'B');
     await qsleep(1000); qaState('B after-back'); await qsnap('B-after-back');
+    qlog('B rows-kept=' + rows0.filter(el => el.isConnected).length + '/' + rows0.length + ' gone-rows=' + [...ROOT.querySelectorAll('#dm-inbox .dm-thread-name')].filter(e => e.textContent.includes('탈퇴한 회원')).length);
     // C. 빠르게 열고 닫기 3번
     for (let i = 0; i < 3; i++) { await startDM(peer); await qsleep(700); qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'C'); await qsleep(700); }
     await qsleep(600); qaState('C after-3cycles'); await qsnap('C-after-cycles');
