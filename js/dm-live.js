@@ -777,6 +777,8 @@
      스피커는 마이크 트랙 publish, 전원은 스피커 트랙 subscribe. 세션ID/트랙명은
      Realtime broadcast('pub')로 교환. 미설정이면 '준비중' 배너로 후퇴.
      ⚠️ 실기기 2대 테스트 필요(첫 배선) — CF 시크릿 등록 후 검증. */
+  // 🔬 QA 진단 기록(GALLA_liveQA 로 들어왔을 때만)
+  function lvlog(m) { try { if (window.__lvQA) sb().rpc("log_client_error", { p_kind: "dm-qa", p_message: "LV " + m, p_ver: "diag" }).then(() => {}, () => {}); } catch (e) {} }
   function sfu(path, method, body) {
     return sb().functions.invoke("rtc-sfu", { body: { path, method, body: body || {} } })
       .then(r => r && r.data).catch(() => null);
@@ -796,6 +798,7 @@
     let offer;
     try { offer = await pc.createOffer(); await pc.setLocalDescription(offer); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
     const sess = await sfu("/sessions/new", "POST", { sessionDescription: { type: "offer", sdp: offer.sdp } });
+    lvlog("sess " + (sess ? (sess.reason || (sess.data && sess.data.sessionId ? "ok" : JSON.stringify(sess).slice(0, 80))) : "null"));
     if (!sess || sess.reason === "unconfigured") { try { pc.close(); } catch (e) {} return fallback(); }
     if (!sess.data || !sess.data.sessionId || !sess.data.sessionDescription) { try { pc.close(); } catch (e) {} return fallback("🔊 음성 연결 실패 — 재입장 시 재시도돼요."); }
     try { await pc.setRemoteDescription(sess.data.sessionDescription); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
@@ -854,8 +857,9 @@
     if (!(CUR.role === "host" || CUR.role === "speaker")) return;
     cf.pubBusy = true;
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (e) { cf.pubBusy = false; cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf);
+    lvlog("pub gum start role=" + CUR.role);
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); lvlog("pub gum ok tracks=" + stream.getAudioTracks().length); }
+    catch (e) { lvlog("pub gum FAIL " + (e && e.name)); cf.pubBusy = false; cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf);
       /* 🎙 마이크가 이 기능의 전부다 — 「확인해 주세요」로 끝내면 되돌릴 방법이 없다(26.9.21) */
       try { window.GALLA_permHelp ? window.GALLA_permHelp("mic") : toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); } catch (_) {}
       return; }
@@ -873,18 +877,19 @@
       await cf.pc.setLocalDescription(offer);
       // 재발행(내려갔다 다시 올라옴) 시 이전 이름과 충돌하지 않게 매번 유니크 접미사
       const trackName = "mic-" + String(ME).slice(0, 8) + "-" + Date.now().toString(36);
+      lvlog("pub mid=" + tr.mid + " mlines=" + (offer.sdp.match(/^m=audio/gm) || []).length + " mids=" + (offer.sdp.match(/^a=mid:.*$/gm) || []).join(",") + " dirs=" + (offer.sdp.match(/^a=(sendonly|recvonly|sendrecv|inactive)$/gm) || []).join(","));
       const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
         { sessionDescription: { type: "offer", sdp: offer.sdp }, tracks: [{ location: "local", mid: tr.mid, trackName }] });
       if (res && res.ok && res.data && res.data.sessionDescription) {
         await cf.pc.setRemoteDescription(res.data.sessionDescription);
         cf.pubTrack = track; cf.myTrackName = trackName;
-        cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf);
+        cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf); lvlog("pub ok " + trackName);
         announcePub();
       } else {
-        cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf);
+        cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf); lvlog("pub FAIL " + JSON.stringify(res).slice(0, 160));
         track.stop();
       }
-    } catch (e) { cf.diag.err = "pub_ex(" + (e && e.name || "?") + ")"; renderDiag(cf); try { track.stop(); } catch (_) {} }
+    } catch (e) { lvlog("pub EX " + (e && (e.name + ":" + e.message)).slice(0, 120)); cf.diag.err = "pub_ex(" + (e && e.name || "?") + ")"; renderDiag(cf); try { track.stop(); } catch (_) {} }
     cf.pubBusy = false;
   }
   function announcePub() {
@@ -918,6 +923,7 @@
           return;   // 성공
         }
         const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
+        lvlog("sub try" + i + " " + p.trackName + " -> " + (err || (sd ? sd.type : JSON.stringify(res).slice(0, 100))));
         if (err && cf.diag) { cf.diag.err = "sub(" + err + ")"; renderDiag(cf); }
         if (err !== "not_found_track_error") break;   // 다른 오류면 재시도 무의미
       } catch (e) { break; }
@@ -1010,8 +1016,8 @@
 
   /* 🔬 두 폰 QA 전용(자가테스트 dmP/dmPr 가 부른다) — 사람 손 없이 열기·입장·손들기·승격·말하기·통계 */
   window.GALLA_liveQA = {
-    async create(title) { await ensureMe(); ensureCSS(); const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: "QA" }); if (error || !id) return null; openStage(id, title, "QA", "open"); return id; },
-    async join(id) { await ensureMe(); ensureCSS(); const { data } = await sb().rpc("live_join", { p_room: id }); if (!data || !data.ok) return data; openStage(id, "", "", "join"); return data; },
+    async create(title) { window.__lvQA = true; await ensureMe(); ensureCSS(); const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: "QA" }); if (error || !id) return null; openStage(id, title, "QA", "open"); return id; },
+    async join(id) { window.__lvQA = true; await ensureMe(); ensureCSS(); const { data } = await sb().rpc("live_join", { p_room: id }); if (!data || !data.ok) return data; openStage(id, "", "", "join"); return data; },
     hand(on) { if (CUR && !!CUR.hand !== !!on) return toggleHand(); },
     async promote(uid) { if (!CUR) return null; const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: "speaker" }); broadcastSync(); refreshState(); return data; },
     async unmute() { if (CUR && CUR.muted) return toggleMute(); },
@@ -1028,7 +1034,9 @@
           if (t === "outbound-rtp" && k === "audio") { out.outB += r.bytesSent || 0; out.outPk += r.packetsSent || 0; }
           if (t === "media-source" && k === "audio" && r.audioLevel != null) out.srcLvl = r.audioLevel;
         });
+        if (!CUR.cf._typesLogged) { CUR.cf._typesLogged = 1; const ty = []; each(r => ty.push((r.type || "?") + ":" + (r.kind || r.mediaType || ""))); lvlog("stat types " + ty.join(",").slice(0, 300)); }
       } catch (e) { out.err = String(e && e.message || e).slice(0, 40); }
+      out.busy = !!(CUR.cf && CUR.cf.pubBusy); out.mic = CUR.cf && CUR.cf.diag && CUR.cf.diag.mic;
       return out;
     },
     async end() { if (!CUR) return; const room = CUR.roomId; try { CUR.channel.send({ type: "broadcast", event: "ended", payload: {} }); } catch (e) {} try { await sb().rpc("live_end", { p_room: room }); } catch (e) {} setTimeout(() => closeStage(), 150); },

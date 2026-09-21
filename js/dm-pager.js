@@ -557,12 +557,9 @@
       if (m.code) toast(`동봉된 암호: ${m.code}${codeMeaning(m.code) ? ' — ' + codeMeaning(m.code) : ''}`);
       if (PLAYING) { PLAYING.pause(); PLAYING = null; }
       beep('connect');
-      /* ⚠️ iOS는 webm을 재생하지 못한다. 그런데도 받아오면 다 내려받은 뒤에야
-         실패해 "느리고 안 된다"가 된다 — 아이폰에선 즉시 안내하고 끝낸다.
-         (새로 녹음하는 건 mp4라 정상) */
-      if (IS_IOS && /\.webm(\?|$)/i.test(m.voice_url)) {
-        return toast('이 음성은 옛 형식이라 아이폰에서 재생할 수 없어요 — 새로 남긴 음성부터는 정상이에요');
-      }
+      /* 안드로이드가 남긴 음성은 webm 이다. 예전엔 아이폰에서 webm 을 미리 막았지만, 지금 아이폰 앱은
+         webm(opus)을 재생한다(26.9.21 두 폰 실측: 갈라톡 음성 재생 성공) — 막으면 안드로이드→아이폰 삐삐를 영영 못 듣는다.
+         재생이 실제로 실패할 때만 안내한다. */
       // mp4 등은 바로 스트리밍(즉시 재생). 길이 정보가 없는 옛 webm만 통째로 받는다
       setTimeout(async () => {
         PLAYING = new Audio();
@@ -575,7 +572,9 @@
         } else {
           PLAYING.src = m.voice_url;
         }
-        PLAYING.play().catch(() => {});
+        const au = PLAYING;
+        au.onerror = () => { if (PLAYING === au) toast('이 음성을 재생하지 못했어요'); };
+        au.play().catch(() => {});
       }, 320);
     }
     if (!m.listened_at) {

@@ -3965,14 +3965,24 @@
       const pid = card.dataset.poll;
       if (opt && !opt.disabled) {
         const { data } = await supabase.rpc('dm_poll_vote', { p_poll: pid, p_options: [opt.dataset.opt] });
-        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); } }
+        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); }
+          pollPing(pid); }
         else if (data?.reason === 'closed') toast('마감된 투표예요');
       } else if (end) {
         if (!confirm('투표를 마감할까요?')) return;
         const { data } = await supabase.rpc('dm_poll_close', { p_poll: pid });
-        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); } }
+        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); }
+          pollPing(pid); }
       }
     });
+  }
+  /* 📊 투표 결과 실시간 — 누가 표를 던지면 방 채널로 알려 다른 사람 카드도 다시 읽는다
+     (예전엔 새로 들어와야만 바뀌었다: 만든 사람 화면이 「0명 참여」로 남음, 26.9.21 두 폰 실측) */
+  function pollPing(pid) { try { roomChan && roomChan.send({ type: 'broadcast', event: 'poll', payload: { pid } }); } catch (_) {} }
+  function pollRefresh(pid) {
+    const w = ROOT.querySelector('#dm-room-msgs'); if (!w || !pid) return;
+    const host = w.querySelector(`.dm-poll[data-poll="${pid}"]`); if (!host) return;
+    host.classList.remove('ready'); hydratePolls(w);
   }
   // 투표/약속 작성 시트
   function openPollComposer(kind) {
@@ -4026,6 +4036,7 @@
           appendRoomMsg(m);
           try { if (window.__dmQARecv || window.__dmQASend) { const w = ROOT.querySelector('#dm-room-msgs'); qlog('rx room ' + (m.sender_id === ME ? 'mine' : 'peer') + ' lag=' + (Date.now() - Date.parse(m.created_at)) + 'ms bubbles=' + (w ? w.querySelectorAll('[data-id="' + m.id + '"]').length : -1)); } } catch (_) {}
         })
+      .on('broadcast', { event: 'poll' }, ({ payload }) => { if (curRoom?.id === rid) pollRefresh(payload && payload.pid); })
       .subscribe();
     roomChan = ch;
   }
@@ -5942,10 +5953,11 @@
       await qsleep(3000);
     }
   }
-  async function qaPagerRoomLive(peer) {
+  async function qaPagerRoomLive(peer, onlyLive) {
     await startDM(peer); await qsleep(1500);   // 갈라톡 모듈 초기화(ME) — 이게 없으면 내 id 가 비어 전송이 전부 실패한다
     const t0 = QA_T0(); window.__dmQASend = true; qlog('run dmP peer=' + String(peer).slice(0, 6) + ' me=' + String(ME).slice(0, 6));
     // ── P1 삐삐: 상대 인사말 새로 녹음될 때까지 → 번호로 걸기 → 인사말 들어 보기 → 음성 남기기
+    if (!onlyLive) {
     const box = await qwait(async () => { const { data } = await supabase.from('pager_boxes').select('number,greeting_url,updated_at').eq('user_id', peer).maybeSingle(); return data && data.greeting_url && data.updated_at > t0 ? data : null; }, 90000);
     qlog('P greet-seen=' + !!box + ' number=' + (box && box.number));
     if (box) {
@@ -5995,6 +6007,7 @@
       }
       await qsnap('P-room');
     }
+    }
     // ── P3 육성 난장: 열기 → 상대 손들면 무대로 → 말하기·듣기 통계
     const L = window.GALLA_liveQA;
     if (!L) { qlog('P live NO-API'); qlog('dmP all done'); return; }
@@ -6011,10 +6024,11 @@
     }
     qlog('dmP all done');
   }
-  async function qaPagerRoomLiveRecv(peer) {
+  async function qaPagerRoomLiveRecv(peer, onlyLive) {
     const t0 = QA_T0(); await startDM(peer); await qsleep(1500);
     window.__dmQARecv = true; qlog('run dmPr me=' + String(ME).slice(0, 6));
     // ── R1 삐삐: 내 인사말 녹음 → 상대 음성 삐삐 도착 → 사서함 목록·재생·들은 표시
+    if (!onlyLive) {
     const gu = await qaUpload(await qaVoice(), 'audio');
     if (gu) { const g = await supabase.rpc('pager_set_greeting', { p_url: gu, p_dur: 2 }); qlog('R greeting set ok=' + !!(g.data && g.data.ok) + ' ' + ((g.data && g.data.reason) || g.error?.message || '')); }
     const pm = await qwait(async () => { const { data } = await supabase.from('pager_messages').select('id,kind,listened_at,voice_url').eq('box_owner', ME).eq('sender_id', peer).eq('kind', 'voice').gt('created_at', t0).order('created_at', { ascending: false }).limit(1); return data && data[0]; }, 150000);
@@ -6064,8 +6078,10 @@
         const card = media.po.closest('.dm-poll-card'); const pid = card && card.dataset.poll;
         media.po.click(); await qsleep(2500);
         const g = pid ? await supabase.rpc('dm_poll_get', { p_poll: pid }) : {};
+        await qsleep(3000);
         qlog('R poll voted my=' + JSON.stringify(g.data && g.data.my_votes) + ' total=' + (g.data && g.data.total) + ' screen=' + JSON.stringify((ROOT.querySelector(`.dm-poll-card[data-poll="${pid}"] .dm-poll-foot`) || {}).textContent || ''));
       }
+    }
     }
     // ── R3 육성 난장: 목록에 뜨나 → 입장 → 손들기 → 무대 올라 말하기·듣기
     const live = await qwait(async () => { const { data } = await supabase.rpc('list_live_rooms'); return (data || []).find(r => r.title === '[QA] 육성'); }, 180000);
@@ -6094,8 +6110,8 @@
     async run(mode, peer, roomId) {
       if ((mode === 'dmX' || mode === 'dmXr') && !roomId) roomId = await qaRoomId();
       if (mode === 'dmX') { qlog('run dmX peer=' + String(peer || '').slice(0, 6)); return qaExtra(peer, roomId); }
-      if (mode === 'dmP') return qaPagerRoomLive(peer);
-      if (mode === 'dmPr') return qaPagerRoomLiveRecv(peer);
+      if (mode === 'dmP' || mode === 'dmL') return qaPagerRoomLive(peer, mode === 'dmL');
+      if (mode === 'dmPr' || mode === 'dmLr') return qaPagerRoomLiveRecv(peer, mode === 'dmLr');
       if (mode === 'dmXr') { qlog('run dmXr'); window.__dmQARecv = true; await startDM(peer);
         try { await window.GALLA_e2e?.ready(supabase, ME); } catch (_) {}
         if (roomId) setTimeout(async () => { try { await openRoomById(roomId); qlog('recv room open'); } catch (e) { qlog('recv room err ' + e); } }, 26000);
