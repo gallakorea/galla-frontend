@@ -1404,6 +1404,48 @@
         };
         wrap.appendChild(sb2); return;
       }
+      // ✅ 채팅 안 행동 확인 카드(26.9.22) — 예측 걸기·가게 저장·맛 판정·여행지 저장·이슈 투표.
+      //    서버는 카드만 만든다. '확인'을 눌러야 사용자 본인 세션으로 실행된다(GP 가 걸린 일이라 대신 걸지 않는다).
+      if(a.kind==="confirm"){
+        var cf=el('<div class="fr-confirm"><div class="fr-confirm-t"></div><div class="fr-confirm-s"></div><div class="fr-confirm-b"><button class="fr-chip fr-chip-cta fr-cf-yes"></button><button class="fr-chip fr-cf-no">취소</button></div></div>');
+        cf.querySelector(".fr-confirm-t").textContent=a.title||"";
+        cf.querySelector(".fr-confirm-s").textContent=a.sub||"";
+        var yes=cf.querySelector(".fr-cf-yes"), no=cf.querySelector(".fr-cf-no");
+        yes.textContent=a.yes||"확인";
+        no.onclick=function(){ cf.classList.add("fr-done"); yes.disabled=no.disabled=true; addMsg("a","ㅇㅋ 안 할게 ㅎㅎ"); };
+        yes.onclick=async function(){
+          yes.disabled=no.disabled=true;
+          var c=window.supabaseClient, msg="";
+          try{
+            if(a.op==="bet"){
+              var r=await c.rpc("place_bet",{p_market_id:a.market_id,p_outcome_id:a.outcome_id,p_stake:a.stake});
+              var d=r&&r.data;
+              if(d&&d.ok) msg="걸었어! "+(a.stake||"")+" GP — 남은 GP "+Math.round(d.balance||0).toLocaleString("ko-KR")+" 🔥";
+              else msg=({insufficient:"GP가 모자라서 못 걸었어 ㅠ",closed:"이미 마감돼서 못 걸었어",other_side:"이미 다른 쪽에 걸어서 반대편엔 못 걸어",below_min:"최소 금액보다 적어서 안 됐어",above_max:"한도를 넘어서 안 됐어",stake_cap:"이 예측에 걸 수 있는 한도를 넘었어",banned:"지금은 예측에 참여할 수 없는 상태야",predict_disabled:"예측이 잠시 닫혀 있어",unauthorized:"로그인이 필요해"})[d&&d.reason] || "안 됐어 — 잠시 뒤에 다시 해볼래?";
+            } else if(a.op==="save_place"||a.op==="save_travel"){
+              var r2=await c.rpc(a.op==="save_place"?"food_toggle_save":"travel_save",{p_id:a.id});
+              var d2=r2&&r2.data;
+              msg = d2&&d2.ok ? (d2.saved?"저장했어! 📌 나중에 저장 목록에서 볼 수 있어":"저장 해제했어") : "저장이 안 됐어 — 로그인했는지 봐줄래?";
+            } else if(a.op==="judge_place"){
+              var r3=await c.rpc("food_judge",{p_id:a.id,p_verdict:a.verdict});
+              msg = r3&&r3.data&&r3.data.ok ? (a.verdict==="good"?"맛있다에 한 표 넣었어 😋":"별로에 한 표 넣었어") : "투표가 안 됐어 ㅠ";
+            } else if(a.op==="vote_issue"){
+              var sess=await c.auth.getSession(); var uid=sess&&sess.data&&sess.data.session&&sess.data.session.user&&sess.data.session.user.id;
+              if(!uid) msg="로그인이 필요해";
+              else {
+                var r4=await c.from("votes").insert({issue_id:a.id,user_id:uid,type:a.side});
+                msg = !r4.error ? "투표했어! 🗳" : (/duplicate|23505/.test(String(r4.error.code||r4.error.message))?"이미 이 이슈에 투표했더라 — 한 번 고르면 못 바꿔":"투표가 안 됐어 ㅠ");
+              }
+            }
+          }catch(e){ msg="안 됐어 — 네트워크가 불안정한가 봐"; }
+          // 서버가 이유를 한국어로 줬으면 그대로 — 뭉뚱그린 "안 됐어"보다 사실대로(26.9.22 사장님: 거짓말 금지)
+          var _er=[r,r2,r3,r4].filter(Boolean).map(function(x){ return x&&x.error&&x.error.message; }).filter(Boolean)[0];
+          if(_er && /[가-힣]/.test(_er) && !/^(걸었어|저장했어|맛있다|별로에|투표했어)/.test(msg)) msg="안 됐어 — "+_er;
+          cf.classList.add("fr-done");
+          addMsg("a", msg);
+        };
+        wrap.appendChild(cf); return;
+      }
       // 📍 위치 켜기 칩 — 「근처 맛집」인데 위치 권한이 없을 때. 켜지면 방금 질문을 자동으로 다시 보낸다(26.9.22 사장님)
       if(a.kind==="perm"){
         var pc=el('<button class="fr-chip fr-chip-cta"></button>');
