@@ -93,11 +93,21 @@
           사용자는 본 적도 없는데 '봤음' 처리된다(26.9.21 에뮬 실측으로 잡음).
        ③ 권한을 실제로 요청하기 전이기만 하면 되므로, 투어 뒤라도 고지 의무는 지켜진다. */
   function tourUp() { return !!document.querySelector(".gtour"); }
+  /* 투어가 '올 예정'인지 — 투어는 뜨는 순간 galla_tour_v2 를 찍는다. 이 값이 비어 있으면
+     투어가 아직 안 왔다는 뜻이다. ⚠️ 이걸 안 보면 투어가 늦게 로드될 때(홈 탭 지연 로드)
+     고지가 먼저 뜨고 그 위로 투어가 또 덮여 팝업이 두 번 연달아 뜬다(26.9.21 에뮬 재현 —
+     첫 시도엔 투어→고지, 두 번째 시도엔 고지→투어로 순서가 로딩 속도에 따라 뒤바뀌었다). */
+  function tourPending() {
+    try { return !localStorage.getItem("galla_tour_v2") && !localStorage.getItem("galla_fresh_signup"); }
+    catch (_) { return false; }
+  }
   function boot() {
-    var tries = 0;
+    var tries = 0, waitedForTour = 0;
     (function wait() {
       if (++tries > 600) return;                 // 10분이면 포기(무한 폴링 방지)
       if (tourUp()) return setTimeout(wait, 1000);
+      // 투어가 아직 안 왔으면 조금 기다린다 — 단, 15초가 지나도 안 오면 투어 대상이 아닌 것으로 본다
+      if (tourPending() && waitedForTour < 15) { waitedForTour++; return setTimeout(wait, 1000); }
       setTimeout(function () { if (!tourUp()) show(); }, 900);
     })();
   }

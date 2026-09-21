@@ -54,7 +54,7 @@ for name in sorted(os.listdir("js")):
 
 # ── ② 버전 스탬프 ──────────────────────────────────────────────────
 REF = re.compile(r'(?:src|href)="\.?/?((?:js|css|vendor)/[\w./-]+\.(?:js|css))\?v=(\d+)"')
-STAMP = re.compile(r'name="galla-ver" content="0930900"')
+STAMP = re.compile(r'name="galla-ver" content="0931000"')
 
 _dirty = set(
     l[3:].strip().strip('"')
