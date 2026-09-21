@@ -1575,7 +1575,12 @@
     try { if (mode && mode !== 'off') localStorage.setItem('galla_call_diag', '1'); } catch (_) {}   // 🔬 콜드 부팅 직후부터 기록되게
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
     if (mode === 'caller' || mode === 'callerV' || mode === 'callerM' || mode === 'callerMV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
-    else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) { wb('selftest ACCEPT-MODE'); _nativeCall({ action: 'qaAutoAnswer', on: true }); } }   // 🔬 잠금화면 CallKit 도 자동 받기(네이티브, 20분)
+    else if (mode === 'accept') {
+      _ctMode = 'accept'; _ctWakeOn();
+      if (changed) { wb('selftest ACCEPT-MODE'); _nativeCall({ action: 'qaAutoAnswer', on: true }); }   // 🔬 잠금화면 CallKit 도 자동 받기(네이티브, 20분)
+      // 이미 벨이 울리는 중이면 지금 받는다(화면에 보일 때만) — '늦게 받기' 시나리오용
+      try { if (CUR && CUR.dir === 'in' && !CUR._accepting && document.visibilityState === 'visible') accept('selftest'); } catch (_) {}
+    }
     else if (mode === 'listen') { _ctMode = 'listen'; if (changed) wb('selftest LISTEN-MODE'); }   // 🔬 관찰만(자동 수락 없음) — 잠금·백그라운드 수신 기록용
     else if (_ctMode) { _ctStop(); }
   }
