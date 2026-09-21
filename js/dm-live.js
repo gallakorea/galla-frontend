@@ -1008,6 +1008,33 @@
     return true;
   }
 
+  /* 🔬 두 폰 QA 전용(자가테스트 dmP/dmPr 가 부른다) — 사람 손 없이 열기·입장·손들기·승격·말하기·통계 */
+  window.GALLA_liveQA = {
+    async create(title) { await ensureMe(); ensureCSS(); const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: "QA" }); if (error || !id) return null; openStage(id, title, "QA", "open"); return id; },
+    async join(id) { await ensureMe(); ensureCSS(); const { data } = await sb().rpc("live_join", { p_room: id }); if (!data || !data.ok) return data; openStage(id, "", "", "join"); return data; },
+    hand(on) { if (CUR && !!CUR.hand !== !!on) return toggleHand(); },
+    async promote(uid) { if (!CUR) return null; const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: "speaker" }); broadcastSync(); refreshState(); return data; },
+    async unmute() { if (CUR && CUR.muted) return toggleMute(); },
+    state() { if (!CUR) return null; const cf = CUR.cf || {}; return { room: CUR.roomId, role: CUR.role, muted: CUR.muted, hand: CUR.hand, n: (CUR.state || []).length, rows: (CUR.state || []).map(r => ({ u: String(r.user_id).slice(0, 6), role: r.role, hand: r.hand_raised, muted: r.muted })), tx: !!(cf.diag && cf.diag.tx), rx: cf.diag ? cf.diag.rx : 0, ice: cf.diag ? cf.diag.ice : '-', err: cf.diag ? cf.diag.err : '-', subs: cf.subs ? cf.subs.size : 0, els: (cf.els || []).length }; },
+    async stats() {
+      const pc = CUR && CUR.cf && CUR.cf.pc; if (!pc || !pc.getStats) return null;
+      const out = { inB: 0, inPk: 0, inLvl: null, outB: 0, outPk: 0, srcLvl: null };
+      try {
+        const rep = await pc.getStats();
+        const each = f => { if (rep && rep.forEach) rep.forEach(f); else if (Array.isArray(rep)) rep.forEach(f); };
+        each(r => {
+          const t = r.type, k = r.kind || r.mediaType;
+          if (t === "inbound-rtp" && k === "audio") { out.inB += r.bytesReceived || 0; out.inPk += r.packetsReceived || 0; if (r.audioLevel != null) out.inLvl = r.audioLevel; }
+          if (t === "outbound-rtp" && k === "audio") { out.outB += r.bytesSent || 0; out.outPk += r.packetsSent || 0; }
+          if (t === "media-source" && k === "audio" && r.audioLevel != null) out.srcLvl = r.audioLevel;
+        });
+      } catch (e) { out.err = String(e && e.message || e).slice(0, 40); }
+      return out;
+    },
+    async end() { if (!CUR) return; const room = CUR.roomId; try { CUR.channel.send({ type: "broadcast", event: "ended", payload: {} }); } catch (e) {} try { await sb().rpc("live_end", { p_room: room }); } catch (e) {} setTimeout(() => closeStage(), 150); },
+    leave() { if (CUR && CUR.role !== "host") return leave(); },
+  };
+
   /* ── init ────────────────────────────────────────────────────────────────── */
   (async function init() {
     const t = setInterval(async () => { if (!sb()) return; clearInterval(t); ensureMe(); }, 200);

@@ -5931,6 +5931,160 @@
     }
     qlog('extra all done');
   }
+  /* 🔬 삐삐·난장·육성 두 폰 QA(dmP=보내는 폰·방장 / dmPr=받는 폰) — 서로 DB 를 보며 단계 맞춘다 */
+  const qwait = async (fn, ms, step = 2000) => { const end = Date.now() + ms; while (Date.now() < end) { try { const v = await fn(); if (v) return v; } catch (_) {} await qsleep(step); } return null; };
+  const QA_T0 = () => new Date(Date.now() - 10000).toISOString();
+  async function qaLiveLog(tag, n) {
+    for (let i = 0; i < n; i++) {
+      const L = window.GALLA_liveQA; const st = L && L.state(); if (!st) { qlog(tag + ' stage-closed'); return; }
+      const sx = await L.stats();
+      qlog(tag + ' role=' + st.role + ' muted=' + st.muted + ' n=' + st.n + ' tx=' + st.tx + ' rx=' + st.rx + ' subs=' + st.subs + ' ice=' + st.ice + (st.err ? ' err=' + st.err : '') + ' | ' + JSON.stringify(sx));
+      await qsleep(3000);
+    }
+  }
+  async function qaPagerRoomLive(peer) {
+    const t0 = QA_T0(); window.__dmQASend = true; qlog('run dmP peer=' + String(peer).slice(0, 6));
+    // ── P1 삐삐: 상대 인사말 새로 녹음될 때까지 → 번호로 걸기 → 인사말 들어 보기 → 음성 남기기
+    const box = await qwait(async () => { const { data } = await supabase.from('pager_boxes').select('number,greeting_url,updated_at').eq('user_id', peer).maybeSingle(); return data && data.greeting_url && data.updated_at > t0 ? data : null; }, 90000);
+    qlog('P greet-seen=' + !!box + ' number=' + (box && box.number));
+    if (box) {
+      const d = await supabase.rpc('pager_dial', { p_number: box.number });
+      qlog('P dial ok=' + !!(d.data && d.data.ok) + ' match=' + (d.data && d.data.user_id === peer) + ' nick=' + (d.data && d.data.nickname) + (d.error ? ' err=' + d.error.message : ''));
+      const au = new Audio(); au.preload = 'metadata';
+      await new Promise(r => { au.onloadedmetadata = () => { qlog('P greet meta ok dur=' + (au.duration || 0).toFixed(2)); r(); }; au.onerror = () => { qlog('P greet meta FAIL ' + (au.error && au.error.code)); r(); }; setTimeout(r, 8000); au.src = box.greeting_url; });
+      try {
+        await ensurePager();
+        const op = HTMLMediaElement.prototype.play; let played = null;
+        HTMLMediaElement.prototype.play = function () { if (String(this.src || '').includes('greet') || this.src === box.greeting_url) played = this; return op.apply(this, arguments); };
+        window.GALLA_PAGER.leaveTo(peer, (d.data && d.data.nickname) || '');
+        await qsleep(2600);
+        const txt = (document.querySelector('.pgr-call') || document.body).textContent;
+        qlog('P leaveTo greetUI=' + txt.includes('인사말 재생 중') + ' playing=' + !!(played && !played.paused && played.currentTime > 0) + ' t=' + (played ? played.currentTime.toFixed(2) : '-'));
+        HTMLMediaElement.prototype.play = op;
+        await qsleep(1500);
+        const x = document.querySelector('[data-c="close"]'); if (x) x.click();
+      } catch (e) { qlog('P leaveTo err ' + String(e && e.message || e).slice(0, 50)); }
+      await qsleep(1500);
+      const vu = await qaUpload(await qaVoice(), 'audio');
+      if (vu) { const r2 = await supabase.rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: vu, p_dur: 2, p_code: '1004' }); qlog('P pager voice ok=' + !!(r2.data && r2.data.ok) + ' ' + ((r2.data && r2.data.reason) || r2.error?.message || '')); }
+    }
+    // ── P2 난장: 방 만들고 입장 전 메시지 → 상대 참여 기다려 사진·음성·투표
+    const { data: rid, error: re } = await supabase.rpc('open_room_create', { p_title: '[QA] 난장', p_topic: 'QA 자동 시험' });
+    qlog('P room create ok=' + !!rid + (re ? ' err=' + re.message : ''));
+    if (rid) {
+      MY_ROOMS.add(rid); await openRoomById(rid); await qsleep(2000);
+      const d0 = await sendAny({ body: '[QA] 입장 전 메시지' }); qlog('P room pre-msg ok=' + !!d0);
+      const joined = await qwait(async () => { const { data } = await supabase.from('open_room_members').select('user_id').eq('room_id', rid).eq('user_id', peer).maybeSingle(); return data; }, 120000);
+      qlog('P peer-joined=' + !!joined);
+      await qsleep(4000);
+      const iu = await qaUpload(await qaImage(), 'image');
+      if (iu) { const d = await sendAny({ kind: 'image', body: '📷 사진', meta: { url: iu } }); qlog('P room image ok=' + !!d); }
+      await qsleep(2500);
+      const vu = await qaUpload(await qaVoice(), 'audio');
+      if (vu) { const d = await sendAny({ kind: 'voice', body: '🎤 음성 메시지', meta: { url: vu, dur: 2 } }); qlog('P room voice ok=' + !!d); }
+      await qsleep(2500);
+      const pc = await supabase.rpc('dm_poll_create', { p_room: rid, p_kind: 'choice', p_question: '[QA] 점심 뭐 먹지', p_options: ['짜장', '짬뽕'], p_multi: false });
+      const pid = pc.data && pc.data.poll_id; qlog('P poll create ok=' + !!pid + (pc.error ? ' err=' + pc.error.message : ''));
+      if (pid) {
+        const v = await qwait(async () => { const { data } = await supabase.rpc('dm_poll_get', { p_poll: pid }); return data && data.total >= 1 ? data : null; }, 120000);
+        qlog('P poll peer-voted=' + !!v + ' total=' + (v && v.total));
+        await qsleep(3000);
+        const card = ROOT.querySelector(`.dm-poll-card[data-poll="${pid}"] .dm-poll-foot`);
+        qlog('P poll my-screen=' + JSON.stringify(card ? card.textContent.trim() : null) + ' (투표 결과가 내 화면에 실시간 반영됐나)');
+      }
+      await qsnap('P-room');
+    }
+    // ── P3 육성 난장: 열기 → 상대 손들면 무대로 → 말하기·듣기 통계
+    const L = window.GALLA_liveQA;
+    if (!L) { qlog('P live NO-API'); qlog('dmP all done'); return; }
+    const lid = await L.create('[QA] 육성'); qlog('P live create ok=' + !!lid);
+    if (lid) {
+      await qsleep(5000); await L.unmute(); await qaLiveLog('P live solo', 2);
+      const hand = await qwait(async () => { const st = L.state(); return st && st.rows.find(r => r.u === String(peer).slice(0, 6) && r.hand); }, 120000);
+      qlog('P live peer-hand=' + !!hand);
+      if (hand) { const pr = await L.promote(peer); qlog('P live promote ' + JSON.stringify(pr).slice(0, 60)); }
+      await qsleep(4000); await qsnap('P-live');
+      qlog('P live speaking');
+      await qaLiveLog('P live', 12);
+      await L.end(); qlog('P live end');
+    }
+    qlog('dmP all done');
+  }
+  async function qaPagerRoomLiveRecv(peer) {
+    const t0 = QA_T0(); window.__dmQARecv = true; qlog('run dmPr');
+    // ── R1 삐삐: 내 인사말 녹음 → 상대 음성 삐삐 도착 → 사서함 목록·재생·들은 표시
+    const gu = await qaUpload(await qaVoice(), 'audio');
+    if (gu) { const g = await supabase.rpc('pager_set_greeting', { p_url: gu, p_dur: 2 }); qlog('R greeting set ok=' + !!(g.data && g.data.ok) + ' ' + ((g.data && g.data.reason) || g.error?.message || '')); }
+    const pm = await qwait(async () => { const { data } = await supabase.from('pager_messages').select('id,kind,listened_at,voice_url').eq('box_owner', ME).eq('sender_id', peer).eq('kind', 'voice').gt('created_at', t0).order('created_at', { ascending: false }).limit(1); return data && data[0]; }, 150000);
+    qlog('R pager voice arrived=' + !!pm);
+    if (pm) {
+      await qsleep(1500);
+      window.GALLA_dmSetTab('pager'); await qsleep(3500);
+      const row = document.querySelector(`.pgr-row[data-msg="${pm.id}"]`);
+      qlog('R box row=' + !!row + ' new=' + !!(row && row.classList.contains('new')) + ' new-count=' + document.querySelectorAll('.pgr-row.new').length + ' lcd=' + JSON.stringify((document.querySelector('.pgr-lcd-sub') || {}).textContent || ''));
+      await qsnap('R-pager-box');
+      if (row) {
+        const op = HTMLMediaElement.prototype.play; let played = null;
+        HTMLMediaElement.prototype.play = function () { played = this; return op.apply(this, arguments); };
+        row.click(); await qsleep(2200);
+        qlog('R pager play started=' + !!played + ' playing=' + !!(played && !played.paused && played.currentTime > 0) + ' t=' + (played ? played.currentTime.toFixed(2) : '-') + ' err=' + (played && played.error ? played.error.code : '-'));
+        HTMLMediaElement.prototype.play = op;
+        await qsleep(2500);
+        const { data: after } = await supabase.from('pager_messages').select('listened_at').eq('id', pm.id).maybeSingle();
+        const row2 = document.querySelector(`.pgr-row[data-msg="${pm.id}"]`);
+        qlog('R pager listened_at=' + !!(after && after.listened_at) + ' row-new-after=' + !!(row2 && row2.classList.contains('new')));
+      }
+    }
+    // ── R2 난장: 목록 → 입장 전 게이트·읽기 차단 → 뛰어들기 → 사진·음성·투표 받기
+    const room = await qwait(async () => { const { data } = await supabase.from('open_rooms').select('id,title').eq('title', '[QA] 난장').gt('created_at', t0).limit(1); return data && data[0]; }, 150000);
+    qlog('R room seen=' + !!room);
+    if (room) {
+      window.GALLA_dmSetTab('rooms'); await qsleep(3500);
+      qlog('R room in-list=' + !!ROOT.querySelector(`.dm-room-row[data-rid="${room.id}"]`));
+      const pre = await supabase.from('open_messages').select('id').eq('room_id', room.id);
+      qlog('R pre-join readable=' + ((pre.data || []).length) + ' (기대 0 — 참여 전엔 못 읽어야)');
+      await openRoomById(room.id); await qsleep(2000);
+      const gate = ROOT.querySelector('#dm-room-gate'), msgs = ROOT.querySelector('#dm-room-msgs');
+      qlog('R gate shown=' + !!(gate && !gate.hidden) + ' msgs-hidden=' + !!(msgs && msgs.hidden)); await qsnap('R-room-gate');
+      const jb = ROOT.querySelector('#dm-room-join-btn'); if (jb) jb.click(); else qlog('R NO join btn');
+      await qsleep(3500);
+      qlog('R joined msgs-visible=' + !!(msgs && !msgs.hidden) + ' bubbles=' + (msgs ? msgs.querySelectorAll('[data-id]').length : -1) + ' gate-hidden=' + !!(gate && gate.hidden));
+      const media = await qwait(async () => { const w = ROOT.querySelector('#dm-room-msgs'); const im = w && [...w.querySelectorAll('img')].filter(i => /qa|r2|media|cdn/i.test(i.src) && !i.classList.contains('dm-stkimg')).pop(); const vp = w && w.querySelector('.dm-vplay'); const po = w && w.querySelector('.dm-poll-opt'); return im && vp && po ? { im, vp, po } : null; }, 150000);
+      qlog('R room media arrived=' + !!media);
+      if (media) {
+        await qsleep(1500);
+        qlog('R room image loaded=' + (media.im.complete && media.im.naturalWidth > 0) + ' ' + media.im.naturalWidth + 'x' + media.im.naturalHeight);
+        media.vp.click(); await qsleep(1800);
+        const va = window.__dmVaudio && window.__dmVaudio();
+        qlog('R room voice playing=' + !!(va && !va.paused && va.currentTime > 0) + ' t=' + (va ? va.currentTime.toFixed(2) : '-') + ' err=' + (va && va.error ? va.error.code : '-'));
+        if (va && !va.paused) media.vp.click();
+        await qsnap('R-room-media');
+        const card = media.po.closest('.dm-poll-card'); const pid = card && card.dataset.poll;
+        media.po.click(); await qsleep(2500);
+        const g = pid ? await supabase.rpc('dm_poll_get', { p_poll: pid }) : {};
+        qlog('R poll voted my=' + JSON.stringify(g.data && g.data.my_votes) + ' total=' + (g.data && g.data.total) + ' screen=' + JSON.stringify((ROOT.querySelector(`.dm-poll-card[data-poll="${pid}"] .dm-poll-foot`) || {}).textContent || ''));
+      }
+    }
+    // ── R3 육성 난장: 목록에 뜨나 → 입장 → 손들기 → 무대 올라 말하기·듣기
+    const live = await qwait(async () => { const { data } = await supabase.rpc('list_live_rooms'); return (data || []).find(r => r.title === '[QA] 육성'); }, 180000);
+    qlog('R live seen=' + !!live);
+    const L = window.GALLA_liveQA;
+    if (live && L) {
+      window.GALLA_dmSetTab('rooms'); try { window.GALLA_liveRefresh && await window.GALLA_liveRefresh(); } catch (_) {}
+      await qsleep(2500); qlog('R live card=' + !!document.querySelector(`.lv-card[data-room="${live.id}"]`));
+      const j = await L.join(live.id); qlog('R live join ' + JSON.stringify(j).slice(0, 50));
+      await qsleep(5000); await qaLiveLog('R live listener', 2);
+      L.hand(true); qlog('R live hand up');
+      const up = await qwait(async () => { const st = L.state(); return st && st.role === 'speaker' ? st : null; }, 60000, 1000);
+      qlog('R live promoted=' + !!up);
+      if (up) { await qsleep(2500); await L.unmute(); }
+      await qsleep(2000); await qsnap('R-live');
+      await qaLiveLog('R live', 12);
+      const closed = await qwait(async () => !L.state(), 60000, 1500);
+      qlog('R live closed-by-host=' + !!closed + ' leftover-audio=' + document.querySelectorAll('body > audio').length);
+    }
+    qlog('dmPr all done');
+  }
   async function qaRoomId() {
     try { const { data } = await supabase.from('open_rooms').select('id').eq('title', '[QA] 단체방').order('created_at', { ascending: false }).limit(1); return data && data[0] ? data[0].id : null; } catch (_) { return null; }
   }
@@ -5938,6 +6092,8 @@
     async run(mode, peer, roomId) {
       if ((mode === 'dmX' || mode === 'dmXr') && !roomId) roomId = await qaRoomId();
       if (mode === 'dmX') { qlog('run dmX peer=' + String(peer || '').slice(0, 6)); return qaExtra(peer, roomId); }
+      if (mode === 'dmP') return qaPagerRoomLive(peer);
+      if (mode === 'dmPr') return qaPagerRoomLiveRecv(peer);
       if (mode === 'dmXr') { qlog('run dmXr'); window.__dmQARecv = true; await startDM(peer);
         try { await window.GALLA_e2e?.ready(supabase, ME); } catch (_) {}
         if (roomId) setTimeout(async () => { try { await openRoomById(roomId); qlog('recv room open'); } catch (e) { qlog('recv room err ' + e); } }, 26000);

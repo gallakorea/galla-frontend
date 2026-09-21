@@ -1583,7 +1583,7 @@
       // 이미 벨이 울리는 중이면 지금 받는다(화면에 보일 때만) — '늦게 받기' 시나리오용
       try { if (CUR && CUR.dir === 'in' && !CUR._accepting && document.visibilityState === 'visible') accept('selftest'); } catch (_) {}
     }
-    else if (mode === 'dmSend' || mode === 'dmRecv' || mode === 'dmUI' || mode === 'dmX' || mode === 'dmXr') {   // 🔬 갈라톡 두 폰 QA — DM 뷰로 가서(dm.js) 한 번 실행
+    else if (mode === 'dmSend' || mode === 'dmRecv' || mode === 'dmUI' || mode === 'dmX' || mode === 'dmXr' || mode === 'dmP' || mode === 'dmPr') {   // 🔬 갈라톡 두 폰 QA — DM 뷰로 가서(dm.js) 한 번 실행
       if (_ctMode !== mode) { _ctMode = mode; _dmQADone = false; }
       if (window.GALLA_dmQA) { if (!_dmQADone) { _dmQADone = true; window.GALLA_dmQA.run(mode, peer, window.__qaRoomId || null); } }
       else { try { if (window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm'); else if (window.GALLA_shellGo) window.GALLA_shellGo('dm'); } catch (_) {} }
