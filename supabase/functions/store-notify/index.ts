@@ -67,10 +67,19 @@ async function handleApple(signedPayload: string) {
   const subEv = appleSubEvent(type, subtype);
   if (subEv) {
     const tx0 = p.data?.signedTransactionInfo ? jwsPayload<any>(p.data.signedTransactionInfo) : null;
-    const orig = tx0?.originalTransactionId;
-    if (!orig) return j({ ok: true, skipped: "no_original_txid" });
-    const expMs = Number(tx0?.expiresDate || 0);
-    return j(await subEvent(String(orig), subEv, expMs ? new Date(expMs).toISOString() : null));
+    if (!tx0?.transactionId) return j({ ok: true, skipped: "no_txid" });
+    /* 🔒 알림 내용을 믿지 않고 애플에 되묻는다(26.9.21 보안 점검) — 예전엔 서명 검증 없이 알림 속
+       originalTransactionId·expiresDate 를 그대로 반영해, 자기 구독 원거래ID 에 「갱신·만료일 2099」를 적은
+       가짜 알림으로 구독을 무료 연장할 수 있었다. 환불 경로처럼 애플이 준 진짜 거래로만 처리한다. */
+    const real: any = await appleGetTransaction(String(tx0.transactionId));
+    if (!real?.originalTransactionId) {
+      console.warn("apple_sub_unconfirmed", tx0.transactionId);
+      return j({ ok: true, skipped: "unconfirmed" });
+    }
+    const expMs = Number(real.expiresDate || 0);
+    const ev = (subEv === "refund" && !real.revocationDate) ? null : subEv;   // 환불이라면서 애플엔 취소 기록이 없으면 무시
+    if (!ev) return j({ ok: true, skipped: "not_revoked" });
+    return j(await subEvent(String(real.originalTransactionId), ev, expMs ? new Date(expMs).toISOString() : null));
   }
 
   // REFUND = 환불 승인, REVOKE = 가족 공유 회수. 나머지는 소모성 상품과 무관.
