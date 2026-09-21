@@ -405,17 +405,29 @@
 
           <div id="soco-err" class="soco-msg"></div>
           <button id="soco-go" class="soco-btn" type="button">가입 완료하고 시작하기</button>
+          <button id="soco-out" type="button" style="display:block;margin:14px auto 0;background:none;border:0;color:#8a90a0;font-size:13.5px;text-decoration:underline;padding:8px">나중에 할게요 (로그아웃)</button>
         </div>`;
       document.body.appendChild(wrap);
       const nick = wrap.querySelector("#soco-nick");
       const msg = wrap.querySelector("#soco-nickmsg");
       const err = wrap.querySelector("#soco-err");
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
+      // 닉네임 규칙은 서버와 같다 — 입력하는 동안 바로 알려 준다(모듈이 없는 화면도 있다: 「저장 실패」만 뜨고 이유를 몰랐다, 26.9.21)
+      const NICK_RE = /^[가-힣a-zA-Z0-9_.\-]+$/;
+      const nickWhy = v => !v ? "" : v.length < 2 ? "닉네임은 2자 이상이에요." : v.length > 12 ? "닉네임은 12자까지예요."
+        : /[ㄱ-ㅎㅏ-ㅣ]/.test(v) ? "자음·모음만 따로 쓸 수는 없어요 — 완성된 글자로 써 주세요." : !NICK_RE.test(v) ? "한글·영문·숫자와 _ . - 만 쓸 수 있어요." : "";
+      nick.addEventListener("input", () => { const w = nickWhy(nick.value.trim()); msg.textContent = w; msg.className = "soco-msg" + (w ? " bad" : ""); });
+      // 🚪 갇힘 방지 — 가입을 마치지 않고 나갈 길(로그아웃하고 둘러보기)
+      wrap.querySelector("#soco-out").onclick = async () => {
+        try { await sb().auth.signOut(); } catch (_) {}
+        wrap.remove(); resolve(false);
+        try { window.GALLA_toast && window.GALLA_toast("로그아웃했어요 — 언제든 다시 가입할 수 있어요."); } catch (_) {}
+      };
       wrap.querySelector("#soco-go").onclick = async () => {
         const c = sb();
         const n = nick.value.trim();
         err.textContent = ""; err.className = "soco-msg";
-        if (n.length < 2) return fail("닉네임은 2자 이상이에요.");
+        const why = nickWhy(n); if (why) return fail(why);
         if (!wrap.querySelector("#soco-terms").checked) return fail("필수 약관에 동의해 주세요.");
         const btn = wrap.querySelector("#soco-go"); btn.disabled = true; btn.textContent = "설정 중…";
         const { data, error } = await c.rpc("social_onboard", {
@@ -423,7 +435,10 @@
           p_marketing: wrap.querySelector("#soco-mkt").checked,
         });
         if (error || !data?.ok) {
-          const r = data?.reason;
+          const r = data?.reason, dt = String(data?.detail || error?.message || "");
+          if (/nickname_charset/.test(dt)) { fail("한글·영문·숫자와 _ . - 만 쓸 수 있어요 (자음·모음만은 안 돼요)."); btn.disabled = false; btn.textContent = "가입 완료하고 시작하기"; return; }
+          if (/nickname_length/.test(dt)) { fail("닉네임은 2~12자예요."); btn.disabled = false; btn.textContent = "가입 완료하고 시작하기"; return; }
+          if (/nickname_reserved/.test(dt)) { fail("쓸 수 없는 닉네임이에요 — 다른 걸로 해 주세요."); btn.disabled = false; btn.textContent = "가입 완료하고 시작하기"; return; }
           const m = { nick_taken:"이미 쓰는 닉네임이에요.", nick_short:"닉네임이 너무 짧아요.",
             age14:"만 14세 이상만 가입할 수 있어요.", gender:"성별을 선택해 주세요.",
             region:"지역을 선택해 주세요.", birth:"출생연도를 선택해 주세요.", terms:"약관에 동의해 주세요." };
