@@ -861,3 +861,61 @@ body.fr-chatting #frAssist, body.dm-detail #frAssist, body.hv-playing #frAssist{
 .fri-cf-yes{ flex:1; color:#fff; background:linear-gradient(135deg,#4361ff,#7b4dff); box-shadow:0 0 18px rgba(123,77,255,.5); animation:friCfIn .45s cubic-bezier(.34,1.56,.64,1); }
 .fri-cf-no{ color:#cfe0ee; background:rgba(255,255,255,.08); }
 @keyframes friCfIn{ from{ transform:scale(.8); opacity:0; } to{ transform:none; opacity:1; } }
+
+/* ══════════ ✨ 답 글 꾸미기(26.9.22) ══════════ */
+.rx-num{ color:#7ff0ff; font-weight:850; font-variant-numeric:tabular-nums; text-shadow:0 0 10px rgba(63,224,255,.65); }
+.rx-u{ color:#9fdcef; font-weight:700; margin-left:1px; }
+.rx-star{ color:#ffcf6a; font-weight:800; text-shadow:0 0 10px rgba(255,190,80,.55); }
+.rx-star .rx-num{ color:#ffe3a3; text-shadow:0 0 10px rgba(255,190,80,.7); }
+.rx-time{ color:#ffd58a; font-weight:800; padding:0 5px; margin:0 1px; border-radius:6px; background:rgba(255,179,71,.12); box-shadow:inset 0 0 0 1px rgba(255,179,71,.38); }
+.rx-q{ color:#f2feff; font-weight:750; background:linear-gradient(transparent 64%, rgba(63,224,255,.34) 64%) no-repeat 0 0 / 100% 100%; border-radius:2px; }
+.rx-new .rx-q{ animation:rxUnder .7s ease-out both; animation-delay:calc(var(--d,0ms) + 180ms); background-size:0% 100%; }
+@keyframes rxUnder{ to{ background-size:100% 100%; } }
+.rx-side{ font-weight:850; padding:0 5px; border-radius:6px; }
+.rx-side.pro{ color:#9cc0ff; background:rgba(79,124,255,.16); box-shadow:inset 0 0 0 1px rgba(111,150,255,.45); }
+.rx-side.con{ color:#ff9fae; background:rgba(255,79,109,.14); box-shadow:inset 0 0 0 1px rgba(255,110,135,.45); }
+.rx-li{ display:flex; gap:9px; align-items:flex-start; margin:6px 0; }
+.rx-li:first-child{ margin-top:2px; }
+.rx-ln{ flex:0 0 auto; min-width:21px; height:21px; margin-top:1px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-style:normal;
+  font-size:11.5px; font-weight:900; color:#04121c; background:linear-gradient(135deg,#7ff0ff,#3aa8ff); box-shadow:0 0 12px rgba(63,224,255,.55); }
+.rx-new .rx-li-in{ animation:rxLi .5s cubic-bezier(.2,1.3,.4,1) both; animation-delay:var(--d,0ms); }
+@keyframes rxLi{ from{ opacity:0; transform:translateX(-12px); } }
+/* 단어가 흐릿→또렷 */
+.rx-new .rx-w{ display:inline-block; opacity:0; filter:blur(5px); transform:translateY(4px); animation:rxIn .44s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:var(--d,0ms); }
+.rx-new .rx-li-in .rx-w{ transform:none; }
+@keyframes rxIn{ to{ opacity:1; filter:blur(0); transform:none; } }
+/* 답이 도착할 때 말풍선에 빛이 한 번 스친다 */
+.fr-msg.fr-a.rx-new .fr-bubble{ position:relative; overflow:hidden; }
+.fr-msg.fr-a.rx-new .fr-bubble::after{ content:""; position:absolute; inset:0; pointer-events:none; transform:translateX(-120%);
+  background:linear-gradient(105deg, transparent 35%, rgba(127,240,255,.28) 50%, transparent 65%); animation:rxShine 1.1s ease-out .1s forwards; }
+@keyframes rxShine{ to{ transform:translateX(120%); } }
+@media (prefers-reduced-motion: reduce){ .rx-new .rx-w, .rx-new .rx-li-in, .rx-new .rx-q, .fr-msg.fr-a.rx-new .fr-bubble::after{ animation:none !important; opacity:1; filter:none; transform:none; background-size:100% 100%; } }
+
+/* 🎬 생각하는 동안 — 네 색 글로우 알약 + 크레딧 */
+@property --rx-a { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+.fr-typing.fr-think{ position:relative; display:inline-flex !important; align-items:center; gap:10px; padding:9px 14px 9px 12px !important; border-radius:999px !important;
+  background:rgba(6,16,28,.85) !important; isolation:isolate; }
+.fr-typing.fr-think::before{ content:""; position:absolute; inset:-1.5px; border-radius:inherit; padding:1.5px; z-index:-1;
+  background:conic-gradient(from var(--rx-a), #3fd3ff, #9b7bff, #ff6f91, #ffb347, #3fd3ff);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; animation:rxSpin 1.8s linear infinite; }
+.fr-typing.fr-think::after{ content:""; position:absolute; inset:-6px; border-radius:inherit; z-index:-2; filter:blur(12px); opacity:.55;
+  background:conic-gradient(from var(--rx-a), #3fd3ff, #9b7bff, #ff6f91, #ffb347, #3fd3ff); animation:rxSpin 1.8s linear infinite; }
+@keyframes rxSpin{ to{ --rx-a:360deg; } }
+.ft-dots{ display:inline-flex; gap:4px; } .ft-dots i{ width:6px !important; height:6px !important; border-radius:50%; background:#8fe6ff !important; animation:ftDot 1s infinite ease-in-out !important; }
+.ft-dots i:nth-child(2){ animation-delay:.15s !important } .ft-dots i:nth-child(3){ animation-delay:.3s !important }
+@keyframes ftDot{ 0%,80%,100%{ opacity:.25; transform:translateY(0) } 40%{ opacity:1; transform:translateY(-3px) } }
+.ft-roll{ display:inline-block; height:18px; overflow:hidden; -webkit-mask:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent); mask:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent); }
+.ft-track{ display:flex; flex-direction:column; animation:ftRoll 5.4s steps(1) infinite, ftRollS 5.4s cubic-bezier(.6,0,.2,1) infinite; }
+.ft-track span{ height:18px; line-height:18px; font-size:13px; font-weight:750; color:#dff6ff; white-space:nowrap; letter-spacing:.02em; }
+@keyframes ftRollS{ 0%,14%{ transform:translateY(0) } 20%,34%{ transform:translateY(-18px) } 40%,54%{ transform:translateY(-36px) } 60%,74%{ transform:translateY(-54px) } 80%,94%{ transform:translateY(-72px) } 100%{ transform:translateY(-90px) } }
+@keyframes ftRoll{ 0%{ opacity:1 } }
+/* ✨ 답 도착 — 첫 말풍선 둘레를 네 색 빛이 빨라졌다 느려지며 한 바퀴 돌고 가라앉는다 */
+.fr-msg.fr-a.rx-glow .fr-bubble{ position:relative; isolation:isolate; overflow:visible; }
+.fr-msg.fr-a.rx-glow .fr-bubble > .rxg{ display:none; }
+.fr-msg.fr-a.rx-glow{ position:relative; }
+.fr-msg.fr-a.rx-glow .fr-bubble::before{ content:""; position:absolute; inset:-2px; border-radius:inherit; padding:2px; z-index:-1; pointer-events:none;
+  background:conic-gradient(from var(--rx-a), #3fd3ff, #9b7bff, #ff6f91, #ffb347, #3fd3ff);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:rxOnce 1.8s cubic-bezier(.45,0,.2,1) forwards; box-shadow:0 0 18px rgba(155,123,255,.5); }
+@keyframes rxOnce{ 0%{ --rx-a:0deg; opacity:0 } 12%{ opacity:1 } 75%{ opacity:1 } 100%{ --rx-a:360deg; opacity:0 } }
+@media (prefers-reduced-motion: reduce){ .fr-typing.fr-think::before, .fr-typing.fr-think::after, .ft-track, .fr-msg.fr-a.rx-glow .fr-bubble::before{ animation:none !important; } }

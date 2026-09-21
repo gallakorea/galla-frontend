@@ -575,7 +575,7 @@
     if(thinking){ tick.textContent="생각하는 중…"; }
     var txt=parts.slice(-3).join("\n");
     if(txt && txt!==_friLastTxt){
-      _friLastTxt=txt; box.textContent=txt;
+      _friLastTxt=txt; box.innerHTML=fmtRich(fmtStage(txt)); revealRich(box);
       var last=parts[parts.length-1]||""; tick.textContent=last.replace(/\s+/g," ").slice(0,40);
       _asEl.classList.remove("fri-full"); friExpand(true); friSparkle();
       _asEl.classList.remove("fri-pop"); void _asEl.offsetWidth; _asEl.classList.add("fri-pop");
@@ -1419,10 +1419,12 @@
     if(d && d.history && d.history.length){
       if(d.name){ friendName=d.name; setTitle(); }
       history = d.history.slice(-30);
+      _frNoAnim=true;
       history.forEach(function(msg){
         if(msg && msg.role==="user"){ addMsg("u", msg.content||""); }
         else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
       });
+      _frNoAnim=false;
       /* 📍 새 대화 경계 — 복원분은 살짝 딤 + 구분선. "어디부터 지금 대화인지 모르겠다"(사장님). */
       try{
         logEl.querySelectorAll(".fr-msg").forEach(function(m){ m.classList.add("fr-old"); });
@@ -1562,10 +1564,64 @@
       .replace(/\(\(([^()\n]{1,80})\)\)/g,'<i class="fr-stage">$1</i>')   // 🎬 갈라식 지문 ((행동))
       .replace(/\*([^*\n]{1,80})\*/g,'<i class="fr-stage">$1</i>');        // 폴백: 혹시 *…* 흘리면도 깨지지 않게
   }
+  /* ✨ 답 글 꾸미기(26.9.22 사장님: 「사람들이 받아보는 결과물 — 텍스트 형식을 비주얼로 죽이게, 동적으로」)
+     숫자·평점·퍼센트·GP·시간은 빛나는 숫자(0부터 올라감), 따옴표 제목은 빛 밑줄, 찬성/반대는 색 표식,
+     「1. / · 」 줄은 번호 배지 줄. 태그 밖 글자에만 건다(짤·지문 태그는 그대로). */
+  function fmtRich(html){
+    var UNIT="GP|명|개|원|만\\s?원|억|곳|표|회|위|배|km|m|분|초|도|점|편|건|대";
+    return String(html||"").split(/(<[^>]+>)/).map(function(seg){
+      if(!seg || seg.charAt(0)==="<") return seg;
+      return seg
+        .replace(/★\s?(\d(?:\.\d)?)/g, '<span class="rx-star">★<b class="rx-num" data-n="$1">$1</b></span>')
+        .replace(/(\d{1,3}(?:\.\d)?)\s?%/g, '<b class="rx-num rx-pct" data-n="$1">$1</b><span class="rx-u">%</span>')
+        .replace(/((?:오전|오후|새벽|아침|저녁|밤)\s?)?(\d{1,2})시(\s?(?:\d{1,2}분|반))?/g, function(m){ var lead=m.match(/^\s*/)[0]; return lead+'<span class="rx-time">'+m.trim()+'</span>'; })
+        .replace(new RegExp("(\\d{1,3}(?:,\\d{3})+|\\d+(?:\\.\\d+)?)\\s?("+UNIT+")","g"), function(m,n,u){ return '<b class="rx-num" data-n="'+n.replace(/,/g,"")+'">'+n+'</b><span class="rx-u">'+u+'</span>'; })
+        .replace(/(&quot;|“|「|『)([^&“”「」『』<>\n]{2,40})(&quot;|”|」|』)/g, '<span class="rx-q">$1$2$3</span>')
+        .replace(/(^|[\s(])(찬성|반대)(?=[\s,.!?)쪽에이가을도]|$)/g, function(m,a,w){ return a+'<span class="rx-side '+(w==="찬성"?"pro":"con")+'">'+w+'</span>'; });
+    }).join("")
+    // 줄머리 번호·가운뎃점 → 번호 배지 줄(줄바꿈은 블록이 대신한다)
+    .replace(/(^|\n)\s*(?:([1-9])[.)]|[·•\-–])\s+([^\n]+)/g, function(m,pre,n,body){ return '<span class="rx-li"><i class="rx-ln">'+(n||"•")+'</i><span>'+body+'</span></span>'; });
+  }
+  /* 새 답 등장 — 단어가 흐릿→또렷하게 차르르(자비스 말하듯), 숫자는 제 차례에 0부터 올라간다 */
+  var _frNoAnim=false;
+  function revealRich(box){
+    if(!box || _frNoAnim || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+    var d=0, STEP=26, MAX=1300;
+    (function walk(node){
+      Array.prototype.slice.call(node.childNodes).forEach(function(n){
+        if(n.nodeType===3){
+          var parts=n.textContent.split(/(\s+)/); if(parts.length<=1 && !n.textContent.trim()) return;
+          var frag=document.createDocumentFragment();
+          parts.forEach(function(w){ if(!w) return; if(/^\s+$/.test(w)){ frag.appendChild(document.createTextNode(w)); return; }
+            var sp=document.createElement("span"); sp.className="rx-w"; sp.style.setProperty("--d", Math.min(d,MAX)+"ms"); sp.textContent=w; frag.appendChild(sp); d+=STEP; });
+          n.parentNode.replaceChild(frag, n);
+        } else if(n.nodeType===1){
+          if(/^(IMG|VIDEO|BUTTON)$/.test(n.tagName) || n.classList.contains("fr-acts")) return;
+          if(n.classList.contains("rx-num") || n.classList.contains("rx-time") || n.classList.contains("rx-side") || n.classList.contains("rx-q") || n.classList.contains("rx-star") || n.classList.contains("rx-u")){
+            n.classList.add("rx-w"); n.style.setProperty("--d", Math.min(d,MAX)+"ms");
+            var nums = n.classList.contains("rx-num") ? [n] : Array.prototype.slice.call(n.querySelectorAll(".rx-num"));
+            nums.forEach(function(x){ countUp(x, Math.min(d,MAX)); });
+            d+=STEP*2; return;
+          }
+          if(n.classList.contains("rx-li")){ n.style.setProperty("--d", Math.min(d,MAX)+"ms"); n.classList.add("rx-li-in"); }
+          walk(n);
+        }
+      });
+    })(box);
+  }
+  function countUp(x, delay){
+    var to=parseFloat(x.getAttribute("data-n")); if(!isFinite(to) || to===0) return;
+    var dec=(String(x.getAttribute("data-n")).split(".")[1]||"").length, fin=x.textContent, big=to>=1000;
+    x.textContent=dec?(0).toFixed(dec):"0";
+    setTimeout(function(){ var t0=performance.now(), ms=Math.min(900, 380+String(Math.round(to)).length*90);
+      (function f(t){ var p=Math.min(1,(t-t0)/ms), v=to*(1-Math.pow(1-p,3));
+        x.textContent = p>=1 ? fin : (dec? v.toFixed(dec) : (big? Math.round(v).toLocaleString("ko-KR") : String(Math.round(v))));
+        if(p<1) requestAnimationFrame(f); })(t0); }, delay+80);
+  }
   function addMsg(role,text){
     var m;
     if(role==="u"){ m=el('<div class="fr-msg fr-u"></div>'); m.textContent=text; }
-    else { m=el('<div class="fr-msg fr-a"><div class="fr-bubble"></div></div>'); m.querySelector(".fr-bubble").innerHTML=fmtStage(text); }
+    else { m=el('<div class="fr-msg fr-a'+(_frNoAnim?"":" rx-new")+'"><div class="fr-bubble"></div></div>'); var bb=m.querySelector(".fr-bubble"); bb.innerHTML=fmtRich(fmtStage(text)); revealRich(bb); }
     logEl.appendChild(m); logEl.scrollTop=logEl.scrollHeight; return m;
   }
   function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
@@ -1577,9 +1633,11 @@
   }
   async function addFriendReply(text, instant){
     var parts=splitBubbles(text), last=null;
+    try{ if(!_frNoAnim && navigator.vibrate) navigator.vibrate([8,40,12]); }catch(e){}
     for(var i=0;i<parts.length;i++){
       if(i>0 && !instant){ typing(true); await sleep(380+Math.min(parts[i].length*6,420)); typing(false); }
       last=addMsg("a", parts[i]);
+      if(i===0 && last && !_frNoAnim) last.classList.add("rx-glow");   // 첫 말풍선에 네 색 빛 테두리 한 바퀴
     }
     try{ var ch=parseChoices(text); if(ch) addChoices(last, ch); }catch(e){}
     return last;
@@ -2041,9 +2099,15 @@
         body:JSON.stringify({op:"react", kind:kind}) }).catch(function(){});
     }).catch(function(){});
   }
+  /* 🎬 생각하는 동안 — 네 색 글로우 알약 안에서 하는 일이 크레딧처럼 흘러 올라간다(아크 「나 대신 찾아줘」·애플 인텔리전스 오마주) */
+  var FR_CREDITS=["생각하는 중","갈라 뒤져보는 중","비교하는 중","골라내는 중","정리하는 중"];
   function typing(on){
     var t=logEl.querySelector(".fr-typing");
-    if(on&&!t){ logEl.appendChild(el('<div class="fr-typing"><i></i><i></i><i></i></div>')); logEl.scrollTop=logEl.scrollHeight; }
+    if(on&&!t){
+      t=el('<div class="fr-typing fr-think"><span class="ft-dots"><i></i><i></i><i></i></span><span class="ft-roll"><span class="ft-track"></span></span></div>');
+      var tr=t.querySelector(".ft-track"); FR_CREDITS.concat([FR_CREDITS[0]]).forEach(function(w){ var sp=document.createElement("span"); sp.textContent=w; tr.appendChild(sp); });
+      logEl.appendChild(t); logEl.scrollTop=logEl.scrollHeight;
+    }
     if(!on&&t) t.remove();
   }
   // 요청 body 조립(callFriend·스트리밍 공용)
