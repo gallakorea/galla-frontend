@@ -1765,6 +1765,53 @@
     try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
     setTimeout(function(){ runAction(a); setTimeout(function(){ card.classList.remove("fr-tc-go"); },400); }, 320);
   }
+  /* 🌦 날씨 그림 — 하늘 상태별 SVG 애니메이션(해 빛살 회전·구름 흐름·빗방울·눈송이·번개) */
+  function wxKind(sky){ sky=String(sky||""); return /뇌|번개/.test(sky)?"storm":/눈|폭설/.test(sky)?"snow":/비|소나기|이슬/.test(sky)?"rain":/안개/.test(sky)?"fog":/구름\s*조금|대체로/.test(sky)?"partly":/구름|흐림/.test(sky)?"cloud":"sun"; }
+  function wxIcon(k, size){
+    var sun='<g class="wx-sun"><circle cx="32" cy="30" r="11" fill="url(#wxS)"/><g class="wx-rays" stroke="#ffd76a" stroke-width="3" stroke-linecap="round">'+
+      [0,45,90,135,180,225,270,315].map(function(a){ return '<line x1="32" y1="10" x2="32" y2="14" transform="rotate('+a+' 32 30)"/>'; }).join("")+'</g></g>';
+    var cloud=function(x,y,s,c){ return '<g class="wx-cloud" transform="translate('+x+' '+y+') scale('+s+')"><path d="M14 30a10 10 0 0 1 1-20 13 13 0 0 1 25 4 8 8 0 0 1 0 16z" fill="'+(c||"url(#wxC)")+'"/></g>'; };
+    var drops='<g class="wx-drops" stroke="#7fd4ff" stroke-width="2.4" stroke-linecap="round"><line x1="22" y1="44" x2="19" y2="52"/><line x1="32" y1="44" x2="29" y2="52"/><line x1="42" y1="44" x2="39" y2="52"/></g>';
+    var flakes='<g class="wx-flakes" fill="#fff"><circle cx="21" cy="47" r="2"/><circle cx="32" cy="50" r="2"/><circle cx="43" cy="47" r="2"/></g>';
+    var bolt='<path class="wx-bolt" d="M34 40l-7 11h6l-3 9 10-13h-6l4-7z" fill="#ffe36b"/>';
+    var fog='<g class="wx-fog" stroke="#cfe3ef" stroke-width="3" stroke-linecap="round" opacity=".8"><line x1="12" y1="42" x2="52" y2="42"/><line x1="16" y1="49" x2="48" y2="49"/></g>';
+    // 🌙 밤(19~6시, 지금 날씨일 때만)엔 해 대신 달과 반짝이는 별
+    var moon='<g class="wx-moon"><path d="M40 16a14 14 0 1 0 8 25 11 11 0 1 1 -8 -25z" fill="url(#wxM)"/><g class="wx-stars" fill="#fff"><circle cx="16" cy="14" r="1.4"/><circle cx="12" cy="30" r="1"/><circle cx="24" cy="8" r="1"/></g></g>';
+    if(wxIcon._night && (k==="sun"||k==="partly")){ sun=moon; }
+    var body = k==="sun"?sun : k==="partly"?(sun+cloud(10,14,.95)) : k==="cloud"?(cloud(2,6,1.1,"url(#wxC2)")+cloud(10,12,.9)) : k==="rain"?(cloud(6,2,1.05,"url(#wxC2)")+drops) : k==="snow"?(cloud(6,2,1.05)+flakes) : k==="storm"?(cloud(6,0,1.05,"url(#wxC2)")+bolt) : (cloud(6,2,1)+fog);
+    return '<svg class="wx-ic wx-'+k+'" width="'+size+'" height="'+size+'" viewBox="0 0 64 64" aria-hidden="true"><defs>'+
+      '<linearGradient id="wxM" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffbe6"/><stop offset="1" stop-color="#d9d2a8"/></linearGradient>'+
+      '<radialGradient id="wxS"><stop offset="0" stop-color="#fff6c2"/><stop offset=".6" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff9f1c"/></radialGradient>'+
+      '<linearGradient id="wxC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe0ee"/></linearGradient>'+
+      '<linearGradient id="wxC2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9e3ec"/><stop offset="1" stop-color="#8ea3b5"/></linearGradient></defs>'+body+'</svg>';
+  }
+  function buildWx(a){
+    var go=function(){ if(a.page){ minimize(); nav(a.page); } };
+    if(a.mode==="fc"){
+      var c=el('<button class="fr-wx fr-wx-fc"><div class="wx-h"><span class="wx-reg"></span><span class="wx-lbl">예보</span></div><div class="wx-rows"></div><span class="wx-go">날씨 화면 ›</span></button>');
+      c.querySelector(".wx-reg").textContent=a.region||"날씨";
+      var rows=c.querySelector(".wx-rows");
+      (a.days||[]).forEach(function(d,i){
+        var r=el('<div class="wx-row" style="--i:'+i+'"><span class="wx-d"></span>'+wxIcon(wxKind(d["하늘"]),30)+'<span class="wx-sky"></span><span class="wx-t"><b class="wx-hi"></b><i class="wx-lo"></i></span><span class="wx-pop"></span></div>');
+        r.querySelector(".wx-d").textContent=d["날짜"]||""; r.querySelector(".wx-sky").textContent=d["하늘"]||"";
+        r.querySelector(".wx-hi").textContent=(d["최고"]!=null?d["최고"]+"°":""); r.querySelector(".wx-lo").textContent=(d["최저"]!=null?d["최저"]+"°":"");
+        r.querySelector(".wx-pop").textContent=(d["비올확률"]!=null?"☂ "+d["비올확률"]+"%":"");
+        rows.appendChild(r);
+      });
+      c.addEventListener("click", go); return c;
+    }
+    var k=wxKind(a.sky), hh=new Date().getHours(), night=(hh>=19||hh<6);
+    wxIcon._night=night;
+    var c2=el('<button class="fr-wx wx-bg-'+k+(night?' wx-night':'')+'"><div class="wx-main">'+wxIcon(k,78)+'<div class="wx-info"><div class="wx-reg"></div><div class="wx-temp"><b class="wx-num">0</b><span>°</span></div><div class="wx-sky"></div></div></div><div class="wx-rep"></div><span class="wx-go">날씨 화면 ›</span></button>');
+    c2.querySelector(".wx-reg").textContent=a.region||"";
+    c2.querySelector(".wx-sky").textContent=(a.sky||"")+(a.precip?" · 강수 "+a.precip+"mm":"");
+    var rep=a.rep||{}, tot=(rep["비"]||0)+(rep["눈"]||0)+(rep["안옴"]||0);
+    c2.querySelector(".wx-rep").textContent = tot ? ("지금 사람들 제보 · 비 "+(rep["비"]||0)+" · 눈 "+(rep["눈"]||0)+" · 안 옴 "+(rep["안옴"]||0)) : "갈라 제보 아직 없음 — 날씨 화면에서 한마디 남겨봐";
+    var nb=c2.querySelector(".wx-num"), to=Number(a.temp)||0, dec=(String(a.temp).split(".")[1]||"").length?1:0;
+    setTimeout(function(){ var t0=performance.now(); (function f(t){ var p=Math.min(1,(t-t0)/1100), v=to*(1-Math.pow(1-p,3)); nb.textContent=dec?v.toFixed(1):Math.round(v); if(p<1) requestAnimationFrame(f); else nb.textContent=String(a.temp); })(t0); }, 250);
+    wxIcon._night=false;
+    c2.addEventListener("click", go); return c2;
+  }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
     var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); });
@@ -1786,6 +1833,8 @@
         };
         wrap.appendChild(sb2); return;
       }
+      // 🌦 날씨 카드(26.9.22) — 움직이는 날씨 그림 + 큰 기온(0부터 올라감) + 사람들 제보 / 예보 줄
+      if(a.kind==="weather"){ wrap.appendChild(buildWx(a)); return; }
       // ✅ 채팅 안 행동 확인 카드(26.9.22) — 예측 참여·가게 저장·맛 판정·여행지 저장·이슈 투표.
       //    서버는 카드만 만든다. '확인'을 눌러야 사용자 본인 세션으로 실행된다(GP 가 걸린 일이라 대신 걸지 않는다).
       if(a.kind==="confirm"){
@@ -2561,7 +2610,16 @@
     }catch(e){}
     peekPing();                        // 🔴 선톡 왔으면 오브에 점(안 켜지던 것 — 붙이는 코드가 없었다)
     window.GALLA_openFriend = openGated;
-    window.GALLA_openAssist = function(a){ try{ openAssist(a||{}); }catch(e){} };   // 🏝 다른 화면에서 갈비스 아일랜드를 띄울 때
+    window.GALLA_openAssist = function(a){ try{ openAssist(a||{}); }catch(e){} };
+    /* 💥 누르면 빛 파동 — 갈비스 창·카드·아일랜드 안 모든 버튼(위기 카드 제외) */
+    document.addEventListener("pointerdown", function(e){
+      var b=e.target.closest && e.target.closest("#frSheet button, #frSheet .fr-chip, #frAssist button, .fr-tc, .fr-wx, .fr-choice");
+      if(!b || b.closest(".fr-crisis")) return;
+      var r=b.getBoundingClientRect(), sp=document.createElement("span"), d=Math.max(r.width,r.height)*2.2;
+      sp.className="fr-ripple"; sp.style.cssText="width:"+d+"px;height:"+d+"px;left:"+(e.clientX-r.left-d/2)+"px;top:"+(e.clientY-r.top-d/2)+"px";
+      if(getComputedStyle(b).position==="static") b.style.position="relative";
+      b.style.overflow = b.style.overflow || "hidden"; b.appendChild(sp); setTimeout(function(){ sp.remove(); }, 650);
+    }, true);   // 🏝 다른 화면에서 갈비스 아일랜드를 띄울 때
     /* 🛠 도킹 미니챗을 밖에서 연다 — 작업 화면 아래에 갈비스가 붙어 같이 상의하는 형태.
        화면은 위에 그대로 두고 대화만 반쪽으로 올라온다(스크림 pass-through). */
     window.GALLA_openDock = async function (work) { if (await guestBlocked()) return; try { openDock(work || { type: "agent" }); } catch (e) {} };

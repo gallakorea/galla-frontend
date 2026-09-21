@@ -71,6 +71,7 @@ const ACTION_BRIEF: Record<string, string> = {
   needGC: "❌ 갈라코인이 모자라서 '아무것도 못 만들었다'. 카드는 안 붙었다. '만들었어/뽑아줬어/카드 봐' 절대 금지 — 코인이 부족하다고 짧게 말하고 지갑에서 충전하면 된다고 한 줄만 덧붙여라.",
   script: "대본 카드가 채팅에 붙었다. 짧게 안내만.",
   plan: "기획안 카드가 채팅에 붙었다. 짧게 안내만.",
+  weather: "날씨 카드(움직이는 그림·기온·예보)가 채팅에 붙었다. 값 반복하지 말고 한 줄 반응만(우산·옷차림 등).",
   confirm: "확인 카드가 채팅에 붙었다 — **아직 실행 안 됐다.** '확인 누르면 ~할게' 한 줄만. '참여했어/저장했어/투표했어' 같은 완료형 절대 금지(거짓말).",
 };
 async function broadcastStep(uid: string, name: string, text: string) {
@@ -1434,9 +1435,15 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       const today = new Date(Date.now() + 9 * 3600000).getUTCDay();   // KST 요일
       const days = w === "tomorrow" ? [1] : w === "dayafter" ? [2] : w === "week" ? [0, 1, 2, 3, 4, 5, 6]
         : (today === 0 ? [0] : [(6 - today + 7) % 7, (7 - today) % 7]);   // 이번 토·일(일요일이면 오늘)
-      return { result: await weatherForecast(args?.region, days, args?.__geo || null) };
+      const fc: any = await weatherForecast(args?.region, days, args?.__geo || null);
+      /* 🌦 날씨 카드(26.9.22) — 예보도 카드로 */
+      const act = (fc && Array.isArray(fc.예보) && fc.예보.length) ? { kind: "weather", mode: "fc", region: fc.지역 || args?.region || "", days: fc.예보.slice(0, 7), page: "search.html?tab=weather" } : undefined;
+      return { result: fc, action: act };
     }
-    return { result: await weatherNow(args?.region) };
+    const wn: any = await weatherNow(args?.region || (args?.__geo ? undefined : "서울"));
+    const one = wn?.날씨 || null;
+    const act = one && one.기온 != null ? { kind: "weather", mode: "now", region: one.지역, temp: one.기온, sky: one.하늘, precip: one.강수mm, rep: one.유저제보, obs: one.관측시각, page: "search.html?tab=weather" } : undefined;
+    return { result: wn, action: act };
   }
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
@@ -6734,7 +6741,7 @@ ${parts.join("\n")}`;
       if (!actions.some((a: any) => a.kind === "perm")) actions.unshift({ kind: "perm", perm: "location", resend: true, label: "📍 위치 켜고 근처 찾기" });
     }
     /* 🌦 날씨를 답했으면 날씨 화면으로 가는 칩 하나(동네 제보·날씨방은 거기 있다) */
-    if (_usedWeather && !actions.some((a: any) => a.kind === "app" && /tab=weather/.test(String(a.page || "")))) {
+    if (_usedWeather && !actions.some((a: any) => a.kind === "weather") && !actions.some((a: any) => a.kind === "app" && /tab=weather/.test(String(a.page || "")))) {
       actions.push({ kind: "app", op: "goto", page: "search.html?tab=weather", label: "🌦 날씨 화면 보기" });
     }
     /* 🔢 보여준 목록 기억(15분) — 다음 턴 「2번 거기/제일 뜨거운 거/그 두 번째」를 서버가 알아듣게(26.9.21 QA: "아직 아무것도 못 보여줬는데") */
