@@ -4350,6 +4350,11 @@
       .then(({ data }) => { if (curThread === tid) { curExpire = data?.expire_secs || null; paintExpBanner(); } });
     ROOT.querySelector('#dm-peer').textContent = name;
     await profilesFor([peer]);
+    /* 이름 없이 열린 방(알림·프로필 '메시지'·원격 진입)은 「익명」으로 떴다 — 프로필을 받은 뒤 진짜 닉네임으로 고친다(26.9.21 QA 캡처) */
+    if (curThread === tid) {
+      const real = (PROFILES[peer] && PROFILES[peer].nickname) || nickCache[peer];
+      if (real && (!name || name === '익명') ) { nickCache[peer] = real; ROOT.querySelector('#dm-peer').textContent = real; }
+    }
     ROOT.querySelector('#dm-peer-ava').innerHTML = avaHTML(peer, 'sm');
     setPeerSub('');
     showView('thread');
@@ -5787,6 +5792,11 @@
     await qsleep(300); qaState('A open+0.3s');
     await qsleep(1200); qaState('A open+1.5s');
     await qsleep(3000); qaState('A open+4.5s'); await qsnap('A-thread-open');
+    // S. 밀어서 닫는 도중 모습 — 손가락으로 끄는 중과 같은 상태(뒤 목록 드러냄 + 대화창 120px 밀림)를 만들어 찍는다
+    { const tv = ROOT.querySelector('.dm-view[data-view="thread"]'), ib = ROOT.querySelector('.dm-view[data-view="inbox"]');
+      if (tv && ib) { ib.hidden = false; tv.classList.add('dm-sliding'); tv.style.transition = 'none'; tv.style.transform = 'translateX(120px)';
+        await qsleep(400); await qsnap('S-sliding');
+        tv.style.transform = ''; tv.classList.remove('dm-sliding'); tv.style.transition = ''; ib.hidden = true; await qsleep(300); } }
     // B. 뒤로(버튼) — 목록만 보여야, 밀린 요소 없어야
     qclick('.dm-view[data-view="thread"] [data-act="toInbox"]', 'B');
     await qsleep(1000); qaState('B after-back'); await qsnap('B-after-back');

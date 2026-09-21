@@ -1827,8 +1827,12 @@ body[data-page="spa"].dm-detail .dm-root.page {
 /* 🫲 SPA 엣지 스와이프 백(dm.js bindSpaEdgeSwipe) — 끌리는 대화방 뷰가 불투명하게
    인박스 위에 얹혀 밀리고, 벌어진 틈으로 뒤의 인박스 리스트가 드러난다.
    배경·그림자는 .dm-panel과 같은 문법(스택 뷰 슬라이드와 같은 감). */
+/* ⚠️ 목록의 탭 줄(채팅·친구·난장·삐삐)은 sticky z-index:5 라, 끄는 대화창(예전 3)보다 위에 그려져
+   밀어서 닫을 때 탭 줄이 대화창을 가로질러 보였다(26.9.21 사장님 스크린샷: ⚙ 이 대화창 위에 떠 있음).
+   끄는 뷰를 탭 줄보다 위로 올리고(20), 목록 뷰는 isolation 으로 안쪽 z-index 가 밖으로 새지 않게 가둔다. */
+body[data-page="spa"] .dm-root.page .dm-view[data-view="inbox"] { isolation: isolate; z-index: 1; }
 body[data-page="spa"] .dm-view.dm-sliding {
-  z-index: 3;
+  z-index: 20;
   background:
     radial-gradient(90% 40% at 80% 0%, rgba(61,107,255,.10) 0%, transparent 60%),
     radial-gradient(120% 80% at 50% 0%, #13141a 0%, #08090c 60%);
