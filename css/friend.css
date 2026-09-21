@@ -617,3 +617,10 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 #frGuest .frg-go{ width:100%; padding:14px; border:0; border-radius:14px; background:var(--accent-grad,#4361ff); color:#fff;
   font-size:15px; font-weight:900; cursor:pointer; }
 #frGuest .frg-x{ width:100%; margin-top:6px; padding:10px; border:0; background:none; color:#7d8494; font-size:13px; font-weight:700; cursor:pointer; }
+
+/* 🖼 사진 카드(26.9.22) — 맛집·여행·숏판 카드에 대표 사진, 번호는 사진 위 배지 */
+.fr-card-img{ position:relative; width:52px; height:52px; border-radius:12px; overflow:hidden; background:#10151c; padding:0; }
+.fr-card-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+.fr-card-img .fr-card-n{ position:absolute; left:3px; top:3px; min-width:18px; height:18px; border-radius:9px; font-size:11px; line-height:18px; text-align:center;
+  background:rgba(0,0,0,.72); color:#fff; padding:0 4px; }
+.fr-card-hasimg{ max-width:320px; }

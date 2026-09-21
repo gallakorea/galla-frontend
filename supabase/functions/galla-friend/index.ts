@@ -986,11 +986,26 @@ async function searchContent(query: string) {
    예전엔 이슈·뉴스·핫튜브만 읽을 수 있어 맛집은 네이버 검색으로 새고, 여행·예측·광장은 아예 몰랐다.
    결과엔 id 를 꼭 싣는다 — point_to(type=section, id)로 그 화면에 데려가게. */
 const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim().slice(0, 40);
-async function gallaBrowse(section: string, query?: string, limit = 5) {
+const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
+const _km = (a: number, b: number, c: number, d: number) => { const R = 6371, r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r; const h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+const _dist = (km: number) => km < 1 ? Math.round(km * 1000 / 10) * 10 + "m" : km.toFixed(1) + "km";
+async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null) {
   const q = _likeSafe(query || ""); const like = `%${q}%`; const n = Math.min(Math.max(limit || 5, 1), 8);
   try {
+    /* 📍 근처 맛집 — 앱이 위치를 실어 보냈으면(권한이 이미 있을 때만) 반경 ~2km 를 지도에서 직접 본다(26.9.21 고도화) */
+    if (section === "food" && geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lon) && (!q || /(근처|주변|가까운|여기|내\s*위치|동네)/.test(q))) {
+      const { data } = await supa.rpc("food_map", { p_sw_lat: geo.lat - 0.018, p_sw_lon: geo.lon - 0.022, p_ne_lat: geo.lat + 0.018, p_ne_lon: geo.lon + 0.022, p_region: null, p_channel: null, p_only_unvisited: false, p_limit: 80, p_category: null, p_min_shows: null, p_spread: false, p_good_price: false, p_max_price: null });
+      const menu = q.replace(/(근처|주변|가까운|여기|내\s*위치|동네|맛집|추천|해줘|알려줘|식당|밥집)/g, " ").trim().split(/\s+/).filter((w) => w.length >= 2);
+      let ps: any[] = ((data as any)?.places || []).map((p: any) => ({ ...p, _km: _km(geo.lat, geo.lon, +p.lat, +p.lon) }));
+      if (menu.length) ps = ps.filter((p) => menu.some((w) => String(p.name + " " + p.category).includes(w)));
+      ps.sort((a, b) => (a._km + (b.rating_n ? 0 : 0.4)) - (b._km + (a.rating_n ? 0 : 0.4)));
+      const top = ps.slice(0, n);
+      return { section: "맛집(내 근처)", items: top.map((x: any) => ({ id: x.id, 이름: x.name, 종류: x.category, 거리: _dist(x._km), 평점: x.rating, 리뷰수: x.rating_n, 착한가격: x.good_price || undefined })),
+        cards: top.map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dist(x._km)].filter(Boolean).join(" · "), img: x.cover || null })),
+        지침: "상대 위치 기준 가까운 갈라 지도 가게들이다(거리 포함). 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
+    }
     if (section === "food") {
-      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price").eq("status", "live");
+      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price,cover_url").eq("status", "live");
       /* 「을지로 맛집 추천」을 통째로 찾으면 0건이다 — 말뭉치 단어를 떼고, 남은 낱말마다(AND) 이름·주소·종류 중 하나에 걸리게 */
       const STOP = /^(맛집|추천|추천해줘|근처|주변|식당|밥집|가게|맛있는|집|어디|좋은|유명한|잘하는|곳|데|땡기는데|먹고|싶어|먹을|거|뭐)$/;
       const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, ""))   /* 「을지로」의 「로」까지 떼면 '을지'로 검색돼 선릉을지순대국이 나왔다 */.filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 3);
@@ -1005,36 +1020,43 @@ async function gallaBrowse(section: string, query?: string, limit = 5) {
       }
       const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
       return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined })),
-        지침: "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
+        cards: (data || []).map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address)].filter(Boolean).join(" · "), img: x.cover_url || null })),
+        지침: /(근처|주변|가까운|내\s*위치)/.test(q)
+          ? "⚠️ 상대 위치를 모른다(위치 권한 없음) — 전국 결과를 근처인 척 말하지 마라. '어느 동네야?'라고 묻거나 '위치 켜주면 근처로 찾아줄게'라고 해라."
+          : "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
     }
     if (section === "travel") {
       if (!q) { const { data } = await supa.rpc("travel_trend_top", { p_n: n, p_min: 0 }); return { section: "여행(뜨는 나라)", items: ((data as any)?.items || []).map((x: any) => ({ 나라: x.name, 코드: x.code, 장소수: x.places, 검색추세: x.delta })), 지침: "지금 뜨는 여행지 나라들이다. 더 구체적으로 물으면 query 로 다시 찾아라." }; }
-      const { data } = await supa.from("travel_places").select("id,name,name_local,country,city,category,summary").eq("status", "live")
+      const { data } = await supa.from("travel_places").select("id,name,name_local,country,city,category,summary,photo").eq("status", "live")
         .or(`name.ilike.${like},name_local.ilike.${like},city.ilike.${like},country.ilike.${like},admin1.ilike.${like}`)
         .not("summary", "is", null).limit(n);
       return { section: "여행", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 나라: x.country, 도시: x.city, 종류: x.category, 설명: String(x.summary || "").slice(0, 90) })),
+        cards: (data || []).map((x: any) => ({ ctype: "travel", id: x.id, title: x.name, sub: [x.country, x.city, x.category].filter(Boolean).join(" · "), img: x.photo || null })),
         지침: "갈라 여행 지도에 실제로 있는 곳들이다. 1~2곳만 골라 말하고, 보여달라면 point_to(type:travel, id)." };
     }
     if (section === "shorts" || section === "longs") {
-      let rq = supa.from("posts").select("id,kind,title,caption,like_count,comment_count,view_count").eq("is_published", true).eq("visibility", "public")
+      let rq = supa.from("posts").select("id,kind,title,caption,like_count,comment_count,view_count,thumbnail_url,images").eq("is_published", true).eq("visibility", "public")
         .eq("kind", section === "longs" ? "horizontal" : "vertical").neq("moderation_status", "rejected");
       if (q) rq = rq.or(`title.ilike.${like},caption.ilike.${like}`);
       const { data } = await rq.order("hot_score", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(n);
       return { section: section === "longs" ? "롱판" : "숏판", items: (data || []).map((x: any) => ({ id: x.id, 제목: String(x.title || x.caption || "").replace(/\s+/g, " ").slice(0, 60), 좋아요: x.like_count, 댓글: x.comment_count, 조회: x.view_count })),
+        cards: (data || []).map((x: any) => ({ ctype: "gallari", id: String(x.id), title: String(x.title || x.caption || "").replace(/\s+/g, " ").slice(0, 50), sub: `♥ ${x.like_count || 0} · 조회 ${x.view_count || 0}`, img: x.thumbnail_url || (Array.isArray(x.images) ? x.images[0] : null) || null })),
         note: (data || []).length ? undefined : "아직 올라온 게 없음 — 지어내지 말고 없다고 말해라", 지침: "보여달라면 point_to(type:gallari, id)." };
     }
     if (section === "predict") {
-      let rq = supa.from("markets").select("id,question,category,close_at,pool_yes,pool_no,volume").eq("status", "open");
+      let rq = supa.from("markets").select("id,question,category,close_at,pool_yes,pool_no,volume,image_url").eq("status", "open");
       if (q) rq = rq.or(`question.ilike.${like},description.ilike.${like}`);
       const { data } = await rq.order("volume", { ascending: false, nullsFirst: false }).limit(n);
       return { section: "예측", items: (data || []).map((x: any) => { const y = +x.pool_yes || 0, no = +x.pool_no || 0, t = y + no; return { id: x.id, 질문: x.question, 분야: x.category, 마감: String(x.close_at || "").slice(0, 10), 예_비율: t ? Math.round(y / t * 100) + "%" : "아직 0", 거래량: x.volume }; }),
+        cards: (data || []).map((x: any) => { const y = +x.pool_yes || 0, no = +x.pool_no || 0, t = y + no; return { ctype: "predict", id: String(x.id), title: String(x.question || "").slice(0, 60), sub: (t ? "예 " + Math.round(y / t * 100) + "%" : "아직 아무도 안 걸었음") + (x.close_at ? " · " + String(x.close_at).slice(5, 10).replace("-", "/") + " 마감" : ""), img: x.image_url || null }; }),
         지침: "지금 열려 있는 예측들이다. 숫자는 이 값만 써라. 보여달라면 point_to(type:predict, id). 상대가 만들자고 하지 않았으면 draft_predict 호출 금지." };
     }
     if (section === "plaza") {
-      let rq = supa.from("plaza_posts").select("id,title,category,up_count,view_count").eq("visibility", "public");
+      let rq = supa.from("plaza_posts").select("id,title,category,up_count,view_count,thumbnail,cover_image").eq("visibility", "public");
       if (q) rq = rq.or(`title.ilike.${like},body.ilike.${like}`);
       const { data } = await rq.order("hot_score", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(n);
-      return { section: "광장", items: (data || []).map((x: any) => ({ id: x.id, 제목: x.title, 분야: x.category, 추천: x.up_count, 조회: x.view_count })), 지침: "보여달라면 point_to(type:plaza, id)." };
+      return { section: "광장", items: (data || []).map((x: any) => ({ id: x.id, 제목: x.title, 분야: x.category, 추천: x.up_count, 조회: x.view_count })),
+        cards: (data || []).map((x: any) => ({ ctype: "plaza", id: String(x.id), title: String(x.title || "").slice(0, 60), sub: [x.category, "추천 " + (x.up_count || 0)].filter(Boolean).join(" · "), img: x.thumbnail || x.cover_image || null })), 지침: "보여달라면 point_to(type:plaza, id)." };
     }
   } catch (e) { return { section, items: [], note: "조회 실패 — 지어내지 마라" }; }
   return { section, items: [], note: "unknown section" };
@@ -1405,7 +1427,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
-  if (name === "galla_browse") return { result: await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5)) };
+  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
@@ -2425,9 +2447,14 @@ function promptStats(messages: any[]): any {
 function enforceContract(reply: string, o: {
   friendName: string; nick?: string; longForm?: boolean; heavy?: boolean; light?: boolean;
   hasActions?: boolean; linkCount?: number; hostileTurn?: boolean; toolBlob?: string; priceAsk?: boolean; statAsk?: boolean;
-  crisis?: boolean; dependency?: boolean; guardsOff?: boolean;
+  crisis?: boolean; dependency?: boolean; guardsOff?: boolean; moodLow?: boolean;
 }): string {
   let x = String(reply || "");
+  /* 😞 상대가 기분 나쁘다는데 「아 진짜? ㅋㅋ」로 시작하면 비웃는 소리다(26.9.21 QA: "팀장한테 깨져서 기분 최악" → "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안").
+     그 턴은 웃음 토큰과 '웃긴 게 아니지' 류 자기수습을 걷어낸다. */
+  if (!o.guardsOff && o.moodLow) {
+    x = x.replace(/\s*[ㅋㅎ]{2,}\s*/g, " ").replace(/[^.!?\n]*(웃긴\s*게\s*아니|웃을\s*일이\s*아니)[^.!?\n]*(미안|ㅠ)?[.!?]?\s*/g, "").replace(/[ \t]{2,}/g, " ").trim();
+  }
   if (!o.guardsOff && o.crisis) x = stripSilencer(x);            // 위기: 입 막는 첫마디 제거
   if (!o.guardsOff && o.dependency) x = stripDepDelight(x);      // 고립을 반기는 문장만 제거
   x = joinBrokenBubbles(deHonorific(fixOwnName(
@@ -4182,6 +4209,8 @@ Deno.serve(async (req) => {
         { name: "번호_카드수_일치하면유지", opts: { linkCount: 3 },
           input: "골라봐.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
           check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
+        { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
+          check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
           check: (o) => /3\. 피어커피 \(성수동2가\)\n/.test(o) && !/\(성수동2가\) 난/.test(o) ? null : "마지막 항목 뒤 말이 같은 줄에 붙어 있음" },
         { name: "잘림꼬리_제거", opts: {},
@@ -4822,6 +4851,9 @@ ${actBlock}
 
     // 🎯 콘텐츠 핸드오프 — 게시물 '갈비스 버튼'에서 왔으면(body.handoff) 실제 내용을 읽어 '근거 오프너'를 낸다(제목만 X).
     const handoff = (body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id) ? body.handoff : null;
+    // 📍 앱이 실어 보낸 위치(권한이 이미 있을 때만, 소수 3자리 ≈ 100m 로 뭉개서 온다) — 근처 맛집용. 저장하지 않는다.
+    const _reqGeo = (body?.geo && Number.isFinite(+body.geo.lat) && Number.isFinite(+body.geo.lon) && Math.abs(+body.geo.lat) <= 90 && Math.abs(+body.geo.lon) <= 180) ? { lat: +body.geo.lat, lon: +body.geo.lon } : null;
+    let _usedWeather = false;
     let handoffBlock = "";
     if (handoff && !userMsg) {
       /* 🚫 '감상평' 금지(사장님 2026-08-18): "재밌네" 같은 소리는 아무 가치가 없다.
@@ -5166,6 +5198,7 @@ ${parts.join("\n")}`;
       : "";
     /* 🎵 템포 판정 — 무거운 얘기냐 가벼운 맞장구냐. 캡 자체는 tempoCap 한 곳에서 정한다. */
     const tHeavy = !!(crisis || grief || dependency || (Number(rel?.emotion?.valence) <= -12));
+    const _moodLow = /(기분\s*(최악|안\s*좋|별로|나빠|더러|꿀꿀)|짜증|우울|힘들|속상|서럽|서러|깨졌|깨짐|혼났|울고\s*싶|울었|슬퍼|슬프|화나|빡쳐|빡침|지쳤|지친다|멘탈|헤어졌|차였|망했)/.test(String(userMsg || ""));
     const tLight = !!(userMsg && !tHeavy && !isComplaint(userMsg) && (isClosing(userMsg) || userMsg.trim().length <= 6));
 
     /* ⚖️ 자기개방 균형 — 갈비스만 안 열고 있으면 자기 얘기를 먼저 꺼내게 한다.
@@ -5489,7 +5522,7 @@ ${parts.join("\n")}`;
     /* 🧾 이번 턴 '재고' — 도구가 실제로 가져온 것들을 종류 구분 없이 한 줄로 모은다.
        본문이 말한 것과 붙는 카드가 어긋나던 사고(본문은 이슈 얘기인데 카드는 유튜브)를 막으려면,
        마지막에 '본문이 실제로 가리킨 것'을 골라야 한다 — 그러려면 후보 전체가 필요하다. */
-    const _stock: { kind: "open" | "view"; ctype?: string; id: string; title: string; alt?: string; url?: string; source: string }[] = [];
+    const _stock: { kind: "open" | "view"; ctype?: string; id: string; title: string; alt?: string; url?: string; source: string; sub?: string; img?: string }[] = [];
     const _hitOf = (s: { title: string; alt?: string }) => Math.max(titleHit(reply, s.title), s.alt ? titleHit(reply, s.alt) : 0);
     // ✍️ 창작성 요청(제목·대본·리스트)은 240토큰+4문장캡에 "2."에서 잘림(레드팀 발견) → 상향·캡 면제. 잡담 브레비티는 불변.
     //    조사 여러 개("제목도 하나 뽑아줘")·후속 수정턴("좀 순하게", 키워드 없음)까지 — 직전 갈비스 답이 리스트/제목이면 이어지는 창작으로 본다.
@@ -5536,7 +5569,7 @@ ${parts.join("\n")}`;
             // 🎭 유머 강제 치환만 경로 고유(스트림은 도구가 없다) — 나머지 규칙은 전부 계약 관문에서.
             if (wantsFunny && humorJoke && !sreply.includes(humorJoke.a)) sreply = `야 이거 앎? ${humorJoke.q}\n\nㅋㅋㅋ ${humorJoke.a}`;
             // 📜 단 하나의 관문 — JSON 경로와 같은 함수. 규칙이 한쪽만 걸리던 구조를 여기서 끝낸다.
-            sreply = enforceContract(sreply, { friendName, nick, longForm, heavy: tHeavy, light: tLight,
+            sreply = enforceContract(sreply, { friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
               hasActions: false, hostileTurn: _hostileTurn, priceAsk: _priceAsk, statAsk: _statAsk,
               dependency, guardsOff });
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
@@ -5592,6 +5625,8 @@ ${parts.join("\n")}`;
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
         await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");   // 📡 대행 진행 라이브
+        if (c.function?.name === "galla_browse" && _reqGeo) (args as any).__geo = _reqGeo;   // 📍 근처 맛집
+        if (c.function?.name === "weather_now") _usedWeather = true;
         const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
         // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
@@ -5618,7 +5653,10 @@ ${parts.join("\n")}`;
             const sec = String((c.function as any)?.arguments || "").match(/"section"\s*:\s*"(\w+)"/)?.[1] || "";
             const CT: Record<string, [string, string]> = { food: ["food", "갈라 맛집"], travel: ["travel", "갈라 여행"], shorts: ["gallari", "숏판"], longs: ["gallari", "롱판"], predict: ["predict", "예측"], plaza: ["plaza", "광장"] };
             const ct = CT[sec];
-            if (ct) for (const it of (res?.items || [])) {
+            if (ct && Array.isArray(res?.cards)) {
+              for (const cd of res.cards) if (cd?.id && cd?.title) _stock.push({ kind: "view", ctype: cd.ctype || ct[0], id: String(cd.id), title: String(cd.title).slice(0, 80), source: ct[1], sub: cd.sub || "", img: cd.img || "" } as any);
+              delete res.cards;   // 모델엔 안 보낸다(토큰 절약) — 카드 꾸미기 전용
+            } else if (ct) for (const it of (res?.items || [])) {
               const t = String(it?.이름 || it?.제목 || it?.질문 || "").slice(0, 80);
               if (it?.id && t) _stock.push({ kind: "view", ctype: ct[0], id: String(it.id), title: t, source: ct[1] });
             }
@@ -6093,7 +6131,7 @@ ${parts.join("\n")}`;
           if (best && bn >= 1 && !has(best.id)) {
             actions.push(best.kind === "open"
               ? { kind: "open", url: best.url, title: best.title, label: "보기", source: best.source }
-              : { kind: "view", ctype: best.ctype, id: best.id, title: best.title, label: "바로 보기", source: best.source });
+              : { kind: "view", ctype: best.ctype, id: best.id, title: best.title, label: "바로 보기", source: best.source, sub: (best as any).sub || undefined, img: (best as any).img || undefined });
           }
         }
       }
@@ -6151,6 +6189,16 @@ ${parts.join("\n")}`;
     if (userMsg && (!_craftOn || _askForm) && !MAKE_RE.test(userMsg) && !/(만들|초안|올리|써\s*줘|쓰자|ㄱㄱ|가자|하자)/.test(userMsg)) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String(actions[i]?.kind || ""))) actions.splice(i, 1);
     }
+    /* 🖼 카드 꾸미기 — 재고에 사진·부제가 있으면(맛집 사진·★평점·동네, 예측 비율·마감) 모델이 부른 point_to 카드에도 채운다 */
+    for (const a of actions as any[]) {
+      if (a?.kind !== "view" || !a.id) continue;
+      const st: any = _stock.find((x: any) => String(x.id) === String(a.id) && (!a.ctype || x.ctype === a.ctype));
+      if (st) { if (!a.title && st.title) a.title = st.title; if (!a.sub && st.sub) a.sub = st.sub; if (!a.img && st.img) a.img = st.img; if (!a.source && st.source) a.source = st.source; }
+    }
+    /* 🌦 날씨를 답했으면 날씨 화면으로 가는 칩 하나(동네 제보·날씨방은 거기 있다) */
+    if (_usedWeather && !actions.some((a: any) => a.kind === "app" && /tab=weather/.test(String(a.page || "")))) {
+      actions.push({ kind: "app", op: "goto", page: "search.html?tab=weather", label: "🌦 날씨 화면 보기" });
+    }
     /* 🔢 보여준 목록 기억(15분) — 다음 턴 「2번 거기/제일 뜨거운 거/그 두 번째」를 서버가 알아듣게(26.9.21 QA: "아직 아무것도 못 보여줬는데") */
     {
       const lk = actions.filter((a: any) => (a.kind === "view" && a.id) || (a.kind === "open" && a.url)).slice(0, 5);
@@ -6172,7 +6220,7 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     // 📜 단 하나의 관문 — 스트림 경로와 같은 함수(enforceContract). 가드가 reply 를 재생성했든
     //    안 했든, 캡·걷어내기·선택지 정규화가 여기서 반드시 한 번 걸린다.
-    reply = enforceContract(reply, { friendName, nick, longForm, heavy: tHeavy, light: tLight,
+    reply = enforceContract(reply, { friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
       hasActions: actions.length > 0,
       linkCount: actions.filter((a: any) => a.kind === "open" || a.kind === "view").length,
       hostileTurn: _hostileTurn, toolBlob: _toolBlob,

@@ -1422,9 +1422,12 @@
       if(isLink && (a.title||a.sub)){
         var title = a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
         var num = numbered ? (links.indexOf(a)+1) : 0;
+        var safeImg = a.img && /^https:\/\//.test(String(a.img)) ? String(a.img) : "";
         var card=el(
-          '<button class="fr-card">'+
-            '<span class="fr-card-ic">'+(num?('<b class="fr-card-n">'+num+'</b>'):ICON.globe)+'</span>'+
+          '<button class="fr-card'+(safeImg?' fr-card-hasimg':'')+'">'+
+            (safeImg
+              ? '<span class="fr-card-ic fr-card-img"><img alt="" loading="lazy" src="'+esc(safeImg)+'">'+(num?'<b class="fr-card-n">'+num+'</b>':'')+'</span>'
+              : '<span class="fr-card-ic">'+(num?('<b class="fr-card-n">'+num+'</b>'):ICON.globe)+'</span>')+
             '<span class="fr-card-body">'+
               '<span class="fr-card-t">'+esc(title)+'</span>'+
               (a.sub?'<span class="fr-card-s">'+esc(a.sub)+'</span>':'')+
@@ -1674,6 +1677,20 @@
     if(!on&&t) t.remove();
   }
   // 요청 body 조립(callFriend·스트리밍 공용)
+  /* 📍 근처 질문일 때만, 위치 권한이 '이미' 허용돼 있으면 좌표를 싣는다(여기서 권한 창은 절대 안 띄운다).
+     소수 3자리(≈100m)로 뭉개서 보낸다 — 서버는 저장하지 않는다. */
+  async function nearGeo(text){
+    if(!/(근처|주변|가까운|내\s*위치|여기\s*(근처|주변)|걸어서)/.test(String(text||""))) return null;
+    var ok=false;
+    try{ var G=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation; if(G&&G.checkPermissions){ var p=await G.checkPermissions(); ok=(p&&(p.location==="granted"||p.coarseLocation==="granted")); } }catch(e){}
+    if(!ok){ try{ if(navigator.permissions){ var q=await navigator.permissions.query({name:"geolocation"}); ok=(q.state==="granted"); } }catch(e){} }
+    if(!ok || !window.GALLA_getPosition) return null;
+    try{
+      var pos=await Promise.race([window.GALLA_getPosition({timeout:3000, maximumAge:300000}), new Promise(function(r){ setTimeout(function(){ r(null); },3500); })]);
+      if(pos && isFinite(pos.lat) && isFinite(pos.lng)) return { lat: Math.round(pos.lat*1000)/1000, lon: Math.round(pos.lng*1000)/1000 };
+    }catch(e){}
+    return null;
+  }
   function fbBody(message, hist, setName, meta, handoff){
     var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
     /* 🤫 "지금은 말 걸 때가 아니다"(빈 reply)를 이해하는 클라이언트임을 알린다.
@@ -1750,6 +1767,7 @@
     var r=null, streamed=false, liveEl=null, authFail=false;
     try{
       var body=fbBody(text, history.slice(0,-1)); if(!isGuest) body.stream=true;   // 게스트 경로는 SSE가 아니라 JSON
+      try{ var _g=await nearGeo(text); if(_g) body.geo=_g; }catch(e){}   // 📍 「근처 맛집」 — 권한이 이미 있을 때만
       var res=await friendFetch(body);
       if(res.__authFail){ authFail=true; }
       else {
