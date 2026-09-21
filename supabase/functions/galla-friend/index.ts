@@ -98,9 +98,32 @@ const GEMINI_EMBED_KEY = GOOGLE_PAID_OK ? (Deno.env.get("GEMINI_API_KEY") || "")
    릴스 에이전트가 이미 Gemini 임베딩으로 갈아타 성공 중이라 같은 경로로 교체.
    차원: Gemini 기본 3072 → 테이블이 vector(1536) 라 1536 요청 + L2 정규화
    (구글 문서: 3072 외 차원은 정규화가 안 돼 있어 직접 해야 코사인이 맞다). */
+/* 🧲 임베딩 = Cloudflare Workers AI bge-m3(다국어, 1024차원) — 26.9.21 교체.
+   9/4 구글 유료 차단(GOOGLE_PAID_OK) 뒤로 Gemini 임베딩이 꺼져 의도 라우터 2층·기억 회상이 조용히 죽어 있었다
+   (seed_intents 0건, 기억 9/10 이후 신규 0). 테이블은 vector(1536) 이라 뒤를 0 으로 채운다 — 0 패딩은 코사인을 바꾸지 않는다.
+   ⚠️ 공급자가 섞이면 공간이 갈린다: CF 토큰이 있으면 **CF 만** 쓴다(다른 공급자로 조용히 폴백 금지).
+   바꾸면 friend_memory 전량 재임베딩(embedding=null → backfill_embeds) + galvis_intents 재시드. */
+const CF_AI_TOKEN = Deno.env.get("CF_AI_TOKEN") || "";
+const CF_ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") || "";
+async function embedCF(t: string): Promise<number[] | null> {
+  try {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/@cf/baai/bge-m3`, {
+      method: "POST", headers: { Authorization: `Bearer ${CF_AI_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: [t] }),
+    });
+    const j = await r.json();
+    const v = j?.result?.data?.[0];
+    if (!Array.isArray(v) || !v.length) return null;
+    const norm = Math.sqrt(v.reduce((a: number, x: number) => a + x * x, 0)) || 1;
+    const out = v.map((x: number) => x / norm);
+    while (out.length < 1536) out.push(0);
+    return out.slice(0, 1536);
+  } catch { return null; }
+}
 async function embed(text: string): Promise<number[] | null> {
   const t = (text || "").slice(0, 2000);
   if (!t) return null;
+  if (CF_AI_TOKEN && CF_ACCOUNT) return await embedCF(t);
   if (GEMINI_EMBED_KEY) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_EMBED_KEY}`, {
@@ -968,7 +991,18 @@ async function gallaBrowse(section: string, query?: string, limit = 5) {
   try {
     if (section === "food") {
       let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price").eq("status", "live");
-      if (q) rq = rq.or(`name.ilike.${like},address.ilike.${like},category.ilike.${like}`);
+      /* 「을지로 맛집 추천」을 통째로 찾으면 0건이다 — 말뭉치 단어를 떼고, 남은 낱말마다(AND) 이름·주소·종류 중 하나에 걸리게 */
+      const STOP = /^(맛집|추천|추천해줘|근처|주변|식당|밥집|가게|맛있는|집|어디|좋은|유명한|잘하는|곳|데|땡기는데|먹고|싶어|먹을|거|뭐)$/;
+      const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, ""))   /* 「을지로」의 「로」까지 떼면 '을지'로 검색돼 선릉을지순대국이 나왔다 */.filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 3);
+      /* 말하는 메뉴 ↔ 지도 분류 이름이 다르다(고기집=육류·고기요리, 술집=주점·호프) — 별칭을 풀어 같이 찾는다.
+         「강남역」은 주소에 없다(강남대로) — 끝의 '역'을 뗀다. */
+      const SYN: Record<string, string[]> = { 고기집: ["고기", "육류", "삼겹", "갈비"], 고깃집: ["고기", "육류", "삼겹", "갈비"], 술집: ["주점", "호프", "이자카야", "포차", "술집"], 횟집: ["회", "횟집", "해산물"], 국밥: ["국밥", "순대", "해장"], 분식: ["분식", "떡볶이"], 빵집: ["베이커리", "빵"], 중국집: ["중식", "중국"], 일식: ["일식", "초밥", "스시"], 양식: ["양식", "파스타", "이탈리아"], 카페: ["카페", "커피", "디저트"], 치킨: ["치킨", "닭"], 삼겹살: ["삼겹", "돼지"], 소고기: ["소고기", "한우", "육류"] };
+      for (const w0 of toks) {
+        const w = /[가-힣]{2,}역$/.test(w0) ? w0.slice(0, -1) : w0;
+        const alts = SYN[w] || [w];
+        const cond = alts.flatMap((a) => { const lw = `%${a}%`; return [`name.ilike.${lw}`, `address.ilike.${lw}`, `category.ilike.${lw}`]; }).join(",");
+        rq = rq.or(cond);
+      }
       const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
       return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined })),
         지침: "갈라 맛집 지도에 실제로 있는 곳들이다. 1~2곳만 골라 친구 말투로, 열어보라면 point_to(type:food, id). 없으면 web_search(kind:local)." };
@@ -994,7 +1028,7 @@ async function gallaBrowse(section: string, query?: string, limit = 5) {
       if (q) rq = rq.or(`question.ilike.${like},description.ilike.${like}`);
       const { data } = await rq.order("volume", { ascending: false, nullsFirst: false }).limit(n);
       return { section: "예측", items: (data || []).map((x: any) => { const y = +x.pool_yes || 0, no = +x.pool_no || 0, t = y + no; return { id: x.id, 질문: x.question, 분야: x.category, 마감: String(x.close_at || "").slice(0, 10), 예_비율: t ? Math.round(y / t * 100) + "%" : "아직 0", 거래량: x.volume }; }),
-        지침: "지금 열려 있는 예측들이다. 숫자는 이 값만 써라. 보여달라면 point_to(type:predict, id)." };
+        지침: "지금 열려 있는 예측들이다. 숫자는 이 값만 써라. 보여달라면 point_to(type:predict, id). 상대가 만들자고 하지 않았으면 draft_predict 호출 금지." };
     }
     if (section === "plaza") {
       let rq = supa.from("plaza_posts").select("id,title,category,up_count,view_count").eq("visibility", "public");
@@ -1028,7 +1062,7 @@ async function weatherNow(region?: string) {
 }
 
 const TOOLS = [
-  { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 인스타 계정·게시물(kind:instagram — '○○ 인스타/인스타 찾아줘/인플루언서'), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집 / 인스타는 핸들이나 브랜드명·주제)" }, kind: { type: "string", enum: ["local", "news", "blog", "web", "instagram"] } }, required: ["query"] } } },
+  { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 인스타 계정·게시물(kind:instagram — '○○ 인스타/인스타 찾아줘/인플루언서'), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라. ⚠️ 맛집·가게는 먼저 galla_browse(section:food)로 갈라 지도를 보고, 거기 없을 때만 이걸(kind:local) 써라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집 / 인스타는 핸들이나 브랜드명·주제)" }, kind: { type: "string", enum: ["local", "news", "blog", "web", "instagram"] } }, required: ["query"] } } },
   // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
@@ -2339,11 +2373,24 @@ function hasChoiceList(t: string): boolean {
 }
 /* 🔢 인라인 번호를 줄로 편다 — 클라 파서는 '줄 시작' 번호만 선택지로 인정한다(^ 앵커).
    모델이 "… 골라봐. 1. 가 2. 나 3. 다"처럼 한 줄로 뱉으면 버튼이 하나도 안 뜬다(실측). */
+/* 목록 마지막 줄에 다음 말이 붙는 것 떼기 — 「3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데…」(26.9.21 QA).
+   모델이 마지막 항목 뒤에 줄을 안 바꾸고 이어 쓴다. 마지막 항목 줄에서 말 시작 표지가 나오면 거기서 문단을 나눈다. */
+function splitListTail(t: string): string {
+  const lines = String(t || "").split("\n");
+  let last = -1;
+  for (let i = 0; i < lines.length; i++) if (/^\s*[1-9][.)]\s+\S/.test(lines[i])) last = i;
+  if (last < 0) return t;
+  const ln = lines[last];
+  const m = ln.match(/^(\s*[1-9][.)]\s+.{2,60}?)\s+((?:난|나는|내\s*생각|근데|이\s*중|이중|개인적으로|솔직히|그리고|다들|아\s|야\s|오\s|음\s|뭐가|어느|너는|넌)[\s\S]*)$/);
+  if (!m) return t;
+  lines.splice(last, 1, m[1].trimEnd(), "", m[2].trim());
+  return lines.join("\n");
+}
 function normalizeChoices(t: string): string {
-  const s = String(t || "");
+  const s = splitListTail(String(t || ""));
   if (hasChoiceList(s)) return s;                       // 이미 줄로 나뉘어 있으면 그대로
   if ((s.match(/(?:^|\s)[1-9][.)]\s+\S/g) || []).length < 2) return s;
-  return s.replace(/(?:^|\s)([1-9])[.)]\s+/g, (m, n) => (n === "1" ? "\n" : "\n") + n + ". ").replace(/\n{3,}/g, "\n\n").trim();
+  return splitListTail(s.replace(/(?:^|\s)([1-9])[.)]\s+/g, (m, n) => (n === "1" ? "\n" : "\n") + n + ". ").replace(/\n{3,}/g, "\n\n").trim());
 }
 function charCap(t: string, cap: number): string {
   const budget = Math.max(2, cap) * 60;
@@ -3301,6 +3348,9 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   const m = (msg || "").trim();
   if (!m) return null;
   if (/(그만|됐어|안\s*궁금|필요\s*없|말고\s*그냥|얘기\s*말)/.test(m)) return null;   // 중단/부정 맥락=오발 방지
+  /* 🧭 코너 화면 열기 — 「날씨 화면 보여줘/맛집 지도 열어줘/예측 탭 가자」는 데이터 조회가 아니라 이동 */
+  if (/(날씨|맛집\s*지도|여행|예측|광장|핫튜브|삐삐|난장|숏판)\s*(화면|탭|지도|페이지|창)?\s*(좀\s*)?(열어|띄워|가자|가줘|보여\s*줘|켜)/.test(m) && !/(뭐|어때|추천|있어|재밌)/.test(m))
+    return { tool: "app_action", hint: "app_action(op:goto, page: weather|food|travel|predict|plaza|hottube|pager|rooms|shorts 중 맞는 것)으로 그 화면을 **바로 열어라**. 한 줄로만 안내. 다른 카드·외부앱 붙이지 마라." };
   if (/(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없|있)|채널\s*(뭐|추천)|요즘\s*(뭐|무슨)\s*(영상|먹방|봐)|영상\s*(하나|좀)?\s*(틀어|보여|재생|줘)|(웃긴|웃기는|재밌는)\s*(영상|거)\s*(하나|좀)?\s*(틀어|보여)|틀어\s*줘)/i.test(m))
     return { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기·가짜1위 금지." };
   if (/(인스타|인스타그램|instagram|인플루언서|인플루)/i.test(m))
@@ -3512,6 +3562,7 @@ const INTENT_RULES: IntentRule[] = [
       if (!sem) return;
       st.stat.push("sem:" + sem.intent);
       if (sem.intent === "reopen") {
+        if (/(날씨|여행|예측|광장|숏판|롱판|핫튜브|지도|삐삐|난장|화면|탭|제일|가장|첫|번째|[0-9]\s*번|인기|뜨거운)/.test(c.userMsg)) return;
         const lv = c.rel?.session_meta?.last_view;
         if (lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000) {
           st.reopen = { ctype: lv.ctype, id: lv.id, label: lv.label, say: reopenSay(c.userMsg) };
@@ -4131,6 +4182,8 @@ Deno.serve(async (req) => {
         { name: "번호_카드수_일치하면유지", opts: { linkCount: 3 },
           input: "골라봐.\n1. 첫 영상\n2. 둘째 영상\n3. 셋째 영상",
           check: (o) => (o.match(/(^|\n)\s*[1-3][.)]\s/g) || []).length === 3 ? null : `일치하는데 지워짐: ${JSON.stringify(o)}` },
+        { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
+          check: (o) => /3\. 피어커피 \(성수동2가\)\n/.test(o) && !/\(성수동2가\) 난/.test(o) ? null : "마지막 항목 뒤 말이 같은 줄에 붙어 있음" },
         { name: "잘림꼬리_제거", opts: {},
           input: "이거 진짜 웃겨. 침착맨 쇼츠인데 조회수 180만이래. 아니면 블랙미스 신작도 있는데. 그리고 또 다른 게임 트레일러가 하나 더 있는데 이건 제목이 좀 길어서 여기서 잘릴 만한 문장이고 종결부호 없이 끝나는 꼬리",
           check: (o) => {
@@ -4267,9 +4320,34 @@ Deno.serve(async (req) => {
       return json({ ok: true, filled: n, remain_hint: (rows || []).length === 40 });
     }
     /* 유저 인증보다 앞 — 운영자 op 라 유저 JWT 가 없다. 크론키가 유일한 가드. */
+    if (body?.op === "embed_probe") {
+      // 🔬 임베딩 공급자 상태(운영자) — 키 값은 돌려주지 않는다. 상태 코드·오류 문구 앞부분만.
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const out: any = { gemini_key: !!GEMINI_EMBED_KEY, cf: !!(CF_AI_TOKEN && CF_ACCOUNT) };
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_EMBED_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "models/gemini-embedding-001", content: { parts: [{ text: "테스트" }] }, outputDimensionality: 1536 }) });
+        out.gemini = { status: r.status, body: (await r.text()).slice(0, 300) };
+      } catch (e) { out.gemini = { err: String(e).slice(0, 120) }; }
+      try { const v = await embed("테스트"); out.embed_ok = !!v; } catch (e) { out.embed_ok = false; }
+      // 딥시크에 임베딩 엔드포인트가 있는지(사장님: "딥시크 써")
+      try {
+        const dk = Deno.env.get("DEEPSEEK_API_KEY") || "";
+        for (const path of ["/embeddings", "/v1/embeddings"]) {
+          const r = await fetch(`https://api.deepseek.com${path}`, { method: "POST", headers: { Authorization: `Bearer ${dk}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "deepseek-embedding", input: "테스트" }) });
+          out["deepseek" + path] = { status: r.status, body: (await r.text()).slice(0, 160) };
+        }
+        const m = await fetch("https://api.deepseek.com/models", { headers: { Authorization: `Bearer ${dk}` } });
+        out.deepseek_models = (await m.text()).slice(0, 300);
+      } catch (e) { out.deepseek = String(e).slice(0, 100); }
+      return json(out);
+    }
     if (body?.op === "seed_intents") {
       // 🧭 의도 예문 임베딩 시드 — 운영자 전용(x-cron-key). 예문을 바꾸면 다시 부른다.
       if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      // 공간이 바뀌었을 수 있으니 예전 예문 벡터를 지우고 새로 넣는다(시드에 없는 옛 예문도 같이 정리)
+      const probe = await embed("테스트");
+      if (!probe) return json({ ok: false, reason: "embed unavailable" });
+      await supa.from("galvis_intents").delete().neq("intent", "__none__");
       let n = 0;
       for (const [intent, exs] of Object.entries(INTENT_SEED)) {
         for (const ex of exs) {
@@ -4505,7 +4583,9 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
       const m0 = (userMsg || "").trim();
       const reopenAsk = m0.length > 0 && m0.length <= 24 &&
         /(열어|열라|올려\s*(봐|줘)?|띄워|틀어\s*줘|보여\s*줘|들어가\s*(볼|보)|(안|못)\s*(열|보이|나와|떴|들어가)|잘못\s*열|다시\s*(줘|보여|열|틀)|어디\s*(있|갔)|빨리)/.test(m0) &&
-        !/(만들|초안|올리|쓰|검색|찾아|맛집|시세|얼마|재밌|웃긴|웃기|영상|뉴스|이슈|짤|다른\s*거|딴\s*거?|새로운?\s*거|새\s*거|하나\s*더|말고)/.test(m0);   // "딴거"는 '같은 걸 또'가 아니라 '다른 걸' — 재오픈이 아니다(레드팀 심판 지적)   // 새 콘텐츠 명사가 있으면 재오픈이 아니라 '새 요청'(실측: "재밌는 거 보여줘"가 직전 카드 재오픈에 낚임)
+        !/(만들|초안|올리|쓰|검색|찾아|맛집|시세|얼마|재밌|웃긴|웃기|영상|뉴스|이슈|짤|다른\s*거|딴\s*거?|새로운?\s*거|새\s*거|하나\s*더|말고)/.test(m0)
+        // 🧭 새 대상(코너·화면)이나 목록에서 고르는 말은 '다시 열기'가 아니다 — 「날씨 화면 보여줘」에 직전 맛집이 열렸다(26.9.21 QA)
+        && !/(날씨|여행|예측|광장|숏판|롱판|핫튜브|지도|삐삐|난장|갈라톡|화면|탭|제일|가장|첫|두\s*번째|세\s*번째|[0-9]\s*번|번째|인기|뜨거운|최신)/.test(m0);   // "딴거"는 '같은 걸 또'가 아니라 '다른 걸' — 재오픈이 아니다(레드팀 심판 지적)   // 새 콘텐츠 명사가 있으면 재오픈이 아니라 '새 요청'(실측: "재밌는 거 보여줘"가 직전 카드 재오픈에 낚임)
       /* ⚠️ work/crisis 변수는 이 지점보다 뒤에 선언된다(tzMin 사고와 같은 함정) —
          원시값으로 판정한다. 작업 모드는 body.work 로 알 수 있고, 위기 문구는
          reopenAsk 정규식(짧은 재촉)과 겹칠 수 없다. */
@@ -4794,9 +4874,27 @@ ${actBlock}
           const CORNER: Record<string, string> = { food: "맛집 지도", travel: "여행", weather: "날씨", hot: "핫튜브", news: "갈라뉴스", plaza: "광장", trending: "트렌드" };
           const where = /search|trend/.test(route) && CORNER[sub] ? CORNER[sub]
             : /predict/.test(route) ? "예측" : /dm/.test(route) ? "갈라톡" : /mypage/.test(route) ? "마이페이지" : /shorts|reels/.test(route) ? "숏판" : /index|home|^#?\/?$/.test(route) ? "홈 피드" : "";
-          if (where) ctx = `상대는 지금 갈라 '${where}' 화면에 있다. '여기/이거'는 그 코너 얘기일 가능성이 크다 — 필요하면 galla_browse·weather_now 로 그 코너의 실제 데이터를 봐라.`;
+          const DESC: Record<string, string> = {
+            "맛집 지도": "유튜버·크리에이터가 다녀간 가게를 지도에 모은 곳. 가게마다 평점·리뷰수·착한가격, 다녀간 영상, 갈라 사람들의 '맛있다/별로' 판정과 댓글, 사진 제보가 있다. 지역·메뉴로 찾거나 지도를 움직여 둘러본다. 갈비스는 galla_browse(section:food)로 여기 가게를 찾아 point_to(type:food)로 그 가게를 바로 열어줄 수 있다.",
+            "여행": "크리에이터가 다녀간 국내외 여행지를 나라·지역별로 모은 곳. 장소 설명·사진·영상, 크리에이터 동선 보기, 여행지 월드컵(둘 중 고르기)이 있다. galla_browse(section:travel)·point_to(type:travel).",
+            "날씨": "지금 우리 동네 날씨 — 기상청 관측 + 갈라 사람들의 실시간 날씨 제보(비 와요/맑아요)와 동네 날씨방. weather_now 로 실제 값을 가져와라.",
+            "핫튜브": "지금 한국에서 뜨는 유튜브 인기영상 순위. hot_videos·point_to(type:hottube).",
+            "예측": "예/아니오로 판가름 나는 질문에 GP를 걸고 맞히는 곳. galla_browse(section:predict)·point_to(type:predict).",
+            "광장": "자유 서술 글(후기·주장·정보). galla_browse(section:plaza)·point_to(type:plaza).",
+          };
+          if (where) ctx = `상대는 지금 갈라 '${where}' 화면에 있다. '여기/이거'는 그 코너 얘기일 가능성이 크다.${DESC[where] ? "\n[이 화면에서 할 수 있는 것] " + DESC[where] : ""}\n'여기서 뭐 해/어떻게 써' 류엔 위 기능을 친구 말투로 2~3개만 짚고, 하나 바로 해볼지 물어라(예: '을지로 쪽 찾아줄까?').`;
         }
         if (ctx) pageBlock = `🧭 [현재 화면]\n${ctx}\n(묻지 않았으면 화면 얘기를 억지로 꺼내지 마라 — '여기/이거/이 가게/이 글'처럼 지칭할 때 쓰는 맥락이다.)`;
+      }
+    } catch { /* */ }
+    let listBlock = "";
+    try {
+      const ll = rel?.session_meta?.last_list;
+      // 목록에서 고르는 말일 때만 — 아무 말에나 붙이면 「날씨 화면 보여줘」에 목록 카드가 덤으로 붙었다
+      const picks = /([0-9]\s*번|번째|첫|두\s*번|세\s*번|마지막|제일|가장|그거|거기|그\s*가게|그\s*글|그\s*집|아까\s*(그|거)|위에\s*거)/.test(userMsg || "");
+      if (userMsg && picks && ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000 && Array.isArray(ll.items) && ll.items.length >= 2) {
+        listBlock = "🔢 [직전에 네가 보여준 목록 — 상대가 '2번/첫 번째/제일 ~한 거/그거'라고 하면 여기서 골라 point_to(type, id)로 열거나 그 항목 얘기를 해라. 새로 검색하지 마라]\n"
+          + ll.items.map((it: any, i: number) => `${i + 1}. ${it.title} (type:${it.ctype}, id:${it.id})`).join("\n");
       }
     } catch { /* */ }
     const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)"
@@ -5351,6 +5449,7 @@ ${parts.join("\n")}`;
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
       ...(pageBlock ? [{ role: "system", content: pageBlock }] : []),
+      ...(listBlock ? [{ role: "system", content: listBlock }] : []),
       ...(planBlock ? [{ role: "system", content: planBlock }] : []),   // 🎨 기획 타임(일방 제작 금지)
       ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
       ...(makeUpBlock ? [{ role: "system", content: makeUpBlock }] : []),   // 🤝 화해
@@ -5514,8 +5613,19 @@ ${parts.join("\n")}`;
           if (Array.isArray(res) && c.function?.name === "hot_issues") {
             for (const it of res) if (it?.id) _stock.push({ kind: "view", ctype: "issue", id: String(it.id), title: String(it.title || "").slice(0, 80), source: "이슈판" });
           }
-          for (const n of (res?.news || res?.items || [])) {
-            if (n?.id) _stock.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), source: "갈라뉴스" });
+          if (c.function?.name === "galla_browse") {
+            // 🧭 코너별 카드 — 예전엔 items 를 전부 '뉴스'로 담아 맛집·예측 카드가 뉴스로 열렸다(26.9.21 QA)
+            const sec = String((c.function as any)?.arguments || "").match(/"section"\s*:\s*"(\w+)"/)?.[1] || "";
+            const CT: Record<string, [string, string]> = { food: ["food", "갈라 맛집"], travel: ["travel", "갈라 여행"], shorts: ["gallari", "숏판"], longs: ["gallari", "롱판"], predict: ["predict", "예측"], plaza: ["plaza", "광장"] };
+            const ct = CT[sec];
+            if (ct) for (const it of (res?.items || [])) {
+              const t = String(it?.이름 || it?.제목 || it?.질문 || "").slice(0, 80);
+              if (it?.id && t) _stock.push({ kind: "view", ctype: ct[0], id: String(it.id), title: t, source: ct[1] });
+            }
+          } else {
+            for (const n of (res?.news || res?.items || [])) {
+              if (n?.id) _stock.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), source: "갈라뉴스" });
+            }
           }
         }
         messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: out.action.brief || ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
@@ -5970,6 +6080,24 @@ ${parts.join("\n")}`;
         if (links0.length > 1) actions.splice(i, 1);
       }
     }
+    /* 🧾 번호 목록마다 카드 채우기 — 본문이 "1. 아트몬스터 2. 을지다방 3. …"을 읊었는데 모델이 point_to 를 하나만 불러
+       카드가 1장이면, 번호·카드가 안 맞아 목록이 계약 관문에서 잘려 "이거 봐봐 — 이거 ㅋㅋ"만 남았다(26.9.21 QA).
+       재고(이번 턴 도구 결과)에서 각 줄이 가리키는 항목을 찾아 빠진 카드를 붙인다. */
+    {
+      const lines = (reply.match(/(?:^|\n)\s*[1-9][.)]\s+[^\n]+/g) || []).map((x) => x.replace(/^\s*[1-9][.)]\s+/, "").trim());
+      if (lines.length >= 2 && _stock.length) {
+        const has = (sid: string) => actions.some((a: any) => String(a.id || "") === sid || String(a.url || "").includes(sid));
+        for (const ln of lines.slice(0, 5)) {
+          let best: any = null, bn = 0;
+          for (const st of _stock) { const n = titleHit(ln, String(st.title || "")); if (n > bn) { bn = n; best = st; } }
+          if (best && bn >= 1 && !has(best.id)) {
+            actions.push(best.kind === "open"
+              ? { kind: "open", url: best.url, title: best.title, label: "보기", source: best.source }
+              : { kind: "view", ctype: best.ctype, id: best.id, title: best.title, label: "바로 보기", source: best.source });
+          }
+        }
+      }
+    }
     /* 🔢 번호 ↔ 카드 순서 맞추기 — 본문이 "1. 여성 수감자 펜팔… 2. …"라고 세워놨는데
        카드 순서가 다르면 "1번"을 눌러 엉뚱한 게 열린다(실측). 본문에 등장한 순서대로 카드를 재배열한다.
        매칭 안 되는 카드는 뒤로 민다(순서만 바꾸고 버리지 않는다). */
@@ -5999,7 +6127,7 @@ ${parts.join("\n")}`;
       const seen = new Set<string>();
       for (let i = 0; i < actions.length; i++) {
         const a: any = actions[i];
-        const key = String(a.url || "") + "|" + String(a.ctype || "") + "|" + String(a.id || "");
+        const key = String(a.url || "") + "|" + String(a.ctype || "") + "|" + String(a.id || "") + "|" + String(a.page || "") + "|" + (a.kind === "draftPredict" || a.kind === "draft" ? a.kind : "");
         if (key === "||") continue;
         if (seen.has(key)) { actions.splice(i, 1); i--; } else seen.add(key);
       }
@@ -6015,6 +6143,20 @@ ${parts.join("\n")}`;
       // ⚠️ 여기서 바로 본문에 붙이면 계약 관문의 문장 캡이 이 줄을 잘라먹는다(마지막 문장이라 1순위).
       //    플래그만 세우고 관문을 통과한 뒤에 붙인다.
       _askPick = links.length >= 2 && !links.some((a: any) => a.auto) && !/몇\s*번|번호|골라/.test(reply);
+    }
+    /* ✂️ 보거나 이동하려는 턴엔 초안 카드를 떼어낸다 — 「요즘 예측 뭐 있어?/날씨 화면 보여줘」에 '예측 만들러 가기'가 붙었다(26.9.21 QA).
+       만들자는 말(MAKE_RE·만들/초안/올리/써)이 있으면 그대로 둔다. */
+    const _craftOn = !!(craft && ["proposed", "planning", "confirmed"].includes(String(craft.state)));
+    const _askForm = /(뭐\s*(있|야|냐|해)|있어\??$|보여|열어|어때|추천|알려|\?$)/.test(String(userMsg || "").trim());
+    if (userMsg && (!_craftOn || _askForm) && !MAKE_RE.test(userMsg) && !/(만들|초안|올리|써\s*줘|쓰자|ㄱㄱ|가자|하자)/.test(userMsg)) {
+      for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String(actions[i]?.kind || ""))) actions.splice(i, 1);
+    }
+    /* 🔢 보여준 목록 기억(15분) — 다음 턴 「2번 거기/제일 뜨거운 거/그 두 번째」를 서버가 알아듣게(26.9.21 QA: "아직 아무것도 못 보여줬는데") */
+    {
+      const lk = actions.filter((a: any) => (a.kind === "view" && a.id) || (a.kind === "open" && a.url)).slice(0, 5);
+      if (lk.length >= 2 && rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(),
+        items: lk.map((a: any) => a.kind === "view" ? { ctype: a.ctype || "issue", id: String(a.id), title: String(a.title || "").slice(0, 60) }
+          : { ctype: /watch\.html\?v=/.test(a.url) ? "hottube" : "link", id: (String(a.url).match(/[?&]v=([^&]+)/) || [])[1] || String(a.url).slice(0, 200), title: String(a.title || "").slice(0, 60) }) } };
     }
     const cleanActions = actions;
 
