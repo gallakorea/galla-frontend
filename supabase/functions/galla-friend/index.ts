@@ -2013,7 +2013,8 @@ function backRefAsk(msg: string): boolean {
   const m = String(msg || "");
   if (!m) return false;
   return /(아까|방금|저번|지난번|어제|전에)\s*(너|니|네|내|우리)?[^\n]{0,10}(말|얘기|한\s*거|했던|그거|그\s*얘기)/.test(m)
-      || /(뭐라고\s*했|무슨\s*얘기\s*했|기억\s*(나|해)|까먹었)/.test(m);
+      || /(뭐라고\s*했|무슨\s*얘기\s*했|기억\s*(나|해)|까먹었)/.test(m)
+      || /(했었지|했었나|했었잖|했잖아|말했잖|얘기했었|그랬었지|그랬잖아|말\s*안\s*했었나)/.test(m);   // 「내가 전에 신발 사고 싶다고 했었지?」가 빠져 가짜기억 동조(26.9.22 QA)
 }
 
 function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[], mayAskName = true, backRef = false, tzMin = 540): string {
@@ -2606,7 +2607,9 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
     }
     if (userMsg && !body?.meta) {
       const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
-      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx, tzOf(body));
+      // 가짜기억 확인 턴(근거 없는 「했었지?」)은 저장하지 않는다 — 전제가 사실로 굳는다
+      const ex = body?.__noExtract ? { memories: [], mood: null, emotion: null, persona_set: {}, supersede: [] } as any
+        : await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx, tzOf(body));
       if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
         try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
       }
@@ -4116,6 +4119,7 @@ async function summarizeProfile(uid: string, nick: string) {
 - 5~9줄, 각 줄 짧게. 확실한 사실만(추측 금지). 서로 상충되면 더 최신·중요한 걸 택해라.
 - 담을 것(있는 것만): 기본(닉/나이대/직업/사는곳), 성향·진영, 좋아/싫어(사람 포함 — 누구를 왜 싫어하는지 꼭), 지금 겪는 일·관심사, 관계 톤·특이사항.
 - 없는 항목은 빼라. 제목·머리말 없이 불릿(-)만.
+- ⚠️ 이 사람의 이름·닉은 위 '닉네임' 값이나 '유저 본인'으로 표시된 기억에서만. 가족·지인·반려동물 이름을 이 사람 이름으로 쓰지 마라(여동생 민지 → 본인 민지로 적은 사고).
 - ⚠️ 농담·비꼼·과장으로 보이거나 확신이 안 서는 항목은 넣지 마라(예: '길에서 네 발로 기어다녔다' 류의 황당한 일회성 사건). 심리분석·성격규정("인정욕구가 있다" 류)도 넣지 말고 담백한 사실만.` },
           { role: "user", content: `닉네임: ${nick || "모름"}\n기억:\n${lines}` },
         ],
@@ -4859,8 +4863,14 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
     // 🙋 이름은 대화로 알려주는데 users.nickname은 안 채워진다 → 컨텍스트에 "닉네임 아직 모름"이 박혀
     //    기억을 이기고 "아직 안 알려줬잖아"라고 답했다(실측). 기억에 이름이 있으면 그걸 호칭으로 쓴다.
     if (!nick) {
+      /* ⚠️ '이름은 ○○'이면 누구 이름이든 본인으로 잡아 「여동생 이름은 민지」→ 유저를 '민지'라 불렀다(26.9.22 QA).
+         본인 기억(유저 본인/본인/나는)만 보고, 가족·지인·반려동물 얘기는 건너뛴다. */
+      const OTHERS = /(동생|여동생|남동생|형|누나|언니|오빠|엄마|어머니|아빠|아버지|친구|팀장|부장|과장|상사|동료|고양이|강아지|반려|여친|남친|여자친구|남자친구|아내|남편|와이프|아들|딸|할머니|할아버지|이모|삼촌)/;
       for (const m of [...memList, ...(forced || [])]) {
-        const hit = String(m?.content || "").match(/이름(은|이)?\s*[:：]?\s*([가-힣]{2,4})(?![가-힣])/);
+        const c = String(m?.content || "");
+        if (OTHERS.test(c) && !/(유저\s*본인|본인)/.test(c)) continue;
+        if (/(유저\s*본인|본인)/.test(c) && m?.mkey && /^[가-힣]{2,4}$/.test(String(m.mkey))) { nick = String(m.mkey); break; }
+        const hit = c.match(/(?:내|제|유저|본인)\s*이름(은|이)?\s*[:：]?\s*([가-힣]{2,4})(?![가-힣])/);
         if (hit && hit[2]) { nick = hit[2]; break; }
       }
       if (!nick && typeof rel?.profile_summary === "string") {
@@ -4996,6 +5006,28 @@ ${actBlock}
           if (where) ctx = `상대는 지금 갈라 '${where}' 화면에 있다. '여기/이거'는 그 코너 얘기일 가능성이 크다.${DESC[where] ? "\n[이 화면에서 할 수 있는 것] " + DESC[where] : ""}\n'여기서 뭐 해/어떻게 써' 류엔 위 기능을 친구 말투로 2~3개만 짚고, 하나 바로 해볼지 물어라(예: '을지로 쪽 찾아줄까?').`;
         }
         if (ctx) pageBlock = `🧭 [현재 화면]\n${ctx}\n(묻지 않았으면 화면 얘기를 억지로 꺼내지 마라 — '여기/이거/이 가게/이 글'처럼 지칭할 때 쓰는 맥락이다.)`;
+      }
+    } catch { /* */ }
+    /* 🧠 가짜기억 차단 — 「내가 전에 ○○ 했었지?」면 실제 기억·이번 대화를 뒤져 확인한다.
+       말로만 "동조하지 마라"라고 해 뒀더니 「어 신발!」로 맞장구치고, 그 말이 사실로 저장까지 됐다(26.9.22 QA).
+       근거가 없으면 '처음 듣는다'를 강제하고, 이 턴은 기억 추출을 건너뛴다. */
+    let fakeRecallBlock = "";
+    try {
+      if (userMsg && backRefAsk(userMsg)) {
+        const STOPW = /^(내가|제가|나|너|니가|네가|우리|전에|저번에|지난번에|아까|어제|예전에|했었지|했었나|했잖아|했었잖아|얘기|말|말했|얘기했|했던|그거|뭐|뭐였지|뭐라고|기억|기억나|기억해|하고|싶다고|싶어|사고|거|것|좀|혹시|진짜|그|저|이)$/;
+        const kws = String(userMsg).replace(/[?!.,~ㅋㅎ]/g, " ").split(/\s+/)
+          .map((w) => w.replace(/(이라고|라고|다고|이랑|랑|하고|에서|에게|한테|으로|로|을|를|이|가|은|는|도|에|의|야|했었지|했었나|했잖아)$/, ""))
+          .filter((w) => w.length >= 2 && !STOPW.test(w)).slice(0, 4);
+        if (kws.length) {
+          const { data: allm } = await supa.from("friend_memory").select("content,mkey").eq("user_id", uid).eq("status", "active").limit(300);
+          const hay = (allm || []).map((m: any) => (m.content || "") + " " + (m.mkey || "")).join("\n") + "\n" + history.map((h: any) => h.content || "").join("\n");
+          const hit = kws.some((w) => hay.includes(w));
+          if (!hit) {
+            fakeRecallBlock = `🚫 [기억 확인 결과] 상대가 전에 말했다는 '${kws.join(" ")}' 관련 기억·대화가 **전혀 없다**. 동조하지 마라("어 그거!" 금지). ` +
+              `"어? 그 얘긴 처음 듣는데 ㅋㅋ 뭔데?"처럼 솔직히 처음 듣는다고 하고 물어봐라. 다른 화제(뉴스 등)로 넘어가지 마라.`;
+            (body as any).__noExtract = true;
+          }
+        }
       }
     } catch { /* */ }
     let listBlock = "";
@@ -5562,6 +5594,7 @@ ${parts.join("\n")}`;
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
       ...(pageBlock ? [{ role: "system", content: pageBlock }] : []),
       ...(listBlock ? [{ role: "system", content: listBlock }] : []),
+      ...(fakeRecallBlock ? [{ role: "system", content: fakeRecallBlock }] : []),
       ...(planBlock ? [{ role: "system", content: planBlock }] : []),   // 🎨 기획 타임(일방 제작 금지)
       ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
       ...(makeUpBlock ? [{ role: "system", content: makeUpBlock }] : []),   // 🤝 화해
@@ -6271,7 +6304,7 @@ ${parts.join("\n")}`;
        만들자는 말(MAKE_RE·만들/초안/올리/써)이 있으면 그대로 둔다. */
     const _craftOn = !!(craft && ["proposed", "planning", "confirmed"].includes(String(craft.state)));
     const _askForm = /(뭐\s*(있|야|냐|해)|있어\??$|보여|열어|어때|추천|알려|\?$)/.test(String(userMsg || "").trim());
-    if (userMsg && (!_craftOn || _askForm) && !MAKE_RE.test(userMsg) && !/(만들|초안|올리|써\s*줘|쓰자|ㄱㄱ|가자|하자)/.test(userMsg)) {
+    if (userMsg && (!_craftOn || _askForm || !!fakeRecallBlock) && !MAKE_RE.test(userMsg) && !/(만들|초안|올리|써\s*줘|쓰자|ㄱㄱ|가자|하자)/.test(userMsg)) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^draft/.test(String(actions[i]?.kind || ""))) actions.splice(i, 1);
     }
     /* 🖼 카드 꾸미기 — 재고에 사진·부제가 있으면(맛집 사진·★평점·동네, 예측 비율·마감) 모델이 부른 point_to 카드에도 채운다 */
