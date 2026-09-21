@@ -5601,6 +5601,22 @@
     for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 440 * i / sr) * 12000), true);
     return new File([buf], 'qa.wav', { type: 'audio/wav' });
   }
+  /* 음성 — 앱 녹음과 같은 MediaRecorder 로 합성음(1.5초)을 녹음한다(서버는 WAV 를 받지 않는다: 실제 앱은 m4a/webm). */
+  async function qaVoice() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC(); try { await ctx.resume(); } catch (_) {}
+    const osc = ctx.createOscillator(); osc.frequency.value = 440;
+    const dst = ctx.createMediaStreamDestination(); osc.connect(dst); osc.start();
+    const rec = new MediaRecorder(dst.stream); const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const done = new Promise(r => { rec.onstop = r; });
+    rec.start(); await qsleep(1500); rec.stop(); await done;
+    try { osc.stop(); ctx.close(); } catch (_) {}
+    const type = rec.mimeType || 'audio/mp4';
+    const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+    qlog('voice rec ' + type + ' ' + chunks.reduce((a, c) => a + c.size, 0) + 'B');
+    return new File(chunks, 'voice.' + ext, { type });
+  }
   async function qaSend(k, fields) {
     const t = Date.now();
     const d = await sendMessage(fields);
@@ -5644,7 +5660,11 @@
       await startDM(peer);
       await qsleep(1500);
       qlog('thread open ' + !!curThread + ' chan=' + !!msgChan);
-      if (mode === 'dmRecv') { window.__dmQARecv = true; return; }
+      if (mode === 'dmRecv') {
+        window.__dmQARecv = true;
+        try { window.webkit?.messageHandlers?.gallaCall?.postMessage({ action: 'notifProbe' }); } catch (_) {}   // 🔔 앱이 꺼져 있던 동안 알림센터에 쌓인 알림(네이티브가 NATIVE 로그로)
+        return;
+      }
       window.__dmQASend = true;
       await qsleep(6000);                                   // 받는 폰이 방을 열고 구독할 시간
       sendTyping(); qlog('tx typing');
@@ -5659,7 +5679,8 @@
       const iu = await qaUpload(await qaImage(), 'image');
       if (iu) await qaSend('image', { kind: 'image', body: '📷 사진', meta: { url: iu } });
       await qsleep(2000);
-      const vu = await qaUpload(qaWav(), 'audio');
+      let vf = null; try { vf = await qaVoice(); } catch (e) { qlog('voice rec FAIL ' + String((e && e.message) || e).slice(0, 60)); }
+      const vu = vf ? await qaUpload(vf, 'audio') : null;
       if (vu) await qaSend('voice', { kind: 'voice', body: '🎤 음성 메시지', meta: { url: vu, dur: 1 } });
       qlog('tx all done');
     },
