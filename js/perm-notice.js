@@ -27,12 +27,13 @@
   try { if (localStorage.getItem("galla_fresh_signup")) return; } catch (_) {}
 
   var REQUIRED = [];   // 갈라는 필수 접근권한이 없다 — 권한 없이도 보고 읽을 수 있다
+  /* k = 토글 키(없으면 OS 권한이 필요 없는 항목 — 사진은 올릴 때 고른 것만 넘어간다) */
   var OPTIONAL = [
-    { icon: "🎙", name: "마이크",       why: "육성톡·음성 메시지·삐삐 녹음" },
-    { icon: "📷", name: "카메라",       why: "면상톡(영상통화)·사진/영상 촬영" },
-    { icon: "🖼", name: "사진",         why: "글·댓글에 사진과 영상을 올릴 때" },
-    { icon: "📍", name: "위치",         why: "대화에서 위치 보내기·내 주변 맛집" },
-    { icon: "🔔", name: "알림",         why: "답글·귓속말·통화 알림 받기" }
+    { k: "notify",   icon: "🔔", name: "알림",   why: "답글·귓속말·통화 알림 받기" },
+    { k: "mic",      icon: "🎙", name: "마이크", why: "육성톡·음성 메시지·삐삐 녹음" },
+    { k: "camera",   icon: "📷", name: "카메라", why: "면상톡(영상통화)·사진/영상 촬영" },
+    { k: "location", icon: "📍", name: "위치",   why: "대화에서 위치 보내기·내 주변 맛집" },
+    {                icon: "🖼", name: "사진",   why: "올릴 때 고른 사진만 넘어가요 · 따로 허용할 필요 없음" }
   ];
 
   function show() {
@@ -73,12 +74,14 @@
       '<div class="note">선택 권한은 동의하지 않아도 갈라를 이용할 수 있어요. ' +
         "다만 그 기능(통화·촬영·위치 보내기 등)은 쓸 수 없어요.<br>" +
         "허용한 뒤에도 <b>휴대폰 설정 → 갈라</b>에서 언제든 끌 수 있어요.</div>" +
+      '<p class="lead" style="margin:-8px 0 14px;font-size:12px">버튼을 누르면 항목마다 휴대폰 확인 창이 이어서 떠요 — <b>허용</b>만 눌러 주세요.</p>' +
       '<button type="button" class="gpn-go">허용하고 시작하기</button>' +
       '<button type="button" class="gpn-later">나중에 할게요</button>';
 
     function row(p) {
       return '<li><span class="ic">' + p.icon + '</span><div><div class="nm">' + p.name +
-             '</div><div class="wy">' + p.why + "</div></div></li>";
+             '</div><div class="wy">' + p.why + "</div></div>" +
+             "</li>";
     }
 
     document.body.appendChild(el);
@@ -89,10 +92,13 @@
       setTimeout(function () { el.remove(); }, 300);
     }
     var go = el.querySelector(".gpn-go");
+
     el.querySelector(".gpn-later").addEventListener("click", close);
     go.addEventListener("click", async function () {
       go.disabled = true; el.querySelector(".gpn-later").disabled = true;
-      var res = await requestAll(function (t) { go.textContent = t; });
+      // 토글 없이 전부 요청한다(사장님: 다 켜져 있어야 쓰기 편하다)
+      var want = { notify: true, mic: true, camera: true, location: true };
+      var res = await requestAll(want, function (t) { go.textContent = t; });
       try { localStorage.setItem("galla_perm_asked_all", JSON.stringify(res)); } catch (_) {}
       close();
     });
@@ -101,42 +107,46 @@
   /* 🔐 OS 권한 창을 차례로 — 하나가 실패·거부돼도 다음으로 넘어간다. 결과는 기록만 한다. */
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   function withTimeout(p, ms) { return Promise.race([p, wait(ms).then(function () { return "timeout"; })]); }
-  async function requestAll(label) {
+  async function requestAll(want, label) {
     var res = {};
-    // ① 알림 — 네이티브 푸시 등록(권한 창 포함). 로그인 전이면 토큰 저장은 로그인 뒤 native-push 가 다시 한다.
-    label("알림 권한 묻는 중…");
-    try {
-      var PN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
-      // OS 권한 창을 먼저(로그인 전이어도 뜨게) → 로그인돼 있으면 토큰 등록까지
-      if (PN && PN.requestPermissions) { await withTimeout(PN.requestPermissions(), 20000); }
-      if (window.GALLA_pushEnable) { await withTimeout(window.GALLA_pushEnable().catch(function () {}), 15000); }
-      if (PN && PN.checkPermissions) { var pr = await PN.checkPermissions(); res.notify = pr && pr.receive; }
-    } catch (_) { res.notify = "err"; }
-    await wait(250);
-    // ② 마이크·카메라 — 영상통화 명분으로 함께. 카메라를 거부하면 마이크만이라도.
-    label("마이크·카메라 권한 묻는 중…");
-    try {
-      var md = navigator.mediaDevices;
-      var gum = md && (md.__origGetUserMedia || md.getUserMedia);
-      if (gum) {
+    var P = (window.Capacitor && window.Capacitor.Plugins) || {};
+    // ① 알림 — OS 권한 창 먼저(로그인 전이어도 뜨게) → 로그인돼 있으면 토큰 등록까지
+    if (want.notify) {
+      label("알림 허용을 물어보는 중…");
+      try {
+        var PN = P.PushNotifications;
+        if (PN && PN.requestPermissions) { var pr = await withTimeout(PN.requestPermissions(), 30000); res.notify = pr && pr.receive; }
+        if (window.GALLA_pushEnable) { await withTimeout(window.GALLA_pushEnable().catch(function () {}), 15000); }
+      } catch (_) { res.notify = "err"; }
+      await wait(200);
+    }
+    // ② 마이크·카메라 — 권한만 받고 곧바로 끈다(한 번의 요청으로 OS 창이 이어서 뜬다)
+    if (want.mic || want.camera) {
+      label((want.mic && want.camera) ? "마이크·카메라 허용을 물어보는 중…" : want.mic ? "마이크 허용을 물어보는 중…" : "카메라 허용을 물어보는 중…");
+      try {
+        var md = navigator.mediaDevices;
+        var gum = md && (md.__origGetUserMedia || md.getUserMedia);
         var stop = function (st) { try { st.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} };
-        try { var s1 = await withTimeout(gum.call(md, { audio: true, video: true }), 30000); if (s1 && s1.getTracks) { stop(s1); res.media = "granted"; } else res.media = s1; }
-        catch (_) {
-          try { var s2 = await withTimeout(gum.call(md, { audio: true }), 30000); if (s2 && s2.getTracks) { stop(s2); res.media = "mic-only"; } else res.media = s2; }
-          catch (e2) { res.media = "denied"; }
+        if (gum) {
+          try { var s1 = await withTimeout(gum.call(md, { audio: !!want.mic, video: !!want.camera }), 40000); if (s1 && s1.getTracks) { stop(s1); res.media = "granted"; } else res.media = s1; }
+          catch (_) {
+            // 카메라를 거부했으면 마이크만이라도
+            if (want.mic && want.camera) { try { var s2 = await withTimeout(gum.call(md, { audio: true }), 30000); if (s2 && s2.getTracks) { stop(s2); res.media = "mic-only"; } } catch (e2) { res.media = "denied"; } }
+            else res.media = "denied";
+          }
         }
-      }
-    } catch (_) { res.media = "err"; }
-    await wait(250);
-    // ③ 위치 — 한 번 받아 보는 것으로 권한 창을 띄운다(좌표는 쓰지 않는다)
-    label("위치 권한 묻는 중…");
-    try {
-      if (window.GALLA_getPosition) { await withTimeout(window.GALLA_getPosition({ timeout: 15000 }), 20000); res.location = "granted"; }
-      else {
-        var G = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
-        if (G && G.requestPermissions) { var gr = await withTimeout(G.requestPermissions(), 20000); res.location = gr && gr.location; }
-      }
-    } catch (e3) { res.location = (e3 && e3.kind) || "denied"; }
+      } catch (_) { res.media = "err"; }
+      await wait(200);
+    }
+    // ③ 위치 — 권한만 묻는다(좌표를 기다리지 않는다: 실내·에뮬에선 20초씩 걸렸다)
+    if (want.location) {
+      label("위치 허용을 물어보는 중…");
+      try {
+        var G = P.Geolocation;
+        if (G && G.requestPermissions) { var gr = await withTimeout(G.requestPermissions({ permissions: ["location"] }), 30000); res.location = gr && (gr.location || gr.coarseLocation); }
+        else if (window.GALLA_getPosition) { await withTimeout(window.GALLA_getPosition({ timeout: 8000 }), 10000); res.location = "granted"; }
+      } catch (e3) { res.location = (e3 && e3.kind) || "denied"; }
+    }
     return res;
   }
 

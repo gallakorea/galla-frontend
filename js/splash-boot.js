@@ -34,7 +34,7 @@
   var css =
     "html.splash-lock,html.splash-lock body{overflow:hidden!important}" +
     "#galla-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;" +
-      "align-items:center;justify-content:center;background:#000;overflow:hidden;" +
+      "align-items:center;justify-content:center;background:#0a0a0b;overflow:hidden;" +
       "opacity:1;transition:opacity .5s ease;-webkit-tap-highlight-color:transparent;user-select:none}" +
     "#galla-splash.gone{opacity:0;pointer-events:none}" +
     /* ① 특이점 — 응축됐다 터진다 */
