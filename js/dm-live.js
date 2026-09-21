@@ -1042,7 +1042,8 @@
           if (t === "inbound-rtp" && k === "audio") { out.inB += r.bytesReceived || 0; out.inPk += r.packetsReceived || 0; if (r.audioLevel != null) out.inLvl = r.audioLevel; }
           if (t === "outbound-rtp" && k === "audio") { out.outB += r.bytesSent || 0; out.outPk += r.packetsSent || 0; }
           if (t === "media-source" && k === "audio" && r.audioLevel != null) out.srcLvl = r.audioLevel;
-          if (t === "ssrc") {   // iosrtc(옛 형식 통계)
+          if (t === "ssrc") {   // iosrtc(옛 형식 통계 — 값이 r.values 안에 문자열로 온다)
+            r = r.values || r;
             if (r.bytesSent != null) { out.outB += +r.bytesSent || 0; out.outPk += +r.packetsSent || 0; if (r.audioInputLevel != null) out.srcLvl = +r.audioInputLevel; }
             if (r.bytesReceived != null) { out.inB += +r.bytesReceived || 0; out.inPk += +r.packetsReceived || 0; if (r.audioOutputLevel != null) out.inLvl = +r.audioOutputLevel; }
           }
