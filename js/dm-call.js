@@ -177,6 +177,7 @@
       .subscribe();
   }
   function listen(_sb, me) {
+    try { if (!window.__gallaListenLogged) { window.__gallaListenLogged = 1; setTimeout(() => wb('listen up=' + Math.round(performance.now())), 0); } } catch (_) {}   // 🔬 엔진 시작 시각(콜드스타트 계측)
     sb = _sb; ME = me;
     if (chanSig || !sb || !ME) return;
     // ⚡ 발신 지연 줄이기: TURN 자격증명 미리 데우고(첫 buildPC 즉시), 내 닉네임 캐시(오퍼 전 DB조회 제거).
@@ -253,7 +254,7 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
-    if (['offer', 'answer', 'accepted', 'hangup'].includes(p.t)) wb('rx-' + p.t);
+    if (['offer', 'answer', 'accepted', 'hangup'].includes(p.t)) wb('rx-' + p.t + (p.t === 'offer' ? ' up=' + Math.round(performance.now()) + ' lag=' + (p.at ? Date.now() - p.at : '?') : ''));   // 🔬 up=앱(페이지) 뜬 뒤 ms · lag=발신 뒤 ms — 콜드스타트 지연 계측
     if (p.t === 'offer') {
       // 👻 유령 벨 차단 — 콜드스타트 REST 폴링이 '지난 통화'의 offer를 재생할 수 있다.
       //    15초 넘게 묵은 offer는 무시(발신자는 answer 올 때까지 1.2초마다 재전송하므로 산 통화는 안 놓친다).
@@ -1470,7 +1471,7 @@
   // 👁 수신 벨이 울리는 중에 앱을 내리거나 올리면 발신자에게 다시 알린다(끊을 때 취소 푸시 필요 여부)
   document.addEventListener('visibilitychange', () => { try { if (CUR && CUR.dir === 'in' && !CUR.connectedAt) send({ t: 'ring', vis: document.visibilityState }); } catch (_) {} });
 
-  function _ctStop() { try { _nativeCall({ action: 'qaAutoAnswer', on: false }); } catch (_) {} _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
+  function _ctStop() { try { _nativeCall({ action: 'qaAutoAnswer', on: false }); localStorage.removeItem('galla_call_diag'); } catch (_) {} _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
     if (_ctMode !== 'caller' && _ctMode !== 'callerV' && _ctMode !== 'callerM' && _ctMode !== 'callerMV') return;   // callerM(V) = 소리 실측(통계) 음성/영상   // callerV = 면상톡(영상) 자동테스트
     if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
@@ -1569,6 +1570,7 @@
     wb('QAV done');
   }
   function _ctApply(mode, peer) {
+    try { if (mode && mode !== 'off') localStorage.setItem('galla_call_diag', '1'); } catch (_) {}   // 🔬 콜드 부팅 직후부터 기록되게
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
     if (mode === 'caller' || mode === 'callerV' || mode === 'callerM' || mode === 'callerMV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) { wb('selftest ACCEPT-MODE'); _nativeCall({ action: 'qaAutoAnswer', on: true }); } }   // 🔬 잠금화면 CallKit 도 자동 받기(네이티브, 20분)
