@@ -818,6 +818,7 @@
       stop() { stopAudio(cf); },
     };
     pc.ontrack = (e) => {
+      lvlog("ontrack kind=" + (e.track && e.track.kind) + " streams=" + (e.streams ? e.streams.length : -1));
       try {
         const el = document.createElement("audio");
         el.autoplay = true; el.playsInline = true; el.srcObject = new MediaStream([e.track]);
@@ -920,10 +921,13 @@
           { tracks: [{ location: "remote", sessionId: p.sessionId, trackName: p.trackName }] });
         const sd = res && res.data && res.data.sessionDescription;
         if (res && res.ok && sd && sd.type === "offer") {
+          lvlog("sub offer mlines=" + (sd.sdp.match(/^m=audio/gm) || []).length + " msid=" + (sd.sdp.match(/^a=msid:/gm) || []).length + " ssrc=" + (sd.sdp.match(/^a=ssrc:\d+ msid/gm) || []).length);
           await cf.pc.setRemoteDescription(sd);
           const answer = await cf.pc.createAnswer();
           await cf.pc.setLocalDescription(answer);
-          await sfu(`/sessions/${cf.sessionId}/renegotiate`, "PUT", { sessionDescription: { type: "answer", sdp: answer.sdp } });
+          const rn = await sfu(`/sessions/${cf.sessionId}/renegotiate`, "PUT", { sessionDescription: { type: "answer", sdp: answer.sdp } });
+          lvlog("sub renego " + (rn ? (rn.ok ? "ok" : JSON.stringify(rn).slice(0, 100)) : "null") + " answerDirs=" + (answer.sdp.match(/^a=(sendonly|recvonly|sendrecv|inactive)$/gm) || []).join(","));
+          setTimeout(() => { try { const tr = cf.pc.getTransceivers ? cf.pc.getTransceivers() : []; lvlog("sub after rx=" + (cf.diag && cf.diag.rx) + " trs=" + tr.map(t => t.mid + ":" + (t.currentDirection || t.direction) + ":" + (t.receiver && t.receiver.track ? t.receiver.track.readyState : "-")).join(",")); } catch (e) { lvlog("sub after err " + e); } }, 3000);
           return;   // 성공
         }
         const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
@@ -1043,6 +1047,7 @@
             if (r.bytesReceived != null) { out.inB += +r.bytesReceived || 0; out.inPk += +r.packetsReceived || 0; if (r.audioOutputLevel != null) out.inLvl = +r.audioOutputLevel; }
           }
         });
+        if (!CUR.cf._ssrcLogged) { let n = 0; each(r => { if (r.type === "ssrc" && n++ < 3) lvlog("stat ssrc " + JSON.stringify(r).slice(0, 260)); }); if (n) CUR.cf._ssrcLogged = 1; }
         if (!CUR.cf._typesLogged) { CUR.cf._typesLogged = 1; const ty = []; each(r => ty.push((r.type || "?") + ":" + (r.kind || r.mediaType || ""))); lvlog("stat types " + ty.join(",").slice(0, 300)); }
       } catch (e) { out.err = String(e && e.message || e).slice(0, 40); }
       out.busy = !!(CUR.cf && CUR.cf.pubBusy); out.mic = CUR.cf && CUR.cf.diag && CUR.cf.diag.mic;
