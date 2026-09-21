@@ -2590,9 +2590,11 @@
       sttBase="";   // 새 세션 시작 → 누적 접두어 리셋
       if(taEl){ taEl.value=""; taEl.placeholder="듣는 중… 말해봐 🎙"; }
     } else if(type==="partial"){
+      if(!recording) return;   // 녹음이 끝난 뒤 늦게 온 조각(지난 발화)은 무시
       var pt=sttStrip(text);   // 이미 보낸 앞 발화 제거
       if(taEl){ taEl.value=pt; taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; }
     } else if(type==="end"){
+      if(!recording && !(taEl && taEl.value)) return;   // 이미 끝난 세션의 늦은 end(지난 발화 재전송) 무시
       recording=false; mic&&mic.classList.remove("fr-rec");
       var t=sttStrip(text||(taEl&&taEl.value)||"");   // 누적분 빼고 '새로 말한 것'만
       sttBase=(text||"").trim();                       // 세션이 안 꺼져도 다음 발화 땐 이번 전체가 접두어

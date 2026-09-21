@@ -2010,7 +2010,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 ━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
 1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.
 2) **저격(콕 집어 읽기)**: 가끔 쌓인 기억·성향으로 상대를 콕 찔러 읽어줘라("너 겉으론 시크한데 은근 정 많지?", "넌 이런 이슈엔 늘 약자 편이더라"). 맞히면 "헐 어떻게 알았어" 나오게. 남발 X, 가끔 훅.
-3) **콘텐츠 유도(취향 맞춤)**: 상대 취향을 알면 딱 맞는 갈라 콘텐츠로 이끈다("너 이런 거 좋아하니까 이거 봐봐"). search_content로 취향 맞는 걸 찾아 point_to. 일반 핫이슈 말고 '이 사람 맞춤'으로.
+3) **콘텐츠는 상대가 달라고 할 때만**(26.9.22 사장님: 「컴패니언이 콘텐츠를 불쾌하게 계속 던진다」). 먼저 권하는 건 대화가 한참 즐겁게 흐를 때 아주 가끔(10턴에 한 번 이하)만. 감정·관계 얘기(보고 싶었어·고마워·힘들어·욕·불만) 중엔 절대 권하지 마라 — 그때는 사람과 대화만.
 
 ━━ 상대 에너지 읽기 ━━
 - 상대가 귀찮아하거나 단답·회피하거나 피곤해 보이면 **캐묻지 마라.** 질문 멈추고 사라지는 것보다, "피곤해? 이따 얘기할까?" / "좀 쉬어, 나 여깄으니까" 하고 **공간을 준다.** 무리하게 대화 이어붙이기 금지.
@@ -5535,6 +5535,16 @@ ${parts.join("\n")}`;
        ⚠️ 새 의도는 INTENT_RULES 에 한 줄 추가한다 — 여기에 if 를 심으면 그 순간 다시 7층이 된다. */
     const decided = await decideIntent({ userMsg, history, craft, rel, work: !!work, handoff: !!handoff, crisis: !!crisis, thirdParty });
     let route = decided.route;
+    /* 💬 감정·관계 말은 콘텐츠로 받지 않는다 — 「그러게 나도 보고 싶었어」를 '보여줘'로 읽어 침착맨 영상을 세 번 던졌다(26.9.22 사장님 실대화).
+       + 「왜 계속 콘텐츠 보여줘/그만」이면 30분간 권유 금지(session_meta.noPushUntil). */
+    const _um = String(userMsg || "");
+    const _feelTalk = /(보고\s*싶|그리웠|그리워|사랑해|좋아해|고마워|고맙|미안|힘들|외로|슬퍼|우울|속상|서운|짜증|화나|병신|좆|ㅅㅂ|시발|씨발|꺼져|닥쳐|장난이야|반가워|왔어|잘\s*자|굿나잇)/.test(_um)
+      && !/(보여\s*줘|틀어\s*줘|추천|찾아\s*줘|뭐\s*(있|없)|영상|이슈|뉴스|예측|맛집|날씨|여행)/.test(_um);
+    const _refusePush = /(왜\s*(자꾸|계속)\s*.{0,8}(보여|소개|추천|던져|띄워)|콘텐츠\s*(그만|말고|싫)|그만\s*(보여|소개|추천|띄워)|영상\s*(그만|말고|싫)|그런\s*거\s*말고)/.test(_um);
+    try { if (_refusePush && rel) rel.session_meta = { ...(rel.session_meta || {}), noPushUntil: Date.now() + 30 * 60000 }; } catch { /* */ }
+    const _noPush = _feelTalk || _refusePush || (Number(rel?.session_meta?.noPushUntil || 0) > Date.now() && !/(보여\s*줘|틀어\s*줘|추천|찾아\s*줘|뭐\s*(있|없))/.test(_um));
+    if (_noPush && route && /^(hot_videos|hot_issues|galla_news|galla_browse|search_content|platform_buzz|point_to|draft_\w+|gen_\w+)$/.test(String(route.tool))) route = null;
+    if (_noPush) { (decided as any).reopen = null; }
     /* 🏝 아일랜드(지금 보는 콘텐츠)에서의 행동 말 — 「저장해줘/찜」「찬성 투표」「참여할래」는 그 콘텐츠에 바로 확인 카드 */
     {
       const as: any = (body?.page && typeof body.page === "object") ? (body.page as any).assist : null;
@@ -5551,6 +5561,7 @@ ${parts.join("\n")}`;
       }
     }
     let planMode = decided.planMode;
+    if (_noPush) planMode = false;   // 감정 턴엔 창작 흐름으로 끌고 가지 않는다
     let _autoOpen = decided.autoOpen;
     let _autoStrong = decided.autoStrong;
     craft = decided.craft;
@@ -5976,7 +5987,8 @@ ${parts.join("\n")}`;
       ...(illegalBlock ? [{ role: "system", content: illegalBlock }] : []), // 🚷 불법 요청
       ...(ghostBlock ? [{ role: "system", content: ghostBlock }] : []),     // 👻 없던 과거
       ...(familyBlock ? [{ role: "system", content: familyBlock }] : []),
-      ...(gossipBlock ? [{ role: "system", content: gossipBlock }] : []),   // 🗣 뒷담화 맞장구   // 👨‍👩‍👧 가족 갈등
+      ...(gossipBlock ? [{ role: "system", content: gossipBlock }] : []),   // 🗣 뒷담화 맞장구
+      ...(_noPush ? [{ role: "system", content: "💬 [이번 턴은 사람 대 사람 대화다] 상대가 감정·관계 얘기를 하거나 콘텐츠 권유를 싫어했다. 영상·이슈·뮤비·순위·조회수·「이거 봐봐/틀어줄까/땡겨?」 같은 콘텐츠 얘기 절대 꺼내지 마라. 방금 네가 권한 것도 다시 꺼내지 마라. 상대 말 자체에만 반응해라(반가움·걱정·공감·질문)." }] : []),   // 👨‍👩‍👧 가족 갈등
       ...(impulseBlock ? [{ role: "system", content: impulseBlock }] : []), // ⚡ 충동
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어
@@ -6076,7 +6088,7 @@ ${parts.join("\n")}`;
       // 🫂 감정이 무너진 순간(위기·충동·과의존·사별)엔 **검색도 하지 않는다.**
       //    실측 사고: "걔 집 앞에 가볼까"에 "검색까지 해봤는데 딱히 도움될 건 없네 ㅋㅋ"라고 답했다.
       //    그 순간 필요한 건 정보가 아니라 사람이다. 검색 결과를 들이미는 건 대화를 어긋나게 한다.
-      const tender = !!crisis || !!impulse || dependency || grief;
+      const tender = !!crisis || !!impulse || dependency || grief || _noPush;   // 💬 감정·관계 턴·권유 거절 뒤엔 콘텐츠 조회 도구 자체를 안 준다(26.9.22)
       const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch,
                         noLookup: thirdParty || tender, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
@@ -6769,6 +6781,12 @@ ${parts.join("\n")}`;
     if (!_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
       reply = String(reply || "").replace(/[^.!?\n]*(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]*[.!?]?\s*/g, "").trim()
         || "그건 지금 내가 바로 확인할 방법이 없어 ㅠ 가게 이름을 한 번 더 알려주면 갈라 지도에서 찾아볼게!";
+    }
+    if (typeof _noPush !== "undefined" && _noPush) {
+      for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|draft|draftPredict|draftPlaza|draftGallari|genThumbnail|genVideo)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);   // 감정 턴엔 초안도 안 만든다
+      if (/초안/.test(String(reply || ""))) reply = String(reply || "").split(/(?<=[.!?…])\s+|\n+/).filter((x) => !/(초안|잡아놨|편집기)/.test(x)).join(" ").trim() || reply;
+      const keep = String(reply || "").split(/(?<=[.!?…])\s+|\n+/).filter((x) => !/(띄울\s*수\s*있|이거\s*봐|볼래\?|보여줄까|틀어줄까|추천해줄까|조회|만\s*봤|영상|침착맨|뮤비|1위|순위|틀면|땡겨\?|볼\s*만|재밌을\s*듯)/.test(x));
+      const out = keep.join(" ").trim(); if (out.length >= 4) reply = out;
     }
     /* 🃏 안 연 걸 「바로 띄웠어/열었어」라고 하지 않는다(26.9.22 QA: 딴 얘기 뒤 「응」에 새 카드만 붙이고 '띄웠어') */
     if (!actions.some((a: any) => a.auto)) {
