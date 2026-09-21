@@ -1488,7 +1488,20 @@
     const t = PENDING_TAB; PENDING_TAB = null;
     setTab(t);
   }
+  /* 🧹 화면이 바뀌면 떠 있던 임시 창을 모두 닫는다 — 첨부(+) 메뉴가 대화방을 닫은 뒤에도 목록·대화 설정 위에
+     그대로 남아 「대화창 닫으면 메뉴가 나온다」로 보였다(26.9.21 두 폰 QA 캡처로 확인). 반응 창·사진 크게 보기·
+     이모티콘 패널·투표 창도 같은 처지였다. */
+  function closeTransients() {
+    try {
+      const sh = document.getElementById('dm-attach-sheet');
+      if (sh) { sh.classList.remove('open'); setTimeout(() => sh.remove(), 200); }
+      document.querySelectorAll('.dm-react-pop, .dm-poll-modal').forEach(el => el.remove());
+      document.getElementById('dm-lightbox')?.classList.remove('on');
+      ROOT.querySelectorAll('#dm-stk, #dm-mk').forEach(p => { p.hidden = true; });
+    } catch (_) {}
+  }
   function showView(name) {
+    if (name !== CUR_VIEW) closeTransients();
     // 🎤 방/뷰를 벗어나면 진행 중인 음성녹음을 확실히 중단(뒤로·목록복귀 포함) —
     //    방 나가도 계속 녹음되던 버그 방지(사장님 제보).
     if (name !== CUR_VIEW) { try { stopVoiceRec(true); PTT = null; if (typeof paintRec === 'function') paintRec(false); } catch (_) {} }
@@ -5253,7 +5266,10 @@
      금융 이전(선물·송금)은 정책상 제외. */
   function openAttachSheet() {
     if (!curPeer) return;
-    document.getElementById('dm-attach-sheet')?.remove();
+    // + 를 다시 누르면 닫힌다(예전엔 매번 새로 다시 열려 닫을 방법이 바깥 탭뿐이었다)
+    const prev = document.getElementById('dm-attach-sheet');
+    if (prev && prev.classList.contains('open')) { prev.classList.remove('open'); setTimeout(() => prev.remove(), 200); return; }
+    prev?.remove();
     const peer = curPeer, name = nickCache[peer] || PROFILES[peer]?.nickname || '상대';
     // 갈라 용어 그대로: 육성톡(음성통화)·면상톡(영상통화)·육성 투척(음성 메시지)·삐삐.
     // 아이콘은 DM 원칙대로 1.8px 라인 SVG(ICONS) — 이모지 금지.
