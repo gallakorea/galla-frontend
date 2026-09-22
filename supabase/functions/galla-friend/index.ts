@@ -1017,11 +1017,46 @@ async function quoteFx(name: string): Promise<any> {
 const TP_MARKER = "576729";
 const AIRLINE_KO: Record<string, string> = { KE: "대한항공", OZ: "아시아나", "7C": "제주항공", LJ: "진에어", TW: "티웨이항공", ZE: "이스타항공", BX: "에어부산", RS: "에어서울", YP: "에어프레미아", RF: "에어로케이",
   JL: "일본항공", NH: "ANA", MM: "피치항공", VJ: "비엣젯", VN: "베트남항공", CX: "캐세이퍼시픽", TG: "타이항공", SQ: "싱가포르항공", PR: "필리핀항공", "5J": "세부퍼시픽", CI: "중화항공", BR: "에바항공", AK: "에어아시아", TR: "스쿠트" };
+/* ✈️ 한국어 도시·나라 → IATA 시티코드. 자동완성이 한국어에 부정확해서(상파울루→파루, 발리→발리나,
+   하와이·나트랑·푸꾸옥 빈 결과) 인기 목적지는 사전으로 못 박는다. 나라는 대표 도시로. */
+const CITY_IATA: Record<string, [string, string]> = {
+  "서울": ["SEL", "서울"], "인천": ["SEL", "서울"], "부산": ["PUS", "부산"], "제주": ["CJU", "제주"], "대구": ["TAE", "대구"],
+  "도쿄": ["TYO", "도쿄"], "동경": ["TYO", "도쿄"], "오사카": ["OSA", "오사카"], "후쿠오카": ["FUK", "후쿠오카"], "삿포로": ["SPK", "삿포로"], "오키나와": ["OKA", "오키나와"], "나고야": ["NGO", "나고야"], "일본": ["TYO", "도쿄"],
+  "방콕": ["BKK", "방콕"], "치앙마이": ["CNX", "치앙마이"], "푸켓": ["HKT", "푸켓"], "태국": ["BKK", "방콕"],
+  "다낭": ["DAD", "다낭"], "하노이": ["HAN", "하노이"], "호치민": ["SGN", "호치민"], "나트랑": ["CXR", "나트랑"], "푸꾸옥": ["PQC", "푸꾸옥"], "달랏": ["DLI", "달랏"], "베트남": ["SGN", "호치민"],
+  "세부": ["CEB", "세부"], "마닐라": ["MNL", "마닐라"], "보라카이": ["MPH", "보라카이"], "필리핀": ["MNL", "마닐라"],
+  "싱가포르": ["SIN", "싱가포르"], "쿠알라룸푸르": ["KUL", "쿠알라룸푸르"], "말레이시아": ["KUL", "쿠알라룸푸르"], "코타키나발루": ["BKI", "코타키나발루"],
+  "발리": ["DPS", "발리"], "자카르타": ["JKT", "자카르타"], "인도네시아": ["DPS", "발리"],
+  "타이베이": ["TPE", "타이베이"], "타이페이": ["TPE", "타이베이"], "대만": ["TPE", "타이베이"], "가오슝": ["KHH", "가오슝"],
+  "홍콩": ["HKG", "홍콩"], "마카오": ["MFM", "마카오"], "상하이": ["SHA", "상하이"], "베이징": ["BJS", "베이징"], "북경": ["BJS", "베이징"], "중국": ["BJS", "베이징"],
+  "괌": ["GUM", "괌"], "사이판": ["SPN", "사이판"], "하와이": ["HNL", "하와이"], "호놀룰루": ["HNL", "호놀룰루"],
+  "파리": ["PAR", "파리"], "런던": ["LON", "런던"], "로마": ["ROM", "로마"], "밀라노": ["MIL", "밀라노"], "바르셀로나": ["BCN", "바르셀로나"], "마드리드": ["MAD", "마드리드"], "프라하": ["PRG", "프라하"], "빈": ["VIE", "비엔나"], "비엔나": ["VIE", "비엔나"], "암스테르담": ["AMS", "암스테르담"], "프랑크푸르트": ["FRA", "프랑크푸르트"], "뮌헨": ["MUC", "뮌헨"], "취리히": ["ZRH", "취리히"], "이스탄불": ["IST", "이스탄불"],
+  "프랑스": ["PAR", "파리"], "영국": ["LON", "런던"], "이탈리아": ["ROM", "로마"], "스페인": ["MAD", "마드리드"], "독일": ["FRA", "프랑크푸르트"], "네덜란드": ["AMS", "암스테르담"], "체코": ["PRG", "프라하"], "터키": ["IST", "이스탄불"], "튀르키예": ["IST", "이스탄불"],
+  "두바이": ["DXB", "두바이"], "아부다비": ["AUH", "아부다비"],
+  "뉴욕": ["NYC", "뉴욕"], "로스앤젤레스": ["LAX", "로스앤젤레스"], "엘에이": ["LAX", "로스앤젤레스"], "샌프란시스코": ["SFO", "샌프란시스코"], "라스베이거스": ["LAS", "라스베이거스"], "라스베가스": ["LAS", "라스베이거스"], "시애틀": ["SEA", "시애틀"], "시카고": ["CHI", "시카고"], "보스턴": ["BOS", "보스턴"], "워싱턴": ["WAS", "워싱턴"], "미국": ["NYC", "뉴욕"],
+  "시드니": ["SYD", "시드니"], "멜버른": ["MEL", "멜버른"], "브리즈번": ["BNE", "브리즈번"], "호주": ["SYD", "시드니"],
+  "상파울루": ["SAO", "상파울루"], "리우": ["RIO", "리우데자네이루"], "리우데자네이루": ["RIO", "리우데자네이루"], "브라질": ["SAO", "상파울루"],
+};
 async function tpCity(name: string): Promise<{ code: string; name: string } | null> {
-  const nm = String(name || "").replace(/(행|가는|출발|도착|공항|까지|에서|로)$/g, "").trim();
+  let nm = String(name || "").replace(/(행|가는|가|출발|도착|공항|까지|에서|으로|로)$/g, "").trim();
   if (!nm) return null;
-  const j = await jget(`https://autocomplete.travelpayouts.com/places2?term=${encodeURIComponent(nm)}&locale=ko&types[]=city`);
-  const h = Array.isArray(j) ? j[0] : null;
+  // 1) 사전 우선(정확·정규화). 「LA」 대문자 등도
+  const key = nm.replace(/\s+/g, "");
+  if (CITY_IATA[key]) return { code: CITY_IATA[key][0], name: CITY_IATA[key][1] };
+  if (/^LA$/i.test(key)) return { code: "LAX", name: "로스앤젤레스" };
+  // 2) 자동완성 — 이름이 실제로 맞는 것만(첫 결과 맹신 금지: 상파울루→파루 사고)
+  const pick = (arr: any[]) => {
+    if (!Array.isArray(arr) || !arr.length) return null;
+    const norm = (t: string) => String(t || "").replace(/\s+/g, "");
+    const exact = arr.find((x) => norm(x.name) === norm(nm));
+    if (exact) return exact;
+    const part = arr.find((x) => norm(x.name).includes(norm(nm)) || norm(nm).includes(norm(x.name)));
+    if (part) return part;
+    return null;   // 맞는 이름이 없으면 버린다(엉뚱한 도시로 요금 0 나오느니)
+  };
+  let j = await jget(`https://autocomplete.travelpayouts.com/places2?term=${encodeURIComponent(nm)}&locale=ko&types[]=city`);
+  let h = pick(j);
+  if (!h) { const je = await jget(`https://autocomplete.travelpayouts.com/places2?term=${encodeURIComponent(nm)}&locale=en&types[]=city`); h = pick(je) || (Array.isArray(je) && je.length === 1 ? je[0] : null); }
   return h?.code ? { code: h.code, name: h.name || nm } : null;
 }
 async function flightPrices(to: string, from?: string, when?: string): Promise<any> {
@@ -6965,8 +7000,9 @@ ${parts.join("\n")}`;
       {   /* 💹 시세 물었는데 숫자가 없다 — 「시세는 못 봐」 둘러대기, 반올림한 숫자가 근거 검사에 지워져 「정확한 값은 못 잡겠어」만 남음,
              도구 없이 웹 기사 숫자로 답함(26.9.22 시험 「하이닉스 가격 얼마야」 3번 다 다른 모양으로 실패) → 카드 값으로 서버가 한 줄 쓴다 */
         const um = String(userMsg || "").replace(/[?？!.]/g, " ");
-        const ask = /(가격|시세|주가|환율|코인)/.test(um) && /(얼마|어때|알려|몇|지금|현재)/.test(um);
-        const deny = /(시세|주가|가격|값|환율)[^.!?\n]{0,14}(못\s*(봐|보|알|잡)|모르|확인\s*(이\s*)?안)|못\s*보는\s*몸|정확한 값은 내가 못 잡겠어/.test(String(reply || ""));
+        const deny = /(시세|주가|가격|값|환율|실시간)[^.!?\n]{0,16}(못\s*(봐|보|알|잡)|모르|확인\s*(이\s*)?안)|못\s*보는\s*몸|정확한 값은 내가 못 잡겠어/.test(String(reply || ""));
+        // 「하이닉스 얼마야」처럼 종목명만 있고 '주가/시세' 키워드가 없어도 — 답이 「주가 못 봐」로 둘러대면 시세 질문이다(26.9.22 사장님 대화)
+        const ask = (/(가격|시세|주가|환율|코인|주식)/.test(um) && /(얼마|어때|알려|몇|지금|현재)/.test(um)) || (deny && /(얼마|값|시세|주가|주식|스탁|환율|코인|가격|시가)/.test(um));
         let qc: any = actions.find((a: any) => a.kind === "quote");
         if (!crisis && ask && !qc && !actions.some((a: any) => /^(food|travel|view)$/.test(String(a.kind || "")))) {
           const STOP = /^(지금|현재|오늘|요즘|혹시|가격|값|시세|주가|얼마.*|알려.*|어때.*|몇.*|좀|이|거|그|나|너)$/;
