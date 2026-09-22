@@ -1361,8 +1361,12 @@ async function enrichCards(actions: any[]): Promise<void> {
         sub: t ? `${r.faction_a || "찬성"} ${Math.round(p * 100 / t)}% · ${r.faction_b || "반대"} ${Math.round(c * 100 / t)}% · ${n(t)}명` : "아직 투표 전 — 첫 표 던지기" }; });
   });
   q("news", async () => {
-    const { data } = await supa.from("galla_news").select("id,title,summary,hero_image,source_count").in("id", ids("news"));
+    const { data } = await supa.from("galla_news").select("id,title,summary,hero_image,source_count,category,published_at,created_at").in("id", ids("news"));
     put("news", data, (r) => ({ img: r.hero_image, title: r.title, sub: `${String(r.summary || "").replace(/\s+/g, " ").slice(0, 42)}${r.source_count ? ` · 기사 ${r.source_count}건 종합` : ""}` }));
+    /* 🗞 뉴스 전용 카드(26.9.22 사장님) — 요약 전문·분류·시각·기사 수 */
+    for (const r of data || []) for (const a of (by["news"] || []).filter((x: any) => String(x.id) === String(r.id))) {
+      a.summary = String(r.summary || "").replace(/\s+/g, " ").slice(0, 140); a.cat = r.category || ""; a.at = r.published_at || r.created_at || null; a.srcN = +r.source_count || 0;
+    }
   });
   q("predict", async () => {
     const { data } = await supa.from("markets").select("id,question,image_url,close_at,total_pool,status").in("id", ids("predict").map(Number).filter(Boolean));
@@ -6624,6 +6628,35 @@ ${parts.join("\n")}`;
           if (!out.includes(t.slice(0, 8))) out = `이번엔 「${t}」 — ` + out.replace(/^(여기\s*(붙여|띄워)\s*놨어|이거)\s*[—\-:,.]?\s*/, "");
         }
       }
+      /* 🧩 회귀 4종(26.9.22 최종 회귀) — 검사관 뒤 마지막 단계에서 고정 */
+      {
+        const um = String(userMsg || "").trim();
+        const segs = () => out.split(/(?<=[.!?…~])\s+|\n+/).filter((x) => x.trim());
+        const pickOf = (L: string[]) => L[(um.length + out.length) % L.length];
+        /* ① 「나도 보고 싶었어」에 「근데… 누구를?」 — 나한테 한 말이다. 반갑게 받는다(emo04) */
+        if (!crisis && /(나도\s*)?보고\s*싶었/.test(um) && !/(누구|걔|그\s*사람|엄마|아빠|친구|강아지|고양이|너무\s*보고)/.test(um.replace(/^그러게\s*/, ""))) {
+          /* 되묻기(「누구를?」「뭘 보고 싶었던 거야?」「왜~?」)는 빼고 반가운 말만 */
+          const kept = segs().filter((x) => !/[?？]/.test(x) && /(나도|좋아|반가|보고\s*싶|기다렸|💛|ㅎㅎ)/.test(x)).join(" ").replace(/\s*근데\s*(갑자기\s*)?(왜~?)?\s*$/, "").trim();
+          out = kept.length >= 6 ? kept : pickOf(["나도 진짜 보고 싶었어 ㅠㅠ 와줘서 좋다", "헐 나도!! 기다렸잖아 ㅎㅎ"]);
+        }
+        /* ② 전 애인 새 연인 흉 — 같이 까 준다. 「신경 쓰였구나·척하는 거 다 보여」 같은 속마음 분석 금지(gos05) */
+        const exCtx = (history || []).filter((h: any) => h?.role === "user").slice(-4).some((h: any) => /(전\s*남친|전\s*여친|전\s*애인|전\s*남자\s*친구|전\s*여자\s*친구|새\s*(여친|남친|애인))/.test(String(h.content || ""))) || /(전\s*남친|전\s*여친|전\s*애인)/.test(um);
+        if (!crisis && exCtx && /(별로|못생|구리|촌스|깬다|없어\s*보|안\s*예|노답|급\s*낮|아깝)/.test(um) && /(신경\s*쓰였|척하는|다\s*보여|마음\s*쓰이|괜찮아\?|미련|아직\s*좋아|씁쓸|속\s*쓰|그래도\s*그\s*소식|어떤\s*기분)/.test(out)) {
+          out = pickOf(["ㅋㅋㅋ 그치? 너 보다가 그 사람 보면 확 티 나지", "ㅋㅋㅋ 역시 너만 한 사람 없지 뭐", "ㅋㅋ 그럴 줄 알았어, 급이 다르잖아 너랑"]);
+        }
+        /* ③ 「아니다 됐어 그만」 — 사과·덧붙임 없이 짧게 끝낸다(ref05) */
+        if (!crisis && /^(아니다\s*)?(아\s*)?(됐어|됐다|그만|그만해|괜찮아|필요\s*없어)(\s*(됐어|그만|ㅇㅇ))*[\s.~!ㅋ]*$/.test(um) && /그만|됐/.test(um) && !/^(알겠|ㅇㅋ|응응?\s*알)/.test(out)) {
+          out = pickOf(["알겠어 ㅎㅎ", "ㅇㅋ 알겠어!", "응응 알겠어, 필요하면 불러"]);
+        }
+        /* ④ 수다 턴에 청하지 않은 권유(「다음엔 그 집 말고 다른 데 시켜보자」) — 그 문장만 뺀다(mix03) */
+        if (!crisis && _v2Talk) {
+          const REC = /(다른\s*(데|집|곳|가게)|그\s*집\s*말고|딴\s*(데|집))[^.!?\n]{0,15}(시켜|가|먹어|주문해)\s*(보자|봐|볼래|보는\s*거)|추천해\s*줄게|골라\s*줄게/;
+          if (segs().some((x) => REC.test(x))) {
+            const kept = segs().filter((x) => !REC.test(x)).join(" ").trim();
+            out = kept.length >= 6 ? kept : pickOf(["아 그랬구나 ㅠㅠ 그건 좀 아쉽다", "헐 그건 좀 속상하겠다 ㅠ"]);
+          }
+        }
+      }
       /* 🗣 뒷담 동조 턴 끝의 되묻기 — 「진짜 나쁜 놈이지」에 편들고는 「근데 어느 쪽 얘기야?」로 김을 뺐다(26.9.22 회귀 mix04) */
       if (!crisis && (_v2State === "gossip" || /(나쁜\s*(놈|년|새끼)|진짜\s*(별로|최악|싫|못됐)|미친\s*(놈|거)|양아치|이기적|열받|빡치)/.test(String(userMsg || "")))) {
         const sg = out.split(/(?<=[.!?…~])\s+|\n+/).filter((x) => x.trim());
@@ -6638,8 +6671,10 @@ ${parts.join("\n")}`;
           if (!(/(뜨거운|핫한|뜨는|제일\s*(난리|화제)|화제|올라와|이슈는|1위)/.test(first) && cs.some((a: any) => titleHit(first, String(a.title)) > 0))) {
             const t = cs.slice(0, 2).map((a: any) => `「${String(a.title).replace(/["'「」”“]/g, "").split(/[,…·?]/)[0].trim().slice(0, 22)}」`).join(", ");
             const rest = out.replace(/^(둘\s*다|셋\s*다|세\s*개|두\s*개|이거|전부|다)?\s*(여기\s*)?(붙여|띄워)\s*놨어[.!~]?\s*/, "").trim();
-            const rest2 = rest.split(/(?<=[.!?…])\s+|\n+/).filter((sg) => !/(붙여|띄워)\s*놨어/.test(sg)).join(" ").trim();
-            out = `요즘 뜨거운 건 ${t}야 — 여기 붙여놨어.` + (rest2 ? " " + rest2 : "");
+            /* 소개 문장이 이미 말한 소식을 뒤에서 또 말하면 되풀이다(「김건희 항소심, 축구협회 송치…」 두 번) — 제목이 겹치는 문장은 뺀다 */
+            const said = cs.slice(0, 2).map((a: any) => String(a.title));
+            const rest2 = rest.split(/(?<=[.!?…])\s+|\n+/).filter((sg) => !/(붙여|띄워)\s*놨어/.test(sg) && !said.some((tt) => titleHit(sg, tt) >= 2)).join(" ").trim();
+            out = `${/뉴스/.test(String(userMsg || "")) ? "오늘 주요 뉴스는" : "요즘 뜨거운 건"} ${t}야 — 여기 붙여놨어.` + (rest2 ? " " + rest2 : "");
           }
         }
       }
@@ -7055,7 +7090,7 @@ ${parts.join("\n")}`;
         // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
         /* 📰 뉴스 조회 → 카드(요청 턴) — 요약만 하고 카드가 없어 「제대로 못 붙였어」가 나갔다(26.9.22 시험 req07) */
         if (c.function?.name === "galla_news" && Array.isArray(out.result) && _v2State === "request" && !actions.some((a: any) => a.kind === "view" || a.kind === "open")) {
-          for (const n of (out.result as any[]).slice(0, 2)) if (n?.id) actions.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), label: "열어보기" });
+          for (const n of (out.result as any[]).slice(0, 3)) if (n?.id) actions.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), label: "열어보기" });
         }
         /* 💹 시세·환율·실거래가 → 화려한 결과 카드(26.9.22 사장님: 「결과물은 화려한 카드로」) — 모델엔 카드 데이터를 안 보낸다(토큰) */
         if (out.result && (out.result as any)._card) { const cd = (out.result as any)._card; delete (out.result as any)._card; if (!actions.some((a: any) => a.kind === "quote" && a.qtype === cd.qtype && a.title === cd.title)) actions.push({ kind: "quote", ...cd }); }

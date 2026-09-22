@@ -90,7 +90,7 @@
       var bb=msgEl && (msgEl.querySelector(".fr-bubble")||msgEl); var k=cardKey(bb && bb.textContent); if(!k) return;
       var cs=(actions||[]).filter(function(a){ return ((a.kind==="open"||a.kind==="view") && (a.title||a.sub)) || a.kind==="quote"; }).slice(0,3)
         .map(function(a){ if(a.kind==="quote"){ var q={}; for(var k in a) q[k]=a[k]; return q; }   // 시세 카드는 통째로(다시 열어도 남게)
-          return { kind:a.kind, ctype:a.ctype, id:a.id, url:a.url, title:a.title, sub:a.sub, img:a.img, label:a.label, source:a.source, badge:a.badge }; });
+          return { kind:a.kind, ctype:a.ctype, id:a.id, url:a.url, title:a.title, sub:a.sub, img:a.img, label:a.label, source:a.source, badge:a.badge, summary:a.summary, cat:a.cat, at:a.at, srcN:a.srcN }; });
       if(!cs.length) return;
       var m=cardMapLoad(); m[k]={ c:cs, at:Date.now() };
       var ks=Object.keys(m); if(ks.length>80){ ks.sort(function(x,y){ return (m[x].at||0)-(m[y].at||0); }).slice(0, ks.length-80).forEach(function(x){ delete m[x]; }); }
@@ -2053,16 +2053,48 @@
     c2.querySelector(".qt-src").textContent=(a.source||"")+(when?" · "+when:"");
     return c2;
   }
+  /* 🗞 뉴스 전용 카드(26.9.22 사장님 「전용 카드 만들어」) — 첫 소식은 큰 사진(천천히 확대)+요약, 나머지는 번호 줄이 차례로 미끄러져 들어온다 */
+  function newsAgo(at){
+    var t=Date.parse(at||""); if(!isFinite(t)) return "";
+    var m=Math.max(0,Math.round((Date.now()-t)/60000));
+    return m<1?"방금":m<60?m+"분 전":m<1440?Math.round(m/60)+"시간 전":Math.round(m/1440)+"일 전";
+  }
+  function buildNews(items){
+    var c=el('<div class="fr-news"><div class="nw-h"><span class="nw-logo">갈라뉴스</span><span class="nw-live"><i></i>LIVE</span><span class="nw-when"></span></div><div class="nw-list"></div><div class="nw-f">여러 기사를 AI가 묶어 정리했어요 · 누르면 전문</div></div>');
+    var first=items[0], list=c.querySelector(".nw-list");
+    var latest=items.map(function(x){ return Date.parse(x.at||"")||0; }).sort(function(a,b){ return b-a; })[0];
+    c.querySelector(".nw-when").textContent = latest ? newsAgo(new Date(latest).toISOString())+" 업데이트" : "";
+    var hero=el('<button class="nw-hero" type="button"><div class="nw-img"><i></i></div><div class="nw-body"><span class="nw-cat"></span><b class="nw-t"></b><p class="nw-s"></p><span class="nw-meta"></span></div></button>');
+    if(first.img){ var im=hero.querySelector(".nw-img i"); im.style.backgroundImage="url(\""+String(first.img).replace(/"/g,"")+"\")"; } else hero.classList.add("nw-noimg");
+    hero.querySelector(".nw-cat").textContent="TOP 1";   // 뉴스 분류값이 틀린 게 있어(김건희 항소심=「스포츠」) 분류는 안 보여준다
+    hero.querySelector(".nw-t").textContent=first.title||"";
+    hero.querySelector(".nw-s").textContent=first.summary||String(first.sub||"").replace(/\s*·\s*기사 \d+건 종합$/,"");
+    hero.querySelector(".nw-meta").textContent=[first.srcN?("기사 "+first.srcN+"건 종합"):"", newsAgo(first.at)].filter(Boolean).join(" · ");
+    hero.onclick=function(){ runAction(first); };
+    list.appendChild(hero);
+    items.slice(1,4).forEach(function(n,i){
+      var r=el('<button class="nw-row" type="button" style="--i:'+i+'"><span class="nw-no"></span><div class="nw-rt"><b></b><span></span></div><div class="nw-th"></div></button>');
+      r.querySelector(".nw-no").textContent=String(i+2);
+      r.querySelector("b").textContent=n.title||"";
+      r.querySelector(".nw-rt span").textContent=[n.srcN?("기사 "+n.srcN+"건 종합"):"", newsAgo(n.at)].filter(Boolean).join(" · ");
+      if(n.img) r.querySelector(".nw-th").style.backgroundImage="url(\""+String(n.img).replace(/"/g,"")+"\")"; else r.querySelector(".nw-th").remove();
+      r.onclick=function(){ runAction(n); };
+      list.appendChild(r);
+    });
+    return c;
+  }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
     if(!(actions[0] && actions[0]._restored)) rememberCards(msgEl, actions);
-    var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); });
+    var news=actions.filter(function(a){ return a.kind==="view" && a.ctype==="news" && a.id && a.title; });
+    var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub) && !(news.length && a.ctype==="news"); });
     var numbered = links.length>=2 && !actions.some(function(a){ return a.auto===true; });
     _cardGroup = numbered ? links : null;
     _offerOne = (links.length===1 && !links[0].auto) ? links[0] : null;
     var wrap=el('<div class="fr-acts fr-in"></div>');
-    var _deckDone=false;
+    var _deckDone=false, _newsDone=false;
     actions.forEach(function(a){
+      if(news.length && a.kind==="view" && a.ctype==="news"){ if(!_newsDone){ _newsDone=true; wrap.appendChild(buildNews(news)); } return; }
       // 🎟 가입 유도 — 맛보기가 끝났을 때만 뜬다. 지금까지 나눈 대화가 아까워지는 지점에 딱 하나.
       if(a.kind==="signup"){
         var sb2=el('<button class="fr-chip fr-chip-cta"></button>');
