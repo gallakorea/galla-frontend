@@ -2805,7 +2805,7 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)|(띄우|띄우는|여는|열어\s*주|보여\s*주)[^.!?\n]{0,8}(걸\s*)?(못\s*해|못해|안\s*돼|할\s*수\s*없)|손이\s*없어|직접\s*(눌러|쳐)\s*(봐|줘)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
@@ -5101,6 +5101,31 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
         }
       }
     }
+    /* 🎯 대상 없는 「띄워봐/열어봐/카드 보여 주라고」 — 방금 대화에서 보여준 카드(3시간 안)를 다시 연다.
+       인기 콘텐츠로 새지 않게(26.9.22 사장님: 바바인디아 얘기 중 「띄워봐」에 핫튜브 1위). 옛 네이버 링크면 같은 이름의 갈라 맛집으로. */
+    {
+      const m0 = String(userMsg || "").trim();
+      const bare = m0.length <= 20 && /(띄워|열어|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|빨리|다시)/.test(m0)
+        && !/(영상|이슈|뉴스|맛집|예측|날씨|여행|숏판|롱판|광장|핫튜브|웃긴|재밌는)/.test(m0);
+      const ll: any = rel?.session_meta?.last_list;
+      const recent = ll?.at && (Date.now() - Date.parse(ll.at)) < 3 * 3600000 && Array.isArray(ll.items) && ll.items.length;
+      if (bare && recent && !body?.work) {
+        let it: any = ll.items[0];
+        let act: any = null;
+        if (it.ctype === "link" && /naver/.test(String(it.id || ""))) {
+          const nm = String(it.title || "").trim().split(/\s+/)[0];
+          if (nm.length >= 2) {
+            const { data: fp } = await supa.from("food_places").select("id,name,category,rating,cover_url,hours").ilike("name", `%${nm.replace(/[%,()]/g, "")}%`).limit(1);
+            if (fp && fp[0]) act = { kind: "view", ctype: "food", id: fp[0].id, title: fp[0].name, sub: [fp[0].category, fp[0].rating ? "★" + fp[0].rating : ""].filter(Boolean).join(" · "), img: fp[0].cover_url || null, auto: true };
+          }
+        } else if (it.ctype === "hottube") act = { kind: "open", url: `https://galla.im/watch.html?v=${it.id}`, title: it.title, auto: true };
+        else if (it.ctype !== "link") act = { kind: "view", ctype: it.ctype, id: it.id, title: it.title, sub: it.sub, auto: true };
+        if (act) {
+          try { await enrichCards([act]); } catch { /* */ }
+          return json({ ok: true, reply: `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
+        }
+      }
+    }
     /* 🔁 결정적 재오픈 — 직전에 보여준 카드가 있고(15분) 상대가 '열어라/안 열린다/다시' 류로
        말하면 LLM 없이 그 카드를 auto 로 다시 연다. 실측 실패 3연속의 근본 수정:
        "열어봐"에 모델이 이슈 '초안'을 만들어버리는 오발까지 원천 차단(모델이 아예 안 돈다).
@@ -5344,7 +5369,7 @@ ${gapMin >= 1440 ? "오래 비었다 → 반가움이 묻어나게." : "얼마 �
 ${lastOpeners.length ? `⚠️ 최근에 이렇게 시작했다 — 【같은 인사말·같은 화제로 시작 금지】\n${lastOpeners.map((o) => "  · " + o).join("\n")}` : ""}
 ⚠️ 직전 대화 화제를 이어서 시작하지 마라. 인사는 '새로 말을 거는 것'이다.
 💛 속상했던 일(회사·상사·싫어하는 사람·스트레스·싸움)은 인사에서 절대 꺼내지 마라 — 반갑게, 가볍게, 좋은 쪽으로만.
-🚫 「오 왔네」「왔구나」「반가워」「안녕」 같은 뻔한 첫마디로 시작하지 마라(사장님: 맨날 똑같아서 재미없다). 첫 문장부터 구체적인 거리로 — 시간·요일·날씨·갈라 화제·상대가 전에 좋아한 것 중 하나로 재치 있게.
+🚫 「오 왔네」「왔구나」「반가워」「안녕」 같은 뻔한 첫마디로 시작하지 마라(사장님: 맨날 똑같아서 재미없다). 첫 문장부터 구체적인 거리로 — 시간·요일·날씨·상대 근황 중 하나로 재치 있게. 🚫 갈라 이슈·뉴스·영상 같은 콘텐츠 얘기로 인사하지 마라(26.9.22 사장님: 「시작만 하면 유튜브 칼날, 지겹다」 — 인사는 사람한테).
 ${actBlock ? `
 [그 사이 이 사람이 갈라에서 한 일 — 아래에서 '딱 하나만' 골라 그걸로 말을 걸어라]
 ${actBlock}
@@ -5627,7 +5652,8 @@ ${parts.join("\n")}`;
       && (rel?.msg_count || 0) >= 4                       // 만나자마자 조르지 않기
       && !/[ㅋㅎ]{2,}|^[\s\p{Emoji}]*$/u.test(userMsg.trim())   // 웃기만/이모지만 = 화제 진행 중
       && !isClosing(userMsg)                              // 단답으로 닫는 중엔 더더욱 금지
-      && userMsg.trim().length >= 4;                      // 뭔가 말을 하고 있을 때만
+      && userMsg.trim().length >= 4                       // 뭔가 말을 하고 있을 때만
+      && !(Array.isArray(rel?.chat_log) ? rel.chat_log : []).some((m: any) => m?.role === "assistant" && /이름\s*(좀\s*)?지어|뭐라고\s*불러/.test(String(m?.content || "")));   // 이미 한 번 물었으면 끝(26.9.22 인사마다 「이름 지어줄래」)
     if (crisis) { try { await supa.rpc("log_crisis", { p_user: uid, p_severity: 2, p_term: crisis.term, p_excerpt: userMsg.slice(0, 120) }); } catch { /* */ } }   // await: 위기 로그는 절대 놓치면 안 됨(관제·후속)
     /* ══ 🧭 의도 판정 — 규칙 표 한 장(INTENT_RULES)에게 전부 맡긴다 ══
        예전엔 여기서부터 7층 폴스루가 이어졌다(정규식→제안확정→후속백스톱→발행→열기동사→FSM→임베딩).
@@ -6154,7 +6180,7 @@ ${parts.join("\n")}`;
       const nonSys = messages.filter((m: any) => m && m.role !== "system");
       /* 이름 묻기는 수다·인사 턴에서만 — 「보고 싶었어」에 「근데 뭐라고 부르면 돼?」가 흐름을 끊었다(26.9.22 채점판) */
       const ctxBlock = { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes,
-        mayAskName && (_v2State === "chat" || _v2State === "greet"), backRefAsk(userMsg || ""), tzMin) };
+        mayAskName && _v2State === "chat", backRefAsk(userMsg || ""), tzMin) };
       const keep = [
         _hostileTurn ? HOSTILE_BLOCK : "", mindBlock, piiBlock, emoCarryBlock, selfDepBlock, jbBlock,
         ...(guardsOff ? [] : [recallBlock, depBlock, tpBlock, biasBlock, illegalBlock, ghostBlock, griefBlock, fakeRecallBlock, freshStartBlock, langBlock]),
@@ -7067,6 +7093,21 @@ ${parts.join("\n")}`;
     }
     if (_v2Talk) {   // 🫂 대화 턴 안전망 — 어느 경로로든 콘텐츠 카드가 붙었으면 뗀다(대화만 하기로 한 턴이다)
       for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|share|news|local|draft\w*|plan|episode|editdraft)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);
+    }
+    /* 🔁 실패한 얘기에 매달리기 금지 — 불만·항의·정정 턴엔 방금 카드·가게 이름이 든 문장을 뺀다
+       (26.9.22 사장님: 「왜 자꾸 그 얘기야?」에도 「바바인디아 그거 아직도 안 뜨는 거야?」 반복) */
+    if (_v2Talk && (_v2State === "refuse" || _v2State === "hostile" || _v2State === "correct")) {
+      const names = [ ...((rel?.session_meta?.last_list?.items || []) as any[]).map((i: any) => String(i?.title || "")), String(rel?.session_meta?.last_view?.title || "") ]
+        .map((t) => t.replace(/\s*(보기|열기)$/, "").split(/\s+/)[0]).filter((t) => t.length >= 2);
+      if (names.length) {
+        const sents = String(reply || "").split(/(?<=[.!?…])\s+|\n+/);
+        const kept = sents.filter((q) => !names.some((n) => q.includes(n)));
+        if (kept.join(" ").trim().length >= 4 && kept.length < sents.length) reply = kept.join(" ").trim();
+      }
+    }
+    {   /* 🚫 카드는 붙었는데 말로는 「못 띄워/손이 없어/직접 눌러」 — 답 전체가 거짓말 한 문장이면 문장 걸러내기로 못 지운다 → 통째로 교체(26.9.22) */
+      const _c: any = actions.find((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
+      if (_c && /(못\s*(해|띄|열|보여)|손이\s*없|직접\s*(눌러|쳐)|할\s*수\s*없)/.test(String(reply || ""))) reply = `여기 띄워놨어 — ${String(_c.title).slice(0, 30)}`;
     }
     const _preContract = reply;   // 🔬 레드팀 진단용(관문 전 원문)
     reply = enforceContract(reply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
