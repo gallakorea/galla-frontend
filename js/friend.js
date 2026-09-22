@@ -1992,8 +1992,30 @@
     setTimeout(function(){ done=true; el.textContent=fmt(to); }, (ms||1200)+150);
   }
   function qtEok(w){ w=Number(w)||0; if(w>=1e8){ var e=Math.floor(w/1e8), m=Math.round((w%1e8)/1e4); return e+"억"+(m?" "+m.toLocaleString("ko-KR")+"만":""); } return Math.round(w/1e4).toLocaleString("ko-KR")+"만"; }
+  var AIRLINE_KO={KE:"대한항공",OZ:"아시아나","7C":"제주항공",LJ:"진에어",TW:"티웨이항공",ZE:"이스타항공",BX:"에어부산",RS:"에어서울",YP:"에어프레미아",RF:"에어로케이",
+    JL:"일본항공",NH:"ANA",MM:"피치항공",GK:"젯스타재팬",VJ:"비엣젯",VN:"베트남항공",QH:"뱀부항공",CX:"캐세이퍼시픽",TG:"타이항공",SQ:"싱가포르항공",PR:"필리핀항공","5J":"세부퍼시픽",
+    CI:"중화항공",BR:"에바항공",IT:"타이거에어",CA:"중국국제항공",MU:"동방항공",CZ:"남방항공",AK:"에어아시아",D7:"에어아시아X",UA:"유나이티드",DL:"델타",AA:"아메리칸",AF:"에어프랑스",LH:"루프트한자",EK:"에미레이트",QR:"카타르항공",TR:"스쿠트"};
+  function buildFlight(a){
+    var c=el('<div class="fr-qt qt-flight"><div class="qt-h"><span class="qt-ic qt-ic-fl"><svg viewBox="0 0 24 24"><path d="M2.5 13.5l19-7-5 15-3.5-6.5z"/><path d="M13 15l-4 4"/></svg></span><span class="qt-t"></span><span class="qt-cnt">편도 최저가</span></div>'+
+      '<div class="qt-big"><span class="qt-from">최저</span><b class="qt-num">0</b><span class="qt-unit">원</span></div><div class="qt-rows"></div><div class="qt-src"></div></div>');
+    c.querySelector(".qt-t").textContent=a.title||"항공권";
+    setTimeout(function(){ qtCount(c.querySelector(".qt-num"), Number(a.value)||0, 0, 1300); }, 120);
+    var box=c.querySelector(".qt-rows");
+    (a.rows||[]).forEach(function(r,i){
+      var row=el('<button class="qt-row qt-frow" style="--i:'+i+'"><img class="qt-logo" alt=""><div class="qt-rl"><b class="qt-apt"></b><span class="qt-meta"></span></div><div class="qt-rr"><b class="qt-won"></b><span class="qt-date">예약 보기 ›</span></div></button>');
+      var im=row.querySelector("img"); im.onerror=function(){ im.style.visibility="hidden"; }; im.src="https://pics.avs.io/64/64/"+encodeURIComponent(r.airline||"")+".png";
+      row.querySelector(".qt-apt").textContent=(AIRLINE_KO[r.airline]||r.airline||"")+" · "+(r.date||"");
+      row.querySelector(".qt-meta").textContent=(r.stops?("경유 "+r.stops+"회"):"직항")+(r.dur?(" · "+Math.floor(r.dur/60)+"시간 "+(r.dur%60?r.dur%60+"분":"")):"");
+      row.querySelector(".qt-won").textContent=Number(r.price||0).toLocaleString("ko-KR")+"원";
+      if(r.url) row.addEventListener("click", function(){ runAction({ kind:"open", url:r.url, title:(a.title||"항공권")+" 예약" }); });
+      box.appendChild(row);
+    });
+    c.querySelector(".qt-src").textContent=(a.source||"최근 검색 기준")+" · 실제 예약가는 달라질 수 있어요";
+    return c;
+  }
   function buildQuote(a){
     var t=a.qtype||"stock";
+    if(t==="flight") return buildFlight(a);
     if(t==="apt"){
       var c=el('<div class="fr-qt qt-apt"><div class="qt-h"><span class="qt-ic"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg></span><span class="qt-t"></span><span class="qt-cnt"></span></div><div class="qt-rows"></div><div class="qt-src"></div></div>');
       c.querySelector(".qt-t").textContent=a.title||"실거래";

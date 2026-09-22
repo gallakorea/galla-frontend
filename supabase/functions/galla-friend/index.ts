@@ -45,7 +45,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  market_quote: "💹 시세 확인하는 중…", apt_price: "🏠 실거래가 보는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", apt_price: "🏠 실거래가 보는 중…", flight_price: "✈️ 항공권 최저가 보는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_browse: "🧭 갈라 둘러보는 중…", do_action: "✅ 준비하는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -1006,6 +1006,53 @@ async function quoteFx(name: string): Promise<any> {
     _card: { qtype: "fx", title: `${unit === 1 ? "1" : unit} ${code}`, code, value: Number((v * unit).toFixed(2)), unit: "원", at: j.date, source: "유럽중앙은행 기준환율" } };
 }
 
+/* ✈️ 항공권 최저가 — Travelpayouts(아비아세일즈) 데이터 API(무료, 최근 48시간 검색 기준 캐시)(26.9.22 사장님: 「최저가로 알려주고 싶다」)
+   도시 이름 → 공항 코드는 같은 회사 자동완성(한국어). 예약 링크엔 제휴 마커(576729). 실시간 좌석가가 아니라 「최근 검색 기준」이다. */
+const TP_MARKER = "576729";
+const AIRLINE_KO: Record<string, string> = { KE: "대한항공", OZ: "아시아나", "7C": "제주항공", LJ: "진에어", TW: "티웨이항공", ZE: "이스타항공", BX: "에어부산", RS: "에어서울", YP: "에어프레미아", RF: "에어로케이",
+  JL: "일본항공", NH: "ANA", MM: "피치항공", VJ: "비엣젯", VN: "베트남항공", CX: "캐세이퍼시픽", TG: "타이항공", SQ: "싱가포르항공", PR: "필리핀항공", "5J": "세부퍼시픽", CI: "중화항공", BR: "에바항공", AK: "에어아시아", TR: "스쿠트" };
+async function tpCity(name: string): Promise<{ code: string; name: string } | null> {
+  const nm = String(name || "").replace(/(행|가는|출발|도착|공항|까지|에서|로)$/g, "").trim();
+  if (!nm) return null;
+  const j = await jget(`https://autocomplete.travelpayouts.com/places2?term=${encodeURIComponent(nm)}&locale=ko&types[]=city`);
+  const h = Array.isArray(j) ? j[0] : null;
+  return h?.code ? { code: h.code, name: h.name || nm } : null;
+}
+async function flightPrices(to: string, from?: string, when?: string): Promise<any> {
+  const token = Deno.env.get("TRAVELPAYOUTS_TOKEN") || "";
+  if (!token) return { error: "항공권 키 없음" };
+  const dst = await tpCity(to);
+  if (!dst) return { error: `'${to}' 도시를 못 찾았다`, 지침: "도시를 못 찾았다고 솔직히. 도시 이름을 다시 물어봐라." };
+  const org = from ? await tpCity(from) : { code: "SEL", name: "서울" };
+  if (!org) return { error: `'${from}' 출발지를 못 찾았다` };
+  /* 날짜: 「10월」→ 올해/내년 YYYY-MM, 「2026-10-05」 그대로, 없으면 이번 달·다음 달 */
+  const now = new Date(Date.now() + 9 * 3600000);
+  let dep = "";
+  const mm = String(when || "").match(/(\d{1,2})\s*월/);
+  const ymd = String(when || "").match(/(20\d\d)[-.](\d{1,2})(?:[-.](\d{1,2}))?/);
+  if (ymd) dep = `${ymd[1]}-${ymd[2].padStart(2, "0")}${ymd[3] ? "-" + ymd[3].padStart(2, "0") : ""}`;
+  else if (mm) { const m = +mm[1]; const y = m < now.getUTCMonth() + 1 ? now.getUTCFullYear() + 1 : now.getUTCFullYear(); dep = `${y}-${String(m).padStart(2, "0")}`; }
+  const months = dep ? [dep] : [0, 1].map((k) => { const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + k, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`; });
+  const all: any[] = [];
+  for (const m of months) {
+    const j = await jget(`https://api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${org.code}&destination=${dst.code}&departure_at=${m}&one_way=true&sorting=price&currency=krw&market=kr&limit=5&token=${encodeURIComponent(token)}`);
+    for (const x of (j?.data || [])) all.push(x);
+  }
+  if (!all.length) return { 노선: `${org.name}→${dst.name}`, error: "최근 검색된 가격이 없다", 링크: `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`,
+    지침: "최근 검색된 최저가가 없다고 솔직히 말하고, 예약 사이트에서 바로 볼 수 있게 링크를 붙였다고만." };
+  all.sort((a, b) => a.price - b.price);
+  const top = all.slice(0, 3);
+  const md = (iso: string) => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  return {
+    노선: `${org.name}→${dst.name}(편도)`, 최저가: top.map((x) => `${md(x.departure_at)} ${AIRLINE_KO[x.airline] || x.airline} ${x.transfers ? `경유 ${x.transfers}회` : "직항"} ${Number(x.price).toLocaleString("ko-KR")}원`),
+    출처: "아비아세일즈 최근 검색 기준(실시간 좌석가 아님)", 지침: "최저가 1개만 짧게 말하고 「최근 검색 기준이라 예약할 땐 달라질 수 있어」를 덧붙여라. 카드가 붙는다.",
+    _card: { qtype: "flight", title: `${org.name} → ${dst.name}`, code: `${org.code}→${dst.code}`, value: Number(top[0].price), unit: "원",
+      rows: top.map((x) => ({ airline: x.airline, date: md(x.departure_at), stops: x.transfers || 0, dur: x.duration || x.duration_to || 0, price: Number(x.price),
+        url: `https://www.aviasales.com${x.link}${String(x.link).includes("?") ? "&" : "?"}marker=${TP_MARKER}&currency=krw` })),   // 원화로(한국어 화면은 아비아세일즈가 지원 안 함)
+      source: "아비아세일즈 최근 검색 기준" },
+  };
+}
+
 async function marketQuote(kind: string, name: string): Promise<any> {
   const nm = String(name || "").trim();
   if (!nm) return { error: "종목·코인 이름이 필요하다" };
@@ -1436,6 +1483,7 @@ const TOOLS = [
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
+  { type: "function", function: { name: "flight_price", description: "✈️ 항공권 최저가(최근 검색 기준, 편도). '도쿄 항공권 얼마', '다낭 비행기표 최저가', '10월 오사카 가는 거' 물으면 이걸 써라. 가격을 추측으로 말하지 마라.", parameters: { type: "object", properties: { to: { type: "string", description: "도착 도시(한국어 가능: 도쿄, 다낭)" }, from: { type: "string", description: "출발 도시(없으면 서울)" }, when: { type: "string", description: "출발 시기(10월, 2026-10-05 등, 없으면 비움)" } }, required: ["to"] } } },
   { type: "function", function: { name: "apt_price", description: "🏠 아파트 매매 실거래가(국토교통부 신고 자료, 최근 두 달). '○○동/○○구 아파트 얼마', '래미안 실거래가', '집값' 물으면 이걸 써라. 숫자를 기억·추측으로 말하지 마라.", parameters: { type: "object", properties: { region: { type: "string", description: "시·구·동(예: 서초구 양재동, 분당, 강남구 대치동)" }, apt: { type: "string", description: "단지 이름(있으면)" } }, required: ["region"] } } },
   { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인·환율). '달러 환율/엔화 얼마' 는 kind:fx. 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "fx", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
   /* 🌦 날씨는 **우리 데이터**로 답한다 — web_search 로 답하면 틀린다(실측 2026-08-29:
@@ -1586,6 +1634,7 @@ async function refundGC(uid: string, amount: number) {
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
+  if (name === "flight_price") return { result: await flightPrices(String(args?.to || ""), args?.from, args?.when) };
   if (name === "apt_price") return { result: await aptPrice(String(args?.region || ""), args?.apt) };
   if (name === "weather_now") {
     const w = String(args?.when || "now");
@@ -4045,6 +4094,8 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "galla_browse", hint: "galla_browse(section:predict)로 지금 열린 예측만. 비율·마감은 결과 값 그대로." };
   if (/(숏판|숏폼|릴스|롱판)\s*(뭐|있|없|보여|추천|재밌|떠|뜨는)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:" + (/롱판/.test(m) ? "longs" : "shorts") + ")로 실제 글만. 없으면 없다고 솔직히." };
+  if (/(항공권|비행기\s*표|비행기표|항공편|비행기\s*값|티켓\s*값|최저가\s*항공)/.test(m) || (/(비행기|항공)/.test(m) && /(얼마|최저|싼|가격|값)/.test(m)))
+    return { tool: "flight_price", hint: "flight_price(to=도착 도시, from=출발 도시(없으면 비움), when=시기)로 최근 검색 최저가를 가져와 **도구가 준 가격만** 말해라. 도착지를 안 말했으면 어디 가는지 물어라." };
   if (/(아파트|집값|실거래|매매가|전용\s*\d|평형)/.test(m) && /(얼마|시세|가격|값|실거래|올랐|떨어졌|거래)/.test(m))
     return { tool: "apt_price", hint: "apt_price(region=상대가 말한 시·구·동, apt=단지 이름 있으면)로 국토부 실거래가를 가져와 **도구가 준 거래만** 말해라. 지역을 안 말했으면 어느 동네인지 물어라. 전망·투자 조언 금지." };
   if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥)/.test(m)
@@ -4845,6 +4896,7 @@ Deno.serve(async (req) => {
     }
     if (body?.op === "quote_test" && req.headers.get("x-cron-key") === (Deno.env.get("CRON_SECRET") || "__none__")) {   // 🧪 시세 출처별 점검(키는 밖으로 안 나간다)
       const nm = String(body?.name || "SK하이닉스");
+      if (body?.flight) return json({ ok: true, flight: await flightPrices(String(body.flight), body?.from, body?.when).catch((e) => ({ err: String(e).slice(0, 100) })) });
       const [naver, fx, apt] = await Promise.all([quoteStock(nm).catch(() => null), quoteFx(String(body?.fx || "달러")).catch(() => null), aptPrice(String(body?.region || "서초구 양재동"), body?.apt).catch((e) => ({ err: String(e).slice(0, 80) }))]);
       return json({ ok: true, naver, fx, apt });
     }
