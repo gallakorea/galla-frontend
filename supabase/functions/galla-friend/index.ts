@@ -6949,7 +6949,7 @@ ${parts.join("\n")}`;
       }
     }
     /* 카드를 뺐는데 말은 「붙여놨어」면 거짓말 — 솔직하게 */
-    if (!crisis && !actions.some((a: any) => a.kind === "crisis") && !actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|(?<!나\s{0,2})여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {   // 위기 턴의 「나 여기 있어」를 카드 거짓말로 오인했다(26.9.22 안전 시험)
+    if (!crisis && (_v2State === "request" || wantsContent(String(userMsg || ""))) && !actions.some((a: any) => a.kind === "crisis") && !actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|(?<!나\s{0,2})여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {   // 위기 턴의 「나 여기 있어」를 카드 거짓말로 오인했다(26.9.22 안전 시험)
       reply = /(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "갈라 맛집 지도엔 딱 맞는 데가 아직 없네 ㅠ 동네 알려주면 거기서 다시 찾아볼게" : "앗 방금 건 제대로 못 붙였어 ㅠ 다시 찾아볼까?";
     }
     try { await enrichCards(actions as any[]); } catch { /* 꾸미기 실패는 카드 자체를 막지 않는다 */ }
