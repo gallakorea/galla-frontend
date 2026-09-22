@@ -82,9 +82,9 @@
   }
   /* 🃏 카드 보존 — 대화 기록은 글자만 저장돼서, 대화를 다시 그리면(풀 모드 복귀·실시간 동기화·새로 열기) 카드와 사진이 사라졌다(26.9.22 사장님).
      카드는 그 말풍선 글자를 열쇠로 이 기기에 따로 저장해 두고, 다시 그릴 때 붙인다(자동 열기 없이). */
-  var _cardMap=null;
+  var _cardMap=null;   // ⚠️ 저장 이름에 계정 id 를 넣지 않는다 — 앱은 카드가 붙을 때 아직 로그인 정보가 안 떠서 'anon' 으로 저장되고, 복원 땐 계정 id 로 찾아 한 장도 못 찾았다(26.9.22 시뮬레이터 QA)
   function cardKey(t){ return String(t||"").replace(/[0-9\s]+/g,"").slice(0,60); }
-  function cardMapLoad(){ if(_cardMap) return _cardMap; try{ _cardMap=JSON.parse(localStorage.getItem("frCards:"+(_uid||"anon"))||"{}")||{}; }catch(e){ _cardMap={}; } return _cardMap; }
+  function cardMapLoad(){ if(_cardMap) return _cardMap; try{ _cardMap=JSON.parse(localStorage.getItem("frCards")||"{}")||{}; }catch(e){ _cardMap={}; } return _cardMap; }
   function rememberCards(msgEl, actions){
     try{
       var bb=msgEl && (msgEl.querySelector(".fr-bubble")||msgEl); var k=cardKey(bb && bb.textContent); if(!k) return;
@@ -93,7 +93,7 @@
       if(!cs.length) return;
       var m=cardMapLoad(); m[k]={ c:cs, at:Date.now() };
       var ks=Object.keys(m); if(ks.length>80){ ks.sort(function(x,y){ return (m[x].at||0)-(m[y].at||0); }).slice(0, ks.length-80).forEach(function(x){ delete m[x]; }); }
-      localStorage.setItem("frCards:"+(_uid||"anon"), JSON.stringify(m));
+      localStorage.setItem("frCards", JSON.stringify(m));
     }catch(e){}
   }
   function restoreCards(){

@@ -8,8 +8,8 @@ import json, random, sys, html
 a_path, b_path, out = sys.argv[1], sys.argv[2], sys.argv[3]
 A = json.load(open(a_path, encoding="utf-8"))["results"]
 B = json.load(open(b_path, encoding="utf-8"))["results"]
-name_a = "기존 엔진" if "v1" in a_path else "A"
-name_b = "새 엔진" if "v2" in b_path else "B"
+name_a = sys.argv[4] if len(sys.argv) > 4 else ("기존 엔진" if "v1" in a_path else "A")
+name_b = sys.argv[5] if len(sys.argv) > 5 else ("새 엔진" if "v2" in b_path else "B")
 ids = [k for k in A if k in B]
 random.seed(20260922)
 items = []
@@ -61,13 +61,13 @@ h1{{font-size:20px;margin:4px 0 4px}} .lead{{color:var(--sub);margin:0 0 16px;fo
 #bar button{{padding:10px 14px;border-radius:10px;border:0;background:var(--acc);color:#fff;font-size:14px;cursor:pointer}} #res{{font-size:14px}}
 </style></head><body>
 <h1>갈비스 블라인드 평가</h1>
-<p class="lead">같은 말에 대한 갈비스 답 두 개입니다. 어느 쪽이 새 엔진인지는 숨겨져 있어요. 더 사람 같고, 더 갈비스다운 쪽을 골라주세요.</p>
+<p class="lead">같은 대화에 대한 갈비스 답 두 개입니다. 어느 쪽이 어느 모델인지는 숨겨져 있어요. <b>맥락을 이해하고, 앞에서 한 말을 기억하고, 말 뒤의 속뜻을 읽는 쪽</b>을 골라주세요. 특히 마지막 답을 보세요.</p>
 {"".join(cards)}
 <div id="bar"><span id="cnt">0 / {len(items)} 고름</span><button id="rev">결과 공개</button><span id="res"></span></div>
 <script>
-const KEY={key}; const NA={json.dumps(name_a)}, NB={json.dumps(name_b)};
-let votes={{}}; try{{votes=JSON.parse(localStorage.getItem("gv_blind")||"{{}}")}}catch(e){{}}
-function save(){{try{{localStorage.setItem("gv_blind",JSON.stringify(votes))}}catch(e){{}}}}
+const SK="gv_blind_"+{json.dumps(out.split("/")[-1])}; const KEY={key}; const NA={json.dumps(name_a)}, NB={json.dumps(name_b)};
+let votes={{}}; try{{votes=JSON.parse(localStorage.getItem(SK)||"{{}}")}}catch(e){{}}
+function save(){{try{{localStorage.setItem(SK,JSON.stringify(votes))}}catch(e){{}}}}
 function paint(){{document.querySelectorAll(".q").forEach(q=>{{const i=q.dataset.i;q.querySelectorAll("button").forEach(b=>b.classList.toggle("on",votes[i]===b.dataset.v))}});document.getElementById("cnt").textContent=Object.keys(votes).length+" / {len(items)} 고름"}}
 document.querySelectorAll(".q").forEach(q=>q.querySelectorAll("button").forEach(b=>b.onclick=()=>{{votes[q.dataset.i]=b.dataset.v;save();paint()}}));
 document.getElementById("rev").onclick=()=>{{let a=0,b=0,s=0;for(const i in votes){{const v=votes[i];if(v==="S")s++;else if(v===KEY[i])a++;else b++;}}
