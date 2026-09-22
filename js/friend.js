@@ -88,8 +88,9 @@
   function rememberCards(msgEl, actions){
     try{
       var bb=msgEl && (msgEl.querySelector(".fr-bubble")||msgEl); var k=cardKey(bb && bb.textContent); if(!k) return;
-      var cs=(actions||[]).filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); }).slice(0,3)
-        .map(function(a){ return { kind:a.kind, ctype:a.ctype, id:a.id, url:a.url, title:a.title, sub:a.sub, img:a.img, label:a.label, source:a.source, badge:a.badge }; });
+      var cs=(actions||[]).filter(function(a){ return ((a.kind==="open"||a.kind==="view") && (a.title||a.sub)) || a.kind==="quote"; }).slice(0,3)
+        .map(function(a){ if(a.kind==="quote"){ var q={}; for(var k in a) q[k]=a[k]; return q; }   // 시세 카드는 통째로(다시 열어도 남게)
+          return { kind:a.kind, ctype:a.ctype, id:a.id, url:a.url, title:a.title, sub:a.sub, img:a.img, label:a.label, source:a.source, badge:a.badge }; });
       if(!cs.length) return;
       var m=cardMapLoad(); m[k]={ c:cs, at:Date.now() };
       var ks=Object.keys(m); if(ks.length>80){ ks.sort(function(x,y){ return (m[x].at||0)-(m[y].at||0); }).slice(0, ks.length-80).forEach(function(x){ delete m[x]; }); }
@@ -1981,6 +1982,54 @@
     wxIcon._night=false;
     c2.addEventListener("click", go); return c2;
   }
+  /* 💹 시세·환율·실거래가 결과 카드(26.9.22 사장님: 「결과물은 화려한 카드로 — 동적 애니메이션」)
+     주식·코인 = 큰 가격이 0부터 차르륵 + 상승 빨강▲/하락 파랑▼(한국식) + 실시간 점 · 환율 = 큰 환산값 · 아파트 = 거래 줄이 하나씩 미끄러져 들어온다 */
+  function qtCount(el, to, dec, ms){
+    var fmt=function(v){ return v.toLocaleString("ko-KR",{minimumFractionDigits:dec,maximumFractionDigits:dec}); };
+    var t0=performance.now(), done=false; (function f(t){ if(done) return; var p=Math.min(1,((t||performance.now())-t0)/(ms||1200)), v=to*(1-Math.pow(1-p,4));
+      el.textContent=fmt(v); if(p<1) requestAnimationFrame(f); else done=true; })(t0);
+    /* 화면이 가려져 애니가 안 돌아도(백그라운드·숨은 창) 끝엔 반드시 진짜 값 — 「0원」에 멈췄다(26.9.22 QA) */
+    setTimeout(function(){ done=true; el.textContent=fmt(to); }, (ms||1200)+150);
+  }
+  function qtEok(w){ w=Number(w)||0; if(w>=1e8){ var e=Math.floor(w/1e8), m=Math.round((w%1e8)/1e4); return e+"억"+(m?" "+m.toLocaleString("ko-KR")+"만":""); } return Math.round(w/1e4).toLocaleString("ko-KR")+"만"; }
+  function buildQuote(a){
+    var t=a.qtype||"stock";
+    if(t==="apt"){
+      var c=el('<div class="fr-qt qt-apt"><div class="qt-h"><span class="qt-ic"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg></span><span class="qt-t"></span><span class="qt-cnt"></span></div><div class="qt-rows"></div><div class="qt-src"></div></div>');
+      c.querySelector(".qt-t").textContent=a.title||"실거래";
+      c.querySelector(".qt-cnt").textContent=a.count?("최근 "+a.count+"건"):"";
+      var box=c.querySelector(".qt-rows");
+      (a.rows||[]).forEach(function(r,i){
+        var row=el('<div class="qt-row" style="--i:'+i+'"><div class="qt-rl"><b class="qt-apt"></b><span class="qt-meta"></span></div><div class="qt-rr"><b class="qt-won"></b><span class="qt-date"></span></div></div>');
+        row.querySelector(".qt-apt").textContent=r.apt||"";
+        row.querySelector(".qt-meta").textContent=(r.dong?r.dong+" · ":"")+"전용 "+r.area+"㎡ · "+r.floor+"층";
+        row.querySelector(".qt-won").textContent=qtEok(r.won)+"원";
+        row.querySelector(".qt-date").textContent=String(r.date||"").replace(/^\d{4}\./,"").replace(".","/");
+        box.appendChild(row);
+      });
+      c.querySelector(".qt-src").textContent=(a.source||"국토교통부 실거래가")+" · 신고 기준이라 최근 거래는 늦게 떠요";
+      return c;
+    }
+    var dir = (Number(a.pct)||Number(a.diff)||0) > 0 ? "up" : ((Number(a.pct)||Number(a.diff)||0) < 0 ? "down" : "flat");
+    var c2=el('<div class="fr-qt qt-'+t+' qt-'+dir+'"><div class="qt-h"><span class="qt-badge"></span><span class="qt-t"></span>'+(t==="fx"?'':'<span class="qt-live"><i></i>실시간</span>')+'</div>'+
+      '<div class="qt-big"><b class="qt-num">0</b><span class="qt-unit"></span></div>'+
+      (t==="fx"?'':'<div class="qt-chg"><span class="qt-arrow"></span><span class="qt-diff"></span><span class="qt-pct"></span></div>')+
+      '<svg class="qt-wave" viewBox="0 0 300 40" preserveAspectRatio="none"><path d="M0 30 C 40 10, 70 34, 110 22 S 180 6, 220 18 S 270 30, 300 12"/></svg><div class="qt-src"></div></div>');
+    c2.querySelector(".qt-badge").textContent=a.code||(t==="fx"?"FX":"");
+    c2.querySelector(".qt-t").textContent=a.title||"";
+    c2.querySelector(".qt-unit").textContent=a.unit||"원";
+    var dec=(t==="fx")?2:0;
+    setTimeout(function(){ qtCount(c2.querySelector(".qt-num"), Number(a.value)||0, dec, 1300); }, 120);
+    if(t!=="fx"){
+      c2.querySelector(".qt-arrow").textContent = dir==="up"?"▲":dir==="down"?"▼":"—";
+      c2.querySelector(".qt-diff").textContent = a.diff!=null ? Math.abs(Number(a.diff)).toLocaleString("ko-KR")+"원" : "";
+      c2.querySelector(".qt-pct").textContent = a.pct!=null ? (Number(a.pct)>0?"+":"")+Number(a.pct).toFixed(2)+"%" : "";
+    }
+    var at=a.at?String(a.at):"";
+    var when = /T\d/.test(at) ? at.slice(11,16)+" 기준" : (at ? at.slice(5).replace("-","/")+" 고시" : "");
+    c2.querySelector(".qt-src").textContent=(a.source||"")+(when?" · "+when:"");
+    return c2;
+  }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
     if(!(actions[0] && actions[0]._restored)) rememberCards(msgEl, actions);
@@ -2005,6 +2054,7 @@
       }
       // 🌦 날씨 카드(26.9.22) — 움직이는 날씨 그림 + 큰 기온(0부터 올라감) + 사람들 제보 / 예보 줄
       if(a.kind==="weather"){ wrap.appendChild(buildWx(a)); return; }
+      if(a.kind==="quote"){ wrap.appendChild(buildQuote(a)); return; }
       // ✅ 채팅 안 행동 확인 카드(26.9.22) — 예측 참여·가게 저장·맛 판정·여행지 저장·이슈 투표.
       //    서버는 카드만 만든다. '확인'을 눌러야 사용자 본인 세션으로 실행된다(GP 가 걸린 일이라 대신 걸지 않는다).
       if(a.kind==="confirm"){

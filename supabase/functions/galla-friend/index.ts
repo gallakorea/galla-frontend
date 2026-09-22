@@ -899,6 +899,9 @@ async function quoteStock(name: string): Promise<any> {
     현재가: `${d.closePrice}원`,
     등락: `${up}${String(d.compareToPreviousClosePrice).replace(/^[-+]/, "")} (${up}${String(d.fluctuationsRatio).replace(/^[-+]/, "")}%)`,   // 원값에 이미 「-」가 있어 「--16,000」이 찍혔다
     기준시각: d.localTradedAt || null,
+    _card: { qtype: "stock", title: d.stockName || hit.name, code: hit.code, value: Number(String(d.closePrice).replace(/,/g, "")), unit: "원",
+      diff: Number(String(d.compareToPreviousClosePrice).replace(/[,+-]/g, "")) * (up === "-" ? -1 : 1), pct: Number(String(d.fluctuationsRatio).replace(/[+-]/g, "")) * (up === "-" ? -1 : 1),
+      at: d.localTradedAt || null, source: "네이버 증권 기준" },
   };
 }
 
@@ -928,6 +931,8 @@ async function quoteCoin(name: string): Promise<any> {
     코인: hit.korean_name, 마켓: hit.market,
     현재가: `${Math.round(v.trade_price).toLocaleString("ko-KR")}원`,
     등락: `${sign}${Math.abs(Number(v.signed_change_rate || 0) * 100).toFixed(2)}%`,
+    _card: { qtype: "coin", title: hit.korean_name, code: hit.market.replace("KRW-", ""), value: Math.round(v.trade_price), unit: "원",
+      diff: Math.round(Number(v.signed_change_price || 0)), pct: Number((Number(v.signed_change_rate || 0) * 100).toFixed(2)), at: new Date(Number(v.timestamp) || Date.now()).toISOString(), source: "업비트 기준" },
   };
 }
 
@@ -978,6 +983,8 @@ async function aptPrice(region: string, apt?: string): Promise<any> {
   const eok = (w: number) => w >= 1e8 ? `${Math.floor(w / 1e8)}억${w % 1e8 ? " " + Math.round((w % 1e8) / 1e4).toLocaleString("ko-KR") + "만" : ""}원` : `${Math.round(w / 1e4).toLocaleString("ko-KR")}만원`;
   return { 지역: sgg + (dongTok ? ` ${dongTok}동` : ""), 거래: pick.slice(0, 6).map((x) => `${x.date} ${x.dong} ${x.apt} 전용 ${Math.round(x.area)}㎡ ${x.floor}층 ${eok(x.won)}`),
     건수: pick.length, 출처: "국토교통부 실거래가(신고일 기준, 최대 30일 늦게 반영)",
+    _card: { qtype: "apt", title: `${sgg.replace(/^(서울특별시|경기도|인천광역시|부산광역시|대구광역시|대전광역시|광주광역시|울산광역시|세종특별자치시)\s*/, "")}${dongTok ? " " + dongTok + "동" : ""}${an ? " · " + an : ""} 실거래`,
+      rows: pick.slice(0, 3).map((x) => ({ apt: x.apt, dong: x.dong, area: Math.round(x.area), floor: x.floor, won: x.won, date: x.date })), count: pick.length, source: "국토교통부 실거래가" },
     지침: "여기 적힌 거래만 말해라(최근 거래 1~2건). 「실거래 신고 기준이라 최근 거래는 늦게 뜬다」를 짧게 덧붙여도 좋다. 시세 전망·투자 조언은 하지 마라." };
 }
 
@@ -995,7 +1002,8 @@ async function quoteFx(name: string): Promise<any> {
   const v = Number(j?.rates?.KRW);
   if (!v) return null;
   return { 통화: code, 환율: `${unit === 1 ? "1" : unit} ${code} = ${(v * unit).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`, 기준일: j.date,
-    출처: "유럽중앙은행 기준환율", 주의: "은행·환전소 실제 환율과 조금 다르다 — 「기준환율(M/D 고시)」이라고 밝혀라" };
+    출처: "유럽중앙은행 기준환율", 주의: "은행·환전소 실제 환율과 조금 다르다 — 「기준환율(M/D 고시)」이라고 밝혀라",
+    _card: { qtype: "fx", title: `${unit === 1 ? "1" : unit} ${code}`, code, value: Number((v * unit).toFixed(2)), unit: "원", at: j.date, source: "유럽중앙은행 기준환율" } };
 }
 
 async function marketQuote(kind: string, name: string): Promise<any> {
@@ -6727,6 +6735,8 @@ ${parts.join("\n")}`;
           : await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
         // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
+        /* 💹 시세·환율·실거래가 → 화려한 결과 카드(26.9.22 사장님: 「결과물은 화려한 카드로」) — 모델엔 카드 데이터를 안 보낸다(토큰) */
+        if (out.result && (out.result as any)._card) { const cd = (out.result as any)._card; delete (out.result as any)._card; if (!actions.some((a: any) => a.kind === "quote" && a.qtype === cd.qtype && a.title === cd.title)) actions.push({ kind: "quote", ...cd }); }
         if (out.result && (out.result as any)["중복주의"]) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null, dup: true };
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
