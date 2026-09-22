@@ -962,9 +962,10 @@ async function aptPrice(region: string, apt?: string): Promise<any> {
   const sgg = String(hit.full_name || "").split(" ").slice(0, 2).join(" ");
   const now = new Date(Date.now() + 9 * 3600000);
   const ym = (d: Date) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-  const months = [ym(now), ym(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)))];
+  // 단지별 거래는 드물어 4달을 병렬로 본다(한 단지가 두 달 안에 한 건도 없을 수 있다 — 개포현대2차 사고)
+  const months = [0, 1, 2, 3].map((k) => ym(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1))));
   const all: any[] = [];
-  for (const m of months) {
+  await Promise.all(months.map(async (m) => {
     try {
       const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 6000);
       const r = await fetch(`https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?serviceKey=${sk}&LAWD_CD=${lawd}&DEAL_YMD=${m}&numOfRows=1000&pageNo=1`, { signal: ac.signal });
@@ -977,14 +978,17 @@ async function aptPrice(region: string, apt?: string): Promise<any> {
           date: `${g("dealYear")}.${g("dealMonth").padStart(2, "0")}.${g("dealDay").padStart(2, "0")}` });
       }
     } catch { /* */ }
-  }
+  }));
   if (!all.length) return { 지역: sgg, error: "최근 두 달 신고된 거래가 없거나 조회 실패", 지침: "거래 기록을 못 찾았다고 솔직히." };
   const an = String(apt || "").replace(/(아파트|얼마|시세)/g, "").trim();
+  const norm = (t: string) => String(t || "").replace(/\s+/g, "").replace(/아파트$/, "");
   /* 「양재동」이라고 했으면 그 동 거래만(법정동 umdNm 기준 — 행정동 「양재1동」과 이름이 다르다) */
   const dongTok = toks.filter((t) => /동$/.test(t)).map((t) => t.replace(/\d*동$/, "")).find((t) => t.length >= 2 && all.some((x) => x.dong.startsWith(t)));   // 「○○동」이라고 말했을 때만(「분당」을 분당동으로 좁혔다)
   let base = dongTok ? all.filter((x) => x.dong.startsWith(dongTok)) : all;
-  let pick = an ? base.filter((x) => x.apt.includes(an) || an.includes(x.apt)) : base;
-  if (an && !pick.length) return { 지역: sgg, error: `'${an}' 거래가 최근 두 달엔 없다`, 지침: "그 단지 거래는 최근 두 달 신고분에 없다고 솔직히." };
+  let pick = an ? base.filter((x) => { const a = norm(x.apt), b = norm(an); return a.includes(b) || b.includes(a); }) : base;
+  // 느슨 매칭: 못 잡으면 핵심어(끝 숫자·차 제거)로 한 번 더 — 「현대2차」→「개포현대2차」
+  if (an && !pick.length) { const core = norm(an).replace(/\d+차?$/, "").replace(/차$/, ""); if (core.length >= 2) pick = base.filter((x) => norm(x.apt).includes(core)); }
+  if (an && !pick.length) return { 지역: sgg, error: `'${an}' 거래가 최근 넉 달엔 없다`, 지침: "그 단지 거래는 최근 넉 달 신고분에 없다고 솔직히. 단지명이 맞는지 물어봐도 좋다." };
   pick.sort((a, b) => b.date.localeCompare(a.date));
   const eok = (w: number) => w >= 1e8 ? `${Math.floor(w / 1e8)}억${w % 1e8 ? " " + Math.round((w % 1e8) / 1e4).toLocaleString("ko-KR") + "만" : ""}원` : `${Math.round(w / 1e4).toLocaleString("ko-KR")}만원`;
   return { 지역: sgg + (dongTok ? ` ${dongTok}동` : ""), 거래: pick.slice(0, 6).map((x) => `${x.date} ${x.dong} ${x.apt} 전용 ${Math.round(x.area)}㎡ ${x.floor}층 ${eok(x.won)}`),
@@ -7936,8 +7940,8 @@ ${parts.join("\n")}`;
         if (a?.kind === "view" && a?.ctype === "food" && /(\(주\)|주식회사|휴게소)/.test(String(a.title || ""))) { actions.splice(k, 1); continue; }
         /* 맛집 얘기엔 바깥 블로그·지도 링크를 붙이지 않는다 — 갈라 맛집만(「양재 맛집 베스트 10」 블로그가 나갔다, 26.9.22 사장님 실기기) */
         if (_foodTurn && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
-        /* 시세·항공권 카드가 나간 턴엔 바깥 링크 카드를 붙이지 않는다 — 항공권 카드 밑에 빈 「링크」 카드가 따라붙었다(26.9.22 QA) */
-        if (actions.some((q: any) => q?.kind === "quote") && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
+        /* 시세·항공권 카드가 나간 턴엔 무관한 콘텐츠 카드를 붙이지 않는다 — 달러 카드에 예측·식당 카드가 따라붙었다(26.9.22 사장님) */
+        if (actions.some((q: any) => q?.kind === "quote") && (a?.kind === "view" || (a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || "")))) && a?.kind !== "quote") { actions.splice(k, 1); continue; }
       }
       /* 「딴 거 없어?」 — 앞 목록이 한 종류(이슈)였으면 같은 종류만. 이슈 뒤 「딴 거」에 뮤비·라이브 영상이 섞였다(26.9.22 시험 w-req2) */
       if (/(다른\s*(거|건|것)|딴\s*거)/.test(_um2) && Array.isArray(_llPrev?.items) && _llPrev.items.length) {
