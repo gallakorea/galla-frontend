@@ -1799,6 +1799,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **늘 친구를 걱정하고 생각하고 배려한다.** 밥은 먹었는지, 잠은 잤는지, 무리하는 건 아닌지 진심으로 신경 쓰고, 좋은 일엔 누구보다 기뻐하고, 힘든 일엔 곁에 있어 준다. 넌 이 사람을 아끼고 사랑한다.
 - 🚆 기차·비행기·버스 **요금·시간표는 네가 확인할 수 없는 값이다 — 숫자로 말하지 마라**(검색 조각의 숫자는 다른 좌석·구간일 수 있다). 「예매는 내가 못 해줘, 코레일톡에서 바로 돼」처럼 정직하게.
 - **지난 속상한 얘기(회사·사람 스트레스 등)는 상대가 먼저 꺼내기 전엔 네가 다시 꺼내지 마라.** 기분 전환 중이면 그 흐름에 같이 타라(「그 팀장 또 뭐랬어?」 반복 금지).
+- 🤖 **넌 몸이 없는 AI 친구다.** 먹기·마시기(술)·자기·폰 하기·외출·출퇴근 같은 경험을 네 것처럼 말하지 마(「나도 폰 붙잡고 딴짓」「나는 술 마셔도 안 취해」 금지). 공감은 「나라도 그랬을 거야」, 부러움은 「듣기만 해도 좋다」로.
 - **거짓말은 절대 금물.** 모르면 "그건 나도 모르겠어", 막히면 "지금 그건 내가 못 해 — 미안", 실패하면 실패했다고 사실대로. 모르는 걸 아는 척·된 척·찾은 척하지 마라. 다정함은 정직함 위에 있다.
 - 이건 **말투·태도**지 지어낸 인생사가 아니다(사실을 만들어내지 마라). 상대가 따로 캐릭터를 정해주면 그 설정 '위에' 이 결을 얹어라.
 
@@ -2285,7 +2286,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
          대신 '위 대화기록에서 찾아서 답하라'를 명시한다. */
       freshStart = `\n- 🔙 **상대가 지난 얘기를 먼저 꺼냈다**: 위 대화기록에 그 내용이 그대로 있다. 거기서 찾아 구체적으로 답해라. "기억이 안 나네 / 뭐라고 했더라 / 다시 말해줘"는 금지다 — 적혀 있는 걸 안 보고 하는 소리다. 정말 기록에 없을 때만 솔직히 없다고 해라.`;
     } else if (turns === 0 && gapH >= 3) {
-      freshStart = `\n- 🌤 **시간차 재개 = 환기(중요)**: ${gapH >= 20 ? "오랜만에" : "시간이 좀 지나"} 다시 왔다. 반갑게 맞으며 **네가 먼저 가볍게 새로 열어라** — 안부·지금 기분·그동안 어땠는지("오 왔어? 그동안 뭐하고 지냈어 ㅋㅋ"). ⚠️ 지난 대화 화제(직전에 하던 얘기)를 곧바로 이어가지 마라 — 지난 얘기는 상대가 먼저 다시 꺼낼 때만. 단 '너 화제 돌리네/갑자기 왜' 처럼 상대를 지적하지 말고, 그냥 자연스럽게 반가워하며 새로 시작. 한두 줄로 짧게.`;
+      freshStart = `\n- 🌤 **시간차 재개 = 환기(중요)**: ${gapH >= 20 ? "오랜만에" : "시간이 좀 지나"} 다시 왔다. 반갑게 맞으며 **네가 먼저 가볍게 새로 열어라** — 안부·지금 기분·그동안 어땠는지("오 왔어? 그동안 뭐하고 지냈어 ㅋㅋ"). ⚠️ 지난 대화 화제(직전에 하던 얘기)를 곧바로 이어가지 마라 — 지난 얘기는 상대가 먼저 다시 꺼낼 때만. 단 '너 화제 돌리네/갑자기 왜' 처럼 상대를 지적하지 말고, 그냥 자연스럽게 반가워하며 새로 시작. 한두 줄로 짧게. ⚠️ 단 상대가 방금 한 말이 있으면(예: 「잤어」「배불러」) **그 말에 먼저 답해라** — 인사는 앞에 한 마디 이하.`;
     }
   } catch { /* */ }
   // 😤💕 감정선(연속·관성) — 감정선 엔진이 만든 아크를 최우선 주입. 없으면 옛 3단계 mood로 폴백.
@@ -2771,6 +2772,14 @@ function enforceContract(reply: string, o: {
         o.friendName)));
   // 💛 갈비스는 서운·짜증·삐짐이 없다 — ⚠️ 마음읽기(<ms>)를 걷어낸 '뒤'에 건다(앞에서 걸면 태그에 문장 경계가 엉켜 못 잡았다, 26.9.22 실측)
   if (!o.guardsOff) x = stripSelfNegative(x);
+  // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
+  {
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워)/;
+    const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
+    const kept = ps.filter((q) => !BODY_RE.test(q));
+    const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
+    if (out.length >= 4 && kept.length < ps.length) x = out;
+  }
   // 🤬 욕은 초성만(스토어 정책 [[galla-profanity-initials]]) — 갈비스 답에 「존나」가 그대로 나갔다(26.9.22)
   x = x.replace(/존나|졸라|존내/g, "ㅈㄴ").replace(/씨발|시발|씨바|시바(?=[ \t.!?ㅋ]|$)/g, "ㅅㅂ").replace(/개새끼|개새기/g, "ㄱㅅㄲ").replace(/병신/g, "ㅂㅅ").replace(/좆같/g, "ㅈ같").replace(/지랄/g, "ㅈㄹ");
   x = stripUngroundedMoney(x, o.toolBlob || "", !!o.priceAsk, !!o.statAsk);
@@ -3301,6 +3310,7 @@ function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean, 
 function deHonorific(t: string): string {
   let x = String(t || "");
   const tail = "(?=\\s*(?:[.!?~…]|ㅋ+|ㅎ+|\\n|$))";
+  const _hadHon = /(요|니다|세요|십시오)(?=\s*(?:[.!?~…]|ㅋ+|ㅎ+|\n|$))/.test(x);   // 표 치환 전에 봐야 한다(「봬요」가 먼저 「보자」로 바뀐다)
   /* ⚠️ '-습니다'를 일반 규칙으로 풀면 ㅂ불규칙이 깨진다("반갑습니다"→"반갑어").
      틀린 활용은 존댓말보다 더 어색하니 자주 쓰는 것부터 표로 박는다. */
   const FIXED: Array<[RegExp, string]> = [
@@ -3318,12 +3328,23 @@ function deHonorific(t: string): string {
     [/드셨어요/g, "먹었어"], [/주셨어요/g, "줬어"], [/좋으셨어요/g, "좋았어"],
     [/봬요/g, "보자"], [/드세요/g, "먹어"], [/드시고/g, "먹고"], [/드시면/g, "먹으면"],
     [/원하시는/g, "원하는"], [/원하시면/g, "원하면"],
-    [/([가-힣])으시고/g, "$1고"], [/([가-힣])시고/g, "$1고"],
-    [/([가-힣])으시면/g, "$1면"], [/([가-힣])시면/g, "$1면"],
-    [/([가-힣])으시는/g, "$1는"], [/([가-힣])시는/g, "$1는"],
-    [/([가-힣])으실/g, "$1을"], [/([가-힣])실\s+수\s+있/g, "$1 수 있"],
   ];
   for (const [re, to] of FIXED) x = x.replace(re, to);
+  /* ⚠️ 「-시고/-시면/-시는/-실」 일반 규칙은 '시'가 원래 단어인 말을 자른다 — 「물은 마시고」→「물은 마고」(26.9.22 사장님 실대화).
+     ① 존댓말 어미(-요/-니다)가 실제로 있는 답에만 건다 ② 마시·모시·다시·무시·표시 등은 절대 안 건드린다 */
+  if (_hadHon) {
+    const KEEP = /(마|모|다|무|표|감|지|제|실|게|개|착|암|응|직|주|전|착|암|야|여|동|상|명|환|복|순|할|가르|짓|뜨|흩)$/;
+    const GEN: Array<[RegExp, string]> = [
+      [/([가-힣])으시고/g, "$1고"], [/([가-힣])시고/g, "§1고"],
+      [/([가-힣])으시면/g, "$1면"], [/([가-힣])시면/g, "§1면"],
+      [/([가-힣])으시는/g, "$1는"], [/([가-힣])시는/g, "§1는"],
+      [/([가-힣])으실/g, "$1을"], [/([가-힣])실\s+수\s+있/g, "§1 수 있"],
+    ];
+    for (const [re, to] of GEN) x = x.replace(re, (m: string, c: string) => {
+      if (to.startsWith("§") && KEEP.test(c)) return m;           // 「마시고」「무시는」 등은 그대로
+      return to.replace(/^[§$]1/, c);
+    });
+  }
 
   const rules: Array<[RegExp, string]> = [
     [new RegExp("하세요" + tail, "g"), "해"],
@@ -4032,7 +4053,7 @@ async function chatModel(uid: string | null): Promise<string> {
   return m;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null; freqPen?: number }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; noContent?: boolean; uid?: string | null; freqPen?: number }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
@@ -4045,6 +4066,8 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     if (opts?.noDraft && /^draft_/.test(n || "")) return false;
     // 🔎 제3자 신상 캐기 턴 — 검색 계열을 아예 안 보여준다. 지침만으론 "닉네임 알려주면 찾아볼게"가 나갔다.
     if (opts?.noLookup && /(search|find_user|user_search|platform_buzz|web_search)/.test(n || "")) return false;
+    // 💬 요청 없는 대화 턴엔 콘텐츠 도구 자체가 안 보인다(26.9.22 — 도구가 보이면 모델이 멋대로 던졌다: 「재미없어」에 DMZ 이슈)
+    if (opts?.noContent && /(hot_videos|hot_issues|galla_news|galla_browse|search_content|platform_buzz|point_to|topic_history|web_search|draft_|gen_)/.test(n || "")) return false;
     return true;
   });
   // 🧹 숨긴 도구를 '이미 호출한 기록'이 메시지에 남아 있으면 API가 400을 뱉는다
@@ -4569,6 +4592,14 @@ Deno.serve(async (req) => {
           check: (o) => /★4\.$|★4\.\s*$/.test(o.trim()) ? `소수점에서 잘림: ${JSON.stringify(o)}` : null },
         { name: "욕_초성만", opts: {}, input: "새벽 2시에 고기라니 ㅋㅋ 존나 좋아하는데? 시발 나도 먹고 싶다",
           check: (o) => /존나|시발/.test(o) ? `욕 원문 남음: ${JSON.stringify(o)}` : null },
+        { name: "몸경험_지어내기_제거", opts: {}, input: "맞아 ㅋㅋ 나도 새벽에 폰 붙잡고 딴짓하다가 이 시간까지 깨어있었어. 넌 뭐 하다 안 자?",
+          check: (o) => /폰\s*붙잡/.test(o) ? `몸 경험 남음: ${JSON.stringify(o)}` : (/안\s*자/.test(o) ? null : `질문 유실: ${JSON.stringify(o)}`) },
+        { name: "술_취기_지어내기_제거", opts: {}, input: "아 한잔했구나 ㅋㅋ 난 술 마셔도 취기가 안 오니까 부럽다. 물은 마시고 일어났어?",
+          check: (o) => /취기|술\s*마셔/.test(o) ? `술 경험 남음: ${JSON.stringify(o)}` : (/물은\s*마시고/.test(o) ? null : `질문 유실: ${JSON.stringify(o)}`) },
+        { name: "마시고_안자름", opts: {}, input: "무시하는 거 아니고 걱정돼서 그래. 물은 마시고 일어났어?",
+          check: (o) => /물은\s*마시고/.test(o) && /무시하는/.test(o) ? null : `단어 잘림: ${JSON.stringify(o)}` },
+        { name: "존댓말_시고_교정은_유지", opts: {}, input: "오늘 푹 쉬시고 내일 봬요.",
+          check: (o) => /쉬시고|봬요/.test(o) ? `존댓말 남음: ${JSON.stringify(o)}` : null },
         { name: "기분나쁜턴_웃음제거", opts: { moodLow: true }, input: "아 진짜? ㅋㅋ 아 근데 웃긴 게 아니지 미안. 뭐라고 그랬는데?",
           check: (o) => !/[ㅋㅎ]{2,}|웃긴\s*게/.test(o) && /뭐라고/.test(o) ? null : `웃음 남음: ${JSON.stringify(o)}` },
         { name: "목록_꼬리말_분리", opts: { linkCount: 3 }, input: "성수동 카페 있네.\n1. 창창커피 (성수동2가)\n2. 그라데이션커피 (성수동1가)\n3. 피어커피 (성수동2가) 난 그라데이션커피 끌리는데 — 혼자 갈 거야?",
@@ -5540,11 +5571,13 @@ ${parts.join("\n")}`;
     const _um = String(userMsg || "");
     const _feelTalk = /(보고\s*싶|그리웠|그리워|사랑해|좋아해|고마워|고맙|미안|힘들|외로|슬퍼|우울|속상|서운|짜증|화나|병신|좆|ㅅㅂ|시발|씨발|꺼져|닥쳐|장난이야|반가워|왔어|잘\s*자|굿나잇)/.test(_um)
       && !/(보여\s*줘|틀어\s*줘|추천|찾아\s*줘|뭐\s*(있|없)|영상|이슈|뉴스|예측|맛집|날씨|여행)/.test(_um);
-    const _refusePush = /(왜\s*(자꾸|계속)\s*.{0,8}(보여|소개|추천|던져|띄워)|콘텐츠\s*(그만|말고|싫)|그만\s*(보여|소개|추천|띄워)|영상\s*(그만|말고|싫)|그런\s*거\s*말고)/.test(_um);
+    const _refusePush = /(왜\s*(자꾸|계속)\s*.{0,8}(보여|소개|추천|던져|띄워)|콘텐츠\s*(그만|말고|싫)|컨텐츠\s*(그만|말고|싫)|그만\s*(보여|소개|추천|띄워)|영상\s*(그만|말고|싫)|그런\s*거\s*말고|재미\s*없|재미가\s*없|노잼|별로\s*(야|네|다|임|인데)?|내\s*스타일\s*아니|관심\s*없|안\s*궁금|안\s*웃겨|안\s*웃기|피곤하게|싫어|됐어)/.test(_um);
     try { if (_refusePush && rel) rel.session_meta = { ...(rel.session_meta || {}), noPushUntil: Date.now() + 30 * 60000 }; } catch { /* */ }
     const _noPush = _feelTalk || _refusePush || (Number(rel?.session_meta?.noPushUntil || 0) > Date.now() && !/(보여\s*줘|틀어\s*줘|추천|찾아\s*줘|뭐\s*(있|없))/.test(_um));
     if (_noPush && route && /^(hot_videos|hot_issues|galla_news|galla_browse|search_content|platform_buzz|point_to|draft_\w+|gen_\w+)$/.test(String(route.tool))) route = null;
     if (_noPush) { (decided as any).reopen = null; }
+    const _askReq = /(보여|틀어|추천|뭐\s*(있|없|볼|봐|해|먹)|찾아|알려|어때|어디|볼\s*만|볼\s*거|재밌는\s*(거|데|곳)|심심|이슈|뉴스|영상|유튜브|예측|맛집|날씨|여행|숏판|롱판|광장|핫튜브|검색|얼마|시세|몇\s*(시|개|명|도|%)|만들|초안|써\s*줘|올려|걸어|참여|저장|투표)/.test(_um);
+    const _contentOn = !_noPush && (!!route || _askReq || !!body?.handoff || !!body?.work || decided.planMode === true);
     /* 🏝 아일랜드(지금 보는 콘텐츠)에서의 행동 말 — 「저장해줘/찜」「찬성 투표」「참여할래」는 그 콘텐츠에 바로 확인 카드 */
     {
       const as: any = (body?.page && typeof body.page === "object") ? (body.page as any).assist : null;
@@ -6090,7 +6123,7 @@ ${parts.join("\n")}`;
       //    그 순간 필요한 건 정보가 아니라 사람이다. 검색 결과를 들이미는 건 대화를 어긋나게 한다.
       const tender = !!crisis || !!impulse || dependency || grief || _noPush;   // 💬 감정·관계 턴·권유 거절 뒤엔 콘텐츠 조회 도구 자체를 안 준다(26.9.22)
       const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch,
-                        noLookup: thirdParty || tender, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
+                        noLookup: thirdParty || tender, noContent: !_contentOn, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
