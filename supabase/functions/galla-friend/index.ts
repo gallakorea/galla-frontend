@@ -266,6 +266,10 @@ function countToolTurn(uid: string | null | undefined) {
 
 // 💰 원가 계측 — 모든 LLM 응답의 usage를 원장에 적는다. 마진 가드(model_for)가 이 숫자로 판단한다.
 //    OpenAI 호환 응답의 usage 필드명은 공급자마다 조금씩 다르다(딥시크는 prompt_cache_hit_tokens).
+let _lastModelErr = "";
+/* 🟠 Claude 키가 '조직 범위 개인 키'라 워크스페이스 ID 헤더가 있어야 한다(없으면 400 — 26.9.22 조용히 딥시크로 떨어지던 원인) */
+const CLAUDE_WS = Deno.env.get("ANTHROPIC_WORKSPACE_ID") || "wrkspc_016iQJmYENxFtpM8bsyPDC5e";
+const wsHdr = (model: string): Record<string, string> => (/^claude/.test(String(model || "")) ? { "anthropic-workspace-id": CLAUDE_WS } : {});   // 🔬 레드팀 진단 — 요청한 모델이 실패해 딥시크로 조용히 떨어졌는지(26.9.22 하이쿠 비교에서 원가 장부가 비어 있었다)
 function logSpend(fn: string, model: string, uid: string | null, usage: any) {
   if (!usage) return;
   const cache = Number(usage.prompt_cache_hit_tokens ?? usage.prompt_tokens_details?.cached_tokens ?? 0) || 0;
@@ -2579,7 +2583,7 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
     const api = apiFor(model);
     let r = await fetch(`${api.base}${usePrefix ? "/beta" : ""}/chat/completions`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${api.key}`, "Content-Type": "application/json" },
+      headers: { "Authorization": `Bearer ${api.key}`, "Content-Type": "application/json", ...wsHdr(model) },
       // ⚠️ 여기선 tools를 아예 선언하지 않는다 → 메시지에 남은 tool_call 기록은 전부 400 사유다.
       body: JSON.stringify(body),
     });
@@ -4085,8 +4089,11 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   //    (llm_400: no function named 'draft_issue' was specified). 그러면 이 턴이 통째로 실패해
   //    **유저에겐 빈 응답이 나간다** — 실제로 그렇게 터졌다.
   //    도구를 숨길 땐 그 호출 기록과 짝이 되는 tool 결과까지 함께 걷어낸다.
-  const msgs = pruneOrphanToolCalls(messages, new Set(activeTools.map((t: any) => t?.function?.name)));
-  const reqBody: any = { model: effModel(opts?.model || await chatModel(opts?.uid ?? null)), messages: msgs, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
+  /* 💸 도구를 안 쓰는 턴(tool_choice:none)엔 도구 설명을 아예 안 보낸다 — 설명만 1만+ 토큰이다.
+     딥시크는 캐시가 거의 공짜라 티가 안 났지만 하이쿠는 그대로 돈이다(26.9.22 실측: 3턴에 입력 11.5만 토큰). */
+  const _noToolsTurn = opts?.toolChoice === "none";
+  const msgs = pruneOrphanToolCalls(messages, new Set(_noToolsTurn ? [] : activeTools.map((t: any) => t?.function?.name)));
+  const reqBody: any = { model: effModel(opts?.model || await chatModel(opts?.uid ?? null)), messages: msgs, ...(_noToolsTurn ? {} : { tools: activeTools }), temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
   if (opts?.freqPen && !/^gemini/.test(String(reqBody.model))) reqBody.frequency_penalty = opts.freqPen;   // 반복 억제(딥시크만 — gemini 는 400 거부, 실측)
   if (/^gemini/.test(String(reqBody.model))) reqBody.reasoning_effort = "minimal";   // 사고 최소(수다용)
   /* 🧠 gpt-5 계열은 추론 모델이다. 기본값 그대로 보내면 세 가지가 한꺼번에 어긋난다:
@@ -4100,12 +4107,12 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     delete reqBody.max_tokens;
   }
   if (/^claude/.test(String(reqBody.model))) { delete reqBody.frequency_penalty; if (reqBody.temperature > 1) reqBody.temperature = 1; }   // 🟠 Claude 호환 창구가 모르는 값은 뺀다
-  if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
+  if (opts?.toolChoice && !_noToolsTurn) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   if (/^claude/.test(String(reqBody.model)) && (!Array.isArray(reqBody.tools) || !reqBody.tools.length)) delete reqBody.tool_choice;
   const _api = apiFor(String(reqBody.model || CHAT_MODEL));
   const r = await fetch(`${_api.base}/chat/completions`, {
     method: "POST",
-    headers: { "Authorization": `Bearer ${_api.key}`, "Content-Type": "application/json" },
+    headers: { "Authorization": `Bearer ${_api.key}`, "Content-Type": "application/json", ...wsHdr(reqBody.model) },
     body: JSON.stringify(reqBody),
   });
   if (!r.ok) {
@@ -4133,6 +4140,7 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
        가장 흔한 사고라, 기본 모델로 딱 한 번 되돌려 살린다(원인은 로그로 남는다). */
     if ((r.status === 400 || r.status === 404) && String(reqBody.model) !== CHAT_MODEL) {
       console.error("chat_model_fallback", reqBody.model, errTxt.slice(0, 120));
+      _lastModelErr = `${reqBody.model} ${r.status}: ${errTxt.slice(0, 200)}`;
       const fb2: any = { ...reqBody, model: CHAT_MODEL };
       const api3 = apiFor(CHAT_MODEL);
       const r3 = await fetch(`${api3.base}/chat/completions`, {
@@ -4205,7 +4213,7 @@ async function craftLLM(system: string, user: string, temp: number, maxTok: numb
       if (/^claude-(sonnet-5|opus-5|opus-4-8|opus-4-7)/.test(mdl)) body.thinking = { type: "disabled" };
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+        headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json", "anthropic-workspace-id": CLAUDE_WS },
         body: JSON.stringify(body),
       });
       if (!r.ok) return null;
@@ -7028,7 +7036,7 @@ ${parts.join("\n")}`;
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages), _v2: { state: _v2State, engine: _engine, on: _v2Talk, craft: decided.craft?.state || null } } : {}),
       ...(isRedteam && body?.debugContract === true ? { _pre: _preContract } : {}),
-                  ...(isRedteam ? { guards } : {}) });
+                  ...(isRedteam ? { guards, _modelErr: _lastModelErr || null } : {}) });
   } catch (e) {
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.
     //    실측: llm_400 하나에 턴 전체가 죽어 유저 화면이 비었다. 원인 추적은 detail로 하고, 대화는 이어지게.
