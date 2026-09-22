@@ -2004,8 +2004,8 @@
     (a.rows||[]).forEach(function(r,i){
       var row=el('<button class="qt-row qt-frow" style="--i:'+i+'"><img class="qt-logo" alt=""><div class="qt-rl"><b class="qt-apt"></b><span class="qt-meta"></span></div><div class="qt-rr"><b class="qt-won"></b><span class="qt-date">예약 보기 ›</span></div></button>');
       var im=row.querySelector("img"); im.onerror=function(){ im.style.visibility="hidden"; }; im.src="https://pics.avs.io/64/64/"+encodeURIComponent(r.airline||"")+".png";
-      row.querySelector(".qt-apt").textContent=(AIRLINE_KO[r.airline]||r.airline||"")+" · "+(r.date||"");
-      row.querySelector(".qt-meta").textContent=(r.stops?("경유 "+r.stops+"회"):"직항")+(r.dur?(" · "+Math.floor(r.dur/60)+"시간 "+(r.dur%60?r.dur%60+"분":"")):"");
+      row.querySelector(".qt-apt").textContent=(AIRLINE_KO[r.airline]||r.airline||"");
+      row.querySelector(".qt-meta").textContent=(r.date?r.date+" · ":"")+(r.stops?("경유 "+r.stops+"회"):"직항")+(r.dur?(" · "+Math.floor(r.dur/60)+"시간 "+(r.dur%60?r.dur%60+"분":"")):"");
       row.querySelector(".qt-won").textContent=Number(r.price||0).toLocaleString("ko-KR")+"원";
       if(r.url) row.addEventListener("click", function(){ runAction({ kind:"open", url:r.url, title:(a.title||"항공권")+" 예약" }); });
       box.appendChild(row);

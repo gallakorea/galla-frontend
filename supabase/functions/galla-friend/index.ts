@@ -7573,6 +7573,8 @@ ${parts.join("\n")}`;
         if (a?.kind === "view" && a?.ctype === "food" && /(\(주\)|주식회사|휴게소)/.test(String(a.title || ""))) { actions.splice(k, 1); continue; }
         /* 맛집 얘기엔 바깥 블로그·지도 링크를 붙이지 않는다 — 갈라 맛집만(「양재 맛집 베스트 10」 블로그가 나갔다, 26.9.22 사장님 실기기) */
         if (_foodTurn && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
+        /* 시세·항공권 카드가 나간 턴엔 바깥 링크 카드를 붙이지 않는다 — 항공권 카드 밑에 빈 「링크」 카드가 따라붙었다(26.9.22 QA) */
+        if (actions.some((q: any) => q?.kind === "quote") && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
       }
       /* 「다른 거/딴 거/말고」 — 방금 보여준 가게는 빼고(남는 게 있을 때만) */
       if (/(다른\s*(거|건|데|곳)|딴\s*(거|데)|말고|또\s*없)/.test(_um2) && Array.isArray(_llPrev?.items)) {
