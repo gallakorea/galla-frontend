@@ -752,12 +752,17 @@
     /* 🔁 콘텐츠를 떠나면 — 사라지지 않고 캡슐로 접힌다. 누르면 원래 대화(풀 모드)로(26.9.22 사장님: 「기사 페이지로 가면 미니 모드가 없어지고 오브를 다시 눌러야 한다」).
        ⚠️ 앱(SPA)은 뉴스를 열면 주소가 #/news 로 바뀌어 id 가 사라진다 → id 대신 '자리 잡은 뒤의 주소'를 기준점으로 삼는다. */
     clearInterval(_asWatch);
-    var _asStart=Date.now(), _asHome="";
+    var _asStart=Date.now(); _asHome="";
     _asWatch=setInterval(function(){
-      if(!_assist || Date.now()-_asStart<2500) return;
+      if(!_assist) return;
       var here=location.pathname+location.search+location.hash;
-      if(!_asHome){ _asHome=here; return; }
-      if(!_assist.away && here!==_asHome && (!_assist.id || here.indexOf(String(_assist.id))<0) && !/tab=(food|travel)/.test(here)){
+      /* 떠남 판정 — ① id 가 있는 콘텐츠: 주소에 id 가 한 번 보였다가 사라지면(빨리 뒤로 가도 잡힌다 — 시간 기준점은 경쟁이 났다)
+                    ② id 없는 것(바깥 기사 등): 자리 잡은 뒤(2.5초) 주소에서 바뀌면 */
+      var idStr=_assist.id ? String(_assist.id) : "";
+      if(idStr && here.indexOf(idStr)>=0) _assist.seen=true;
+      var left = idStr ? (_assist.seen && here.indexOf(idStr)<0)
+                       : (Date.now()-_asStart>=2500 && (_asHome ? here!==_asHome : (_asHome=here, false)));
+      if(!_assist.away && left && !/tab=(food|travel)/.test(here)){
         _assist.away=true;
         if(_asEl){ _asEl.classList.add("fri-away"); friExpand(false); var tk=_asEl.querySelector(".fri-tick"); if(tk) tk.textContent="대화로 돌아가기"; }
       }
@@ -791,7 +796,8 @@
       syncAssist();
     })();
   }
-  var _asWatch=0;
+  var _asWatch=0, _asHome="";
+  window.GALLA_assistDbg=function(){ return { assist:_assist, home:_asHome, here:location.pathname+location.search+location.hash, watching:!!_asWatch }; };
   function closeAssist(){
     clearInterval(_asWatch); _asWatch=0; _friPos=null; if(_asEl){ _asEl.classList.remove("fri-free","fri-stash","fri-stash-left"); _asEl.style.left=_asEl.style.top=""; }
     _assist=null; try{ sessionStorage.removeItem("fr_assist"); }catch(e){}
