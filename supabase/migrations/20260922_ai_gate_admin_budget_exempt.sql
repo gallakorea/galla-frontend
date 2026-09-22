@@ -1,4 +1,4 @@
--- 관리자 계정은 대화 월 예산 하드스톱 면제(턴 한도는 원래 면제). 사장님 계정은 subscriptions 에 companion_always(2099-12-31, source=admin_grant) 부여 — 26.9.22
+-- 관리자·레드팀 풀 계정은 대화 월 예산 하드스톱 면제(턴 한도는 원래 면제). 사장님 계정·레드팀 풀은 subscriptions 에 companion_always(2099-12-31, source=admin_grant/qa_pool) — 26.9.22 사장님 승인
 CREATE OR REPLACE FUNCTION public.ai_gate(p_fn text, p_subject text, p_n integer DEFAULT 1, p_limit_override integer DEFAULT NULL::integer)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -21,7 +21,7 @@ begin
   v_tier := case when v_uid is null then 'guest' else public.tier_of(v_uid) end;
 
   -- 💰 예산 하드스톱 — 대화 계열에만 적용(창작은 강등으로 처리, 게스트는 턴 축소로 처리).
-  if v_uid is not null and p_fn like 'galla-friend%' and not public.is_admin_uid(v_uid) then  -- 관리자=예산 면제(26.9.22 사장님 지시)
+  if v_uid is not null and p_fn like 'galla-friend%' and not public.is_admin_uid(v_uid) and not public.is_redteam_uid(v_uid) then  -- 관리자=예산 면제(26.9.22 사장님 지시)
     v_mf := public.model_for(v_uid, 'chat');
     if coalesce((v_mf ->> 'downgraded')::boolean, false) then
       -- 무료는 다음 달 1일, 유료는 결제일+30 — _ai_budget 이 정한 날짜 하나만 쓴다(화면·말이 같은 날을 말하게)
