@@ -44,6 +44,11 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    // 🔐 로그인한 사용자만(익명 남용 차단) — 게이트웨이 verify_jwt=false 라 여기서 토큰 실검증
+    const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: _u } = await supa.auth.getUser(jwt);
+    if (!_u?.user) return json({ ok: false, reason: "auth" }, 401);
+
     const { duel_id } = await req.json().catch(() => ({}));
     if (!duel_id) return json({ ok: false, reason: "no_duel" }, 400);
 
