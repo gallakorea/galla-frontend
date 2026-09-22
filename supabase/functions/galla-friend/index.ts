@@ -45,7 +45,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  market_quote: "💹 시세 확인하는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", apt_price: "🏠 실거래가 보는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_browse: "🧭 갈라 둘러보는 중…", do_action: "✅ 준비하는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -931,23 +931,54 @@ async function quoteCoin(name: string): Promise<any> {
   };
 }
 
-/* 🏛 국내 주식 예비 — 네이버(비공식)가 막히면 공공데이터포털 금융위원회 주식시세정보(공식·무료·**전일 종가**)로(26.9.22 사장님) */
-async function quoteStockPublic(name: string): Promise<any> {
+/* (🏛 공공데이터 금융위 주식시세 예비는 뺐다 — 공공누리 4유형: 상업적 이용·제3자 재배포 금지, 상업 이용은 KRX 유료 구매. 26.9.22 확인) */
+
+/* 🏠 아파트 매매 실거래가 — 국토교통부(공공데이터포털, 무료·이용허락범위 제한 없음, 우리 키 8/31 승인)(26.9.22 사장님)
+   지역은 5자리 시군구 코드 — weather_regions 읍면동 행정코드 앞 5자리로 찾는다. 신고 기한(30일) 때문에 이번 달+지난달을 본다. */
+async function aptPrice(region: string, apt?: string): Promise<any> {
   const key = Deno.env.get("DATA_GO_KR_KEY") || "";
-  if (!key) return null;
-  const sk = /%[0-9A-F]{2}/i.test(key) ? key : encodeURIComponent(key);   // 포털은 인코딩된 키·안 된 키 둘 다 준다
-  const nm = String(name || "").replace(/주가|주식|시세|얼마/g, "").trim();
-  const j = await jget(`https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService/getStockPriceInfo?serviceKey=${sk}&resultType=json&numOfRows=10&likeItmsNm=${encodeURIComponent(nm)}`);
-  let items = j?.response?.body?.items?.item || [];
-  if (!Array.isArray(items)) items = [items];
-  if (!items.length) return null;
-  const latest = items.reduce((m: string, x: any) => (String(x.basDt) > m ? String(x.basDt) : m), "");
-  const rows = items.filter((x: any) => String(x.basDt) === latest).sort((a: any, b: any) => String(a.itmsNm).length - String(b.itmsNm).length);   // 이름 짧은 = 본주(레버리지 ETF 제외)
-  const x = rows[0]; if (!x?.clpr) return null;
-  const d = `${String(x.basDt).slice(4, 6)}/${String(x.basDt).slice(6, 8)}`;
-  const up = Number(x.vs) < 0 ? "" : "+";
-  return { 종목: x.itmsNm, 코드: x.srtnCd, 현재가: `${Number(x.clpr).toLocaleString("ko-KR")}원`, 등락: `${up}${Number(x.vs).toLocaleString("ko-KR")} (${up}${x.fltRt}%)`,
-    기준시각: `${d} 종가`, 출처: "공공데이터(전일 종가)", 주의: "실시간이 아니라 전일 종가다 — 반드시 「어제 종가 기준」이라고 밝혀라" };
+  if (!key) return { error: "실거래가 키 없음" };
+  const sk = /%[0-9A-F]{2}/i.test(key) ? key : encodeURIComponent(key);
+  const rg = String(region || "").replace(/(아파트|집값|시세|실거래가?|매매|얼마|근처|쪽)/g, "").trim();
+  if (rg.length < 2) return { error: "지역이 필요하다(예: 서초구, 양재동)" };
+  const toks = rg.split(/\s+/).filter((w) => w.length >= 2);
+  let q = supa.from("weather_regions").select("adm_code,full_name,name").eq("kind", "dong").not("adm_code", "is", null);
+  for (const t of toks) q = q.ilike("full_name", `%${t.replace(/(시|구|군|동)$/, "")}%`);
+  const { data: rows } = await q.limit(5);
+  const hit = (rows || [])[0];
+  if (!hit?.adm_code) return { error: `'${rg}' 지역을 못 찾았다`, 지침: "지역을 못 찾았다고 솔직히. 시·구·동 이름을 다시 물어봐라." };
+  const lawd = String(hit.adm_code).slice(0, 5);
+  const sgg = String(hit.full_name || "").split(" ").slice(0, 2).join(" ");
+  const now = new Date(Date.now() + 9 * 3600000);
+  const ym = (d: Date) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const months = [ym(now), ym(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)))];
+  const all: any[] = [];
+  for (const m of months) {
+    try {
+      const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 6000);
+      const r = await fetch(`https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade?serviceKey=${sk}&LAWD_CD=${lawd}&DEAL_YMD=${m}&numOfRows=1000&pageNo=1`, { signal: ac.signal });
+      clearTimeout(tm);
+      const xml = await r.text();
+      for (const it of xml.split("<item>").slice(1)) {
+        const g = (k: string) => (it.match(new RegExp(`<${k}>\\s*([^<]*?)\\s*</${k}>`)) || [])[1] || "";
+        if (g("cdealType")) continue;   // 해제된 거래 제외
+        all.push({ apt: g("aptNm"), dong: g("umdNm"), won: Number(g("dealAmount").replace(/,/g, "")) * 10000, area: Number(g("excluUseAr")), floor: g("floor"),
+          date: `${g("dealYear")}.${g("dealMonth").padStart(2, "0")}.${g("dealDay").padStart(2, "0")}` });
+      }
+    } catch { /* */ }
+  }
+  if (!all.length) return { 지역: sgg, error: "최근 두 달 신고된 거래가 없거나 조회 실패", 지침: "거래 기록을 못 찾았다고 솔직히." };
+  const an = String(apt || "").replace(/(아파트|얼마|시세)/g, "").trim();
+  /* 「양재동」이라고 했으면 그 동 거래만(법정동 umdNm 기준 — 행정동 「양재1동」과 이름이 다르다) */
+  const dongTok = toks.filter((t) => /동$/.test(t)).map((t) => t.replace(/\d*동$/, "")).find((t) => t.length >= 2 && all.some((x) => x.dong.startsWith(t)));   // 「○○동」이라고 말했을 때만(「분당」을 분당동으로 좁혔다)
+  let base = dongTok ? all.filter((x) => x.dong.startsWith(dongTok)) : all;
+  let pick = an ? base.filter((x) => x.apt.includes(an) || an.includes(x.apt)) : base;
+  if (an && !pick.length) return { 지역: sgg, error: `'${an}' 거래가 최근 두 달엔 없다`, 지침: "그 단지 거래는 최근 두 달 신고분에 없다고 솔직히." };
+  pick.sort((a, b) => b.date.localeCompare(a.date));
+  const eok = (w: number) => w >= 1e8 ? `${Math.floor(w / 1e8)}억${w % 1e8 ? " " + Math.round((w % 1e8) / 1e4).toLocaleString("ko-KR") + "만" : ""}원` : `${Math.round(w / 1e4).toLocaleString("ko-KR")}만원`;
+  return { 지역: sgg + (dongTok ? ` ${dongTok}동` : ""), 거래: pick.slice(0, 6).map((x) => `${x.date} ${x.dong} ${x.apt} 전용 ${Math.round(x.area)}㎡ ${x.floor}층 ${eok(x.won)}`),
+    건수: pick.length, 출처: "국토교통부 실거래가(신고일 기준, 최대 30일 늦게 반영)",
+    지침: "여기 적힌 거래만 말해라(최근 거래 1~2건). 「실거래 신고 기준이라 최근 거래는 늦게 뜬다」를 짧게 덧붙여도 좋다. 시세 전망·투자 조언은 하지 마라." };
 }
 
 /* 💱 환율 — Frankfurter(유럽중앙은행 기준환율, 무료·가입 없음, 영업일 1회 고시)(26.9.22 사장님) */
@@ -973,8 +1004,8 @@ async function marketQuote(kind: string, name: string): Promise<any> {
   let r: any = null;
   if (kind === "fx" || (kind === "auto" && /(환율|달러|엔화|유로|위안|파운드|환전)/.test(nm))) r = await quoteFx(nm);
   else if (kind === "coin") r = await quoteCoin(nm);
-  else if (kind === "stock") r = (await quoteStock(nm)) || (await quoteStockPublic(nm));
-  else r = (await quoteStock(nm)) || (await quoteCoin(nm)) || (await quoteStockPublic(nm));   // 자동 판별 — 네이버가 막히면 공공데이터(전일 종가)
+  else if (kind === "stock") r = await quoteStock(nm);
+  else r = (await quoteStock(nm)) || (await quoteCoin(nm));   // 자동 판별
   if (!r) return { error: `'${nm}' 시세를 못 찾았다`, 지침: "못 찾았다고 솔직히 말해라. 숫자를 지어내지 마라." };
   return { ...r, 지침: "여기 적힌 숫자만 말해라. 반올림·환산·추측 금지. 기준 시각이 있으면 '장중/방금 기준'처럼 덧붙여라." };
 }
@@ -1397,6 +1428,7 @@ const TOOLS = [
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
+  { type: "function", function: { name: "apt_price", description: "🏠 아파트 매매 실거래가(국토교통부 신고 자료, 최근 두 달). '○○동/○○구 아파트 얼마', '래미안 실거래가', '집값' 물으면 이걸 써라. 숫자를 기억·추측으로 말하지 마라.", parameters: { type: "object", properties: { region: { type: "string", description: "시·구·동(예: 서초구 양재동, 분당, 강남구 대치동)" }, apt: { type: "string", description: "단지 이름(있으면)" } }, required: ["region"] } } },
   { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인·환율). '달러 환율/엔화 얼마' 는 kind:fx. 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "fx", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
   /* 🌦 날씨는 **우리 데이터**로 답한다 — web_search 로 답하면 틀린다(실측 2026-08-29:
      앱 데이터가 서울 23.8도·구름인데 검색으로 "비 오고 28도"라고 답했다).
@@ -1546,6 +1578,7 @@ async function refundGC(uid: string, amount: number) {
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
+  if (name === "apt_price") return { result: await aptPrice(String(args?.region || ""), args?.apt) };
   if (name === "weather_now") {
     const w = String(args?.when || "now");
     if (w !== "now") {
@@ -3468,7 +3501,7 @@ function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean, 
 /* 🔎 DeepSeek 검사관 — 답이 나가기 직전, '실제로 한 것'과 '말한 것'이 맞는지 본다(26.9.22).
    정규식은 표현을 바꾸면 샌다(「띄워줄게」→「찾아서 줄게」→「몇 분 안에 줄게」). 사실 목록을 주고 예/아니오로 묻는다.
    3.5초 넘으면 원답 그대로(검사 실패가 대화를 막지 않는다). */
-async function llmVerify(reply: string, c: { userMsg: string; history: any[]; actions: any[]; crisis: boolean; uid?: string | null }): Promise<string> {
+async function llmVerify(reply: string, c: { userMsg: string; history: any[]; actions: any[]; crisis: boolean; uid?: string | null; facts?: string }): Promise<string> {
   _lastVerify = { skipped: true };
   const r0 = String(reply || "").replace(/<ms>[\s\S]*?<\/ms>\s*/g, "").replace(/<\/?ms>/g, "").trim();
   if (!r0 || c.crisis || r0.length < 6) return reply;
@@ -3478,6 +3511,7 @@ async function llmVerify(reply: string, c: { userMsg: string; history: any[]; ac
   const hist = (c.history || []).slice(-10).map((h: any) => `${h?.role === "user" ? "상대" : "갈비스"}: ${String(h?.content || "").replace(/\s+/g, " ").slice(0, 120)}`).join("\n");
   const sys = `너는 AI 친구 '갈비스'의 답을 내보내기 직전에 검사한다. 아래 [사실]만 참이다. 갈비스는 몸이 없는 AI다.
 [이번 답에 실제로 붙는 카드] ${cards.length ? cards.join(" | ") : "없음"}
+[이번 턴에 도구로 실제 조회한 값 — 여기 있는 숫자·이름은 확인된 사실이다] ${c.facts ? c.facts.slice(0, 1800) : "없음"}
 [오늘 대화]
 ${hist || "(없음)"}
 [상대 마지막 말] ${c.userMsg.slice(0, 200)}
@@ -4003,6 +4037,8 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "galla_browse", hint: "galla_browse(section:predict)로 지금 열린 예측만. 비율·마감은 결과 값 그대로." };
   if (/(숏판|숏폼|릴스|롱판)\s*(뭐|있|없|보여|추천|재밌|떠|뜨는)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:" + (/롱판/.test(m) ? "longs" : "shorts") + ")로 실제 글만. 없으면 없다고 솔직히." };
+  if (/(아파트|집값|실거래|매매가|전용\s*\d|평형)/.test(m) && /(얼마|시세|가격|값|실거래|올랐|떨어졌|거래)/.test(m))
+    return { tool: "apt_price", hint: "apt_price(region=상대가 말한 시·구·동, apt=단지 이름 있으면)로 국토부 실거래가를 가져와 **도구가 준 거래만** 말해라. 지역을 안 말했으면 어느 동네인지 물어라. 전망·투자 조언 금지." };
   if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥)/.test(m)
       || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
     return { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 **도구가 돌려준 숫자만** 말해라. 기억·추측으로 숫자 말하기 절대 금지. 못 찾으면 못 찾았다고 솔직히. 주식·코인이 아닌 것(날씨·환율 등)이면 web_search를 kind:news로 써라." };
@@ -4801,8 +4837,8 @@ Deno.serve(async (req) => {
     }
     if (body?.op === "quote_test" && req.headers.get("x-cron-key") === (Deno.env.get("CRON_SECRET") || "__none__")) {   // 🧪 시세 출처별 점검(키는 밖으로 안 나간다)
       const nm = String(body?.name || "SK하이닉스");
-      const [naver, pub, fx] = await Promise.all([quoteStock(nm).catch(() => null), quoteStockPublic(nm).catch((e) => ({ err: String(e).slice(0, 80) })), quoteFx(String(body?.fx || "달러")).catch(() => null)]);
-      return json({ ok: true, naver, pub, fx, hasKey: !!Deno.env.get("DATA_GO_KR_KEY") });
+      const [naver, fx, apt] = await Promise.all([quoteStock(nm).catch(() => null), quoteFx(String(body?.fx || "달러")).catch(() => null), aptPrice(String(body?.region || "서초구 양재동"), body?.apt).catch((e) => ({ err: String(e).slice(0, 80) }))]);
+      return json({ ok: true, naver, fx, apt });
     }
     if (body?.op === "contract_test") {
       /* 🧪 계약 검사 — LLM 0콜·0원·1초. 규칙이 '실제로' 걸리는지 고정 입력으로 확인한다.
@@ -6627,7 +6663,9 @@ ${parts.join("\n")}`;
           if (String(reply || "").split(SPLIT).some(alien)) { const kept = dropSents(alien); reply = kept.length >= 4 ? kept : `여기 붙여놨어: ${fcA.map((a: any) => a.title).slice(0, 3).join(", ")}`; }
         }
       }
-      if (!_fixed) reply = await llmVerify(reply, { userMsg: String(userMsg || ""), history, actions, crisis: !!crisis, uid });
+      /* 도구가 가져온 값(시세·실거래가·날씨…)을 검사관에게 사실로 준다 — 모르고 보면 조회한 숫자를 「확인 안 된 숫자」로 지웠다(26.9.22: 하이닉스·엔화·양재동) */
+      const _facts = (messages || []).filter((m: any) => m?.role === "tool").map((m: any) => String(m.content || "")).join(" ").replace(/\s+/g, " ");
+      if (!_fixed) reply = await llmVerify(reply, { userMsg: String(userMsg || ""), history, actions, crisis: !!crisis, uid, facts: _facts });
       return reply;
     };
 
