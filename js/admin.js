@@ -18,6 +18,8 @@
   };
   const ago = (ts) => { if (!ts) return ""; const s = (Date.now() - new Date(ts).getTime()) / 1000; if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전"; if (s < 86400) return Math.floor(s / 3600) + "시간 전"; return Math.floor(s / 86400) + "일 전"; };
   let sb, ME = null;
+  /* 🛰 관제 앱 모드(/ops/) — 갈라 앱과 분리된 관리자 전용 SPA(26.9.22 사장님). 로그인은 화면 안에서, 이동은 주소창(#/모듈)으로. */
+  const OPS = /^\/ops(\/|$)/.test(location.pathname);
   const main = () => document.getElementById("ad-main");
   const rpc = (fn, args) => sb.rpc(fn, args).then(r => r.data);
 
@@ -41,6 +43,7 @@
      원인: 권한 조회가 '실패'해도 '권한 없음'으로 오판해 튕겨냈고, 반대편은 세션이 있으니 도로 보냄.
      ① 조회 오류는 재시도(권한 없음과 구분) ② 그래도 안 되면 리다이렉트 대신 화면에 상태 표시 ③ 왕복 횟수 상한. */
   function bounce(to) {
+    if (OPS && window.OPS_showLogin) { window.OPS_showLogin(); return; }   // 관제 앱은 페이지를 옮기지 않고 로그인 화면을 띄운다
     let n = 0;
     try { n = Number(sessionStorage.getItem("__adminBounce") || "0"); } catch (_) {}
     if (n >= 3) {
@@ -79,7 +82,14 @@
     try { sessionStorage.removeItem("__adminBounce"); } catch (_) {}   // 정상 진입 = 카운터 리셋
     document.getElementById("admin-gate").remove();
     document.getElementById("admin-app").hidden = false;
-    wireShell(); route("dashboard"); pollOnline();
+    wireShell();
+    if (OPS) {
+      const fromHash = () => (location.hash.replace(/^#\/?/, "").split("?")[0] || "dashboard");
+      window.addEventListener("hashchange", () => navTo(fromHash(), true));
+      navTo(fromHash(), true);
+      try { window.OPS_ready && window.OPS_ready(sb, ME); } catch (_) {}
+    } else route("dashboard");
+    pollOnline();
   }
   function wireShell() {
     const sidebar = $("#ad-sidebar"), scrim = $("#ad-scrim");
@@ -88,19 +98,48 @@
     scrim.onclick = close;
     document.querySelectorAll(".ad-navitem").forEach(b => b.onclick = () => {
       document.querySelectorAll(".ad-navitem").forEach(x => x.classList.remove("active"));
-      b.classList.add("active"); close(); route(b.dataset.mod);
+      b.classList.add("active"); close();
+      if (OPS) { if (location.hash !== "#/" + b.dataset.mod) location.hash = "#/" + b.dataset.mod; else route(b.dataset.mod); }
+      else route(b.dataset.mod);
     });
   }
   async function pollOnline() {
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { crisis: renderCrisis, alerts: renderAlerts, foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
-  function navTo(mod) {
-    document.querySelectorAll(".ad-navitem").forEach(x => x.classList.toggle("active", x.dataset.mod === mod));
+  function navTo(mod, fromHash) {
+    document.querySelectorAll(".ad-navitem,.ops-tab").forEach(x => x.classList.toggle("active", x.dataset.mod === mod));
+    if (OPS && !fromHash && location.hash !== "#/" + mod) { location.hash = "#/" + mod; return; }   // 주소창이 진실 — 뒤로 가기가 먹는다
     route(mod);
+    try { window.scrollTo(0, 0); } catch (_) {}
+  }
+  window.OPS_nav = (m) => navTo(m);
+
+  /* 🆘 위기 관제(전용 화면) — 대시보드 카드와 같은 데이터, 목록을 크게 */
+  async function renderCrisis() {
+    main().innerHTML = `<h2 class="ad-h2">🆘 위기 감지</h2><p class="ad-sub">자살·자해 신호가 감지된 대화입니다. 확인한 건 '확인 처리'를 눌러 주세요. 시험 계정은 알림에서 빠집니다.</p><div id="ad-crisis"><div class="ad-loading">불러오는 중…</div></div>`;
+    await paintCrisis();
+  }
+  /* 🔔 관제 알림함 — ops_alerts(위기·신고·버그 신고). 갈라 앱 알림함엔 더 이상 안 들어간다. */
+  async function renderAlerts() {
+    main().innerHTML = `<h2 class="ad-h2">🔔 관제 알림</h2><div class="ops-alert-bar"><button class="ad-btn" id="ops-readall">모두 읽음</button></div><div id="ops-alerts"><div class="ad-loading">불러오는 중…</div></div>`;
+    const paint = async () => {
+      const { data } = await sb.from("ops_alerts").select("id,kind,message,created_at,read_at").order("created_at", { ascending: false }).limit(100);
+      const box = $("#ops-alerts"); if (!box) return;
+      if (!data || !data.length) { box.innerHTML = `<div class="ad-soon">새 알림이 없어요.</div>`; return; }
+      const go = { crisis: "crisis", report: "reports", bug_report: "bugs" };
+      box.innerHTML = data.map(a => `<button class="ops-alert${a.read_at ? " read" : ""} k-${esc(a.kind)}" data-id="${a.id}" data-go="${go[a.kind] || "dashboard"}">
+        <span class="ops-alert-msg">${esc(a.message)}</span><span class="ops-alert-when">${ago(a.created_at)}</span></button>`).join("");
+      box.querySelectorAll(".ops-alert").forEach(b => b.onclick = async () => {
+        try { await sb.from("ops_alerts").update({ read_at: new Date().toISOString() }).eq("id", Number(b.dataset.id)); } catch (_) {}
+        navTo(b.dataset.go);
+      });
+    };
+    $("#ops-readall").onclick = async () => { await sb.from("ops_alerts").update({ read_at: new Date().toISOString() }).is("read_at", null); paint(); try { window.OPS_badge && window.OPS_badge(); } catch (_) {} };
+    await paint();
   }
 
   /* ─────────── 🍜 맛집 수기 등록 ───────────

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>갈라 관제</title>
+  <!-- 🛰 갈라 관제 앱 — 갈라 앱과 분리된 관리자 전용 SPA(26.9.22). 위기·신고 알림은 여기로만 온다. -->
+  <link rel="manifest" href="/ops/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="갈라 관제">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/ops/icon-192.png">
+  <link rel="icon" type="image/png" href="/ops/icon-192.png">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="/css/admin.css?v=0922700">
+  <link rel="stylesheet" href="/ops/ops.css?v=0922700">
+</head>
+<body class="ops">
+  <div id="admin-gate" class="admin-gate">권한 확인 중…</div>
+
+  <!-- 로그인(관제 앱 안에서) -->
+  <div id="ops-login" class="ops-login" hidden>
+    <form id="ops-login-form" class="ops-login-box" autocomplete="on">
+      <div class="ops-logo">🛰</div>
+      <h1>갈라 관제</h1>
+      <p>관리자 계정으로 로그인하세요.</p>
+      <input id="ops-email" type="email" placeholder="이메일" autocomplete="username" required>
+      <input id="ops-pw" type="password" placeholder="비밀번호" autocomplete="current-password" required>
+      <button id="ops-go" type="submit">입장</button>
+      <div id="ops-err" class="ops-err"></div>
+    </form>
+  </div>
+
+  <div id="admin-app" class="admin-app" hidden>
+    <header class="ad-topbar">
+      <button class="ad-burger" id="ad-burger" aria-label="전체 메뉴">☰</button>
+      <div class="ad-brand">🛰 갈라 <b>관제</b></div>
+      <div class="ad-top-right">
+        <button id="ops-push" class="ops-push" hidden>🔔 알림 켜기</button>
+        <span id="ad-online" class="ad-online">● –</span>
+      </div>
+    </header>
+
+    <aside class="ad-sidebar" id="ad-sidebar">
+      <div class="ad-side-brand">🛰 갈라 관제</div>
+      <nav class="ad-nav" id="ad-nav">
+        <button class="ad-navitem" data-mod="crisis"><span>🆘</span> 위기 감지</button>
+        <button class="ad-navitem" data-mod="alerts"><span>🔔</span> 관제 알림</button>
+        <button class="ad-navitem active" data-mod="dashboard"><span>📊</span> 대시보드</button>
+        <button class="ad-navitem" data-mod="content"><span>📝</span> 콘텐츠 관리</button>
+        <button class="ad-navitem" data-mod="members"><span>👥</span> 회원 관리</button>
+        <button class="ad-navitem" data-mod="reports"><span>🚨</span> 신고·모더레이션</button>
+        <button class="ad-navitem" data-mod="tips"><span>🕵️</span> 제보 관리</button>
+        <button class="ad-navitem" data-mod="bugs"><span>🐞</span> 버그 신고</button>
+        <button class="ad-navitem" data-mod="travel"><span>🧳</span> 여행 수확</button>
+        <button class="ad-navitem" data-mod="bughunter"><span>🤖</span> 버그헌터</button>
+        <button class="ad-navitem" data-mod="errors"><span>🩺</span> 에러 로그</button>
+        <button class="ad-navitem" data-mod="settle"><span>💰</span> 정산·출금</button>
+        <button class="ad-navitem" data-mod="margin"><span>📊</span> AI 원가·마진</button>
+        <button class="ad-navitem" data-mod="turns"><span>📏</span> 턴 계측</button>
+        <button class="ad-navitem" data-mod="support"><span>🎧</span> 고객지원</button>
+        <button class="ad-navitem" data-mod="brain"><span>🧠</span> 브레인 엔진</button>
+        <button class="ad-navitem" data-mod="linkpost"><span>🔗</span> 링크 발행</button>
+        <button class="ad-navitem" data-mod="upload"><span>⬆️</span> 직접 업로드</button>
+        <button class="ad-navitem" data-mod="foodman"><span>🍜</span> 맛집 수기 등록</button>
+        <button class="ad-navitem" data-mod="ops"><span>⚙️</span> 운영·감사</button>
+      </nav>
+      <button class="ad-exit" id="ops-logout">로그아웃</button>
+    </aside>
+    <div class="ad-scrim" id="ad-scrim"></div>
+
+    <main class="ad-main" id="ad-main"><div class="ad-loading">불러오는 중…</div></main>
+
+    <!-- 모바일 아래 탭 -->
+    <nav class="ops-tabs" aria-label="관제 메뉴">
+      <button class="ops-tab" data-mod="crisis"><span class="i">🆘</span><span class="t">위기</span><i class="ops-dot" id="ops-dot-crisis" hidden></i></button>
+      <button class="ops-tab" data-mod="alerts"><span class="i">🔔</span><span class="t">알림</span><i class="ops-dot" id="ops-dot-alerts" hidden></i></button>
+      <button class="ops-tab active" data-mod="dashboard"><span class="i">📊</span><span class="t">대시보드</span></button>
+      <button class="ops-tab" data-mod="reports"><span class="i">🚨</span><span class="t">신고</span></button>
+      <button class="ops-tab" data-mod="__menu"><span class="i">☰</span><span class="t">전체</span></button>
+    </nav>
+  </div>
+
+  <script src="/js/error-logger.js?v=080412"></script>
+  <script src="/js/time-ago.js?v=0927300"></script>
+  <script src="/vendor/supabase.js?v=0926300"></script>
+  <script src="/js/supabase.js?v=0926300"></script>
+  <script src="/js/media-upload.js?v=0828020"></script>
+  <script src="/js/admin-charts.js?v=080412"></script>
+  <script src="/ops/ops.js?v=0922700"></script>
+  <script src="/js/admin.js?v=0922700"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v610';   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
+const SW_VERSION = 'galla-sw-v611';   // v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
 /* ⚠️ STATIC_CACHE 는 SW 버전과 묶지 않는다.
    예전엔 'galla-static-'+SW_VERSION 이라 SW 를 올릴 때마다 activate 에서 통째로 지워졌다.
    자원 URL 은 ?v= 로 버전돼 있어(불변) 버릴 이유가 없는데도 매 배포마다 전부 재다운로드했다
@@ -21,7 +21,7 @@ const PRECACHE = ['/offline.html', '/assets/logo.png', '/manifest.webmanifest'];
 
 // 캐시하지 않을 같은-오리진 경로(민감/동적)
 const NO_CACHE_PATHS = [
-  '/settings', '/account-edit', '/auth/', '/admin', '/login', '/reset',
+  '/settings', '/account-edit', '/auth/', '/admin', '/ops', '/login', '/reset',   // /ops = 관제 앱(자기 서비스워커가 따로 있다)
   '/change-password', '/confirm', '/withdraw', '/imgproxy'
 ];
 const isSensitive = (p) => NO_CACHE_PATHS.some(x => p.startsWith(x));

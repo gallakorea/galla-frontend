@@ -1,66 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-<meta name="galla-ver" content="0945000"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>갈라 관제센터 - ADMIN</title>
-  <link rel="stylesheet" href="./css/admin.css?v=0905400">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
-  <meta name="theme-color" content="#0a0a0b">
-  <link rel="stylesheet" href="./css/theme.css?v=0924800">
-</head>
-<body>
-  <div id="admin-gate" class="admin-gate">권한 확인 중…</div>
-
-  <div id="admin-app" class="admin-app" hidden>
-    <!-- 상단바 (모바일 햄버거 / PC 로고) -->
-    <header class="ad-topbar">
-      <button class="ad-burger" id="ad-burger" aria-label="메뉴">☰</button>
-      <div class="ad-brand">🛠 갈라 <b>관제센터</b></div>
-      <div class="ad-top-right"><span id="ad-online" class="ad-online">● –</span></div>
-    </header>
-
-    <!-- 사이드바 -->
-    <aside class="ad-sidebar" id="ad-sidebar">
-      <div class="ad-side-brand">🛠 갈라 관제센터</div>
-      <nav class="ad-nav" id="ad-nav">
-        <button class="ad-navitem active" data-mod="dashboard"><span>📊</span> 대시보드</button>
-        <button class="ad-navitem" data-mod="content"><span>📝</span> 콘텐츠 관리</button>
-        <button class="ad-navitem" data-mod="members"><span>👥</span> 회원 관리</button>
-        <button class="ad-navitem" data-mod="reports"><span>🚨</span> 신고·모더레이션</button>
-        <button class="ad-navitem" data-mod="tips"><span>🕵️</span> 제보 관리</button>
-        <button class="ad-navitem" data-mod="bugs"><span>🐞</span> 버그 신고</button>
-        <button class="ad-navitem" data-mod="travel"><span>🧳</span> 여행 수확</button>
-        <button class="ad-navitem" data-mod="bughunter"><span>🤖</span> 버그헌터</button>
-        <button class="ad-navitem" data-mod="errors"><span>🩺</span> 에러 로그</button>
-        <button class="ad-navitem" data-mod="settle"><span>💰</span> 정산·출금</button>
-        <button class="ad-navitem" data-mod="margin"><span>📊</span> AI 원가·마진</button>
-        <button class="ad-navitem" data-mod="turns"><span>📏</span> 턴 계측</button>
-        <button class="ad-navitem" data-mod="support"><span>🎧</span> 고객지원</button>
-        <button class="ad-navitem" data-mod="brain"><span>🧠</span> 브레인 엔진</button>
-        <button class="ad-navitem" data-mod="linkpost"><span>🔗</span> 링크 발행</button>
-        <button class="ad-navitem" data-mod="upload"><span>⬆️</span> 직접 업로드</button>
-        <button class="ad-navitem" data-mod="foodman"><span>🍜</span> 맛집 수기 등록</button>
-        <button class="ad-navitem" data-mod="ops"><span>⚙️</span> 운영·감사</button>
-      </nav>
-      <a class="ad-exit" href="index.html">← 서비스로 나가기</a>
-    </aside>
-    <div class="ad-scrim" id="ad-scrim"></div>
-
-    <!-- 콘텐츠 영역 -->
-    <main class="ad-main" id="ad-main"><div class="ad-loading">불러오는 중…</div></main>
-  </div>
-
-  <script src="/js/error-logger.js?v=080412"></script>
-<script src="/js/time-ago.js?v=0927300"></script>
-  <script src="./vendor/supabase.js?v=0926300"></script>
-  <script src="js/supabase.js?v=0926300"></script>
-  <script src="./js/media-upload.js?v=0828020"></script>
-  <script src="./js/admin-charts.js?v=080412"></script>
-  <script src="./js/admin.js?v=0925900"></script>
-<script src="/js/analytics.js?v=080412"></script>
-<script src="/js/pwa.js?v=0901012"></script>
-  <script src="/js/pull-refresh.js?v=0924400"></script>
-</body>
-</html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>갈라 관제</title>
+<!-- 🛰 관리자 화면은 별도 관제 앱(/ops/)으로 옮겼다(26.9.22 사장님). 옛 주소는 넘겨주기만, 갈라 앱 안에선 열지 않는다. -->
+<script>
+(function(){
+  var native = !!(window.Capacitor && (!window.Capacitor.isNativePlatform || window.Capacitor.isNativePlatform()));
+  if (native) { location.replace('/index.html'); return; }
+  var m = (location.search.match(/[?&]mod=([a-z]+)/) || [])[1];
+  location.replace('/ops/' + (m ? '#/' + m : ''));
+})();
+</script></head>
+<body style="background:#0a0a0b;color:#aaa;font:14px system-ui;padding:40px;text-align:center">관제 앱으로 이동 중… <a href="/ops/" style="color:#9db8ff">바로 가기</a></body></html>

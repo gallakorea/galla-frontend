@@ -233,7 +233,7 @@
         </div>
     </section>
 
-    <a class="st-logout" id="ad-admin-link" href="admin-login.html" style="background:linear-gradient(135deg,#3d6bff,#2b4fd0);color:#fff;text-decoration:none;text-align:center;border-radius:12px;font-weight:900">🛠 관리자 관제센터</a>
+    <a class="st-logout" id="ad-admin-link" href="/ops/" style="background:linear-gradient(135deg,#3d6bff,#2b4fd0);color:#fff;text-decoration:none;text-align:center;border-radius:12px;font-weight:900">🛠 관리자 관제센터</a>
     <button class="st-logout" id="logoutBtn">로그아웃</button>
 
     </main>
@@ -334,7 +334,7 @@ function waitForSupabaseClient() {
 <script src="js/account-delete.js?v=080412"></script>
 <script src="js/notify-settings.js?v=0930700"></script>
 <script src="js/invite.js?v=0909100"></script><!-- 🎁 초대 허브 -->
-<script src="js/settings.js?v=0918810"></script>
+<script src="js/settings.js?v=0922700"></script>
 <script src="js/bug-report.js?v=0925800"></script>
 <script>
 /* 📳 흔들어서 신고 — iOS만 권한 동의가 필요하다. 필요한 기기에서만 항목을 보여준다. */
@@ -377,7 +377,7 @@ function waitForSupabaseClient() {
 <script>
 (async function(){ try{ const sb=await waitForSupabaseClient(); const {data:se}=await sb.auth.getSession();
   if(!se?.session) return; const {data:p}=await sb.from('user_profiles').select('admin_flag').eq('user_id',se.session.user.id).maybeSingle();
-  if(p&&p.admin_flag){ const el=document.getElementById('ad-admin-link'); if(el) el.style.display='block'; } }catch(e){} })();
+  if(p&&p.admin_flag&&!(window.Capacitor&&(!window.Capacitor.isNativePlatform||window.Capacitor.isNativePlatform()))){ const el=document.getElementById('ad-admin-link'); if(el){ el.target='_blank'; el.rel='noopener'; el.textContent='🛰 갈라 관제 앱 열기'; el.style.display='block'; } } }catch(e){} })();   /* 앱에선 관리자 링크 숨김(26.9.22) */
 </script>
 <script src="/js/analytics.js?v=080412"></script>
 <script src="/js/pwa.js?v=0901012"></script>

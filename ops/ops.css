@@ -1,0 +1,56 @@
+/* 🛰 갈라 관제 앱 — admin.css 위에 앱 셸(로그인·아래 탭·알림 켜기·알림함)만 얹는다 */
+body.ops { background: #0a0a0b; color: #e8ebf2; -webkit-tap-highlight-color: transparent; }
+body.ops .ad-topbar { padding-top: env(safe-area-inset-top); height: calc(54px + env(safe-area-inset-top)); }
+body.ops .ad-brand b { color: #ff5a6a; }
+body.ops .ad-exit { width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer; font: inherit; font-size: 12px; }
+
+/* 로그인 */
+.ops-login { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px 16px; background: radial-gradient(120% 80% at 50% 0%, #1a1020, #0a0a0b 60%); z-index: 100; }
+.ops-login[hidden] { display: none; }
+.ops-login-box { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.ops-logo { font-size: 44px; }
+.ops-login-box h1 { margin: 0; font-size: 22px; }
+.ops-login-box p { margin: 0 0 8px; color: #8a8f9a; font-size: 14px; }
+.ops-login-box input { background: #121319; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; color: #fff; padding: 13px 14px; font-size: 16px; }
+.ops-login-box button { margin-top: 4px; padding: 13px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #e0364c, #b61f35); color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; }
+.ops-login-box button:disabled { opacity: .6; }
+.ops-err { min-height: 18px; color: #ff8098; font-size: 13px; }
+
+/* 알림 켜기 */
+.ops-push { border: 1px solid rgba(255,90,106,.45); background: rgba(255,90,106,.12); color: #ff9aa6; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.ops-push.on { border-color: rgba(91,140,255,.35); background: rgba(91,140,255,.1); color: #9db8ff; }
+body.ops .ad-top-right { display: flex; align-items: center; gap: 8px; }
+
+/* 모바일 아래 탭 */
+.ops-tabs { display: none; }
+@media (max-width: 900px) {
+  body.ops .ad-main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .ops-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: rgba(12,12,15,.94); backdrop-filter: blur(14px); border-top: 1px solid rgba(255,255,255,.08); }
+  .ops-tab { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border: 0; background: none; color: #8a8f9a; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .ops-tab .i { font-size: 20px; line-height: 1; filter: grayscale(.4); }
+  .ops-tab.active { color: #fff; }
+  .ops-tab.active .i { filter: none; transform: translateY(-1px); }
+  .ops-dot { position: absolute; top: 4px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: #ff3b52; box-shadow: 0 0 0 0 rgba(255,59,82,.7); animation: opsPulse 1.6s ease-out infinite; }
+  .ops-dot[hidden] { display: none; }
+}
+@keyframes opsPulse { to { box-shadow: 0 0 0 10px rgba(255,59,82,0); } }
+
+/* 관제 알림함 */
+.ad-h2 { font-size: 20px; margin: 4px 0 6px; }
+.ad-sub { color: #8a8f9a; font-size: 13px; margin: 0 0 14px; }
+.ops-alert-bar { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+.ops-alert { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer;
+  background: var(--card); border: 1px solid var(--line); border-left: 3px solid #5b8cff; border-radius: 12px; padding: 13px 14px; margin: 0 0 8px; color: #e8ebf2; font: inherit; font-size: 14px; }
+.ops-alert.k-crisis { border-left-color: #ff3b52; }
+.ops-alert.k-report { border-left-color: #ffb13b; }
+.ops-alert.read { opacity: .55; }
+.ops-alert-when { flex: none; color: #8a8f9a; font-size: 12px; }
+
+/* 앱 열려 있을 때 실시간 알림 */
+.ops-live { position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 90; max-width: calc(100% - 32px);
+  background: #1b1c24; border: 1px solid rgba(255,255,255,.12); border-left: 4px solid #5b8cff; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 700;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5); cursor: pointer; animation: opsDrop .35s cubic-bezier(.2,1.2,.3,1); }
+.ops-live.k-crisis { border-left-color: #ff3b52; background: #26141a; }
+@keyframes opsDrop { from { opacity: 0; transform: translate(-50%, -14px); } }
+@media (prefers-reduced-motion: reduce) { .ops-dot, .ops-live { animation: none; } }

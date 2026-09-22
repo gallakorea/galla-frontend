@@ -319,6 +319,8 @@ Deno.serve(async (req) => {
       .select("user_id,from_user,type,message,link").eq("id", body.id).maybeSingle();
     if (!n) return j({ error: "no notif" }, 404);
     if (SKIP_NOTIFY.has(n.type)) return j({ ok: true, skipped: true });
+    // 🛰 관리자 알림은 갈라 앱으로 보내지 않는다 — 관제 앱(ops_alerts → kind:ops)만(26.9.22 사장님)
+    if ((NOTIFY[n.type]?.cat) === "admin") return j({ ok: true, skipped: "ops-only" });
     const { data: fu } = await sb.from("users").select("nickname").eq("id", n.from_user).maybeSingle();
     const st = NOTIFY[n.type] || NOTIFY_DEFAULT;
     const sent = await pushTo([n.user_id], {
@@ -327,6 +329,22 @@ Deno.serve(async (req) => {
       url: "/" + String(n.link || "").replace(/^\//, ""),
       tag: `n-${n.type}`,
     }, st.cat);
+    return j({ ok: true, sent });
+  }
+
+  // 🛰 관제 앱 전용 — ops_alerts INSERT 트리거가 호출. 갈라 앱(APNs·FCM·일반 웹푸시)엔 절대 안 보낸다.
+  if (body.kind === "ops") {
+    if (!bridgeOk(req)) return j({ error: "forbidden" }, 403);
+    const { data: a } = await sb.from("ops_alerts").select("id,kind,message").eq("id", body.id).maybeSingle();
+    if (!a) return j({ error: "no alert" }, 404);
+    const { data: subs } = await sb.from("ops_push_subs").select("endpoint,p256dh,auth").limit(50);
+    const title = a.kind === "crisis" ? "🆘 위기 감지" : a.kind === "report" ? "🚨 신고 접수" : "🐞 버그 신고";
+    const payload = JSON.stringify({ title, body: a.message, url: "/ops/#/" + (a.kind === "crisis" ? "crisis" : "alerts"), tag: "ops-" + a.kind, urgent: a.kind === "crisis" });
+    let sent = 0;
+    await Promise.all((subs || []).map(async (s) => {
+      try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400, urgency: "high" }); sent++; }
+      catch (e) { const code = (e as { statusCode?: number }).statusCode; if (code === 404 || code === 410) await sb.from("ops_push_subs").delete().eq("endpoint", s.endpoint); }
+    }));
     return j({ ok: true, sent });
   }
 

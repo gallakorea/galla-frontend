@@ -351,7 +351,9 @@ async function GALLA_settingsInit(root) {
     // 4) 관리자 관제센터 링크 노출
     try {
       const { data: p } = await supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle();
-      if (p && p.admin_flag) { const el = byId("ad-admin-link"); if (el) el.style.display = "block"; }
+      /* 🛰 관리자 화면은 갈라 앱에서 열지 않는다 — 웹에서만, 별도 관제 앱(/ops/)으로(26.9.22 사장님) */
+      const native = !!(window.Capacitor && (!window.Capacitor.isNativePlatform || window.Capacitor.isNativePlatform()));
+      if (p && p.admin_flag && !native) { const el = byId("ad-admin-link"); if (el) { el.href = "/ops/"; el.target = "_blank"; el.rel = "noopener"; el.textContent = "🛰 갈라 관제 앱 열기"; el.style.display = "block"; } }
     } catch (_) {}
   }
 }
