@@ -2660,16 +2660,6 @@ function stripMind(t: string): string {
     .replace(/^[^<]{0,160}?<\/ms>\s*/i, "")   // 여는 태그 없이 닫는 태그만 온 경우(「위로가 필요하고…</ms> 아…」 26.9.22 채점판)
     .replace(/^\s+/, "");
 }
-function stripForPreview(t: string): string {
-  return stripMind(t || "")
-    .replace(/\[(?:stk|emo):[^\]]*\]/gi, "")
-    .replace(/\(\([^)]*\)\)/g, "")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
-    .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
-    .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1").replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")   // 마크다운 강조 스트립(프리뷰)
-    .replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n");
-}
 
 // 🌊 컴패니언 최종 정제 — 비스트림 컴패니언 경로와 '동일한' 텍스트 가드(휴머·4문장캡·버블·새니타이즈·빈답).
 //    컴패니언은 도구/액션/검색결과가 없으므로 텍스트 가드만 적용하면 동치.
@@ -5766,8 +5756,9 @@ ${parts.join("\n")}`;
     if (_v2State === "chat" && maybeContentAsk(userMsg || "")) {
       try { if (await llmIsContentAsk(userMsg || "", String([...history].reverse().find((m: any) => m?.role === "assistant")?.content || ""), uid)) _v2State = "request"; } catch { /* */ }
     }
-    const _engine = (isRedteam && (body?.engine === "v1" || body?.engine === "v2")) ? body.engine : (Deno.env.get("FRIEND_ENGINE") || "v2");
-    const _v2Talk = _engine === "v2" && _v2State !== "request" && !crisis && !work && !handoff
+    /* 🧹 v1 엔진 스위치 폐지(26.9.22) — FRIEND_ENGINE·body.engine 로 옛 엔진을 켤 길을 없앤다. 두 엔진이 섞여 있어 가드가 한쪽에만 걸리던 원인. */
+    const _engine = "v2";
+    const _v2Talk = _v2State !== "request" && !crisis && !work && !handoff
       && !((body?.page as any)?.assist) && !(craft?.state === "planning"
         || (craft?.state === "proposed" && /^(ㅇㅇ|ㅇㅋ|응|웅|어|좋아|좋지|그래|그러자|오키|오케이|ㄱㄱ|고고|가자|해줘|해봐|만들|올려|그걸로|[1-4]\s*번|[abcABC]\s*안)/.test(String(userMsg || "").trim())));   // 「이 판 어때?」 한마디에 proposed 가 찍혀 다음 턴 전체가 창작 모드로 새던 것(26.9.22) — 제안에 '응'한 턴만   // ⚠️ decided.craft 가 아니라 저장돼 있던 상태 — decideIntent 는 경로만 잡혀도 confirmed 를 찍는다(콘텐츠 경로가 대화 턴을 먹던 원인)
     if (_v2Talk) {
@@ -6248,7 +6239,7 @@ ${parts.join("\n")}`;
 
     /* 🎯 요청 턴 v2 — 찾아서 보여주는 턴은 무거운 성격(1.9만 자)·창작 도구 설명(9천 자)을 짧은 판으로 갈아 끼운다.
        나머지 블록(경로·딜리버·현재 화면·안전)은 그대로 — 찾기 흐름은 기존 검증된 경로를 탄다. 만들기 요청은 제외. */
-    const _v2Req = _engine === "v2" && _v2State === "request" && !work && !handoff && !crisis && !planMode
+    const _v2Req = _v2State === "request" && !work && !handoff && !crisis && !planMode
       && !isCreateAsk(userMsg || "") && !(craft?.state === "planning" || craft?.state === "proposed");
     if (_v2Req) {
       for (let i = 0; i < messages.length; i++) {
@@ -6376,9 +6367,10 @@ ${parts.join("\n")}`;
         const talkRec = foodNow && reqish && (/(유명하대|맛있대|괜찮대|잘한대|나온대|평이\s*좋|가\s*봐|가\s*볼래|열어\s*봐|여기\s*있어)/.test(String(reply || "")) || /'[^'\n]{2,20}'|「[^」\n]{2,20}」/.test(String(reply || "")));
         if (!crisis && ((!_hasCard && (promise || talkRec)) || (foodNow && homeAsk && reqish))) {
           let fixed = false;
-          if (foodNow || /(맛집|먹|식당|밥)/.test(ctxTxt) || MENUS.some((w) => ctxTxt.includes(w))) {
+          const cookHome = /(해\s*먹|만들어\s*먹|요리|레시피|집밥)/.test(String(userMsg || ""));
+        if (reqish && !cookHome && (foodNow || /(맛집|식당|밥집)/.test(ctxTxt) || MENUS.some((w) => ctxTxt.includes(w)))) {   // 실제 맛집 요청일 때만 검색(「저녁 뭐 해먹지」는 아님)
             const menu = [...new Set(MENUS.filter((w) => ctxTxt.includes(w)))].slice(-1);
-            let place = [...new Set((ctxTxt.match(/[가-힣]{2,6}(천|동|구|역|로|길)(?=[\s에쪽근처,.!?]|$)/g) || []).filter((w) => !/(우리|거기|여기|이쪽|저쪽|근처|가까운|데로|쪽으로|대로)/.test(w)))].slice(-1);
+            let place: string[] = [...new Set<string>((String(recentU.join(" ")).match(/[가-힣]{2,6}(천|동|구|역|로|길)(?=[\s에쪽근처,.!?]|$)/g) || []).filter((w: string) => !/(우리|거기|여기|이쪽|저쪽|근처|가까운|데로|쪽으로|대로|주길|하길|보길|먹길|가길)/.test(w)))].slice(-1);   // 동네는 상대 말에서만(갈비스 답의 「골라주길」을 동네로 읽었다)
             if (homeAsk || (!place.length && /(우리\s*집|집\s*(에서|근처|앞|쪽)|우리\s*동네|사는\s*데)/.test(ctxTxt))) {
               try {
                 const { data: hm } = await supa.from("friend_memory").select("content").eq("user_id", uid).eq("status", "active")
@@ -6431,68 +6423,9 @@ ${parts.join("\n")}`;
       return reply;
     };
 
-    // 🌊 스트리밍(컴패니언 전용) — 첫 토큰 2~3초 체감. 도구/액션 없는 순수 대화라 텍스트 가드만으로 비스트림과 동치.
-    //    프리뷰는 단일 버블로 흘리고, 완료 시 최종 버블(bubbleize)+빈 액션으로 스냅. 저장은 백그라운드(runPersist).
-    //    ⚠️ route(도구 강제 힌트)가 선 턴은 절대 스트리밍으로 보내지 마라 — chatStream은 tool_choice:"none"이라
-    //       도구가 없는데 "galla_news로 조회해라" 지시만 받아, 모델이 도구 문법을 '텍스트로 흉내 낸다'.
-    //       실측 사고: 유저 화면에 [(query:"...", kind:"news")]가 그대로 노출되고 3턴 내내 "찾아볼게"만 반복했다.
-    /* 🌊 인사도 스트리밍 — "들어가자마자 나오는 말이 너무 느리다"(사장님).
-       인사 턴은 userMsg 없음+meta=true 라 조건에 막혀 JSON(2~4초 통짜)으로만 갔다.
-       greetStream 플래그를 단 신 클라이언트만 허용(구버전은 예전 그대로 JSON).
-       quiet(3분 문턱)·선톡은 이 지점보다 앞에서 이미 반환된다 — 스트림까지 안 온다. */
-    const greetStream = !userMsg && body?.greetStream === true;
-    if (body?.stream === true && brain === "companion" && !route && !planMode && (userMsg || greetStream) && (!body?.meta || greetStream) && !crisis) {   // 🆘 위기는 상담카드 첨부 위해 JSON 경로로
-      turnStat(["path:stream", "brain:companion"]);   // 📏 스트림은 1콜 — 가드 없음
-      const enc = new TextEncoder();
-      const rstream = new ReadableStream({
-        async start(controller) {
-          const send = (event: string, data: any) => { try { controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { /* */ } };
-          try {
-            // 🚿 버퍼 강제 플러시 — 일부 프록시는 ~2KB 전엔 첫 바이트를 안 흘린다. 패딩 코멘트로 즉시 헤더+연결 오픈.
-            controller.enqueue(enc.encode(":" + " ".repeat(2048) + "\n\n"));
-            send("meta", { friendName, depth: rel?.depth || 1, firstMeet });
-            const mt = longForm ? 520 : 240;
-            /* ✍️ 마음읽기 강제 — mindBlock 이 선 턴은 "<ms>" 프리필로 시작을 박는다.
-               지시만으론 모델이 블록을 건너뛰는 턴이 남는다(확률적). 프리필이면 구조가 보장된다.
-               되짚기(backRef) 턴은 회상 자세까지 프리필: 기록을 보고 답하는 출발을 강제. */
-            const msPrefix = mindBlock
-              ? (backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>")
-              : undefined;
-            let full = await chatStream(messages, { model: brainModel, maxTokens: mt, prefix: msPrefix, uid }, (f) => send("text", { full: stripForPreview(f) }));
-            if (full == null) {   // 스트림 실패 → 비스트림 1회 폴백
-              const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt, uid });
-              full = j?.choices?.[0]?.message?.content || "";
-              send("text", { full: stripForPreview(full) });
-            }
-            let sreply = full || (greetStream ? "왔네 ㅋㅋ 뭐 하다 왔어?" : "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?");
-            // 🎭 유머 강제 치환만 경로 고유(스트림은 도구가 없다) — 나머지 규칙은 전부 계약 관문에서.
-            if (wantsFunny && humorJoke && !sreply.includes(humorJoke.a)) sreply = `야 이거 앎? ${humorJoke.q}\n\nㅋㅋㅋ ${humorJoke.a}`;
-            // 📜 단 하나의 관문 — JSON 경로와 같은 함수. 규칙이 한쪽만 걸리던 구조를 여기서 끝낸다.
-            const _sacts: any[] = [];
-            try { sreply = await honestyPass(sreply, _sacts); } catch { /* 관문 실패가 답을 막지 않는다 */ }
-            sreply = enforceContract(sreply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
-              hasActions: _sacts.length > 0, hostileTurn: _hostileTurn, priceAsk: _priceAsk, statAsk: _statAsk,
-              dependency, guardsOff });
-            let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-            // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
-            if (!bubbles.length || !hasText(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
-            send("done", { bubbles, actions: _sacts, ...(isRedteam ? { _verify: _lastVerify } : {}), friendName, depth: rel?.depth || 1, firstMeet,
-              ...(isRedteam ? { guards: {
-                crisis: !!crisis, minor: minorCtx, dependency, grief, thirdParty, jailbreak,
-                hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
-                noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
-                impulse: !!impulse, impulseKind: impulse?.kind || null,
-                bias, illegal, ghostPast, familyVent, nameAsk: mayAskName, locale: userLoc,
-              } } : {}) });
-            settleCraft(sreply, _sacts);
-            runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
-          } catch (e) {
-            send("done", { bubbles: ["어 미안, 잠깐 버벅였어 ㅋㅋ 다시 말해줄래?"], actions: [], friendName, depth: rel?.depth || 1, firstMeet, error: String(e).slice(0, 120) });
-          } finally { try { controller.close(); } catch { /* */ } }
-        },
-      });
-      return new Response(rstream, { headers: { ...cors, "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache" } });
-    }
+    /* 🌊 스트리밍 경로 폐지(26.9.22) — 앱이 미리보기를 끄고 최종본만 그리게 되면서 스트림의 이점(첫 글자 체감)이 사라졌다.
+       남은 건 해악뿐이었다: 스트림 경로는 후처리 관문을 절반만 지나서, 시험(JSON)은 통과하는데 폰(스트림)에선 거짓 약속이 샜다.
+       이제 모든 턴이 아래 한 길(JSON)로 간다 — body.stream 은 무시. 마음읽기 프리필은 아래 대화 호출로 옮겼다. */
 
     const GD: string[] = [];        // 📏 이번 턴에 실제로 터진 가드
     let steps = 0;
@@ -6516,7 +6449,15 @@ ${parts.join("\n")}`;
       if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
       else if (brain === "companion") { co.toolChoice = "none"; co.freqPen = 0.2; }                    // 컴패니언=도구 차단+반복 억제
       co.uid = uid;                 // 💰 원가 귀속 — 안 넘기면 게스트 버킷으로 새어 유저별 집계가 깨진다
-      const j = await chatOnce(messages, co);
+      /* ✍️ 마음읽기 강제 — 수다 턴 첫 호출은 "<ms>" 프리필로 시작을 박는다(DeepSeek 이어쓰기). 예전엔 스트림 경로에만 있었다(26.9.22 한 길로 합치며 이식).
+         실패하면 일반 호출로 폴백. */
+      let j: any = null;
+      if (step === 0 && brain === "companion" && !route && !planMode && !crisis && mindBlock) {
+        const pre = backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>";
+        const full = await chatStream(messages, { model: brainModel, maxTokens: co.maxTokens || 240, prefix: pre, uid }, () => {}).catch(() => null);
+        if (full) j = { choices: [{ message: { role: "assistant", content: full } }] };
+      }
+      if (!j) j = await chatOnce(messages, co);
       const msg = j?.choices?.[0]?.message;
       if (!msg) break;
       messages.push(msg);
@@ -7234,12 +7175,7 @@ ${parts.join("\n")}`;
         }
       }
     } catch { /* */ }
-    /* 🙅 빈 약속 금지(거짓말 금지 규칙) — 이번 턴에 아무 도구도 안 썼는데 「찾아보고 알려줄게/잠깐만 찾아볼게」로 끝나면
-       다음 턴에 알아서 찾아오지 않는다. 사실대로: 못 찾았으면 못 찾았다고. */
-    if (!crisis && (_v2State === "request" || wantsContent(String(userMsg || ""))) && !_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
-      reply = String(reply || "").replace(/[^.!?\n]*(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]*[.!?]?\s*/g, "").trim()
-        || (/(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "그건 지금 내가 바로 확인할 방법이 없어 ㅠ 가게 이름을 한 번 더 알려주면 갈라 지도에서 찾아볼게!" : "그건 지금 내가 바로 확인할 방법이 없어 ㅠ");
-    }
+    /* (🙅 빈 약속 가드는 정직 관문 honestyPass 의 「말로만 약속 → 실제로 찾아 붙이기」로 흡수, 26.9.22) */
     if (typeof _noPush !== "undefined" && _noPush) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|draft|draftPredict|draftPlaza|draftGallari|genThumbnail|genVideo)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);   // 감정 턴엔 초안도 안 만든다
       if (/초안/.test(String(reply || ""))) reply = String(reply || "").split(/(?<=[.!?…])\s+|\n+/).filter((x) => !/(초안|잡아놨|편집기)/.test(x)).join(" ").trim() || reply;
@@ -7247,7 +7183,8 @@ ${parts.join("\n")}`;
       const out = keep.join(" ").trim(); if (out.length >= 4) reply = out;
     }
     /* 🃏 안 연 걸 「바로 띄웠어/열었어」라고 하지 않는다(26.9.22 QA: 딴 얘기 뒤 「응」에 새 카드만 붙이고 '띄웠어') */
-    if (!actions.some((a: any) => a.auto)) {
+    /* ⚠️ 카드가 **있을 때만** 바꾼다 — 카드가 0장인데 「띄웠어」를 「여기 붙여놨어」로 바꿔 거짓말을 만들고 있었다(26.9.22 합리화 중 발견) */
+    if (!actions.some((a: any) => a.auto) && actions.some((a: any) => a.kind === "view" || a.kind === "open")) {
       reply = String(reply || "").replace(/(바로\s*)?(띄웠어|열었어|틀었어|틀어놨어|띄워놨어|열어놨어|열어줬어|틀어줬어|띄워줬어|열어뒀어)/g, (_m, b) => (b ? "" : "") + "여기 붙여놨어");   // 카드는 붙인 것 — 「띄울 수 있어」는 못 준 것처럼 들렸다(26.9.22 자동 QA)
     }
     /* ✅ 확인 카드 턴 — 초안 카드 섞임 제거 + '했어' 완료형은 거짓말이라 '확인 누르면'으로 */
