@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0923200"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
+<meta name="galla-ver" content="0923300"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>GALLA 갈라</title>
   <meta name="robots" content="noindex"><!-- 셸은 검색 노출 금지 — 콘텐츠는 실제 페이지들이 담당 -->
@@ -18,7 +18,7 @@
   <!-- 🚀 P4 확정: 앱/PWA 진입은 단일문서 SPA(app.html)가 기본. localStorage galla_spa=0 이면
        구 iframe 셸 폴백(긴급 롤백용). 웹 브라우저는 이 파일에 안 오므로 MPA 무영향. -->
   <script>try{ if(localStorage.getItem('galla_spa')!=='0'){ var t=new URLSearchParams(location.search).get('tab'); location.replace('app.html'+(t?('#/'+t):'')); } }catch(e){}</script>
-  <script src="/js/splash-boot.js?v=0923200&wait=ready"></script>
+  <script src="/js/splash-boot.js?v=0923300&wait=ready"></script>
   <link rel="stylesheet" href="./css/theme.css?v=0924800">
   <link rel="stylesheet" href="./css/nav.css?v=0808104">
   <!-- 📞 통화 UI(#dm-call) — 엔진이 최상위에서 돌므로 스타일도 최상위에 필요 -->
@@ -516,17 +516,17 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=0923200"></script>
+<script src="./js/tour.js?v=0923300"></script>
 
 <!-- 📞 통화 엔진(최상위) — 네이티브 앱에선 여기서만 네이티브 WebRTC/CallKit로 통화가 돈다.
      supabase 클라(세션 공유) → 수신음 → dm-call 엔진(autoBoot: supabaseClient 뜨면 수신 대기).
      발신은 판(iframe)이 postMessage(callstart)로 넘기고, 이 프레임의 GALLA_call.start가 처리. -->
 <script src="./vendor/supabase.js?v=0926300"></script>
 <script src="./js/supabase.js?v=0926300"></script>
-<script src="/js/geo.js?v=0930800"></script><script src="/js/perm-help.js?v=0923200"></script><script src="/js/perm-notice.js?v=0923200"></script><script src="/js/loc-map.js?v=0930900"></script>
+<script src="/js/geo.js?v=0930800"></script><script src="/js/perm-help.js?v=0923300"></script><script src="/js/perm-notice.js?v=0923300"></script><script src="/js/loc-map.js?v=0930900"></script>
 <script src="./js/dm-sound.js?v=0930100" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc. Agora 웹SDK 미사용(CallKit 잠금답변 충돌) — 로드 제거. -->
 <!-- <script src="./js/agora-media.js?v=080412"></script> -->
-<script src="./js/dm-call.js?v=0923200"></script>
+<script src="./js/dm-call.js?v=0923300"></script>
 </body>
 </html>

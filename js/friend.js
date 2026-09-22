@@ -669,7 +669,8 @@
     setTimeout(friDrag, 0);
     _asEl.insertAdjacentHTML("afterbegin",'<i class="hud-hex"></i><i class="hud-br tl"></i><i class="hud-br tr"></i><i class="hud-br bl"></i><i class="hud-br brr"></i><i class="hud-scan"></i>');
     var inp=_asEl.querySelector("input");
-    var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
+    // 미니에서 말을 걸면 풀 대화로 넘어가서 이어간다(26.9.22 사장님: 미니에서 입력하면 풀 모드로 바뀌어야지)
+    var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; try{ inp.blur(); }catch(_){} bigOpen(); setTimeout(function(){ sendText(t); }, 120); };
     _asEl.querySelector(".fra-send").onclick=go;
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter" && !e.isComposing){ e.preventDefault(); go(); } });
     _asEl.querySelector(".fri-cap").onclick=function(){

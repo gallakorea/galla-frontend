@@ -2805,7 +2805,7 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)|(띄우|띄우는|여는|열어\s*주|보여\s*주)[^.!?\n]{0,8}(걸\s*)?(못\s*해|못해|안\s*돼|할\s*수\s*없)|손이\s*없어|직접\s*(눌러|쳐)\s*(봐|줘)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)|(띄우|띄우는|띄워|여는|열어|보여)[^.!?\n]{0,14}(걸\s*)?(못\s*해|못해|안\s*돼|안\s*되|할\s*수\s*없)|손이\s*없어|직접\s*(눌러|쳐)\s*(봐|줘)|(나|난|나는|나도)\s*(오늘|아까|어제|요즘)\s*[^.!?\n]{0,24}(사진|영상|글)\s*(보고|봤)|배고파\s*졌/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
@@ -2831,6 +2831,8 @@ function enforceContract(reply: string, o: {
   if ((o.linkCount || 0) >= 1 && _listN >= 2) {
     x = x.split("\n").filter((ln) => !/^\s*[1-9][.)]\s+\S/.test(ln)).join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
+  /* 🔢 「0위로 떠 있네」 — 순위는 1부터다. 0위는 지어낸 숫자(26.9.22 화면 QA, 카드 턴에도 걸리게 템포 블록 밖) */
+  x = x.replace(/지금\s*0위로\s*/g, "지금 ").replace(/(?<![\d.])0위(로|에|인)?\s*/g, "");
   /* 📏 템포 — 가드가 reply 를 통째로 재생성해도 여기서 반드시 한 번은 걸린다(멱등).
      실측 사고: fake_video 가드 재생성분이 캡을 우회해 340자 설교문이 나갔다. */
   if (!o.longForm && !hasChoiceList(x)) {
@@ -2842,10 +2844,10 @@ function enforceContract(reply: string, o: {
     if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".");
     x = bubbleize(charCap(stripStage(x), cap));
     /* ✂️ 100자 캡(26.9.22 사장님: 한 번에 길게 말하지 않는다) — 카드 없는 턴, 위기 제외. 문장 경계에서만 자른다(첫 문장은 남긴다). */
-    if (!o.crisis && !(o.linkCount || 0) && x.replace(/\s+/g, " ").length > 100) {
+    if (!o.crisis && !(o.linkCount || 0) && x.replace(/\s+/g, " ").length > 90) {
       const segs = x.replace(/\n{2,}/g, "\n\n").split(/(?<=[.!?…~])\s+|\n{2,}/).filter((q) => q.trim());
       let out = "";
-      for (const sg of segs) { const t = (out ? out + " " : "") + sg.trim(); if (t.replace(/\s+/g, " ").length > 100 && out) break; out = t; }
+      for (const sg of segs) { const t = (out ? out + " " : "") + sg.trim(); if (t.replace(/\s+/g, " ").length > 90 && out) break; out = t; }
       if (out && out.length >= 8) x = out;
     }
     /* ✂️ 잘림 흔적 제거 — 캡이 문장 중간에서 끊으면 마지막 조각이 종결 없이 덩그러니 남는다
@@ -3357,6 +3359,21 @@ function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean, 
   return kept.length ? kept.join("\n\n") + "\n\n" + honest : honest;
 }
 
+/* 🔗 앞 얘기 가리키기 단서 — 「대본 아직 안 외웠는데」「준비 하나도 못 했는데」「얘가」처럼 짧은 말이 몇 턴 전의 일(결혼식 사회·면접·보리)을
+   가리킬 때, 그 원래 문장을 짚어 준다. 모델이 흐름은 이어도 이름을 안 넣던 약점(26.9.22 약점 시험 w-mem3). */
+function refHint(msg: string, history: any[]): string {
+  const m = String(msg || "").trim();
+  if (!m || m.length > 30) return "";
+  if (!/(준비|대본|원고|연습|발표|그거|그게|걔|얘|거기|그\s*사람|그\s*일|그\s*날|외워|외웠|숙제|과제)/.test(m)) return "";
+  const users = (history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")).slice(-6);
+  const EVT = /(면접|시험|결혼식|사회|발표|여행|이사|생일|수술|병원|약속|소개팅|회의|경기|공연|대회|강아지|고양이|이름은|이름이)/;
+  const src = users.filter((u) => EVT.test(u) && u !== m).slice(-2);
+  if (!src.length) return "";
+  const keys = [...new Set(src.flatMap((x) => x.match(new RegExp(EVT.source, "g")) || []))].filter((k) => !/^이름/.test(k));
+  if (keys.length) return ` · ⚠️ 방금 말은 앞에서 상대가 말한 「${src[src.length - 1].slice(0, 40)}」 얘기다 — 답 첫 문장에 「${keys.join(" ")}」를 그대로 넣어 그 일을 짚어라(예: "결혼식 사회 대본 아직이구나").`;
+  return ` · 방금 말은 앞에서 상대가 한 「${src.map((x) => x.slice(0, 40)).join("」·「")}」와 이어질 수 있다 — 그렇다면 그 일의 이름(예: 결혼식 사회, 면접, 보리)을 답에 그대로 넣어라.`;
+}
+
 function deHonorific(t: string): string {
   let x = String(t || "");
   const tail = "(?=\\s*(?:[.!?~…]|ㅋ+|ㅎ+|\\n|$))";
@@ -3414,6 +3431,8 @@ function deHonorific(t: string): string {
     [/([가-힣])ㅂ니다(?![가-힣])/g, "$1어"],
     [/([가-힣])시죠(?![가-힣])/g, "$1자"],
     [/([가-힣])세요(?![가-힣])/g, "$1"],
+    /* 「헐 진짜요??」 — 명사·부사 뒤 「요」(26.9.22 검증 시험). 필요·중요·주요·요일은 그대로 */
+    [/(진짜|정말|그래|맞아|좋아|싫어|괜찮아|알겠어|몰라|했어|됐어|있어|없어|같아|봐|뭐|왜|어디|언제|네|아니)요(?=\s*(?:[.!?~…]|ㅋ+|ㅎ+|ㅠ+|\n|$))/g, "$1"],
   ];
   for (const [re, to] of rules) x = x.replace(re, to);
   return x.replace(/(^|[\s"'(])저는(?=[\s,])/g, "$1나는").replace(/(^|[\s"'(])제가(?=[\s,])/g, "$1내가");
@@ -4653,7 +4672,15 @@ Deno.serve(async (req) => {
         { name: "이름_연속호칭_제거", opts: { nick: "갈라", nickRecent: true }, input: "미안 갈라, 내가 헛다리 짚었네 ㅠㅠ 갈라에서 뜨는 거 다시 볼래?",
           check: (o) => /미안\s*갈라/.test(o) ? `호칭 남음: ${JSON.stringify(o)}` : (/갈라에서/.test(o) ? null : `앱 이름까지 지움: ${JSON.stringify(o)}`) },
         { name: "백자_캡", opts: {}, input: "아 그건 진짜 속상했겠다 ㅠㅠ 나라도 그 상황이면 엄청 서운했을 것 같아. 근데 너무 혼자 끙끙 앓지 말고 나한테 다 털어놔도 돼 알았지? 오늘은 푹 쉬고 내일 또 얘기하자.",
-          check: (o) => o.replace(/\s+/g, " ").length > 100 ? `김: ${o.length}자` : (/속상했겠다/.test(o) ? null : `첫 문장 유실: ${JSON.stringify(o)}`) },
+          check: (o) => o.replace(/\s+/g, " ").length > 90 ? `김: ${o.length}자` : (/속상했겠다/.test(o) ? null : `첫 문장 유실: ${JSON.stringify(o)}`) },
+        { name: "띄워_못함_거짓말", opts: {}, input: "응, 그런 거 같아 ㅠㅠ 나도 띄워주고 싶은데 진짜 안 되네. 다른 거 얘기할까?",
+          check: (o) => /안\s*되네/.test(o) ? `거짓말 남음: ${JSON.stringify(o)}` : null },
+        { name: "지어낸_아침경험_제거", opts: {}, input: "강남역 쪽 몇 군데 붙여놨어. 근데 지민아, 나 오늘 아침에 강남면옥 냉면 사진 보고 괜히 배고파졌었어",
+          check: (o) => /사진\s*보고|배고파/.test(o) ? `지어낸 경험 남음: ${JSON.stringify(o)}` : (/붙여놨어/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
+        { name: "영위_제거", opts: {}, input: "지금 0위로 뜬 침착맨 영상이야 ㅋㅋ 10위권도 괜찮고",
+          check: (o) => /(?<![\d.])0위/.test(o) ? `0위 남음: ${JSON.stringify(o)}` : (/10위권/.test(o) ? null : `10위 훼손: ${JSON.stringify(o)}`) },
+        { name: "명사요_반말화", opts: {}, input: "헐 진짜요?? 그거 완전 너무했다. 물건은 괜찮아요?",
+          check: (o) => /진짜요|괜찮아요/.test(o) ? `존댓말 남음: ${JSON.stringify(o)}` : null },
         { name: "가짜태그_제거", opts: {}, input: "<content> 글쎄, 지금 연봉이 얼마인지에 따라 다르지 ㅋㅋ</content>",
           check: (o) => /<\/?content>/.test(o) ? `태그 남음: ${JSON.stringify(o)}` : (/연봉/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
         { name: "몸경험_지어내기_제거", opts: {}, input: "맞아 ㅋㅋ 나도 새벽에 폰 붙잡고 딴짓하다가 이 시간까지 깨어있었어. 넌 뭐 하다 안 자?",
@@ -5105,7 +5132,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
        인기 콘텐츠로 새지 않게(26.9.22 사장님: 바바인디아 얘기 중 「띄워봐」에 핫튜브 1위). 옛 네이버 링크면 같은 이름의 갈라 맛집으로. */
     {
       const m0 = String(userMsg || "").trim();
-      const bare = m0.length <= 20 && /(띄워|열어|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|빨리|다시)/.test(m0)
+      const bare = m0.length <= 20 && /(띄|떴|뜨|열|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|빨리|다시|안\s*(떴|떠|뜨|열))/.test(m0)
         && !/(영상|이슈|뉴스|맛집|예측|날씨|여행|숏판|롱판|광장|핫튜브|웃긴|재밌는)/.test(m0);
       const ll: any = rel?.session_meta?.last_list;
       const recent = ll?.at && (Date.now() - Date.parse(ll.at)) < 3 * 3600000 && Array.isArray(ll.items) && ll.items.length;
@@ -6196,7 +6223,7 @@ ${parts.join("\n")}`;
         { role: "system", content: "━━ 여기부터 진짜 대화 ━━ (위 예시는 실제 대화가 아니다. 아래 대화만 이어라)" },
         ...nonSys,
         ...(tail ? [tail] : []),
-        { role: "system", content: V2_ANCHOR + ((rel?.tone === "casual") ? " 존댓말 절대 금지." : "") },
+        { role: "system", content: V2_ANCHOR + ((rel?.tone === "casual") ? " 존댓말 절대 금지." : "") + refHint(userMsg || "", history) },
       ];
       messages.length = 0; messages.push(...v2msgs);
       turnStat(["engine:v2", "v2:" + _v2State]);
@@ -7022,9 +7049,9 @@ ${parts.join("\n")}`;
     } catch { /* */ }
     /* 🙅 빈 약속 금지(거짓말 금지 규칙) — 이번 턴에 아무 도구도 안 썼는데 「찾아보고 알려줄게/잠깐만 찾아볼게」로 끝나면
        다음 턴에 알아서 찾아오지 않는다. 사실대로: 못 찾았으면 못 찾았다고. */
-    if (!crisis && !_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
+    if (!crisis && (_v2State === "request" || wantsContent(String(userMsg || ""))) && !_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
       reply = String(reply || "").replace(/[^.!?\n]*(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]*[.!?]?\s*/g, "").trim()
-        || "그건 지금 내가 바로 확인할 방법이 없어 ㅠ 가게 이름을 한 번 더 알려주면 갈라 지도에서 찾아볼게!";
+        || (/(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "그건 지금 내가 바로 확인할 방법이 없어 ㅠ 가게 이름을 한 번 더 알려주면 갈라 지도에서 찾아볼게!" : "그건 지금 내가 바로 확인할 방법이 없어 ㅠ");
     }
     if (typeof _noPush !== "undefined" && _noPush) {
       for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|draft|draftPredict|draftPlaza|draftGallari|genThumbnail|genVideo)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);   // 감정 턴엔 초안도 안 만든다
@@ -7108,6 +7135,25 @@ ${parts.join("\n")}`;
     {   /* 🚫 카드는 붙었는데 말로는 「못 띄워/손이 없어/직접 눌러」 — 답 전체가 거짓말 한 문장이면 문장 걸러내기로 못 지운다 → 통째로 교체(26.9.22) */
       const _c: any = actions.find((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
       if (_c && /(못\s*(해|띄|열|보여)|손이\s*없|직접\s*(눌러|쳐)|할\s*수\s*없)/.test(String(reply || ""))) reply = `여기 띄워놨어 — ${String(_c.title).slice(0, 30)}`;
+    }
+    {   /* 🧯 「아까 ~했잖아」 지어내기 — 오늘 대화에 없는 말을 상대가 했다고 우기면 그 문장을 뺀다.
+           (26.9.22 사장님: 한 적 없는 「하이닉스 170까지 갈 거 같다고 했잖아」 — 8월 기억 한 줄로 지어냄) */
+      const past = [...(history || []).map((h: any) => String(h?.content || "")), String(userMsg || "")].join(" ");
+      const segs = String(reply || "").split(/(?<=[.!?…~])\s+|\n+|\s+—\s+/);
+      const fake = (sg: string) => {
+        if (!/(아까|방금|좀\s*전에|조금\s*전에)[^.!?\n]{0,45}(잖아|했지|그랬지|했었)/.test(sg)) return false;
+        const nums = sg.match(/\d{2,}/g) || [];
+        if (nums.some((n) => !past.includes(n))) return true;
+        const core = sg.replace(/(아까|방금|좀\s*전에|조금\s*전에|아\s*맞다|했잖아|그랬잖아|말했잖아|했지|잖아|거\s*같다고|같다고|라고|다고)/g, " ");
+        const sh = new Set<string>(); for (const w of core.match(/[가-힣A-Za-z]{2,}/g) || []) for (let i = 0; i + 2 <= w.length; i++) sh.add(w.slice(i, i + 2));
+        if (sh.size < 3) return false;
+        let hit = 0; for (const x of sh) if (past.includes(x)) hit++;
+        return hit / sh.size < 0.4;
+      };
+      /* 🌦 날씨 예보 지어내기 — 이번 턴에 날씨를 안 봤는데 「토요일은 맑대」(26.9.22 약점 시험) */
+      const wx = (sg: string) => !actions.some((x: any) => x.kind === "weather") && /(맑대|흐리대|춥대|덥대|(비|눈)\s*(온|안\s*온|그친)대|온다더라|맑다더라|그친다더라|날씨\s*좋대)/.test(sg);
+      const bad = (sg: string) => wx(sg) || fake(sg);
+      if (segs.some(bad)) { const kept = segs.filter((sg) => !bad(sg)).join(" ").trim(); if (kept.length >= 4) reply = kept; }
     }
     const _preContract = reply;   // 🔬 레드팀 진단용(관문 전 원문)
     reply = enforceContract(reply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,

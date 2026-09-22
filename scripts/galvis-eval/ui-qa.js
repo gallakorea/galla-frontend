@@ -80,6 +80,20 @@ export async function run() {
     const naver = c7.filter((c) => /naver\.com|네이버/.test(c.outerHTML)).length;
     ok("7 맛집 요청에 카드", c7.length >= 1, `카드 ${c7.length}장 · ${b7 && b7.textContent.slice(0, 40)}`);
     ok("7 갈라 맛집(네이버 링크 아님)", c7.length >= 1 && naver === 0, `네이버 링크 ${naver}장`);
+
+    // 8) 미니(아일랜드)에서 말 걸기 → 풀 대화로 넘어가 답이 이어진다(26.9.22 사장님)
+    const c8 = cardsIn(b7)[0] || cardsIn(document.getElementById("frSheet")).pop();
+    if (c8) c8.click();
+    ok("8 카드 누르면 다시 아일랜드", !!(await until(() => surf() === "island" && document.querySelector("#frAssist.on"), 8000)), surf());
+    await wait(1500);
+    const n8 = msgs().length;
+    const in8 = document.querySelector("#frAssist .fra-in input");
+    if (in8) { in8.value = "여기 괜찮아 보인다"; document.querySelector("#frAssist .fra-send").click(); }
+    ok("8 미니에서 입력하면 풀 대화로", !!(await until(() => surf() === "sheet", 6000)), surf());
+    await until(() => msgs().length >= n8 + 2 && !document.querySelector("#frSheet .fr-typing"), 45000);
+    const u8 = msgs().filter((m) => !m.classList.contains("fr-a")).pop();
+    ok("8 보낸 말이 풀 대화에 보인다", !!(u8 && /여기 괜찮아 보인다/.test(u8.textContent)), u8 && u8.textContent.slice(0, 30));
+    ok("8 풀 대화에 답이 온다", msgs().length >= n8 + 2, `메시지 ${n8}→${msgs().length}`);
   } catch (e) { ok("실행 오류", false, String(e && e.message || e)); }
   const pass = R.filter((r) => r.pass).length;
   return { pass, total: R.length, results: R };
