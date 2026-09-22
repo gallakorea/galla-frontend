@@ -2026,7 +2026,8 @@
       c2.querySelector(".qt-pct").textContent = a.pct!=null ? (Number(a.pct)>0?"+":"")+Number(a.pct).toFixed(2)+"%" : "";
     }
     var at=a.at?String(a.at):"";
-    var when = /T\d/.test(at) ? at.slice(11,16)+" 기준" : (at ? at.slice(5).replace("-","/")+" 고시" : "");
+    /* 시각은 기기 현지 시각으로 — 업비트는 UTC(Z)로 줘서 「10:41 기준」(실제 19:41)이 찍혔다 */
+    var when=""; if(/T\d/.test(at)){ try{ var d=new Date(at); when=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+" 기준"; }catch(e){} } else if(at){ when=at.slice(5).replace("-","/")+" 고시"; }
     c2.querySelector(".qt-src").textContent=(a.source||"")+(when?" · "+when:"");
     return c2;
   }
