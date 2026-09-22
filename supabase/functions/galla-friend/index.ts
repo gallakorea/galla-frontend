@@ -2481,6 +2481,8 @@ function apiFor(model: string): { base: string; key: string } {
      딥시크 창구로 날아가 400 으로 죽는다(모델명은 맞는데 창구가 틀린 실패라 원인 찾기 어렵다). */
   if (/^(gpt-|o[1-9])/.test(model) && OPENAI_KEY)
     return { base: "https://api.openai.com/v1", key: OPENAI_KEY };
+  if (/^claude/.test(model) && Deno.env.get("ANTHROPIC_API_KEY"))   // 🟠 Claude(하이쿠) — OpenAI 호환 창구(26.9.22 비교 시험). ⚠️ ANTHROPIC_KEY 상수는 아래(4176)에 이미 있다 — 다시 선언하면 부팅 실패
+    return { base: "https://api.anthropic.com/v1", key: Deno.env.get("ANTHROPIC_API_KEY") || "" };
   return { base: BASE_URL, key: API_KEY };
 }
 
@@ -2567,7 +2569,8 @@ async function chatStream(messages: any[], opts: { model?: string; maxTokens?: n
     // 베타 경로는 tool_choice 파라미터를 거부할 수 있다 — 어차피 tools 미선언.
     // ⚠️ gemini OpenAI 호환은 tools 없이 tool_choice 를 주면 400(INVALID_ARGUMENT) — 스트림이 통째로 죽어
     //    비스트림 폴백으로 새고, 유저는 20초를 타이핑 점만 보며 기다린다(사장님 "실행이 느려" 실측).
-    if (!usePrefix && !/^gemini/.test(model)) body.tool_choice = "none";
+    if (!usePrefix && !/^(gemini|claude)/.test(model)) body.tool_choice = "none";   // Claude 는 도구 없이 tool_choice 를 주면 거부할 수 있다
+    if (/^claude/.test(model)) delete body.frequency_penalty;
     /* 🔴 스트리밍은 이 옵션 없이는 usage 를 안 준다. 그래서 **주 대화 경로가 원가를 한 줄도 안 적고 있었다**
        (실측 2026-08-29: ai_spend 의 galla-friend 기록이 8/27 에서 멈춤. 대화는 계속됐는데 장부만 비었다).
        요금제·마진 계산의 근거가 이 표라서, 여기가 비면 원가를 모르는 채로 가격을 정하게 된다.
@@ -4096,7 +4099,9 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     reqBody.max_completion_tokens = (reqBody.max_tokens || 240) + 512;   // 사고가 답변 몫을 먹지 않게
     delete reqBody.max_tokens;
   }
+  if (/^claude/.test(String(reqBody.model))) { delete reqBody.frequency_penalty; if (reqBody.temperature > 1) reqBody.temperature = 1; }   // 🟠 Claude 호환 창구가 모르는 값은 뺀다
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
+  if (/^claude/.test(String(reqBody.model)) && (!Array.isArray(reqBody.tools) || !reqBody.tools.length)) delete reqBody.tool_choice;
   const _api = apiFor(String(reqBody.model || CHAT_MODEL));
   const r = await fetch(`${_api.base}/chat/completions`, {
     method: "POST",
@@ -5685,6 +5690,8 @@ ${parts.join("\n")}`;
        chatOnce 만 배선해봐야 유료 등급 모델이 실제 대화엔 닿지 않았다.
        env 를 명시로 박아둔 경우엔 그게 이긴다(긴급 고정용). */
     let brainModel = (brain === "companion" ? _COMPANION_ENV : _AGENT_ENV) || await chatModel(uid);
+    /* 🧪 모델 비교(26.9.22 사장님: 챗지피티는?) — 레드팀 계정만 body.model 로 대화 모델을 바꿔 끼운다(채점판 A/B). */
+    if (isRedteam && typeof body?.model === "string" && /^(gpt-|deepseek-|gemini-|claude-)/.test(body.model)) brainModel = body.model;
     if (brain === "companion") {
       try {
         const adminModel = Deno.env.get("FRIEND_ADMIN_CHAT_MODEL") || "off";   // 26.9.22 기본 끔 — 사장님만 다른 모델로 돌면 채점판과 체감이 어긋난다

@@ -57,12 +57,14 @@ def wipe(uid):
 
 
 ENGINE = None   # --engine v1|v2 (레드팀 계정만 서버가 받아준다)
+MODEL = None    # --model claude-haiku-4-5-20251001 | gpt-5-mini | deepseek-chat (레드팀 계정만)
 
 
 def talk(jwt, msg, hist):
     for a in range(5):
         b = {"message": msg, "history": hist}
         if ENGINE: b["engine"] = ENGINE
+        if MODEL: b["model"] = MODEL
         st, t = http("POST", "/functions/v1/galla-friend", b,
                      {"apikey": ANON, "Authorization": "Bearer " + jwt, "x-redteam-key": RT})
         if st in (429, 503, 0, 502, 504):
@@ -144,8 +146,9 @@ def main():
     only = None; tag = "run"
     if "--only" in args: only = args[args.index("--only") + 1].split(",")
     if "--tag" in args: tag = args[args.index("--tag") + 1]
-    global ENGINE
+    global ENGINE, MODEL
     if "--engine" in args: ENGINE = args[args.index("--engine") + 1]
+    if "--model" in args: MODEL = args[args.index("--model") + 1]
     setf = args[args.index("--set") + 1] if "--set" in args else "scenarios"   # --set holdout = 검증용(튜닝 금지)
     items = json.load(open(os.path.join(HERE, setf + ".json"), encoding="utf-8"))["items"]
     if only: items = [x for x in items if any(x["id"].startswith(o) for o in only)]
