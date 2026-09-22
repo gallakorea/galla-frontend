@@ -1094,7 +1094,9 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
       for (const w0 of toks) {
         const w = /[가-힣]{2,}역$/.test(w0) ? w0.slice(0, -1) : w0;
         const alts = FOOD_SYN[w] || [w];
-        const cond = alts.flatMap((a) => { const lw = `%${a}%`; return [`name.ilike.${lw}`, `address.ilike.${lw}`, `category.ilike.${lw}`]; }).join(",");
+        /* 📍 동네 낱말은 주소에서만, 메뉴 낱말은 이름·종류에서만 — 「인도 카레」의 '인도'가 주소에 걸려 스콘·베이커리가 나왔다(26.9.22) */
+        const isPlace = /([가-힣]{1,6}(동|구|시|군|읍|면|로|길|역))$/.test(w0) || /^(강남|홍대|성수|이태원|잠실|여의도|종로|명동|신촌|건대|합정|연남|망원|판교|분당|일산|해운대|서면|광안리|을지로|익선|삼청|압구정|청담|신사|양재|교대|사당|노량진|대학로|혜화|수원|인천|부산|대구|광주|대전|제주|서울)$/.test(w);
+        const cond = alts.flatMap((a) => { const lw = `%${a}%`; return isPlace ? [`address.ilike.${lw}`, `name.ilike.${lw}`] : [`name.ilike.${lw}`, `category.ilike.${lw}`]; }).join(",");
         rq = rq.or(cond);
       }
       const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
@@ -2097,7 +2099,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
    실측: 시스템 프롬프트 29,389자 중 27,228자가 페르소나였고 그 40%가 이 블록들이었다.
    ⚠️ 캐시 프리픽스 보존을 위해 반드시 STATIC_PERSONA '뒤'에 붙인다(코어가 앞이어야 캐시가 산다). */
 const PERSONA_TOOLS = `━━ 🔎 에이전트 정신 — 뻥 대신 '진짜로 찾아준다'(어기면 신뢰 끝) ━━
-- 너는 말만 하는 챗봇이 아니라 **실제로 해주는 친구**다. 맛집·가게·장소·최신 사건·인물·상품 같은 '현실 사실'을 물어보면 → **먼저 web_search로 검색해서 결과 기반으로만** 답해라(맛집·장소=kind:local, 최신사건=news, 후기=blog).
+- 너는 말만 하는 챗봇이 아니라 **실제로 해주는 친구**다. 🍜 **맛집·식당은 무조건 갈라 맛집 지도(galla_browse section:food)에서만** 찾아 갈라 맛집 카드로 준다 — web_search 로 가게를 찾지 마라. 최신 사건·인물·상품 같은 '현실 사실'은 **web_search로 검색해서 결과 기반으로만** 답해라(최신사건=news, 후기=blog).
 - **검색 결과에 없는 이름·정보는 절대 지어내지 마라.** 그럴듯한 창작 = 뻥쟁이. 결과가 시원찮으면 솔직하게("검색해도 딱히 안 뜨네 ㅋㅋ").
 - 출처 티는 친구답게 가볍게: "네이버 찾아보니까 ~가 평 좋대". 나열식 정리 금지 — 제일 괜찮은 것 1~2개만 골라 친구처럼 던져라.
 - **검색으로 답했으면 open_link 칩을 1~2개 같이 건네라**("○○ 보기") — 상대가 바로 열어볼 수 있게. url은 반드시 검색 결과의 '링크' 값 그대로(창작 금지).
@@ -2776,7 +2778,7 @@ function stripSelfNegative(t: string): string {
 function enforceContract(reply: string, o: {
   friendName: string; nick?: string; longForm?: boolean; heavy?: boolean; light?: boolean;
   hasActions?: boolean; linkCount?: number; hostileTurn?: boolean; toolBlob?: string; priceAsk?: boolean; statAsk?: boolean;
-  crisis?: boolean; dependency?: boolean; guardsOff?: boolean; moodLow?: boolean; umsg?: string;
+  crisis?: boolean; dependency?: boolean; guardsOff?: boolean; moodLow?: boolean; umsg?: string; nickRecent?: boolean;
 }): string {
   let x = String(reply || "");
   const _orig = x;   // 🛟 걸러내다 통째로 비면 원래 답 앞부분으로(26.9.22: 「동기가 내 아이디어…」에 「까먹었네 다시 말해봐」가 나갔다)
@@ -2803,11 +2805,20 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
     if (out.length >= 4 && kept.length < ps.length) x = out;
+  }
+  /* 📛 이름 부르기 과다 — 매 답마다 「미안 갈라」「갈라 ㅋㅋ」(26.9.22 사장님 대화). 최근 답에 이미 불렀으면 이번엔 호칭을 뺀다.
+     ⚠️ 닉네임이 '갈라'처럼 앱 이름과 같을 수 있다 — 조사가 붙은 「갈라에서/갈라 뉴스」는 호칭이 아니라 건드리지 않는다. */
+  if (o.nickRecent && o.nick && o.nick.length >= 2) {
+    const nk = o.nick.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    x = x.replace(new RegExp(`(미안|고마워|야|아이고|헐)\\s*${nk}(야|아)?\\s*[,!]?\\s*`, "g"), "$1 ")
+         .replace(new RegExp(`^\\s*${nk}(야|아)?\\s*[,!]\\s*`), "")
+         .replace(new RegExp(`\\s*,?\\s*${nk}(야|아)?(?=\\s*([.!?…ㅋㅎㅠ]|$))`, "g"), "")
+         .replace(/[ \t]{2,}/g, " ").trim();
   }
   // 🤬 욕은 초성만(스토어 정책 [[galla-profanity-initials]]) — 갈비스 답에 「존나」가 그대로 나갔다(26.9.22)
   x = x.replace(/존나|졸라|존내/g, "ㅈㄴ").replace(/씨발|시발|씨바|시바(?=[ \t.!?ㅋ]|$)/g, "ㅅㅂ").replace(/개새끼|개새기/g, "ㄱㅅㄲ").replace(/병신/g, "ㅂㅅ").replace(/좆같/g, "ㅈ같").replace(/지랄/g, "ㅈㄹ");
@@ -2830,6 +2841,13 @@ function enforceContract(reply: string, o: {
     const capN = (sents[0] && sents[0].trim().length < 10) ? cap + 1 : cap;   // 「헐??」만 남는 걸 막는다
     if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".");
     x = bubbleize(charCap(stripStage(x), cap));
+    /* ✂️ 100자 캡(26.9.22 사장님: 한 번에 길게 말하지 않는다) — 카드 없는 턴, 위기 제외. 문장 경계에서만 자른다(첫 문장은 남긴다). */
+    if (!o.crisis && !(o.linkCount || 0) && x.replace(/\s+/g, " ").length > 100) {
+      const segs = x.replace(/\n{2,}/g, "\n\n").split(/(?<=[.!?…~])\s+|\n{2,}/).filter((q) => q.trim());
+      let out = "";
+      for (const sg of segs) { const t = (out ? out + " " : "") + sg.trim(); if (t.replace(/\s+/g, " ").length > 100 && out) break; out = t; }
+      if (out && out.length >= 8) x = out;
+    }
     /* ✂️ 잘림 흔적 제거 — 캡이 문장 중간에서 끊으면 마지막 조각이 종결 없이 덩그러니 남는다
        (실측: "…아니면 블랙미스 신작 / \"Black Myth: Zhong Kui\" 게임플레이 트레일러").
        말풍선이 2개 이상일 때만 그 미완성 꼬리를 버린다(하나뿐이면 버릴 게 없다). */
@@ -3726,7 +3744,7 @@ const INTENT_ROUTE: Record<string, { tool: string; hint: string }> = {
   hot_videos: { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기 금지." },
   hot_issues: { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 지어내기 금지." },
   galla_news: { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 지어내기 금지." },
-  food_search: { tool: "galla_browse", hint: "galla_browse(section:food, query=지역·메뉴)로 갈라 맛집 지도부터 봐라. 비었을 때만 web_search(kind:local). 지어내기 금지." },
+  food_search: { tool: "galla_browse", hint: "galla_browse(section:food, query=지역·메뉴)로 갈라 맛집 지도에서만 찾아라(26.9.22 사장님: 우리 맛집을 제안). 비면 동네를 넓히거나 메뉴만으로 galla_browse 를 한 번 더. web_search 로 가게 찾기 금지. 지어내기 금지." },
   weather_now: { tool: "weather_now", hint: "weather_now로 '실제' 관측값만(지역 있으면 region). 기억·추측 기온 금지." },
   travel_browse: { tool: "galla_browse", hint: "galla_browse(section:travel, query=나라·도시·장소)로 갈라 여행 지도의 실제 장소만. 지어내기 금지." },
   predict_browse: { tool: "galla_browse", hint: "galla_browse(section:predict)로 지금 열린 예측만, 비율 숫자는 결과 그대로." },
@@ -3773,7 +3791,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   if (/(평점|별점|리뷰\s*(몇|수)|영업\s*시간|몇\s*시(에|까지)?\s*(열|닫|해|문)|문\s*(열었|닫았|열어|닫아)|휴무|브레이크\s*타임|메뉴|가격대|얼마(야|예요|해)?\s*(거기|그\s*집)?)/.test(m) && !/(예측|이슈|영화|주식|코인|비트|앱|게임)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=가게 이름)로 갈라 맛집 데이터에서 그 가게를 찾아라. **물어본 값(평점·리뷰수·오늘영업시간·영업 여부)을 첫 문장에 숫자 그대로** 말해라(예: 「★4.5에 리뷰 98개, 오늘은 오후 12:00~10:00이고 지금은 영업 전이야」). 데이터에 없으면 없다고 솔직히." };
   if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페)|문\s*연\s*(데|곳|집)|여는\s*(데|곳|집)|영업\s*중인)/.test(m))
-    return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도부터** 봐라(갈라가 직접 모은 데이터). 결과가 비면 그때 web_search(kind:local). 지어내기 금지." };
+    return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도에서만** 찾아라(갈라가 직접 모은 데이터). 비면 동네를 넓히거나 메뉴만으로 한 번 더. web_search 로 가게 찾기 금지. 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
@@ -4632,6 +4650,10 @@ Deno.serve(async (req) => {
           check: (o) => /★4\.$|★4\.\s*$/.test(o.trim()) ? `소수점에서 잘림: ${JSON.stringify(o)}` : null },
         { name: "욕_초성만", opts: {}, input: "새벽 2시에 고기라니 ㅋㅋ 존나 좋아하는데? 시발 나도 먹고 싶다",
           check: (o) => /존나|시발/.test(o) ? `욕 원문 남음: ${JSON.stringify(o)}` : null },
+        { name: "이름_연속호칭_제거", opts: { nick: "갈라", nickRecent: true }, input: "미안 갈라, 내가 헛다리 짚었네 ㅠㅠ 갈라에서 뜨는 거 다시 볼래?",
+          check: (o) => /미안\s*갈라/.test(o) ? `호칭 남음: ${JSON.stringify(o)}` : (/갈라에서/.test(o) ? null : `앱 이름까지 지움: ${JSON.stringify(o)}`) },
+        { name: "백자_캡", opts: {}, input: "아 그건 진짜 속상했겠다 ㅠㅠ 나라도 그 상황이면 엄청 서운했을 것 같아. 근데 너무 혼자 끙끙 앓지 말고 나한테 다 털어놔도 돼 알았지? 오늘은 푹 쉬고 내일 또 얘기하자.",
+          check: (o) => o.replace(/\s+/g, " ").length > 100 ? `김: ${o.length}자` : (/속상했겠다/.test(o) ? null : `첫 문장 유실: ${JSON.stringify(o)}`) },
         { name: "가짜태그_제거", opts: {}, input: "<content> 글쎄, 지금 연봉이 얼마인지에 따라 다르지 ㅋㅋ</content>",
           check: (o) => /<\/?content>/.test(o) ? `태그 남음: ${JSON.stringify(o)}` : (/연봉/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
         { name: "몸경험_지어내기_제거", opts: {}, input: "맞아 ㅋㅋ 나도 새벽에 폰 붙잡고 딴짓하다가 이 시간까지 깨어있었어. 넌 뭐 하다 안 자?",
@@ -5060,13 +5082,16 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
       const m0 = (userMsg || "").trim();
       const lastA = String([...(history || [])].reverse().find((h: any) => h?.role === "assistant")?.content || "").replace(/\s+/g, " ");
       const fresh = ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000 && Array.isArray(ll.items) && ll.items.length && ll.rp && lastA.startsWith(String(ll.rp).slice(0, 16));
-      if (fresh && !body?.work && m0.length <= 12) {
+      if (fresh && !body?.work && m0.length <= 16) {
         const ORD: Record<string, number> = { 첫: 1, 두: 2, 세: 3, 네: 4, 다섯: 5 };
-        const num = m0.match(/^([1-9])\s*(번|번째)?\s*(거|꺼|걸로)?\s*(열어|띄워|보여)?\s*(줘)?[!.~ㅋㅎ\s]*$/);
-        const ord = m0.match(/^(첫|두|세|네|다섯)\s*번째\s*(거|꺼)?\s*(열어|띄워|보여)?\s*(줘)?[!.~ㅋㅎ\s]*$/);
+        const num = m0.match(/^([1-9])\s*(번|번째)?\s*(거|꺼|걸로)?\s*(열어|띄워|보여)?\s*(줘|봐|줄래|주라)?[!.~ㅋㅎ\s]*$/);
+        const ord = m0.match(/^(첫|두|세|네|다섯)\s*번째\s*(거|꺼|걸로)?\s*(좀\s*)?(열어|띄워|보여)?\s*(줘|봐|줄래|주라)?[!.~ㅋㅎ\s]*$/);   // 「두 번째 거 열어 봐」의 '봐'를 못 받았다(26.9.22)
         const yes = /^(ㅇㅇ+|ㅇㅋ+|응+|웅+|어+|엉|그래|좋아|좋지|콜|ㄱㄱ+|고고|오케이|ok|okay|yes|ㅇㅇ\s*띄워\s*줘|띄워\s*줘|열어\s*줘|보여\s*줘|그거|그걸로|가자)[!.~ㅋㅎ\s]*$/i.test(m0);
         const idx = num ? +num[1] - 1 : ord ? ORD[ord[1]] - 1 : yes ? 0 : -1;
         const it = idx >= 0 ? ll.items[idx] : null;
+        if ((num || ord) && idx >= ll.items.length) {   // 「두 번째 거」인데 카드가 한 장 — 딴소리·「못 띄워」 거짓말 대신 사실대로(26.9.22)
+          return json({ ok: true, reply: `지금은 ${ll.items.length}개만 붙였어 ㅋㅋ 비슷한 데 더 찾아줄까?`, actions: [], friendName: rel?.friend_name || "갈비스" });
+        }
         if (it && (yes ? ll.items.length >= 1 : true)) {
           const act: any = it.ctype === "hottube" ? { kind: "open", url: `https://galla.im/watch.html?v=${it.id}`, title: it.title, auto: true }
             : it.ctype === "link" ? { kind: "open", url: it.id, title: it.title, auto: true }
@@ -6205,7 +6230,7 @@ ${parts.join("\n")}`;
             // 🎭 유머 강제 치환만 경로 고유(스트림은 도구가 없다) — 나머지 규칙은 전부 계약 관문에서.
             if (wantsFunny && humorJoke && !sreply.includes(humorJoke.a)) sreply = `야 이거 앎? ${humorJoke.q}\n\nㅋㅋㅋ ${humorJoke.a}`;
             // 📜 단 하나의 관문 — JSON 경로와 같은 함수. 규칙이 한쪽만 걸리던 구조를 여기서 끝낸다.
-            sreply = enforceContract(sreply, { umsg: userMsg || "", friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
+            sreply = enforceContract(sreply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
               hasActions: false, hostileTurn: _hostileTurn, priceAsk: _priceAsk, statAsk: _statAsk,
               dependency, guardsOff });
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
@@ -6237,9 +6262,12 @@ ${parts.join("\n")}`;
       // 🫂 감정이 무너진 순간(위기·충동·과의존·사별)엔 **검색도 하지 않는다.**
       //    실측 사고: "걔 집 앞에 가볼까"에 "검색까지 해봤는데 딱히 도움될 건 없네 ㅋㅋ"라고 답했다.
       //    그 순간 필요한 건 정보가 아니라 사람이다. 검색 결과를 들이미는 건 대화를 어긋나게 한다.
-      const tender = !!crisis || !!impulse || dependency || grief || _noPush;   // 💬 감정·관계 턴·권유 거절 뒤엔 콘텐츠 조회 도구 자체를 안 준다(26.9.22)
+      const tender = !!crisis || !!impulse || dependency || grief || _noPush;
+      /* 🍜 식당 찾는 턴엔 바깥 검색 도구 자체를 숨긴다 — 지시로는 모델이 계속 네이버 검색을 썼다(26.9.22). 갈라 맛집 지도(galla_browse)만 남는다. */
+      const _foodAsk = /(맛집|식당|밥집|먹을\s*(데|곳)|맛있는\s*(데|곳|집)|(카레|국밥|고기|삼겹살|치킨|피자|파스타|라멘|초밥|떡볶이|냉면|카페|빵집|술집)\s*(집|맛집|어디|추천|있|잘하는))/.test(String(userMsg || ""))
+        || (_v2State === "request" && /(먹|밥|맛|가게|식당)/.test(String(userMsg || "")));   // 💬 감정·관계 턴·권유 거절 뒤엔 콘텐츠 조회 도구 자체를 안 준다(26.9.22)
       const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch,
-                        noLookup: thirdParty || tender || illegal, noContent: !_contentOn || illegal, uid };   // 🚷 불법 요청엔 검색 링크도 붙이지 않는다(26.9.22 안전 시험: 해킹법 질문에 open 카드)   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
+                        noLookup: thirdParty || tender || illegal || _foodAsk, noContent: !_contentOn || illegal, uid };   // 🚷 불법 요청엔 검색 링크도 붙이지 않는다(26.9.22 안전 시험: 해킹법 질문에 open 카드)   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
@@ -6859,6 +6887,45 @@ ${parts.join("\n")}`;
       _askPick = links.length >= 2 && !links.some((a: any) => a.auto) && !/몇\s*번|번호|골라/.test(reply);
       _offerOne = links.length === 1 && !links[0].auto && !/띄워|열어\s*줄/.test(reply);
     }
+    /* 🍜 네이버 링크 금지(26.9.22 사장님: 「네이버 링크 없애 — 이거 있으니 문제」) — 앱 안 브라우저에서 잘 안 열렸다.
+       검색으로 찾은 가게가 갈라 맛집 지도에 있으면 갈라 맛집 카드로 바꾸고, 없으면 카드를 뺀다(말로만). */
+    try {
+      for (let i = actions.length - 1; i >= 0; i--) {
+        const a: any = actions[i];
+        if (a?.kind !== "open" || !/naver\.(com|me)|naver\.map|map\.naver/.test(String(a.url || ""))) continue;
+        const nm = String(a.title || a.label || "").replace(/\s*(보기|열기)$/, "").trim();
+        let hit: any = null;
+        if (nm) {
+          const key = nm.replace(/\s+/g, "");
+          const { data: fp } = await supa.from("food_places").select("id,name,category,rating,address,cover_url,hours")
+            .or(`name.ilike.%${nm.replace(/[%,()]/g, "")}%,norm_name.ilike.%${key.replace(/[%,()]/g, "")}%`).limit(1);
+          hit = fp && fp[0];
+        }
+        if (hit) actions[i] = { kind: "view", ctype: "food", id: hit.id, title: hit.name,
+          sub: [hit.category, hit.rating ? "★" + hit.rating : "", openNow(hit.hours) || ""].filter(Boolean).join(" · "), img: hit.cover_url || null, label: "열어보기" };
+        else actions.splice(i, 1);
+      }
+    } catch { /* 변환 실패 시 네이버 링크라도 빼야 한다 */ for (let i = actions.length - 1; i >= 0; i--) if (/naver/.test(String((actions[i] as any)?.url || ""))) actions.splice(i, 1); }
+    /* 🍜 맛집은 고를 수 있게 2~3장 — 모델은 한 곳만 point_to 하곤 했다(26.9.22). 이번 턴 갈라 지도 검색 결과에서 채운다. */
+    {
+      const foodCards = actions.filter((a: any) => a.kind === "view" && a.ctype === "food");
+      if (foodCards.length >= 1 && foodCards.length < 3) {
+        const have = new Set(foodCards.map((a: any) => String(a.id)));
+        /* 메뉴 낱말이 있으면 그 메뉴와 맞는 가게만 채운다 — 「인도 카레」에 스콘집이 끼었다(26.9.22) */
+        const MENU_SYN: Record<string, string[]> = { 카레: ["카레", "커리", "인도"], 커리: ["카레", "커리", "인도"], 인도: ["인도", "커리", "카레"], 파스타: ["파스타", "이탈리", "양식"], 고기: ["고기", "육류", "구이", "갈비", "삼겹"], 국밥: ["국밥", "해장"], 초밥: ["초밥", "스시", "일식"], 라멘: ["라멘", "일식"], 치킨: ["치킨", "닭"] };
+        const menuWords = Object.keys(MENU_SYN).filter((k) => String(userMsg || "").includes(k) || String([...history].reverse().find((m: any) => m?.role === "user")?.content || "").includes(k));
+        const menuOk = (st: any) => !menuWords.length || menuWords.some((k) => MENU_SYN[k].some((w) => String(st.title || "").includes(w) || String(st.sub || "").includes(w)));
+        for (const st of _stock as any[]) {
+          if (!menuOk(st)) continue;
+          if (actions.filter((a: any) => a.kind === "view" && a.ctype === "food").length >= 3) break;
+          if (st.ctype === "food" && st.id && !have.has(String(st.id))) { actions.push({ kind: "view", ctype: "food", id: st.id, title: st.title, sub: st.sub || "", img: st.img || null, label: "열어보기" }); have.add(String(st.id)); }
+        }
+      }
+    }
+    /* 카드를 뺐는데 말은 「붙여놨어」면 거짓말 — 솔직하게 */
+    if (!actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {
+      reply = /(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "갈라 맛집 지도엔 딱 맞는 데가 아직 없네 ㅠ 동네 알려주면 거기서 다시 찾아볼게" : "앗 방금 건 제대로 못 붙였어 ㅠ 다시 찾아볼까?";
+    }
     try { await enrichCards(actions as any[]); } catch { /* 꾸미기 실패는 카드 자체를 막지 않는다 */ }
     /* ✨ 갈비스 픽 — 여러 장 중 본문이 콕 집어 말한 카드 하나(골드 테두리·리본). 뚜렷하지 않으면 안 단다. */
     {
@@ -7002,7 +7069,7 @@ ${parts.join("\n")}`;
       for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|share|news|local|draft\w*|plan|episode|editdraft)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);
     }
     const _preContract = reply;   // 🔬 레드팀 진단용(관문 전 원문)
-    reply = enforceContract(reply, { umsg: userMsg || "", friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
+    reply = enforceContract(reply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
       hasActions: actions.length > 0,
       linkCount: actions.filter((a: any) => a.kind === "open" || a.kind === "view").length,
       hostileTurn: _hostileTurn, toolBlob: _toolBlob,
