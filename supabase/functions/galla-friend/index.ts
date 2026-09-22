@@ -6648,6 +6648,29 @@ ${parts.join("\n")}`;
         if (!crisis && /^(아니다\s*)?(아\s*)?(됐어|됐다|그만|그만해|괜찮아|필요\s*없어)(\s*(됐어|그만|ㅇㅇ))*[\s.~!ㅋ]*$/.test(um) && /그만|됐/.test(um) && !/^(알겠|ㅇㅋ|응응?\s*알)/.test(out)) {
           out = pickOf(["알겠어 ㅎㅎ", "ㅇㅋ 알겠어!", "응응 알겠어, 필요하면 불러"]);
         }
+        /* ⑤ 몸 흉내 — 「난 아직 안 먹었지 ㅋㅋ」(26.9.22 회귀 mix05). 갈비스는 못 먹고 못 잔다. 그 문장만 정직한 말로 */
+        {
+          const BODY = /(^|\s)(난|나는|나도|내가)\s*(아직\s*|벌써\s*|방금\s*|오늘\s*)?(안\s*먹었|먹었|못\s*먹었|배고파|배불러|배불|졸려|잤|안\s*잤|점심\s*먹|저녁\s*먹|밥\s*먹)/;
+          if (!crisis && segs().some((x) => BODY.test(x))) {
+            const kept = segs().map((x) => BODY.test(x) ? "난 먹는 몸은 아니지만 ㅎㅎ" : x).join(" ").replace(/(난 먹는 몸은 아니지만 ㅎㅎ\s*){2,}/g, "난 먹는 몸은 아니지만 ㅎㅎ ").trim();
+            out = kept;
+          }
+        }
+        /* ⑥ 술 먹고 잤다 — 누구랑보다 몸 먼저 챙긴다(chat02) */
+        if (!crisis && /술/.test(um) && /(먹고|마시고|마셨|취해)/.test(um) && !/(물|해장|속|머리|괜찮|숙취|쓰려)/.test(out)) {
+          out = out.replace(/\s*[^.!?…\n]*누구랑[^.!?…\n]*[?？]\s*$/, "").trim();
+          out = (out ? out + " " : "") + "속은 괜찮아? 물 많이 마셔 ㅠ";
+        }
+        /* ⑦ 「무슨 소리야」에 같은 질문 되풀이 — 풀어서 다시 말한다(ctx03) */
+        if (!crisis && /(무슨|뭔)\s*(소리|말)|뭐라는|뭐래/.test(um)) {
+          const prevA = String(((history || []).filter((h: any) => h?.role === "assistant").slice(-1)[0] || {}).content || "").replace(/<ms>[\s\S]*?<\/ms>/g, "").trim();
+          const prevQ = (prevA.match(/[^.!?…\n]*[?？]/g) || []).pop() || "";
+          const curQ = (out.match(/[^.!?…\n]*[?？]/g) || []).pop() || "";
+          const norm = (t: string) => t.replace(/[^가-힣a-z0-9]/gi, "").replace(/^(그럼|아|어|근데)/, "");
+          if (prevQ && curQ && (norm(curQ).includes(norm(prevQ).slice(-8)) || norm(prevQ).includes(norm(curQ).slice(-8)))) {
+            out = `아 헷갈리게 말했네 ㅋㅋ 「${prevQ.trim().replace(/^(아|오|벌써\?)\s*/, "")}」 — 그냥 이게 궁금해서 물어본 거야`;
+          }
+        }
         /* ④ 수다 턴에 청하지 않은 권유(「다음엔 그 집 말고 다른 데 시켜보자」) — 그 문장만 뺀다(mix03) */
         if (!crisis && _v2Talk) {
           const REC = /(다른\s*(데|집|곳|가게)|그\s*집\s*말고|딴\s*(데|집))[^.!?\n]{0,15}(시켜|가|먹어|주문해)\s*(보자|봐|볼래|보는\s*거)|추천해\s*줄게|골라\s*줄게/;
