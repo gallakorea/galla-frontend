@@ -996,7 +996,9 @@ async function webSearch(query: string, kind: string) {
         // 🏪 장소는 무조건 '네이버 플레이스'로 — 가게 홈페이지/인스타 잡링크 대신 지도 검색(가게명+동네)이
         //    바로 플레이스 카드로 떨어진다. 주소 앞 2~3토큰(시·구·동)으로 동명 가게 구분.
         const addr = String(it.roadAddress || it.address || "").split(" ").slice(0, 3).join(" ");
-        link = "https://m.map.naver.com/search2/search.naver?query=" + encodeURIComponent((addr ? addr + " " : "") + name);
+        /* 🗺 옛 모바일 지도 검색 주소(m.map.naver.com/search2)는 「잘못된 주소」가 떴다(26.9.22 사장님) → 현행 지도 검색 주소, 검색어는 가게 이름 + 동네만(길면 못 찾는다) */
+        const gu = (String(addr || "").match(/([가-힣]+[구군시])\s/) || [])[1] || "";
+        link = "https://map.naver.com/p/search/" + encodeURIComponent((gu ? gu + " " : "") + name);
       } else {
         link = (it.link && /^https?:/.test(it.link)) ? it.link
           : "https://m.search.naver.com/search.naver?query=" + encodeURIComponent(name);
@@ -2801,7 +2803,7 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든/;
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데/;
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
@@ -6478,7 +6480,7 @@ ${parts.join("\n")}`;
         GD.push("guard:show");
         try {
           const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
-          messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 hot_issues 또는 galla_news로 하나 찾아 그 id로 point_to(mode:view). 방금 얘기한 것과 같은 걸 또 열지 마라." : "방금 얘기한 그 갈라 콘텐츠를 point_to(mode:view, type, id)로 열어라. id를 모르면 hot_issues 또는 galla_news 또는 search_content로 그 콘텐츠를 다시 찾아 그 id로 point_to."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
+          messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 지금 대화 주제에 맞는 도구로 하나 찾아 point_to(mode:view)로 열어라. 방금 것과 같은 걸 또 열지 마라." : "상대가 원하는 것을 **지금 대화의 주제**에서 읽어라(예: 카레 얘기 중 '추천해줘' = 카레 맛집). 음식·가게면 galla_browse(section:food) 또는 web_search(kind:local), 영상이면 hot_videos, 여행지면 galla_browse(section:travel), 이슈·뉴스면 hot_issues·galla_news. 주제와 상관없는 인기 콘텐츠(음악·아무 영상)를 붙이지 마라."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
           const js2 = await chatOnce(messages, { uid, toolChoice: "required" });
           const m2 = js2?.choices?.[0]?.message; if (m2) messages.push(m2);
           for (const c of (m2?.tool_calls || [])) {
@@ -6964,7 +6966,7 @@ ${parts.join("\n")}`;
       const lk = actions.filter((a: any) => (a.kind === "view" && a.id) || (a.kind === "open" && a.url)).slice(0, 5);
       if (lk.length >= 1 && rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(),
         items: lk.map((a: any) => a.kind === "view" ? { ctype: a.ctype || "issue", id: String(a.id), title: String(a.title || "").slice(0, 60), sub: String(a.sub || "").slice(0, 60) }
-          : { ctype: /watch\.html\?v=/.test(a.url) ? "hottube" : "link", id: (String(a.url).match(/[?&]v=([^&]+)/) || [])[1] || String(a.url).slice(0, 200), title: String(a.title || "").slice(0, 60) }) } };
+          : { ctype: /watch\.html\?v=/.test(a.url) ? "hottube" : "link", id: (String(a.url).match(/[?&]v=([^&]+)/) || [])[1] || String(a.url).slice(0, 1200), title: String(a.title || "").slice(0, 60) }) } };
     }
     const cleanActions = actions;
 
