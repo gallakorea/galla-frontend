@@ -4,7 +4,7 @@
 //
 // 모델 무관: 기본 OPENAI_API_KEY(gpt-4o-mini). env로 교체 — FRIEND_API_KEY/BASE_URL/MODEL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
-import { classifyTurn, wantsContent, CORE_V2, v2Blocks, V2_ANCHOR, CORE_V2_REQ, REQ_CARD, TOOLS_LITE, isCreateAsk, type V2State } from "./companion_v2.ts";
+import { classifyTurn, wantsContent, maybeContentAsk, CORE_V2, v2Blocks, V2_ANCHOR, CORE_V2_REQ, REQ_CARD, TOOLS_LITE, isCreateAsk, type V2State } from "./companion_v2.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -267,6 +267,23 @@ function countToolTurn(uid: string | null | undefined) {
 // 💰 원가 계측 — 모든 LLM 응답의 usage를 원장에 적는다. 마진 가드(model_for)가 이 숫자로 판단한다.
 //    OpenAI 호환 응답의 usage 필드명은 공급자마다 조금씩 다르다(딥시크는 prompt_cache_hit_tokens).
 let _lastModelErr = "";
+/* 🎯 콘텐츠를 달라는 말인가 — 작은 판정 호출(26.9.22 사장님: 「콘텐츠 보여 달라는 의향을 캐치」) */
+async function llmIsContentAsk(msg: string, lastBot: string, uid: string | null): Promise<boolean> {
+  const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 2500);
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", signal: ac.signal,
+      headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: CHAT_MODEL, temperature: 0, max_tokens: 3, messages: [
+        { role: "system", content: "한국어 채팅 앱 '갈라'의 AI 친구 대화다. 사용자의 마지막 말이 갈라 안의 볼거리(영상·이슈·뉴스·맛집·여행·글·예측 등)를 보여달라/추천해달라/뭐 있냐고 묻는 말이면 YES, 그냥 수다·감정·근황·혼잣말이거나 넷플릭스 같은 바깥 서비스 고민이면 NO. YES 또는 NO 한 단어만." },
+        { role: "user", content: (lastBot ? `AI 직전 말: ${lastBot.slice(0, 120)}\n` : "") + `사용자 말: ${msg.slice(0, 120)}` },
+      ] }),
+    });
+    const j = await r.json();
+    logSpend(AI_FN + ":cls", CHAT_MODEL, uid, j?.usage);
+    return /YES/i.test(String(j?.choices?.[0]?.message?.content || ""));
+  } catch { return false; } finally { clearTimeout(tm); }
+}
 /* 🟠 Claude 키가 '조직 범위 개인 키'라 워크스페이스 ID 헤더가 있어야 한다(없으면 400 — 26.9.22 조용히 딥시크로 떨어지던 원인) */
 const CLAUDE_WS = Deno.env.get("ANTHROPIC_WORKSPACE_ID") || "wrkspc_016iQJmYENxFtpM8bsyPDC5e";
 const wsHdr = (model: string): Record<string, string> => (/^claude/.test(String(model || "")) ? { "anthropic-workspace-id": CLAUDE_WS } : {});   // 🔬 레드팀 진단 — 요청한 모델이 실패해 딥시크로 조용히 떨어졌는지(26.9.22 하이쿠 비교에서 원가 장부가 비어 있었다)
@@ -5601,7 +5618,12 @@ ${parts.join("\n")}`;
     if (_noPush) { (decided as any).reopen = null; }
     /* 🫂 컴패니언 엔진 v2(26.9.22) — 코드가 먼저 이번 턴 상태를 정한다. 대화 턴이면 콘텐츠 경로를 아예 닫고
        짧은 핵심 성격 + 상태 카드 + 모범 대화로 간다(companion_v2.ts). 끄기: FRIEND_ENGINE=v1 / 레드팀은 body.engine 으로 A/B. */
-    const _v2State: V2State = classifyTurn(userMsg || "", history);
+    let _v2State: V2State = classifyTurn(userMsg || "", history);
+    /* 🧠 애매한 말은 뜻으로 한 번 더 — 정규식은 표현을 끝없이 놓친다(「킬링타임용 뭐 없냐」「요즘 사람들 뭐 보냐」).
+       수다로 판정됐지만 물음·요청 꼴이면 작은 판정 호출 1번(3토큰, ₩0.05 미만, 2.5초 제한 — 실패하면 수다로 둔다). */
+    if (_v2State === "chat" && maybeContentAsk(userMsg || "")) {
+      try { if (await llmIsContentAsk(userMsg || "", String([...history].reverse().find((m: any) => m?.role === "assistant")?.content || ""), uid)) _v2State = "request"; } catch { /* */ }
+    }
     const _engine = (isRedteam && (body?.engine === "v1" || body?.engine === "v2")) ? body.engine : (Deno.env.get("FRIEND_ENGINE") || "v2");
     const _v2Talk = _engine === "v2" && _v2State !== "request" && !crisis && !work && !handoff
       && !((body?.page as any)?.assist) && !(craft?.state === "planning"
@@ -5700,6 +5722,11 @@ ${parts.join("\n")}`;
     let brainModel = (brain === "companion" ? _COMPANION_ENV : _AGENT_ENV) || await chatModel(uid);
     /* 🧪 모델 비교(26.9.22 사장님: 챗지피티는?) — 레드팀 계정만 body.model 로 대화 모델을 바꿔 끼운다(채점판 A/B). */
     if (isRedteam && typeof body?.model === "string" && /^(gpt-|deepseek-|gemini-|claude-)/.test(body.model)) brainModel = body.model;
+    /* 🫂 혼합 — 대화 턴(v2)만 다른 모델(하이쿠 등), 찾기·창작 턴은 그대로. 운영 스위치: FRIEND_TALK_MODEL(비우면 끔). 레드팀은 body.talkModel 로 시험. */
+    {
+      const tm = (isRedteam && typeof body?.talkModel === "string") ? body.talkModel : (Deno.env.get("FRIEND_TALK_MODEL") || "");
+      if (_v2Talk && /^(claude-|gpt-|deepseek-|gemini-)/.test(tm)) brainModel = tm;
+    }
     if (brain === "companion") {
       try {
         const adminModel = Deno.env.get("FRIEND_ADMIN_CHAT_MODEL") || "off";   // 26.9.22 기본 끔 — 사장님만 다른 모델로 돌면 채점판과 체감이 어긋난다

@@ -27,12 +27,20 @@ export function wantsContent(m: string): boolean {
   if (/(재밌는|재미있는|웃긴|볼\s*만한|볼만한|신박한|핫한|뜨는)\s*(거|것|걸|게|콘텐츠|컨텐츠|영상|이슈|글|데|곳|거리)/.test(s)
       && /(있|없|냐|니|나\?|줘|봐|하라고|내놔|\?)/.test(s)) return true;
   if (/(볼\s*거|볼거리|볼\s*게|콘텐츠|컨텐츠)/.test(s) && /(있|없|냐|줘|봐|하라고|내놔|\?)/.test(s)) return true;
+  if (/(킬링\s*타임|심심풀이|올라온\s*(거|것|글)|새로\s*(뜬|올라온)|뭐\s*보냐|뭐\s*봐\?|뭐\s*볼까)/.test(s) && !/(넷플|넷플릭스|디즈니|티빙|왓챠|쿠팡\s*플레이|웨이브|영화관)/.test(s)) return true;   // 바깥 OTT 고민은 수다
+  if (/(웃긴|재밌는|재미있는|볼만한)\s*(거|것|걸)\s*(하나|좀|줘|한\s*개)/.test(s)) return true;
   // 명령·요청 어미가 붙은 경우
   if (/(보여\s*줘|보여줄래|틀어\s*줘|띄워\s*줘|열어\s*줘|찾아\s*줘|찾아줄래|알려\s*줘|알려줄래|추천\s*(해|좀|해줘|해\s*줄래)|골라\s*줘|검색\s*해|조회\s*해|뽑아\s*줘|만들어\s*줘|써\s*줘|올려\s*줘|저장\s*해|투표\s*해|참여\s*해)/.test(s)) return true;
   // 갈라 안 콘텐츠를 콕 집어 묻는 경우(「핫튜브에 뭐 떴어?」「예측 뭐 있어?」)
   if (/(이슈|뉴스|핫튜브|영상|유튜브|예측|숏판|롱판|광장|맛집|여행지|날씨|기온|미세먼지|시세|주가|환율|코인|비트코인|콘텐츠|컨텐츠)/.test(s)
       && /(뭐|뭔|무슨|어때|어떄|있어|있냐|없어|없냐|떴|올라와|얼마|몇|알아\?|어디|\?)/.test(s)) return true;
   return false;
+}
+
+/* 애매한 수다(물음·요청 꼴)인지 — 이런 말만 LLM 판정으로 한 번 더 본다(비용 ₩0.05 미만) */
+export function maybeContentAsk(m: string): boolean {
+  const s = String(m || "").trim();
+  return s.length >= 3 && s.length <= 60 && /(\?|뭐|거|것|냐|없|있|줘|봐|하나|좀|추천|골라)/.test(s);
 }
 
 export function classifyTurn(m: string, hist: { role: string; content: string }[]): V2State {
