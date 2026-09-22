@@ -58,12 +58,15 @@ def wipe(uid):
 
 ENGINE = None   # --engine v1|v2 (레드팀 계정만 서버가 받아준다)
 TALK = None     # --talk claude-haiku-4-5-20251001 (대화 턴만 그 모델 — 혼합)
+STREAM = True   # 기본 = 앱과 같은 스트림 경로. --json 이면 옛 JSON 경로
 MODEL = None    # --model claude-haiku-4-5-20251001 | gpt-5-mini | deepseek-chat (레드팀 계정만)
 
 
 def talk(jwt, msg, hist):
     for a in range(5):
         b = {"message": msg, "history": hist}
+        # ⚠️ 앱과 같은 길로 — 로그인한 앱은 stream=true 로 대화한다(26.9.22: 시험은 JSON·앱은 스트림이라 검사가 앱에서만 빠져 있었다)
+        if STREAM: b["stream"] = True
         if ENGINE: b["engine"] = ENGINE
         if MODEL: b["model"] = MODEL
         if TALK: b["talkModel"] = TALK
@@ -71,11 +74,19 @@ def talk(jwt, msg, hist):
                      {"apikey": ANON, "Authorization": "Bearer " + jwt, "x-redteam-key": RT})
         if st in (429, 503, 0, 502, 504):
             time.sleep(3 * (a + 1)); continue
+        if "event: done" in t:   # SSE — done 이벤트가 앱이 받는 최종본
+            done = None
+            for ch in t.split("\n\n"):
+                if ch.startswith("event: done"):
+                    try: done = json.loads(ch.split("data: ", 1)[1], strict=False)
+                    except Exception: pass
+            if done is not None:
+                return {"reply": "\n\n".join(done.get("bubbles") or []), "actions": done.get("actions") or [], "status": st, "path": "stream"}
         try:
             j = json.loads(t, strict=False)
         except Exception:
             time.sleep(2); continue
-        return {"reply": j.get("reply") or "", "actions": j.get("actions") or [], "status": st}
+        return {"reply": j.get("reply") or "", "actions": j.get("actions") or [], "status": st, "path": "json"}
     return {"reply": "", "actions": [], "status": "fail"}
 
 
@@ -148,7 +159,8 @@ def main():
     only = None; tag = "run"
     if "--only" in args: only = args[args.index("--only") + 1].split(",")
     if "--tag" in args: tag = args[args.index("--tag") + 1]
-    global ENGINE, MODEL, TALK
+    global ENGINE, MODEL, TALK, STREAM
+    if "--json" in args: STREAM = False
     if "--talk" in args: TALK = args[args.index("--talk") + 1]
     if "--engine" in args: ENGINE = args[args.index("--engine") + 1]
     if "--model" in args: MODEL = args[args.index("--model") + 1]
