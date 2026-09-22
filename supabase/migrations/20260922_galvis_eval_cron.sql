@@ -1,0 +1,3 @@
+-- 🧪 통합 시험 매일 자동 실행(새벽 2시 13분 KST = 17:13 UTC, 정각 몰림 피함) + 주간 4턴 인물 배터리는 통합 시험에 흡수(suite=persona)
+select cron.unschedule('galvis-redteam-weekly');
+select cron.schedule('galvis-eval-daily', '13 17 * * *', $$select net.http_post(url:=$u$https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galvis-redteam$u$, headers:=jsonb_build_object($h$Authorization$h$, $h$Bearer $h$ || (select decrypted_secret from vault.decrypted_secrets where name=$n$svc_role_key$n$), $h$x-cron-key$h$,(select decrypted_secret from vault.decrypted_secrets where name=$n$cron_secret$n$),$h$Content-Type$h$,$h$application/json$h$), body:=$b${"op":"eval","suites":"all","trigger":"cron"}$b$::jsonb, timeout_milliseconds:=60000)$$);

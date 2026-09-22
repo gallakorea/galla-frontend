@@ -4065,6 +4065,8 @@ const INTENT_RULES: IntentRule[] = [
       if (!sem) return;
       st.stat.push("sem:" + sem.intent);
       if (sem.intent === "reopen") {
+        /* 의미만으로 다시 열지 않는다 — 「뭐가 170 인데?」가 '다시 열어'로 읽혀 카드가 떴다(26.9.22). 열기 단서가 있어야 한다 */
+        if (!/(열|띄|보여|다시|카드|창|눌러|안\s*(돼|나와|보여|떠))/.test(c.userMsg) || /(뭐가|뭔데|무슨\s*말|무슨\s*뜻)/.test(c.userMsg)) return;
         if (/(날씨|여행|예측|광장|숏판|롱판|핫튜브|지도|삐삐|난장|화면|탭|제일|가장|첫|번째|[0-9]\s*번|인기|뜨거운)/.test(c.userMsg)) return;
         const lv = c.rel?.session_meta?.last_view;
         if (lv?.at && (Date.now() - Date.parse(lv.at)) < 15 * 60000) {
@@ -5199,7 +5201,13 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
         else if (it.ctype !== "link") act = { kind: "view", ctype: it.ctype, id: it.id, title: it.title, sub: it.sub, auto: true };
         if (act) {
           try { await enrichCards([act]); } catch { /* */ }
-          return json({ ok: true, reply: gripe ? [`미안 ㅠ 여기 다시 붙였어 — ${String(act.title || "그거").slice(0, 30)}. 카드 누르면 바로 열려`, `${String(act.title || "그거").slice(0, 30)} 여기 있어! 아래 카드 눌러봐`, `답답했지 ㅠ ${String(act.title || "그거").slice(0, 30)} 다시 붙였어, 카드 누르면 열려`][Math.floor(Math.random() * 3)] : `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
+          /* 항의가 이어지면 같은 말만 반복하지 않는다 — 두 번째부터는 「혹시 카드가 안 보여?」(사람이라면 그렇게 묻는다, 26.9.22 심판) */
+          const _tt = String(act.title || "그거").slice(0, 30);
+          const _nG = history.slice(-6).filter((h: any) => h?.role === "assistant" && /(다시 붙였어|카드 누르면|카드가 안 보여|내 쪽에선)/.test(String(h.content || ""))).length;
+          const _gr = _nG === 0 ? `미안 ㅠ 여기 다시 붙였어 — ${_tt}. 카드 누르면 바로 열려`
+            : _nG === 1 ? `${_tt} 카드 다시 붙였어. 혹시 화면에 카드가 안 보여?`
+            : `답답하게 해서 진짜 미안 ㅠ 내 쪽에선 ${_tt} 카드가 붙어 있는데, 안 보이면 앱을 한 번 껐다 켜줄래?`;
+          return json({ ok: true, reply: gripe ? _gr : `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
         }
       }
     }
@@ -5413,11 +5421,11 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
        예시 문장을 그대로 베껴서 매번 "오 왔네 / 잘 지냈어?"가 나왔다(사장님 지적).
        각도를 하나만 주면 시작점이 구조적으로 갈린다. */
     const GREET_ANGLES = [
-      "지금 네 상태·기분을 한 줄 던지고 상대에게 넘겨라(날씨·졸림·배고픔 등 사소한 것).",
+      /* 🚫 26.9.22 두 각도 삭제 — 「요즘 갈라에서 뭐로 시끄러운지」는 콘텐츠 화제 인사를 '지시'하고 있었다(사장님 「왜 자꾸 똑같은 얘기로 시작하냐」의 출처),
+         「네 상태·기분(졸림·배고픔)」은 몸 없는 AI 에게 「배고프다·멍때리는 중」 거짓말을 시켰다. */
       "상대가 뭐 하다 왔는지 궁금해하는 걸로 열어라.",
-      "지금 시간대에 어울리는 한마디로 열어라(아침·점심·저녁·새벽).",
-      "요즘 갈라에서 사람들이 뭐로 시끄러운지 한 줄로 열어라.",
-      "쓸데없지만 웃긴 생각 하나를 툭 던지며 열어라.",
+      "지금 시간대에 어울리는 한마디로 열어라(아침·점심·저녁·새벽) — 상대의 하루를 챙기는 쪽으로.",
+      "상대를 반가워하며 오늘 하루를 가볍게 물어라.",
       "상대의 관심사(프로필 요약 참고) 중 하나를 가볍게 건드리며 열어라.",
       "말없이 반가워하는 짧은 한마디로만 열고 바로 질문 하나.",
     ];
@@ -6308,6 +6316,22 @@ ${parts.join("\n")}`;
        ① 결정적 검사(거짓 능력·지어낸 회상·날씨·앞 얘기 짚기·말 끊기·말로만 약속→실제로 찾아 붙이기·카드 밖 가게)
        ② DeepSeek 검사관 — 표현을 바꿔 정규식을 빠져나간 거짓말을 잡는다 */
     const honestyPass = async (reply: string, actions: any[]): Promise<string> => {
+      let _fixed = false;   // 결정적 장치가 답을 확정했으면 검사관이 다시 쓰지 않는다(26.9.22: 확정된 「양재천 쪽 상록분식」에 「동네 알려줘」를 끼워 넣었다)
+      {   /* 👋 인사에 외부 콘텐츠 화제 금지 — 프롬프트에 두 번 적어도 「먹방 유튜버들이 영상 지우기 시작했대」로 열었다(사장님 「왜 자꾸 똑같은 얘기로 시작하냐」).
+             내가 갈라에서 한 일(내 글·내 예측)은 인사 재료라 그대로 둔다. */
+        if (!userMsg && !crisis) {
+          const EXT = /(유튜브|유튜버|칼날|핫튜브|영상|뉴스|기사|먹방)/;
+          const segs = String(reply || "").split(/(?<=[.!?…~])\s+|\n+/);
+          if (segs.some((sg) => EXT.test(sg) && !/(네가|니가|너가|올린|쓴)/.test(sg))) {
+            const kept = segs.filter((sg) => !(EXT.test(sg) && !/(네가|니가|너가|올린|쓴)/.test(sg)) && !/몸이\s*없어/.test(sg)).join(" ").trim();
+            const h = new Date(Date.now() + (tzMin || 540) * 60000).getUTCHours();
+            const G = h < 5 ? ["아직 안 잤어? ㅎㅎ 무슨 생각 해?", "새벽이네 ㅎㅎ 잠이 안 와?"] : h < 11 ? ["좋은 아침 ㅎㅎ 오늘 뭐 해?", "아침이다 ㅎㅎ 잘 잤어?"]
+              : h < 14 ? ["점심은 먹었어? ㅎㅎ", "오늘 오전 어땠어?"] : h < 18 ? ["오후 잘 보내고 있어? ㅎㅎ", "오늘 하루 어땠어?"] : ["저녁 먹었어? ㅎㅎ", "오늘 하루 어땠어? 수고했어"];
+            reply = kept.length >= 6 ? kept : G[Math.floor(Math.random() * G.length)];
+            _fixed = true;
+          }
+        }
+      }
       {   /* 🃏 「카드 다시 붙여봤어·여기 띄웠어」라는데 이번 답에 카드가 없다 → 방금 보여준 카드(3시간 안)를 진짜로 다시 붙인다 */
         const has = actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || "")));
         const ll: any = rel?.session_meta?.last_list;
@@ -6321,7 +6345,8 @@ ${parts.join("\n")}`;
       }
       {   /* 🚫 카드는 붙었는데 말로는 「못 띄워/손이 없어/직접 눌러」 — 답 전체가 거짓말 한 문장이면 문장 걸러내기로 못 지운다 → 통째로 교체(26.9.22) */
         const _c: any = actions.find((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
-        if (_c && /(못\s*(해|띄|열|보여)|손이\s*없|직접\s*(눌러|쳐)|할\s*수\s*없)/.test(String(reply || ""))) reply = `여기 띄워놨어 — ${String(_c.title).slice(0, 30)}`;
+        /* ⚠️ 카드·화면 얘기일 때만 — 「170이 뭔지는 확인할 수 없어」 같은 정직한 답을 통째로 카드 문구로 덮던 것(26.9.22 실대화 3회 시험) */
+        if (_c && /((띄우|띄워|띄울|열어|열|보여|카드|화면|링크)[^.!?\n]{0,14}(못\s*해|못해|안\s*돼|안\s*되|할\s*수\s*없)|못\s*(띄|열어|보여)|손이\s*없|직접\s*(눌러|쳐))/.test(String(reply || ""))) reply = `여기 띄워놨어 — ${String(_c.title).slice(0, 30)}`;
       }
       {   /* 🧯 「아까 ~했잖아」 지어내기 — 오늘 대화에 없는 말을 상대가 했다고 우기면 그 문장을 뺀다.
              (26.9.22 사장님: 한 적 없는 「하이닉스 170까지 갈 거 같다고 했잖아」 — 8월 기억 한 줄로 지어냄) */
@@ -6397,12 +6422,13 @@ ${parts.join("\n")}`;
               if (rows.length) {
                 for (let k = actions.length - 1; k >= 0; k--) if ((actions[k] as any).kind === "view" && (actions[k] as any).ctype === "food") actions.splice(k, 1);
                 for (const x of rows) actions.push({ kind: "view", ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover_url || null, label: "열어보기" } as any);
-                reply = `${lead}여기 붙여놨어: ${rows.map((x: any) => x.name).join(", ")}`.slice(0, 90);
-                if (rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(), items: rows.map((x: any) => ({ ctype: "food", id: String(x.id), title: String(x.name || "").slice(0, 60), sub: _dong(x.address) })) } };   // 다음 턴 「왜 안 줘」에 이걸 다시 연다
+                reply = `${lead}${homeAsk && place[0] && !lead ? `${place[0]} 쪽에서 찾았어 — ` : ""}여기 붙여놨어: ${rows.map((x: any) => x.name).join(", ")}`.slice(0, 90);
+                _fixed = true;
+              if (rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(), items: rows.map((x: any) => ({ ctype: "food", id: String(x.id), title: String(x.name || "").slice(0, 60), sub: _dong(x.address) })) } };   // 다음 턴 「왜 안 줘」에 이걸 다시 연다
                 fixed = true; break;
               }
             }
-            if (!fixed && !_hasCard) { reply = base ? `미안, 갈라 맛집 지도엔 ${place[0]} 쪽 가게가 아직 없어 ㅠ` : `미안, 동네를 몰라서 못 붙였어 ㅠ 어느 동네인지 알려줘`; fixed = true; }
+            if (!fixed && !_hasCard) { _fixed = true; reply = base ? `미안, 갈라 맛집 지도엔 ${place[0]} 쪽 가게가 아직 없어 ㅠ` : `미안, 동네를 몰라서 못 붙였어 ㅠ 어느 동네인지 알려줘`; fixed = true; }
           }
           if (!fixed && promise && !_hasCard) {
             const kept = String(reply || "").split(/(?<=[.!?…~])\s+|\n+|\s+—\s+/).filter((sg) => !/(찾아\s*볼게|줄게|찾는\s*중|찾고\s*있어|잠깐만|몇\s*분|다시\s*찾아)/.test(sg)).join(" ").trim();
@@ -6419,7 +6445,7 @@ ${parts.join("\n")}`;
           if (segs.some(alien)) { const kept = segs.filter((sg) => !alien(sg)).join(" ").trim(); reply = kept.length >= 4 ? kept : `여기 붙여놨어: ${actions.filter((a: any) => a.kind === "view" && a.ctype === "food").map((a: any) => a.title).slice(0, 3).join(", ")}`; }
         }
       }
-      reply = await llmVerify(reply, { userMsg: String(userMsg || ""), history, actions, crisis: !!crisis, uid });
+      if (!_fixed) reply = await llmVerify(reply, { userMsg: String(userMsg || ""), history, actions, crisis: !!crisis, uid });
       return reply;
     };
 

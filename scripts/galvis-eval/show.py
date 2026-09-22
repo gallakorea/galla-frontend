@@ -8,11 +8,12 @@ args = [a for a in sys.argv[1:] if not a.startswith("--")]
 path = args[0] if args else sorted(glob.glob(os.path.join(HERE, "runs", "*.json")))[-1]
 d = json.load(open(path, encoding="utf-8"))
 s = d["summary"]
-print(f"합격 {s['합격']}/{s['전체']} ({s['합격률']}%) · 맥락 {s['맥락']} · 사람다움 {s['사람다움']} · 갈비스다움 {s['갈비스다움']}")
-print("코드결함:", s["코드결함"])
+print(f"합격 {s['합격']}/{s['전체']} ({s['합격률']}%)" + (f" · 맥락 {s['맥락']} · 사람다움 {s['사람다움']} · 갈비스다움 {s['갈비스다움']}" if "맥락" in s else ""))
+if s.get("묶음별"): print("묶음별:", {k: f"{v['pass']}/{v['n']}" for k, v in s["묶음별"].items()})
+if s.get("코드결함"): print("코드결함:", s["코드결함"])
 for k, r in d["results"].items():
     j = r.get("judge") or {}
-    bad = r["code"] or not j.get("pass")
+    bad = (not r["pass"]) if "pass" in r else (r["code"] or not j.get("pass"))
     if not bad and "--all" not in sys.argv:
         continue
     print(f"■ {k} [{r['st']}] 코드:{r['code']} 심판:{'합격' if j.get('pass') else '불합격'} 맥락{j.get('ctx')} 사람{j.get('human')} | {j.get('why')}")

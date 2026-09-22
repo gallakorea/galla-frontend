@@ -195,15 +195,11 @@ supabase functions deploy galla-friend
 curl -s -X POST "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-friend" \
   -H "Content-Type: application/json" -H "apikey: $ANON_KEY" \
   -d '{"deviceId":"split-smoke-1","message":"안녕"}' | head -c 300
-#    로그인 JSON 턴 + 스트림 턴은 redteam 계정 JWT로 (scripts/galvis-redteam.mjs가 하는 방식)
+#    로그인 턴은 통합 시험이 레드팀 풀 계정으로 대신한다(스트림 경로는 26.9.22 폐지)
 
-# ④ 레드팀 배터리(엣지 함수 완주형) — 12페르소나 회귀 + 레드플래그 + LLM 심판
-curl -s -X POST "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galvis-redteam" \
-  -H "x-cron-key: $CRON_SECRET"
-# → redteam_runs 최신 행의 health/flags를 직전(분리 전 베이스라인)과 비교. 새 flag 카테고리 = 회귀.
-
-# ⑤ 문제은행 회귀 — ⚠️ 반드시 REDTEAM_KEY 있는 상태로(없으면 운영 게이트를 실제로 소모해 마비)
-python3 scripts/redteam-bank.py --no-save     # 확인만. 통과 후 기록하려면 --no-save 제거
+# ④ 통합 시험(문제은행 하나·채점기 하나 — docs/galvis-qa.md)
+python3 scripts/galvis-eval/run.py --suite bank,safety,real          # 배포 직후 최소
+python3 scripts/galvis-eval/run.py --suite all                       # 전체(약 40분)
 ```
 
 **0단계 — 베이스라인 (분리 전, 오늘이라도)**

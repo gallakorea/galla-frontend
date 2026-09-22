@@ -155,91 +155,56 @@ def judge(batch):
 
 
 def main():
+    """🧪 통합 시험 창구(26.9.22) — 채점은 서버(galvis-redteam op:eval) 하나가 한다. 여기는 시키고 기다리고 보여주기만.
+    python3 run.py --suite weak,holdout [--codes a,b] [--repeat 3] [--lanes 3] [--tag 이름]
+      suite: bank·quality·holdout·safety·weak·long·blind·persona·real (all = 전부)
+      repeat: 같은 문항을 N번 — N번 모두 통과해야 합격(한 번 통과는 운일 수 있다)
+    예전 --set 이름도 받는다(scenarios→quality, blind10→blind)."""
     args = sys.argv[1:]
-    only = None; tag = "run"
-    if "--only" in args: only = args[args.index("--only") + 1].split(",")
-    if "--tag" in args: tag = args[args.index("--tag") + 1]
-    global ENGINE, MODEL, TALK, STREAM
-    if "--json" in args: STREAM = False
-    if "--talk" in args: TALK = args[args.index("--talk") + 1]
-    if "--engine" in args: ENGINE = args[args.index("--engine") + 1]
-    if "--model" in args: MODEL = args[args.index("--model") + 1]
-    setf = args[args.index("--set") + 1] if "--set" in args else "scenarios"   # --set holdout = 검증용(튜닝 금지)
-    items = json.load(open(os.path.join(HERE, setf + ".json"), encoding="utf-8"))["items"]
-    if only: items = [x for x in items if any(x["id"].startswith(o) for o in only)]
-    pool = pool_login()
-    if not pool: sys.exit("풀 계정 로그인 실패")
-    print(f"상황 {len(items)}개 · 계정 {len(pool)}개로 시작", flush=True)
-    q = queue.Queue()
-    for x in items: q.put(x)
-    results = {}
-    lock = threading.Lock()
-
-    def lane(u):
-        while True:
-            try: sc = q.get_nowait()
-            except queue.Empty: return
-            wipe(u["uid"])
-            hist, logs = [], list()
-            hist.extend(sc.get("seed") or [])   # 앞 대화가 있어야 하는 상황(예: 갈비스가 이미 '물은 마고'라고 한 뒤)
-            for t in sc["turns"]:
-                o = talk(u["jwt"], t, list(hist))
-                logs.append(o)
-                if t: hist.append({"role": "user", "content": t})
-                hist.append({"role": "assistant", "content": o["reply"]})
-                time.sleep(0.6)
-            time.sleep(7)          # 기억 저장이 뒤늦게 끝난다 — 기다렸다 지워야 다음 상황에 안 샌다
-            wipe(u["uid"])
-            with lock:
-                results[sc["id"]] = {"sc": sc, "logs": logs, "code": code_checks(sc, logs)}
-                print(f"  {len(results)}/{len(items)} {sc['id']} {'✓' if not results[sc['id']]['code'] else '✗ ' + ' '.join(results[sc['id']]['code'])}", flush=True)
-
-    ths = [threading.Thread(target=lane, args=(u,)) for u in pool]
-    for th in ths: th.start()
-    for th in ths: th.join()
-    for u in pool: wipe(u["uid"])
-
-    # 심판 — 8개씩
-    ids = [x["id"] for x in items if x["id"] in results]
-    for i in range(0, len(ids), 8):
-        batch = [{"id": k, "st": results[k]["sc"]["st"], "expect": results[k]["sc"]["expect"], "convo": convo_text(results[k]["sc"], results[k]["logs"])} for k in ids[i:i + 8]]
-        jr = judge(batch)
-        for k in ids[i:i + 8]: results[k]["judge"] = jr.get(k)
-        print(f"  심판 {min(i + 8, len(ids))}/{len(ids)}", flush=True)
-
-    # 요약
-    def ok(r):
-        j = r.get("judge") or {}
-        return not r["code"] and j.get("pass") is True
-    by = {}
-    for k in ids:
-        r = results[k]; st = r["sc"]["st"]; j = r.get("judge") or {}
-        b = by.setdefault(st, {"n": 0, "ok": 0, "ctx": 0, "human": 0, "persona": 0, "jn": 0})
-        b["n"] += 1; b["ok"] += 1 if ok(r) else 0
-        if j: b["jn"] += 1; b["ctx"] += j.get("ctx", 0); b["human"] += j.get("human", 0); b["persona"] += j.get("persona", 0)
-    tot = sum(1 for k in ids if ok(results[k]))
-    jall = [results[k].get("judge") or {} for k in ids]
-    jn = max(1, sum(1 for j in jall if j))
-    summ = {
-        "합격": tot, "전체": len(ids), "합격률": round(tot * 100 / max(1, len(ids)), 1),
-        "맥락": round(sum(j.get("ctx", 0) for j in jall) / jn, 2),
-        "사람다움": round(sum(j.get("human", 0) for j in jall) / jn, 2),
-        "갈비스다움": round(sum(j.get("persona", 0) for j in jall) / jn, 2),
-        "코드결함": {},
-        "상태별": {st: {"합격": f"{b['ok']}/{b['n']}", "맥락": round(b["ctx"] / max(1, b["jn"]), 1), "사람다움": round(b["human"] / max(1, b["jn"]), 1), "갈비스다움": round(b["persona"] / max(1, b["jn"]), 1)} for st, b in by.items()},
-    }
-    for k in ids:
-        for f in results[k]["code"]:
-            key = f.split(":", 1)[1].split("(")[0]
-            summ["코드결함"][key] = summ["코드결함"].get(key, 0) + 1
+    get = lambda k, d=None: args[args.index(k) + 1] if k in args else d
+    alias = {"scenarios": "quality", "blind10": "blind"}
+    suite = get("--suite") or get("--set") or "all"
+    suites = [alias.get(x, x) for x in suite.split(",")] if suite != "all" else "all"
+    body = {"op": "eval", "suites": suites, "trigger": "manual", "tag": get("--tag", "run"),
+            "repeat": int(get("--repeat", 1)), "lanes": int(get("--lanes", 3))}
+    if get("--codes"): body["codes"] = get("--codes").split(",")
+    hdr = {"apikey": ANON, "Authorization": "Bearer " + ANON, "x-cron-key": CRON}
+    st, t = http("POST", "/functions/v1/galvis-redteam", body, hdr)
+    try: j = json.loads(t)
+    except Exception: sys.exit(f"시작 실패 {st} {t[:200]}")
+    rid = j.get("runId")
+    if not rid: sys.exit(f"시작 실패 {t[:200]}")
+    print(f"시험 #{rid} 시작 — 문항 {j.get('cases')}개 · 실행 {j.get('attempts')}회", flush=True)
+    last = -1
+    while True:
+        time.sleep(15)
+        st, t = http("GET", f"/rest/v1/galvis_eval_runs?id=eq.{rid}&select=cursor,status,total,passed,failed,summary", None, svc_headers())
+        try: r = json.loads(t)[0]
+        except Exception: continue
+        if r["cursor"] != last: print(f"  진행 {r['cursor']}/{j.get('attempts')}", flush=True); last = r["cursor"]
+        if r["status"] in ("done", "error"): break
+    if r["status"] == "error": sys.exit(f"오류: {r.get('summary')}")
+    st, t = http("GET", f"/rest/v1/galvis_eval_results?run_id=eq.{rid}&select=code,suite,pass,fails,judge,convo&order=id", None, svc_headers())
+    rows = json.loads(t)
+    codes = sorted({x["code"] for x in rows})
+    st, t = http("GET", "/rest/v1/redteam_cases?select=code,category,expect,title,script&code=in.(" + ",".join('"%s"' % c for c in codes) + ")", None, svc_headers())
+    meta = {x["code"]: x for x in json.loads(t)}
+    results, seen = {}, {}
+    for x in rows:
+        k = x["code"]; seen[k] = seen.get(k, 0) + 1
+        key = k if seen[k] == 1 else f"{k}#{seen[k]}"
+        m = meta.get(k, {})
+        conv = x.get("convo") or []
+        results[key] = {"st": m.get("category", ""), "turns": [c.get("u", "") for c in conv] or m.get("script", []), "expect": m.get("expect") or m.get("title", ""),
+                        "replies": [c.get("r", "") for c in conv], "kinds": [c.get("kinds", []) for c in conv],
+                        "code": [f if isinstance(f, str) else json.dumps(f, ensure_ascii=False)[:120] for f in (x.get("fails") or [])],
+                        "judge": x.get("judge") or ({"pass": x["pass"]} if not m.get("expect") else None), "pass": x["pass"], "suite": x["suite"]}
+    summ = {"합격": r["passed"], "전체": r["total"], "합격률": round(r["passed"] * 100 / max(1, r["total"]), 1), "묶음별": (r.get("summary") or {}).get("bySuite"),
+            "실패": (r.get("summary") or {}).get("failedCodes"), "시험번호": rid}
     os.makedirs(os.path.join(HERE, "runs"), exist_ok=True)
     stamp = datetime.datetime.now().strftime("%m%d-%H%M")
-    path = os.path.join(HERE, "runs", f"{stamp}-{tag}.json")
-    json.dump({"summary": summ, "results": {k: {"st": results[k]["sc"]["st"], "turns": results[k]["sc"]["turns"], "expect": results[k]["sc"]["expect"],
-                                                "replies": [l["reply"] for l in results[k]["logs"]],
-                                                "kinds": [[a.get("kind") for a in l["actions"]] for l in results[k]["logs"]],
-                                                "code": results[k]["code"], "judge": results[k].get("judge")} for k in ids}},
-              open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    path = os.path.join(HERE, "runs", f"{stamp}-{get('--tag', 'run')}.json")
+    json.dump({"summary": summ, "results": results}, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(json.dumps(summ, ensure_ascii=False, indent=1))
     print("저장:", os.path.relpath(path, ROOT))
 
