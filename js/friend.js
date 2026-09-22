@@ -80,6 +80,33 @@
     var a=log[log.length-1]||{}, b=log[log.length-2]||{};
     return String(a.content||"").slice(-60)+"§"+String(b.content||"").slice(-40);
   }
+  /* 🃏 카드 보존 — 대화 기록은 글자만 저장돼서, 대화를 다시 그리면(풀 모드 복귀·실시간 동기화·새로 열기) 카드와 사진이 사라졌다(26.9.22 사장님).
+     카드는 그 말풍선 글자를 열쇠로 이 기기에 따로 저장해 두고, 다시 그릴 때 붙인다(자동 열기 없이). */
+  var _cardMap=null;
+  function cardKey(t){ return String(t||"").replace(/[0-9\s]+/g,"").slice(0,60); }
+  function cardMapLoad(){ if(_cardMap) return _cardMap; try{ _cardMap=JSON.parse(localStorage.getItem("frCards:"+(_uid||"anon"))||"{}")||{}; }catch(e){ _cardMap={}; } return _cardMap; }
+  function rememberCards(msgEl, actions){
+    try{
+      var bb=msgEl && (msgEl.querySelector(".fr-bubble")||msgEl); var k=cardKey(bb && bb.textContent); if(!k) return;
+      var cs=(actions||[]).filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); }).slice(0,3)
+        .map(function(a){ return { kind:a.kind, ctype:a.ctype, id:a.id, url:a.url, title:a.title, sub:a.sub, img:a.img, label:a.label, source:a.source, badge:a.badge }; });
+      if(!cs.length) return;
+      var m=cardMapLoad(); m[k]={ c:cs, at:Date.now() };
+      var ks=Object.keys(m); if(ks.length>80){ ks.sort(function(x,y){ return (m[x].at||0)-(m[y].at||0); }).slice(0, ks.length-80).forEach(function(x){ delete m[x]; }); }
+      localStorage.setItem("frCards:"+(_uid||"anon"), JSON.stringify(m));
+    }catch(e){}
+  }
+  function restoreCards(){
+    try{
+      var m=cardMapLoad(); if(!logEl) return;
+      logEl.querySelectorAll(".fr-msg.fr-a").forEach(function(msgEl){
+        if(msgEl.querySelector(".fr-acts")) return;
+        var bb=msgEl.querySelector(".fr-bubble"); var hit=m[cardKey(bb && bb.textContent)];
+        if(hit && hit.c && hit.c.length) addActions(msgEl, hit.c.map(function(a){ var o={}; for(var k in a) o[k]=a[k]; o.auto=false; o._restored=true; return o; }));
+      });
+      _cardGroup=null; _offerOne=null;   // 되살린 옛 카드가 「1번/ㅇㅇ」 대상이 되지 않게
+    }catch(e){}
+  }
   function renderHistory(log){
     if(!logEl) return;
     logEl.innerHTML="";
@@ -88,6 +115,7 @@
       if(msg && msg.role==="user") addMsg("u", msg.content||"");
       else splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); });
     });
+    restoreCards();
     scrollBottom();
   }
   function applyRemoteChat(remoteLog){
@@ -734,7 +762,10 @@
         if(_asEl){ _asEl.classList.add("fri-away"); friExpand(false); var tk=_asEl.querySelector(".fri-tick"); if(tk) tk.textContent="대화로 돌아가기"; }
       }
     }, 1000);
+    /* 💬 대화 중에 카드를 눌러 왔으면 — 새 한마디·「세 줄 요약」 버튼 없이 하던 대화를 그대로 잇는다(26.9.22 사장님: 「미니 모드도 대화하던 게 아니고 3줄 요약 이러고」) */
+    var _fromChat = !fromBoot && !!(logEl && logEl.querySelector(".fr-msg"));
     buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0;
+    if(_fromChat){ var _ms=logEl.querySelectorAll(".fr-msg"); for(var _i=_ms.length-1;_i>=0;_i--){ if(_ms[_i].classList.contains("fr-u")){ _asBase=_i+1; break; } } }
     try{ var ob=orb && orb.getBoundingClientRect(); if(ob && ob.width){ _asEl.style.setProperty("--fx", Math.round(ob.left+ob.width/2 - window.innerWidth/2)+"px"); _asEl.style.setProperty("--fy", Math.round(ob.top+ob.height/2 - (window.innerHeight-110))+"px"); } }catch(e){}
     setSurface("island"); _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
     _asEl.querySelector(".fri-tick").textContent="보는 중…";
@@ -745,9 +776,10 @@
       travel:["저장해줘","근처 맛집"], hottube:["비슷한 거 더"], video:["비슷한 거 더"], plaza:["요약해줘","댓글 분위기"], gallari:["비슷한 거 더"] };
     var qk=_asEl.querySelector(".fra-quick"); qk.innerHTML="";
     var QI={ "세 줄 요약":"sum","요약해줘":"sum","쟁점만":"sum","넌 어느 편?":"side","판세 알려줘":"chart","나도 참여할래":"join","저장해줘":"save","근처 다른 데":"pin","근처 맛집":"pin","비슷한 거 더":"more","댓글 분위기":"chart" };
-    (QK[_assist.type]||["요약해줘"]).forEach(function(t, qi){ var b=el('<button class="fra-q" style="--qi:'+qi+'">'+(FRI_IC[QI[t]]||FRI_IC.more)+'<span></span></button>'); b.querySelector("span").textContent=t;
+    if(!_fromChat) (QK[_assist.type]||["요약해줘"]).forEach(function(t, qi){ var b=el('<button class="fra-q" style="--qi:'+qi+'">'+(FRI_IC[QI[t]]||FRI_IC.more)+'<span></span></button>'); b.querySelector("span").textContent=t;
       b.onclick=function(){ sendText(t==="세 줄 요약"?"이거 세 줄로 요약해줘":t==="넌 어느 편?"?"넌 이거 어느 편이야?":t==="판세 알려줘"?"이 예측 판세 어때?":t==="근처 다른 데"?"이 근처 다른 맛집도 보여줘":t==="근처 맛집"?"이 근처 맛집 찾아줘":t==="비슷한 거 더"?"이거랑 비슷한 거 더 보여줘":t==="쟁점만"?"이 뉴스 쟁점만 짚어줘":t==="댓글 분위기"?"여기 댓글 분위기 어때?":t); };
       qk.appendChild(b); });
+    if(_fromChat){ setTimeout(function(){ syncAssist(); }, 450); return; }   // 하던 대화 그대로(마지막 주고받은 말이 보인다)
     (async function(){
       await sleep(fromBoot ? 900 : 650);          // 화면이 뜬 뒤에 말한다
       if(!logEl.children.length){ try{ await restoreOrGreet(true); }catch(e){} }
@@ -1551,6 +1583,7 @@
         else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
       });
       _frNoAnim=false;
+      restoreCards();
       /* 📍 새 대화 경계 — 복원분은 살짝 딤 + 구분선. "어디부터 지금 대화인지 모르겠다"(사장님). */
       try{
         logEl.querySelectorAll(".fr-msg").forEach(function(m){ m.classList.add("fr-old"); });
@@ -1932,6 +1965,7 @@
   }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
+    if(!(actions[0] && actions[0]._restored)) rememberCards(msgEl, actions);
     var links=actions.filter(function(a){ return (a.kind==="open"||a.kind==="view") && (a.title||a.sub); });
     var numbered = links.length>=2 && !actions.some(function(a){ return a.auto===true; });
     _cardGroup = numbered ? links : null;

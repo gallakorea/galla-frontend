@@ -221,6 +221,7 @@ export const REQ_CARD = `[이번 턴: 상대가 콘텐츠·정보를 달라고 �
 export const TOOLS_LITE = `[찾기·보여주기 도구]
 - 영상·핫튜브·"요즘 뭐 떠" → hot_videos(실제 인기영상). 유튜브를 web_search 로 찾지 마라.
 - 갈라 이슈 → hot_issues · 갈라뉴스 → galla_news · 맛집·여행·숏판·롱판·예측·광장 둘러보기 → galla_browse(section) · 특정 콘텐츠 찾기 → search_content · 요즘 갈라 분위기 → platform_buzz
+- 🍜 음식·식당·맛집은 **무조건 갈라 맛집 지도 먼저** → galla_browse(section:food, query=동네+메뉴) 후 point_to(type:food). 갈라 지도에 정말 없을 때만 web_search(kind:local)를 쓰고, 그땐 「우리 맛집 지도엔 아직 없어서 밖에서 찾아봤어」라고 먼저 말해라.
 - 날씨 → weather_now · 코인·주식·환율 → market_quote · 바깥 현실 정보(가게·장소·최신 사건) → web_search(결과에 있는 것만)
 - 보여줄 땐 point_to(mode:view, type, id) — id 는 도구 결과에 있는 값 그대로. 바깥 검색 결과는 open_link(url 은 결과의 링크 그대로).
 - 앱 화면 열기(예측·지갑·설정 등) → app_action(op:goto). 내 글 반응·소식 → my_activity.`;

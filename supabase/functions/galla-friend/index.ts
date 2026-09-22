@@ -6480,7 +6480,7 @@ ${parts.join("\n")}`;
         GD.push("guard:show");
         try {
           const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
-          messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 지금 대화 주제에 맞는 도구로 하나 찾아 point_to(mode:view)로 열어라. 방금 것과 같은 걸 또 열지 마라." : "상대가 원하는 것을 **지금 대화의 주제**에서 읽어라(예: 카레 얘기 중 '추천해줘' = 카레 맛집). 음식·가게면 galla_browse(section:food) 또는 web_search(kind:local), 영상이면 hot_videos, 여행지면 galla_browse(section:travel), 이슈·뉴스면 hot_issues·galla_news. 주제와 상관없는 인기 콘텐츠(음악·아무 영상)를 붙이지 마라."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
+          messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 지금 대화 주제에 맞는 도구로 하나 찾아 point_to(mode:view)로 열어라. 방금 것과 같은 걸 또 열지 마라." : "상대가 원하는 것을 **지금 대화의 주제**에서 읽어라(예: 카레 얘기 중 '추천해줘' = 카레 맛집). 음식·가게면 반드시 galla_browse(section:food)로 갈라 맛집 지도부터(정말 없을 때만 web_search(kind:local)), 영상이면 hot_videos, 여행지면 galla_browse(section:travel), 이슈·뉴스면 hot_issues·galla_news. 주제와 상관없는 인기 콘텐츠(음악·아무 영상)를 붙이지 마라."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
           const js2 = await chatOnce(messages, { uid, toolChoice: "required" });
           const m2 = js2?.choices?.[0]?.message; if (m2) messages.push(m2);
           for (const c of (m2?.tool_calls || [])) {
