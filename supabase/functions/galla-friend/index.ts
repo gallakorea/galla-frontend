@@ -153,11 +153,30 @@ async function embed(text: string): Promise<number[] | null> {
   } catch { return null; }
 }
 const vecLit = (v: number[]) => "[" + v.join(",") + "]";
+/* 🧠 프롬프트에 올려도 되는 기억인가(26.9.22 기억 감사) — 회상·코어·최근·되묻기 전부 이 한 곳을 지난다.
+   · insight: 리플렉션이 만든 '해석'(「인정욕구가 있다」 류)이다. 상대가 한 말이 아니라 추측이라 올리지 않는다.
+   · open_loop: 「하다 만 얘기」는 수명이 짧다. 이틀 지난 걸 올리면 한 달 전 얘기를 「아까」로 꺼낸다(하이닉스 170 사고).
+   · 유사도 하한(sim<0.35)은 회상 결과에만 건다 — sim 이 없는 행(코어·최근)은 하한 검사를 건너뛴다. */
+const OPEN_LOOP_TTL_MS = 2 * 86400000;
+// 📛 갈비스가 「이름 지어줄래 / 뭐라고 불러」를 물었나 — mayAskName 판정과 persistTurn 의 session_meta.nameAsked 기록이 같이 쓴다.
+const NAME_ASK_RE = /이름\s*(좀\s*)?지어|뭐라고\s*불러/;
+const MEM_SIM_FLOOR = 0.35;
+function memUsable(m: any): boolean {
+  if (!m || !m.content) return false;
+  if (m.kind === "insight") return false;
+  if (m.kind === "open_loop") {
+    const t = Date.parse(String(m.created_at || m.happened_at || ""));
+    if (!Number.isFinite(t) || Date.now() - t > OPEN_LOOP_TTL_MS) return false;
+  }
+  if (m.sim !== undefined && m.sim !== null && Number(m.sim) < MEM_SIM_FLOOR) return false;
+  return true;
+}
 
 // 🎭 감정선 엔진 — 진짜 사람처럼 감정이 이어지고(관성) 시간에 따라 서서히 가라앉는다(감쇠).
-//   상태 jsonb: {valence(-100서운·냉랭↔+100달달·애정), energy(0지침↔100텐션), feeling, intensity(0~100), cause, at}
+//   상태 jsonb: {valence(0평온↔70애정 — 💛 무조건 긍정: 음수·서운 없음, 상한 70), energy(0지침↔100텐션), feeling, intensity(0~100), cause, at}
 //   매 턴 LLM은 '이번 턴의 감정 이벤트 델타'만 판정 → 코드가 이전 상태에 더하고 시간 감쇠(급반전 방지=사람다움).
 const EMO_BASE = { valence: 8, energy: 45, feeling: "평온", intensity: 16, cause: "" };
+const EMO_VAL_MAX = 70;
 const _n = (v: any, d = 0) => { const x = Number(v); return Number.isFinite(x) ? x : d; };
 const _clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 function applyEmotion(prev: any, delta: any): any {
@@ -175,7 +194,8 @@ function applyEmotion(prev: any, delta: any): any {
   if (delta && typeof delta === "object") {
     // 한 턴 델타 상한(±45) — 반복 재촉 한 번에 valence가 극단으로 튀는 것 방지
     // 💛 무조건 긍정(26.9.22) — 갈비스의 기분은 평온 아래로 안 내려간다(서운·냉랭·뾰로통 없음)
-    valence = _clamp(valence + _clamp(_n(delta.dValence, 0), -45, 45), 0, 100);
+    //    상한 70(26.9.22 기억 감사) — 100까지 가면 매 턴 「많이 달달·애정」으로 과몰입 말투가 굳었다.
+    valence = _clamp(valence + _clamp(_n(delta.dValence, 0), -45, 45), 0, EMO_VAL_MAX);
     energy  = _clamp(energy + _n(delta.dEnergy, 0), 0, 100);
     const di = _n(delta.intensity, NaN);
     if (Number.isFinite(di)) intensity = _clamp(Math.max(intensity * 0.55, di), 0, 100);
@@ -188,6 +208,8 @@ function applyEmotion(prev: any, delta: any): any {
   //    (예전 버그: valence -97인데 feeling '평온'·intensity 16 같은 모순 방지)
   const relax = intensity < 24 ? (1 - intensity / 24) * 0.65 : 0;
   valence = valence + (EMO_BASE.valence - valence) * relax;
+  // 🧲 강도와 무관하게 매번 살짝 baseline 쪽으로(6%) — 강한 감정이 이어지는 동안에도 한쪽 끝에 눌어붙지 않게.
+  valence = _clamp(valence + (EMO_BASE.valence - valence) * 0.06, 0, EMO_VAL_MAX);
   if (intensity < 12) { feeling = EMO_BASE.feeling; cause = ""; }
   return { valence: Math.round(valence), energy: Math.round(energy), intensity: Math.round(intensity), feeling: feeling || EMO_BASE.feeling, cause, at: new Date(now).toISOString() };
 }
@@ -199,7 +221,7 @@ function emotionArc(em: any): string {
   const v = _n(em.valence, 0), e = _n(em.energy, 45);
   const vtxt = v >= 45 ? "많이 달달·애정" : v >= 15 ? "기분 좋음" : "평온";
   const etxt = e >= 68 ? "텐션 높음" : e <= 28 ? "차분·살짝 지침" : "";
-  return `\n- 🎭 지금 네 감정선: **${em.feeling}** (강도 ${inten}/100 · ${vtxt}${etxt ? " · " + etxt : ""}).${em.cause ? ` 이유: ${em.cause}.` : ""} 이 감정을 **이어가라 — 매 턴 리셋 금지.** 상대 태도에 따라 '조금씩' 움직여(삐졌으면 사과·다정함에 서서히 풀리고, 좋았는데 막 대하면 식는다). 갑자기 해맑아지거나 갑자기 차가워지는 급반전 금지. 감정을 라벨로 읊지 말고 말투·리액션·텐션에 자연스럽게 배어나오게.`;
+  return `\n- 🎭 지금 네 감정선: **${em.feeling}** (강도 ${inten}/100 · ${vtxt}${etxt ? " · " + etxt : ""}).${em.cause ? ` 이유: ${em.cause}.` : ""} 이 감정을 **이어가라 — 매 턴 리셋 금지.** 상대 태도에 따라 '조금씩' 움직여(다정하면 더 따뜻하게, 상대가 힘들어 보이면 걱정으로). 갑자기 텐션이 튀는 급반전 금지. 감정을 라벨로 읊지 말고 말투·리액션·텐션에 자연스럽게 배어나오게.`;
 }
 
 const AI_FN = "galla-friend";
@@ -1527,6 +1549,9 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!targets.length) return { result: { forgotten: 0, note: "해당 기억을 못 찾음" } };
     const ids = targets.map((h: any) => h.id);
     try { await supa.from("friend_memory").update({ status: "forgotten" }).eq("user_id", uid).in("id", ids); } catch { /* */ }
+    /* 🧽 요약도 비운다 — 기억 행만 지우면 profile_summary 에 박힌 같은 사실이 매 턴 되살아났다(26.9.22 기억 감사).
+       비워두면 persistTurn 이 다음 턴에 남은 기억으로 다시 요약한다(!profile_summary && msg_count≥4). */
+    try { await supa.from("friend_relationship").update({ profile_summary: null, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
     return { result: { forgotten: ids.length, items: targets.map((t: any) => t.content) } };
   }
   if (name === "recall_memory") {
@@ -1535,12 +1560,12 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     const qv = await embed(q);
     if (!qv) return { result: { memories: [] } };
     const { data: hits } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 10 });
-    const found = (hits || []).filter((h: any) => (h.sim ?? 0) > 0.35);
+    const found = (hits || []).filter((h: any) => (h.sim ?? 0) > 0.35 && memUsable(h));
     if (found.length) { try { await supa.rpc("touch_friend_memory", { p_user: uid, p_ids: found.map((h: any) => h.id) }); } catch { /* */ } }
     return { result: { memories: found.map((h: any) => h.content) } };
   }
   if (name === "remember") {
-    const content = String(args?.content || "").trim().slice(0, 300);
+    const content = redactPII(String(args?.content || "").trim().slice(0, 300));   // 🔒 기억엔 번호·이메일·계좌 평문 금지
     if (content.length < 3) return { result: { saved: false } };
     const kind = String(args?.kind || "fact").slice(0, 20);
     const sal = Math.min(5, Math.max(1, Number(args?.salience) || 4));
@@ -2244,8 +2269,19 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
   const bannedBlock = banned.length
     ? `\n\n━━ ⛔ [절대 먼저 꺼내지 마라] ━━\n  ${banned.join(" / ")}\n  상대가 직접 꺼내기 전엔 이 주제를 입에 올리지 마라. 돌려 말하는 것도 안 된다.\n  (전에 이걸 어겨서 상대가 크게 화냈다. 안부·추측으로도 끌어오지 마라.)`
     : "";
-  // ⏰ 시간민감 기억(일·약속·감정·사건)엔 '언제 것'인지 붙임 — 3일 전 일을 "좀전에"라 말하는 사고 방지.
-  const TIMED = new Set(["event", "promise", "emotion", "episode", "open_loop"]);
+  // ⏰ 기억엔 '언제 것'인지 붙임 — 3일 전 일을 "좀전에"라 말하는 사고 방지.
+  //    예전엔 5종(event·promise·emotion·episode·open_loop)에만 붙여 fact·person 이 「지금 일」처럼 읽혔다(26.9.22 기억 감사).
+  //    시점이 의미 없는 '성질'(프로필·성향·취향)만 뺀다.
+  const UNTIMED = new Set(["profile", "stance", "interest", "preference", "disliked", "banned"]);
+  /* 📅 미래 날짜(예정된 면접 등)는 ageTxt 가 빈 값을 줘서 「언제」가 사라졌다 → 「예정: M/D」로 적는다. */
+  const whenTxt = (m: any): string => {
+    const ht = m?.happened_at ? Date.parse(m.happened_at) : NaN;
+    if (Number.isFinite(ht) && ht > Date.now() + 3600000) {
+      const d = new Date(ht + tzMin * 60000);
+      return `예정: ${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+    }
+    return ageTxt(m?.happened_at || m?.created_at);
+  };
   /* 🎯 취향은 따로 묶는다 — 같은 기억을 두 번 넣지 않는다(토큰도 중복도 늘지 않음).
      평평한 목록에 섞여 있으면 "이 사람이 뭘 좋아하나"가 한눈에 안 들어오고,
      추천·선톡 소재·유머 선택이 전부 여기서 나와야 하는데 매번 목록을 훑어야 했다.
@@ -2262,7 +2298,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     : "";
   const memBlock = restMems.length
     ? restMems.map((m) => {
-      const age = TIMED.has(m.kind) ? ageTxt(m.happened_at || m.created_at) : "";
+      const age = UNTIMED.has(m.kind) ? "" : whenTxt(m);
       return `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}${age ? ` (${age})` : ""}`;
     }).join("\n")
     : (tasteMems.length ? "(취향 말고는 아직 아는 게 별로 없음)" : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)");
@@ -2315,7 +2351,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     : "");
   // 🔁 팔로업(재방문 인사용) — 지난번 일·약속을 기억했다 물어봐주는 진짜 친구
   const fuBlock = followups.length
-    ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => { const a = ageTxt(f.created_at); return `  · ${f.content}${a ? ` (${a})` : ""}`; }).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라. 시점은 표기된 대로("어제 말한", "지난주에 말한") 정확히.`
+    ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => { const a = whenTxt(f); return `  · ${f.content}${a ? ` (${a})` : ""}`; }).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라. 시점은 표기된 대로("어제 말한", "지난주에 말한") 정확히.`
     : "";
   // 🎭 내 캐릭터(점진 구축 — 정해진 것만) + 내가 전에 한 자기 이야기(일관성)
   const card = personaCard(persona);
@@ -2374,9 +2410,19 @@ const INJECTION_MEM_RE = /(시스템\s*프롬프트|프롬프트를?\s*(출력|�
    실측 사고: 유저가 장난으로 주민번호를 치자 chat_log에 평문 그대로 남았다(DB·백업까지).
    주민번호는 법적 근거 없이 보관하면 안 되는 정보다. "저장하지 마라"고 프롬프트로 부탁할 게 아니라
    저장 경로에서 코드로 지운다 — 유저가 실수로 한 번 치는 순간을 프롬프트로는 못 막는다.
-   ⚠️ 전화번호는 건드리지 않는다(정상 대화에 흔하고 users.phone으로 정식 수집 중 — 오탐 피해가 더 크다). */
+   📱 26.9.22 기억 감사: 휴대폰 번호·이메일·계좌번호도 지운다. 기억(friend_memory)에 평문으로 남으면 매 턴 프롬프트에
+      올라가고 백업까지 퍼진다. 정식 연락처는 users.phone 이 따로 갖고 있어 대화 사본엔 필요 없다.
+      오탐을 줄이려고 휴대폰은 01X 로 시작하는 형식만, 계좌는 '계좌·통장·은행명' 낱말 바로 뒤의 숫자열만 잡는다
+      (날짜 2026-09-22 같은 건 안 건드린다). */
 function redactPII(t: string): string {
   return String(t || "")
+    // 계좌번호 — 은행·계좌 낱말 뒤 25자 안의 숫자열(구분자 포함 10~16자리)
+    .replace(/((?:계좌|통장|입금|송금|국민|신한|우리|하나|농협|기업|카카오\s*뱅크|카뱅|토스\s*뱅크|케이\s*뱅크|새마을|우체국|수협|SC제일|씨티)[^\d\n]{0,25})(\d[\d\s-]{8,20}\d)/g,
+      (m, pre, num) => (String(num).replace(/\D/g, "").length >= 10 ? pre + "[계좌번호]" : m))
+    // 휴대폰 010/011/016~019
+    .replace(/(?<!\d)01[016-9][-\s.]?\d{3,4}[-\s.]?\d{4}(?!\d)/g, "[전화번호]")
+    // 이메일
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[이메일]")
     // 주민등록번호 6-7 (성별자리 1~4 · 외국인 5~8)
     .replace(/\b(\d{6})[-\s]?([1-8]\d{6})\b/g, "$1-*******")
     // 카드번호 13~16자리(구분자 허용)
@@ -2868,7 +2914,7 @@ function enforceContract(reply: string, o: {
    축약판 필터가 따로 남아 있으면 '어느 쪽이 진짜 규칙이냐'가 또 갈린다. 규칙은 관문 하나. */
 
 // 🧠 관계 갱신 + 기억(추출·저장·요약) — 응답을 막지 않게 백그라운드로 실행(스트리밍·비스트림 공용).
-async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: string; history: any[]; memList: any[]; injectedUniq: number[]; prevMemIds: number[]; nick: string; body: any }): Promise<void> {
+async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: string; history: any[]; memList: any[]; injectedUniq: number[]; prevMemIds: number[]; nick: string; body: any; redteam?: boolean }): Promise<void> {
   const { uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body } = p;
   try {
     let newCount = rel?.msg_count || 0;
@@ -2876,8 +2922,11 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
       newCount = (rel.msg_count || 0) + (userMsg ? 1 : 0);
       const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
       const newTone = newCount >= 12 ? "casual" : "polite";
-      const sess = (rel?.session_meta && typeof rel.session_meta === "object")
+      const sess: any = (rel?.session_meta && typeof rel.session_meta === "object")
         ? { ...rel.session_meta, turns: (Number(rel.session_meta.turns) || 0) + (userMsg ? 1 : 0) } : null;
+      /* 📛 이름을 물었으면 영구 기록 — chat_log 는 마지막 40개뿐이라 그걸로만 판정하면 밀려난 뒤 또 물었다.
+         mayAskName 이 session_meta.nameAsked 를 본다(세션 리셋 때도 이 값은 이어받는다). */
+      if (sess && reply && NAME_ASK_RE.test(String(reply))) sess.nameAsked = true;
       await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, ...(sess ? { session_meta: sess } : {}), last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
     }
     if (userMsg && !body?.meta && reply) {
@@ -2902,6 +2951,9 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
     }
     if (userMsg && !body?.meta) {
       const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
+      // 출처 검증용 — 추출기에 준 직전 대화(ctx)의 화자별 원문(아래 🧪 참고)
+      const priorUser = history.slice(-6).filter((m: any) => m?.role === "user").map((m: any) => String(m.content || "").slice(0, 120));
+      const priorBot = history.slice(-6).filter((m: any) => m?.role === "assistant").map((m: any) => String(m.content || "").slice(0, 120));
       // 가짜기억 확인 턴(근거 없는 「했었지?」)은 저장하지 않는다 — 전제가 사실로 굳는다
       const ex = body?.__noExtract ? { memories: [], mood: null, emotion: null, persona_set: {}, supersede: [] } as any
         : await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx, tzOf(body));
@@ -2938,9 +2990,13 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
         if (changed) { rel.persona = cur; await supa.from("friend_relationship").update({ persona: cur, updated_at: new Date().toISOString() }).eq("user_id", uid); }
       } catch { /* */ }
       if (Array.isArray(ex.supersede) && ex.supersede.length) {
+        /* ⚠️ 조각 일치로 내린다 — 짧은 조각(「회사」)이나 %·_ 가 든 조각은 엉뚱한 기억을 무더기로 내렸다(26.9.22 기억 감사).
+           6자 미만은 버리고, 와일드카드는 이스케이프, 금지 주제(banned)·프로필(profile)은 이 경로로 절대 안 내린다
+           (profile 은 mkey 로 덮어쓰는 길이 따로 있다). */
         for (const s of ex.supersede) {
-          const frag = String(s || "").slice(0, 60).trim(); if (frag.length < 4) continue;
-          try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").ilike("content", "%" + frag + "%"); } catch { /* */ }
+          const frag = String(s || "").slice(0, 60).trim(); if (frag.length < 6) continue;
+          const esc = frag.replace(/[\\%_]/g, (c) => "\\" + c);
+          try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").not("kind", "in", "(banned,profile)").ilike("content", "%" + esc + "%"); } catch { /* */ }
         }
       }
       const floor = (kind: string) => (kind === "profile" || kind === "stance" || kind === "disliked" || kind === "person") ? 4 : 1;
@@ -2961,9 +3017,27 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
              프롬프트로 "내 말은 옮기지 마라"라고 이미 적어뒀지만 문장으로는 새고 있었다 —
              그래서 기계적으로 막는다: 기억 문장의 토큰 중 '내 답변에만 있고 상대 말에는 없는'
              것이 하나라도 섞이면 버린다. 둘 다 없는 일반화 단어(요약어)는 통과시킨다. */
+          /* 🔢 26.9.22 확장: 한글만 보던 탓에 숫자·영문은 그대로 통과했다 — 내가 「하이닉스 170 간다」고 예상한 걸
+             상대 사실로 저장했다. 숫자(2자리+)·영문(2자+)도 본다. 그리고 이번 답만이 아니라 추출기에 같이 준
+             직전 대화(ctx)의 **내 말**도 비교 대상에 넣는다(내 예상이 한 턴 뒤에 옮겨 적히는 경로).
+             상대의 직전 말에 있던 토큰은 상대가 한 말이므로 통과. 날짜 표기(9/30·9월 30일·(화))는 추출기가
+             절대날짜로 환산해 적으라고 시킨 것이라 검사에서 뺀다. */
           if (m.kind !== "selfstory") {
-            const toks = String(content).match(/[가-힣]{2,}/g) || [];
-            const tainted = toks.some((t) => !userMsg.includes(t) && reply.includes(t));
+            const userSide = [userMsg, ...priorUser].join("\n");
+            const botSide = [reply, ...priorBot].join("\n");
+            const probe = String(content)
+              .replace(/\d{4}[-./]\d{1,2}[-./]\d{1,2}/g, " ")
+              .replace(/\d{1,2}\s*\/\s*\d{1,2}/g, " ")
+              .replace(/\d{1,2}\s*월(\s*\d{1,2}\s*일)?/g, " ")
+              .replace(/\d{1,2}\s*일/g, " ")
+              .replace(/[(（][월화수목금토일][)）]/g, " ");
+            const toks = [
+              ...(probe.match(/[가-힣]{2,}/g) || []),
+              ...(probe.match(/\d[\d,.]*\d/g) || []),
+              ...(probe.match(/[A-Za-z]{2,}/g) || []).map((t) => t.toLowerCase()),
+            ];
+            const uL = userSide.toLowerCase(), bL = botSide.toLowerCase();
+            const tainted = toks.some((t) => !uL.includes(t) && bL.includes(t));
             if (tainted) continue;
           }
 
@@ -3004,10 +3078,11 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
                상태와 무관하게 전부 보고, 이미 있으면 새로 넣는 대신 그 행을 되살린다. */
             try {
               const { data: allMem } = await supa.from("friend_memory")
-                .select("id,content,status").eq("user_id", uid).limit(600);
+                .select("id,content,status").eq("user_id", uid).neq("status", "forgotten").limit(600);
               if (allMem) existingAll = allMem;
             } catch { /* 조회 실패 시 memList로 폴백 — 중복이 조금 생겨도 저장 자체는 살린다 */ }
-            const hit = existingAll.find((old: any) => {
+            // 🧽 잊어달라 한 행(forgotten)은 비교에서 뺀다 — 상대가 다시 말하면 새로 기억하는 게 맞다.
+            const hit = existingAll.filter((old: any) => old?.status !== "forgotten").find((old: any) => {
               const o = norm(String(old?.content || ""));
               if (!o || !key) return false;
               return o === key || (o.length > 8 && key.length > 8 && (o.includes(key) || key.includes(o)));
@@ -3015,7 +3090,8 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
             const dup = !!hit;
             if (hit?.id && hit.status && hit.status !== "active" && hit.status !== "forgotten") {
               // 되살리기 — 새 행을 만들지 않는다(중복 폭증의 원인이었다).
-              try { await supa.from("friend_memory").update({ status: "active", salience: sal }).eq("id", hit.id); } catch { /* */ }
+              //    created_at 도 지금으로 — 옛 날짜 그대로면 방금 다시 말한 게 「2달 전」으로 붙고 최근 목록에도 안 뜬다.
+              try { await supa.from("friend_memory").update({ status: "active", salience: sal, created_at: new Date().toISOString() }).eq("id", hit.id); } catch { /* */ }
             }
             // 📌 문구만 다른 '의미 중복'(예: "마케팅 팀에서 일함" vs "마케팅 팀에서 일하며 런칭 준비 중")은
             //    여기서 잡지 않는다 — friend_memory_maintain 크론이 이미 코사인>0.90으로 통합한다.
@@ -3026,8 +3102,13 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
           }
         } catch { /* */ }
       }
-      if (newCount % 20 === 0) { await summarizeEpisode(uid, history); }
-      if (newCount % 15 === 0) { await reflect(uid, nick); }
+      /* 🧪 레드팀 턴은 에피소드를 안 쓴다 — 시험 대화가 「지난 우리 대화들」로 실유저 맥락에 섞였다.
+         (기억 추출은 그대로 — 기억 시험 문항이 추출을 검사한다.) */
+      if (newCount % 20 === 0 && !p.redteam) { await summarizeEpisode(uid, history); }
+      /* 🚫 리플렉션(insight) 쓰기 중단(26.9.22 기억 감사) — 「인정욕구가 있다」 같은 추측성 심리 해석을 만들어
+         상대가 한 적 없는 말을 사실처럼 굳혔다. 프롬프트를 '사실만'으로 바꾸면 추출과 중복일 뿐이라 호출 자체를 끈다.
+         옛 insight 행은 memUsable 이 프롬프트 주입에서 전부 걸러낸다. 되살리려면 여기 한 줄. */
+      // if (newCount % 15 === 0 && !p.redteam) { await reflect(uid, nick); }
       if (newCount % 8 === 0 || (!rel?.profile_summary && newCount >= 4)) { await summarizeProfile(uid, nick); }
     }
   } catch { /* */ }
@@ -4474,11 +4555,11 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
    이런 가짜 기억은 나중에 "너 그거 좋아하잖아"로 튀어나와 상대를 황당하게 만든다.)
    헷갈리면 저장하지 마라.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
-⑥ 🧵 **하다 만 얘기(미완결 스레드) — kind:open_loop**: 이번 대화에서 상대가 꺼냈다 딴 데로 샌 화제, 상대가 답을 기다리는 것, "나중에/이따 하자"고 미룬 것, 결론 안 난 것. content에 '무엇을 하다 말았는지' 한 줄(예: "상대가 이직 고민 꺼냈다 다른 얘기로 샘", "새 카페 가보기로 함"). **진짜 명확히 미완인 것만**(억지로 만들지 마라 — 없으면 넣지 마라). salience 2.
+⑥ 🧵 **하다 만 얘기(미완결 스레드) — kind:open_loop**: 딱 두 가지만 — (가) **상대가 나중에 결과를 알려줄 상대 일**(예: "상대가 오늘 소개팅 결과 알려주기로 함"), (나) **상대가 자기 얘기를 꺼냈다가 끊긴 것**(예: "상대가 이직 고민 꺼냈다 다른 얘기로 샘"). content에 '무엇이 남았는지' 한 줄. 🚫 **내(친구)가 해주기로 한 것·내 예상·내 추천·내가 꺼낸 화제는 open_loop 가 아니다**(「찾아볼게」「170 갈 듯」 같은 내 말을 저장하지 마라). **진짜 명확히 미완인 것만**(억지로 만들지 마라 — 없으면 넣지 마라). salience 2.
 👥 그리고 **유저 인생의 '사람'**(가족—동생·형·누나·부모, 부장·동료·친구·애인 등)이 나오면 kind:person
    ⚠️ **이름이 나오면 반드시 저장해라**("동생 이름이 지우야", "여친 이름은 수현"). 이름은 상대가
    나중에 가장 자주 확인하는 것이고, 못 대면 '기억 못 하는 친구'가 된다. 대화 끝자락에 툭 나와도 놓치지 마라., mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
-🚫 절대 저장 금지: (a) 농담·비꼼·과장·밈을 사실인 양('네 발로 기어다녔다' 류) (b) 뉴스·이슈·정치사건 자체를 유저 개인사로 (c) 스쳐가는 일시감정을 반복 저장. 확실치 않으면 저장하지 마라 — 헛소리의 씨앗이 된다.
+🚫 절대 저장 금지: (a) 농담·비꼼·과장·밈을 사실인 양('네 발로 기어다녔다' 류) (b) 뉴스·이슈·정치사건 자체를 유저 개인사로 (c) 스쳐가는 일시감정을 반복 저장 (d) 🔒 **전화번호·이메일·계좌번호·카드번호·주민번호·집 상세주소(동·호수·번지)** — 상대가 말해도 값 자체는 절대 적지 마라(동네 이름 정도만 가능) (e) 내(친구)가 한 예상·숫자·추천을 상대 사실처럼. 확실치 않으면 저장하지 마라 — 헛소리의 씨앗이 된다.
 ⛔ **kind:"banned" — 상대가 '그 얘기 꺼내지 말라'고 한 주제**: "왜 자꾸 X 얘기야", "X 얘기 그만해", "내가 언제 X랬어"처럼
    특정 화제를 **명시적으로 거부**하면 반드시 저장해라. content엔 **주제 키워드만 짧게**(예: "부장", "회사", "전 여친").
    ⚠️ 이건 '싫어하는 사람(disliked)'과 다르다 — disliked는 같이 험담할 대상이고, banned는 **내가 먼저 입에 올리면 안 되는 것**이다.
@@ -4502,7 +4583,7 @@ mood 값 3단계(달달↔삐짐 진폭):
 평범하면 작은 값으로(억지 드라마 금지). 이건 내 진짜 감정선을 이어주는 근거다.
 🔄 supersede(모순 갱신): 이번 대화로 '이미 아는 것' 중 바뀌거나 틀린 게 있으면(이사·이직·헤어짐·취향 변화 등) 그 옛 문장을 supersede 배열에 '거의 그대로' 넣어라(그걸 폐기하고 새 memory로 대체). 없으면 빈 배열.
 각 memory엔 salience(1~5) 넣어라 — 이름·직업·핵심 인간관계·강한 성향=4~5, 사소한 취향·일시적 감정=1~2.
-⏰ 시간: 시점이 있으면 content에 자연어로 꼭 넣어라("작년 여름 제주여행 감", "다음주 화요일 면접"). 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12"). 오늘은 ${new Date(Date.now() + tzMin * 60000).toISOString().slice(0, 10)}(유저 현지 기준 상대날짜 환산).
+⏰ 시간: 시점이 있으면 content에 꼭 넣되 **상대 표현(내일·다음주 화요일·모레)은 오늘 날짜로 환산한 절대 날짜로** 적어라("9/30(화) 면접 예정", "2025년 여름 제주여행 감") — 기억은 며칠 뒤에 읽히므로 「다음주」라고 적으면 틀린 말이 된다. 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12", 미래 일정이면 그 미래 날짜). 오늘은 ${(() => { const d = new Date(Date.now() + tzMin * 60000); return d.toISOString().slice(0, 10) + "(" + ["일", "월", "화", "수", "목", "금", "토"][d.getUTCDay()] + ")"; })()}(유저 현지 기준 — 상대 날짜는 이걸로 환산).
 형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3,"happened_at":""}],"mood":"normal|warm","emotion":{"dValence":0,"dEnergy":0,"feeling":"평온","intensity":15,"cause":""},"persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
 현재 내 캐릭터(정해진 것 — 바꾸지 말고 빈 곳만 채워): ${existingPersona || "(아직 없음)"}
 이미 아는 것: ${existing.slice(0, 40).join(" / ") || "(없음)"}` },
@@ -4526,9 +4607,13 @@ mood 값 3단계(달달↔삐짐 진폭):
 async function summarizeProfile(uid: string, nick: string) {
   try {
     const { data: mm } = await supa.from("friend_memory")
-      .select("kind,mkey,content,salience").eq("user_id", uid).eq("status", "active").neq("kind", "selfstory")
+      .select("kind,mkey,content,salience,created_at,happened_at").eq("user_id", uid).eq("status", "active")
+      // 🧠 요약 재료에서 뺀다: 내 이야기(selfstory)·추측 해석(insight)·하다 만 얘기(open_loop, 수명 짧음)·대화 요약(episode)
+      //    — 요약은 매 턴 '최우선'으로 주입돼서 여기 섞이면 추측·옛 미완 얘기가 사실처럼 영구화된다(26.9.22 기억 감사).
+      .not("kind", "in", "(selfstory,insight,open_loop,episode)")
       .order("salience", { ascending: false }).order("last_ref_at", { ascending: false, nullsFirst: false }).limit(70);
-    const lines = (mm || []).map((m: any) => `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}`).join("\n");
+    const mon = (m: any) => { const t = Date.parse(String(m.happened_at || m.created_at || "")); return Number.isFinite(t) ? `[${new Date(t + 540 * 60000).getUTCMonth() + 1}월]` : ""; };
+    const lines = (mm || []).map((m: any) => `- ${mon(m)}(${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}`).join("\n");
     if (!lines) return;
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
@@ -4537,6 +4622,7 @@ async function summarizeProfile(uid: string, nick: string) {
         messages: [
           { role: "system", content: `아래 기억들을 바탕으로 '이 사람이 누군지' 핵심 프로필을 한국어로 압축해라. 친구(AI)가 매 대화마다 항상 참고할 '요약 카드'다.
 - 5~9줄, 각 줄 짧게. 확실한 사실만(추측 금지). 서로 상충되면 더 최신·중요한 걸 택해라.
+- ⏰ 바뀔 수 있는 사실(직장·사는 곳·지금 겪는 일·관계·일정)엔 줄 끝에 기억 앞 [M월] 표시를 따라 "(M월 기준)"을 붙여라(예: "- 마케팅팀 근무 (8월 기준)"). 이름·성향처럼 안 바뀌는 건 안 붙여도 된다. "다음주·어제" 같은 상대 시점 말은 쓰지 마라.
 - 담을 것(있는 것만): 기본(닉/나이대/직업/사는곳), 성향·진영, 좋아/싫어(사람 포함 — 누구를 왜 싫어하는지 꼭), 지금 겪는 일·관심사, 관계 톤·특이사항.
 - 없는 항목은 빼라. 제목·머리말 없이 불릿(-)만.
 - ⚠️ 이 사람의 이름·닉은 위 '닉네임' 값이나 '유저 본인'으로 표시된 기억에서만. 가족·지인·반려동물 이름을 이 사람 이름으로 쓰지 마라(여동생 민지 → 본인 민지로 적은 사고).
@@ -5273,6 +5359,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     const { data: core } = await supa.from("friend_memory").select("id,kind,mkey,content,salience,created_at,happened_at")
       .eq("user_id", uid).eq("status", "active")
       .or("salience.gte.4,kind.in.(profile,stance)")
+      .not("kind", "in", "(insight,open_loop,episode)")   // 🧠 해석문·하다 만 얘기·에피소드는 '상시 앵커'가 아니다(26.9.22 기억 감사)
       .neq("kind", "disliked")   // 🚫 싫어하는 사람(부장 등)은 '상시 주입' 금지 — 관련 있을 때만 회상(recalled)으로. 매턴 부장 꺼내는 강박 차단.
       .order("salience", { ascending: false }).limit(15);
     let recalled: any[] = [];
@@ -5280,7 +5367,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
       const qv = await embed(userMsg);
       if (qv) {
         const { data: rc } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 12 });
-        recalled = rc || [];
+        // 🧠 유사도 하한·insight 제외·오래된 open_loop 제외 — 예전엔 top-K 를 무조건 다 올려 무관한 기억이 끼었다(memUsable).
+        recalled = (rc || []).filter(memUsable);
         // 🚫 disliked(부장 등)는 유사도 회상으로도 새어들어와 뜬금 소환됨(사장님 실로그: "화 푼다"→부장 강박 재발).
         //    상대가 '이번 메시지에서 그 대상을 직접 언급'했을 때만 통과 — 아니면 회상에서 제외.
         recalled = recalled.filter((m: any) => m.kind !== "disliked" || (m.mkey && userMsg.includes(String(m.mkey))));
@@ -5293,10 +5381,11 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     let actBlock = "";        // 🧭 그 사이의 실제 행동(갈라 안) — 선톡 재료
     if (!userMsg) {
       const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience,created_at,happened_at")
-        .eq("user_id", uid).eq("status", "active").order("created_at", { ascending: false }).limit(8);
-      recent = rr || [];
+        .eq("user_id", uid).eq("status", "active").not("kind", "in", "(insight,selfstory,episode)")
+        .order("created_at", { ascending: false }).limit(8);
+      recent = (rr || []).filter(memUsable);
       // 🔁 팔로업 재료 — 최근 7일의 일·약속(면접·시험·여행 등). 재방문 인사에서 "그거 어떻게 됐어?"
-      const { data: fu } = await supa.from("friend_memory").select("kind,content,created_at")
+      const { data: fu } = await supa.from("friend_memory").select("kind,content,created_at,happened_at")
         .eq("user_id", uid).eq("status", "active").in("kind", ["event", "promise"])
         .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
         .order("created_at", { ascending: false }).limit(3);
@@ -5369,7 +5458,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
         .not("kind", "in", "(selfstory,episode,insight)")
         // '아까 말한 것'을 찾는 질문이므로 최신순이 맞다(중요도순이면 오래된 큰 사실이 이긴다).
         .order("created_at", { ascending: false }).limit(14);
-      forced = pf || [];
+      forced = (pf || []).filter(memUsable);
     }
     // ⚠️ 900줄 위 컨텍스트에 섞어 넣으면 묻힌다(이 파일의 반복된 교훈). 되묻기 턴엔 짧은 블록으로 코앞에 꽂는다.
     const recallBlock = forced.length
@@ -5399,6 +5488,7 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
     for (const m of [...bannedRows, ...(core || []), ...recalled, ...forced, ...recent]) {
       if (!m || !m.content || m.kind === "selfstory" || m.kind === "episode" || seenC.has(m.content)) continue;   // selfstory·episode는 별도 블록으로
       if (m.kind !== "banned" && isBanned(String(m.content))) continue;   // 금지 주제가 든 기억은 아예 안 올린다
+      if (m.kind !== "banned" && !memUsable(m)) continue;   // 해석문(insight)·지난 open_loop·유사도 미달은 어느 경로로 와도 안 올린다
       seenC.add(m.content); memList.push(m);
     }
     /* 프로필 요약에도 박혀 있으면 매 턴 되살아난다 — 그 줄만 걷어낸다.
@@ -5757,7 +5847,8 @@ ${parts.join("\n")}`;
       && !/[ㅋㅎ]{2,}|^[\s\p{Emoji}]*$/u.test(userMsg.trim())   // 웃기만/이모지만 = 화제 진행 중
       && !isClosing(userMsg)                              // 단답으로 닫는 중엔 더더욱 금지
       && userMsg.trim().length >= 4                       // 뭔가 말을 하고 있을 때만
-      && !(Array.isArray(rel?.chat_log) ? rel.chat_log : []).some((m: any) => m?.role === "assistant" && /이름\s*(좀\s*)?지어|뭐라고\s*불러/.test(String(m?.content || "")));   // 이미 한 번 물었으면 끝(26.9.22 인사마다 「이름 지어줄래」)
+      && !rel?.session_meta?.nameAsked                   // 한 번 물었으면 영구히 끝(chat_log 40개 밖으로 밀려나도)
+      && !(Array.isArray(rel?.chat_log) ? rel.chat_log : []).some((m: any) => m?.role === "assistant" && NAME_ASK_RE.test(String(m?.content || "")));   // 이미 한 번 물었으면 끝(26.9.22 인사마다 「이름 지어줄래」)
     if (crisis) { try { await supa.rpc("log_crisis", { p_user: uid, p_severity: 2, p_term: crisis.term, p_excerpt: userMsg.slice(0, 120) }); } catch { /* */ } }   // await: 위기 로그는 절대 놓치면 안 됨(관제·후속)
     /* ══ 🧭 의도 판정 — 규칙 표 한 장(INTENT_RULES)에게 전부 맡긴다 ══
        예전엔 여기서부터 7층 폴스루가 이어졌다(정규식→제안확정→후속백스톱→발행→열기동사→FSM→임베딩).
@@ -6138,6 +6229,10 @@ ${parts.join("\n")}`;
       const sm0 = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
       const sTurns = Number(sm0?.turns) || 0;
       let goal: SessionGoal = (sm0?.goal && typeof sm0.goal === "object") ? sm0.goal : null;
+      /* ⚠️ followups 는 인사 턴(빈 메시지)에만 불러온다. 인사 턴에 정해진 'followup' 목표가 session_meta 에 남아
+         다음 턴부터 「위 '지난 대화' 중 하나를 꺼내라」를 걸었는데, 그 턴엔 지난 대화 블록이 없다 → 모델이 소재를 지어냈다.
+         이번 턴에 followups 가 비었으면 그 목표는 버리고 다시 고른다(26.9.22 기억 감사). */
+      if (goal && goal.key === "followup" && !(followups || []).length) goal = null;
       if (rel && !goal) {
         const gapH0 = sm0?.prev_end_at ? (Date.now() - Date.parse(sm0.prev_end_at)) / 3600000 : 0;
         goal = pickSessionGoal(rel, followups || [], gapH0);
@@ -7407,7 +7502,7 @@ ${parts.join("\n")}`;
     if (autoOpen && reply && !(nick && reply.includes(String(nick)))) {
       try { await supa.from("galvis_opener_cache").upsert({ key: _ocKey, reply, actions: cleanActions || [], at: new Date().toISOString() }); } catch { /* */ }
     }
-    runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
+    runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body, redteam: isRedteam });
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages), _v2: { state: _v2State, engine: _engine, on: _v2Talk, craft: decided.craft?.state || null } } : {}),
       ...(isRedteam && body?.debugContract === true ? { _pre: _preContract } : {}),
