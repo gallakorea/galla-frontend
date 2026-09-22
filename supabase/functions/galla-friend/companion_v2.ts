@@ -191,4 +191,23 @@ export function v2Blocks(state: V2State, userMsg: string): string[] {
   return out;
 }
 
+/* 🎯 요청 턴(v2) — 콘텐츠를 '찾아서 보여주는' 턴. 성격은 같고, 도구 설명은 찾기·보여주기에 필요한 것만(창작 설명 9천 자는 뺀다).
+   만들기(초안·제목·썸네일·대본) 요청은 여기 안 온다 — 기존 경로. */
+export function isCreateAsk(m: string): boolean {
+  return /(만들어|만들자|만들래|초안|써\s*줘|써줘|올려\s*(줘|봐|보|줄)|올려봐|발의|제목\s*(뽑|지어|추천)|썸네일|대본|스크립트|그려\s*줘|편집|기획)/.test(String(m || ""));
+}
+export const CORE_V2_REQ = CORE_V2.replace(/- 이번 턴은 대화만 한다\.[^\n]*\n/, "");
+export const REQ_CARD = `[이번 턴: 상대가 콘텐츠·정보를 달라고 했다]
+- 도구로 실제로 찾아서 point_to(view)·open_link 로 카드를 붙여라. 말만 하고 안 붙이는 건 최악이다(카드는 앱이 보여준다).
+- 말은 1~2문장: 무엇을 찾았는지 한 줄로 먼저("지금 핫튜브 1위는 ○○야") + 네 짧은 한마디. 설명 없이 감상부터 꺼내지 마라.
+- 본문에 번호 목록·여러 개 나열 금지 — 여러 개면 카드가 번호로 보여준다. URL·마크다운·"눌러봐" 같은 UI 안내도 금지.
+- 상대가 고른 종류를 지켜라(영상 달라면 영상, 맛집이면 맛집). 무거운 뉴스(사건·사고·정치)는 상대가 뉴스를 달라고 할 때만.
+- 못 찾으면 솔직히 없다고. 이름·숫자 지어내기 금지. "찾아볼게/잠깐만" 같은 미래 약속 금지 — 지금 찾아서 줘라.`;
+export const TOOLS_LITE = `[찾기·보여주기 도구]
+- 영상·핫튜브·"요즘 뭐 떠" → hot_videos(실제 인기영상). 유튜브를 web_search 로 찾지 마라.
+- 갈라 이슈 → hot_issues · 갈라뉴스 → galla_news · 맛집·여행·숏판·롱판·예측·광장 둘러보기 → galla_browse(section) · 특정 콘텐츠 찾기 → search_content · 요즘 갈라 분위기 → platform_buzz
+- 날씨 → weather_now · 코인·주식·환율 → market_quote · 바깥 현실 정보(가게·장소·최신 사건) → web_search(결과에 있는 것만)
+- 보여줄 땐 point_to(mode:view, type, id) — id 는 도구 결과에 있는 값 그대로. 바깥 검색 결과는 open_link(url 은 결과의 링크 그대로).
+- 앱 화면 열기(예측·지갑·설정 등) → app_action(op:goto). 내 글 반응·소식 → my_activity.`;
+
 export const V2_ANCHOR = "[마지막 확인] 위 진짜 대화의 흐름을 이어 방금 상대 말에 바로 답한다 · 짧을수록 좋다(1~2문장 반말) · 몸 있는 척·지어내기 금지 · 콘텐츠 권유 금지 · 괄호·코드 금지.";

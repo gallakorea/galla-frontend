@@ -4,7 +4,7 @@
 //
 // 모델 무관: 기본 OPENAI_API_KEY(gpt-4o-mini). env로 교체 — FRIEND_API_KEY/BASE_URL/MODEL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
-import { classifyTurn, wantsContent, CORE_V2, v2Blocks, V2_ANCHOR, type V2State } from "./companion_v2.ts";
+import { classifyTurn, wantsContent, CORE_V2, v2Blocks, V2_ANCHOR, CORE_V2_REQ, REQ_CARD, TOOLS_LITE, isCreateAsk, type V2State } from "./companion_v2.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -2780,7 +2780,7 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지)/;
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤)/;
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
@@ -6064,7 +6064,22 @@ ${parts.join("\n")}`;
       { role: "system", content: `[항상] ①"찾아볼게/잠깐만/이따" 금지 — 할 수 있으면 지금 하고, 못 하면 못 한다고. ②칩·카드·버튼 조작 안내 금지 — 앱이 알아서 한다. ③상대 심리 진단 금지("~한 건 …라서야"). ④모르는 사실·숫자는 지어내지 말고 모른다고. ⑤사과는 한 번이면 끝 — 지난 실수("말로만 떠들었지" 류)를 다시 꺼내 되새기지 마라, 그냥 지금 물은 것에 답해라. ⑥"이거 봐봐"라고 말할 거면 반드시 그 콘텐츠를 도구로 실제로 붙여라 — 말만 하는 건 최악. ${/(뭐\s*(없|있|할|볼|보지|하지)|없나|추천|골라|고를|뭐가\s*좋|어떤\s*거|심심)/.test(userMsg || "") ? '⑦고를 걸 제시할 땐 줄바꿈으로 한 줄에 하나씩 "1. " "2. " 번호 목록(2~4개, 각 20자 이내). ' : '⑦번호 목록·객관식 금지 — 지금은 그냥 말로 대화해라(선택지를 들이미는 건 친구가 아니라 ARS다). '}${(rel?.tone === "casual") ? '⑧존댓말 절대 금지 — "-세요/-셨-/-십니까/드시-/원하시는" 전부 금지, 문장 중간까지 완전 반말.' : ''}` },
     ];
 
-    if (!_v2Talk && _v2State === "request" && !work && !handoff && !crisis) {
+    /* 🎯 요청 턴 v2 — 찾아서 보여주는 턴은 무거운 성격(1.9만 자)·창작 도구 설명(9천 자)을 짧은 판으로 갈아 끼운다.
+       나머지 블록(경로·딜리버·현재 화면·안전)은 그대로 — 찾기 흐름은 기존 검증된 경로를 탄다. 만들기 요청은 제외. */
+    const _v2Req = _engine === "v2" && _v2State === "request" && !work && !handoff && !crisis && !planMode
+      && !isCreateAsk(userMsg || "") && !(craft?.state === "planning" || craft?.state === "proposed");
+    if (_v2Req) {
+      for (let i = 0; i < messages.length; i++) {
+        const c = messages[i]?.role === "system" ? String(messages[i].content || "") : "";
+        if (c === STATIC_PERSONA) messages[i] = { role: "system", content: CORE_V2_REQ };
+        else if (c === PERSONA_TOOLS) messages[i] = { role: "system", content: TOOLS_LITE };
+        else if (c.startsWith("[항상]")) messages[i] = { role: "system", content: c.replace(/⑦[^⑧]*/, "⑦본문에 번호 목록·나열 금지 — 여러 개면 카드가 번호로 보여준다. ") };   // 「고를 걸 번호 목록으로」 지시가 요청 카드와 부딪힌다
+      }
+      const ui = messages.map((m: any) => m?.role).lastIndexOf("user");
+      if (ui >= 0) messages.splice(ui, 0, { role: "system", content: REQ_CARD });
+      turnStat(["engine:v2req"]);
+    }
+    if (!_v2Talk && !_v2Req && _v2State === "request" && !work && !handoff && !crisis) {
       /* 🎯 요청 턴(기존 엔진) — 「홍대 맛집 찾아줘」에 「털렸어가 무슨 뜻이야」로 되묻던 것(26.9.22 채점판). 유저 말 바로 앞에 박는다. */
       const ui = messages.map((m: any) => m?.role).lastIndexOf("user");
       if (ui >= 0) messages.splice(ui, 0, { role: "system", content: "[이번 턴: 요청] 상대가 방금 달라고 한 것부터 바로 줘라(카드는 앱이 붙인다). 지난 얘기를 되묻지 마라. 준 것에 대한 한마디 포함 1~2문장. 사람 흉내(나도 먹어봤는데 등) 금지." });
@@ -6929,6 +6944,12 @@ ${parts.join("\n")}`;
     //    같은 **따뜻한 문장까지 잘려나가** 답이 앙상해졌다(블라인드 평가 5:2 패배의 원인 중 하나).
     // 📜 단 하나의 관문 — 스트림 경로와 같은 함수(enforceContract). 가드가 reply 를 재생성했든
     //    안 했든, 캡·걷어내기·선택지 정규화가 여기서 반드시 한 번 걸린다.
+    {   /* 🃏 카드 정리(26.9.22) — 제목 없는 「이거」 카드 3장이 같이 붙고, 한 턴에 5~6장이 나갔다. 빈 제목은 빼고 콘텐츠 카드는 최대 3장. */
+      const junk = (a: any) => /^(open|view)$/.test(String(a?.kind || "")) && (!String(a?.title || "").trim() || /^(이거|보기|바로 보기)$/.test(String(a?.title || "").trim()));
+      for (let i = actions.length - 1; i >= 0; i--) if (junk(actions[i])) actions.splice(i, 1);
+      let nCard = 0;
+      for (let i = 0; i < actions.length; i++) if (/^(open|view)$/.test(String((actions[i] as any)?.kind || "")) && ++nCard > 3) { actions.splice(i, 1); i--; }
+    }
     if (_v2Talk) {   // 🫂 대화 턴 안전망 — 어느 경로로든 콘텐츠 카드가 붙었으면 뗀다(대화만 하기로 한 턴이다)
       for (let i = actions.length - 1; i >= 0; i--) if (/^(view|open|share|news|local|draft\w*|plan|episode|editdraft)$/.test(String((actions[i] as any)?.kind || ""))) actions.splice(i, 1);
     }
