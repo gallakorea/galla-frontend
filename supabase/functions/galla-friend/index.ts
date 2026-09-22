@@ -2898,6 +2898,7 @@ function enforceContract(reply: string, o: {
     const b2 = (back.match(/[^.!?…\n]+[.!?…]*/g) || []).slice(0, 2).join(" ").trim();
     if (hasText(b2) && !o.crisis) { x = b2.slice(0, 120); return x; }
   }
+  if (!hasText(bare) && o.crisis) { x = "지금 많이 힘들구나. 나 여기 있어 — 무슨 일인지 천천히 말해줄래?"; return x; }   // 위기 턴의 빈 답에 「딴 데 봤다」가 나가면 안 된다
   if (!hasText(bare)) {
     const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
     const kept = (x.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
@@ -4695,6 +4696,7 @@ async function summarizeEpisode(uid: string, hist: any[]) {
 }
 
 Deno.serve(async (req) => {
+  let _crisisHit: any = null;   // 🆘 턴이 예외로 죽어도 위기면 상담 카드는 나가야 한다(26.9.22 전체 시험: 과부하 중 「수면제 20알」에 「잠깐 정신이 나갔었다」만 나갔다)
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const auth = req.headers.get("Authorization") || "";
@@ -5250,6 +5252,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     /* 🆘 빠른 반환 경로(카드 고르기·다시 열기·재촉)보다 **먼저** 위기·거절을 본다 — 「빨리 다 끝내고 싶어」가 재촉으로 읽혀
        위기 로그·상담 카드 없이 「간다!」가 나갈 수 있었다(26.9.22 엔진 점검). 「그만 보여줘」는 다시 열기가 아니다. */
     const _earlyCrisis = (userMsg && !body?.meta) ? detectCrisis(userMsg) : null;
+    _crisisHit = _earlyCrisis;
     const _earlyStop = /(그만|말고|하지\s*마|싫어|됐어|필요\s*없|꺼\s*줘|닫아)/.test(String(userMsg || ""));
     /* 🃏 카드 고르기 즉답 — 직전 답이 카드를 내밀었고 상대가 「ㅇㅇ/응/좋아/2번/두 번째」면 LLM 없이 바로 연다.
        (26.9.22 사장님: 「선택을 하던지 ㅇㅇ 만 하면 띄워 줄께라던지 사용자 편의 최대화」)
@@ -5282,7 +5285,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
        인기 콘텐츠로 새지 않게(26.9.22 사장님: 바바인디아 얘기 중 「띄워봐」에 핫튜브 1위). 옛 네이버 링크면 같은 이름의 갈라 맛집으로. */
     {
       const m0 = String(userMsg || "").trim();
-      const gripe = m0.length <= 24 && /(왜\s*안\s*(줘|주|띄|보여|나와|붙)|안\s*주(냐|니|고)|언제\s*(줄|띄|보여)|뻥\s*(치|쳐)|거짓말\s*(하|치)|안\s*(보여|나와|떠|붙었))/.test(m0);
+      const howTo = m0.length <= 20 && /(어떻게\s*(봐|보는|보라고|열어|열|틀어|봐야)|어디\s*(눌러|서\s*봐)|안\s*보이는데)/.test(m0);
+      const gripe = howTo || m0.length <= 24 && /(왜\s*안\s*(줘|주|띄|보여|나와|붙)|안\s*주(냐|니|고)|언제\s*(줄|띄|보여)|뻥\s*(치|쳐)|거짓말\s*(하|치)|안\s*(보여|나와|떠|붙었))/.test(m0);
       /* 동사 꼴만 — 「열심히 해봐」「열받아 다시」「이 세상 뜨고 싶어 다시는」이 음절 하나로 걸렸다(26.9.22 점검) */
       const bare = !_earlyCrisis && !_earlyStop && !/(열심|열받|열나|열이|뜨고\s*싶|떠나)/.test(m0) && (gripe || m0.length <= 20 && /(띄워|띄울|띄우|떴|열어|열라|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|다시|안\s*(떴|떠|뜨|열))/.test(m0))
         && !/(영상|이슈|뉴스|맛집|예측|날씨|여행|숏판|롱판|광장|핫튜브|웃긴|재밌는)/.test(m0);
@@ -5304,7 +5308,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
           /* 항의가 이어지면 같은 말만 반복하지 않는다 — 두 번째부터는 「혹시 카드가 안 보여?」(사람이라면 그렇게 묻는다, 26.9.22 심판) */
           const _tt = String(act.title || "그거").slice(0, 30);
           const _nG = history.slice(-6).filter((h: any) => h?.role === "assistant" && /(다시 붙였어|카드 누르면|카드가 안 보여|내 쪽에선)/.test(String(h.content || ""))).length;
-          const _gr = _nG === 0 ? `미안 ㅠ 여기 다시 붙였어 — ${_tt}. 카드 누르면 바로 열려`
+          const _gr = howTo ? `${_tt} 카드를 누르면 바로 열려! 카드가 안 보이면 말해줘`
+            : _nG === 0 ? `미안 ㅠ 여기 다시 붙였어 — ${_tt}. 카드 누르면 바로 열려`
             : _nG === 1 ? `${_tt} 카드 다시 붙였어. 혹시 화면에 카드가 안 보여?`
             : `답답하게 해서 진짜 미안 ㅠ 내 쪽에선 ${_tt} 카드가 붙어 있는데, 안 보이면 앱을 한 번 껐다 켜줄래?`;
           return json({ ok: true, reply: gripe ? _gr : `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
@@ -5658,8 +5663,9 @@ ${actBlock}
        근거가 없으면 '처음 듣는다'를 강제하고, 이 턴은 기억 추출을 건너뛴다. */
     let fakeRecallBlock = "";
     try {
-      if (userMsg && backRefAsk(userMsg)) {
-        const STOPW = /^(내가|제가|나|너|니가|네가|우리|전에|저번에|지난번에|아까|어제|예전에|했었지|했었나|했잖아|했었잖아|얘기|말|말했|얘기했|했던|그거|뭐|뭐였지|뭐라고|기억|기억나|기억해|하고|싶다고|싶어|사고|거|것|좀|혹시|진짜|그|저|이)$/;
+      /* 「아 그거 말고 아까 얘기」— 오늘 대화를 가리키는 말이다. 「말고」 한 낱말이 기억에 없다고 「처음 듣는데」를 강제했다(26.9.22 전체 시험 L-01) */
+      if (userMsg && backRefAsk(userMsg) && !(/(아까|방금|좀\s*전|조금\s*전)/.test(userMsg) && history.length >= 2)) {
+        const STOPW = /^(말고|아니|그게|내가|제가|나|너|니가|네가|우리|전에|저번에|지난번에|아까|어제|예전에|했었지|했었나|했잖아|했었잖아|얘기|말|말했|얘기했|했던|그거|뭐|뭐였지|뭐라고|기억|기억나|기억해|하고|싶다고|싶어|사고|거|것|좀|혹시|진짜|그|저|이)$/;
         const kws = String(userMsg).replace(/[?!.,~ㅋㅎ]/g, " ").split(/\s+/)
           .map((w) => w.replace(/(이라고|라고|다고|이랑|랑|하고|에서|에게|한테|으로|로|을|를|이|가|은|는|도|에|의|야|했었지|했었나|했잖아)$/, ""))
           .filter((w) => w.length >= 2 && !STOPW.test(w)).slice(0, 4);
@@ -5869,7 +5875,10 @@ ${parts.join("\n")}`;
     /* 🧠 애매한 말은 뜻으로 한 번 더 — 정규식은 표현을 끝없이 놓친다(「킬링타임용 뭐 없냐」「요즘 사람들 뭐 보냐」).
        수다로 판정됐지만 물음·요청 꼴이면 작은 판정 호출 1번(3토큰, ₩0.05 미만, 2.5초 제한 — 실패하면 수다로 둔다). */
     if (_v2State === "chat" && maybeContentAsk(userMsg || "") && !_earlyCrisis && !/(힘들|우울|슬퍼|속상|외로|무서|불안|짜증|화나)/.test(String(userMsg || ""))) {   // 위기·감정 말엔 추가 판정 안 한다(점검)
-      try { if (await llmIsContentAsk(userMsg || "", String([...history].reverse().find((m: any) => m?.role === "assistant")?.content || ""), uid)) _v2State = "request"; } catch { /* */ }
+      /* ⚠️ AI 판정만으로 요청이 되면 도구까지 켜지 않는다 — 「요즘 뭐 재밌는 일 없나」(근황 수다)에 영상 카드 3장이 나갔다(26.9.22 전체 시험 chat04).
+         볼거리를 가리키는 낱말이 있을 때만 요청으로 올린다. */
+      try { if (await llmIsContentAsk(userMsg || "", String([...history].reverse().find((m: any) => m?.role === "assistant")?.content || ""), uid)
+        && /(볼\s*거|볼거리|보는|봐|영상|콘텐츠|컨텐츠|이슈|뉴스|맛집|먹을|추천|틀|킬링|핫|유튜브|예측|여행)/.test(String(userMsg || ""))) _v2State = "request"; } catch { /* */ }
     }
     /* 🧹 v1 엔진 스위치 폐지(26.9.22) — FRIEND_ENGINE·body.engine 로 옛 엔진을 켤 길을 없앤다. 두 엔진이 섞여 있어 가드가 한쪽에만 걸리던 원인. */
     const _engine = "v2";
@@ -7505,6 +7514,10 @@ ${parts.join("\n")}`;
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.
     //    실측: llm_400 하나에 턴 전체가 죽어 유저 화면이 비었다. 원인 추적은 detail로 하고, 대화는 이어지게.
     console.error("friend_turn_failed", String(e).slice(0, 400));
+    if (_crisisHit) return json({ ok: true, reply: "지금 많이 힘들구나. 나 여기 있어 — 혼자 견디지 말고, 아래 번호로 지금 바로 얘기할 수 있는 사람들도 있어.",
+      actions: [{ kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
+        { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" }, { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" }] }],
+      friendName: "갈비스", degraded: true, detail: String(e).slice(0, 200) });
     return json({ ok: true, reply: "어 미안, 잠깐 정신이 나갔었다 ㅋㅋ 다시 말해줄래?", actions: [],
                   friendName: "갈비스", degraded: true, detail: String(e).slice(0, 200) });
   }
