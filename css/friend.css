@@ -830,7 +830,7 @@ body:has(.comment-write) #frMiniSay, body:has(.battle-input-bar) #frMiniSay, bod
 @keyframes friSpk{ from{ transform:translate(0,0) scale(.3) rotate(0); opacity:1; } to{ transform:translate(var(--dx),var(--dy)) scale(1) rotate(90deg); opacity:0; } }
 /* 입력바 있는 화면은 그 위로 · 대화창 열린 동안 숨김 */
 body:has(.comment-write) #frAssist.fri, body:has(.battle-input-bar) #frAssist.fri, body:has(#shortsCommentModal.visible) #frAssist.fri{ bottom:calc(env(safe-area-inset-bottom,0px) + 168px); }
-body.fr-chatting #frAssist, body.dm-detail #frAssist, body.hv-playing #frAssist{ display:none !important; }
+body.fr-chatting #frAssist, body.dm-detail #frAssist{ display:none !important; }   /* 26.9.22 영상 재생 중(hv-playing)에도 아일랜드는 남는다 — 영상은 위, 아일랜드는 아래라 안 겹친다(시뮬레이터 QA: 영상 페이지에서 미니가 사라졌다) */
 @media(min-width:1100px){ #frAssist.fri{ left:auto; right:26px; bottom:26px; transform:none; } #frAssist.fri.on{ animation:none; } }
 @media (prefers-reduced-motion: reduce){ #frAssist.fri *, #frAssist.fri::before{ animation:none !important; transition:none !important; } }
 

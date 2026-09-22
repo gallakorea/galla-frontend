@@ -272,7 +272,13 @@
     guestSheet(title||"");
     return true;
   }
-  async function openGated(){ if(await guestBlocked()) return; open(); }
+  /* ⚡ 오브를 누르면 바로 연다 — 앱은 부팅 직후 로그인 확인(getSession)이 수십 초 걸려, 누르고 한참 뒤에야 열렸다(26.9.22 시뮬레이터 QA: 「눌러도 반응이 없다」).
+     저장된 로그인이 있으면 먼저 열고, 확인은 뒤에서 한다(진짜 게스트면 그때 가입 안내). */
+  function hasSavedSession(){ try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^sb-.*-auth-token$/.test(k||"")){ var v=JSON.parse(localStorage.getItem(k)||"null"); if(v && (v.access_token || (v.currentSession && v.currentSession.access_token))) return true; } } }catch(e){} return false; }
+  async function openGated(){
+    if(hasSavedSession()){ open(); guestBlocked().then(function(b){ if(b && sheet){ sheet.classList.remove("fr-open"); document.body.classList.remove("fr-chatting"); setSurface("orb"); } }).catch(function(){}); return; }
+    if(await guestBlocked()) return; open();
+  }
 
   function build(){
     // 🔵 아크 리액터 오브 — 회전 틱 링 + 카운터 링 + 앰버 코어(자비스 HUD 오마주)
@@ -2306,8 +2312,15 @@
     // id 없는 미지의 액션은 조용히 무시(옛 클라가 새 액션 만나도 깨진 이동 안 함)
   }
 
+  /* ⏱ 앱 부팅 직후 getSession 이 수십 초 걸린다(시뮬레이터 QA) — 1.5초 안에 안 오면 저장된 토큰(아직 유효한 것)을 쓴다 */
+  function savedToken(){ try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^sb-.*-auth-token$/.test(k||"")){ var v=JSON.parse(localStorage.getItem(k)||"null"); var t=v && (v.access_token || (v.currentSession && v.currentSession.access_token)); var ex=v && (v.expires_at || (v.currentSession && v.currentSession.expires_at)); if(t && (!ex || ex*1000 > Date.now()+30000)) return t; } } }catch(e){} return null; }
   async function token(){
-    try{ var sb=window.supabaseClient; var r=await sb.auth.getSession(); if(r&&r.data&&r.data.session) return r.data.session.access_token; }catch(e){}
+    try{
+      var sb=window.supabaseClient;
+      var r=await Promise.race([ sb.auth.getSession(), new Promise(function(res){ setTimeout(function(){ res("__slow"); }, 1500); }) ]);
+      if(r==="__slow") return savedToken();
+      if(r&&r.data&&r.data.session) return r.data.session.access_token;
+    }catch(e){ return savedToken(); }
     return null;
   }
   // 🔐 갈비스 호출 — 401(세션 만료/손상)이면 세션 갱신 후 1회 재시도. res.__authFail=true면 재로그인 필요.
