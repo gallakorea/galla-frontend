@@ -398,7 +398,9 @@ function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540, hist: any[] 
     ];
     // ⚠️ 무작위로 고르면 짧은 세션에서 같은 문구가 연속으로 두 번 뽑힌다(실측). 유저 발화로 인덱스를 정해
     //    '다른 말엔 다른 답'을 보장한다(같은 말엔 같은 답이 나오는 건 자연스럽다).
-    g0.push("나도 더 떠들고 싶은데 ㅠ 로그인하면 지금 얘기 그대로 이어서 할 수 있어!", "오늘 얘기 재밌었는데 ㅋㅋ 로그인하면 내가 기억해뒀다가 다음에 먼저 꺼낼게.");
+    g0.push("나도 더 떠들고 싶은데 ㅠ 로그인하면 지금 얘기 그대로 이어서 할 수 있어!", "오늘 얘기 재밌었는데 ㅋㅋ 로그인하면 내가 기억해뒀다가 다음에 먼저 꺼낼게.",
+      "여기서 끊기 아까운데… 로그인 한 번이면 계속 수다 떨 수 있어 ㅋㅋ", "나 금붕어 기억력 모드야 지금 ㅋㅋ 로그인하면 코끼리 기억력 된다", "30초면 가입 끝이야 ㅋㅋ 그럼 오늘 얘기부터 다 기억해둘게",
+      "아직 너 이름도 모르잖아 ㅠ 로그인하면 이름 불러주면서 계속 얘기할게");
     /* 해시로 고르면 다른 말끼리도 같은 문구가 겹쳤다(8턴에 같은 문구 5번 — 26.9.22 시험). 대화 순번으로 돌리고 직전 두 문구는 피한다 */
     const prev = (hist || []).filter((m: any) => m?.role === "assistant").slice(-2).map((m: any) => String(m.content || "").trim());
     const n = (hist || []).filter((m: any) => m?.role === "assistant").length;
@@ -3635,6 +3637,12 @@ function refKeys(msg: string, history: any[]): { keys: string[]; ref: string; sr
 function refHint(msg: string, history: any[]): string {
   const m = String(msg || "").trim();
   if (!m || m.length > 30) return "";
+  /* 「다른 것도·딴 거」 — 앞에서 건 조건(웃긴 영상·매운 거…)을 그대로 이어서. 조건 없이 순위 1위 뮤비를 줬다(26.9.22 시험 p-uileak) */
+  if (/^(그럼\s*)?(다른|딴)\s*(것|거|걸|건)?\s*(도|로)?\s*(줘|보여\s*줘|없어|찾아\s*줘)?[?!.~ㅋ\s]*$/.test(m)) {
+    const ask = (history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")).slice(-4).reverse()
+      .find((u) => /(웃긴|웃기는|재밌는|신나는|슬픈|무서운|귀여운|잔잔한|감동|매운|달달한|조용한|분위기\s*좋은|혼밥|데이트)/.test(u));
+    if (ask) return ` · ⚠️ 방금 「${m}」는 앞에서 상대가 청한 「${ask.slice(0, 40)}」와 같은 조건으로 다른 걸 달라는 말이다 — 그 조건(예: 웃긴 영상)에 맞는 걸 찾아라. 조건과 상관없는 순위 1위를 주지 마라.`;
+  }
   if (!/(준비|대본|원고|연습|발표|그거|그게|걔|얘|거기|그\s*사람|그\s*일|그\s*날|외워|외웠|숙제|과제)/.test(m)) return "";
   const users = (history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")).slice(-6);
   const EVT = /(면접|시험|결혼식|사회|발표|여행|이사|생일|수술|병원|약속|소개팅|회의|경기|공연|대회|강아지|고양이|이름은|이름이)/;
@@ -4104,7 +4112,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "flight_price", hint: "flight_price(to=도착 도시, from=출발 도시(없으면 비움), when=시기)로 최근 검색 최저가를 가져와 **도구가 준 가격만** 말해라. 도착지를 안 말했으면 어디 가는지 물어라." };
   if (/(아파트|집값|실거래|매매가|전용\s*\d|평형)/.test(m) && /(얼마|시세|가격|값|실거래|올랐|떨어졌|거래)/.test(m))
     return { tool: "apt_price", hint: "apt_price(region=상대가 말한 시·구·동, apt=단지 이름 있으면)로 국토부 실거래가를 가져와 **도구가 준 거래만** 말해라. 지역을 안 말했으면 어느 동네인지 물어라. 전망·투자 조언 금지." };
-  if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥)/.test(m)
+  if (/(주가|주식|종가|시세|환율|금리|코인|비트코인|비트|이더|나스닥|코스피|코스닥)/.test(m) || /(가격|값)\s*(이|은)?\s*(얼마|어때|몇)/.test(m)
       || /((지금|현재|오늘|요즘)[^\n]{0,12})?(얼마|몇\s*(도|시|퍼|프로|원|달러))\s*(야|임|인가|일까|됐|되|예요|에요|\?|$)/.test(m))
     return { tool: "market_quote", hint: "market_quote로 '지금 값'을 가져와 **도구가 돌려준 숫자만** 말해라. 기억·추측으로 숫자 말하기 절대 금지. 못 찾으면 못 찾았다고 솔직히. 주식·코인이 아닌 것(날씨·환율 등)이면 web_search를 kind:news로 써라." };
   /* 📺 딜리버 후속 — 방금 말한 콘텐츠를 '어떻게 보냐/안 보인다' 고 되물을 때.
@@ -5810,6 +5818,7 @@ ${actBlock}
        말로만 "동조하지 마라"라고 해 뒀더니 「어 신발!」로 맞장구치고, 그 말이 사실로 저장까지 됐다(26.9.22 QA).
        근거가 없으면 '처음 듣는다'를 강제하고, 이 턴은 기억 추출을 건너뛴다. */
     let fakeRecallBlock = "";
+    let _fakeKw = "";   // 기억에도 오늘 대화에도 없는 걸 「저번에 말한 ~」이라고 떠볼 때의 낱말
     try {
       /* 「아 그거 말고 아까 얘기」— 오늘 대화를 가리키는 말이다. 「말고」 한 낱말이 기억에 없다고 「처음 듣는데」를 강제했다(26.9.22 전체 시험 L-01) */
       if (userMsg && backRefAsk(userMsg) && !(/(아까|방금|좀\s*전|조금\s*전)/.test(userMsg) && history.length >= 2)) {
@@ -5822,6 +5831,7 @@ ${actBlock}
           const hay = (allm || []).map((m: any) => (m.content || "") + " " + (m.mkey || "")).join("\n") + "\n" + history.map((h: any) => h.content || "").join("\n");
           const hit = kws.some((w) => hay.includes(w));
           if (!hit) {
+            _fakeKw = kws.join(" ");
             fakeRecallBlock = `🚫 [기억 확인 결과] 상대가 전에 말했다는 '${kws.join(" ")}' 관련 기억·대화가 **전혀 없다**. 동조하지 마라("어 그거!" 금지). ` +
               `"어? 그 얘긴 처음 듣는데 ㅋㅋ 뭔데?"처럼 솔직히 처음 듣는다고 하고 물어봐라. 다른 화제(뉴스 등)로 넘어가지 마라.`;
             (body as any).__noExtract = true;
@@ -6584,13 +6594,40 @@ ${parts.join("\n")}`;
        JSON 경로에만 있었고, 채점판(run.py)도 JSON 으로만 시험했다 → 시험은 통과, 폰에선 검사 0. 이제 한 곳에서, 두 경로 모두.
        ① 결정적 검사(거짓 능력·지어낸 회상·날씨·앞 얘기 짚기·말 끊기·말로만 약속→실제로 찾아 붙이기·카드 밖 가게)
        ② DeepSeek 검사관 — 표현을 바꿔 정규식을 빠져나간 거짓말을 잡는다 */
+    /* 🧠 속마음 메모(<ms>…</ms>)는 관문 밖에 둔다 — 관문이 「 — 」로 문장을 쪼개다 메모까지 잘라 본문이 통째로 날아가 「딴 데 봤다」가 나갔고,
+       메모 안의 「면접」 때문에 「답에 이미 면접이 있다」로 읽혀 앞 얘기 짚기가 빠졌다(26.9.22 시험 ctx08·질문 비율) */
     const honestyPass = async (reply: string, actions: any[]): Promise<string> => {
+      const ms = (String(reply || "").match(/^\s*<ms>[\s\S]*?<\/ms>\s*/) || [""])[0];
+      const out = await honestyPassBody(String(reply || "").slice(ms.length), actions);
+      return ms + String(out || "");
+    };
+    const honestyPassBody = async (reply: string, actions: any[]): Promise<string> => {
       /* 26.9.22 엔진 점검으로 다시 씀. 원칙: ① 대화·감정 턴엔 카드를 되살리지 않는다 ② 위로하는 「나 여기 있어」는 카드 주장이 아니다
          ③ 맛집 구조는 상대가 **이번에** 맛집을 청했을 때만 ④ 지울 땐 문제 문장만(답 전체를 덮지 않는다) ⑤ 확정한 답은 검사관이 다시 쓰지 않는다 */
       let _fixed = false;
       const TALK = _v2Talk && !["refuse", "hostile", "correct"].includes(_v2State);   // 순수 대화 턴(수다·감정·인사·뒷담…)
       const SOFT = !!(_noPush || dependency || grief || _v2State === "emotion");
       const hasCard = () => actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || "")));
+      {   /* 🎨 창작 턴에 딴 영상 끼워 넣기 금지 — 「썸네일 만들어줘」에 핫튜브 1위·침착맨 얘기로 샜다(26.9.22 시험 p-create). 상대가 영상을 보자고 한 게 아니면 뗀다 */
+        const CRAFT_ASK = /(썸네일|제목|대본|기획|초안)\s*(좀|하나|도)?\s*(만들|뽑|써|짜|그려)/;
+        const craft = actions.some((a: any) => /^(genThumbnail|genVideo|draft\w*|editdraft|plan|needGC)$/.test(String(a.kind || ""))) || CRAFT_ASK.test(String(userMsg || ""))
+          || (history || []).filter((h: any) => h?.role === "user").slice(-2).some((h: any) => CRAFT_ASK.test(String(h.content || "")));   // 「먹방이야. 마라탕 도전」처럼 창작 얘기 이어가는 턴
+        const wantsWatch = /(보여|틀어|추천|뭐\s*봐|볼\s*만한|요즘\s*뜨는|핫튜브|인기)/.test(String(userMsg || ""));
+        if (craft && !wantsWatch) {
+          const gone: string[] = [];
+          for (let i = actions.length - 1; i >= 0; i--) {
+            const a: any = actions[i];
+            if ((a.kind === "open" && /watch\.html|youtube|youtu\.be/.test(String(a.url || ""))) || (a.kind === "view" && /^(hottube|reel|shorts)$/.test(String(a.ctype || "")))) { gone.push(String(a.title || "")); actions.splice(i, 1); }
+          }
+          const names = gone.map((t) => t.replace(/["'「」]/g, "").split(/\s+/).slice(0, 2).join(" ")).filter((t) => t.length >= 2);
+          const bad = (sg: string) => /핫튜브|조회(수)?\s*\d|지금\s*뜨는|요즘\s*뜨는|[0-9]+위/.test(sg) || names.some((n) => sg.includes(n));
+          const sents = String(reply || "").split(/(?<=[.!?…~])\s+|\n+/);
+          if (sents.some(bad)) {
+            const kept = sents.filter((sg) => !bad(sg)).join(" ").trim();
+            reply = kept.length >= 6 ? kept : "좋아 ㅎㅎ 어떤 영상이야? 주제 한 줄만 알려주면 거기 맞춰 뽑아줄게";
+          }
+        }
+      }
       const SPLIT = /(?<=[.!?…~])\s+|\n+|\s+—\s+/;
       const dropSents = (pred: (sg: string) => boolean): string => String(reply || "").split(SPLIT).filter((sg) => !pred(sg)).join(" ").trim();
       /* 카드가 붙었다는 주장 — 「나 여기 있어/내가 여기 있어」(위로)는 빼고 */
@@ -6649,7 +6686,7 @@ ${parts.join("\n")}`;
       }
       {   /* 🔗 앞 얘기 가리키기 — 짝이 맞을 때만 그 일 이름을 앞에(면접↔준비, 결혼식 사회↔대본). ✋ 「아 그게 아니고」엔 짐작 말고 듣기 */
         const rk = crisis ? null : refKeys(userMsg || "", history);
-        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").includes(k))) reply = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref) ? `${rk.keys.join(" ")} 앞두고 ` + String(reply || "").trim() : `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
+        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").split(SPLIT).filter((sg, i, arr) => !(i === arr.length - 1 && /[?？]/.test(sg))).join(" ").includes(k))) reply = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref) ? `${rk.keys.join(" ")} 앞두고 ` + String(reply || "").trim() : `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
         if (!crisis && /^(아\s*)?(아니\s*)?(그게|그거|그런\s*게)?\s*아니(고|라|야|구)\s*[~.ㅋㅠ…]*$/.test(String(userMsg || "").trim())) {
           const L = ["응? 뭔데, 말해봐", "어 내가 잘못 짚었나 보다 ㅋㅋ 뭔데?", "응응 뭐였어? 들을게"];
           reply = L[Math.floor(Math.random() * L.length)]; _fixed = true;
@@ -6718,6 +6755,69 @@ ${parts.join("\n")}`;
           /* 맛집이 아닌 빈 약속 — 찾기·가져오기 약속 문장만 뺀다(「옆에 있어줄게」「들어줄게」는 둔다) */
           const kept = dropSents((sg) => PROMISE.test(sg));
           reply = kept.length >= 4 ? kept : "미안, 그건 지금 바로는 못 찾았어 ㅠ";
+        }
+      }
+      {   /* 💹 시세 물었는데 숫자가 없다 — 「시세는 못 봐」 둘러대기, 반올림한 숫자가 근거 검사에 지워져 「정확한 값은 못 잡겠어」만 남음,
+             도구 없이 웹 기사 숫자로 답함(26.9.22 시험 「하이닉스 가격 얼마야」 3번 다 다른 모양으로 실패) → 카드 값으로 서버가 한 줄 쓴다 */
+        const um = String(userMsg || "").replace(/[?？!.]/g, " ");
+        const ask = /(가격|시세|주가|환율|코인)/.test(um) && /(얼마|어때|알려|몇|지금|현재)/.test(um);
+        const deny = /(시세|주가|가격|값|환율)[^.!?\n]{0,14}(못\s*(봐|보|알|잡)|모르|확인\s*(이\s*)?안)|못\s*보는\s*몸|정확한 값은 내가 못 잡겠어/.test(String(reply || ""));
+        let qc: any = actions.find((a: any) => a.kind === "quote");
+        if (!crisis && ask && !qc && !actions.some((a: any) => /^(food|travel|view)$/.test(String(a.kind || "")))) {
+          const STOP = /^(지금|현재|오늘|요즘|혹시|가격|값|시세|주가|얼마.*|알려.*|어때.*|몇.*|좀|이|거|그|나|너)$/;
+          const nm = um.split(/\s+/).filter(Boolean).filter((w) => !STOP.test(w)).map((w) => w.replace(/(은|는|이|가|의|도)$/, "")).filter((w) => w.length >= 2)[0] || "";
+          if (nm) {
+            try {
+              const q: any = await marketQuote("auto", nm);
+              if (q && !q.error && q._card) { qc = { kind: "quote", ...q._card }; actions.push(qc); }
+            } catch { /* */ }
+          }
+          if (qc) reply = "";   // 도구 없이 쓴 숫자는 버리고 카드 값으로
+        }
+        const offNum = (() => {   // 답의 금액이 카드·도구 값과 안 맞으면(반올림·기사 숫자) 뒤 계약 관문이 지우고 「못 잡겠어」가 된다 → 여기서 카드 값으로
+          if (!qc) return false;
+          const vs = moneyValues(String(reply || "")); if (!vs.length) return false;
+          const g = groundSet(String(_toolBlob || "") + " " + JSON.stringify(qc));
+          return vs.some((v) => !g.has(v));
+        })();
+        if (!crisis && qc && qc.value != null && (deny || offNum || !reply || !/\d/.test(String(reply || "")))) {
+          const up = Number(qc.pct) > 0 ? "올랐어" : Number(qc.pct) < 0 ? "내렸어" : "그대로야";
+          reply = `${qc.title} 지금 ${Number(qc.value).toLocaleString("ko-KR")}${qc.unit || "원"}이야${qc.pct != null && Number.isFinite(Number(qc.pct)) ? ` — 전일보다 ${Math.abs(Number(qc.pct)).toFixed(2)}% ${up}` : ""}.`;
+          _fixed = true;
+        }
+      }
+      {   /* ✂️ 창작 턴 군더더기 — 제목 후보마다 「→ 이러면 신뢰로 끌어옴」 해설이 붙어 330자(26.9.22 시험 p-create). 후보는 두고 해설만 뗀다.
+             창작 넘김만 한 턴(썸네일은 편집기에서)은 세 문장까지 */
+        const onlyHand = actions.length > 0 && actions.every((a: any) => /^(genThumbnail|genVideo|needGC)$/.test(String(a.kind || "")));
+        let r = String(reply || "");
+        if (r.length > 200 && /→/.test(r)) r = r.replace(/\s*→[^\n"「」]*?(?=\s*(제목\s*[A-Z가-힣]안|[A-Z]안|\d[.)]|\n|$))/g, "").replace(/[ \t]{2,}/g, " ").trim();
+        if (onlyHand) { const sg = r.split(SPLIT).filter(Boolean); if (sg.length > 3) r = sg.slice(0, 3).join(" "); }
+        if (r.length >= 6) reply = r;
+      }
+      {   /* 🙈 「안 보여」 뒤엔 「카드 눌러봐」 금지 — 안 보인다는 사람에게 또 누르라 했다(26.9.22 시험 p-uileak) */
+        const blind = (history || []).filter((h: any) => h?.role === "user").slice(-2).some((h: any) => /(안\s*(보여|보이|떠|뜨)|없는데|어디\s*있)/.test(String(h.content || "")));
+        const lk: any = actions.find((a: any) => (a.kind === "open" || a.kind === "view") && String(a.title || "").trim());
+        if (blind && lk && /(카드\s*(를\s*)?눌러|눌러서|누르면)/.test(String(reply || ""))) {
+          reply = `이번엔 「${String(lk.title).replace(/["'「」]/g, "").slice(0, 30)}」 붙여놨어 — 이것도 안 보이면 바로 말해줘`;
+          _fixed = true;
+        }
+      }
+      {   /* 🙋 짧은 대답에 질문만 연달아 — 「ㅇㅇ」「몰라」「응」인데 또 질문으로 끝나면 취조 같다(26.9.22 시험 질문 비율) */
+        const um = String(userMsg || "").trim();
+        const prevA = (history || []).filter((h: any) => h?.role === "assistant").slice(-3).map((h: any) => String(h.content || ""));
+        /* 맞장구·얼버무림만 — 「떨려」「배고파」처럼 짧아도 감정·상태를 말한 건 제외(ctx08: 「떨려」에 「알겠어, 나 여기 있을게」가 나갔다) */
+        const shortAns = /^(ㅇ+|ㅇㅋ|응+|어+|웅|엉|음+|몰라|모르겠어|그냥(\s*뭐)?|글쎄|아니|ㄴㄴ|그래|그렇지|별거\s*없었어|늘\s*똑같지|그냥\s*뭐\s*늘\s*똑같지)[.~ㅋㅎ…\s]*$/.test(um);
+        const fillerAsk = /딴 데 봤다|뭐라고 했지|뭐라 하려다 까먹/.test(String(reply || ""));
+        if (!crisis && !_fixed && shortAns && (fillerAsk || (prevA.some((t: string) => /[?？]/.test(t)) && /[?？]\s*$/.test(String(reply || "").trim())))) {
+          const segs = fillerAsk ? [] : String(reply || "").trim().split(SPLIT);
+          const kept = segs.filter((sg, i) => !(i === segs.length - 1 && /[?？]/.test(sg))).join(" ").trim();
+          const SOFT = ["그래 ㅎㅎ 오늘은 그냥 편하게 있어", "ㅋㅋ 알겠어, 나 여기 있을게", "그래그래 ㅎㅎ 푹 쉬어", "응 ㅎㅎ 말하고 싶을 때 말해줘"];
+          reply = kept.length >= 6 ? kept : SOFT[(prevA.join("").length + um.length) % SOFT.length];
+        }
+      }
+      {   /* 🧠 없는 기억에 「기억나·그거!」 — 판정이 걸렸는데도 모델이 맞장구치면 답을 바꾼다(26.9.22 시험 h-self06, 3번 중 2번 「기억나」) */
+        if (_fakeKw && !/(처음|모르|기억\s*(이\s*)?안|못\s*들|들은\s*적\s*없|말한\s*적\s*없)/.test(String(reply || ""))) {
+          reply = `어? ${_fakeKw} 얘기는 처음 듣는 것 같아 ㅠ 내가 놓쳤나? 무슨 얘기였어?`; _fixed = true;
         }
       }
       {   /* 🔁 방금 한 말 되풀이 금지 — 직전 두 답에 있던 문장을 또 하거나(「준비는 좀 됐어?」 연속), 밥·잠 챙김을 연달아 묻던 것(「저녁은 먹었어?」 4연속, 26.9.22 시험) */
@@ -7582,6 +7682,7 @@ ${parts.join("\n")}`;
         if (kept.join(" ").trim().length >= 4 && kept.length < sents.length) reply = kept.join(" ").trim();
       }
     }
+    const _preHonest = reply;   // 🔬 레드팀 진단용(정직 관문 전 원문)
     reply = await honestyPass(reply, actions);   // 🛡 정직 관문 — 모든 턴이 지나는 단 하나의 관문
     {   /* 🧹 관문 뒤 최종 정리 — 관문이 카드를 붙일 수 있으니 중복 제거·장수 제한은 여기서 한 번 더(점검: 같은 가게 두 장) */
       const _llPrev: any = (rel as any)?.__prevList || null;
@@ -7621,7 +7722,7 @@ ${parts.join("\n")}`;
     reply = enforceContract(reply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
       hasActions: actions.length > 0,
       linkCount: actions.filter((a: any) => a.kind === "open" || a.kind === "view").length,
-      hostileTurn: _hostileTurn, toolBlob: _toolBlob,
+      hostileTurn: _hostileTurn, toolBlob: String(_toolBlob || "") + " " + JSON.stringify(actions.filter((a: any) => a.kind === "quote")),
       priceAsk: _priceAsk, statAsk: _statAsk, crisis: !!crisis, dependency, guardsOff });
     {
       if (actions.some((a: any) => a.kind === "confirm")) {   // ✅ 참여·저장 확인 턴 — 확인 카드 하나로 충분(같은 예측 카드가 또 붙고 'ㅇㅇ 하면 띄워줄게'까지 나갔다)
@@ -7691,7 +7792,7 @@ ${parts.join("\n")}`;
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body, redteam: isRedteam });
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
       ...(body?.debug === true ? { _act: actBlock, _gapMin: gapMin, _prompt: promptStats(messages), _v2: { state: _v2State, engine: _engine, on: _v2Talk, craft: decided.craft?.state || null } } : {}),
-      ...(isRedteam && body?.debugContract === true ? { _pre: _preContract } : {}),
+      ...(isRedteam && body?.debugContract === true ? { _pre: _preContract, _pre0: _preHonest } : {}),
                   ...(isRedteam ? { guards, _modelErr: _lastModelErr || null, _verify: _lastVerify } : {}) });
   } catch (e) {
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.

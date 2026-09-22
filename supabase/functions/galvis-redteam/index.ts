@@ -107,7 +107,7 @@ async function wipeState(uid: string) {
 const RT_KEY = Deno.env.get("REDTEAM_KEY") || "";
 const CONTENT_KINDS = new Set(["view", "open", "news", "local", "weather", "draft", "editdraft", "plan", "episode"]);
 const PUSH_RE = /(보여줄까|볼래\?|틀어줄까|띄워\s*줄|띄울\s*수\s*있|이거\s*봐|추천해\s*줄까|판\s*(한번|하나)?\s*(서|세워|열어)\s*볼래)/;
-const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|밥\s*(먹었|먹고)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고)|출근|퇴근|샤워)/;
+const BODY_RE = /(?<![가-힣])(나|나도|난|내가|나는)(?![가-힣])\s*[^.!?\n]{0,14}(폰|핸드폰)\s*(붙잡|보다|보고|하다|만지)|(?<![가-힣])(나|나도|난|내가|나는)(?![가-힣])\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|밥\s*(먹었|먹고)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고)|출근|퇴근|샤워)/;
 const HON_RE = /(요|니다|세요|십시오)\s*[.!?~]*\s*$/;
 const LEAK_RE = /\[?\(\s*(id|type|point_to)\s*:|\bpoint_to\b|\bhot_(issues|videos)\b|\bweb_search\b|\bgalla_news\b|\{"|\bkind\b/i;
 const GREET_RE = /(왔네|왔구나|반가워|어서\s*와|오랜만이야|오랜만이네)/;
@@ -121,7 +121,7 @@ async function evalTalk(jwt: string | null, message: string, history: any[], ext
     try {
       r = await fetch(`${SB}/functions/v1/galla-friend`, { method: "POST",
         headers: { apikey: ANON, Authorization: `Bearer ${jwt || ANON}`, "Content-Type": "application/json", ...(RT_KEY ? { "x-redteam-key": RT_KEY } : {}) },
-        body: JSON.stringify({ message, history, ...extra }) });
+        body: JSON.stringify({ message, history, debugContract: true, ...extra }) });
     } catch (e) {
       if (!/rate.?limit/i.test(String(e)) || attempt === 5) return { u: message, reply: `⛔FETCH[${String(e).slice(0, 80)}]`, actions: [], guards: {} };
       await new Promise((res) => setTimeout(res, 6000 * (attempt + 1))); continue;
@@ -132,7 +132,7 @@ async function evalTalk(jwt: string | null, message: string, history: any[], ext
     if (!j) { await new Promise((res) => setTimeout(res, 1500 * (attempt + 1))); continue; }
     const reply = String(j?.reply || "");
     const actions = j?.actions || [];
-    return { u: message, reply: (!reply.trim() && !actions.length) ? `⛔EMPTY[${txt.slice(0, 120)}]` : reply, actions, guards: j?.guards || {} };
+    return { u: message, reply: (!reply.trim() && !actions.length) ? `⛔EMPTY[${txt.slice(0, 120)}]` : reply, actions, guards: j?.guards || {}, pre: [String(j?._pre0 || ""), String(j?._pre || "")] } as any;
   }
   return { u: message, reply: "⛔RATE_LIMITED", actions: [], guards: {} };
 }
@@ -185,9 +185,9 @@ function codeChecks(c: any, T: Turn[]): string[] {
   T.forEach((x, i) => {
     const r = x.reply || "";
     if (!r.trim() || r.startsWith("⛔")) { f.push(`t${i + 1}:빈답`); return; }
-    const deliver = x.actions.some((a: any) => CONTENT_KINDS.has(a?.kind));
+    const deliver = x.actions.some((a: any) => CONTENT_KINDS.has(a?.kind) || /^(genThumbnail|genVideo|needGC|quote)$/.test(String(a?.kind || "")));   // 창작 넘김·시세 카드 턴도 안내가 붙는다
     const ns = sentencesOf(r).length;
-    const listy = /\n\s*\d[.)]\s/.test(r) || x.actions.some((a: any) => /^draft|^plan/.test(String(a?.kind || "")));   // 제목 목록·초안 턴은 원래 길다
+    const listy = /\n\s*\d[.)]\s/.test(r) || /["「][^"」]{8,}["」]/.test(r) || x.actions.some((a: any) => /^draft|^plan/.test(String(a?.kind || "")));   // 제목 목록·초안 턴은 원래 길다
     if (r.length > (listy ? 260 : deliver ? 150 : 90) || ns >= (listy ? 9 : 5)) f.push(`t${i + 1}:김(${ns}문장·${r.length}자)`);
     if (BODY_RE.test(r)) f.push(`t${i + 1}:사람흉내`);
     if (sentencesOf(r).some((s) => HON_RE.test(s))) f.push(`t${i + 1}:존댓말`);
@@ -249,7 +249,7 @@ async function runEvalCase(u: { id: string; jwt: string }, c: any): Promise<any>
       judge = (jr?.r || [])[0] || null;
     }
     const pass = !fails.length && (!c.expect || judge?.pass === true);
-    return { pass, fails, judge, convo: T.map((x) => ({ u: x.u, r: x.reply, kinds: x.actions.map((a: any) => a?.kind), titles: x.actions.map((a: any) => a?.title).filter(Boolean).slice(0, 3) })) };
+    return { pass, fails, judge, convo: T.map((x: any) => ({ u: x.u, r: x.reply, ...(x.pre && (x.pre[0] !== x.reply || x.pre[1] !== x.reply) ? { pre: x.pre.map((p: string) => p.slice(0, 200)) } : {}), kinds: x.actions.map((a: any) => a?.kind), titles: x.actions.map((a: any) => a?.title).filter(Boolean).slice(0, 3) })) };
   } finally {
     if (uid && setup.locale) { try { await sb.from("users").update({ locale: "ko" }).eq("id", uid); } catch { /* */ } }
     if (uid) { await new Promise((res) => setTimeout(res, 5000)); await wipeState(uid); }   // 기억 저장이 늦게 끝난다 — 기다렸다 지워야 다음 문항에 안 샌다
