@@ -460,7 +460,7 @@
   /* 🔽 미니 모드 말풍선(26.9.22 사장님: 「페이지 떴을 때 갈비스 미니 모드도 없고 흐름이 끊김」)
      콘텐츠를 열면 갈비스가 알약으로 접히며 한 마디 건넨다. 웹은 페이지가 새로 떠도(sessionStorage) 그대로 이어진다. */
   var MINI_SAY={ food:"맛있어 보여? 보고 말해줘 ㅎㅎ", travel:"가보고 싶어? 보고 얘기해줘!", predict:"넌 어느 쪽 같아? 보고 와서 알려줘", issue:"넌 어느 편이야? 보고 말해줘",
-    news:"다 읽으면 어땠는지 말해줘", hottube:"웃겼는지 보고 말해줘 ㅋㅋ", plaza:"보고 어땠는지 알려줘", gallari:"보고 어땠는지 알려줘" };
+    news:"다 읽으면 어땠는지 말해줘", hottube:"웃겼는지 보고 말해줘 ㅋㅋ", plaza:"보고 어땠는지 알려줘", gallari:"보고 어땠는지 알려줘", link:"다 읽고 어땠는지 말해줘" };
   function miniSay(text){
     if(!mini || !text) return;
     var b=document.getElementById("frMiniSay");
@@ -638,9 +638,12 @@
     var go=function(){ var t=String(inp.value||"").trim(); if(!t) return; inp.value=""; sendText(t); };
     _asEl.querySelector(".fra-send").onclick=go;
     inp.addEventListener("keydown", function(e){ if(e.key==="Enter" && !e.isComposing){ e.preventDefault(); go(); } });
-    _asEl.querySelector(".fri-cap").onclick=function(){ friExpand(!_asEl.classList.contains("fri-open")); };
+    _asEl.querySelector(".fri-cap").onclick=function(){
+      if(_assist && _assist.away){ bigOpen(); return; }   // 콘텐츠를 떠난 뒤의 캡슐 = 대화로 돌아가기
+      friExpand(!_asEl.classList.contains("fri-open"));
+    };
     // 아일랜드 → 크게: 이어가는 대화라 새 인사 없이(「또 왔네 반가워」가 붙던 것)
-    var bigOpen=function(){ hideAssist(); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
+    var bigOpen=function(){ var away=_assist && _assist.away; if(away) closeAssist(); else hideAssist(); if(_asEl) _asEl.classList.remove("fri-away"); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
     _asEl.querySelector(".fra-big").onclick=bigOpen;
     _asEl.querySelector(".fra-cards").onclick=bigOpen;
     _asEl.querySelector(".fra-x").onclick=function(){
@@ -718,12 +721,18 @@
     var ms=document.getElementById("frMiniSay"); if(ms) ms.classList.remove("on");
     orb && orb.classList.add("fr-hidden");
     /* 그 콘텐츠를 떠나면(다른 화면으로 이동) 아일랜드도 물러난다 — 주소에 그 id 가 사라지면 닫고 오브 복귀 */
+    /* 🔁 콘텐츠를 떠나면 — 사라지지 않고 캡슐로 접힌다. 누르면 원래 대화(풀 모드)로(26.9.22 사장님: 「기사 페이지로 가면 미니 모드가 없어지고 오브를 다시 눌러야 한다」).
+       ⚠️ 앱(SPA)은 뉴스를 열면 주소가 #/news 로 바뀌어 id 가 사라진다 → id 대신 '자리 잡은 뒤의 주소'를 기준점으로 삼는다. */
     clearInterval(_asWatch);
-    var _asStart=Date.now();
+    var _asStart=Date.now(), _asHome="";
     _asWatch=setInterval(function(){
-      if(!_assist || !_assist.id || Date.now()-_asStart<2500) return;
+      if(!_assist || Date.now()-_asStart<2500) return;
       var here=location.pathname+location.search+location.hash;
-      if(here.indexOf(String(_assist.id))<0 && !/tab=(food|travel)/.test(here)){ closeAssist(); orb && orb.classList.remove("fr-hidden"); }
+      if(!_asHome){ _asHome=here; return; }
+      if(!_assist.away && here!==_asHome && (!_assist.id || here.indexOf(String(_assist.id))<0) && !/tab=(food|travel)/.test(here)){
+        _assist.away=true;
+        if(_asEl){ _asEl.classList.add("fri-away"); friExpand(false); var tk=_asEl.querySelector(".fri-tick"); if(tk) tk.textContent="대화로 돌아가기"; }
+      }
     }, 1000);
     buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0;
     try{ var ob=orb && orb.getBoundingClientRect(); if(ob && ob.width){ _asEl.style.setProperty("--fx", Math.round(ob.left+ob.width/2 - window.innerWidth/2)+"px"); _asEl.style.setProperty("--fy", Math.round(ob.top+ob.height/2 - (window.innerHeight-110))+"px"); } }catch(e){}
@@ -2115,6 +2124,15 @@
     logEl.appendChild(wrap); scrollBottom();
   }
   // 🌐 자비스 내부 브라우저 — 검색으로 찾아준 가게·기사를 앱 안에서 바로 연다(Capacitor Browser=인앱 사파리 시트)
+  /* 🔙 바깥 기사를 닫고 돌아오면 아일랜드를 펼쳐 먼저 묻는다 — 앱은 인앱 브라우저 닫힘, 웹은 탭 복귀 */
+  var _extAt=0;
+  function backFromExternal(){
+    if(!_extAt || Date.now()-_extAt<1500 || !_assist || _assist.type!=="link" || !_asEl) return;
+    _extAt=0; friExpand(true);
+    var q="다 봤어? 어땠어?"; addMsg("a", q); history.push({role:"assistant",content:q}); saveChat();
+  }
+  try{ var _B=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser; if(_B && _B.addListener) _B.addListener("browserFinished", backFromExternal); }catch(e){}
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") setTimeout(backFromExternal, 300); });
   function openInApp(url){
     if(!/^https?:\/\//.test(url||"")) return;
     try{
@@ -2156,7 +2174,8 @@
     if((a.kind==="open"||a.kind==="view"||a.kind==="external") && !a._reacted){ a._reacted=true; logReact("chip_open"); }
     if(a.kind==="open"){
       var gu=String(a.url||"").match(/^https:\/\/(?:www\.)?galla\.im\/(.+)$/);
-      if(gu) openAssist(a); else minimize(a);
+      if(gu) openAssist(a);
+      else { openAssist({ k:"link", title:a.title||"", url:a.url }); _extAt=Date.now(); }   // 바깥 기사도 알약이 아니라 아일랜드(한 가지 미니 모드)
       if(gu){ nav(gu[1]); return; }                     // 🎬 핫튜브 등 갈라 안 페이지는 앱 안에서(바깥 브라우저로 튀던 것)
       openInApp(a.url); return;
     }
