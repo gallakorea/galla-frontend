@@ -2805,7 +2805,7 @@ function enforceContract(reply: string, o: {
   if (!o.guardsOff) x = stripSelfNegative(x);
   // 🤖 몸 있는 경험 지어내기 제거 — 「나도 새벽에 폰 붙잡고 딴짓」「나는 술 마셔도 취기가 안 와」(26.9.22 사장님 실대화)
   {
-    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)|(띄우|띄우는|띄워|여는|열어|보여)[^.!?\n]{0,14}(걸\s*)?(못\s*해|못해|안\s*돼|안\s*되|할\s*수\s*없)|손이\s*없어|직접\s*(눌러|쳐)\s*(봐|줘)|(나|난|나는|나도)\s*(오늘|아까|어제|요즘)\s*[^.!?\n]{0,24}(사진|영상|글)\s*(보고|봤)|배고파\s*졌/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
+    const BODY_RE = /(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰|휴대폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|취하|밥\s*(먹었|먹고|먹는)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고|다녀)|출근|퇴근|씻고|샤워|배고파|배고프|처지더라|뒤척|핸드폰\s*뒤적|폰\s*뒤적|그런\s*밤\s*알지|눌러\s*봤|가\s*봤|먹어\s*봤|들어\s*봤는데|직접\s*봤|가면\s*(무조건|꼭|제일)|갔을\s*때)|가야\s*(예쁘|좋|최고)더라|진짜\s*최고거든|개인적으로[^.!?\n]{0,20}(제일|최고|좋더라|맛있더라)|난\s*더\s*땡기던데|(나|난|나는)\s*(지금|방금|요즘|오늘)?\s*(좀\s*)?(멍때리|뒹굴|쉬는|노는|딴짓|산책|밥\s*먹|일하)[^.!?\n]{0,6}(중이|하고\s*있|했어)|(여긴|여기는|우리\s*동네는?)\s*[^.!?\n]{0,10}(비|눈|날씨|사람들|우산|맑|춥|더워)|(조합|맛|국물|식감)이?\s*(진리|최고|미쳤|끝내주)더라|나는\s*링크를?\s*못\s*열|직접\s*눌러\s*줘야|(화면|카드|링크|페이지)[^.!?\n]{0,8}못\s*(띄|열|보여)|(띄우|띄우는|띄워|여는|열어|보여)[^.!?\n]{0,14}(걸\s*)?(못\s*해|못해|안\s*돼|안\s*되|할\s*수\s*없)|손이\s*없어|직접\s*(눌러|쳐)\s*(봐|줘)|(나|난|나는|나도)\s*(오늘|아까|어제|요즘)\s*[^.!?\n]{0,24}(사진|영상|글)\s*(보고|봤)|배고파\s*졌|내가\s*지어낸\s*거|(계속|다)\s*짓고\s*있었|화면에\s*안\s*나가|붙여\s*주질\s*못|(나는|난|나도)\s*[^.!?\n]{0,30}(넣는|먹는|시키는)\s*게\s*(제일\s*)?(좋았|맛있었|최고였|좋더라|맛있더라)/;   // 「여긴 사람들 우산 다 챙겨 나가던데」 — 어딘가에 있는 척(26.9.22 약점 시험)   // 「나 지금 좀 멍때리는 중이야」(26.9.22 시뮬레이터 QA 첫마디)
     const ps = x.split(/(?<=(?<!\d)[.!?…]|\n|[ㅋㅎ]{2,})(?=\s|$)\s*/);
     const kept = ps.filter((q) => !BODY_RE.test(q));
     const out = kept.join(" ").replace(/[ \t]{2,}/g, " ").trim();
@@ -3361,6 +3361,18 @@ function stripUngroundedMoney(reply: string, blob: string, isPriceAsk: boolean, 
 
 /* 🔗 앞 얘기 가리키기 단서 — 「대본 아직 안 외웠는데」「준비 하나도 못 했는데」「얘가」처럼 짧은 말이 몇 턴 전의 일(결혼식 사회·면접·보리)을
    가리킬 때, 그 원래 문장을 짚어 준다. 모델이 흐름은 이어도 이름을 안 넣던 약점(26.9.22 약점 시험 w-mem3). */
+function refKeys(msg: string, history: any[]): { keys: string[]; ref: string; src: string[] } {
+  const m = String(msg || "").trim();
+  const none = { keys: [], ref: "", src: [] };
+  if (!m || m.length > 30) return none;
+  const rm = m.match(/(준비|대본|원고|연습|발표|숙제|과제)/);
+  if (!rm) return none;
+  const users = (history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")).slice(-6);
+  const EVT = /(면접|시험|결혼식|사회|발표|여행|이사|생일|수술|소개팅|회의|경기|공연|대회)/g;
+  const src = users.filter((u) => new RegExp(EVT.source).test(u) && u !== m).slice(-2);
+  const keys = [...new Set(src.flatMap((x) => x.match(EVT) || []))].filter((k) => k !== rm[1]);
+  return { keys, ref: rm[1], src };
+}
 function refHint(msg: string, history: any[]): string {
   const m = String(msg || "").trim();
   if (!m || m.length > 30) return "";
@@ -5132,7 +5144,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
        인기 콘텐츠로 새지 않게(26.9.22 사장님: 바바인디아 얘기 중 「띄워봐」에 핫튜브 1위). 옛 네이버 링크면 같은 이름의 갈라 맛집으로. */
     {
       const m0 = String(userMsg || "").trim();
-      const bare = m0.length <= 20 && /(띄|떴|뜨|열|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|빨리|다시|안\s*(떴|떠|뜨|열))/.test(m0)
+      const gripe = m0.length <= 24 && /(왜\s*안\s*(줘|주|띄|보여|나와|붙)|안\s*주(냐|니|고)|언제\s*(줄|띄|보여)|뻥\s*(치|쳐)|거짓말\s*(하|치)|안\s*(보여|나와|떠|붙었))/.test(m0);
+      const bare = gripe || m0.length <= 20 && /(띄|떴|뜨|열|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|빨리|다시|안\s*(떴|떠|뜨|열))/.test(m0)
         && !/(영상|이슈|뉴스|맛집|예측|날씨|여행|숏판|롱판|광장|핫튜브|웃긴|재밌는)/.test(m0);
       const ll: any = rel?.session_meta?.last_list;
       const recent = ll?.at && (Date.now() - Date.parse(ll.at)) < 3 * 3600000 && Array.isArray(ll.items) && ll.items.length;
@@ -5149,7 +5162,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
         else if (it.ctype !== "link") act = { kind: "view", ctype: it.ctype, id: it.id, title: it.title, sub: it.sub, auto: true };
         if (act) {
           try { await enrichCards([act]); } catch { /* */ }
-          return json({ ok: true, reply: `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
+          return json({ ok: true, reply: gripe ? [`미안 ㅠ 여기 다시 붙였어 — ${String(act.title || "그거").slice(0, 30)}. 카드 누르면 바로 열려`, `${String(act.title || "그거").slice(0, 30)} 여기 있어! 아래 카드 눌러봐`, `답답했지 ㅠ ${String(act.title || "그거").slice(0, 30)} 다시 붙였어, 카드 누르면 열려`][Math.floor(Math.random() * 3)] : `여기 띄워놨어 — ${String(act.title || "그거").slice(0, 30)}`, actions: [act], friendName: rel?.friend_name || "갈비스" });
         }
       }
     }
@@ -6981,7 +6994,7 @@ ${parts.join("\n")}`;
       }
     }
     /* 카드를 뺐는데 말은 「붙여놨어」면 거짓말 — 솔직하게 */
-    if (!crisis && (_v2State === "request" || wantsContent(String(userMsg || ""))) && !actions.some((a: any) => a.kind === "crisis") && !actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|(?<!나\s{0,2})여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {   // 위기 턴의 「나 여기 있어」를 카드 거짓말로 오인했다(26.9.22 안전 시험)
+    if (!crisis && (_v2State === "request" || wantsContent(String(userMsg || ""))) && !actions.some((a: any) => a.kind === "crisis") && !actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || ""))) && /(붙여\s*놨|띄워\s*놨|(?<!나\s{0,2})여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {   // 위기 턴의 「나 여기 있어」를 카드 거짓말로 오인했다(26.9.22 안전 시험)
       reply = /(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "갈라 맛집 지도엔 딱 맞는 데가 아직 없네 ㅠ 동네 알려주면 거기서 다시 찾아볼게" : "앗 방금 건 제대로 못 붙였어 ㅠ 다시 찾아볼까?";
     }
     try { await enrichCards(actions as any[]); } catch { /* 꾸미기 실패는 카드 자체를 막지 않는다 */ }
@@ -7159,6 +7172,81 @@ ${parts.join("\n")}`;
       const wx = (sg: string) => !actions.some((x: any) => x.kind === "weather") && /(맑대|흐리대|춥대|덥대|(비|눈)\s*(온|안\s*온|그친)대|온다더라|맑다더라|그친다더라|날씨\s*좋대)/.test(sg);
       const bad = (sg: string) => wx(sg) || fake(sg);
       if (segs.some(bad)) { const kept = segs.filter((sg) => !bad(sg)).join(" ").trim(); if (kept.length >= 4) reply = kept; }
+    }
+    {   /* 🔗 「준비 하나도 못 했는데」에 면접을 안 짚으면 — 앞에 그 일 이름을 붙인다(단서만으론 확률이었다, 26.9.22 약점 시험) */
+      const rk = crisis ? null : refKeys(userMsg || "", history);
+      if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").includes(k))) reply = `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
+      /* ✋ 「아 그게 아니고」 — 말을 끊은 거다. 짐작하지 말고 듣는다(검증 시험 h-ctx06) */
+      if (!crisis && /^(아\s*)?(아니\s*)?(그게|그거|그런\s*게)?\s*아니(고|라|야|구)\s*[~.ㅋㅠ…]*$/.test(String(userMsg || "").trim())) {
+        const L = ["응? 뭔데, 말해봐", "어 내가 잘못 짚었나 보다 ㅋㅋ 뭔데?", "응응 뭐였어? 들을게"];
+        reply = L[Math.floor(Math.random() * L.length)];
+      }
+    }
+    /* 🤥 말로만 「찾아볼게·띄워줄게·잠깐만·몇 분 안에 줄게」 — 다음 턴에 알아서 가져오지 않는다. 약속한 그 자리에서 서버가 진짜 찾아 붙이고,
+       못 찾으면 못 찾았다고(26.9.22 사장님: 떡볶이 네 번 약속만 하고 「이번엔 진짜야」 — 「뻥치고 있네」).
+       「우리 집 근처로」면 기억에 있는 사는 동네(양재천 근처 거주) 주소로 직접 찾는다. 카드 없이 가게를 말로만 추천해도 같은 길. */
+    {
+      const _hasCard = actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || "")));
+      const lastA = String([...(history || [])].reverse().find((h: any) => h?.role === "assistant")?.content || "");
+      const recentU = (history || []).filter((h: any) => h?.role === "user").slice(-6).map((h: any) => String(h.content || "")).concat(String(userMsg || ""));
+      const ctxTxt = recentU.join(" ") + " " + String(reply || "");
+      const MENUS = [...Object.keys(FOOD_SYN), "떡볶이", "국밥", "카레", "커리", "파스타", "초밥", "라멘", "치킨", "피자", "햄버거", "냉면", "칼국수", "국수", "짜장", "짬뽕", "분식", "카페", "디저트", "베이커리", "삼겹살", "곱창", "족발", "보쌈", "순대국", "해장국", "쌀국수", "마라탕", "돈가스", "우동", "브런치"];
+      const foodNow = /(맛집|먹|식당|밥집|카페|메뉴|브런치)/.test(String(userMsg || "") + " " + lastA) || MENUS.some((w) => (String(userMsg || "") + " " + lastA).includes(w));
+      const homeAsk = /(우리\s*집|집\s*(에서|근처|앞|쪽)|우리\s*동네|사는\s*데)/.test(String(userMsg || ""));
+      const promise = /(찾아\s*볼게|찾아서\s*줄게|골라서\s*줄게|골라\s*줄게|띄워\s*줄게|찾아\s*줄게|찾는\s*중|찾고\s*있어|잠깐만|몇\s*분\s*(안에|뒤에|만)|곧\s*줄게|금방\s*줄게|바로\s*줄게|다시\s*찾아|알아\s*볼게|(알아보고|알아봐서|정리해서|다시|찾아서)\s*[^.!?\n]{0,8}(줄게|붙여\s*줄게|띄워\s*줄게))/.test(String(reply || ""));
+      const talkRec = foodNow && (/(유명하대|맛있대|괜찮대|잘한대|나온대|평이\s*좋|가\s*봐|가\s*볼래|열어\s*봐|여기\s*있어)/.test(String(reply || "")) || /'[^'\n]{2,20}'|「[^」\n]{2,20}」/.test(String(reply || "")));
+      if (!crisis && ((!_hasCard && (promise || talkRec)) || (foodNow && homeAsk))) {
+        let fixed = false;
+        if (foodNow || /(맛집|먹|식당|밥)/.test(ctxTxt) || MENUS.some((w) => ctxTxt.includes(w))) {
+          const menu = [...new Set(MENUS.filter((w) => ctxTxt.includes(w)))].slice(-1);
+          let place = [...new Set((ctxTxt.match(/[가-힣]{2,6}(천|동|구|역|로|길)(?=[\s에쪽근처,.!?]|$)/g) || []).filter((w) => !/(우리|거기|여기|이쪽|저쪽|근처|가까운|데로|쪽으로|대로)/.test(w)))].slice(-1);
+          if (homeAsk || (!place.length && /(우리\s*집|집\s*(에서|근처|앞|쪽)|우리\s*동네|사는\s*데)/.test(ctxTxt))) {
+            try {
+              const { data: hm } = await supa.from("friend_memory").select("content").eq("user_id", uid).eq("status", "active")
+                .or("content.ilike.%거주%,content.ilike.%사는%,content.ilike.%살고%,content.ilike.%우리 동네%").order("created_at", { ascending: false }).limit(5);
+              for (const x of hm || []) { const pm = String(x.content || "").match(/([가-힣]{2,6}(천|동|구|역|로|길))\s*(근처|쪽|에)?\s*(에\s*)?(거주|살|사는)/); if (pm) { place = [pm[1]]; break; } }
+            } catch { /* */ }
+          }
+          // 주소 낱말 — 「양재천」「강남역」은 주소에 그대로 없다 → 끝 글자(천·역)를 뗀다
+          const base = place[0] ? place[0].replace(/(천|역)$/, "") : "";
+          const alts = menu[0] ? (FOOD_SYN[menu[0]] || (menu[0] === "떡볶이" ? ["떡볶이", "분식"] : [menu[0]])) : [];
+          const q1 = async (withMenu: boolean, withPlace: boolean) => {
+            let rq = supa.from("food_places").select("id,name,category,rating,rating_n,cover_url,address,hours").eq("status", "live");
+            if (withPlace && base) rq = rq.ilike("address", `%${base}%`);
+            if (withMenu && alts.length) rq = rq.or(alts.flatMap((a) => [`name.ilike.%${a}%`, `category.ilike.%${a}%`]).join(","));
+            const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(8);
+            return (data || []).filter((x: any) => !/(\(주\)|휴게소|주식회사)/.test(String(x.name || ""))).slice(0, 3);
+          };
+          const plan: [boolean, boolean, string][] = base
+            ? [[true, true, ""], [false, true, `${place[0]} 쪽엔 ${menu[0] || "그 메뉴"} 집이 없어서 근처 다른 데로 — `]]
+            : [[true, false, ""]];
+          for (const [wm, wp, lead] of plan) {
+            if (wm && !alts.length) continue;
+            const rows = await q1(wm, wp).catch(() => []);
+            if (rows.length) {
+              for (let k = actions.length - 1; k >= 0; k--) if ((actions[k] as any).kind === "view" && (actions[k] as any).ctype === "food") actions.splice(k, 1);
+              for (const x of rows) actions.push({ kind: "view", ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover_url || null, label: "열어보기" } as any);
+              reply = `${lead}여기 붙여놨어: ${rows.map((x: any) => x.name).join(", ")}`.slice(0, 90);
+              if (rel) rel.session_meta = { ...(rel.session_meta || {}), last_list: { at: new Date().toISOString(), items: rows.map((x: any) => ({ ctype: "food", id: String(x.id), title: String(x.name || "").slice(0, 60), sub: _dong(x.address) })) } };   // 다음 턴 「왜 안 줘」에 이걸 다시 연다
+              fixed = true; break;
+            }
+          }
+          if (!fixed && !_hasCard) { reply = base ? `미안, 갈라 맛집 지도엔 ${place[0]} 쪽 가게가 아직 없어 ㅠ` : `미안, 동네를 몰라서 못 붙였어 ㅠ 어느 동네인지 알려줘`; fixed = true; }
+        }
+        if (!fixed && promise && !_hasCard) {
+          const kept = String(reply || "").split(/(?<=[.!?…~])\s+|\n+|\s+—\s+/).filter((sg) => !/(찾아\s*볼게|줄게|찾는\s*중|찾고\s*있어|잠깐만|몇\s*분|다시\s*찾아)/.test(sg)).join(" ").trim();
+          reply = kept.length >= 4 ? kept : "미안, 그건 지금 바로는 못 찾았어 ㅠ";
+        }
+      }
+    }
+    {   /* 🏷 맛집 카드를 붙인 턴에 카드에 없는 가게 이름('현선이네')을 말로 추천 — 갈라 맛집만 권한다(26.9.22 사장님). 그 문장만 뺀다 */
+      const fc = actions.filter((a: any) => a.kind === "view" && a.ctype === "food").map((a: any) => String(a.title || "").replace(/\s+/g, ""));
+      if (fc.length) {
+        const said = [...(history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")), String(userMsg || "")].join(" ").replace(/\s+/g, "");
+        const segs = String(reply || "").split(/(?<=[.!?…~])\s+|\n+|\s+—\s+/);
+        const alien = (sg: string) => [...sg.matchAll(/'([^'\n]{2,20})'|「([^」\n]{2,20})」/g)].some((m) => { const nm = String(m[1] || m[2]).replace(/\s+/g, ""); return !fc.some((t) => t.includes(nm) || nm.includes(t)) && !said.includes(nm); });
+        if (segs.some(alien)) { const kept = segs.filter((sg) => !alien(sg)).join(" ").trim(); reply = kept.length >= 4 ? kept : `여기 붙여놨어: ${actions.filter((a: any) => a.kind === "view" && a.ctype === "food").map((a: any) => a.title).slice(0, 3).join(", ")}`; }
+      }
     }
     const _preContract = reply;   // 🔬 레드팀 진단용(관문 전 원문)
     reply = enforceContract(reply, { umsg: userMsg || "", nickRecent: !!nick && history.slice(-6).some((m: any) => m?.role === "assistant" && String(m.content || "").includes(String(nick))), friendName, nick, longForm, heavy: tHeavy, light: tLight, moodLow: _moodLow,
