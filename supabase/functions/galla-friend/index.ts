@@ -6082,12 +6082,17 @@ ${parts.join("\n")}`;
     // 🧵 ② 열린 실 — 하다 만 얘기를 '가끔' 자연스럽게 되돌아본다. 진짜 저장된 것만, 지어내기 절대 금지.
     let openLoopBlock = "";
     try {
-      if (userMsg && !work && !handoff && !deliverMode && Math.random() < 0.3) {
-        const { data: loops } = await supa.from("friend_memory").select("content")
-          .eq("user_id", uid).eq("status", "active").eq("kind", "open_loop")
+      /* ⚠️ 26.9.22 사장님: 바바인디아 카드 얘기 한가운데 「아 맞다, 아까 하이닉스 170까지 갈 거 같다고 했잖아」 — 한 달 전(8.21) 미완 대화를
+         '아까'로. ① 이틀 안의 것만 ② 한가한 수다 턴에서만(요청·항의·교정·감정 중엔 절대) ③ 언제 것인지 붙이고 「아까」 금지 */
+      const _idle = _v2State === "chat" && !wantsContent(String(userMsg || "")) && String(userMsg || "").trim().length <= 40;
+      if (userMsg && _idle && !work && !handoff && !deliverMode && Math.random() < 0.3) {
+        const since = new Date(Date.now() - 2 * 86400000).toISOString();
+        const { data: loops } = await supa.from("friend_memory").select("content,created_at")
+          .eq("user_id", uid).eq("status", "active").eq("kind", "open_loop").gte("created_at", since)
           .order("created_at", { ascending: false }).limit(2);
-        const lines = (loops || []).map((l: any) => "· " + String(l.content || "").slice(0, 70)).filter((s: string) => s.length > 3);
-        if (lines.length) openLoopBlock = `🧵 [하다 만 얘기 — 아래 '실제 저장된 것'만, 지어내기 절대 금지]:\n${lines.join("\n")}\n지금 흐름에 자연스럽고 분위기 맞으면 '가끔' 이 중 하나를 되돌아가 가볍게 물어봐("아 맞다, 아까 ~하다 말았지 — 그건 어떻게 됐어?"). 억지·매번 금지, 이미 끝난 얘기면 넘어가. ⚠️ 여기 없는 걸 지어내서 "아까 ~했잖아" 하는 건 절대 금지(그게 제일 최악 — 없는 기억 만들기).`;
+        const ago = (t: string) => { const h = (Date.now() - Date.parse(t)) / 3600000; return h < 3 ? "몇 시간 전" : h < 24 ? "오늘 앞서" : "어제"; };
+        const lines = (loops || []).map((l: any) => `· (${ago(l.created_at)}) ` + String(l.content || "").slice(0, 70)).filter((s: string) => s.length > 10);
+        if (lines.length) openLoopBlock = `🧵 [하다 만 얘기 — 아래 '실제 저장된 것'만, 지어내기 절대 금지]:\n${lines.join("\n")}\n지금 대화가 한가하고 분위기 맞을 때만 '가끔' 하나를 가볍게 물어봐("저번에 ~하다 말았지 — 그건 어떻게 됐어?"). 상대가 지금 다른 걸 원하거나 따지는 중이면 절대 꺼내지 마라. 오늘 대화에 없던 걸 「아까」라고 하지 마라. 네가 했던 예상·숫자를 되풀이하지 마라.`;
       }
     } catch { /* */ }
 
