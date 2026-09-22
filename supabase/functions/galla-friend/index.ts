@@ -5464,7 +5464,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
           /* 항의가 이어지면 같은 말만 반복하지 않는다 — 두 번째부터는 「혹시 카드가 안 보여?」(사람이라면 그렇게 묻는다, 26.9.22 심판) */
           const _tt = String(act.title || "그거").slice(0, 30);
           const _nG = history.slice(-6).filter((h: any) => h?.role === "assistant" && /(다시 붙였어|카드\s*(를\s*)?누르면|카드가 안 보여|내 쪽에선)/.test(String(h.content || ""))).length;
-          const _gr = howTo ? (_nG === 0 ? `${_tt} 카드를 누르면 바로 열려! 카드가 안 보이면 말해줘` : `아 카드가 안 보이는구나 ㅠ 앱을 한 번 껐다 켜보면 떠. 그래도 안 되면 내가 다른 걸로 찾아줄게`)
+          const _gr = howTo ? (_nG === 0 ? `${_tt} 카드를 누르면 바로 열려! 카드가 안 보이면 말해줘` : `아 카드가 안 보이는구나 ㅠ 대화창을 살짝 위로 올려볼래? 그래도 없으면 「다른 거」라고 해줘, 새로 붙일게`)
             : _nG === 0 ? `미안 ㅠ 여기 다시 붙였어 — ${_tt}. 카드 누르면 바로 열려`
             : _nG === 1 ? `${_tt} 카드 다시 붙였어. 혹시 화면에 카드가 안 보여?`
             : `답답하게 해서 진짜 미안 ㅠ 내 쪽에선 ${_tt} 카드가 붙어 있는데, 안 보이면 앱을 한 번 껐다 켜줄래?`;
@@ -6598,8 +6598,29 @@ ${parts.join("\n")}`;
        메모 안의 「면접」 때문에 「답에 이미 면접이 있다」로 읽혀 앞 얘기 짚기가 빠졌다(26.9.22 시험 ctx08·질문 비율) */
     const honestyPass = async (reply: string, actions: any[]): Promise<string> => {
       const ms = (String(reply || "").match(/^\s*<ms>[\s\S]*?<\/ms>\s*/) || [""])[0];
-      const out = await honestyPassBody(String(reply || "").slice(ms.length), actions);
-      return ms + String(out || "");
+      let out = String(await honestyPassBody(String(reply || "").slice(ms.length), actions) || "");
+      if (!crisis && !/^(여기 붙여놨어|이번엔 「)/.test(out)) out = nameRefFix(out);   // 검사관이 다시 쓴 뒤에도 남도록 맨 끝에서
+      return ms + out;
+    };
+    /* 🐶🔗 앞 얘기 이름 짚기 — 관문 맨 끝(검사관 뒤)에서 한 번 더. 판정은 「계약 관문이 남길 앞 두 문장(질문 빼고)」 기준 —
+       마지막 질문에만 「보리」「면접관」이 있으면 계약 관문이 그 질문을 잘라 이름이 사라졌다(26.9.22 w-mem2·ctx08) */
+    const nameRefFix = (r0: string): string => {
+      let r = String(r0 || "").trim();
+      const head = () => r.split(/(?<=[.!?…~])\s+|\n+|\s+—\s+/).filter((sg) => !/[?？]/.test(sg)).slice(0, 2).join(" ");
+      const um = String(userMsg || "");
+      if (/(^|\s)(얘|걔|이\s*녀석|그\s*녀석|이\s*놈|요\s*녀석)(가|는|도|를|이)?(\s|$)/.test(um)) {
+        const nm = (history || []).filter((h: any) => h?.role === "user").slice(-6).map((h: any) => (String(h.content || "").match(/이름(?:은|이)?\s*[「"']?([가-힣]{1,5}?)[」"']?\s*(?:야|이야|이에요|예요|임|이라고|라고)/) || [])[1]).filter(Boolean).pop();
+        if (nm && !head().includes(nm)) {
+          const jong = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return c >= 0 && c <= 11171 && c % 28 !== 0; };
+          const P: Record<string, [string, string]> = { 가: ["이가", "가"], 는: ["이는", "는"], 도: ["이도", "도"], 를: ["이를", "를"] };
+          let done = false;
+          r = r.replace(/(강아지|고양이|걔|얘)(가|는|도|를)(?=\s)/, (_m, _w, p) => { done = true; return nm + (jong(nm) ? P[p][0] : P[p][1]); });
+          if (!done || !head().includes(nm)) r = `${nm} ` + r.replace(/^(아이고|오|아)\s+/, "");
+        }
+      }
+      const rk = refKeys(um, history);
+      if (rk && rk.keys.length && !rk.keys.some((k) => head().includes(k)) && /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref)) r = `${rk.keys.join(" ")} 앞두고 ` + r;
+      return r;
     };
     const honestyPassBody = async (reply: string, actions: any[]): Promise<string> => {
       /* 26.9.22 엔진 점검으로 다시 씀. 원칙: ① 대화·감정 턴엔 카드를 되살리지 않는다 ② 위로하는 「나 여기 있어」는 카드 주장이 아니다
@@ -6608,6 +6629,20 @@ ${parts.join("\n")}`;
       const TALK = _v2Talk && !["refuse", "hostile", "correct"].includes(_v2State);   // 순수 대화 턴(수다·감정·인사·뒷담…)
       const SOFT = !!(_noPush || dependency || grief || _v2State === "emotion");
       const hasCard = () => actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || "")));
+      {   /* 🧰 도구 호출 흉내 — 도구를 부르지 않고 「[gen_titles: {"topic":…}]」를 글로 써서 코드가 그대로 나갔다(26.9.22 시험 p-create).
+             진짜 도구 이름이면 서버가 그 자리에서 실행해 카드로 붙이고, 글에서는 지운다 */
+        const FAKE = /\[\s*([a-z][a-z_]{2,30})\s*[:(]\s*(\{[\s\S]*?\})\s*\)?\s*\]/g;
+        const calls = [...String(reply || "").matchAll(FAKE)];
+        if (calls.length) {
+          for (const m of calls.slice(0, 1)) {
+            const name = m[1]; let args: any = {}; try { args = JSON.parse(m[2]); } catch { /* */ }
+            if (!crisis && TOOLS.some((t: any) => t?.function?.name === name)) {
+              try { const out: any = await runTool(name, args, uid, rel?.last_seen_at || null, reshow); if (out?.action) actions.push(out.action); } catch { /* */ }
+            }
+          }
+          reply = String(reply || "").replace(FAKE, " ").replace(/[ \t]{2,}/g, " ").trim();
+        }
+      }
       {   /* 🎨 창작 턴에 딴 영상 끼워 넣기 금지 — 「썸네일 만들어줘」에 핫튜브 1위·침착맨 얘기로 샜다(26.9.22 시험 p-create). 상대가 영상을 보자고 한 게 아니면 뗀다 */
         const CRAFT_ASK = /(썸네일|제목|대본|기획|초안)\s*(좀|하나|도)?\s*(만들|뽑|써|짜|그려)/;
         const craft = actions.some((a: any) => /^(genThumbnail|genVideo|draft\w*|editdraft|plan|needGC)$/.test(String(a.kind || ""))) || CRAFT_ASK.test(String(userMsg || ""))
@@ -6619,12 +6654,19 @@ ${parts.join("\n")}`;
             const a: any = actions[i];
             if ((a.kind === "open" && /watch\.html|youtube|youtu\.be/.test(String(a.url || ""))) || (a.kind === "view" && /^(hottube|reel|shorts)$/.test(String(a.ctype || "")))) { gone.push(String(a.title || "")); actions.splice(i, 1); }
           }
+          /* 카드 없이 도구 결과(핫튜브 목록)의 제목·채널만 말로 끼우는 경우도 — 「유행음식으로 인싸 체험하기 — 이거 침착맨 거」(26.9.22 p-create) */
+          for (const m of String(_toolBlob || "").matchAll(/"(?:title|channel|channelTitle)"\s*:\s*"([^"]{2,60})"/g)) gone.push(m[1]);
           const names = gone.map((t) => t.replace(/["'「」]/g, "").split(/\s+/).slice(0, 2).join(" ")).filter((t) => t.length >= 2);
           const bad = (sg: string) => /핫튜브|조회(수)?\s*\d|지금\s*뜨는|요즘\s*뜨는|[0-9]+위/.test(sg) || names.some((n) => sg.includes(n));
           const sents = String(reply || "").split(/(?<=[.!?…~])\s+|\n+/);
           if (sents.some(bad)) {
             const kept = sents.filter((sg) => !bad(sg)).join(" ").trim();
-            reply = kept.length >= 6 ? kept : "좋아 ㅎㅎ 어떤 영상이야? 주제 한 줄만 알려주면 거기 맞춰 뽑아줄게";
+            /* 다 지워졌을 때 — 주제를 이미 말했으면 되묻지 않는다(「먹방이야. 마라탕 도전」에 「어떤 영상이야?」가 나갔다) */
+            const toldTopic = String(userMsg || "").trim().length >= 6 && !CRAFT_ASK.test(String(userMsg || ""));
+            reply = kept.length >= 6 ? kept
+              : actions.some((a: any) => /^draft/.test(String(a.kind || ""))) ? "좋다 ㅋㅋ 초안 잡아놨어 — 거기서 같이 다듬자"
+              : actions.some((a: any) => a.kind === "genThumbnail") ? (toldTopic ? "좋다 ㅋㅋ 그 느낌으로 썸네일은 편집기에서 그려줄게" : "좋아 ㅎㅎ 어떤 영상이야? 주제 한 줄만 알려줘")
+              : toldTopic ? "좋다 ㅋㅋ 그 주제면 썸네일은 편집기에서 바로 뽑아줄게" : "좋아 ㅎㅎ 어떤 영상이야? 주제 한 줄만 알려줘";
           }
         }
       }
@@ -6686,7 +6728,7 @@ ${parts.join("\n")}`;
       }
       {   /* 🔗 앞 얘기 가리키기 — 짝이 맞을 때만 그 일 이름을 앞에(면접↔준비, 결혼식 사회↔대본). ✋ 「아 그게 아니고」엔 짐작 말고 듣기 */
         const rk = crisis ? null : refKeys(userMsg || "", history);
-        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").split(SPLIT).filter((sg, i, arr) => !(i === arr.length - 1 && /[?？]/.test(sg))).join(" ").includes(k))) reply = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref) ? `${rk.keys.join(" ")} 앞두고 ` + String(reply || "").trim() : `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
+        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").split(SPLIT).filter((sg) => !/[?？]/.test(sg)).slice(0, 2).join(" ").includes(k))) reply = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref) ? `${rk.keys.join(" ")} 앞두고 ` + String(reply || "").trim() : `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
         if (!crisis && /^(아\s*)?(아니\s*)?(그게|그거|그런\s*게)?\s*아니(고|라|야|구)\s*[~.ㅋㅠ…]*$/.test(String(userMsg || "").trim())) {
           const L = ["응? 뭔데, 말해봐", "어 내가 잘못 짚었나 보다 ㅋㅋ 뭔데?", "응응 뭐였어? 들을게"];
           reply = L[Math.floor(Math.random() * L.length)]; _fixed = true;
@@ -6878,7 +6920,7 @@ ${parts.join("\n")}`;
       let j: any = null;
       if (step === 0 && brain === "companion" && !route && !planMode && !crisis && mindBlock) {
         const pre = backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>";
-        const full = await chatStream(messages, { model: brainModel, maxTokens: co.maxTokens || 240, prefix: pre, uid }, () => {}).catch(() => null);
+        const full = await chatStream(messages, { model: brainModel, maxTokens: co.maxTokens || 360, prefix: pre, uid }, () => {}).catch(() => null);   // 메모(<ms>)가 토큰을 먹어 본문이 「아 ㅋㅋ 무거운」에서 잘렸다(26.9.22 w-req2) — 길이 캡은 관문이 한다
         if (full) j = { choices: [{ message: { role: "assistant", content: full } }] };
       }
       if (!j) j = await chatOnce(messages, co);
