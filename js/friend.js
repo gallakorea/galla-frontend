@@ -433,9 +433,17 @@
     logEl.addEventListener("load", restick, true);                       // 이미지·미디어 늦은 로드
     try{ new ResizeObserver(restick).observe(logEl); }catch(e){}          // 로그 영역 자체가 줄 때(키보드)
   }
+  /* 🎞 아일랜드 퇴장 — 즉시 지우지 않고 오그라드는 애니(.38s)가 끝난 뒤 지운다. 그동안 대화창이 올라온다(오브를 거치지 않는다) */
+  function islandOut(){
+    if(!_asEl || !_asEl.classList.contains("on")) return;
+    _asEl.classList.add("fri-out");
+    clearTimeout(islandOut._t);
+    islandOut._t=setTimeout(function(){ if(_asEl) _asEl.classList.remove("fri-out","on","fri-open","fri-think"); }, 380);
+  }
+  function islandIn(){ if(!_asEl) return; clearTimeout(islandOut._t); _asEl.classList.remove("fri-out"); }
   function open(){
     if(!sheet) build();
-    if(_asEl) _asEl.classList.remove("on","fri-open","fri-think");
+    islandOut();
     setSurface("sheet");
     bindKb();                                     // 키보드 트래킹(1회 등록)
     bindStick(); _stick=true;                     // 하단 고정 감시자(1회 등록) — 열 때는 항상 바닥부터
@@ -477,7 +485,7 @@
       if(sheet) sheet.classList.remove("fr-open");
       document.body.classList.remove("fr-chatting");
       orb && orb.classList.add("fr-hidden");
-      setSurface("island"); _asEl.classList.add("on"); friExpand(false); syncAssist();
+      islandIn(); setSurface("island"); _asEl.classList.add("on"); friExpand(false); syncAssist();
       return;
     }
     setSurface("orb");
@@ -678,7 +686,8 @@
       friExpand(!_asEl.classList.contains("fri-open"));
     };
     // 아일랜드 → 크게: 이어가는 대화라 새 인사 없이(「또 왔네 반가워」가 붙던 것)
-    var bigOpen=function(){ var away=_assist && _assist.away; if(away) closeAssist(); else hideAssist(); if(_asEl) _asEl.classList.remove("fri-away"); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
+    /* 🎞 아일랜드 → 대화창: 오브를 거치지 않는다(예전엔 hideAssist 가 잠깐 오브로 바꿔 번쩍였다). 아일랜드가 오그라드는 동안 대화창이 올라온다 */
+    var bigOpen=function(){ var away=_assist && _assist.away; if(away) closeAssist(true); if(_asEl) _asEl.classList.remove("fri-away"); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
     _asEl.querySelector(".fra-big").onclick=bigOpen;
     _asEl.querySelector(".fra-cards").onclick=bigOpen;
     _asEl.querySelector(".fra-x").onclick=function(){
@@ -779,7 +788,7 @@
     buildAssist(); _friLastTxt=""; _asBase=logEl ? logEl.querySelectorAll(".fr-msg").length : 0;
     if(_fromChat){ var _ms=logEl.querySelectorAll(".fr-msg"); for(var _i=_ms.length-1;_i>=0;_i--){ if(_ms[_i].classList.contains("fr-u")){ _asBase=_i+1; break; } } }
     try{ var ob=orb && orb.getBoundingClientRect(); if(ob && ob.width){ _asEl.style.setProperty("--fx", Math.round(ob.left+ob.width/2 - window.innerWidth/2)+"px"); _asEl.style.setProperty("--fy", Math.round(ob.top+ob.height/2 - (window.innerHeight-110))+"px"); } }catch(e){}
-    setSurface("island"); _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
+    islandIn(); setSurface("island"); _asEl.classList.remove("on","fri-open","fri-full"); void _asEl.offsetWidth; _asEl.classList.add("on","fri-think");
     _asEl.querySelector(".fri-tick").textContent="보는 중…";
     if(!_asObs && logEl && window.MutationObserver){ _asObs=new MutationObserver(function(){ syncAssist(); }); _asObs.observe(logEl, {childList:true, subtree:true, characterData:true}); }
     _asEl.querySelector(".fra-msg").textContent="";
@@ -805,10 +814,10 @@
   }
   var _asWatch=0, _asHome="";
   window.GALLA_assistDbg=function(){ return { assist:_assist, home:_asHome, here:location.pathname+location.search+location.hash, watching:!!_asWatch }; };
-  function closeAssist(){
+  function closeAssist(keepSurface){
     clearInterval(_asWatch); _asWatch=0; _friPos=null; if(_asEl){ _asEl.classList.remove("fri-free","fri-stash","fri-stash-left"); _asEl.style.left=_asEl.style.top=""; }
     _assist=null; try{ sessionStorage.removeItem("fr_assist"); }catch(e){}
-    hideAssist();
+    if(!keepSurface) hideAssist();
   }
   function minimize(a){
     var say = a ? (MINI_SAY[a.ctype || (/watch\.html/.test(String(a.url||""))?"hottube":"")] || "다 보면 어땠는지 말해줘 ㅎㅎ") : "";
@@ -1887,7 +1896,7 @@
       var title=a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
       var c=el('<button class="fr-tc'+(a.pick?' fr-tc-pick':'')+(img?'':' fr-tc-noimg')+'" style="--i:'+i+';--kc:'+km.c+'">'+
         '<span class="fr-tc-media">'+
-          (img?'<img alt="" loading="lazy" decoding="async">':'<span class="fr-tc-ph">'+tcIcon(k)+'</span>')+
+          (img?'<img alt="" decoding="async">':'<span class="fr-tc-ph">'+tcIcon(k)+'</span>')+
           '<span class="fr-tc-shade"></span><span class="fr-tc-shine"></span>'+
           '<span class="fr-tc-badge"></span>'+
           (numbered?'<b class="fr-tc-n">'+(i+1)+'</b>':'')+
@@ -2080,7 +2089,7 @@
         var card=el(
           '<button class="fr-card'+(safeImg?' fr-card-hasimg':'')+'">'+
             (safeImg
-              ? '<span class="fr-card-ic fr-card-img"><img alt="" loading="lazy" src="'+esc(safeImg)+'">'+(num?'<b class="fr-card-n">'+num+'</b>':'')+'</span>'
+              ? '<span class="fr-card-ic fr-card-img"><img alt="" src="'+esc(safeImg)+'">'+(num?'<b class="fr-card-n">'+num+'</b>':'')+'</span>'
               : '<span class="fr-card-ic">'+(num?('<b class="fr-card-n">'+num+'</b>'):ICON.globe)+'</span>')+
             '<span class="fr-card-body">'+
               '<span class="fr-card-t">'+esc(title)+'</span>'+

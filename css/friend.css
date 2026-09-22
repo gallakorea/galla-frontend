@@ -80,8 +80,10 @@ body.fr-web .fr-getapp:active{ transform:scale(.95); }
 #frOrb.fr-ping .fr-dot{ display:block; }
 
 /* ── 시트/패널(레이아웃·키보드 = 검증된 규칙 그대로) ───── */
-#frSheet{ position:fixed; inset:0; z-index:950; display:none; }
-#frSheet.fr-open{ display:block; }
+/* 🎞 display:none↔block 은 슬라이드가 안 된다(첫 프레임이 없어 뚝 나타나고 뚝 사라졌다, 26.9.22 사장님 「부드럽지가 않아」)
+   → 숨김은 visibility 로. 닫을 땐 패널이 다 내려간 뒤(.32s)에 숨는다. */
+#frSheet{ position:fixed; inset:0; z-index:950; display:block; visibility:hidden; pointer-events:none; transition:visibility 0s linear .32s; }
+#frSheet.fr-open{ visibility:visible; pointer-events:auto; transition:none; }
 #frSheet .fr-scrim{ position:absolute; inset:0; backdrop-filter:blur(2px); opacity:0; transition:opacity .22s;
   background:linear-gradient(to bottom, rgba(2,6,12,.30) 0, rgba(2,6,12,.62) 84px); }  /* 로고는 보이게 */
 #frSheet.fr-open .fr-scrim{ opacity:1; }
@@ -1121,14 +1123,14 @@ body.fr-chatting #frAssist, body.dm-detail #frAssist{ display:none !important; }
 
 /* ══════════ 🧭 갈비스는 화면에 하나만 + 오브↔아일랜드 변신(26.9.22 머티리얼 컨테이너 변환) ══════════ */
 body.fr-sf-island #frOrb, body.fr-sf-island #frMini, body.fr-sf-island #frMiniSay,
-body.fr-sf-sheet #frOrb, body.fr-sf-sheet #frMini, body.fr-sf-sheet #frMiniSay, body.fr-sf-sheet #frAssist,
+body.fr-sf-sheet #frOrb, body.fr-sf-sheet #frMini, body.fr-sf-sheet #frMiniSay, body.fr-sf-sheet #frAssist:not(.fri-out),
 body.fr-sf-mini #frOrb, body.fr-sf-mini #frAssist,
-body.fr-sf-orb #frAssist, body.fr-sf-orb #frMini, body.fr-sf-orb #frMiniSay{ display:none !important; }
+body.fr-sf-orb #frAssist:not(.fri-out), body.fr-sf-orb #frMini, body.fr-sf-orb #frMiniSay{ display:none !important; }
 /* 오브 자리에서 자라나 캡슐이 된다 */
 #frAssist.fri.on{ animation:friMorphIn .6s cubic-bezier(.2,1.2,.3,1) both !important; }
 @keyframes friMorphIn{ 0%{ opacity:.2; transform:translateX(-50%) translate(var(--fx,40vw), var(--fy,0px)) scale(.18); border-radius:50%; }
   55%{ opacity:1; border-radius:22px; } 100%{ opacity:1; transform:translateX(-50%); } }
-#frAssist.fri.fri-out{ animation:friMorphOut .38s cubic-bezier(.5,0,.8,.3) both !important; }
+#frAssist.fri.fri-out{ display:flex !important; pointer-events:none; animation:friMorphOut .38s cubic-bezier(.5,0,.8,.3) both !important; }
 @keyframes friMorphOut{ to{ opacity:0; transform:translateX(-50%) translate(var(--fx,40vw), var(--fy,0px)) scale(.18); border-radius:50%; } }
 /* 접힌 채 새 답 — 새 소식 점 */
 #frAssist.fri-unread:not(.fri-open) .fri-cap::after{ content:""; position:absolute; right:14px; top:50%; width:9px; height:9px; margin-top:-4.5px; border-radius:50%;
