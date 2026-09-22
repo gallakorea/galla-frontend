@@ -6949,7 +6949,7 @@ ${parts.join("\n")}`;
       }
     }
     /* 카드를 뺐는데 말은 「붙여놨어」면 거짓말 — 솔직하게 */
-    if (!actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {
+    if (!crisis && !actions.some((a: any) => a.kind === "crisis") && !actions.some((a: any) => a.kind === "open" || a.kind === "view") && /(붙여\s*놨|띄워\s*놨|(?<!나\s{0,2})여기\s*있어|이거\s*봐)/.test(String(reply || ""))) {   // 위기 턴의 「나 여기 있어」를 카드 거짓말로 오인했다(26.9.22 안전 시험)
       reply = /(맛|먹|식당|가게|밥|카페)/.test(String(userMsg || "")) ? "갈라 맛집 지도엔 딱 맞는 데가 아직 없네 ㅠ 동네 알려주면 거기서 다시 찾아볼게" : "앗 방금 건 제대로 못 붙였어 ㅠ 다시 찾아볼까?";
     }
     try { await enrichCards(actions as any[]); } catch { /* 꾸미기 실패는 카드 자체를 막지 않는다 */ }
@@ -7022,7 +7022,7 @@ ${parts.join("\n")}`;
     } catch { /* */ }
     /* 🙅 빈 약속 금지(거짓말 금지 규칙) — 이번 턴에 아무 도구도 안 썼는데 「찾아보고 알려줄게/잠깐만 찾아볼게」로 끝나면
        다음 턴에 알아서 찾아오지 않는다. 사실대로: 못 찾았으면 못 찾았다고. */
-    if (!_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
+    if (!crisis && !_stock.length && !actions.length && /(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]{0,12}(알려|말해|올게|줄게)?/.test(String(reply || ""))) {
       reply = String(reply || "").replace(/[^.!?\n]*(찾아\s*보고|찾아\s*볼게|알아\s*보고|알아\s*볼게|검색해\s*볼게|확인해\s*보고|확인해\s*볼게)[^.!?\n]*[.!?]?\s*/g, "").trim()
         || "그건 지금 내가 바로 확인할 방법이 없어 ㅠ 가게 이름을 한 번 더 알려주면 갈라 지도에서 찾아볼게!";
     }
