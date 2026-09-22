@@ -90,6 +90,10 @@ export async function run() {
     const in8 = document.querySelector("#frAssist .fra-in input");
     if (in8) { in8.value = "여기 괜찮아 보인다"; document.querySelector("#frAssist .fra-send").click(); }
     ok("8 미니에서 입력하면 풀 대화로", !!(await until(() => surf() === "sheet", 6000)), surf());
+    await wait(500);
+    /* 상태 이름만 보면 안 된다 — 대화창이 콘텐츠 상세(z 10000) 뒤에 깔려 안 보이던 것을 놓쳤다(26.9.22 사장님 실기기) */
+    const topEl = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+    ok("8 풀 대화가 실제로 맨 위에 보인다", !!(topEl && topEl.closest("#frSheet")), topEl ? (topEl.id || topEl.className || topEl.tagName).toString().slice(0, 40) : "없음");
     await until(() => msgs().length >= n8 + 2 && !document.querySelector("#frSheet .fr-typing"), 45000);
     const u8 = msgs().filter((m) => !m.classList.contains("fr-a")).pop();
     ok("8 보낸 말이 풀 대화에 보인다", !!(u8 && /여기 괜찮아 보인다/.test(u8.textContent)), u8 && u8.textContent.slice(0, 30));

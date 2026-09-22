@@ -481,6 +481,7 @@
 
   function close(){
     /* 🔁 콘텐츠 화면에서 크게 봤다가 닫으면 → 다시 아일랜드(미니)로 돌아간다(26.9.22 사장님: 「창↔미니 회귀 매우 중요」) */
+    if(sheet) sheet.classList.remove("fr-over");
     if(_assist && _asEl){
       if(sheet) sheet.classList.remove("fr-open");
       document.body.classList.remove("fr-chatting");
@@ -687,7 +688,7 @@
     };
     // 아일랜드 → 크게: 이어가는 대화라 새 인사 없이(「또 왔네 반가워」가 붙던 것)
     /* 🎞 아일랜드 → 대화창: 오브를 거치지 않는다(예전엔 hideAssist 가 잠깐 오브로 바꿔 번쩍였다). 아일랜드가 오그라드는 동안 대화창이 올라온다 */
-    var bigOpen=function(){ var away=_assist && _assist.away; if(away) closeAssist(true); if(_asEl) _asEl.classList.remove("fri-away"); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
+    var bigOpen=function(){ var away=_assist && _assist.away; if(away) closeAssist(true); if(_asEl) _asEl.classList.remove("fri-away"); if(!sheet) build(); sheet.classList.add("fr-over"); window.__frSuppressGreet=true; open(); window.__frSuppressGreet=false; };
     _asEl.querySelector(".fra-big").onclick=bigOpen;
     _asEl.querySelector(".fra-cards").onclick=bigOpen;
     _asEl.querySelector(".fra-x").onclick=function(){

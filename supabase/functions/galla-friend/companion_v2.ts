@@ -50,7 +50,8 @@ export function maybeContentAsk(m: string): boolean {
 }
 
 export function classifyTurn(m: string, hist: { role: string; content: string }[]): V2State {
-  const s = String(m || "").trim();
+  /* 「ㅇㅇ 다른거」「응 딴 거」 — 앞의 맞장구를 떼고 본다(수다로 읽혀 네이버 블로그 링크가 나갔다, 26.9.22 사장님 실기기) */
+  const s = String(m || "").trim().replace(/^(ㅇㅇ+|ㅇㅋ+|응+|웅+|어+|그럼|음+|아니)\s+(?=\S)/, "");
   const lastBot = [...(hist || [])].reverse().find((x) => x && x.role === "assistant")?.content || "";
   if (!s) return "greet";
   /* 😤 불만이 먼저다 — 「무슨 이슈를 보여 주고 환장하겠네」를 이슈 요청으로 읽어 또 이슈를 띄웠다(26.9.22 사장님 실대화).

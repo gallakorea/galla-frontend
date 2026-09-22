@@ -84,6 +84,8 @@ body.fr-web .fr-getapp:active{ transform:scale(.95); }
    → 숨김은 visibility 로. 닫을 땐 패널이 다 내려간 뒤(.32s)에 숨는다. */
 #frSheet{ position:fixed; inset:0; z-index:950; display:block; visibility:hidden; pointer-events:none; transition:visibility 0s linear .32s; }
 #frSheet.fr-open{ visibility:visible; pointer-events:auto; transition:none; }
+/* 아일랜드(콘텐츠 위)에서 크게 열면 콘텐츠 상세 시트(z 10000) 위로 — 뒤에 깔려 「맛집 화면이 뜬다」로 보였다(26.9.22 사장님 실기기) */
+#frSheet.fr-open.fr-over{ z-index:10055; }
 #frSheet .fr-scrim{ position:absolute; inset:0; backdrop-filter:blur(2px); opacity:0; transition:opacity .22s;
   background:linear-gradient(to bottom, rgba(2,6,12,.30) 0, rgba(2,6,12,.62) 84px); }  /* 로고는 보이게 */
 #frSheet.fr-open .fr-scrim{ opacity:1; }

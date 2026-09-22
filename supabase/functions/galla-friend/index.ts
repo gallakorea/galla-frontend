@@ -897,7 +897,7 @@ async function quoteStock(name: string): Promise<any> {
   return {
     종목: d.stockName || hit.name, 코드: hit.code,
     현재가: `${d.closePrice}원`,
-    등락: `${up}${d.compareToPreviousClosePrice} (${up}${d.fluctuationsRatio}%)`,
+    등락: `${up}${String(d.compareToPreviousClosePrice).replace(/^[-+]/, "")} (${up}${String(d.fluctuationsRatio).replace(/^[-+]/, "")}%)`,   // 원값에 이미 「-」가 있어 「--16,000」이 찍혔다
     기준시각: d.localTradedAt || null,
   };
 }
@@ -931,13 +931,50 @@ async function quoteCoin(name: string): Promise<any> {
   };
 }
 
+/* 🏛 국내 주식 예비 — 네이버(비공식)가 막히면 공공데이터포털 금융위원회 주식시세정보(공식·무료·**전일 종가**)로(26.9.22 사장님) */
+async function quoteStockPublic(name: string): Promise<any> {
+  const key = Deno.env.get("DATA_GO_KR_KEY") || "";
+  if (!key) return null;
+  const sk = /%[0-9A-F]{2}/i.test(key) ? key : encodeURIComponent(key);   // 포털은 인코딩된 키·안 된 키 둘 다 준다
+  const nm = String(name || "").replace(/주가|주식|시세|얼마/g, "").trim();
+  const j = await jget(`https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService/getStockPriceInfo?serviceKey=${sk}&resultType=json&numOfRows=10&likeItmsNm=${encodeURIComponent(nm)}`);
+  let items = j?.response?.body?.items?.item || [];
+  if (!Array.isArray(items)) items = [items];
+  if (!items.length) return null;
+  const latest = items.reduce((m: string, x: any) => (String(x.basDt) > m ? String(x.basDt) : m), "");
+  const rows = items.filter((x: any) => String(x.basDt) === latest).sort((a: any, b: any) => String(a.itmsNm).length - String(b.itmsNm).length);   // 이름 짧은 = 본주(레버리지 ETF 제외)
+  const x = rows[0]; if (!x?.clpr) return null;
+  const d = `${String(x.basDt).slice(4, 6)}/${String(x.basDt).slice(6, 8)}`;
+  const up = Number(x.vs) < 0 ? "" : "+";
+  return { 종목: x.itmsNm, 코드: x.srtnCd, 현재가: `${Number(x.clpr).toLocaleString("ko-KR")}원`, 등락: `${up}${Number(x.vs).toLocaleString("ko-KR")} (${up}${x.fltRt}%)`,
+    기준시각: `${d} 종가`, 출처: "공공데이터(전일 종가)", 주의: "실시간이 아니라 전일 종가다 — 반드시 「어제 종가 기준」이라고 밝혀라" };
+}
+
+/* 💱 환율 — Frankfurter(유럽중앙은행 기준환율, 무료·가입 없음, 영업일 1회 고시)(26.9.22 사장님) */
+const FX_MAP: [RegExp, string, number][] = [
+  [/(엔화|엔\b|일본|JPY|¥)/i, "JPY", 100], [/(유로|EUR|€)/i, "EUR", 1], [/(위안|중국|CNY|RMB)/i, "CNY", 1], [/(파운드|영국|GBP|£)/i, "GBP", 1],
+  [/(홍콩)/, "HKD", 1], [/(대만)/, "TWD", 1], [/(싱가포르)/, "SGD", 1], [/(호주)/, "AUD", 1], [/(캐나다)/, "CAD", 1], [/(바트|태국)/, "THB", 1], [/(스위스|프랑)/, "CHF", 1],
+  [/(달러|미국|USD|\$|불)/i, "USD", 1],
+];
+function fxCode(name: string): [string, number] | null { for (const [re, c, u] of FX_MAP) if (re.test(name)) return [c, u]; return null; }
+async function quoteFx(name: string): Promise<any> {
+  const hit = fxCode(name); if (!hit) return null;
+  const [code, unit] = hit;
+  const j = await jget(`https://api.frankfurter.dev/v1/latest?base=${code}&symbols=KRW`);
+  const v = Number(j?.rates?.KRW);
+  if (!v) return null;
+  return { 통화: code, 환율: `${unit === 1 ? "1" : unit} ${code} = ${(v * unit).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원`, 기준일: j.date,
+    출처: "유럽중앙은행 기준환율", 주의: "은행·환전소 실제 환율과 조금 다르다 — 「기준환율(M/D 고시)」이라고 밝혀라" };
+}
+
 async function marketQuote(kind: string, name: string): Promise<any> {
   const nm = String(name || "").trim();
   if (!nm) return { error: "종목·코인 이름이 필요하다" };
   let r: any = null;
-  if (kind === "coin") r = await quoteCoin(nm);
-  else if (kind === "stock") r = await quoteStock(nm);
-  else r = (await quoteStock(nm)) || (await quoteCoin(nm));   // 자동 판별
+  if (kind === "fx" || (kind === "auto" && /(환율|달러|엔화|유로|위안|파운드|환전)/.test(nm))) r = await quoteFx(nm);
+  else if (kind === "coin") r = await quoteCoin(nm);
+  else if (kind === "stock") r = (await quoteStock(nm)) || (await quoteStockPublic(nm));
+  else r = (await quoteStock(nm)) || (await quoteCoin(nm)) || (await quoteStockPublic(nm));   // 자동 판별 — 네이버가 막히면 공공데이터(전일 종가)
   if (!r) return { error: `'${nm}' 시세를 못 찾았다`, 지침: "못 찾았다고 솔직히 말해라. 숫자를 지어내지 마라." };
   return { ...r, 지침: "여기 적힌 숫자만 말해라. 반올림·환산·추측 금지. 기준 시각이 있으면 '장중/방금 기준'처럼 덧붙여라." };
 }
@@ -1360,7 +1397,7 @@ const TOOLS = [
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
-  { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인). 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
+  { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인·환율). '달러 환율/엔화 얼마' 는 kind:fx. 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "fx", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
   /* 🌦 날씨는 **우리 데이터**로 답한다 — web_search 로 답하면 틀린다(실측 2026-08-29:
      앱 데이터가 서울 23.8도·구름인데 검색으로 "비 오고 28도"라고 답했다).
      weather_now RPC 는 기상청 관측 + 유저 제보를 합친 값이라 앱 화면과도 일치한다. */
@@ -4762,6 +4799,11 @@ Deno.serve(async (req) => {
       }
       return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
     }
+    if (body?.op === "quote_test" && req.headers.get("x-cron-key") === (Deno.env.get("CRON_SECRET") || "__none__")) {   // 🧪 시세 출처별 점검(키는 밖으로 안 나간다)
+      const nm = String(body?.name || "SK하이닉스");
+      const [naver, pub, fx] = await Promise.all([quoteStock(nm).catch(() => null), quoteStockPublic(nm).catch((e) => ({ err: String(e).slice(0, 80) })), quoteFx(String(body?.fx || "달러")).catch(() => null)]);
+      return json({ ok: true, naver, pub, fx, hasKey: !!Deno.env.get("DATA_GO_KR_KEY") });
+    }
     if (body?.op === "contract_test") {
       /* 🧪 계약 검사 — LLM 0콜·0원·1초. 규칙이 '실제로' 걸리는지 고정 입력으로 확인한다.
          이게 없어서 배포마다 눈으로 한 턴씩 보다가, 고칠 때마다 다른 쪽이 뚫렸다.
@@ -5251,6 +5293,7 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
     if (craft.state !== "idle" && (!craft.at || (Date.now() - Date.parse(craft.at)) > 2 * 3600000)) craft = { state: "idle" };
     /* 🆘 빠른 반환 경로(카드 고르기·다시 열기·재촉)보다 **먼저** 위기·거절을 본다 — 「빨리 다 끝내고 싶어」가 재촉으로 읽혀
        위기 로그·상담 카드 없이 「간다!」가 나갈 수 있었다(26.9.22 엔진 점검). 「그만 보여줘」는 다시 열기가 아니다. */
+    if (rel) (rel as any).__prevList = rel?.session_meta?.last_list || null;   // 「다른 거」 판정용 — 이번 턴이 last_list 를 바꾸기 전 목록
     const _earlyCrisis = (userMsg && !body?.meta) ? detectCrisis(userMsg) : null;
     _crisisHit = _earlyCrisis;
     const _earlyStop = /(그만|말고|하지\s*마|싫어|됐어|필요\s*없|꺼\s*줘|닫아)/.test(String(userMsg || ""));
@@ -7419,6 +7462,22 @@ ${parts.join("\n")}`;
     }
     reply = await honestyPass(reply, actions);   // 🛡 정직 관문 — 모든 턴이 지나는 단 하나의 관문
     {   /* 🧹 관문 뒤 최종 정리 — 관문이 카드를 붙일 수 있으니 중복 제거·장수 제한은 여기서 한 번 더(점검: 같은 가게 두 장) */
+      const _llPrev: any = (rel as any)?.__prevList || null;
+      const _um2 = String(userMsg || "");
+      const _foodTurn = actions.some((a: any) => a?.ctype === "food") || /(맛집|식당|밥집|먹을\s*데)/.test(_um2) || (_llPrev?.items || []).some((x: any) => x?.ctype === "food");
+      for (let k = actions.length - 1; k >= 0; k--) {
+        const a: any = actions[k];
+        /* 법인명·휴게소는 맛집 카드로 부적절 */
+        if (a?.kind === "view" && a?.ctype === "food" && /(\(주\)|주식회사|휴게소)/.test(String(a.title || ""))) { actions.splice(k, 1); continue; }
+        /* 맛집 얘기엔 바깥 블로그·지도 링크를 붙이지 않는다 — 갈라 맛집만(「양재 맛집 베스트 10」 블로그가 나갔다, 26.9.22 사장님 실기기) */
+        if (_foodTurn && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
+      }
+      /* 「다른 거/딴 거/말고」 — 방금 보여준 가게는 빼고(남는 게 있을 때만) */
+      if (/(다른\s*(거|건|데|곳)|딴\s*(거|데)|말고|또\s*없)/.test(_um2) && Array.isArray(_llPrev?.items)) {
+        const prevIds = new Set(_llPrev.items.map((x: any) => String(x?.id || "")));
+        const fresh = actions.filter((a: any) => (a?.kind === "view" || a?.kind === "open") && !prevIds.has(String(a.id || "")));
+        if (fresh.length) for (let k = actions.length - 1; k >= 0; k--) { const a: any = actions[k]; if ((a?.kind === "view" || a?.kind === "open") && prevIds.has(String(a.id || ""))) actions.splice(k, 1); }
+      }
       const seen = new Set<string>();
       for (let k = 0; k < actions.length; k++) {
         const a: any = actions[k]; if (!(a?.kind === "view" || a?.kind === "open")) continue;
