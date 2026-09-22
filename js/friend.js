@@ -1664,12 +1664,7 @@
       else{
         var ct=(res.headers.get("content-type")||"");
         if(ct.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
-          r=await consumeStream(res, function(full){
-            if(_greetStale) return;                       // 유저가 먼저 말 걸었으면 라이브 렌더도 중단
-            if(!liveEl){ typing(false); tShown=false; liveEl=addMsg("a",""); }
-            var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
-            logEl.scrollTop=logEl.scrollHeight;
-          });
+          r=await consumeStream(res, function(){});   // 🛡 인사도 최종본만(미리보기 끔)
         } else { r=await res.json(); }
       }
     }catch(e){ r=null; }
@@ -2480,11 +2475,8 @@
       else {
         var ctype=(res.headers.get("content-type")||"");
         if(ctype.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
-          r=await consumeStream(res, function(full){
-            if(!liveEl){ typing(false); liveEl=addMsg("a",""); }
-            var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
-            logEl.scrollTop=logEl.scrollHeight;
-          });
+          /* 🛡 실시간 미리보기 끔(26.9.22 사장님) — 모델 원문이 1~2초 보였다가 정화된 최종본으로 바뀌던 것. 입력 중 표시만 두고 최종본만 그린다 */
+          r=await consumeStream(res, function(){});
           streamed=true;
         } else {
           r=await res.json();
