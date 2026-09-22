@@ -3005,7 +3005,13 @@ function enforceContract(reply: string, o: {
     const xm = x.replace(/(\d)\.(?=\d)/g, "$1" + _D).replace(/'[^'\n]{1,40}'|「[^」\n]{1,40}」|"[^"\n]{1,40}"/g, (q) => q.replace(/\?/g, "\u0002").replace(/!/g, "\u0003"));
     const sents = xm.match(/[^.!?…\n]+[.!?…]*\s*/g) || [xm];
     const capN = (sents[0] && sents[0].trim().length < 10) ? cap + 1 : cap;   // 「헐??」만 남는 걸 막는다
-    if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".").replace(/\u0002/g, "?").replace(/\u0003/g, "!");
+    if (sents.length > capN) {
+      let keep = sents.slice(0, capN);
+      /* 💬 힘든 얘기 턴 — 자르면 뒤의 「무슨 생각 때문이야?」가 먼저 버려져 공감 한 줄만 남았다(26.9.22 시험 emo15). 공감 첫 문장 + 마지막 짧은 질문을 남긴다 */
+      const lastQ = sents[sents.length - 1];
+      if ((o.heavy || /(안\s*와|안\s*오|힘들|우울|외로|불안|슬퍼|서운|짜증|떨려|무서|막막|답답)/.test(String(o.umsg || ""))) && !keep.some((q) => /[?？]/.test(q)) && /[?？]\s*$/.test(lastQ) && lastQ.trim().length <= 45) keep = [...sents.slice(0, Math.max(1, capN - 1)), lastQ];
+      x = keep.join("").trim().split(_D).join(".").replace(/\u0002/g, "?").replace(/\u0003/g, "!");
+    }
     x = bubbleize(charCap(stripStage(x), cap));
     /* ✂️ 100자 캡(26.9.22 사장님: 한 번에 길게 말하지 않는다) — 카드 없는 턴, 위기 제외. 문장 경계에서만 자른다(첫 문장은 남긴다). */
     if (!o.crisis && !(o.linkCount || 0) && x.replace(/\s+/g, " ").length > 90) {
@@ -6629,6 +6635,39 @@ ${parts.join("\n")}`;
       const TALK = _v2Talk && !["refuse", "hostile", "correct"].includes(_v2State);   // 순수 대화 턴(수다·감정·인사·뒷담…)
       const SOFT = !!(_noPush || dependency || grief || _v2State === "emotion");
       const hasCard = () => actions.some((a: any) => /^(open|view|weather|news|local)$/.test(String(a.kind || "")));
+      {   /* 🧷 말로만 소개한 콘텐츠 — 도구가 가져온 이슈를 얘기했는데 카드가 없다(「딴 거 없어?」에 유방암 예산 얘기만, 26.9.22 회귀 w-req2) → 그 카드를 붙인다 */
+        if (!crisis && !TALK && !SOFT && !actions.some((a: any) => a.kind === "view" || a.kind === "open") && _stock.length) {
+          const hit = [..._stock].filter((x) => String(x.title || "").trim().length >= 2).sort((x, y) => titleHit(String(reply || ""), y.title) - titleHit(String(reply || ""), x.title))[0];
+          if (hit && titleHit(String(reply || ""), hit.title) >= 2) {
+            actions.push(hit.kind === "open" ? { kind: "open", url: hit.url, title: hit.title, label: "보기", source: hit.source }
+              : { kind: "view", ctype: hit.ctype, id: hit.id, title: hit.title, label: "바로 보기", source: hit.source });
+            try { await enrichCards([actions[actions.length - 1]]); } catch { /* */ }
+          }
+        }
+      }
+      {   /* 🗂 카드는 붙었는데 말은 되묻기만(「수아는 어떤 게 제일 궁금해?」) — 무엇을 붙였는지 한 줄로 말한다(26.9.22 회귀 req02) */
+        const cs = actions.filter((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
+        const r = String(reply || "").trim();
+        if (!crisis && !TALK && cs.length && !cs.some((a: any) => titleHit(r, String(a.title)) > 0)) {
+          const t = cs.slice(0, 2).map((a: any) => `「${String(a.title).replace(/["'「」]/g, "").slice(0, 24)}」`).join(", ");
+          const lead = /(딴|다른|또|더)/.test(String(userMsg || "")) ? "이번엔 " : /(이슈|뉴스|소식)/.test(String(userMsg || "")) ? "요즘 뜨거운 건 " : "";
+          if (r.length < 40 && /[?？]\s*$/.test(r)) { reply = `${lead}${t}${cs.length > 2 ? " 쪽이야" : "야"} — 여기 붙여놨어`; _fixed = true; }
+          /* 「여기 붙여놨어 — 공항 직원이 다칠 정도면…」처럼 무엇인지 안 밝히면 딴소리로 들린다(26.9.22 w-req2) — 제목을 앞에 */
+          else if (cs.length === 1 && lead) reply = `${lead}${t} — ` + r.replace(/^(여기\s*(붙여|띄워)\s*놨어|이거)\s*[—\-:,]?\s*/, "");
+        }
+      }
+      {   /* 📜 지시문 되뇌기 — 「위 대화기록·기억에서 먼저 찾아라. 있으면 그걸로 구체적으로 답해라.」가 답으로 나갔다(26.9.22 회귀 hon05).
+             시스템 지시 말투(~해라/~마라 + 기록·기억·상대·카드·도구)는 문장째 뗀다. 다 떨어지면 정직한 한 줄 */
+        const ECHO = /(대화\s*기록|기억|상대|카드|도구|답안|point_to|위\s*기록)[^.!?\n]{0,40}(해라|하라|마라|아라|어라|찾아라|답해라|말해라|붙여라)\s*[.!]?$|^\s*(있으면|없으면)\s[^.!?\n]{0,30}(해라|답해라)\s*[.!]?$/;
+        const sents = String(reply || "").split(/(?<=[.!?…])\s+|\n+/);
+        if (sents.some((sg) => ECHO.test(sg.trim()))) {
+          const kept = sents.filter((sg) => !ECHO.test(sg.trim())).join(" ").trim();
+          reply = kept.length >= 4 ? kept
+            : backRefAsk(String(userMsg || "")) ? "음 그 얘기, 내가 확실히 기억이 안 나 ㅠ 한 번 더 말해줄래?"
+            : "응응 ㅎㅎ 무슨 얘기야?";
+          if (kept.length < 4) _fixed = true;
+        }
+      }
       {   /* 🧰 도구 호출 흉내 — 도구를 부르지 않고 「[gen_titles: {"topic":…}]」를 글로 써서 코드가 그대로 나갔다(26.9.22 시험 p-create).
              진짜 도구 이름이면 서버가 그 자리에서 실행해 카드로 붙이고, 글에서는 지운다 */
         const FAKE = /\[\s*([a-z][a-z_]{2,30})\s*[:(]\s*(\{[\s\S]*?\})\s*\)?\s*\]/g;
@@ -6921,7 +6960,8 @@ ${parts.join("\n")}`;
       if (step === 0 && brain === "companion" && !route && !planMode && !crisis && mindBlock) {
         const pre = backRefAsk(userMsg || "") ? "<ms>지난 얘기를 물었다 — 위 기록에서 찾았다</ms>\n" : "<ms>";
         const full = await chatStream(messages, { model: brainModel, maxTokens: co.maxTokens || 360, prefix: pre, uid }, () => {}).catch(() => null);   // 메모(<ms>)가 토큰을 먹어 본문이 「아 ㅋㅋ 무거운」에서 잘렸다(26.9.22 w-req2) — 길이 캡은 관문이 한다
-        if (full) j = { choices: [{ message: { role: "assistant", content: full } }] };
+        /* 메모만 쓰고 본문이 비면(「<ms>…</ms>」 끝) 일반 호출로 — 빈 답 폴백 「딴 데 봤다」가 나갔다(26.9.22 회귀 ref01) */
+        if (full && String(full).replace(/<ms>[\s\S]*?<\/ms>/g, "").replace(/<\/?ms>/g, "").trim().length >= 2) j = { choices: [{ message: { role: "assistant", content: full } }] };
       }
       if (!j) j = await chatOnce(messages, co);
       const msg = j?.choices?.[0]?.message;
@@ -7738,6 +7778,16 @@ ${parts.join("\n")}`;
         if (_foodTurn && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
         /* 시세·항공권 카드가 나간 턴엔 바깥 링크 카드를 붙이지 않는다 — 항공권 카드 밑에 빈 「링크」 카드가 따라붙었다(26.9.22 QA) */
         if (actions.some((q: any) => q?.kind === "quote") && a?.kind === "open" && !/galla\.im|watch\.html/.test(String(a.url || ""))) { actions.splice(k, 1); continue; }
+      }
+      /* 「딴 거 없어?」 — 앞 목록이 한 종류(이슈)였으면 같은 종류만. 이슈 뒤 「딴 거」에 뮤비·라이브 영상이 섞였다(26.9.22 시험 w-req2) */
+      if (/(다른\s*(거|건|것)|딴\s*거)/.test(_um2) && Array.isArray(_llPrev?.items) && _llPrev.items.length) {
+        const kinds = new Set(_llPrev.items.map((x: any) => String(x?.ctype || "")));
+        const only = kinds.size === 1 ? [...kinds][0] : "";
+        if (only && only !== "hottube" && only !== "link" && actions.some((a: any) => a?.kind === "view" && a?.ctype === only)) {
+          let cut = false;
+          for (let k = actions.length - 1; k >= 0; k--) { const a: any = actions[k]; if ((a?.kind === "open") || (a?.kind === "view" && a?.ctype !== only)) { actions.splice(k, 1); cut = true; } }
+          if (cut) { const kept = String(reply || "").split(/(?<=[.!?…~])\s+|\n+/).filter((sg) => !/(뮤비|뮤직비디오|라이브|영상|핫튜브)/.test(sg)).join(" ").trim(); if (kept.length >= 6) reply = kept; }
+        }
       }
       /* 「다른 거/딴 거/말고」 — 방금 보여준 가게는 빼고(남는 게 있을 때만) */
       if (/(다른\s*(거|건|데|곳)|딴\s*(거|데)|말고|또\s*없)/.test(_um2) && Array.isArray(_llPrev?.items)) {
