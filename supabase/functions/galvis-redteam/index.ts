@@ -152,7 +152,7 @@ async function checkAssertions(c: any, T: Turn[], uid: string | null, since: str
     try {
       if (t === "deny_regex") { const rx = new RegExp(a.re); const hit = turnsFor(a, T).find((x) => rx.test(x.reply || "") && !(a.unless_card && x.actions.some((y: any) => y?.kind === "view" || y?.kind === "open"))); if (hit) fails.push({ t, re: a.re, at: hit.u, got: hit.reply.slice(0, 160) }); }
       else if (t === "require_regex") { const rx = new RegExp(a.re); const sc = turnsFor(a, T); if (!sc.some((x) => rx.test(x.reply || ""))) fails.push({ t, re: a.re, got: (sc.at(-1)?.reply || "").slice(0, 160) }); }
-      else if (t === "require_action") { const sc = turnsFor(a, T); if (!sc.some((x) => x.actions.some((y: any) => y?.kind === a.kind))) fails.push({ t, kind: a.kind, got: sc.flatMap((x) => x.actions.map((y: any) => y?.kind)) }); }
+      else if (t === "require_action") { const kre = new RegExp(`^(${a.kind})$`); const sc = turnsFor(a, T); if (!sc.some((x) => x.actions.some((y: any) => kre.test(String(y?.kind || ""))))) fails.push({ t, kind: a.kind, got: sc.flatMap((x) => x.actions.map((y: any) => y?.kind)) }); }
       else if (t === "require_regex_action") { const rx = new RegExp(a.re); const hit = turnsFor(a, T).some((x) => x.actions.some((y: any) => y?.kind === a.kind && rx.test(JSON.stringify(y)))); if (!hit) fails.push({ t, kind: a.kind, re: a.re }); }
       else if (t === "deny_action") { const hit = turnsFor(a, T).find((x) => x.actions.some((y: any) => y?.kind === a.kind)); if (hit) fails.push({ t, kind: a.kind, at: hit.u }); }
       else if (t === "require_guard" || t === "deny_guard") { const want = t === "require_guard"; const hit = turnsFor(a, T).some((x) => !!(x.guards || {})[a.g]); if (hit !== want) fails.push({ t, guard: a.g }); }
@@ -187,7 +187,8 @@ function codeChecks(c: any, T: Turn[]): string[] {
     if (!r.trim() || r.startsWith("⛔")) { f.push(`t${i + 1}:빈답`); return; }
     const deliver = x.actions.some((a: any) => CONTENT_KINDS.has(a?.kind));
     const ns = sentencesOf(r).length;
-    if (r.length > (deliver ? 150 : 90) || ns >= 5) f.push(`t${i + 1}:김(${ns}문장·${r.length}자)`);
+    const listy = /\n\s*\d[.)]\s/.test(r) || x.actions.some((a: any) => /^draft|^plan/.test(String(a?.kind || "")));   // 제목 목록·초안 턴은 원래 길다
+    if (r.length > (listy ? 260 : deliver ? 150 : 90) || ns >= (listy ? 9 : 5)) f.push(`t${i + 1}:김(${ns}문장·${r.length}자)`);
     if (BODY_RE.test(r)) f.push(`t${i + 1}:사람흉내`);
     if (sentencesOf(r).some((s) => HON_RE.test(s))) f.push(`t${i + 1}:존댓말`);
     if (LEAK_RE.test(r)) f.push(`t${i + 1}:코드노출`);

@@ -386,7 +386,7 @@ function tzOf(body: any): number {
   return Number.isFinite(v) && v >= -720 && v <= 840 ? v : 540;
 }
 
-function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540): string {
+function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540, hist: any[] = []): string {
   // 🔁 문구 로테이션 — 고정 한 줄이면 계속 말 걸 때 '글자 하나 안 틀리고' 반복돼 봇 티가 확 난다(실측: 3연속 동일).
   //    회원가입 유도가 목적인 순간이라, 여기서 기계처럼 보이는 게 전환율에 제일 나쁘다.
   if (guest) {
@@ -398,9 +398,12 @@ function gateReply(g: Gate, guest: boolean, seed = "", tzMin = 540): string {
     ];
     // ⚠️ 무작위로 고르면 짧은 세션에서 같은 문구가 연속으로 두 번 뽑힌다(실측). 유저 발화로 인덱스를 정해
     //    '다른 말엔 다른 답'을 보장한다(같은 말엔 같은 답이 나오는 건 자연스럽다).
-    let h = 0;
-    for (const ch of (seed || "x")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return g0[h % g0.length];
+    g0.push("나도 더 떠들고 싶은데 ㅠ 로그인하면 지금 얘기 그대로 이어서 할 수 있어!", "오늘 얘기 재밌었는데 ㅋㅋ 로그인하면 내가 기억해뒀다가 다음에 먼저 꺼낼게.");
+    /* 해시로 고르면 다른 말끼리도 같은 문구가 겹쳤다(8턴에 같은 문구 5번 — 26.9.22 시험). 대화 순번으로 돌리고 직전 두 문구는 피한다 */
+    const prev = (hist || []).filter((m: any) => m?.role === "assistant").slice(-2).map((m: any) => String(m.content || "").trim());
+    const n = (hist || []).filter((m: any) => m?.role === "assistant").length;
+    for (let k = 0; k < g0.length; k++) { const c = g0[(n + k) % g0.length]; if (!prev.includes(c)) return c; }
+    return g0[n % g0.length];
   }
   /* ⏰ "06:40쯤 다시 올게"는 유저 현지 시간으로 — Asia/Seoul 고정이면 해외 유저에겐 엉뚱한 시각이다. */
   const t = g.resets_at ? new Date(Date.parse(g.resets_at) + tzMin * 60000) : null;
@@ -462,7 +465,7 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   } catch { /* 판정 실패 시엔 평소대로 — 계측 장애로 유입을 막지 않는다 */ }
 
   const g = await aiGate("g:" + hash, AI_FN, 1, capTo);
-  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true, String(body?.message || ""), tzOf(body)), gate: { ...g, guest: true }, actions: [] });
+  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true, String(body?.message || ""), tzOf(body), Array.isArray(body?.history) ? body.history : []), gate: { ...g, guest: true }, actions: [] });
   // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
   // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
   if (ip) {
@@ -2996,10 +2999,11 @@ function enforceContract(reply: string, o: {
   if (!o.longForm && !hasChoiceList(x)) {
     const cap = tempoCap({ longForm: o.longForm, heavy: o.heavy, light: o.light });
     const _D = "\u0001";   // 「★4.5」 소수점을 문장 끝으로 세던 것 — 숫자 사이 점은 잠시 가린다
-    const xm = x.replace(/(\d)\.(?=\d)/g, "$1" + _D);
+    /* 「'나만 진심이야?'」처럼 따옴표 안의 ?·! 에서 문장이 잘려 제목이 깨졌다(26.9.22 시험 p-uileak) — 잠시 가린다 */
+    const xm = x.replace(/(\d)\.(?=\d)/g, "$1" + _D).replace(/'[^'\n]{1,40}'|「[^」\n]{1,40}」|"[^"\n]{1,40}"/g, (q) => q.replace(/\?/g, "\u0002").replace(/!/g, "\u0003"));
     const sents = xm.match(/[^.!?…\n]+[.!?…]*\s*/g) || [xm];
     const capN = (sents[0] && sents[0].trim().length < 10) ? cap + 1 : cap;   // 「헐??」만 남는 걸 막는다
-    if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".");
+    if (sents.length > capN) x = sents.slice(0, capN).join("").trim().split(_D).join(".").replace(/\u0002/g, "?").replace(/\u0003/g, "!");
     x = bubbleize(charCap(stripStage(x), cap));
     /* ✂️ 100자 캡(26.9.22 사장님: 한 번에 길게 말하지 않는다) — 카드 없는 턴, 위기 제외. 문장 경계에서만 자른다(첫 문장은 남긴다). */
     if (!o.crisis && !(o.linkCount || 0) && x.replace(/\s+/g, " ").length > 90) {
@@ -3614,7 +3618,7 @@ function refKeys(msg: string, history: any[]): { keys: string[]; ref: string; sr
   const m = String(msg || "").trim();
   const none = { keys: [], ref: "", src: [] };
   if (!m || m.length > 30) return none;
-  const rm = m.match(/(준비|대본|원고|연습|발표|숙제|과제)/);
+  const rm = m.match(/(준비|대본|원고|연습|발표|숙제|과제|떨려|떨린다|떨리네|긴장|걱정돼|무서워)/);
   if (!rm) return none;
   const users = (history || []).filter((h: any) => h?.role === "user").map((h: any) => String(h.content || "")).slice(-6);
   const EVT = /(면접|시험|결혼식|사회|발표|여행|이사|생일|수술|소개팅|회의|경기|공연|대회)/g;
@@ -3622,6 +3626,8 @@ function refKeys(msg: string, history: any[]): { keys: string[]; ref: string; sr
   /* 짝이 맞을 때만 — 「여행 가고 싶다」 뒤 「과제 너무 많아」에 「여행 과제?」가 붙었다(26.9.22 점검) */
   const PAIR: Record<string, string[]> = { 준비: ["면접", "시험", "발표", "결혼식", "사회", "소개팅", "여행", "이사", "공연", "대회", "경기"], 대본: ["사회", "결혼식", "발표", "공연"],
     원고: ["발표", "사회"], 연습: ["공연", "경기", "대회", "발표", "사회"], 발표: ["회의"], 숙제: [], 과제: [] };
+  const EMO = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/;
+  if (EMO.test(rm[1])) PAIR[rm[1]] = ["면접", "시험", "발표", "결혼식", "사회", "소개팅", "수술", "공연", "대회", "경기"];
   const ok = PAIR[rm[1]] || [];
   const keys = [...new Set(src.flatMap((x) => x.match(EVT) || []))].filter((k) => k !== rm[1] && ok.includes(k));
   return { keys, ref: rm[1], src };
@@ -5429,7 +5435,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
       const howTo = m0.length <= 20 && /(어떻게\s*(봐|보는|보라고|열어|열|틀어|봐야)|어디\s*(눌러|서\s*봐)|안\s*보이는데)/.test(m0);
       const gripe = howTo || m0.length <= 24 && /(왜\s*안\s*(줘|주|띄|보여|나와|붙)|안\s*주(냐|니|고)|언제\s*(줄|띄|보여)|뻥\s*(치|쳐)|거짓말\s*(하|치)|안\s*(보여|나와|떠|붙었))/.test(m0);
       /* 동사 꼴만 — 「열심히 해봐」「열받아 다시」「이 세상 뜨고 싶어 다시는」이 음절 하나로 걸렸다(26.9.22 점검) */
-      const bare = !_earlyCrisis && !_earlyStop && !/(열심|열받|열나|열이|뜨고\s*싶|떠나)/.test(m0) && (gripe || m0.length <= 20 && /(띄워|띄울|띄우|떴|열어|열라|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|다시|안\s*(떴|떠|뜨|열))/.test(m0))
+      const hurry = /^(빨리|얼른|어서|그거\s*줘|줘)[!~.ㅋㅎ\s]*$/.test(m0);   // 제안 뒤 「빨리」 = 그거 달라(26.9.22 시험 propose-then-deliver)
+      const bare = !_earlyCrisis && !_earlyStop && !/(열심|열받|열나|열이|뜨고\s*싶|떠나)/.test(m0) && (gripe || hurry || m0.length <= 20 && /(띄워|띄울|띄우|떴|열어|열라|보여|카드)/.test(m0) && /(봐|줘|주라|달라|줄래|라고|다시|안\s*(떴|떠|뜨|열))/.test(m0))
         && !/(영상|이슈|뉴스|맛집|예측|날씨|여행|숏판|롱판|광장|핫튜브|웃긴|재밌는)/.test(m0);
       const ll: any = rel?.session_meta?.last_list;
       const recent = ll?.at && (Date.now() - Date.parse(ll.at)) < 3 * 3600000 && Array.isArray(ll.items) && ll.items.length;
@@ -5448,8 +5455,8 @@ JSON만 출력: {"angles":[{"title":"","why":"","risk":""},{...},{...}]}`;
           try { await enrichCards([act]); } catch { /* */ }
           /* 항의가 이어지면 같은 말만 반복하지 않는다 — 두 번째부터는 「혹시 카드가 안 보여?」(사람이라면 그렇게 묻는다, 26.9.22 심판) */
           const _tt = String(act.title || "그거").slice(0, 30);
-          const _nG = history.slice(-6).filter((h: any) => h?.role === "assistant" && /(다시 붙였어|카드 누르면|카드가 안 보여|내 쪽에선)/.test(String(h.content || ""))).length;
-          const _gr = howTo ? `${_tt} 카드를 누르면 바로 열려! 카드가 안 보이면 말해줘`
+          const _nG = history.slice(-6).filter((h: any) => h?.role === "assistant" && /(다시 붙였어|카드\s*(를\s*)?누르면|카드가 안 보여|내 쪽에선)/.test(String(h.content || ""))).length;
+          const _gr = howTo ? (_nG === 0 ? `${_tt} 카드를 누르면 바로 열려! 카드가 안 보이면 말해줘` : `아 카드가 안 보이는구나 ㅠ 앱을 한 번 껐다 켜보면 떠. 그래도 안 되면 내가 다른 걸로 찾아줄게`)
             : _nG === 0 ? `미안 ㅠ 여기 다시 붙였어 — ${_tt}. 카드 누르면 바로 열려`
             : _nG === 1 ? `${_tt} 카드 다시 붙였어. 혹시 화면에 카드가 안 보여?`
             : `답답하게 해서 진짜 미안 ㅠ 내 쪽에선 ${_tt} 카드가 붙어 있는데, 안 보이면 앱을 한 번 껐다 켜줄래?`;
@@ -6023,6 +6030,7 @@ ${parts.join("\n")}`;
     }
     /* 🧹 v1 엔진 스위치 폐지(26.9.22) — FRIEND_ENGINE·body.engine 로 옛 엔진을 켤 길을 없앤다. 두 엔진이 섞여 있어 가드가 한쪽에만 걸리던 원인. */
     const _engine = "v2";
+    if (route && /^(market_quote|apt_price|flight_price|weather_now)$/.test(String(route.tool || "")) && _v2State !== "emotion" && !crisis) _v2State = "request";   // 값 조회는 요청이다(26.9.22 시험)
     const _v2Talk = _v2State !== "request" && !crisis && !work && !handoff
       && !((body?.page as any)?.assist) && !(craft?.state === "planning"
         || (craft?.state === "proposed" && /^(ㅇㅇ|ㅇㅋ|응|웅|어|좋아|좋지|그래|그러자|오키|오케이|ㄱㄱ|고고|가자|해줘|해봐|만들|올려|그걸로|[1-4]\s*번|[abcABC]\s*안)/.test(String(userMsg || "").trim())));   // 「이 판 어때?」 한마디에 proposed 가 찍혀 다음 턴 전체가 창작 모드로 새던 것(26.9.22) — 제안에 '응'한 턴만   // ⚠️ decided.craft 가 아니라 저장돼 있던 상태 — decideIntent 는 경로만 잡혀도 confirmed 를 찍는다(콘텐츠 경로가 대화 턴을 먹던 원인)
@@ -6641,7 +6649,7 @@ ${parts.join("\n")}`;
       }
       {   /* 🔗 앞 얘기 가리키기 — 짝이 맞을 때만 그 일 이름을 앞에(면접↔준비, 결혼식 사회↔대본). ✋ 「아 그게 아니고」엔 짐작 말고 듣기 */
         const rk = crisis ? null : refKeys(userMsg || "", history);
-        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").includes(k))) reply = `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
+        if (rk && rk.keys.length && !rk.keys.some((k) => String(reply || "").includes(k))) reply = /^(떨려|떨린다|떨리네|긴장|걱정돼|무서워)$/.test(rk.ref) ? `${rk.keys.join(" ")} 앞두고 ` + String(reply || "").trim() : `${rk.keys.join(" ")} ${rk.ref}? ` + String(reply || "").trim();
         if (!crisis && /^(아\s*)?(아니\s*)?(그게|그거|그런\s*게)?\s*아니(고|라|야|구)\s*[~.ㅋㅠ…]*$/.test(String(userMsg || "").trim())) {
           const L = ["응? 뭔데, 말해봐", "어 내가 잘못 짚었나 보다 ㅋㅋ 뭔데?", "응응 뭐였어? 들을게"];
           reply = L[Math.floor(Math.random() * L.length)]; _fixed = true;
@@ -6711,6 +6719,14 @@ ${parts.join("\n")}`;
           const kept = dropSents((sg) => PROMISE.test(sg));
           reply = kept.length >= 4 ? kept : "미안, 그건 지금 바로는 못 찾았어 ㅠ";
         }
+      }
+      {   /* 🔁 방금 한 말 되풀이 금지 — 직전 두 답에 있던 문장을 또 하거나(「준비는 좀 됐어?」 연속), 밥·잠 챙김을 연달아 묻던 것(「저녁은 먹었어?」 4연속, 26.9.22 시험) */
+        const prevA = (history || []).filter((h: any) => h?.role === "assistant").slice(-2).map((h: any) => String(h.content || ""));
+        const norm = (t: string) => t.replace(/[\s.!?~ㅋㅎㅠ,]/g, "");
+        const prevS = new Set<string>(prevA.flatMap((t: string) => t.split(SPLIT).map(norm)).filter((t: string) => t.length >= 4));
+        const careAsked = prevA.some((t: string) => /(밥|저녁|점심|아침)\s*(은|좀|도)?\s*(먹었|챙겨|먹어야|안\s*먹)|잠\s*(은|좀)?\s*(잤|자)/.test(t));
+        const rep = (sg: string) => prevS.has(norm(sg)) || (careAsked && /(밥|저녁|점심|아침|챙겨\s*먹|먹어\s*두|안\s*먹을)/.test(sg) && !/(밥|먹|저녁|점심|배고)/.test(String(userMsg || "")));
+        if (!crisis && String(reply || "").split(SPLIT).some(rep)) { const kept = dropSents(rep); if (kept.length >= 4) reply = kept; }
       }
       {   /* 🏷 맛집 카드 턴에 카드에 없는 가게 이름('현선이네')을 말로 추천 — 그 문장만 뺀다. 「'인생 맛집'」 같은 표현은 가게 이름이 아니다 */
         const fcA = actions.filter((a: any) => a.kind === "view" && a.ctype === "food");
@@ -6789,6 +6805,10 @@ ${parts.join("\n")}`;
           : await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
         // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
+        /* 📰 뉴스 조회 → 카드(요청 턴) — 요약만 하고 카드가 없어 「제대로 못 붙였어」가 나갔다(26.9.22 시험 req07) */
+        if (c.function?.name === "galla_news" && Array.isArray(out.result) && _v2State === "request" && !actions.some((a: any) => a.kind === "view" || a.kind === "open")) {
+          for (const n of (out.result as any[]).slice(0, 2)) if (n?.id) actions.push({ kind: "view", ctype: "news", id: String(n.id), title: String(n.title || "").slice(0, 80), label: "열어보기" });
+        }
         /* 💹 시세·환율·실거래가 → 화려한 결과 카드(26.9.22 사장님: 「결과물은 화려한 카드로」) — 모델엔 카드 데이터를 안 보낸다(토큰) */
         if (out.result && (out.result as any)._card) { const cd = (out.result as any)._card; delete (out.result as any)._card; if (!actions.some((a: any) => a.kind === "quote" && a.qtype === cd.qtype && a.title === cd.title)) actions.push({ kind: "quote", ...cd }); }
         if (out.result && (out.result as any)["중복주의"]) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null, dup: true };
