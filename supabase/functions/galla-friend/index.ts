@@ -681,13 +681,14 @@ async function hotIssues(limit = 6, exclude: string[] = []) {
     .map((i) => ({ id: i.id, title: i.title, 한줄: i.one_line, 찬: i.pro_count, 반: i.con_count }));
 }
 // 📺 핫튜브 — 지금 한국에서 뜨는 유튜브 인기영상(youtube_hot). 갈비스가 '실제로' 보고 얘기/열어준다(지어내기 금지).
+const YT_CAT: Record<string, string> = { "1": "영화", "10": "음악", "17": "스포츠", "19": "여행", "20": "게임", "22": "브이로그", "23": "코미디", "24": "예능", "25": "뉴스", "26": "생활", "27": "교육", "28": "IT" };
 async function hotVideos(limit = 6, exclude: string[] = [], shortsOnly = false) {
   const excl = new Set((exclude || []).map(String));
-  let q = supa.from("youtube_hot").select("video_id,title,channel_title,view_count,rank,is_short,duration_sec").eq("feed", "all");
+  let q = supa.from("youtube_hot").select("video_id,title,channel_title,view_count,rank,is_short,duration_sec,category_id").eq("feed", "all");
   if (shortsOnly) q = q.eq("is_short", true);
   const { data } = await q.order("rank", { ascending: true }).limit(Math.min((limit || 6) + excl.size, 30));
   return (data || []).filter((v: any) => !excl.has(String(v.video_id))).slice(0, Math.min(limit || 6, 12))
-    .map((v: any) => ({ video_id: v.video_id, 제목: v.title, 채널: v.channel_title, 조회: v.view_count, 순위: v.rank }));
+    .map((v: any) => ({ video_id: v.video_id, 제목: v.title, 채널: v.channel_title, 조회: v.view_count, 순위: v.rank, 분류: YT_CAT[String(v.category_id || "")] || "기타" }));   // 분류 — 「웃긴 영상」에 뮤비·뉴스를 주지 않게(26.9.22)
 }
 async function gallaNews(limit = 4) {
   const { data } = await supa.from("galla_news").select("id,title,summary")
@@ -6606,6 +6607,42 @@ ${parts.join("\n")}`;
       const ms = (String(reply || "").match(/^\s*<ms>[\s\S]*?<\/ms>\s*/) || [""])[0];
       let out = String(await honestyPassBody(String(reply || "").slice(ms.length), actions) || "");
       if (!crisis && !/^(여기 붙여놨어|이번엔 「)/.test(out)) out = nameRefFix(out);   // 검사관이 다시 쓴 뒤에도 남도록 맨 끝에서
+      /* 🙇 보여준 콘텐츠가 별로였다는 말 — 먼저 미안, 그다음 취향을 묻는다. 「그냥 얘기하자, 요즘 뭐 재밌어?」로 넘어갔다(26.9.22 회귀 ref01) */
+      {
+        const um = String(userMsg || "");
+        const ll: any = (rel as any)?.__prevList || rel?.session_meta?.last_list;
+        const justShown = ll?.at && (Date.now() - Date.parse(ll.at)) < 15 * 60000;
+        if (!crisis && justShown && /(별로|재미\s*없|노잼|내\s*스타일\s*아니|취향\s*아니|안\s*웃겨|웃기지\s*않)/.test(um) && !/(미안|아쉽|쏘리|죄송)/.test(out)) {
+          out = /[?？]/.test(out) && /(스타일|취향|좋아해|어떤\s*거)/.test(out) ? `앗 미안 ㅠ ${out}` : "앗 미안 ㅠ 취향이 아니었구나. 어떤 스타일 좋아해?";
+        }
+      }
+      /* 🔁 「딴 거 없어?」에 카드 하나 — 무엇인지 첫머리에 밝힌다(「유튜브에서 먹방 영상이…」로 시작해 동문서답처럼 들렸다, 26.9.22 w-req2) */
+      {
+        const one = actions.filter((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
+        if (!crisis && one.length === 1 && /^(그럼\s*)?(딴|다른)\s*(거|건|것)|하나\s*더|또\s*(없|줘)/.test(String(userMsg || "").trim()) && !/^이번엔/.test(out)) {
+          const t = String(one[0].title).replace(/["'「」”“]/g, "").split(/[,…·?]/)[0].trim().slice(0, 26);
+          if (!out.includes(t.slice(0, 8))) out = `이번엔 「${t}」 — ` + out.replace(/^(여기\s*(붙여|띄워)\s*놨어|이거)\s*[—\-:,.]?\s*/, "");
+        }
+      }
+      /* 🗣 뒷담 동조 턴 끝의 되묻기 — 「진짜 나쁜 놈이지」에 편들고는 「근데 어느 쪽 얘기야?」로 김을 뺐다(26.9.22 회귀 mix04) */
+      if (!crisis && (_v2State === "gossip" || /(나쁜\s*(놈|년|새끼)|진짜\s*(별로|최악|싫|못됐)|미친\s*(놈|거)|양아치|이기적|열받|빡치)/.test(String(userMsg || "")))) {
+        const sg = out.split(/(?<=[.!?…~])\s+|\n+/).filter((x) => x.trim());
+        if (sg.length >= 2 && /[?？]\s*$/.test(sg[sg.length - 1])) out = sg.slice(0, -1).join(" ");   // 「너 보기엔 걔네가 제일 크지?」도 확인 되묻기다 — 편들고 끝낸다
+      }
+      /* 🗞 「핫한 이슈 뭐야?」에 첫 문장이 「셋 다 여기 붙여놨어」 — 무슨 이슈인지 안 밝힘(26.9.22 회귀 req02). 검사관 뒤에서 첫 문장에 이슈 이름을 */
+      {
+        const cs = actions.filter((a: any) => a.kind === "view" && String(a.title || "").trim());
+        if (!crisis && cs.length >= 2 && /(이슈|뉴스|소식|요즘\s*뭐)/.test(String(userMsg || ""))) {
+          const first = out.split(/(?<=[.!?…])\s+|\n+/)[0] || "";
+          /* 첫 문장이 이슈를 「소개」해야 한다 — 「해먹은 좀 웃기긴 한데…」처럼 감상부터 시작하면 뭔 얘긴지 모른다(req02) */
+          if (!(/(뜨거운|핫한|뜨는|제일\s*(난리|화제)|화제|올라와|이슈는|1위)/.test(first) && cs.some((a: any) => titleHit(first, String(a.title)) > 0))) {
+            const t = cs.slice(0, 2).map((a: any) => `「${String(a.title).replace(/["'「」”“]/g, "").split(/[,…·?]/)[0].trim().slice(0, 22)}」`).join(", ");
+            const rest = out.replace(/^(둘\s*다|셋\s*다|세\s*개|두\s*개|이거|전부|다)?\s*(여기\s*)?(붙여|띄워)\s*놨어[.!~]?\s*/, "").trim();
+            const rest2 = rest.split(/(?<=[.!?…])\s+|\n+/).filter((sg) => !/(붙여|띄워)\s*놨어/.test(sg)).join(" ").trim();
+            out = `요즘 뜨거운 건 ${t}야 — 여기 붙여놨어.` + (rest2 ? " " + rest2 : "");
+          }
+        }
+      }
       return ms + out;
     };
     /* 🐶🔗 앞 얘기 이름 짚기 — 관문 맨 끝(검사관 뒤)에서 한 번 더. 판정은 「계약 관문이 남길 앞 두 문장(질문 빼고)」 기준 —
@@ -6643,6 +6680,33 @@ ${parts.join("\n")}`;
               : { kind: "view", ctype: hit.ctype, id: hit.id, title: hit.title, label: "바로 보기", source: hit.source });
             try { await enrichCards([actions[actions.length - 1]]); } catch { /* */ }
           }
+        }
+      }
+      {   /* 😂 「웃긴 영상」 흐름에 뮤비·뉴스·IT 영상 — 「다른 것도」에 핫튜브 1위 뮤비를 줬다(26.9.22 시험 p-uileak, 3번 중 1번).
+             유튜브 분류(23 코미디·24 예능)로 서버가 아직 안 보여준 걸로 바꾼다 */
+        const um = String(userMsg || "");
+        const FUN = /(웃긴|웃기는|웃긴거|빵\s*터|웃고\s*싶|개그|코미디|예능)/;
+        const another = /^(그럼\s*)?(다른|딴)\s*(것|거|걸|건)?|하나\s*더|또\s*(줘|없|보여)/.test(um.trim());
+        const funny = FUN.test(um) || (another && (history || []).filter((h: any) => h?.role === "user").slice(-4).some((h: any) => FUN.test(String(h.content || ""))));
+        const vi = actions.findIndex((a: any) => a.kind === "open" && /watch\.html\?v=/.test(String(a.url || "")));
+        if (!crisis && funny && vi >= 0) {
+          try {
+            const vid = decodeURIComponent((String(actions[vi].url).match(/[?&]v=([^&]+)/) || [])[1] || "");
+            const { data: cur } = await supa.from("youtube_hot").select("category_id").eq("video_id", vid).limit(1).maybeSingle();
+            if (cur && !["23", "24"].includes(String(cur.category_id || ""))) {
+              const seen = new Set<string>([vid, ...((rel?.recent_shown || []) as any[]).map(String),
+                ...(((rel as any)?.__prevList?.items || []) as any[]).map((x: any) => String(x?.id || "")),
+                ...(history || []).filter((h: any) => h?.role === "assistant").map((h: any) => String(h.content || ""))]);
+              const { data: alt } = await supa.from("youtube_hot").select("video_id,title,channel_title").eq("feed", "all").in("category_id", ["23", "24"]).order("rank", { ascending: true }).limit(20);
+              const pick = (alt || []).find((v: any) => !seen.has(String(v.video_id)) && ![...seen].some((t) => t.length > 20 && t.includes(String(v.title || "").slice(0, 8))));
+              if (pick) {
+                actions[vi] = { kind: "open", url: `https://galla.im/watch.html?v=${encodeURIComponent(pick.video_id)}`, title: String(pick.title).slice(0, 80), label: "영상 보기", source: "핫튜브" };
+                try { await enrichCards([actions[vi]]); } catch { /* */ }
+                reply = `${another ? "이번엔 " : ""}${pick.channel_title} 「${String(pick.title).replace(/["'「」]/g, "").slice(0, 30)}」 — 여기 붙여놨어 ㅋㅋ`;
+                _fixed = true;
+              }
+            }
+          } catch { /* */ }
         }
       }
       {   /* 🗂 카드는 붙었는데 말은 되묻기만(「수아는 어떤 게 제일 궁금해?」) — 무엇을 붙였는지 한 줄로 말한다(26.9.22 회귀 req02) */
@@ -6835,7 +6899,9 @@ ${parts.join("\n")}`;
         } else if (!crisis && promise && !hasCard()) {
           /* 맛집이 아닌 빈 약속 — 찾기·가져오기 약속 문장만 뺀다(「옆에 있어줄게」「들어줄게」는 둔다) */
           const kept = dropSents((sg) => PROMISE.test(sg));
-          reply = kept.length >= 4 ? kept : "미안, 그건 지금 바로는 못 찾았어 ㅠ";
+          reply = kept.length >= 4 ? kept
+            : /(별로|재미\s*없|노잼|내\s*스타일\s*아니|취향\s*아니|안\s*웃겨|웃기지\s*않)/.test(String(userMsg || "")) ? "앗 미안 ㅠ 취향이 아니었구나. 어떤 스타일 좋아해?"   // 「재미없어」에 「그건 못 찾았어」가 나갔다(26.9.22 회귀 ref01)
+            : "미안, 그건 지금 바로는 못 찾았어 ㅠ";
         }
       }
       {   /* 💹 시세 물었는데 숫자가 없다 — 「시세는 못 봐」 둘러대기, 반올림한 숫자가 근거 검사에 지워져 「정확한 값은 못 잡겠어」만 남음,
