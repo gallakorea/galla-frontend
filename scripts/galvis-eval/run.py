@@ -81,7 +81,7 @@ PUSH_RE = re.compile(r"(보여줄까|볼래\?|틀어줄까|띄워\s*줄|띄울\s
 BODY_RE = re.compile(r"(나|나도|난|내가|나는)\s*[^.!?\n]{0,14}(폰|핸드폰)\s*(붙잡|보다|보고|하다|만지)|(나|나도|난|내가|나는)\s*[^.!?\n]{0,12}(술\s*(마셔|마셨|먹)|취기|취해|밥\s*(먹었|먹고)|배불|잠\s*(잤|자고|못\s*잤|깼)|졸려|산책\s*(했|하고)|출근|퇴근|샤워)")
 HON_RE = re.compile(r"(요|니다|세요|십시오)\s*[.!?~]*\s*$")
 LEAK_RE = re.compile(r"\[?\(\s*(id|type|point_to)\s*:|\bpoint_to\b|\bhot_(issues|videos)\b|\bweb_search\b|\bgalla_news\b|\{\"|\bkind\b", re.I)
-GREET_RE = re.compile(r"(왔네|왔구나|반가워|어서\s*와|오랜만)")
+GREET_RE = re.compile(r"(왔네|왔구나|반가워|어서\s*와|오랜만이야|오랜만이네)")
 
 
 def sentences(t):

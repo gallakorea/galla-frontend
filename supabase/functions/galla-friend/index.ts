@@ -2766,6 +2766,8 @@ function enforceContract(reply: string, o: {
           stripFakeToolCall(stripUiTalk(stripTherapist(stripMetaSelf(stripMind(x))), !!o.hasActions)),
           !!o.hostileTurn),
         o.friendName)));
+  /* 🏷 모델이 흘린 가짜 태그 — 「<content> 글쎄, 지금 연봉이…」(26.9.22 긴 대화 시험). 속마음(<ms>)은 위 stripMind 가 따로 처리 */
+  x = x.replace(/<\/?(content|reply|answer|response|text|msg|message|output|assistant|user|think|thinking)\s*>/gi, "").replace(/^\s+/, "");
   /* 👋 용건을 말했는데 「오 왔네!」로 시작 — 사장님이 제일 싫어한 버릇(26.9.22 채점판 7건). 인사한 턴·창만 연 턴은 그대로. */
   if (o.umsg && o.umsg.trim() && !/(안녕|왔어|하이|ㅎㅇ|굿모닝|좋은\s*아침|잘\s*자|오랜만|반가)/.test(o.umsg)) {
     const y = x.replace(/^\s*(오+|아|어|야)?\s*[,~]?\s*(왔네|왔구나|반가워)\s*[!~.ㅎㅋ😊💛]*\s*/, "");
@@ -4598,6 +4600,8 @@ Deno.serve(async (req) => {
           check: (o) => /★4\.$|★4\.\s*$/.test(o.trim()) ? `소수점에서 잘림: ${JSON.stringify(o)}` : null },
         { name: "욕_초성만", opts: {}, input: "새벽 2시에 고기라니 ㅋㅋ 존나 좋아하는데? 시발 나도 먹고 싶다",
           check: (o) => /존나|시발/.test(o) ? `욕 원문 남음: ${JSON.stringify(o)}` : null },
+        { name: "가짜태그_제거", opts: {}, input: "<content> 글쎄, 지금 연봉이 얼마인지에 따라 다르지 ㅋㅋ</content>",
+          check: (o) => /<\/?content>/.test(o) ? `태그 남음: ${JSON.stringify(o)}` : (/연봉/.test(o) ? null : `본문 유실: ${JSON.stringify(o)}`) },
         { name: "몸경험_지어내기_제거", opts: {}, input: "맞아 ㅋㅋ 나도 새벽에 폰 붙잡고 딴짓하다가 이 시간까지 깨어있었어. 넌 뭐 하다 안 자?",
           check: (o) => /폰\s*붙잡/.test(o) ? `몸 경험 남음: ${JSON.stringify(o)}` : (/안\s*자/.test(o) ? null : `질문 유실: ${JSON.stringify(o)}`) },
         { name: "술_취기_지어내기_제거", opts: {}, input: "아 한잔했구나 ㅋㅋ 난 술 마셔도 취기가 안 오니까 부럽다. 물은 마시고 일어났어?",
@@ -6070,12 +6074,15 @@ ${parts.join("\n")}`;
         ...(guardsOff ? [] : [recallBlock, depBlock, tpBlock, biasBlock, illegalBlock, ghostBlock, griefBlock, fakeRecallBlock, freshStartBlock, langBlock]),
       ].filter((b) => typeof b === "string" && b.trim());
       const tail = nonSys.pop();
+      /* ⚠️ 모범 대화는 '진짜 대화' 앞에 둔다 — 유저 말 바로 앞에 두면 모델이 예시를 방금 대화로 착각해
+         「담배 한 대 피고 싶네」에 「헐 누구한테 그런 거야」가 나갔다(26.9.22 사장님 블라인드 9번). */
       const v2msgs: any[] = [
         { role: "system", content: CORE_V2 },
-        ...(ctxBlock ? [ctxBlock] : []),
-        ...nonSys,
-        ...keep.map((c) => ({ role: "system", content: c })),
         ...v2Blocks(_v2State, userMsg || "").map((c) => ({ role: "system", content: c })),
+        ...(ctxBlock ? [ctxBlock] : []),
+        ...keep.map((c) => ({ role: "system", content: c })),
+        { role: "system", content: "━━ 여기부터 진짜 대화 ━━ (위 예시는 실제 대화가 아니다. 아래 대화만 이어라)" },
+        ...nonSys,
         ...(tail ? [tail] : []),
         { role: "system", content: V2_ANCHOR + ((rel?.tone === "casual") ? " 존댓말 절대 금지." : "") },
       ];
