@@ -1809,7 +1809,10 @@ body[data-page="spa"].dm-detail .dm-root.page .dm-panel {
    ② 상세는 판(.tab-pane, transform 컨테이너) 기준 절대 고정 — 스레드 헤드가
       safe-area 바로 아래 붙고, 높이는 --dm-vvh(키보드 로직) 그대로 산다. */
 body[data-page="spa"] .tab-pane[data-tab="dm"] .view-host {
-  overflow: hidden; overscroll-behavior: none;
+  /* ⚠️ overscroll-behavior 는 세로만 가둔다(-y:none). 예전엔 축 없이 none 이라
+     가로 스크롤 체이닝까지 막혀, DM 판에선 좌우 탭 스와이프(#tab-track)가 죽었다
+     (26.9.23 사장님 제보·안드로이드 실기 확인). 가로는 auto 로 열어 탭 스와이프를 살린다. */
+  overflow: hidden; overscroll-behavior-x: auto; overscroll-behavior-y: none;
 }
 body[data-page="spa"].dm-detail .dm-root.page {
   /* ⚠️ position:absolute (NOT fixed) — 판(.tab-pane)이 transform 컨테이너라
