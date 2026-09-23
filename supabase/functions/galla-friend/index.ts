@@ -1211,6 +1211,21 @@ async function searchContent(query: string) {
     .eq("status", "normal").order("hot_score", { ascending: false, nullsFirst: false }).limit(4);
   return { results: (data || []).map((x) => ({ type: "issue", id: x.id, title: x.title, 한줄: x.one_line })) };
 }
+/* 🔎 하이브리드 검색(26.9.23 고도화) — 질의를 bge-m3로 임베딩해 galla_search RPC(의미 벡터 + 트라이그램)로 이슈·광장을 뜻으로 찾는다.
+   키워드 ILIKE 가 못 잡던 「매운 거」「혼밥 좋은」 같은 것도 의미로. 결과는 실제 행만(지어내기 방지). */
+async function gallaSearch(query: string, sections?: string[]): Promise<any> {
+  const q = String(query || "").trim().slice(0, 120);
+  if (!q) return { results: [] };
+  const qv = await embed(q).catch(() => null);
+  const secs = (sections && sections.length ? sections : ["issue", "plaza"]).filter((x) => ["issue", "plaza"].includes(x));
+  const { data } = await supa.rpc("galla_search", { p_query_text: q, p_query_vec: qv ? vecLit(qv) : null, p_sections: secs, p_limit: 6 });
+  const rows = (data || []) as any[];
+  return {
+    results: rows.map((r) => ({ type: r.section, id: r.id, title: r.title, 부제: r.sub })),
+    cards: rows.map((r) => ({ ctype: r.section, id: String(r.id), title: r.title, sub: r.sub })),
+    지침: rows.length ? "갈라에 실제로 있는 콘텐츠다(뜻으로 찾음). 1~2개만 골라 친구 말투로, 열어보라면 point_to(type:해당 종류, id). 없는 건 지어내지 마라." : "갈라 안에 딱 맞는 게 없다 — 솔직히 말하고, 필요하면 web_search 로 바깥을 찾아라.",
+  };
+}
 
 /* 🧭 갈라 안의 코너(맛집·여행·숏판·롱판·예측·광장)를 '실제 데이터'로 훑는다(26.9.21 갈비스 전역화).
    예전엔 이슈·뉴스·핫튜브만 읽을 수 있어 맛집은 네이버 검색으로 새고, 여행·예측·광장은 아예 몰랐다.
@@ -1548,6 +1563,7 @@ const TOOLS = [
   { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다. **'내일/모레/주말/이번 주'를 물으면 when 을 꼭 넣어라**(tomorrow|dayafter|weekend|week) — 예보가 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" }, when: { type: "string", enum: ["now", "tomorrow", "dayafter", "weekend", "week"], description: "지금이면 비우거나 now" } } } } },
   { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
+  { type: "function", function: { name: "galla_search", description: "🔎 갈라 안 콘텐츠(이슈·광장 글)를 '뜻'으로 찾는다 — 키워드가 정확히 안 맞아도(「매운 거」「혼밥 좋은」「비 오는 날」) 의미로 검색. 상대가 '○○ 관련 글/이슈 찾아줘', 특정 주제·상황을 물을 때. 맛집·여행·영상·뉴스는 각 전용 도구(galla_browse·hot_videos·galla_news)를 써라. 결과에 없는 건 지어내지 마라.", parameters: { type: "object", properties: { query: { type: "string", description: "찾는 주제·상황(자연어)" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_browse", description: "🧭 갈라 안의 코너를 '실제 데이터'로 훑는다 — section: food(갈라 맛집 지도: '○○ 맛집/근처 뭐 먹지/돈가스 맛집'), travel(갈라 여행 지도: '○○ 여행지/어디 놀러가/일본 가볼만한 곳', query 없으면 뜨는 나라), shorts(숏판: 세로 영상·사진), longs(롱판: 가로 영상), predict(예측: '요즘 예측 뭐 있어/○○ 예측'), plaza(광장 글). 맛집·식당은 오직 이걸로만 찾는다(web_search 금지) — 없으면 없다고 솔직히. 결과에 없는 가게·장소·수치를 지어내지 마라. 보여달라면 point_to(type=해당 section, id).", parameters: { type: "object", properties: { section: { type: "string", enum: ["food", "travel", "shorts", "longs", "predict", "plaza"] }, query: { type: "string", description: "검색어(지역·가게·장소·나라·키워드). 없으면 인기순" }, limit: { type: "integer" } }, required: ["section"] } } },
   { type: "function", function: { name: "do_action", description: "✅ 대화 안에서 바로 하는 행동 — 상대가 **명시적으로** 시킬 때만: 예측 걸기(op:bet — '○○에 100GP 걸어줘', target=예측 id, outcome=선택지 이름, stake=GP), 가게 저장(op:save_place, target=맛집 id), 가게 맛 판정(op:judge_place, verdict:good=맛있다/bad=별로), 여행지 저장(op:save_travel), 이슈 투표(op:vote_issue, side:pro|con). id 는 도구 결과·직전 목록·현재 화면의 것 그대로. 실행은 상대가 카드의 '확인'을 눌러야 된다 — '확인 누르면 참여할게' 식으로 한 줄. ⚠️ '걸기·베팅' 말고 '참여'라고 말해라(스토어 용어). 상대가 금액을 안 말했으면 stake 비워라(기본 100).", parameters: { type: "object", properties: { op: { type: "string", enum: ["bet", "save_place", "judge_place", "save_travel", "vote_issue"] }, target: { type: "string", description: "대상 id" }, outcome: { type: "string", description: "bet: 선택지 이름(예/아니오/음악…)" }, stake: { type: "integer", description: "bet: 걸 GP" }, verdict: { type: "string", enum: ["good", "bad"] }, side: { type: "string", enum: ["pro", "con"] } }, required: ["op", "target"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
@@ -1900,6 +1916,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
+  if (name === "galla_search") return { result: await gallaSearch(String(args?.query || "")) };
   if (name === "do_action") return await doAction(args, uid);
   if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
@@ -4147,6 +4164,11 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=가게 이름)로 갈라 맛집 데이터에서 그 가게를 찾아라. **물어본 값(평점·리뷰수·오늘영업시간·영업 여부)을 첫 문장에 숫자 그대로** 말해라(예: 「★4.5에 리뷰 98개, 오늘은 오후 12:00~10:00이고 지금은 영업 전이야」). 데이터에 없으면 없다고 솔직히." };
   if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페)|문\s*연\s*(데|곳|집)|여는\s*(데|곳|집)|영업\s*중인)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도에서만** 찾아라(갈라가 직접 모은 데이터). 비면 동네를 넓히거나 메뉴만으로 한 번 더. web_search 로 가게 찾기 금지. 지어내기 금지." };
+  /* 🔎 주제 특정 검색(26.9.23 고도화) — 「부동산 관련 이슈/AI 글/○○ 얘기 찾아줘」는 뜻으로 찾는다(galla_search).
+     제네릭 「요즘 이슈 뭐 있어」는 아래 hot_issues 로. 전용 코너(맛집·여행·영상·뉴스·시세)는 제외. */
+  if ((/(관련|관한|대한)\s*(글|이슈|얘기|내용|것|거|판)|(글|이슈|얘기|주제)\s*(을|를|좀|이|가|은|는)?\s*(찾아|검색)|(찾아|검색)\s*(줘|봐|해)?[^\n]{0,8}(글|이슈|얘기|주제)/.test(m))
+      && !/(맛집|식당|밥집|가게|카페|여행|여행지|놀러|영상|유튜브|핫튜브|뉴스|갈라뉴스|주가|시세|환율|코인|항공|비행기|아파트|집값|날씨|예측|숏판|롱판)/.test(m))
+    return { tool: "galla_search", hint: "galla_search(query=상대가 찾는 주제·상황을 자연어로)로 갈라 이슈·광장을 '뜻'으로 찾아라. 도구가 준 실제 결과만 말하고, 없으면 솔직히. 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
@@ -4964,6 +4986,26 @@ Deno.serve(async (req) => {
         } catch (e) { fails.push({ case: c.name, why: "throw: " + String(e).slice(0, 140) }); }
       }
       return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
+    }
+    if (body?.op === "embed_content") {   // 🔎 검색 임베딩 백필(크론/운영) — search_vec 없는 이슈·광장을 bge-m3로 채운다(질의당 아님)
+      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      const lim = Math.min(Math.max(_n(body?.limit, 100), 1), 300);
+      let done = 0, fail = 0;
+      // 이슈
+      const { data: iss } = await supa.from("issues").select("id,title,one_line,description").is("search_vec", null).eq("status", "normal").limit(lim);
+      for (const r of iss || []) {
+        const v = await embed(`${r.title || ""} ${r.one_line || ""} ${String(r.description || "").slice(0, 300)}`.trim());
+        if (v) { await supa.from("issues").update({ search_vec: vecLit(v) }).eq("id", r.id); done++; } else fail++;
+      }
+      // 광장
+      const { data: plz } = await supa.from("plaza_posts").select("id,title,category,body").is("search_vec", null).limit(lim);
+      for (const r of plz || []) {
+        const v = await embed(`${r.title || ""} ${r.category || ""} ${String(r.body || "").slice(0, 300)}`.trim());
+        if (v) { await supa.from("plaza_posts").update({ search_vec: vecLit(v) }).eq("id", r.id); done++; } else fail++;
+      }
+      const { count: iLeft } = await supa.from("issues").select("id", { count: "exact", head: true }).is("search_vec", null).eq("status", "normal");
+      const { count: pLeft } = await supa.from("plaza_posts").select("id", { count: "exact", head: true }).is("search_vec", null);
+      return json({ ok: true, embedded: done, fail, remaining: { issue: iLeft || 0, plaza: pLeft || 0 } });
     }
     if (body?.op === "quote_test" && req.headers.get("x-cron-key") === (Deno.env.get("CRON_SECRET") || "__none__")) {   // 🧪 시세 출처별 점검(키는 밖으로 안 나간다)
       const nm = String(body?.name || "SK하이닉스");
@@ -7182,7 +7224,10 @@ ${parts.join("\n")}`;
           if (Array.isArray(res) && c.function?.name === "hot_issues") {
             for (const it of res) if (it?.id) _stock.push({ kind: "view", ctype: "issue", id: String(it.id), title: String(it.title || "").slice(0, 80), source: "이슈판" });
           }
-          if (c.function?.name === "galla_browse") {
+          if (c.function?.name === "galla_search" && Array.isArray(res?.cards)) {   // 🔎 하이브리드 검색 결과 카드(이슈·광장) — ctype 그대로
+            for (const cd of res.cards) if (cd?.id && cd?.title) _stock.push({ kind: "view", ctype: cd.ctype || "issue", id: String(cd.id), title: String(cd.title).slice(0, 80), sub: String(cd.sub || "").slice(0, 60), source: "갈라 검색" });
+            delete res.cards;   // 모델엔 안 보낸다(토큰 절약)
+          } else if (c.function?.name === "galla_browse") {
             // 🧭 코너별 카드 — 예전엔 items 를 전부 '뉴스'로 담아 맛집·예측 카드가 뉴스로 열렸다(26.9.21 QA)
             const sec = String((c.function as any)?.arguments || "").match(/"section"\s*:\s*"(\w+)"/)?.[1] || "";
             const CT: Record<string, [string, string]> = { food: ["food", "갈라 맛집"], travel: ["travel", "갈라 여행"], shorts: ["gallari", "숏판"], longs: ["gallari", "롱판"], predict: ["predict", "예측"], plaza: ["plaza", "광장"] };
