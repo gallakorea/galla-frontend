@@ -112,6 +112,43 @@
       sync();
       new MutationObserver(sync).observe(src, { childList: true, attributes: true, characterData: true, subtree: true });
     }
+
+    /* 👤 '마이' 행 = 로그인한 아이디 표시(모바일 네비 아바타와 같은 원리·같은 캐시).
+       로그인+사진: 원형 아바타 + 닉네임, 비로그인: 사람 아이콘 + '마이' 유지.
+       → PC 와이드에서 "어느 계정으로 들어와 있는지" 한눈에(26.9.23 사장님). */
+    (function paintMe(){
+      const row = el.querySelector('.pcl-item[data-key="mypage"]');
+      if (!row) return;
+      const svg = row.querySelector('svg');
+      const label = row.querySelector('span');
+      const AV = 'galla_nav_avatar', NK = 'galla_nav_nick';
+      const showAvatar = (url) => {
+        let img = row.querySelector('img.pcl-avatar');
+        if (!url) { if (img) { img.remove(); if (svg && !row.querySelector('svg')) row.insertBefore(svg, row.firstChild); } return; }
+        if (!img) {
+          img = document.createElement('img'); img.className = 'pcl-avatar'; img.alt = '';
+          const cur = row.querySelector('svg'); if (cur) cur.replaceWith(img); else row.insertBefore(img, row.firstChild);
+          img.onerror = function () { this.onerror = null; this.remove(); if (svg && !row.querySelector('svg')) row.insertBefore(svg, row.firstChild); };
+        }
+        if (img.src !== url) img.src = url;
+      };
+      const setNick = (n) => { if (label) label.textContent = n || '마이'; };
+      try { const c = localStorage.getItem(AV); if (c) showAvatar(c); const n = localStorage.getItem(NK); if (n) setNick(n); } catch (_) {}
+      (async () => {
+        const sbc = window.supabaseClient || (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+        if (!sbc) return;
+        let uid = null;
+        try { const { data } = await sbc.auth.getSession(); uid = data?.session?.user?.id || null; } catch (_) { return; }
+        if (!uid) { try { localStorage.removeItem(AV); localStorage.removeItem(NK); } catch (_) {} showAvatar(null); setNick('마이'); return; }
+        try {
+          const { data: u } = await sbc.from('users').select('avatar_url,nickname').eq('id', uid).maybeSingle();
+          const photo = (u && u.avatar_url) ? (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url) : u.avatar_url) : null;
+          const nick = (u && u.nickname) ? u.nickname : '';
+          try { photo ? localStorage.setItem(AV, photo) : localStorage.removeItem(AV); nick ? localStorage.setItem(NK, nick) : localStorage.removeItem(NK); } catch (_) {}
+          showAvatar(photo); setNick(nick);
+        } catch (_) {}
+      })();
+    })();
   }
 
   /* ── 우측 라이브 패널 — 각 카드는 실패하면 조용히 사라진다(빈 껍데기 금지) ── */

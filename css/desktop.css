@@ -97,6 +97,15 @@
     border: none; background: none; font-family: inherit; text-align: left; width: 100%;
   }
   #pc-left .pcl-item svg { width: 22px; height: 22px; flex: none; }
+  /* 👤 '마이' 아바타 — 로그인한 아이디를 원형 사진으로(모바일 네비와 동형). 닉네임은 라벨에 들어간다. */
+  #pc-left .pcl-item img.pcl-avatar {
+    width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none;
+    background: #1a1d24; box-shadow: 0 0 0 1px rgba(255,255,255,.14);
+  }
+  #pc-left .pcl-item.on img.pcl-avatar { box-shadow: 0 0 0 2px var(--accent, #4361ff); }
+  #pc-left .pcl-item[data-key="mypage"] span {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
   #pc-left .pcl-item:hover { background: rgba(255, 255, 255, .06); color: #fff; }
   #pc-left .pcl-item.on { color: #fff; font-weight: 900; }
   #pc-left .pcl-item.on::before {
