@@ -1238,15 +1238,36 @@ async function searchContent(query: string) {
 }
 /* 🔎 하이브리드 검색(26.9.23 고도화) — 질의를 bge-m3로 임베딩해 galla_search RPC(의미 벡터 + 트라이그램)로 이슈·광장을 뜻으로 찾는다.
    키워드 ILIKE 가 못 잡던 「매운 거」「혼밥 좋은」 같은 것도 의미로. 결과는 실제 행만(지어내기 방지). */
-async function gallaSearch(query: string, sections?: string[]): Promise<any> {
+/* 🎯 사용자 취향 벡터(Phase 3, 26.9.23) — 관심/선호 기억은 부스트, 싫어함/금지는 패널티.
+   salience 가중 평균 후 정규화. 검색 재정렬용 작은 신호(질의 관련성이 우선). 기억 없으면 null. */
+async function tasteVecs(uid?: string | null): Promise<{ interest: string | null; dislike: string | null }> {
+  if (!uid) return { interest: null, dislike: null };
+  try {
+    const { data } = await supa.from("friend_memory").select("kind,embedding,salience")
+      .eq("user_id", uid).eq("status", "active").not("embedding", "is", null)
+      .in("kind", ["interest", "preference", "disliked", "banned"]).order("salience", { ascending: false, nullsFirst: false }).limit(24);
+    const parse = (e: any): number[] | null => { try { return Array.isArray(e) ? e : JSON.parse(String(e)); } catch { return null; } };
+    const avg = (rows: any[]): string | null => {
+      const vs = rows.map((r) => ({ v: parse(r.embedding), w: Math.max(1, Number(r.salience) || 1) })).filter((x) => x.v && x.v.length === 1536);
+      if (!vs.length) return null;
+      const acc = new Array(1536).fill(0); let wsum = 0;
+      for (const { v, w } of vs) { for (let i = 0; i < 1536; i++) acc[i] += v![i] * w; wsum += w; }
+      let n = 0; for (let i = 0; i < 1536; i++) { acc[i] /= wsum; n += acc[i] * acc[i]; }
+      n = Math.sqrt(n) || 1; return vecLit(acc.map((x) => x / n));
+    };
+    const rows = (data || []) as any[];
+    return { interest: avg(rows.filter((r) => r.kind === "interest" || r.kind === "preference")), dislike: avg(rows.filter((r) => r.kind === "disliked" || r.kind === "banned")) };
+  } catch { return { interest: null, dislike: null }; }
+}
+async function gallaSearch(query: string, sections?: string[], uid?: string | null): Promise<any> {
   const q = String(query || "").trim().slice(0, 120);
   if (!q) return { results: [] };
   // 🎯 벡터·키워드용 '주제'만 추출 — 「관련/찾아줘/뉴스/이슈」 같은 검색 잡음을 떼야 임베딩이 주제에 집중된다(26.9.23)
   const topic = q.replace(/(관련(된)?|관한|대한|에\s*(대해|관해)|찾아\s*줘|찾아|검색(해)?\s*줘?|알려\s*줘|보여\s*줘|있나|있어\??|없어\??|좀|줘|해\s*줘|글|얘기|주제|내용|것|거)/g, " ").replace(/\s+/g, " ").trim() || q;
-  const qv = await embed(topic).catch(() => null);
+  const [qv, taste] = await Promise.all([embed(topic).catch(() => null), tasteVecs(uid)]);
   const ALL = ["issue", "plaza", "news", "food", "travel"];
   const secs = (sections && sections.length ? sections : ALL).filter((x) => ALL.includes(x));
-  const { data } = await supa.rpc("galla_search", { p_query_text: topic, p_query_vec: qv ? vecLit(qv) : null, p_sections: secs, p_limit: 6 });
+  const { data } = await supa.rpc("galla_search", { p_query_text: topic, p_query_vec: qv ? vecLit(qv) : null, p_sections: secs, p_limit: 6, p_interest_vec: taste.interest, p_dislike_vec: taste.dislike });
   const rows = (data || []) as any[];
   return {
     results: rows.map((r) => ({ type: r.section, id: r.id, title: r.title, 부제: r.sub })),
@@ -1944,7 +1965,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
-  if (name === "galla_search") return { result: await gallaSearch(String(args?.query || ""), Array.isArray(args?.sections) ? args.sections : undefined) };
+  if (name === "galla_search") return { result: await gallaSearch(String(args?.query || ""), Array.isArray(args?.sections) ? args.sections : undefined, uid) };
   if (name === "do_action") return await doAction(args, uid);
   if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
