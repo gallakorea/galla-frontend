@@ -1369,6 +1369,13 @@ async function dataOpener(type: string, id: string): Promise<string | null> {
 /* 🃏 카드 꾸미기(26.9.22 사장님: 「텍스트 말고 형식을 갖춘 멋진 카드로 — 보고 사용자가 판단하게」)
    어떤 도구에서 왔든 콘텐츠 카드엔 사진·종류 배지·핵심 한 줄을 채운다. 종류별로 한 번씩만 조회(최대 7쿼리). */
 const CARD_BADGE: Record<string, string> = { issue: "이슈", news: "갈라뉴스", predict: "예측", food: "맛집", travel: "여행", plaza: "광장", gallari: "숏판·롱판", hottube: "핫튜브", link: "링크" };
+/* 🏷 카드 제목 짧게 — 쉼표로 자르되 앞 조각이 너무 짧으면(「미국,」→「미국」) 통째로 슬라이스(26.9.23 사장님) */
+function shortTitle(t: string, n = 24): string {
+  const c = String(t || "").replace(/["'\u300c\u300d\u201c\u201d]/g, "").trim();
+  const head = c.split(/[,\u2026\u00b7?]/)[0].trim();
+  const base = head.length >= 6 ? head : c;   // 앞 조각이 6자 미만이면 자르지 않는다
+  return base.length > n ? base.slice(0, n).trim() + "\u2026" : base;
+}
 async function enrichCards(actions: any[]): Promise<void> {
   const cards = (actions || []).filter((a: any) => a && (a.kind === "view" || a.kind === "open"));
   if (!cards.length) return;
@@ -6663,7 +6670,7 @@ ${parts.join("\n")}`;
       {
         const one = actions.filter((a: any) => (a.kind === "view" || a.kind === "open") && String(a.title || "").trim());
         if (!crisis && one.length === 1 && /^(그럼\s*)?(딴|다른)\s*(거|건|것)|하나\s*더|또\s*(없|줘)/.test(String(userMsg || "").trim()) && !/^이번엔/.test(out)) {
-          const t = String(one[0].title).replace(/["'「」”“]/g, "").split(/[,…·?]/)[0].trim().slice(0, 26);
+          const t = shortTitle(String(one[0].title), 26);
           if (!out.includes(t.slice(0, 8))) out = `이번엔 「${t}」 — ` + out.replace(/^(여기\s*(붙여|띄워)\s*놨어|이거)\s*[—\-:,.]?\s*/, "");
         }
       }
@@ -6731,7 +6738,7 @@ ${parts.join("\n")}`;
           const first = out.split(/(?<=[.!?…])\s+|\n+/)[0] || "";
           /* 첫 문장이 이슈를 「소개」해야 한다 — 「해먹은 좀 웃기긴 한데…」처럼 감상부터 시작하면 뭔 얘긴지 모른다(req02) */
           if (!(/(뜨거운|핫한|뜨는|제일\s*(난리|화제)|화제|올라와|이슈는|1위)/.test(first) && cs.some((a: any) => titleHit(first, String(a.title)) > 0))) {
-            const t = cs.slice(0, 2).map((a: any) => `「${String(a.title).replace(/["'「」”“]/g, "").split(/[,…·?]/)[0].trim().slice(0, 22)}」`).join(", ");
+            const t = cs.slice(0, 2).map((a: any) => `「${shortTitle(String(a.title), 22)}」`).join(", ");
             const rest = out.replace(/^(둘\s*다|셋\s*다|세\s*개|두\s*개|이거|전부|다)?\s*(여기\s*)?(붙여|띄워)\s*놨어[.!~]?\s*/, "").trim();
             /* 소개 문장이 이미 말한 소식을 뒤에서 또 말하면 되풀이다(「김건희 항소심, 축구협회 송치…」 두 번) — 제목이 겹치는 문장은 뺀다 */
             const said = cs.slice(0, 2).map((a: any) => String(a.title));
