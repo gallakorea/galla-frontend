@@ -1319,7 +1319,7 @@ const _likeSafe = (q: string) => String(q || "").replace(/[%_,()*]/g, " ").trim(
 const _dong = (addr: string) => { const a = String(addr || "").split(/\s+/); return (a.find((w) => /(동|가|읍|면)$/.test(w) && w.length <= 6) || a[2] || a[1] || "").replace(/\(.*$/, ""); };
 const _km = (a: number, b: number, c: number, d: number) => { const R = 6371, r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r; const h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 const _dist = (km: number) => km < 1 ? Math.round(km * 1000 / 10) * 10 + "m" : km.toFixed(1) + "km";
-async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null, nearAsk = false, openAsk = false) {
+async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { lat: number; lon: number } | null, nearAsk = false, openAsk = false, uid?: string | null) {
   const q = _likeSafe(query || ""); const like = `%${q}%`; const n = Math.min(Math.max(limit || 5, 1), 8);
   try {
     /* 📍 근처 맛집 — 앱이 위치를 실어 보냈으면(권한이 이미 있을 때만) 반경 ~2km 를 지도에서 직접 본다(26.9.21 고도화) */
@@ -1339,21 +1339,20 @@ async function gallaBrowse(section: string, query?: string, limit = 5, geo?: { l
         지침: "상대의 **현재 위치 기준** 가까운 갈라 지도 가게들이다(거리 포함, 가까운 순). 위치를 이미 알고 있으니 동네를 묻지 마라. 1~2곳만 골라 거리와 함께 친구 말투로. 보여달라면 point_to(type:food, id)." };
     }
     if (section === "food") {
-      let rq = supa.from("food_places").select("id,name,address,category,rating,rating_n,min_price,good_price,cover_url,hours").eq("status", "live");
-      /* 「을지로 맛집 추천」을 통째로 찾으면 0건이다 — 말뭉치 단어를 떼고, 남은 낱말마다(AND) 이름·주소·종류 중 하나에 걸리게 */
+      /* 🔎 하이브리드 맛집 검색(26.9.23 통합) — 동네(주소)·메뉴(이름/분류) 분리는 유지하고, ILIKE+FOOD_SYN 수작업을
+         트라이그램+벡터(bge-m3)+개인화(food_search RPC)로. 「매운 거」「혼밥 좋은」이 뜻으로(임베딩 채워질수록). */
       const STOP = /^(맛집|추천|추천해줘|근처|주변|식당|밥집|가게|맛있는|집|어디|좋은|유명한|잘하는|곳|데|땡기는데|먹고|싶어|먹을|거|뭐)$/;
-      const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, ""))   /* 「을지로」의 「로」까지 떼면 '을지'로 검색돼 선릉을지순대국이 나왔다 */.filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 3);
-      /* 말하는 메뉴 ↔ 지도 분류 이름이 다르다(고기집=육류·고기요리, 술집=주점·호프) — 별칭을 풀어 같이 찾는다.
-         「강남역」은 주소에 없다(강남대로) — 끝의 '역'을 뗀다. */
+      const toks = q.replace(/돈까스/g, "돈가스").split(/\s+/).map((w) => w.replace(/(에서|에)$/, "")).filter((w) => w.length >= 2 && !STOP.test(w)).slice(0, 4);
+      const places: string[] = [], menus: string[] = [];
       for (const w0 of toks) {
         const w = /[가-힣]{2,}역$/.test(w0) ? w0.slice(0, -1) : w0;
-        const alts = FOOD_SYN[w] || [w];
-        /* 📍 동네 낱말은 주소에서만, 메뉴 낱말은 이름·종류에서만 — 「인도 카레」의 '인도'가 주소에 걸려 스콘·베이커리가 나왔다(26.9.22) */
         const isPlace = /([가-힣]{1,6}(동|구|시|군|읍|면|로|길|역))$/.test(w0) || /^(강남|홍대|성수|이태원|잠실|여의도|종로|명동|신촌|건대|합정|연남|망원|판교|분당|일산|해운대|서면|광안리|을지로|익선|삼청|압구정|청담|신사|양재|교대|사당|노량진|대학로|혜화|수원|인천|부산|대구|광주|대전|제주|서울)$/.test(w);
-        const cond = alts.flatMap((a) => { const lw = `%${a}%`; return isPlace ? [`address.ilike.${lw}`, `name.ilike.${lw}`] : [`name.ilike.${lw}`, `category.ilike.${lw}`]; }).join(",");
-        rq = rq.or(cond);
+        if (isPlace) places.push(w); else { menus.push(w); for (const a of (FOOD_SYN[w] || [])) menus.push(a); }
       }
-      const { data } = await rq.order("rating_n", { ascending: false, nullsFirst: false }).limit(n);
+      const pMenu = [...new Set(menus)].join(" ").slice(0, 60);
+      const pPlace = places.join(" ").slice(0, 30);
+      const [fvec, ftaste] = await Promise.all([pMenu ? embed(pMenu).catch(() => null) : Promise.resolve(null), tasteVecs(uid)]);
+      const { data } = await supa.rpc("food_search", { p_menu: pMenu, p_place: pPlace, p_vec: fvec ? vecLit(fvec) : null, p_interest_vec: ftaste.interest, p_dislike_vec: ftaste.dislike, p_limit: n });
       return { section: "맛집", items: (data || []).map((x: any) => ({ id: x.id, 이름: x.name, 주소: String(x.address || "").slice(0, 40), 종류: x.category, 평점: x.rating, 리뷰수: x.rating_n, 최저가: x.min_price, 착한가격: x.good_price || undefined, 영업: openNow(x.hours) || "정보 없음" })),
         cards: (data || []).map((x: any) => ({ ctype: "food", id: x.id, title: x.name, sub: [x.category, x.rating ? "★" + x.rating : "", _dong(x.address), openNow(x.hours) || ""].filter(Boolean).join(" · "), img: x.cover_url || null })),
         영업안내: _lateNight() ? "지금 늦은 시간이다 — '영업: 정보 없음'인 곳은 여는지 모른다고 솔직히 말하고, '영업 중'인 곳을 우선 권해라." : undefined,
@@ -1967,7 +1966,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_search") return { result: await gallaSearch(String(args?.query || ""), Array.isArray(args?.sections) ? args.sections : undefined, uid) };
   if (name === "do_action") return await doAction(args, uid);
-  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true); return { result: r }; }
+  if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true, uid); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
