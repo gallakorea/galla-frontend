@@ -153,6 +153,31 @@ async function embed(text: string): Promise<number[] | null> {
   } catch { return null; }
 }
 const vecLit = (v: number[]) => "[" + v.join(",") + "]";
+/* 🧲 배치 임베딩 — bge-m3 는 text:[...] 배열을 받아 한 번에 여러 개(백필 API 호출 대폭 절감). CF 없으면 개별 폴백. */
+async function embedMany(texts: string[]): Promise<(number[] | null)[]> {
+  const arr = texts.map((t) => (t || "").slice(0, 1000));
+  if (CF_AI_TOKEN && CF_ACCOUNT) {
+    try {
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/@cf/baai/bge-m3`, {
+        method: "POST", headers: { Authorization: `Bearer ${CF_AI_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ text: arr }),
+      });
+      const j = await r.json();
+      const data = j?.result?.data;
+      if (Array.isArray(data) && data.length === arr.length) {
+        return data.map((v: number[]) => {
+          if (!Array.isArray(v) || !v.length) return null;
+          const norm = Math.sqrt(v.reduce((a: number, x: number) => a + x * x, 0)) || 1;
+          const out = v.map((x: number) => x / norm); while (out.length < 1536) out.push(0);
+          return out.slice(0, 1536);
+        });
+      }
+    } catch { /* 개별 폴백 */ }
+  }
+  const out: (number[] | null)[] = [];
+  for (const t of arr) out.push(await embed(t).catch(() => null));
+  return out;
+}
 /* 🧠 프롬프트에 올려도 되는 기억인가(26.9.22 기억 감사) — 회상·코어·최근·되묻기 전부 이 한 곳을 지난다.
    · insight: 리플렉션이 만든 '해석'(「인정욕구가 있다」 류)이다. 상대가 한 말이 아니라 추측이라 올리지 않는다.
    · open_loop: 「하다 만 얘기」는 수명이 짧다. 이틀 지난 걸 올리면 한 달 전 얘기를 「아까」로 꺼낸다(하이닉스 170 사고).
@@ -1216,9 +1241,12 @@ async function searchContent(query: string) {
 async function gallaSearch(query: string, sections?: string[]): Promise<any> {
   const q = String(query || "").trim().slice(0, 120);
   if (!q) return { results: [] };
-  const qv = await embed(q).catch(() => null);
-  const secs = (sections && sections.length ? sections : ["issue", "plaza"]).filter((x) => ["issue", "plaza"].includes(x));
-  const { data } = await supa.rpc("galla_search", { p_query_text: q, p_query_vec: qv ? vecLit(qv) : null, p_sections: secs, p_limit: 6 });
+  // 🎯 벡터·키워드용 '주제'만 추출 — 「관련/찾아줘/뉴스/이슈」 같은 검색 잡음을 떼야 임베딩이 주제에 집중된다(26.9.23)
+  const topic = q.replace(/(관련(된)?|관한|대한|에\s*(대해|관해)|찾아\s*줘|찾아|검색(해)?\s*줘?|알려\s*줘|보여\s*줘|있나|있어\??|없어\??|좀|줘|해\s*줘|글|얘기|주제|내용|것|거)/g, " ").replace(/\s+/g, " ").trim() || q;
+  const qv = await embed(topic).catch(() => null);
+  const ALL = ["issue", "plaza", "news", "food", "travel"];
+  const secs = (sections && sections.length ? sections : ALL).filter((x) => ALL.includes(x));
+  const { data } = await supa.rpc("galla_search", { p_query_text: topic, p_query_vec: qv ? vecLit(qv) : null, p_sections: secs, p_limit: 6 });
   const rows = (data || []) as any[];
   return {
     results: rows.map((r) => ({ type: r.section, id: r.id, title: r.title, 부제: r.sub })),
@@ -1563,7 +1591,7 @@ const TOOLS = [
   { type: "function", function: { name: "weather_now", description: "🌦 지금 한국 날씨를 '실제 값'으로 가져온다(기상청 관측 + 갈라 유저 제보). 상대가 '날씨 어때/비 와?/추워?/우산 챙겨야 해?' 물으면 **반드시 이걸 써라** — web_search 는 어제 기사나 다른 지역을 줘서 틀린다. 기억·추측으로 기온을 말하는 건 절대 금지. region 은 상대가 부른 지역명 그대로(서울/부산/전주), 안 말하면 비우면 전국이 온다. **'내일/모레/주말/이번 주'를 물으면 when 을 꼭 넣어라**(tomorrow|dayafter|weekend|week) — 예보가 온다.", parameters: { type: "object", properties: { region: { type: "string", description: "지역명(서울, 부산, 제주…). 모르면 비워라" }, when: { type: "string", enum: ["now", "tomorrow", "dayafter", "weekend", "week"], description: "지금이면 비우거나 now" } } } } },
   { type: "function", function: { name: "topic_history", description: "🎓 어떤 주제를 갈라가 얼마나·언제부터 다뤘고 유저 여론이 어떻게 갈렸는지(갈라뉴스+이슈 축적). 시사·논쟁 주제로 대화가 깊어질 때 이걸 불러 '축적된 관점'으로 말해라 — 특히 '요즘 이거 어때/사람들 뭐래/전에도 이랬나' 류. 밖의 최신 사실은 web_search, 갈라 안의 흐름은 이것.", parameters: { type: "object", properties: { topic: { type: "string", description: "주제 키워드(2~6자 권장: 금리, 하이닉스, 이재명)" } }, required: ["topic"] } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
-  { type: "function", function: { name: "galla_search", description: "🔎 갈라 안 콘텐츠(이슈·광장 글)를 '뜻'으로 찾는다 — 키워드가 정확히 안 맞아도(「매운 거」「혼밥 좋은」「비 오는 날」) 의미로 검색. 상대가 '○○ 관련 글/이슈 찾아줘', 특정 주제·상황을 물을 때. 맛집·여행·영상·뉴스는 각 전용 도구(galla_browse·hot_videos·galla_news)를 써라. 결과에 없는 건 지어내지 마라.", parameters: { type: "object", properties: { query: { type: "string", description: "찾는 주제·상황(자연어)" } }, required: ["query"] } } },
+  { type: "function", function: { name: "galla_search", description: "🔎 갈라 콘텐츠 '뜻'으로 통합검색(이슈·광장 글·뉴스·맛집·여행) — 키워드가 정확히 안 맞아도(「매운 거」「혼밥 좋은」「조용한 여행지」) 의미로. 상대가 '○○ 관련 글/이슈/뉴스/맛집/여행지 찾아줘' 주제·상황을 물을 때. sections 로 코너 좁히기(안 주면 전체). ⚠️'근처/우리 동네 맛집'·지금 위치 기반은 galla_browse(food). 영상은 hot_videos. 결과에 없는 건 지어내지 마라.", parameters: { type: "object", properties: { query: { type: "string", description: "찾는 주제·상황(자연어)" }, sections: { type: "array", items: { type: "string", enum: ["issue", "plaza", "news", "food", "travel"] }, description: "좁힐 코너(안 주면 전체)" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_browse", description: "🧭 갈라 안의 코너를 '실제 데이터'로 훑는다 — section: food(갈라 맛집 지도: '○○ 맛집/근처 뭐 먹지/돈가스 맛집'), travel(갈라 여행 지도: '○○ 여행지/어디 놀러가/일본 가볼만한 곳', query 없으면 뜨는 나라), shorts(숏판: 세로 영상·사진), longs(롱판: 가로 영상), predict(예측: '요즘 예측 뭐 있어/○○ 예측'), plaza(광장 글). 맛집·식당은 오직 이걸로만 찾는다(web_search 금지) — 없으면 없다고 솔직히. 결과에 없는 가게·장소·수치를 지어내지 마라. 보여달라면 point_to(type=해당 section, id).", parameters: { type: "object", properties: { section: { type: "string", enum: ["food", "travel", "shorts", "longs", "predict", "plaza"] }, query: { type: "string", description: "검색어(지역·가게·장소·나라·키워드). 없으면 인기순" }, limit: { type: "integer" } }, required: ["section"] } } },
   { type: "function", function: { name: "do_action", description: "✅ 대화 안에서 바로 하는 행동 — 상대가 **명시적으로** 시킬 때만: 예측 걸기(op:bet — '○○에 100GP 걸어줘', target=예측 id, outcome=선택지 이름, stake=GP), 가게 저장(op:save_place, target=맛집 id), 가게 맛 판정(op:judge_place, verdict:good=맛있다/bad=별로), 여행지 저장(op:save_travel), 이슈 투표(op:vote_issue, side:pro|con). id 는 도구 결과·직전 목록·현재 화면의 것 그대로. 실행은 상대가 카드의 '확인'을 눌러야 된다 — '확인 누르면 참여할게' 식으로 한 줄. ⚠️ '걸기·베팅' 말고 '참여'라고 말해라(스토어 용어). 상대가 금액을 안 말했으면 stake 비워라(기본 100).", parameters: { type: "object", properties: { op: { type: "string", enum: ["bet", "save_place", "judge_place", "save_travel", "vote_issue"] }, target: { type: "string", description: "대상 id" }, outcome: { type: "string", description: "bet: 선택지 이름(예/아니오/음악…)" }, stake: { type: "integer", description: "bet: 걸 GP" }, verdict: { type: "string", enum: ["good", "bad"] }, side: { type: "string", enum: ["pro", "con"] } }, required: ["op", "target"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
@@ -1916,7 +1944,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
-  if (name === "galla_search") return { result: await gallaSearch(String(args?.query || "")) };
+  if (name === "galla_search") return { result: await gallaSearch(String(args?.query || ""), Array.isArray(args?.sections) ? args.sections : undefined) };
   if (name === "do_action") return await doAction(args, uid);
   if (name === "galla_browse") { const r: any = await gallaBrowse(String(args?.section || ""), args?.query, _n(args?.limit, 5), args?.__geo || null, args?.__near === true, args?.__open === true); return { result: r }; }
   if (name === "galla_news") return { result: await gallaNews() };
@@ -4166,9 +4194,9 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "galla_browse", hint: "galla_browse(section:food, query=지역+메뉴)로 **갈라 맛집 지도에서만** 찾아라(갈라가 직접 모은 데이터). 비면 동네를 넓히거나 메뉴만으로 한 번 더. web_search 로 가게 찾기 금지. 지어내기 금지." };
   /* 🔎 주제 특정 검색(26.9.23 고도화) — 「부동산 관련 이슈/AI 글/○○ 얘기 찾아줘」는 뜻으로 찾는다(galla_search).
      제네릭 「요즘 이슈 뭐 있어」는 아래 hot_issues 로. 전용 코너(맛집·여행·영상·뉴스·시세)는 제외. */
-  if ((/(관련|관한|대한)\s*(글|이슈|얘기|내용|것|거|판)|(글|이슈|얘기|주제)\s*(을|를|좀|이|가|은|는)?\s*(찾아|검색)|(찾아|검색)\s*(줘|봐|해)?[^\n]{0,8}(글|이슈|얘기|주제)/.test(m))
-      && !/(맛집|식당|밥집|가게|카페|여행|여행지|놀러|영상|유튜브|핫튜브|뉴스|갈라뉴스|주가|시세|환율|코인|항공|비행기|아파트|집값|날씨|예측|숏판|롱판)/.test(m))
-    return { tool: "galla_search", hint: "galla_search(query=상대가 찾는 주제·상황을 자연어로)로 갈라 이슈·광장을 '뜻'으로 찾아라. 도구가 준 실제 결과만 말하고, 없으면 솔직히. 지어내기 금지." };
+  if ((/(관련|관한|대한)\s*(글|이슈|얘기|내용|것|거|판|뉴스|소식|여행지)|(글|이슈|얘기|주제|뉴스|소식|여행지)\s*(을|를|좀|이|가|은|는)?\s*(찾아|검색|있나|있어)|(찾아|검색)\s*(줘|봐|해)?[^\n]{0,8}(글|이슈|얘기|주제|뉴스|소식|여행지)/.test(m))
+      && !/(맛집|식당|밥집|가게|카페|근처|우리\s*동네|내\s*위치|영상|유튜브|핫튜브|주가|시세|환율|코인|항공|비행기|아파트|집값|날씨|예측|숏판|롱판)/.test(m))
+    return { tool: "galla_search", hint: "galla_search(query=찾는 주제·상황을 자연어로)로 갈라 콘텐츠(이슈·광장·뉴스·여행)를 '뜻'으로 통합검색. 뉴스만 원하면 sections:[\"news\"], 여행지면 [\"travel\"]. 도구가 준 실제 결과만, 없으면 솔직히. 지어내기 금지." };
   if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
@@ -4987,25 +5015,41 @@ Deno.serve(async (req) => {
       }
       return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
     }
-    if (body?.op === "embed_content") {   // 🔎 검색 임베딩 백필(크론/운영) — search_vec 없는 이슈·광장을 bge-m3로 채운다(질의당 아님)
+    if (body?.op === "embed_content") {   // 🔎 검색 임베딩 백필(크론/운영) — search_vec 없는 콘텐츠를 bge-m3로 배치 채움(질의당 아님)
       if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
-      const lim = Math.min(Math.max(_n(body?.limit, 100), 1), 300);
-      let done = 0, fail = 0;
-      // 이슈
-      const { data: iss } = await supa.from("issues").select("id,title,one_line,description").is("search_vec", null).eq("status", "normal").limit(lim);
-      for (const r of iss || []) {
-        const v = await embed(`${r.title || ""} ${r.one_line || ""} ${String(r.description || "").slice(0, 300)}`.trim());
-        if (v) { await supa.from("issues").update({ search_vec: vecLit(v) }).eq("id", r.id); done++; } else fail++;
+      const lim = Math.min(Math.max(_n(body?.limit, 150), 1), 300);
+      const only = String(body?.table || "");   // 특정 표만(크론 분산용). 없으면 우선순위대로.
+      const out: any = { embedded: 0, fail: 0, remaining: {} };
+      // 표별: 어떤 행을 먼저(신선/신호), 어떤 텍스트로 임베딩할지
+      const TB: Record<string, { sel: string; order?: string; flt?: (q: any) => any; text: (r: any) => string }> = {
+        issue:  { sel: "id,title,one_line,description", flt: (q) => q.eq("status", "normal"), text: (r) => `${r.title || ""} ${r.one_line || ""} ${String(r.description || "").slice(0, 300)}` },
+        plaza:  { sel: "id,title,category,body", text: (r) => `${r.title || ""} ${r.category || ""} ${String(r.body || "").slice(0, 300)}` },
+        // 가치 있는 것만(비용 억제): 뉴스=최근 45일, 맛집=평점 있는 것, 여행지=사진 있는 것
+        news:   { sel: "id,title,summary,category", order: "published_at.desc.nullslast", flt: (q) => q.eq("status", "published").gte("published_at", new Date(Date.now() - 45 * 864e5).toISOString()), text: (r) => `${r.title || ""} ${String(r.summary || "").slice(0, 300)} ${r.category || ""}` },
+        food:   { sel: "id,name,category,address,rating_n", order: "rating_n.desc.nullslast", flt: (q) => q.eq("status", "live").gt("rating_n", 0), text: (r) => `${r.name || ""} ${r.category || ""} ${String(r.address || "").split(" ").slice(0, 3).join(" ")}` },
+        travel: { sel: "id,name,city,country,admin1,summary,photo", order: "photo.desc.nullslast", flt: (q) => q.not("photo", "is", null), text: (r) => `${r.name || ""} ${r.city || ""} ${r.country || ""} ${r.admin1 || ""} ${String(r.summary || "").slice(0, 200)}` },
+      };
+      const TABLE: Record<string, string> = { issue: "issues", plaza: "plaza_posts", news: "galla_news", food: "food_places", travel: "travel_places" };
+      const order = only ? [only] : ["issue", "plaza", "news", "food", "travel"];
+      let budget = lim;
+      for (const key of order) {
+        const cfg = TB[key]; if (!cfg) continue; const tbl = TABLE[key];
+        if (budget <= 0 && !only) break;
+        let qy = supa.from(tbl).select(cfg.sel).is("search_vec", null); if (cfg.flt) qy = cfg.flt(qy);
+        if (cfg.order) { const [c, d] = cfg.order.split("."); qy = qy.order(c, { ascending: d !== "desc", nullsFirst: false }); }
+        const { data: rows } = await qy.limit(only ? lim : budget);
+        for (let i = 0; i < (rows || []).length; i += 50) {
+          const batch = (rows as any[]).slice(i, i + 50);
+          const vecs = await embedMany(batch.map((r) => cfg.text(r).trim()));
+          for (let k = 0; k < batch.length; k++) {
+            if (vecs[k]) { await supa.from(tbl).update({ search_vec: vecLit(vecs[k]!) }).eq("id", batch[k].id); out.embedded++; } else out.fail++;
+          }
+        }
+        budget -= (rows || []).length;
+        const { count } = await supa.from(tbl).select("id", { count: "exact", head: true }).is("search_vec", null);
+        out.remaining[key] = count || 0;
       }
-      // 광장
-      const { data: plz } = await supa.from("plaza_posts").select("id,title,category,body").is("search_vec", null).limit(lim);
-      for (const r of plz || []) {
-        const v = await embed(`${r.title || ""} ${r.category || ""} ${String(r.body || "").slice(0, 300)}`.trim());
-        if (v) { await supa.from("plaza_posts").update({ search_vec: vecLit(v) }).eq("id", r.id); done++; } else fail++;
-      }
-      const { count: iLeft } = await supa.from("issues").select("id", { count: "exact", head: true }).is("search_vec", null).eq("status", "normal");
-      const { count: pLeft } = await supa.from("plaza_posts").select("id", { count: "exact", head: true }).is("search_vec", null);
-      return json({ ok: true, embedded: done, fail, remaining: { issue: iLeft || 0, plaza: pLeft || 0 } });
+      return json({ ok: true, ...out });
     }
     if (body?.op === "quote_test" && req.headers.get("x-cron-key") === (Deno.env.get("CRON_SECRET") || "__none__")) {   // 🧪 시세 출처별 점검(키는 밖으로 안 나간다)
       const nm = String(body?.name || "SK하이닉스");
