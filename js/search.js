@@ -249,11 +249,12 @@ async function initTrendPage() {
     //      III.E.4h(파생 지표 표시) 위반 통보 이력. 순위 정렬 재료로만 쓰고 수치엔 미표시.
     try {
       const { data: tr } = await supabase.from("unified_realtime_trends")
-        .select("keyword,total_score,youtube_hits").limit(40);
+        .select("keyword,total_score,youtube_hits,gn_id").limit(40);
       if (tr && tr.length >= 5) {
         _hotKwCache = tr.map(r => ({
           kw: r.keyword,
           count: Math.max(1, (r.total_score || 0) - (r.youtube_hits || 0) * 2),
+          gn: r.gn_id || null,   // 갈라뉴스 연결(있으면 클릭 시 그 뉴스로)
         }));
         return _hotKwCache.slice(0, limit);
       }
@@ -816,7 +817,7 @@ async function initTrendPage() {
       const max = kws[0].count || 1;
       const rows = kws.map((r, i) => {
         const pct = Math.max(8, Math.round(r.count / max * 100));
-        return `<button class="tr-lane${i < 3 ? " hot r" + (i + 1) : ""}" style="--i:${i};--pct:${pct}%" data-kw="${esc(r.kw)}">
+        return `<button class="tr-lane${i < 3 ? " hot r" + (i + 1) : ""}" style="--i:${i};--pct:${pct}%" data-kw="${esc(r.kw)}"${r.gn ? ` data-gn="${esc(r.gn)}"` : ""}>
           <span class="tr-rank"><b>${i + 1}</b></span>
           <span class="tr-body">
             <span class="tr-top"><span class="tr-kw">${esc(r.kw)}</span><span class="tr-pt"><b data-to="${r.count}">0</b><i>pt</i></span></span>
@@ -845,7 +846,12 @@ async function initTrendPage() {
       trMoreClick(e);
       const b = e.target.closest("[data-kw]");
       if (b) {
-        // 키워드 탭 → 재밌는 버스트 후 검색
+        // 갈라뉴스가 연결된 화제 → 검색 대신 그 갈라뉴스로 바로(빈손 방지)
+        if (b.dataset.gn) {
+          (window.GALLA_nav || function (u) { location.href = u; })("news.html?gn=" + encodeURIComponent(b.dataset.gn));
+          return;
+        }
+        // 연결 뉴스 없으면 키워드 검색 → 재밌는 버스트 후
         if (window.GALLA_FX) {
           const r = b.getBoundingClientRect();
           window.GALLA_FX.burst(r.left + 30, r.top + r.height / 2, { colors: ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a"], count: 14, spread: 66 });
