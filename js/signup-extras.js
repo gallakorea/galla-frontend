@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
     bd.addEventListener('input', function(){
       var a = window.GALLA_ageFromBirth(bd.value);
       if(a === null){ ageHint.textContent=''; ageHint.className='pw-hint'; }
-      else if(a < 14){ ageHint.textContent='✕ 만 14세 미만은 가입할 수 없습니다'; ageHint.className='pw-hint no'; ageAgree.checked=false; }
+      else if(a < 18){ ageHint.textContent="✕ 만 18세 미만은 가입할 수 없습니다"; ageHint.className='pw-hint no'; ageAgree.checked=false; }
       /* 만 나이 숫자는 표시하지 않는다 — 세는 나이와 달라 '계산이 틀렸다'는
          인상을 주고, 본인 나이를 되비추는 것도 불쾌 요소 (사장님 지적) */
       /* ⚠️ 필수 약관 '사전 체크' 금지 — 나이가 확인돼도 동의는 유저가 직접 누른다(사전선택은 법적 리스크 + "왜 미리 체크돼 있지?" 불신) */
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
   (function(){
     var y = document.getElementById('bdY'), m = document.getElementById('bdM'), d = document.getElementById('bdD');
     if(!y || !m || !d || !bd) return;
-    var top = new Date().getFullYear() - 14;
+    var top = new Date().getFullYear() - 18;
     for(var i = top; i >= 1920; i--) y.add(new Option(i + '년', i));
     for(var j = 1; j <= 12; j++) m.add(new Option(j + '월', j));
     function fillDays(){
@@ -80,9 +80,9 @@ document.addEventListener("DOMContentLoaded", function () {
   var signupBtn2 = document.getElementById('signupBtn');
   function syncAgreeAll(){ agreeAll.checked = allBoxes.every(function(b){ return b.checked; }); }
   function refreshSignupBtn(){
-    /* 생년월일 칸이 없으면(26.9.18 단계별 가입) 만 14세는 약관 체크박스 자기 확인으로 받는다 */
+    /* 생년월일 칸이 없으면(26.9.18 단계별 가입) 만 18세는 약관 체크박스 자기 확인으로 받는다(26.9.24 애플 18+ 통일) */
     var age = bd ? window.GALLA_ageFromBirth(bd.value) : 99;
-    var ok = reqBoxes.every(function(b){ return b.checked; }) && age !== null && age >= 14;
+    var ok = reqBoxes.every(function(b){ return b.checked; }) && age !== null && age >= 18;
     signupBtn2.disabled = !ok;
   }
   agreeAll.addEventListener('change', function(){

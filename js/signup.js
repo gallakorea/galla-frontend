@@ -79,14 +79,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (_) { /* 확인 실패 시 진행 — 서버 제약이 최종 방어 */ }
 
         /* 🪜 단계별 가입(26.9.18): 생년월일·성별·지역은 가입에서 뺐다 — 통계를 열 때 받는다.
-           만 14세 이상은 약관의 [필수] '만 14세 이상입니다' 자기 확인으로 받는다(아래 agreeAge). */
+           만 18세 이상은 약관의 [필수] '만 18세 이상입니다' 자기 확인으로 받는다(아래 agreeAge, 26.9.24 애플 18+). */
 
         // 필수 약관 동의 확인
         const agreeAge = document.getElementById("agreeAge").checked;
         const agreeTerms = document.getElementById("agreeTerms").checked;
         const agreePrivacy = document.getElementById("agreePrivacy").checked;
         if (!agreeAge || !agreeTerms || !agreePrivacy) {
-            alert("필수 약관(만 14세 이상·이용약관·개인정보 수집·이용)에 동의해주세요.");
+            alert("필수 약관(만 18세 이상·이용약관·개인정보 수집·이용)에 동의해주세요.");
             return;
         }
 
