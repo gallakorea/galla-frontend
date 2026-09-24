@@ -433,8 +433,9 @@
                 if (!(row.pct > 1)) break;                       // 1% 미만이면 '싸졌다' 고 말하지 않는다
                 const { data } = await live().eq('country', row.country).limit(20);
                 if ((data || []).length >= 2) {
-                  return data.map(x => ({ ...x, __title: `지금 싸게 가는 ${row.country}`,
-                    note: `1년 새 ${row.pct}% 저렴` }));
+                  /* '싸다' 는 환율 이야기일 뿐 현지 물가와 다르다 — 말을 정확히 한다 */
+                  return data.map(x => ({ ...x, __title: `원화가 강해진 ${row.country}`,
+                    __meta: `1년 새 환율 ${row.pct}% 유리`, note: null }));
                 }
               }
               return [];
