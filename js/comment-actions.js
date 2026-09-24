@@ -141,8 +141,9 @@
       rows.push(`<button class="opt danger" data-a="del">🗑️ 삭제</button>`);
     } else {
       rows.push(`<button class="opt" data-a="report">🚨 신고</button>`);
-      // 차단 — App Store 1.2(사용자 콘텐츠엔 신고+차단). 작성자 id 가 있어야 막을 수 있다
-      if (opts.uid && opts.uid !== "null" && opts.uid !== "undefined") rows.push(`<button class="opt danger" data-a="block">🚫 이 사용자 차단</button>`);
+      // 차단 — App Store 1.2. 일반 댓글은 작성자 id 로, 유령(익명) 댓글은 서버가 숨은 작성자를
+      // 찾아 차단(block_comment_author). 둘 다 남의 댓글이면 항상 노출한다.
+      rows.push(`<button class="opt danger" data-a="block">🚫 이 사용자 차단</button>`);
     }
     rows.push(`<button class="opt" data-a="share">🔗 이 댓글 공유</button>`);
     sheet.innerHTML = `<div class="dim"></div><div class="card">${rows.join("")}<button class="cancel">닫기</button></div>`;
@@ -155,7 +156,23 @@
       if (a === "edit") GALLA_cmtEdit({ table: opts.table, id: opts.id, bodyCol: opts.bodyCol, current: opts.current, onSaved: opts.onEdited });
       else if (a === "del") GALLA_cmtDelete({ table: opts.table, id: opts.id, soft: opts.soft, onDone: opts.onDeleted });
       else if (a === "report") (window.GALLA_reportContent || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid });
-      else if (a === "block") (window.GALLA_blockUser || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid, onBlocked: opts.onDeleted });
+      else if (a === "block") {
+        const uid = opts.uid;
+        if (uid && uid !== "null" && uid !== "undefined") {
+          (window.GALLA_blockUser || window.GALLA_openReportMenu)?.({ contentType: "comment", contentId: opts.id, authorId: uid, onBlocked: opts.onDeleted });
+        } else {
+          // 👻 유령(익명) 댓글 — 서버가 숨은 실 작성자를 찾아 차단(클라이언트엔 id 안 내려감)
+          (async () => {
+            try {
+              const { data, error } = await sb().rpc("block_comment_author", { p_table: opts.table, p_id: opts.id });
+              if (error || !data?.ok) throw error || new Error(data?.reason || "block");
+              try { window.GALLA_blockedRefresh && window.GALLA_blockedRefresh(); } catch (_) {}
+              window.GALLA_toast && GALLA_toast("차단했어요.");
+              opts.onDeleted && opts.onDeleted();
+            } catch (e) { window.GALLA_toast && GALLA_toast("차단 실패: " + (e?.message || e)); }
+          })();
+        }
+      }
       else if (a === "share") cmtShare(opts);
     });
   };

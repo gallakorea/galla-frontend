@@ -410,15 +410,17 @@
     const nameHtml = gh
       ? `<span class="hv-cmt-n ghost-nick" style="color:${gh.color}">${gh.name}</span>`
       : `<span class="hv-cmt-n"${uAttr}${nickAttr}>${esc(m.nickname)}</span>`;
+    // ⋯ 메뉴(공용 comment-actions): 내 댓글=수정·삭제, 남=신고·차단, 유령=신고만(uid 비움)
+    const cmtUid = gh ? "" : esc(m.user_id || "");
     return `
-      <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}">
+      <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}" data-cmt-item>
         ${av}
         <div class="hv-cmt-b">
           <div class="hv-cmt-h">
             ${nameHtml}
             <span class="hv-cmt-d">${timeAgo(m.created_at)}</span>
           </div>
-          <div class="hv-cmt-t">${esc(m.body)}</div>
+          <div class="hv-cmt-t" data-cmt-text>${esc(m.body)}</div>
           <div class="hv-cmt-a">
             <button type="button" class="hv-cl${m.liked ? " on" : ""}" data-like="${m.id}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>
@@ -426,7 +428,7 @@
             </button>
             ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(gh ? gh.name : m.nickname)}">답글</button>`}
             <button type="button" class="hv-cshare" data-cshare="${m.id}" data-body="${esc(m.body || "")}" aria-label="댓글 공유">🔗</button>
-            ${m.mine ? `<button type="button" class="hv-cx" data-del="${m.id}">삭제</button>` : ""}
+            <button type="button" class="cmt-mini" data-cmt-menu data-cmt-table="video_comments" data-cmt-id="${m.id}" data-cmt-uid="${cmtUid}" data-cmt-bodycol="body" aria-label="더보기">⋯</button>
           </div>
         </div>
       </div>`;

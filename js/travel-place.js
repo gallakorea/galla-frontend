@@ -324,9 +324,12 @@
     var box = ROOT.querySelector("#tv-cmts"); if (!box) return;
     var cs = (r && r.comments) || [];
     box.innerHTML = cs.length ? cs.map(function (c) {
-      return '<div class="tv-cmt ' + (V[c.faction] ? V[c.faction].tone : "") + '">' +
+      // ⋯ 메뉴(공용 comment-actions): 내 한마디=수정·삭제, 남=신고·차단
+      return '<div class="tv-cmt ' + (V[c.faction] ? V[c.faction].tone : "") + '" data-cmt-item>' +
         '<span class="tv-cf">' + (V[c.faction] ? V[c.faction].label : "") + "</span>" +
-        "<b>" + esc(c.nick) + "</b> " + esc(c.body) + "</div>";
+        "<b>" + esc(c.nick) + "</b> " + '<span data-cmt-text>' + esc(c.body) + "</span>" +
+        '<button type="button" class="cmt-mini tv-cmt-menu" data-cmt-menu data-cmt-table="travel_comments" data-cmt-id="' + c.id + '" data-cmt-uid="' + esc(c.user_id || "") + '" data-cmt-bodycol="body" aria-label="더보기">⋯</button>' +
+        "</div>";
     }).join("") : '<div class="tv-none">첫 한마디를 남겨보세요.</div>';
   }
 

@@ -2344,10 +2344,12 @@
   }
 
   function talkRow(c) {
-    return '<div class="fd-c ' + (c.faction === "good" ? "good" : "bad") + '">' +
+    // ⋯ 메뉴(공용 comment-actions): 내 한마디=수정·삭제, 남=신고·차단
+    return '<div class="fd-c ' + (c.faction === "good" ? "good" : "bad") + '" data-cmt-item>' +
       '<div class="fd-c-h"><b>' + esc(c.nick) + '</b>' +
-        '<span class="fd-c-fac">' + (c.faction === "good" ? "맛있다" : "맛없다") + '</span></div>' +
-      '<div class="fd-c-b">' + esc(c.body) + '</div>' +
+        '<span class="fd-c-fac">' + (c.faction === "good" ? "맛있다" : "맛없다") + '</span>' +
+        '<button type="button" class="cmt-mini fd-c-menu" data-cmt-menu data-cmt-table="food_comments" data-cmt-id="' + c.id + '" data-cmt-uid="' + esc(c.user_id || "") + '" data-cmt-bodycol="body" aria-label="더보기">⋯</button></div>' +
+      '<div class="fd-c-b" data-cmt-text>' + esc(c.body) + '</div>' +
       '<button type="button" class="fd-c-like' + (c.liked ? " on" : "") + '" data-like="' + c.id + '">' +
         '👍 ' + (c.likes || 0) + '</button></div>';
   }
