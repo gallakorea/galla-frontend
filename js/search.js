@@ -244,6 +244,21 @@ async function initTrendPage() {
   let _hotKwCache = null;
   async function computeHotKeywords(limit = 12) {
     if (_hotKwCache) return _hotKwCache.slice(0, limit);
+    // 1순위: 통합 실시간 트렌드 뷰(포털 검색어 축 + 뉴스·커뮤니티 교차).
+    //   ⚠️ 화면 표시 숫자에서는 유튜브 기여(youtube_hits)를 뺀다 — YouTube ToS
+    //      III.E.4h(파생 지표 표시) 위반 통보 이력. 순위 정렬 재료로만 쓰고 수치엔 미표시.
+    try {
+      const { data: tr } = await supabase.from("unified_realtime_trends")
+        .select("keyword,total_score,youtube_hits").limit(40);
+      if (tr && tr.length >= 5) {
+        _hotKwCache = tr.map(r => ({
+          kw: r.keyword,
+          count: Math.max(1, (r.total_score || 0) - (r.youtube_hits || 0) * 2),
+        }));
+        return _hotKwCache.slice(0, limit);
+      }
+    } catch (_) { /* 뷰 오류 시 아래 폴백 */ }
+    // 폴백: 통합 뷰가 비었을 때 뉴스 제목 단어 빈도(기존 로직)
     const since = new Date(Date.now() - 6 * 3600e3).toISOString();
     const { data } = await supabase.from("news_articles_raw")
       .select("title").gte("published_at", since).limit(700);
@@ -283,7 +298,7 @@ async function initTrendPage() {
      지목했다. 실제로는 유튜브와 무관한 자체·외부 트렌드 집계다.
      오해의 소지를 남기지 않도록 소스와 숫자의 의미를 같이 적는다. */
   const SRC_NOTE = {
-    galla:  "갈라 내 이슈·뉴스에서 집계한 언급 횟수입니다. (자체 데이터)",
+    galla:  "갈라가 실시간 검색어·뉴스·커뮤니티를 통합해 집계한 화제 점수입니다. (자체 집계)",
     google: "Google 트렌드 제공 데이터입니다.",
     naver:  "네이버 제공 데이터입니다.",
     nate:   "네이트·줌 제공 데이터입니다.",
@@ -795,25 +810,26 @@ async function initTrendPage() {
     hotWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
     gallaWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
 
-    // 1) 실시간 급상승 키워드 — 라이브 모멘텀 보드(카운트업 · 빛 스윕 · 순차 등장)
+    // 1) 실시간 급상승 — 역동 레이스 리더보드(네온 트랙 · 흐르는 빛 · 카운터)
     const kws = await computeHotKeywords(15);
     if (kws.length) {
       const max = kws[0].count || 1;
-      const rows = kws.map((r, i) => `
-        <button class="tm-row" style="--i:${i}" data-kw="${esc(r.kw)}">
-          <span class="tm-rank r${i < 3 ? i + 1 : 0}">${i + 1}</span>
-          <span class="tm-main">
-            <span class="tm-kw">${esc(r.kw)}</span>
-            <span class="tm-bar"><span class="tm-fill${i < 3 ? " shine" : ""}" style="width:${Math.max(6, Math.round(r.count / max * 100))}%"></span></span>
+      const rows = kws.map((r, i) => {
+        const pct = Math.max(8, Math.round(r.count / max * 100));
+        return `<button class="tr-lane${i < 3 ? " hot r" + (i + 1) : ""}" style="--i:${i};--pct:${pct}%" data-kw="${esc(r.kw)}">
+          <span class="tr-rank"><b>${i + 1}</b></span>
+          <span class="tr-body">
+            <span class="tr-top"><span class="tr-kw">${esc(r.kw)}</span><span class="tr-pt"><b data-to="${r.count}">0</b><i>pt</i></span></span>
+            <span class="tr-track"><span class="tr-fill"></span></span>
           </span>
-          <span class="tm-cnt" data-to="${r.count}">0</span>
-        </button>`);
+        </button>`;
+      });
       hotWrap.innerHTML =
-        `<div class="tm-live"><span class="tm-live-dot"></span>LIVE · 실시간 집계<button class="tm-share" type="button" aria-label="트렌드 순위 공유" style="float:right;margin-top:-2px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#c9d1e0;font-size:11px;font-weight:800;cursor:pointer">🔗 순위 공유</button></div>
-         <div class="tm-board">${trMore(rows, "키워드 더보기")}</div>`;
+        `<div class="tm-live"><span class="tm-live-dot"></span>LIVE · 실시간 집계<button class="tm-share" type="button" aria-label="트렌드 순위 공유">🔗 순위 공유</button></div>
+         <div class="tr-board">${trMore(rows, "키워드 더보기")}</div>`;
       countUp(hotWrap);
     } else {
-      hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
+      hotWrap.innerHTML = `<p class="se-muted">지금은 조용하네요… 곧 뭐가 터질지 몰라요 👀</p>`;
     }
     hotWrap.onclick = e => {
       // 🔗 실시간 트렌드 순위 공유 — /share/trend 랜딩(TOP 순위 + 가입 유도)

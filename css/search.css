@@ -1966,3 +1966,60 @@ body[data-page="news"] .news-viewer-fallback {
 .hv-hero.hv-playing .hv-hero-sh { z-index: 3; }
 /* 프레임 안에서 소리 버튼을 눌러야 하므로 아래쪽 글자 영역만 클릭을 먹는다 */
 .hv-hero.hv-playing { cursor: default; }
+
+/* ============================================================
+   🔥 실시간 급상승 — 역동 레이스 리더보드(네온 트랙 · 흐르는 빛)
+   ============================================================ */
+.tm-share { float: right; margin-top: -2px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.06);
+  color: #c9d1e0; font-size: 11px; font-weight: 800; cursor: pointer; }
+
+.tr-board { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 4px; }
+
+.tr-lane { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  padding: 10px 13px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+  border: 1px solid rgba(255,255,255,.05);
+  opacity: 0; transform: translateX(-16px);
+  animation: trIn .5s cubic-bezier(.2,1,.3,1) forwards; animation-delay: calc(var(--i) * 55ms); }
+@keyframes trIn { to { opacity: 1; transform: none; } }
+.tr-lane:active { transform: scale(.985); }
+
+.tr-rank { flex: 0 0 auto; width: 26px; text-align: center; }
+.tr-rank b { font: italic 900 18px/1 system-ui; color: #5f6a80; font-variant-numeric: tabular-nums; }
+
+.tr-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.tr-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tr-kw { font: 800 15px/1.2 system-ui; color: #eef1f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-pt { flex: 0 0 auto; display: flex; align-items: baseline; gap: 2px; }
+.tr-pt b { font: 900 14px/1 system-ui; color: #8a909c; font-variant-numeric: tabular-nums; }
+.tr-pt i { font: 800 9px/1 system-ui; color: #5a6070; font-style: normal; }
+
+/* 네온 트랙 */
+.tr-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.tr-fill { display: block; height: 100%; width: var(--pct); border-radius: 999px; position: relative; overflow: hidden;
+  background: linear-gradient(90deg, #4a7bff, #5b8cff);
+  transform-origin: left; animation: trGrow .9s cubic-bezier(.2,1,.3,1) both; animation-delay: calc(var(--i) * 55ms + .1s); }
+@keyframes trGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.tr-fill::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: translateX(-100%); animation: trShine 2.6s ease-in-out infinite; animation-delay: calc(var(--i) * 120ms + .6s); }
+@keyframes trShine { 0% { transform: translateX(-100%); } 55%,100% { transform: translateX(230%); } }
+
+/* TOP3 강조 — 불타는 그라디언트 + 네온 글로우 */
+.tr-lane.hot { background: linear-gradient(180deg, rgba(255,90,60,.1), rgba(255,255,255,.015)); }
+.tr-lane.r1 { border-color: rgba(255,60,90,.4); box-shadow: 0 0 22px rgba(255,60,90,.14) inset; }
+.tr-lane.r1 .tr-rank b { color: #ff3c56; font-size: 23px; text-shadow: 0 0 14px rgba(255,60,90,.75); }
+.tr-lane.r2 .tr-rank b { color: #ff7a3c; font-size: 20px; text-shadow: 0 0 10px rgba(255,120,60,.55); }
+.tr-lane.r3 .tr-rank b { color: #ffb03c; font-size: 19px; text-shadow: 0 0 9px rgba(255,180,60,.45); }
+.tr-lane.r1 .tr-kw { color: #fff; font-size: 16px; }
+.tr-lane.hot .tr-pt b { color: #ff8a3c; }
+.tr-lane.r1 .tr-fill { background: linear-gradient(90deg, #ff2d55, #ff8a3c); box-shadow: 0 0 12px rgba(255,80,90,.6); }
+.tr-lane.r2 .tr-fill { background: linear-gradient(90deg, #ff5b3c, #ffa83c); }
+.tr-lane.r3 .tr-fill { background: linear-gradient(90deg, #ff8a3c, #ffc23c); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-lane { opacity: 1; transform: none; animation: none; }
+  .tr-fill { animation: none; }
+  .tr-fill::after { animation: none; display: none; }
+}
