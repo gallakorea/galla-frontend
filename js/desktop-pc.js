@@ -384,6 +384,19 @@
               const { data } = await live().order('created_at', { ascending: false }).limit(40);
               return data || [];
             } },
+          { t: null, run: async () => {   // 💱 환율 — 원화가 강해진 나라(= 지금 싸게 가는 곳)
+              const fx = await fetch('/fx').then(r => r.ok ? r.json() : null).catch(() => null);
+              if (!fx || !fx.ok) return [];
+              for (const row of (fx.rows || []).slice(0, 8)) {
+                if (!(row.pct > 1)) break;                       // 1% 미만이면 '싸졌다' 고 말하지 않는다
+                const { data } = await live().eq('country', row.country).limit(20);
+                if ((data || []).length >= 2) {
+                  return data.map(x => ({ ...x, __title: `지금 싸게 가는 ${row.country}`,
+                    note: `1년 새 ${row.pct}% 저렴` }));
+                }
+              }
+              return [];
+            } },
           { t: null, run: async () => {   // 나라별 — 제목은 나라 이름으로
               const { data } = await live().limit(300);
               const rows = (data || []).filter(x => x.country);
