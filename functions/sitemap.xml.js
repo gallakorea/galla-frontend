@@ -96,7 +96,7 @@ export async function onRequest() {
   ]);
 
   // clean URL(= 실제 200 페이지, 미들웨어가 SEO 메타 주입). .html은 308 리다이렉트되므로 clean 사용.
-  (issues || []).forEach(r => parts.push(u(`${HOST}/issue?id=${r.id}`, iso(r.created_at), "daily", "0.8")));
+  (issues || []).forEach(r => parts.push(u(`${HOST}/issue?id=${r.id}`, iso(r.created_at), "daily", "0.9")));  // 간판 콘텐츠 — 여행(0.7)보다 크롤 우선순위 위로
   (plaza || []).forEach(r => parts.push(u(`${HOST}/plaza_detail?id=${r.id}`, iso(r.created_at), "weekly", "0.6")));
   (markets || []).forEach(r => parts.push(u(`${HOST}/predict-market?id=${r.id}`, iso(r.created_at), "daily", "0.7")));
   // 갈라뉴스는 AI가 여러 보도를 종합해 새로 쓴 오리지널 → 이슈와 같은 급으로 취급한다

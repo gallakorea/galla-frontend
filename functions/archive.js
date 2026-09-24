@@ -129,8 +129,9 @@ export async function onRequest(context) {
   }
 
   // ── 허브 ──
+  // 이슈는 갈라의 간판 콘텐츠 → 허브에서 2배(48건) 노출해 크롤러가 이슈를 더 많이 발견하게.
   const packs = await Promise.all(Object.entries(TYPES).map(async ([k, spec]) => {
-    const { rows, total } = await fetchPage(spec, 0, HUB);
+    const { rows, total } = await fetchPage(spec, 0, k === "issue" ? HUB * 2 : HUB);
     return { k, spec, rows, total };
   }));
   const body =
