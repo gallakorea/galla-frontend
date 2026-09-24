@@ -185,6 +185,29 @@
     if (!el) return;
     if (!html) { card.remove(); return; }
     el.innerHTML = html + (moreHref ? `<a class="pcr-more" href="${moreHref}">${moreLabel} →</a>` : '');
+    countUp(el);
+  }
+  /* 막대 옆 숫자를 0부터 굴린다 — 값이 '움직여서' 눈에 걸리게(26.9.24) */
+  function countUp(root) {
+    let slow = false;
+    try { slow = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+    if (slow || !root) return;
+    root.querySelectorAll('.pcr-bar u').forEach((u, i) => {
+      const m = String(u.textContent || '').match(/^([^0-9]*)([0-9][0-9,.]*)(.*)$/);
+      if (!m) return;
+      const to = parseFloat(m[2].replace(/,/g, ''));
+      if (!isFinite(to)) return;
+      const dec = (m[2].split('.')[1] || '').length;
+      const fmt = v => m[1] + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString()) + m[3];
+      const t0 = performance.now() + i * 90 + 300, dur = 720;
+      u.textContent = fmt(0);
+      const step = now => {
+        const k = Math.max(0, Math.min(1, (now - t0) / dur));
+        u.textContent = fmt(to * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
   }
 
   /* 🔴 유튜브 콘텐츠가 재생되는 화면에서는 우리 지표 패널을 붙이지 않는다.
@@ -225,12 +248,70 @@
     try { sessionStorage.setItem('galla_pcr_rot_' + key, String((i + 1) % n)); } catch (_) {}
     return i % n;
   }
-  /* 테마 한 줄(왜 이게 떴는지) + 사진 두 장 */
-  function grid(theme, meta, cells) {
+  /* 테마 표식 — 이모지 말고 선 아이콘(galla 톤). 무엇을 근거로 고른 줄인지 한눈에 */
+  const ICON = {
+    who: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+    layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+    tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+    pin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+    play: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>',
+    award: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>',
+    zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+    plane: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  };
+  const ic = k => ICON[k] ? `<svg class="pcr-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>` : '';
+
+  /* 테마 한 줄(왜 이게 떴는지) + 사진 두 장 + 숫자 한 줄(26.9.24 사장님: 한 줄은 사진, 한 줄은 차트) */
+  function grid(theme, meta, cells, viz, opt) {
     if (!cells || !cells.length) return '';
-    return `<div class="pcr-theme"><b>${esc(theme)}</b>${meta ? `<i>${esc(meta)}</i>` : ''}</div>` +
+    const o = opt || {};
+    return `<div class="pcr-theme${o.tone ? ' tone-' + o.tone : ''}">${ic(o.icon)}<b>${esc(theme)}</b>${meta ? `<i>${esc(meta)}</i>` : ''}</div>` +
       `<div class="pcr-grid">` + cells.map(c => `
-        <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>`;
+        <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` +
+      (o.tone ? (viz || '').replace('class="pcr-viz', `class="pcr-viz tone-${o.tone}`) : (viz || ''));
+  }
+  /* 가로 막대 — [{k:'다낭', v:159000, tx:'15.9만', hot:true}]. 막대는 CSS 로 자라고 값은 뒤따라 뜬다. */
+  function bars(items, opt) {
+    const rows = (items || []).filter(x => x && x.k && Number(x.v) > 0).slice(0, 3);
+    if (rows.length < 2) return '';
+    const max = Math.max(...rows.map(x => Number(x.v)));
+    const min = Math.min(...rows.map(x => Number(x.v)));
+    const flip = !!(opt && opt.low);            // 값이 작을수록 좋은 것(가격) 은 짧은 막대가 아니라 긴 막대로
+    /* 14만·15.9만·16.8만처럼 붙어 있는 값은 비율로 그리면 셋 다 같아 보인다 — 폭을 펼쳐 차이를 보이게 */
+    const span = (max - min) || 1;
+    return `<div class="pcr-viz">` + rows.map((x, i) => {
+      const v = Number(x.v);
+      const norm = flip ? (max - v) / span : (v - min) / span;
+      const p = .34 + .66 * norm;
+      return `<span class="pcr-bar${x.hot ? ' is-hot' : ''}" style="--p:${Math.max(.18, Math.min(1, p)).toFixed(3)};--d:${i * 90}ms">
+        <b>${esc(x.k)}</b><span class="pcr-bar-t"><i></i></span><u>${esc(x.tx || sN(v))}</u></span>`;
+    }).join('') + `</div>`;
+  }
+  /* 꺾은선 — 환율 12개월처럼 흐름이 있는 값. 선이 왼쪽부터 그려지고 끝점이 깜빡인다. */
+  function spark(pts, label, sub) {
+    const a = (pts || []).map(Number).filter(v => isFinite(v));
+    if (a.length < 6) return '';
+    const lo = Math.min(...a), hi = Math.max(...a), rng = (hi - lo) || 1;
+    const W = 100, H = 30, step = W / (a.length - 1);
+    const xy = a.map((v, i) => [i * step, H - 3 - ((v - lo) / rng) * (H - 6)]);
+    const line = xy.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+    const area = `${line} L${W} ${H} L0 ${H} Z`;
+    const end = xy[xy.length - 1];
+    return `<div class="pcr-viz pcr-sparkbox">
+      <span class="pcr-spark-wrap">
+      <svg class="pcr-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="pcrSparkG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="currentColor" stop-opacity=".34"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path class="pcr-spark-a" d="${area}" fill="url(#pcrSparkG)"/>
+        <path class="pcr-spark-l" d="${line}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <span class="pcr-spark-dot" style="left:calc(${(end[0] / W * 100).toFixed(1)}% - 3px);top:calc(${(end[1] / H * 100).toFixed(1)}% - 3px)"></span>
+      </span>
+      <span class="pcr-spark-tx"><b>${esc(label)}</b>${sub ? `<i>${esc(sub)}</i>` : ''}</span>
+    </div>`;
   }
   const pick = (arr, n) => { const a = (arr || []).slice(); for (let k = a.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [a[k], a[r]] = [a[r], a[k]]; } return a.slice(0, n); };
 
@@ -354,20 +435,32 @@
               if (!secs.length) return null;
               const sec = secs[rot('food-src', secs.length)];
               const who = String(sec.name || '').trim();
+              const top = secs.slice().sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 3);
               return { t: sec.kind === 'gov' ? `${who}이 고른 집` : sec.kind === 'guide' ? `${who}에 오른 집` : `${who}이 다녀간 집`,
-                m: `${sN(sec.total)}곳`, rows: (sec.places || []).filter(pp => pp.cover) };
+                m: `${sN(sec.total)}곳`, rows: (sec.places || []).filter(pp => pp.cover),
+                icon: sec.kind === 'gov' ? 'award' : sec.kind === 'guide' ? 'zap' : 'play', tone: 'indigo',
+                viz: bars(top.map(x => ({ k: String(x.name || '').slice(0, 7), v: x.total, tx: sN(x.total) + '곳',
+                  hot: x.slug === sec.slug }))) };
             } },
           { run: async () => {   // 여러 채널이 겹치게 소개한 집 = 검증된 집
               const rows = await fmap({ p_min_shows: 3 });
               if (rows.length < 2) return null;
+              const top = rows.slice().sort((a, b) => (b.channels || []).length - (a.channels || []).length).slice(0, 3);
               return { t: '세 곳 넘게 겹친 집', m: '여러 채널이 같이 갔다',
-                rows: rows.map(x => ({ ...x, __sub: (x.channels || []).length ? `채널 ${x.channels.length}곳` : null })) };
+                rows: rows.map(x => ({ ...x, __sub: (x.channels || []).length ? `채널 ${x.channels.length}곳` : null })),
+                icon: 'layers', tone: 'violet',
+                viz: bars(top.map(x => ({ k: String(x.name || '').slice(0, 8), v: (x.channels || []).length,
+                  tx: (x.channels || []).length + '곳 겹침' }))) };
             } },
           { run: async () => {   // 착한 가격
               const rows = await fmap({ p_good_price: true });
               if (rows.length < 2) return null;
+              const cheap = rows.filter(x => x.min_price > 0).sort((a, b) => a.min_price - b.min_price).slice(0, 3);
               return { t: '지갑 가벼운 날', m: '착한 가격 가게',
-                rows: rows.map(x => ({ ...x, __sub: x.min_price ? `${sN(x.min_price)}원부터` : null })) };
+                rows: rows.map(x => ({ ...x, __sub: x.min_price ? `${sN(x.min_price)}원부터` : null })),
+                icon: 'tag', tone: 'mint',
+                viz: bars(cheap.map(x => ({ k: String(x.name || '').slice(0, 8), v: x.min_price,
+                  tx: x.min_price.toLocaleString() + '원' })), { low: true }) };
             } },
           { run: async () => {   // 지역 — 도시 하나씩 돌아가며
               const { data } = await supa.rpc('food_regions');
@@ -377,7 +470,10 @@
               const c = cities[rot('food-region', Math.min(cities.length, 24))];
               const rows = await fmap({ p_region: c.code });
               if (rows.length < 2) return null;
-              return { t: `${c.sido} ${c.name} 맛집`, m: `${sN(c.n)}곳`, rows };
+              const near = cities.filter(x => x.sido === c.sido).sort((a, b) => b.n - a.n).slice(0, 3);
+              if (!near.some(x => x.code === c.code)) near[near.length - 1] = c;
+              return { t: `${c.sido} ${c.name} 맛집`, m: `${sN(c.n)}곳`, rows, icon: 'pin', tone: 'indigo',
+                viz: bars(near.map(x => ({ k: x.name, v: x.n, tx: sN(x.n) + '곳', hot: x.code === c.code }))) };
             } },
         ];
         try {
@@ -387,7 +483,7 @@
             try { th = await themes[(s0 + k) % themes.length].run(); } catch (_) { th = null; }
             if (!th || (th.rows || []).length < 2) continue;
             const cells = pick(th.rows, 2).map(x => ({ href: href(x.id), img: x.cover, name: x.name, sub: x.__sub || sub(x) }));
-            return fill('pcr-food', grid(th.t, th.m, cells), 'search.html?tab=food', '맛집 더 보기');
+            return fill('pcr-food', grid(th.t, th.m, cells, th.viz, { icon: th.icon, tone: th.tone }), 'search.html?tab=food', '맛집 더 보기');
           }
           fill('pcr-food', '');
         } catch (_) { fill('pcr-food', ''); }
@@ -413,18 +509,26 @@
                 (cs || []).forEach(c => { nm[c.slug] = c.name; });
               }
               const rows = await byIds([...new Set((data || []).map(r => r.place_id))]);
-              return rows.map(r => ({ ...r, note: ch[r.id] ? (nm[ch[r.id]] || null) : null }));
+              const cnt = {}; (data || []).forEach(r => { if (r.channel) cnt[r.channel] = (cnt[r.channel] || 0) + 1; });
+              const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 3);
+              return Object.assign(rows.map(r => ({ ...r, note: ch[r.id] ? (nm[ch[r.id]] || null) : null })),
+                { __viz: bars(top.map(k => ({ k: String(nm[k] || k).slice(0, 8), v: cnt[k], tx: cnt[k] + '곳' }))), __icon: 'play', __tone: 'indigo' });
             } },
           { t: '맞대결 상위', run: async () => {
               const { data } = await supa.from('travel_vs_rank').select('place_id,score,wins')
                 .order('score', { ascending: false }).limit(40);
               const w = {}; (data || []).forEach(r => { w[r.place_id] = r.wins; });
               const rows = await byIds((data || []).map(r => r.place_id));
-              return rows.map(r => ({ ...r, note: w[r.id] ? `${w[r.id]}승` : null }));
+              const out = rows.map(r => ({ ...r, note: w[r.id] ? `${w[r.id]}승` : null }));
+              const top = out.filter(x => w[x.id] > 0).sort((a, b) => w[b.id] - w[a.id]).slice(0, 3);
+              return Object.assign(out, { __viz: bars(top.map(x => ({ k: String(x.name || '').slice(0, 8), v: w[x.id], tx: w[x.id] + '승' }))), __icon: 'award', __tone: 'violet' });
             } },
           { t: '새로 올라온 곳', run: async () => {
               const { data } = await live().order('created_at', { ascending: false }).limit(40);
-              return data || [];
+              const rows = data || [];
+              const cnt = {}; rows.forEach(x => { if (x.country) cnt[x.country] = (cnt[x.country] || 0) + 1; });
+              const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 3);
+              return Object.assign(rows, { __viz: bars(top.map(k => ({ k, v: cnt[k], tx: cnt[k] + '곳' }))), __icon: 'zap', __tone: 'indigo' });
             } },
           { t: null, run: async () => {   // 💱 환율 — 원화가 강해진 나라(= 지금 싸게 가는 곳)
               const fx = await fetch('/fx').then(r => r.ok ? r.json() : null).catch(() => null);
@@ -434,8 +538,11 @@
                 const { data } = await live().eq('country', row.country).limit(20);
                 if ((data || []).length >= 2) {
                   /* '싸다' 는 환율 이야기일 뿐 현지 물가와 다르다 — 말을 정확히 한다 */
-                  return data.map(x => ({ ...x, __title: `원화가 강해진 ${row.country}`,
-                    __meta: `1년 새 환율 ${row.pct}% 유리`, note: null }));
+                  const pts = (fx.series || {})[row.cur] || [];
+                  return Object.assign(data.map(x => ({ ...x, __title: `원화가 강해진 ${row.country}`,
+                    __meta: `1년 새 환율 ${row.pct}% 유리`, note: null })),
+                    { __viz: spark(pts, `${row.krw.toLocaleString()}원 / ${row.unit > 1 ? row.unit + row.cur : row.cur}`,
+                      `최근 12개월 · 원화 가치 ${row.pct > 0 ? '▲' : '▼'} ${Math.abs(row.pct)}%`), __icon: 'trend', __tone: 'violet' });
                 }
               }
               return [];
@@ -452,10 +559,14 @@
                 const d = top[(s0 + k) % top.length];
                 const { data } = await live().eq('country', d.country).limit(20);
                 if ((data || []).length >= 2) {
-                  const w = d.price >= 1e4 ? (d.price / 1e4).toFixed(1).replace(/\.0$/, '') + '만' : sN(d.price);
+                  const won = v => (v >= 1e4 ? (v / 1e4).toFixed(1).replace(/\.0$/, '') + '만' : sN(v)) + '원';
                   const ko = /[가-힣]/.test(d.city || '') ? d.city : '';   // 한글 이름 없으면 도시는 빼고 값만
-                  return data.map(x => ({ ...x, __title: `서울에서 지금 싼 ${d.country}`,
-                    __meta: `${ko ? ko + ' ' : ''}왕복 ${w}원`, note: null }));
+                  return Object.assign(data.map(x => ({ ...x, __title: `서울에서 지금 싼 ${d.country}`,
+                    __meta: `${ko ? ko + ' ' : ''}왕복 ${won(d.price)}`, note: null })),
+                    { __viz: bars([d, ...top.filter(x => x.country !== d.country)].slice(0, 3)   /* 제목에 쓴 나라는 차트에 꼭 넣는다 */
+                      .sort((a, b) => a.price - b.price)
+                      .map(x => ({ k: /[가-힣]/.test(x.city || '') ? x.city : x.country,
+                        v: x.price, tx: won(x.price), hot: x.country === d.country })), { low: true }), __icon: 'plane', __tone: 'mint' });
                 }
               }
               return [];
@@ -468,7 +579,10 @@
               const big = Object.keys(byC).filter(k => byC[k].length >= 2);
               if (!big.length) return [];
               const c = big[rot('travel-c', big.length)];
-              return byC[c].map(x => ({ ...x, __title: `${c} 여행` }));
+              const top = big.slice().sort((a, b) => byC[b].length - byC[a].length).slice(0, 3);
+              if (!top.includes(c)) top[top.length - 1] = c;
+              return Object.assign(byC[c].map(x => ({ ...x, __title: `${c} 여행` })),
+                { __viz: bars(top.map(k => ({ k, v: byC[k].length, tx: byC[k].length + '곳', hot: k === c }))), __icon: 'globe', __tone: 'indigo' });
             } },
         ];
         try {
@@ -484,7 +598,7 @@
                 if (c && !/[가-힣]/.test(c) && /[가-힣]/.test(x.name || '')) c = '';   // 한글 이름 옆 영문 도시는 군더더기
                 return (c && n && c.toLowerCase() !== n.toLowerCase()) ? c + ' · ' + n : (c || n || '여행'); })() }));
             const title = th.t || (rows[0] && rows[0].__title) || '가 볼 만한 곳';
-            return fill('pcr-travel', grid(title, (rows[0] && rows[0].__meta) || '', cells), 'search.html?tab=travel', '여행 더 보기');
+            return fill('pcr-travel', grid(title, (rows[0] && rows[0].__meta) || '', cells, rows.__viz, { icon: rows.__icon, tone: rows.__tone }), 'search.html?tab=travel', '여행 더 보기');
           }
           fill('pcr-travel', '');
         } catch (_) { fill('pcr-travel', ''); }

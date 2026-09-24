@@ -371,10 +371,64 @@
   .pcr-cell:nth-child(2) .pcr-cell-img img { animation-delay: -4s; } .pcr-cell:nth-child(3) .pcr-cell-img img { animation-delay: -8s; }
   @keyframes pcrKen { from { transform: scale(1.02); } to { transform: scale(1.14) translate(-2%, -2%); } }
   .pcr-cell::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,.82)); }
-  .pcr-cell-tx { position: absolute; z-index: 2; left: 9px; right: 9px; bottom: 8px; }
+  .pcr-cell { transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease; }
+  .pcr-cell:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,.55), 0 0 0 1px rgba(139,155,255,.35); }
+  .pcr-cell:hover .pcr-cell-img img { animation-play-state: paused; transform: scale(1.16); transition: transform .45s cubic-bezier(.22,1,.36,1); }
+  .pcr-cell::before { content: ""; position: absolute; z-index: 3; inset: 0; border-radius: inherit; opacity: 0;
+    background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.16) 50%, transparent 62%);
+    transform: translateX(-60%); transition: opacity .2s ease; }
+  .pcr-cell:hover::before { opacity: 1; animation: pcrSweep .75s ease forwards; }
+  @keyframes pcrSweep { to { transform: translateX(60%); } }
+  .pcr-cell-tx { position: absolute; z-index: 2; left: 9px; right: 9px; bottom: 8px; transition: transform .35s cubic-bezier(.22,1,.36,1); }
+  .pcr-cell:hover .pcr-cell-tx { transform: translateY(-2px); }
   .pcr-cell-tx b { display: block; color: #fff; font-size: 12.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pcr-cell-tx i { display: block; margin-top: 1px; font-style: normal; font-size: 10.5px; color: #cfd3dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 테마 색 — 인디고(기본) · 바이올렛 · 민트. 카드마다 공기가 달라진다 */
+  .pcr-theme, .pcr-viz { --g1: #4a5bdc; --g2: #8b9bff; --gd: #a8b4ff; }
+  .tone-violet { --g1: #6d45d8; --g2: #b08bff; --gd: #c7b2ff; }
+  .tone-mint { --g1: #1b8f86; --g2: #57d6c0; --gd: #7ee8d2; }
+  .pcr-ic { width: 12px; height: 12px; flex: 0 0 auto; color: var(--gd); opacity: .92;
+    transform: translateY(1px); animation: pcrIcIn .5s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes pcrIcIn { from { opacity: 0; transform: translateY(1px) scale(.6) rotate(-12deg); } }
+  /* 숫자 한 줄 — 사진 밑에 붙는 미니 차트(26.9.24). 막대는 자라고, 값은 뒤따라 뜬다 */
+  .pcr-viz { margin-top: 9px; display: grid; gap: 5px; }
+  .pcr-bar { display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 7px; font-size: 10.5px; }
+  .pcr-bar b { color: #8f96ab; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pcr-bar-t { position: relative; height: 6px; border-radius: 99px; background: rgba(255,255,255,.055); overflow: hidden; }
+  .pcr-bar-t i { position: absolute; inset: 0; border-radius: 99px; transform: scaleX(0); transform-origin: left;
+    background: linear-gradient(90deg, var(--g1), var(--g2)); animation: pcrGrow .95s cubic-bezier(.22,1,.36,1) var(--d,0ms) forwards; }
+  .pcr-bar u { text-decoration: none; color: #c3c9db; font-weight: 700; font-variant-numeric: tabular-nums;
+    opacity: 0; animation: pcrUp .45s ease calc(var(--d,0ms) + 340ms) forwards; }
+  .pcr-bar.is-hot b { color: #e6e9f2; }
+  .pcr-bar.is-hot u { color: #fff; }
+  .pcr-bar.is-hot .pcr-bar-t i { background: linear-gradient(90deg, var(--g2), var(--gd)); box-shadow: 0 0 12px color-mix(in srgb, var(--g2) 55%, transparent); }
+  .pcr-bar-t::after { content: ""; position: absolute; inset: 0; border-radius: 99px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+    transform: translateX(-100%); animation: pcrShine 4.6s ease-in-out infinite; animation-delay: calc(var(--d,0ms) + 1.4s); }
+  .pcr-bar.is-hot .pcr-bar-t::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); }
+  .pcr-bar:hover .pcr-bar-t i { filter: brightness(1.25) saturate(1.1); }
+  .pcr-bar u { transition: color .2s ease; }
+  @keyframes pcrGrow { to { transform: scaleX(var(--p,1)); } }
+  @keyframes pcrUp { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  @keyframes pcrShine { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(100%); } }
+  /* 꺾은선 — 왼쪽부터 그려지고 끝점이 숨 쉰다 */
+  .pcr-sparkbox { margin-top: 9px; display: block; }
+  .pcr-spark-wrap { position: relative; display: block; height: 34px; }
+  .pcr-spark { width: 100%; height: 34px; display: block; overflow: visible; color: var(--g2); }
+  .pcr-spark-l { stroke-dasharray: 300; stroke-dashoffset: 300; animation: pcrDraw 1.15s cubic-bezier(.4,0,.2,1) .12s forwards; }
+  .pcr-spark-a { opacity: 0; animation: pcrFadeIn .6s ease .78s forwards; }
+  .pcr-spark-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--gd); opacity: 0;
+    animation: pcrFadeIn .3s ease 1.1s forwards, pcrPulse 2.6s ease-out 1.5s infinite; }
+  .pcr-spark-tx { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; }
+  .pcr-spark-tx b { font-size: 11.5px; font-weight: 800; color: #dfe3ee; font-variant-numeric: tabular-nums; }
+  .pcr-spark-tx i { font-size: 10px; font-style: normal; color: #6d7488; }
+  @keyframes pcrDraw { to { stroke-dashoffset: 0; } }
+  @keyframes pcrFadeIn { to { opacity: 1; } }
+  @keyframes pcrPulse { 0% { box-shadow: 0 0 0 0 rgba(199,178,255,.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(199,178,255,0); } }
   @media (prefers-reduced-motion: reduce) {
     #pc-right *, #pc-right *::before, #pc-right *::after { animation: none !important; transition: none !important; }
+    .pcr-bar-t i { transform: scaleX(var(--p,1)) !important; }
+    .pcr-bar u, .pcr-spark-a, .pcr-spark-dot { opacity: 1 !important; }
+    .pcr-spark-l { stroke-dashoffset: 0 !important; }
   }
 }

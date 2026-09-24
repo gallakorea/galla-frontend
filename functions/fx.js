@@ -25,9 +25,11 @@ export async function onRequestGet({ request }) {
   const get = (u) => fetch(u, { cf: { cacheTtl: 3600 } }).then(r => r.ok ? r.json() : null).catch(() => null);
 
   /* ⚠️ api.frankfurter.app 은 301 만 돌려준다(26.9.24 실측) — .dev 의 v1 을 쓴다 */
-  const [now, then] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [now, then, hist] = await Promise.all([
     get(`https://api.frankfurter.dev/v1/latest?base=KRW&symbols=${syms}`),
     get(`https://api.frankfurter.dev/v1/${ago}?base=KRW&symbols=${syms}`),
+    get(`https://api.frankfurter.dev/v1/${ago}..${today}?base=KRW&symbols=${syms}`),
   ]);
   if (!now?.rates || !then?.rates) {
     return new Response(JSON.stringify({ ok: false }), { status: 502, headers: { 'content-type': 'application/json' } });
@@ -41,7 +43,20 @@ export async function onRequestGet({ request }) {
       krw: Math.round((1 / a) * (CUR[c].unit || 1) * 100) / 100, unit: CUR[c].unit || 1 };
   }).filter(Boolean).sort((x, y) => y.pct - x.pct);
 
-  const res = new Response(JSON.stringify({ ok: true, base: 'KRW', since: ago, date: now.date, rows }), {
+  /* 1년치를 달마다 한 점으로 줄인다(12~13점) — 카드에 그리는 꺾은선용 */
+  const series = {};
+  if (hist?.rates) {
+    const days = Object.keys(hist.rates).sort();
+    const byMonth = new Map();
+    for (const d of days) byMonth.set(d.slice(0, 7), hist.rates[d]);   // 그 달의 마지막 영업일
+    const months = [...byMonth.keys()].sort();
+    for (const c of Object.keys(CUR)) {
+      const pts = months.map(m => byMonth.get(m)?.[c]).filter(v => typeof v === 'number');
+      if (pts.length >= 6) series[c] = pts.map(v => Math.round(v * 1e6) / 1e6);
+    }
+  }
+
+  const res = new Response(JSON.stringify({ ok: true, base: 'KRW', since: ago, date: now.date, rows, series }), {
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=21600' },
   });
   await cache.put(key, res.clone());
