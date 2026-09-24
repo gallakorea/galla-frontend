@@ -311,10 +311,14 @@ async function initTrendPage() {
       `<button class="se-pop" style="--i:${i}" data-kw="${esc(r.keyword)}"${r.link ? ` data-link="${esc(r.link)}"` : ""}>
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
         <span class="se-pop-title">${esc(r.keyword)}</span>
-        ${r.badge ? `<span class="se-pop-cnt">${esc(r.badge)}</span>`
+        ${r.badge
+          ? (/^\d+$/.test(String(r.badge))
+              ? `<span class="se-pop-cnt" data-to="${r.badge}">0</span>`   /* 숫자면 카운트업 */
+              : `<span class="se-pop-cnt">${esc(r.badge)}</span>`)
           : (r.link ? `<span class="se-pop-go">›</span>` : "")}
        </button>`
     ).join("");
+    countUp(popularEl);   // 숫자가 0→값으로 착 들어오는 임팩트
   }
   async function showSource(src) {
     curSrc = src;
