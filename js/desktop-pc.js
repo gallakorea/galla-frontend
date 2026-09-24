@@ -339,21 +339,57 @@
       }),
       job('pcr-food', async () => {
         /* ⑤ 맛집 — 테마가 돌아간다(26.9.24 사장님: 단조롭고 의미 없다).
-           출처별로 묶인 데이터를 쓴다: 유튜브 채널 25곳·지자체 3곳·방송 12곳.
-           "서울시 공무원이 고른 집", "○○이 다녀간 집" 처럼 왜 이 집이 떴는지 제목이 말한다. */
+           출처(누가 골랐나) · 여러 채널 겹침 · 착한 가격 · 지역 — 왜 이 집이 떴는지 제목이 말한다.
+           한 테마가 비면 다음 테마로 넘어간다(빈 껍데기 금지). */
+        const href = id => 'search.html?tab=food&place=' + encodeURIComponent(id);
+        const sub = x => [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ');
+        const fmap = async (opt) => {
+          const { data } = await supa.rpc('food_map', Object.assign({ p_limit: 40, p_spread: true }, opt));
+          return ((data || {}).places || []).filter(x => x.cover);
+        };
+        const themes = [
+          { run: async () => {   // 누가 골랐나 — 지자체·유튜버·방송
+              const { data } = await supa.rpc('food_browse', { p_per: 12, p_channels: 14 });
+              const secs = (((data || {}).sections) || []).filter(x => (x.places || []).filter(pp => pp.cover).length >= 2);
+              if (!secs.length) return null;
+              const sec = secs[rot('food-src', secs.length)];
+              const who = String(sec.name || '').trim();
+              return { t: sec.kind === 'gov' ? `${who}이 고른 집` : sec.kind === 'guide' ? `${who}에 오른 집` : `${who}이 다녀간 집`,
+                m: `${sN(sec.total)}곳`, rows: (sec.places || []).filter(pp => pp.cover) };
+            } },
+          { run: async () => {   // 여러 채널이 겹치게 소개한 집 = 검증된 집
+              const rows = await fmap({ p_min_shows: 3 });
+              if (rows.length < 2) return null;
+              return { t: '세 곳 넘게 겹친 집', m: '여러 채널이 같이 갔다',
+                rows: rows.map(x => ({ ...x, __sub: (x.channels || []).length ? `채널 ${x.channels.length}곳` : null })) };
+            } },
+          { run: async () => {   // 착한 가격
+              const rows = await fmap({ p_good_price: true });
+              if (rows.length < 2) return null;
+              return { t: '지갑 가벼운 날', m: '착한 가격 가게',
+                rows: rows.map(x => ({ ...x, __sub: x.min_price ? `${sN(x.min_price)}원부터` : null })) };
+            } },
+          { run: async () => {   // 지역 — 도시 하나씩 돌아가며
+              const { data } = await supa.rpc('food_regions');
+              const cities = [];
+              for (const sd of (((data || {}).sido) || [])) for (const c of (sd.cities || [])) if (c.n >= 200) cities.push({ ...c, sido: sd.name });
+              if (!cities.length) return null;
+              const c = cities[rot('food-region', Math.min(cities.length, 24))];
+              const rows = await fmap({ p_region: c.code });
+              if (rows.length < 2) return null;
+              return { t: `${c.sido} ${c.name} 맛집`, m: `${sN(c.n)}곳`, rows };
+            } },
+        ];
         try {
-          const { data } = await supa.rpc('food_browse', { p_per: 12, p_channels: 14 });
-          const secs = (((data || {}).sections) || []).filter(x => (x.places || []).filter(pp => pp.cover).length >= 2);
-          if (!secs.length) return fill('pcr-food', '');
-          const sec = secs[rot('food', secs.length)];
-          const who = String(sec.name || '').trim();
-          const theme = sec.kind === 'gov' ? `${who}이 고른 집`
-            : sec.kind === 'guide' ? `${who}에 오른 집`
-            : `${who}이 다녀간 집`;
-          const cells = pick((sec.places || []).filter(pp => pp.cover), 2).map(x => ({
-            href: 'search.html?tab=food', img: x.cover, name: x.name,
-            sub: [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }));
-          fill('pcr-food', grid(theme, `${sN(sec.total)}곳`, cells), 'search.html?tab=food', '맛집 더 보기');
+          const s0 = rot('food', themes.length);
+          for (let k = 0; k < themes.length; k++) {
+            let th = null;
+            try { th = await themes[(s0 + k) % themes.length].run(); } catch (_) { th = null; }
+            if (!th || (th.rows || []).length < 2) continue;
+            const cells = pick(th.rows, 2).map(x => ({ href: href(x.id), img: x.cover, name: x.name, sub: x.__sub || sub(x) }));
+            return fill('pcr-food', grid(th.t, th.m, cells), 'search.html?tab=food', '맛집 더 보기');
+          }
+          fill('pcr-food', '');
         } catch (_) { fill('pcr-food', ''); }
       }),
       job('pcr-travel', async () => {
@@ -370,8 +406,14 @@
               const { data } = await supa.from('travel_place_sources').select('place_id,channel')
                 .order('created_at', { ascending: false }).limit(60);
               const ch = {}; (data || []).forEach(r => { ch[r.place_id] = r.channel; });
+              const slugs = [...new Set(Object.values(ch))].filter(Boolean).slice(0, 40);
+              const nm = {};                                  // 슬러그 대신 채널 이름으로(kbstravel → KBS 여행)
+              if (slugs.length) {
+                const { data: cs } = await supa.from('travel_channels').select('slug,name').in('slug', slugs);
+                (cs || []).forEach(c => { nm[c.slug] = c.name; });
+              }
               const rows = await byIds([...new Set((data || []).map(r => r.place_id))]);
-              return rows.map(r => ({ ...r, note: ch[r.id] ? ch[r.id] : null }));
+              return rows.map(r => ({ ...r, note: ch[r.id] ? (nm[ch[r.id]] || null) : null }));
             } },
           { t: '맞대결 상위', run: async () => {
               const { data } = await supa.from('travel_vs_rank').select('place_id,score,wins')
@@ -397,6 +439,26 @@
               }
               return [];
             } },
+          { t: null, run: async () => {   // ✈️ 항공권 — 서울에서 지금 싼 나라(트래블페이아웃 실거래 최저가)
+              const { data: fd } = await supa.from('flight_deals')
+                .select('city,country,price,depart_date').order('price').limit(40);
+              const seen = new Set(), cand = [];
+              for (const d of (fd || [])) { if (d.country && !seen.has(d.country)) { seen.add(d.country); cand.push(d); } }
+              if (!cand.length) return [];
+              const top = cand.slice(0, 6);
+              const s0 = rot('travel-air', top.length);
+              for (let k = 0; k < top.length; k++) {
+                const d = top[(s0 + k) % top.length];
+                const { data } = await live().eq('country', d.country).limit(20);
+                if ((data || []).length >= 2) {
+                  const w = d.price >= 1e4 ? (d.price / 1e4).toFixed(1).replace(/\.0$/, '') + '만' : sN(d.price);
+                  const ko = /[가-힣]/.test(d.city || '') ? d.city : '';   // 한글 이름 없으면 도시는 빼고 값만
+                  return data.map(x => ({ ...x, __title: `서울에서 지금 싼 ${d.country}`,
+                    __meta: `${ko ? ko + ' ' : ''}왕복 ${w}원`, note: null }));
+                }
+              }
+              return [];
+            } },
           { t: null, run: async () => {   // 나라별 — 제목은 나라 이름으로
               const { data } = await live().limit(300);
               const rows = (data || []).filter(x => x.country);
@@ -409,14 +471,21 @@
             } },
         ];
         try {
-          const th = themes[rot('travel', themes.length)];
-          const rows = await th.run();
-          const cells = pick(rows, 2).map(x => ({
-            href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name,
-            sub: x.note || (() => { const c = (x.city || '').trim(), n = (x.country || '').trim();
-              return (c && n && c.toLowerCase() !== n.toLowerCase()) ? c + ' · ' + n : (c || n || '여행'); })() }));
-          const title = th.t || (rows[0] && rows[0].__title) || '가 볼 만한 곳';
-          fill('pcr-travel', grid(title, '', cells), 'search.html?tab=travel', '여행 더 보기');
+          const s0 = rot('travel', themes.length);
+          for (let k = 0; k < themes.length; k++) {   // 한 테마가 비면 다음 테마로(빈 껍데기 금지)
+            const th = themes[(s0 + k) % themes.length];
+            let rows = [];
+            try { rows = await th.run(); } catch (_) { rows = []; }
+            if (!rows || rows.length < 2) continue;
+            const cells = pick(rows, 2).map(x => ({
+              href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name,
+              sub: x.note || (() => { let c = (x.city || '').trim(); const n = (x.country || '').trim();
+                if (c && !/[가-힣]/.test(c) && /[가-힣]/.test(x.name || '')) c = '';   // 한글 이름 옆 영문 도시는 군더더기
+                return (c && n && c.toLowerCase() !== n.toLowerCase()) ? c + ' · ' + n : (c || n || '여행'); })() }));
+            const title = th.t || (rows[0] && rows[0].__title) || '가 볼 만한 곳';
+            return fill('pcr-travel', grid(title, (rows[0] && rows[0].__meta) || '', cells), 'search.html?tab=travel', '여행 더 보기');
+          }
+          fill('pcr-travel', '');
         } catch (_) { fill('pcr-travel', ''); }
       }),
       job('pcr-plaza', async () => {

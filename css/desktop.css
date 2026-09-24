@@ -361,9 +361,9 @@
 
   /* 맛집·여행 — 사진 2×2 */
   /* 테마 줄 — 왜 이 사진들이 떴는지 한 줄로(26.9.24) */
-  .pcr-theme { display: flex; align-items: baseline; gap: 6px; margin: 0 2px 8px; }
-  .pcr-theme b { font-size: 12.5px; font-weight: 800; color: #e6e9f2; letter-spacing: -.01em; }
-  .pcr-theme i { font-size: 11px; font-style: normal; color: #6d7488; }
+  .pcr-theme { display: flex; align-items: baseline; gap: 6px; margin: 0 2px 8px; min-width: 0; }
+  .pcr-theme b { font-size: 12.5px; font-weight: 800; color: #e6e9f2; letter-spacing: -.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pcr-theme i { font-size: 11px; font-style: normal; color: #6d7488; flex: 0 0 auto; white-space: nowrap; }
   .pcr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 2px; }
   .pcr-cell { position: relative; display: block; aspect-ratio: 4/5; border-radius: 13px; overflow: hidden; text-decoration: none; background: #15161c; }
   .pcr-cell-img { position: absolute; inset: 0; display: block; }
