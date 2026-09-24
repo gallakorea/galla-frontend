@@ -531,7 +531,7 @@
               return Object.assign(rows, { __viz: bars(top.map(k => ({ k, v: cnt[k], tx: cnt[k] + '곳' }))), __icon: 'zap', __tone: 'indigo' });
             } },
           { t: null, run: async () => {   // 💱 환율 — 원화가 강해진 나라(= 지금 싸게 가는 곳)
-              const fx = await fetch('/fx').then(r => r.ok ? r.json() : null).catch(() => null);
+              const fx = await fetch('/fx?v=2').then(r => r.ok ? r.json() : null).catch(() => null);   /* 판 번호 — 응답 모양이 바뀌면 올린다(엣지·브라우저 캐시 우회) */
               if (!fx || !fx.ok) return [];
               for (const row of (fx.rows || []).slice(0, 8)) {
                 if (!(row.pct > 1)) break;                       // 1% 미만이면 '싸졌다' 고 말하지 않는다
