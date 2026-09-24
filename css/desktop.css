@@ -413,8 +413,8 @@
   @keyframes pcrShine { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(100%); } }
   /* 꺾은선 — 왼쪽부터 그려지고 끝점이 숨 쉰다 */
   .pcr-sparkbox { margin-top: 9px; display: block; }
-  .pcr-spark-wrap { position: relative; display: block; height: 34px; }
-  .pcr-spark { width: 100%; height: 34px; display: block; overflow: visible; color: var(--g2); }
+  .pcr-spark-wrap { position: relative; display: block; height: 38px; }
+  .pcr-spark { width: 100%; height: 38px; display: block; overflow: visible; color: var(--g2); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--g2) 35%, transparent)); }
   .pcr-spark-l { stroke-dasharray: 300; stroke-dashoffset: 300; animation: pcrDraw 1.15s cubic-bezier(.4,0,.2,1) .12s forwards; }
   .pcr-spark-a { opacity: 0; animation: pcrFadeIn .6s ease .78s forwards; }
   .pcr-spark-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--gd); opacity: 0;

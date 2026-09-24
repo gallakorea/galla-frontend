@@ -303,10 +303,10 @@
       <span class="pcr-spark-wrap">
       <svg class="pcr-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="pcrSparkG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="currentColor" stop-opacity=".34"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+          <stop offset="0" stop-color="currentColor" stop-opacity=".42"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/>
         </linearGradient></defs>
         <path class="pcr-spark-a" d="${area}" fill="url(#pcrSparkG)"/>
-        <path class="pcr-spark-l" d="${line}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <path class="pcr-spark-l" d="${line}" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
       </svg>
       <span class="pcr-spark-dot" style="left:calc(${(end[0] / W * 100).toFixed(1)}% - 3px);top:calc(${(end[1] / H * 100).toFixed(1)}% - 3px)"></span>
       </span>
@@ -576,7 +576,7 @@
               const rows = (data || []).filter(x => x.country);
               if (!rows.length) return [];
               const byC = {}; rows.forEach(x => { (byC[x.country] = byC[x.country] || []).push(x); });
-              const big = Object.keys(byC).filter(k => byC[k].length >= 2);
+              const big = Object.keys(byC).filter(k => byC[k].length >= 6);   /* 2곳짜리 나라는 카드가 초라하다 */
               if (!big.length) return [];
               const c = big[rot('travel-c', big.length)];
               const top = big.slice().sort((a, b) => byC[b].length - byC[a].length).slice(0, 3);
