@@ -217,6 +217,21 @@
   const TH = (u, w) => { try { return u ? (window.GALLA_thumb ? window.GALLA_thumb(u, w || 240) : u) : ''; } catch (_) { return u || ''; } };
   const IMG = (u, w, cls) => u ? `<span class="${cls || 'pcr-th'}"><img src="${esc(TH(u, w))}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('noimg');this.remove()"></span>` : `<span class="${cls || 'pcr-th'} noimg"></span>`;
   const sN = n => { n = Number(n) || 0; return n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : n.toLocaleString(); };
+  /* 볼 때마다 다음 테마로 — 같은 세션에서 한 바퀴 돌게(새로고침마다 하나씩 전진) */
+  function rot(key, n) {
+    if (!n) return 0;
+    let i = 0;
+    try { i = parseInt(sessionStorage.getItem('galla_pcr_rot_' + key) || '0', 10) || 0; } catch (_) {}
+    try { sessionStorage.setItem('galla_pcr_rot_' + key, String((i + 1) % n)); } catch (_) {}
+    return i % n;
+  }
+  /* 테마 한 줄(왜 이게 떴는지) + 사진 두 장 */
+  function grid(theme, meta, cells) {
+    if (!cells || !cells.length) return '';
+    return `<div class="pcr-theme"><b>${esc(theme)}</b>${meta ? `<i>${esc(meta)}</i>` : ''}</div>` +
+      `<div class="pcr-grid">` + cells.map(c => `
+        <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>`;
+  }
   const pick = (arr, n) => { const a = (arr || []).slice(); for (let k = a.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [a[k], a[r]] = [a[r], a[k]]; } return a.slice(0, n); };
 
   let QUIET = false;
@@ -323,30 +338,72 @@
         } catch (_) { fill('pcr-news', ''); }
       }),
       job('pcr-food', async () => {
-        // ⑤ 맛집 — 사진 2장, 볼 때마다 바뀐다 (여행과 분리: 26.9.24 사장님)
+        /* ⑤ 맛집 — 테마가 돌아간다(26.9.24 사장님: 단조롭고 의미 없다).
+           출처별로 묶인 데이터를 쓴다: 유튜브 채널 25곳·지자체 3곳·방송 12곳.
+           "서울시 공무원이 고른 집", "○○이 다녀간 집" 처럼 왜 이 집이 떴는지 제목이 말한다. */
         try {
-          const { data } = await supa.rpc('food_browse', {});   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS)
-          const foods = [].concat(...(((data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
-          const cells = pick(foods, 2).map(x => ({ href: 'search.html?tab=food', img: x.cover, name: x.name,
+          const { data } = await supa.rpc('food_browse', { p_per: 12, p_channels: 14 });
+          const secs = (((data || {}).sections) || []).filter(x => (x.places || []).filter(pp => pp.cover).length >= 2);
+          if (!secs.length) return fill('pcr-food', '');
+          const sec = secs[rot('food', secs.length)];
+          const who = String(sec.name || '').trim();
+          const theme = sec.kind === 'gov' ? `${who}이 고른 집`
+            : sec.kind === 'guide' ? `${who}에 오른 집`
+            : `${who}이 다녀간 집`;
+          const cells = pick((sec.places || []).filter(pp => pp.cover), 2).map(x => ({
+            href: 'search.html?tab=food', img: x.cover, name: x.name,
             sub: [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }));
-          fill('pcr-food', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
-            <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
-            'search.html?tab=food', '맛집 더 보기');
+          fill('pcr-food', grid(theme, `${sN(sec.total)}곳`, cells), 'search.html?tab=food', '맛집 더 보기');
         } catch (_) { fill('pcr-food', ''); }
       }),
       job('pcr-travel', async () => {
-        // ⑤-2 여행 — 사진 2장
+        /* ⑤-2 여행 — 테마 회전: 유튜버가 다녀간 / 맞대결 상위 / 나라별 / 새로 올라온 */
+        const P = 'id,name,city,country,photo';
+        const live = () => supa.from('travel_places').select(P).eq('status', 'live').not('photo', 'is', null);
+        const byIds = async (ids) => {
+          if (!ids.length) return [];
+          const { data } = await live().in('id', ids.slice(0, 40));
+          return data || [];
+        };
+        const themes = [
+          { t: '유튜버가 다녀간 곳', run: async () => {
+              const { data } = await supa.from('travel_place_sources').select('place_id,channel')
+                .order('created_at', { ascending: false }).limit(60);
+              const ch = {}; (data || []).forEach(r => { ch[r.place_id] = r.channel; });
+              const rows = await byIds([...new Set((data || []).map(r => r.place_id))]);
+              return rows.map(r => ({ ...r, note: ch[r.id] ? ch[r.id] : null }));
+            } },
+          { t: '맞대결 상위', run: async () => {
+              const { data } = await supa.from('travel_vs_rank').select('place_id,score,wins')
+                .order('score', { ascending: false }).limit(40);
+              const w = {}; (data || []).forEach(r => { w[r.place_id] = r.wins; });
+              const rows = await byIds((data || []).map(r => r.place_id));
+              return rows.map(r => ({ ...r, note: w[r.id] ? `${w[r.id]}승` : null }));
+            } },
+          { t: '새로 올라온 곳', run: async () => {
+              const { data } = await live().order('created_at', { ascending: false }).limit(40);
+              return data || [];
+            } },
+          { t: null, run: async () => {   // 나라별 — 제목은 나라 이름으로
+              const { data } = await live().limit(300);
+              const rows = (data || []).filter(x => x.country);
+              if (!rows.length) return [];
+              const byC = {}; rows.forEach(x => { (byC[x.country] = byC[x.country] || []).push(x); });
+              const big = Object.keys(byC).filter(k => byC[k].length >= 2);
+              if (!big.length) return [];
+              const c = big[rot('travel-c', big.length)];
+              return byC[c].map(x => ({ ...x, __title: `${c} 여행` }));
+            } },
+        ];
         try {
-          const { data } = await supa.from('travel_places')
-            .select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60);
-          const cells = pick(data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id),
-            /* 도시·나라가 같으면 한 번만(예: '싱가포르 · 싱가포르') */
-            img: x.photo, name: x.name,
-            sub: (() => { const c = (x.city || '').trim(), n = (x.country || '').trim();
+          const th = themes[rot('travel', themes.length)];
+          const rows = await th.run();
+          const cells = pick(rows, 2).map(x => ({
+            href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name,
+            sub: x.note || (() => { const c = (x.city || '').trim(), n = (x.country || '').trim();
               return (c && n && c.toLowerCase() !== n.toLowerCase()) ? c + ' · ' + n : (c || n || '여행'); })() }));
-          fill('pcr-travel', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
-            <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
-            'search.html?tab=travel', '여행 더 보기');
+          const title = th.t || (rows[0] && rows[0].__title) || '가 볼 만한 곳';
+          fill('pcr-travel', grid(title, '', cells), 'search.html?tab=travel', '여행 더 보기');
         } catch (_) { fill('pcr-travel', ''); }
       }),
       job('pcr-plaza', async () => {
