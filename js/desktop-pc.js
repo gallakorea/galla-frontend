@@ -231,10 +231,12 @@
       card('pcr-hot', '지금 뜨는 영상') +
       (ytSurface ? '' : card('pcr-predict', '갈라 예측')) +
       card('pcr-news', '갈라뉴스') +
-      card('pcr-spots', '맛집 · 여행') +
+      card('pcr-food', '맛집') +
+      card('pcr-travel', '여행') +
       card('pcr-plaza', '광장 HOT') +
       card('pcr-rooms', '난장 라이브', true) +
-      `<section class="pcr-card pcr-getapp"><h3>📲 갈라 앱</h3>
+      /* 📱 앱 받기 — 이모지 대신 SVG, 왼쪽 레일 카드와 같은 톤(26.9.24 사장님) */
+      `<section class="pcr-card pcr-getapp"><h3>${I('<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/>')}갈라 앱</h3>
         <div class="pcr-body"><p class="pcr-dl-t">알림·통화·오프라인까지 — <b>앱으로 더 크게</b></p>
         <button class="pcr-dl" type="button">앱 받기</button></div></section>`;
     document.body.appendChild(el);
@@ -320,21 +322,32 @@
             </a>`).join(''), 'search.html?tab=news', '갈라뉴스 더 보기');
         } catch (_) { fill('pcr-news', ''); }
       }),
-      job('pcr-spots', async () => {
-        // ⑤ 맛집 · 여행 — 사진 2×2(맛집 2 + 여행 2), 볼 때마다 바뀐다
+      job('pcr-food', async () => {
+        // ⑤ 맛집 — 사진 2장, 볼 때마다 바뀐다 (여행과 분리: 26.9.24 사장님)
         try {
-          const [f, t] = await Promise.all([
-            supa.rpc('food_browse', {}),   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS) — 맛집 탭과 같은 함수로
-            supa.from('travel_places').select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60),
-          ]);
-          const foods = [].concat(...(((f.data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
+          const { data } = await supa.rpc('food_browse', {});   // ⚠️ food_places 는 직접 읽기가 막혀 있다(RLS)
+          const foods = [].concat(...(((data || {}).sections) || []).map(sec => (sec.places || []).filter(x => x.cover)));
           const cells = pick(foods, 2).map(x => ({ href: 'search.html?tab=food', img: x.cover, name: x.name,
-              sub: '🍜 ' + [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }))
-            .concat(pick(t.data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id), img: x.photo, name: x.name, sub: '✈️ ' + (x.city || x.country || '여행') })));
-          fill('pcr-spots', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
+            sub: [String(x.address || '').split(' ').slice(1, 2).join(''), x.category].filter(Boolean).join(' · ') }));
+          fill('pcr-food', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
             <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
-            'search.html?tab=food', '맛집·여행 더 보기');
-        } catch (_) { fill('pcr-spots', ''); }
+            'search.html?tab=food', '맛집 더 보기');
+        } catch (_) { fill('pcr-food', ''); }
+      }),
+      job('pcr-travel', async () => {
+        // ⑤-2 여행 — 사진 2장
+        try {
+          const { data } = await supa.from('travel_places')
+            .select('id,name,city,country,photo').eq('status', 'live').not('photo', 'is', null).limit(60);
+          const cells = pick(data, 2).map(x => ({ href: 'travel-place.html?id=' + encodeURIComponent(x.id),
+            /* 도시·나라가 같으면 한 번만(예: '싱가포르 · 싱가포르') */
+            img: x.photo, name: x.name,
+            sub: (() => { const c = (x.city || '').trim(), n = (x.country || '').trim();
+              return (c && n && c.toLowerCase() !== n.toLowerCase()) ? c + ' · ' + n : (c || n || '여행'); })() }));
+          fill('pcr-travel', cells.length ? `<div class="pcr-grid">` + cells.map(c => `
+            <a class="pcr-cell" href="${c.href}">${IMG(c.img, 300, 'pcr-cell-img')}<span class="pcr-cell-tx"><b>${esc(c.name)}</b><i>${esc(c.sub)}</i></span></a>`).join('') + `</div>` : '',
+            'search.html?tab=travel', '여행 더 보기');
+        } catch (_) { fill('pcr-travel', ''); }
       }),
       job('pcr-plaza', async () => {
         // ⑥ 광장 HOT — 추천 점수 순
