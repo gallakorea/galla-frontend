@@ -6,7 +6,7 @@
  * → 크롤 경로는 앱이 아니라 여기가 맡는다. 페이지네이션 있는 진짜 목록 페이지 하나.
  *   사람이 봐도 쓸 만한 '전체 콘텐츠' 페이지이고, 홈 푸터에서 링크 한 줄로 들어온다.
  *
- *   /archive              영역별 최근 12건씩 + 각 영역 전체보기
+ *   /archive              영역별 최근 24건씩 + 각 영역 전체보기
  *   /archive?t=news&p=2   영역별 목록(60건/페이지) + 이전·다음
  *
  * ⚠️ 갈라뉴스는 출처 2곳 이상만 싣는다 — 단일 출처 기사는 미들웨어가 noindex 를 붙인다.
@@ -14,7 +14,7 @@
 const SB = "https://bidqauputnhkqepvdzrr.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 const HOST = "https://galla.im";
-const PER = 60, HUB = 12, MAX_PAGE = 60;
+const PER = 60, HUB = 24, MAX_PAGE = 60;
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const clip = (s, n) => { s = String(s ?? "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
