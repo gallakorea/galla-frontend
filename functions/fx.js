@@ -15,7 +15,8 @@ const CUR = {
 
 export async function onRequestGet({ request }) {
   const cache = caches.default;
-  const key = new Request(new URL('/fx', request.url).toString(), { method: 'GET' });
+  /* 캐시 키에 판 번호 — 응답 모양을 바꾸면 올린다(안 올리면 6시간 동안 옛 응답이 나간다, 26.9.24) */
+  const key = new Request(new URL('/fx?v=2', request.url).toString(), { method: 'GET' });
   const hit = await cache.match(key);
   if (hit) return hit;
 
