@@ -308,7 +308,7 @@ async function initTrendPage() {
     const note = `<p class="se-srcnote">${esc(SRC_NOTE[curSrc] || "")}</p>`;
     if (!items.length) { popularEl.innerHTML = `<p class="se-muted">집계된 검색어가 없어요.</p>` + note; return; }
     popularEl.innerHTML = note + items.map((r, i) =>
-      `<button class="se-pop" data-kw="${esc(r.keyword)}"${r.link ? ` data-link="${esc(r.link)}"` : ""}>
+      `<button class="se-pop" style="--i:${i}" data-kw="${esc(r.keyword)}"${r.link ? ` data-link="${esc(r.link)}"` : ""}>
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
         <span class="se-pop-title">${esc(r.keyword)}</span>
         ${r.badge ? `<span class="se-pop-cnt">${esc(r.badge)}</span>`
