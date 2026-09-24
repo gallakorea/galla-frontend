@@ -107,7 +107,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { crisis: renderCrisis, alerts: renderAlerts, foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { crisis: renderCrisis, alerts: renderAlerts, foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, trends: renderTrends, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod, fromHash) {
@@ -284,6 +284,26 @@
   }
 
   // ─────────── 대시보드 ───────────
+  // 🔥 실시간 트렌드 — 갈라가 수집하는 4대 소스(포털검색어·뉴스·유튜브·커뮤니티)를
+  //    통합한 unified_realtime_trends 뷰. 이걸 보고 이슈/예측을 발제한다.
+  async function renderTrends() {
+    main().innerHTML = `<div class="ad-loading">트렌드 집계 중…</div>`;
+    const { data, error } = await sb.from("unified_realtime_trends")
+      .select("keyword,total_score,portal_sources,news_hits,youtube_hits,community_hits").limit(30);
+    if (error) { main().innerHTML = `<h1 class="ad-h1">🔥 실시간 트렌드</h1><div class="ad-soon">트렌드를 불러오지 못했어요.</div>`; return; }
+    const rows = (data || []).map((t, i) => `
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid #171b24">
+        <span style="width:26px;text-align:center;font-weight:800;color:${i < 3 ? "#ffb020" : "#5f6a80"}">${i + 1}</span>
+        <span style="flex:1;font-weight:600;color:#e6ebf5">${esc(t.keyword)}</span>
+        <span style="font-weight:800;color:#5b8cff;min-width:40px;text-align:right">${t.total_score}</span>
+        <span style="color:#5f6a80;font-size:12px;min-width:220px;text-align:right">포털 ${t.portal_sources} · 뉴스 ${t.news_hits} · 튜브 ${t.youtube_hits} · 커뮤 ${t.community_hits}</span>
+      </div>`).join("");
+    main().innerHTML = `<h1 class="ad-h1">🔥 실시간 트렌드</h1>
+      <p class="ad-sub">구글·네이트/줌 실시간 검색어(최근 50분) + 뉴스·유튜브·커뮤니티 교차 점수. 여기서 이슈·예측을 발제하세요.</p>
+      <div class="ad-card"><div class="ad-card-h">현시각 화제 TOP 30 <span class="ad-live-refresh">4대 소스 통합 · 조회 시점 계산</span></div>
+        <div>${rows || '<div class="ad-soon">지금 잡히는 트렌드가 없어요.</div>'}</div></div>`;
+  }
+
   async function renderDashboard() {
     main().innerHTML = `<div class="ad-loading">집계 중…</div>`;
     const [t, g] = await Promise.all([rpc("admin_traffic"), rpc("admin_growth")]);
