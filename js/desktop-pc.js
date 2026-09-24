@@ -70,14 +70,19 @@
       <button class="pcl-galvis" type="button" aria-label="갈비스와 대화">
         ${I('<circle cx="12" cy="12" r="8.2" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>')}
         <span>갈비스</span></button>
-      <button class="pcl-getapp" type="button" aria-label="갈라 앱 받기">📲 <span>앱 받기</span></button>
-      <!-- 💬 갈라톡 PC — 윈도우·맥 설치본(26.9.19 사장님). 깃허브 저장소가 비공개라 릴리스 주소는 404 — 우리 저장소(cdn)에 올린 것을 받는다.
-           새 버전을 내면 cdn.galla.im/desktop/ 의 같은 이름으로 덮어쓴다(r2-presign 엣지). -->
-      <div class="pcl-talk">
-        <div class="pcl-talk-h">💬 <span>갈라톡 PC</span></div>
+      <!-- 📱💻 앱 받기 — 모바일 앱과 갈라톡 PC 를 한 카드로(26.9.24 사장님: 더 세련되게).
+           예전엔 점선 박스 '📲 앱 받기' 와 '💬 갈라톡 PC' 가 따로 떠 산만했고 이모지라 급조해 보였다.
+           지금 쓰는 운영체제 버튼을 먼저·강조한다(윈도우면 Windows, 맥이면 Mac). -->
+      <div class="pcl-app">
+        <button class="pcl-getapp" type="button" aria-label="갈라 앱 받기">
+          <span class="pcl-ic">${I('<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.6 5.6h2.8"/>')}</span>
+          <span class="pcl-tx"><b>모바일 앱</b><i>아이폰 · 안드로이드</i></span>
+          <span class="pcl-go">${I('<path d="M9 5l7 7-7 7"/>')}</span>
+        </button>
+        <div class="pcl-app-sep"><span>갈라톡 PC</span></div>
         <div class="pcl-talk-btns">
           <a class="pcl-dl" id="pclDlWin" href="https://cdn.galla.im/desktop/GallaTalk-Setup-x64.exe" download aria-label="갈라톡 윈도우용 받기"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg><span>Windows</span></a>
-          <a class="pcl-dl" href="https://cdn.galla.im/desktop/GallaTalk-mac.dmg" download aria-label="갈라톡 맥용 받기"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-.9-2.4-3.8zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg><span>Mac</span></a>
+          <a class="pcl-dl" id="pclDlMac" href="https://cdn.galla.im/desktop/GallaTalk-mac.dmg" download aria-label="갈라톡 맥용 받기"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-.9-2.4-3.8zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg><span>Mac</span></a>
         </div>
       </div>
       <div class="pcl-foot">
@@ -94,6 +99,12 @@
     el.querySelector('.pcl-getapp').onclick = () => { window.GALLA_appDownload && window.GALLA_appDownload('getapp'); };
     /* ARM 윈도우(서피스 등)면 arm64 설치본으로 */
     try { if (/Windows/.test(navigator.userAgent) && /ARM|aarch64/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.userAgent)) el.querySelector('#pclDlWin').href = 'https://cdn.galla.im/desktop/GallaTalk-Setup-arm64.exe'; } catch (_) {}
+    /* 지금 쓰는 운영체제 것을 먼저·강조 — 고르게 하지 말고 바로 누르게 */
+    try {
+      const mac = /Mac/i.test(navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent);
+      const mine = el.querySelector(mac ? '#pclDlMac' : '#pclDlWin');
+      if (mine) { mine.classList.add('is-mine'); mine.parentElement.prepend(mine); }
+    } catch (_) {}
     el.querySelector('#pclBug').onclick = async e => {
       e.preventDefault();
       if (!window.GALLA_openBugReport) {

@@ -147,22 +147,63 @@
   }
   #pc-left .pcl-galvis svg { width: 20px; height: 20px; flex: none; color: #5fd8ff; }
   #pc-left .pcl-galvis:hover { background: rgba(95,216,255,.15); }
-  /* 앱 받기(레일) — 다운로드 트리거 */
-  #pc-left .pcl-getapp {
-    display: flex; align-items: center; gap: 8px; justify-content: center;
-    margin-top: 8px; padding: 11px; border: 1px dashed rgba(255,255,255,.22);
-    border-radius: 14px; cursor: pointer; background: none; color: #c3c9d4;
-    font-size: 14px; font-weight: 800; font-family: inherit;
-    transition: background .14s, color .14s;
+  /* ── 앱 받기 + 갈라톡 PC — 한 카드 (26.9.24 사장님: 더 세련되게) ──
+     예전엔 점선 박스와 별도 카드가 따로 떠 산만했고 이모지(📲·💬)라 급조해 보였다.
+     하나로 묶고 아이콘은 SVG, 내 운영체제 버튼은 앞으로 빼서 강조한다. */
+  #pc-left .pcl-app {
+    margin-top: 10px; padding: 10px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+    border: 1px solid rgba(255,255,255,.08);
   }
-  #pc-left .pcl-getapp:hover { background: rgba(255,255,255,.05); color: #fff; }
-  /* 💬 갈라톡 PC 다운로드 — 앱 받기 아래 */
-  #pc-left .pcl-talk { margin-top: 10px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); }
-  #pc-left .pcl-talk-h { font-size: 12.5px; font-weight: 800; color: #c9ceda; margin-bottom: 8px; }
+  #pc-left .pcl-getapp {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 10px 10px 11px; border-radius: 12px; cursor: pointer;
+    border: 1px solid rgba(120,140,255,.26);
+    background: linear-gradient(135deg, rgba(99,120,255,.16), rgba(99,120,255,.06));
+    color: #dfe4ff; font-family: inherit; text-align: left;
+    transition: border-color .14s, background .14s, transform .12s;
+  }
+  #pc-left .pcl-getapp:hover {
+    border-color: rgba(140,160,255,.5);
+    background: linear-gradient(135deg, rgba(99,120,255,.26), rgba(99,120,255,.1));
+  }
+  #pc-left .pcl-getapp:active { transform: scale(.985); }
+  #pc-left .pcl-getapp .pcl-ic {
+    width: 30px; height: 30px; flex: none; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.07); color: #aab7ff;
+  }
+  #pc-left .pcl-getapp .pcl-ic svg { width: 17px; height: 17px; }
+  #pc-left .pcl-getapp .pcl-tx { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+  #pc-left .pcl-getapp .pcl-tx b { font-size: 13.5px; font-weight: 800; color: #eef0ff; letter-spacing: -.01em; }
+  #pc-left .pcl-getapp .pcl-tx i { font-size: 11px; font-style: normal; color: #9aa3c4; }
+  #pc-left .pcl-getapp .pcl-go { flex: none; color: #7b86ad; display: flex; }
+  #pc-left .pcl-getapp .pcl-go svg { width: 14px; height: 14px; }
+  #pc-left .pcl-getapp:hover .pcl-go { color: #aab7ff; }
+
+  /* 가운데 글자가 걸린 얇은 구분선 */
+  #pc-left .pcl-app-sep {
+    display: flex; align-items: center; gap: 8px;
+    margin: 11px 2px 9px; color: #6d7488; font-size: 10.5px; font-weight: 800; letter-spacing: .02em;
+  }
+  #pc-left .pcl-app-sep::before,
+  #pc-left .pcl-app-sep::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
+
   #pc-left .pcl-talk-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  #pc-left .pcl-dl { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border-radius: 10px;
-    background: rgba(255,255,255,.06); color: #e8ebf2; font-size: 12.5px; font-weight: 800; text-decoration: none; }
-  #pc-left .pcl-dl:hover { background: rgba(255,255,255,.12); color: #fff; }
+  #pc-left .pcl-dl {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    height: 36px; border-radius: 11px; text-decoration: none;
+    background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06);
+    color: #d5dae6; font-size: 12.5px; font-weight: 800;
+    transition: background .14s, border-color .14s, color .14s;
+  }
+  #pc-left .pcl-dl:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.14); color: #fff; }
+  /* 지금 쓰는 운영체제 */
+  #pc-left .pcl-dl.is-mine {
+    background: rgba(99,120,255,.14); border-color: rgba(120,140,255,.3); color: #e7ebff;
+  }
+  #pc-left .pcl-dl.is-mine:hover { background: rgba(99,120,255,.24); border-color: rgba(140,160,255,.45); }
 
   /* ── 우측 라이브 패널 ── */
   #pc-right {
@@ -240,10 +281,13 @@
   @media (max-width: 1279px) {
     :root { --pc-left: 68px; }
     #pc-left .pcl-item span, #pc-left .pcl-logo .pcl-word, #pc-left .pcl-foot,
-    #pc-left .pcl-galvis span, #pc-left .pcl-getapp span, #pc-left .pcl-talk-h span, #pc-left .pcl-dl span { display: none; }
-    #pc-left .pcl-talk { padding: 8px 4px; } #pc-left .pcl-talk-btns { grid-template-columns: 1fr; }
+    #pc-left .pcl-galvis span, #pc-left .pcl-dl span,
+    #pc-left .pcl-getapp .pcl-tx, #pc-left .pcl-getapp .pcl-go, #pc-left .pcl-app-sep { display: none; }
+    #pc-left .pcl-app { padding: 6px 4px; }
+    #pc-left .pcl-getapp { padding: 8px 0; gap: 0; }
+    #pc-left .pcl-talk-btns { grid-template-columns: 1fr; }
     #pc-left .pcl-item { justify-content: center; padding: 13px 0; }
-    #pc-left .pcl-galvis, #pc-left .pcl-getapp { justify-content: center; padding: 12px 0; }
+    #pc-left .pcl-galvis { justify-content: center; padding: 12px 0; }
     #pc-left .pcl-badge { position: absolute; top: 4px; right: 8px; margin: 0; }
     #pc-left .pcl-write { font-size: 0; padding: 13px 0; }
     #pc-left .pcl-write::before { content: '✎'; font-size: 17px; }
