@@ -249,7 +249,7 @@ async function initTrendPage() {
     //      III.E.4h(파생 지표 표시) 위반 통보 이력. 순위 정렬 재료로만 쓰고 수치엔 미표시.
     try {
       const { data: tr } = await supabase.from("unified_realtime_trends")
-        .select("keyword,total_score,youtube_hits,gn_id").limit(40);
+        .select("keyword,total_score,youtube_hits,gn_id").order("total_score", { ascending: false }).limit(40);
       if (tr && tr.length >= 5) {
         _hotKwCache = tr.map(r => ({
           kw: r.keyword,
