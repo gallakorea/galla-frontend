@@ -7,9 +7,10 @@ import { logSpend } from "../_shared/spend.ts";
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CRON_KEY = Deno.env.get("CRON_SECRET") || "";
-const API_KEY = Deno.env.get("DEEPSEEK_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
-const BASE_URL = Deno.env.get("DEEPSEEK_API_KEY") ? "https://api.deepseek.com" : "https://api.openai.com/v1";
-const MODEL = Deno.env.get("DEEPSEEK_API_KEY") ? "deepseek-chat" : "gpt-4o-mini";
+const DS_OPS = Deno.env.get("DEEPSEEK_API_KEY_OPS") || Deno.env.get("DEEPSEEK_API_KEY") || "";  // 운영 전용 키 우선(잔액 격리)
+const API_KEY = DS_OPS || Deno.env.get("OPENAI_API_KEY") || "";
+const BASE_URL = DS_OPS ? "https://api.deepseek.com" : "https://api.openai.com/v1";
+const MODEL = DS_OPS ? "deepseek-chat" : "gpt-4o-mini";
 const supa = createClient(SUPA_URL, SERVICE);
 
 const TOPICS = [

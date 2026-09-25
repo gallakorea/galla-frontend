@@ -21,7 +21,7 @@ const FLAGS: { cat: string; pen: number; re: RegExp }[] = [
 ];
 
 // 영구 유저 풀 로그인(회원가입 레이트리밋 회피 — 유저 생성 0). redteam_pool 테이블에서 크레덴셜.
-const DS_KEY2 = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const DS_KEY2 = Deno.env.get("DEEPSEEK_API_KEY_OPS") || Deno.env.get("DEEPSEEK_API_KEY") || "";  // 운영 전용 키 우선(잔액 격리), 없으면 기존 키 폴백
 
 /* ⚖️ 채점판 심판(26.9.22) — 상황별 '좋은 답 기준'을 주고 대화마다 점수를 매긴다.
    내 지표가 아니라 사장님 블라인드 판정이 최종 기준이다([[galla-quality-evidence]]). 이건 배포 전 퇴행을 거르는 체다. */
