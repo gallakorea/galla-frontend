@@ -486,7 +486,22 @@ async function initTrendPage() {
     doSearch(kw.trim());
   }
 
+  // 트렌드에서 넘어온 검색이면 결과 위에 '← 실시간 트렌드로' 버튼을 띄운다(되돌아갈 길)
+  function showBackTrend(show) {
+    let el = document.getElementById("se-backtrend");
+    if (!el && show) {
+      el = document.createElement("button");
+      el.id = "se-backtrend"; el.type = "button";
+      el.style.cssText = "display:flex;align-items:center;gap:6px;margin:2px 0 12px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#c9d1e0;font-size:13px;font-weight:800;cursor:pointer";
+      el.innerHTML = "<span style='font-size:16px;line-height:1'>←</span> 실시간 트렌드로";
+      el.onclick = () => { showBackTrend(false); activateTab("trending"); };
+      resultsEl.parentNode.insertBefore(el, resultsEl);
+    }
+    if (el) el.hidden = !show;
+  }
+
   input.addEventListener("input", () => {
+    showBackTrend(false);
     const q = input.value.trim();
     clearBtn.hidden = !input.value;
     if (!q) { showEmpty(true); return; }
@@ -856,7 +871,7 @@ async function initTrendPage() {
           const r = b.getBoundingClientRect();
           window.GALLA_FX.burst(r.left + 30, r.top + r.height / 2, { colors: ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a"], count: 14, spread: 66 });
         }
-        activateTab("search"); runSearch(b.dataset.kw, true);
+        activateTab("search"); showBackTrend(true); runSearch(b.dataset.kw, true);
       }
     };
 
