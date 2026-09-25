@@ -8,9 +8,13 @@
      카카오톡이 설치 직후 띄우는 「접근권한 안내」 화면이 이 조항 때문이다.
 
    ✅ 26.9.21 사장님 결정: 고지만 하고 넘기면, 갈라톡을 쓰는 도중에 권한 창·「설정에서 켜 주세요」가
-      기능마다 번갈아 떠서 UX 가 최악이었다. 그래서 「허용하고 시작하기」로 알림→마이크·카메라→위치를
-      OS 권한 창으로 한 번에 묻는다. 선택 권한이라 「나중에 할게요」(아무것도 안 물음)도 둔다 —
-      OS 창에서 거부해도 앱은 그대로 쓸 수 있다(22조의2 선택 권한 요건).
+      기능마다 번갈아 떠서 UX 가 최악이었다. 그래서 「계속」으로 알림→마이크·카메라→위치를
+      OS 권한 창으로 한 번에 묻는다. 선택 권한이라는 요건은 OS 창에서 거부해도 앱을 그대로 쓸 수
+      있다는 것으로 충족한다(22조의2).
+
+   🍎 26.9.25 애플 5.1.1(iv) 리젝 대응: 권한 요청 전 안내 화면은 ①버튼에 '허용/Allow' 같은 유도어를
+      쓰면 안 되고(→「계속」), ②안내 뒤에는 반드시 OS 권한 요청으로 진행해야 한다(연기·건너뛰기 버튼
+      「나중에 할게요」 제거). 선택권은 OS 권한 창의 '허용 안 함'으로 보장된다.
 
    네이티브 앱에서 최초 1회만. 웹은 대상이 아니다(단말 권한 고지 의무는 앱 대상).
    ========================================================= */
@@ -56,8 +60,7 @@
       "#gpn .note{font-size:12px;color:#6f7a93;line-height:1.7;background:#10131a;border-radius:12px;padding:14px 15px;margin-bottom:24px}" +
       "#gpn button{width:100%;border:0;border-radius:13px;padding:16px;font-size:15.5px;font-weight:800;" +
         "background:#2f6bff;color:#fff;font-family:inherit;cursor:pointer}" +
-      "#gpn button:disabled{opacity:.7}" +
-      "#gpn .gpn-later{background:none;color:#7f8aa3;font-size:13.5px;font-weight:600;padding:14px;margin-top:6px}";
+      "#gpn button:disabled{opacity:.7}";
     document.head.appendChild(st);
 
     var el = document.createElement("div");
@@ -65,8 +68,8 @@
     el.setAttribute("role", "dialog");
     el.innerHTML =
       "<h2>갈라가 쓰는 권한을 알려드려요</h2>" +
-      '<p class="lead">지금 한 번에 허용해 두면 <b>갈라톡·통화 도중에 다시 묻지 않아요.</b><br>' +
-        "허용하지 않아도 갈라를 보고 읽는 데는 아무 지장이 없어요.</p>" +
+      '<p class="lead">지금 한 번에 켜 두면 <b>갈라톡·통화 도중에 다시 묻지 않아요.</b><br>' +
+        "켜지 않아도 갈라를 보고 읽는 데는 아무 지장이 없어요.</p>" +
       (REQUIRED.length
         ? "<h3>필수 접근권한</h3><ul>" + REQUIRED.map(row).join("") + "</ul>"
         : "") +
@@ -74,9 +77,8 @@
       '<div class="note">선택 권한은 동의하지 않아도 갈라를 이용할 수 있어요. ' +
         "다만 그 기능(통화·촬영·위치 보내기 등)은 쓸 수 없어요.<br>" +
         "허용한 뒤에도 <b>휴대폰 설정 → 갈라</b>에서 언제든 끌 수 있어요.</div>" +
-      '<p class="lead" style="margin:-8px 0 14px;font-size:12px">버튼을 누르면 항목마다 휴대폰 확인 창이 이어서 떠요 — <b>허용</b>만 눌러 주세요.</p>' +
-      '<button type="button" class="gpn-go">허용하고 시작하기</button>' +
-      '<button type="button" class="gpn-later">나중에 할게요</button>';
+      '<p class="lead" style="margin:-8px 0 14px;font-size:12px">계속을 누르면 항목마다 휴대폰 확인 창이 이어서 떠요. 각 창에서 허용하거나 허용하지 않을 수 있어요.</p>' +
+      '<button type="button" class="gpn-go">계속</button>';
 
     function row(p) {
       return '<li><span class="ic">' + p.icon + '</span><div><div class="nm">' + p.name +
@@ -93,9 +95,8 @@
     }
     var go = el.querySelector(".gpn-go");
 
-    el.querySelector(".gpn-later").addEventListener("click", close);
     go.addEventListener("click", async function () {
-      go.disabled = true; el.querySelector(".gpn-later").disabled = true;
+      go.disabled = true;
       // 토글 없이 전부 요청한다(사장님: 다 켜져 있어야 쓰기 편하다)
       var want = { notify: true, mic: true, camera: true, location: true };
       var res = await requestAll(want, function (t) { go.textContent = t; });
