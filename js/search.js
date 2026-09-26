@@ -624,7 +624,7 @@ async function initTrendPage() {
       const lbl = w.qtype === "fx" ? "환율" : w.qtype === "coin" ? "코인 시세" : "주식 시세";
       return `<div class="sr-sec" data-k="widget"><div class="sr-widget ${up ? "up" : "down"}">
         <div class="srw-top"><span class="srw-label">${lbl}</span><span class="srw-badge">LIVE</span></div>
-        <div class="srw-title">${esc(w.title || "")}${w.code ? " · " + esc(w.code) : ""}</div>
+        <div class="srw-title">${esc(w.title || "")}${(w.code && w.qtype !== "fx") ? " · " + esc(w.code) : ""}</div>
         <div class="srw-value"><span class="srw-num" data-to="${w.value}">0</span><span class="srw-unit">${esc(w.unit || "원")}</span></div>
         ${w.diff != null ? `<div class="srw-diff ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${sign}${Math.abs(w.diff).toLocaleString()}${w.pct != null ? ` (${sign}${w.pct}%)` : ""}</div>` : ""}
         ${w.source ? `<div class="srw-src">${esc(w.source)}</div>` : ""}
