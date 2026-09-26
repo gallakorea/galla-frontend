@@ -841,8 +841,9 @@ async function initTrendPage() {
       html += `<div class="sr-sec" data-k="food"><div class="sr-sec-head" style="color:#ffb020">🍜 <span>맛집</span> <b>${food.length}</b></div>`;
       html += food.map(f => {
         const rate = (f.rating && f.rating_n) ? `★ ${Number(f.rating).toFixed(1)} · 리뷰 ${f.rating_n}` : (f.category || "맛집");
+        const fimg = f.cover_url && window.GALLA_thumb ? window.GALLA_thumb(f.cover_url, 240) : f.cover_url;
         return `<a class="sr-card sr-food" href="#food" data-food="${esc(f.id)}">
-          <div class="sr-thumb"><span class="sr-noimg">🍜</span></div>
+          <div class="sr-thumb">${isValidThumbnail(fimg) ? `<img src="${esc(fimg)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">🍜</span>`}</div>
           <div class="sr-body">
             <div class="sr-cat">${esc(f.category || "맛집")}</div>
             <div class="sr-title">${esc(f.name || "")}</div>
