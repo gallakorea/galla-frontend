@@ -548,6 +548,25 @@ async function initTrendPage() {
     doSearch(kw.trim());
   }
 
+  /* 🔙 검색 상태 복원 — 결과를 눌러 상세로 갔다가 '뒤로' 오면 검색어·스크롤을 되살린다.
+     안 그러면 홈으로 떨어져 검색이 사라진다(사장님: '또 갇힌다'). sessionStorage 1회 소비형. */
+  const SR_KEY = "galla_search_restore";
+  function saveSearchState() {
+    try { if (_lastQ) sessionStorage.setItem(SR_KEY, JSON.stringify({ q: _lastQ, y: window.scrollY || 0, at: Date.now() })); } catch (_) {}
+  }
+  function clearSearchState() { try { sessionStorage.removeItem(SR_KEY); } catch (_) {} }
+  function restoreSearchState() {
+    let s = null;
+    try { s = JSON.parse(sessionStorage.getItem(SR_KEY) || "null"); } catch (_) {}
+    clearSearchState();                                   // 1회성: 복원하면 곧바로 지운다(재진입마다 튀지 않게)
+    if (!s || !s.q || (Date.now() - (s.at || 0)) > 30 * 60 * 1000) return false;   // 30분 지난 건 무시
+    try { if (typeof activateTab === "function") activateTab("search", false); } catch (_) {}
+    input.value = s.q; clearBtn.hidden = false;
+    runSearch(s.q, false);
+    if (s.y) setTimeout(function () { try { window.scrollTo(0, s.y); } catch (_) {} }, 450);
+    return true;
+  }
+
   // 트렌드에서 넘어온 검색이면 결과 위에 '← 실시간 트렌드로' 버튼을 띄운다(되돌아갈 길)
   function showBackTrend(show) {
     let el = document.getElementById("se-backtrend");
@@ -577,7 +596,7 @@ async function initTrendPage() {
     if (q) { addRecent(q); doSearch(q); }
   });
   clearBtn.addEventListener("click", () => {
-    input.value = ""; clearBtn.hidden = true; showEmpty(true); input.focus();
+    input.value = ""; clearBtn.hidden = true; clearSearchState(); showEmpty(true); input.focus();
   });
 
   function issueThumb(i) {
@@ -844,6 +863,9 @@ async function initTrendPage() {
   }
 
   resultsEl.addEventListener("click", e => {
+    // 🔙 상세로 이동하는 링크(내부 href)를 누르기 직전 검색 상태를 저장 → '뒤로' 시 복원
+    const goLink = e.target.closest('a[href]');
+    if (goLink && goLink.getAttribute('target') !== '_blank') saveSearchState();
     // 뉴스 결과 → 기사 페이지
     const news = e.target.closest(".sr-card.news");
     if (news) {
@@ -1629,8 +1651,8 @@ async function initTrendPage() {
       };
       tryOpen();
     }
-  } else {
-    // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
+  } else if (!restoreSearchState()) {
+    // 🔙 결과→상세→'뒤로' 복원이 우선. 없으면 PTR/재마운트 시 직전 탭 복원(없으면 검색 디폴트).
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
     activateTab(["search", "trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
