@@ -414,6 +414,67 @@ async function initTrendPage() {
       .limit(12));
     return data || [];
   }
+  // 갈라뉴스(AI 종합 발행분) — 원본뉴스(news_articles_raw)와 별개
+  async function searchGnews(q) {
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
+      .from("galla_news")
+      .select("id,title,summary,category,hero_image,source_count,published_at")
+      .eq("status", "published")
+      .ilike("title", `%${q}%`)
+      .order("published_at", { ascending: false })
+      .limit(6));
+    return data || [];
+  }
+  // 숏판(세로)·롱판(가로) — posts.kind
+  async function searchPosts(q, kind, lim) {
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
+      .from("posts")
+      .select("id,kind,title,caption,thumbnail_url,video_url,view_count,created_at")
+      .eq("kind", kind)
+      .or(`title.ilike.%${q}%,caption.ilike.%${q}%`)
+      .order("view_count", { ascending: false })
+      .limit(lim));
+    return data || [];
+  }
+  function searchShorts(q) { return searchPosts(q, "vertical", 8); }
+  function searchLongs(q) { return searchPosts(q, "horizontal", 6); }
+
+  /* 🏛 공식 사이트(지식패널) — 회사·브랜드·기관을 검색하면 공식 홈/IR/뉴스룸을 바로 안내.
+     외부 링크만 노출(스니펫 아님) → 저작권 무관. 정확 일치 또는 별칭만 매칭. */
+  const OFFICIAL = {
+    "삼성전자": { name: "삼성전자", desc: "전자제품 제조 · 코스피 005930", links: [["공식 홈", "https://www.samsung.com/sec/"], ["IR 투자정보", "https://www.samsung.com/sec/ir/"], ["뉴스룸", "https://news.samsung.com/kr/"]] },
+    "sk하이닉스": { name: "SK하이닉스", desc: "반도체 제조 · 코스피 000660", links: [["공식 홈", "https://www.skhynix.com/kor/"], ["IR", "https://www.skhynix.com/kor/ir/"]] },
+    "현대자동차": { name: "현대자동차", desc: "자동차 제조 · 코스피 005380", links: [["공식 홈", "https://www.hyundai.com/kr/"], ["IR", "https://www.hyundai.com/worldwide/ko/company/ir/"]] },
+    "네이버": { name: "네이버", desc: "인터넷 플랫폼 · 코스피 035420", links: [["공식 홈", "https://www.naver.com/"], ["IR", "https://www.navercorp.com/investment/"]] },
+    "카카오": { name: "카카오", desc: "인터넷 플랫폼 · 코스피 035720", links: [["공식 홈", "https://www.kakaocorp.com/"], ["IR", "https://www.kakaocorp.com/ir/"]] },
+    "lg에너지솔루션": { name: "LG에너지솔루션", desc: "2차전지 · 코스피 373220", links: [["공식 홈", "https://www.lgensol.com/ko/"], ["IR", "https://www.lgensol.com/ko/company-ir"]] },
+  };
+  const OFFICIAL_ALIAS = { "현대차": "현대자동차", "하이닉스": "sk하이닉스", "삼전": "삼성전자", "lg엔솔": "lg에너지솔루션" };
+  function officialCard(q) {
+    const k = String(q || "").trim().toLowerCase();
+    const key = OFFICIAL[k] ? k : (OFFICIAL_ALIAS[k] || null);
+    return key ? OFFICIAL[key] : null;
+  }
+
+  /* 💹 검색 위젯 — 검색어가 '값'(환율/주가/코인)이면 갈비스 도구로 실제 값을 받아 카드로 띄운다.
+     엣지 op(market_widget) 미배포/실패 시 null → 위젯 없이 일반 결과만(회귀 없음). */
+  function detectQuoteIntent(q) {
+    const s = String(q || "").trim();
+    if (!s) return null;
+    if (/환율|달러|엔화|유로|위안|파운드/.test(s)) return { kind: "fx", name: (s.match(/달러|엔화|유로|위안|파운드/) || ["달러"])[0] };
+    if (/비트코인|이더|리플|도지|코인/.test(s)) return { kind: "coin", name: s.replace(/시세|가격|얼마|코인/g, "").trim() || s };
+    if (/주가|주식/.test(s)) return { kind: "stock", name: s.replace(/주가|주식|시세|얼마/g, "").trim() };
+    if (officialCard(s)) return { kind: "stock", name: s };   // 사전에 있는 종목(삼성전자 등)은 시세도 함께
+    return null;
+  }
+  async function searchWidget(q) {
+    const intent = detectQuoteIntent(q);
+    if (!intent) return null;
+    try {
+      const { data } = await supabase.functions.invoke("galla-friend", { body: { op: "market_widget", kind: intent.kind, name: intent.name } });
+      return (data && data.ok && data.card) ? data.card : null;
+    } catch (e) { return null; }
+  }
 
   /* 👤 유저 검색 — 닉네임(공개)으로. 프로필로 이동. */
   async function searchUsers(q) {
@@ -470,11 +531,12 @@ async function initTrendPage() {
   const doSearch = debounce(async q => {
     const my = ++seq;
     _lastQ = q;
-    const [users, hashtag, issues, markets, news, videos, plaza] = await Promise.all([
-      searchUsers(q), searchHashtag(q, _hashSort), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
+    const [users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget] = await Promise.all([
+      searchUsers(q), searchHashtag(q, _hashSort), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q),
+      searchGnews(q), searchShorts(q), searchLongs(q), searchWidget(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, users, hashtag, issues, markets, news, videos, plaza);
+    renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget);
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -484,6 +546,25 @@ async function initTrendPage() {
     showEmpty(false);
     resultsEl.innerHTML = `<div class="sr-loading">검색 중…</div>`;
     doSearch(kw.trim());
+  }
+
+  /* 🔙 검색 상태 복원 — 결과를 눌러 상세로 갔다가 '뒤로' 오면 검색어·스크롤을 되살린다.
+     안 그러면 홈으로 떨어져 검색이 사라진다(사장님: '또 갇힌다'). sessionStorage 1회 소비형. */
+  const SR_KEY = "galla_search_restore";
+  function saveSearchState() {
+    try { if (_lastQ) sessionStorage.setItem(SR_KEY, JSON.stringify({ q: _lastQ, y: window.scrollY || 0, at: Date.now() })); } catch (_) {}
+  }
+  function clearSearchState() { try { sessionStorage.removeItem(SR_KEY); } catch (_) {} }
+  function restoreSearchState() {
+    let s = null;
+    try { s = JSON.parse(sessionStorage.getItem(SR_KEY) || "null"); } catch (_) {}
+    clearSearchState();                                   // 1회성: 복원하면 곧바로 지운다(재진입마다 튀지 않게)
+    if (!s || !s.q || (Date.now() - (s.at || 0)) > 30 * 60 * 1000) return false;   // 30분 지난 건 무시
+    try { if (typeof activateTab === "function") activateTab("search", false); } catch (_) {}
+    input.value = s.q; clearBtn.hidden = false;
+    runSearch(s.q, false);
+    if (s.y) setTimeout(function () { try { window.scrollTo(0, s.y); } catch (_) {} }, 450);
+    return true;
   }
 
   // 트렌드에서 넘어온 검색이면 결과 위에 '← 실시간 트렌드로' 버튼을 띄운다(되돌아갈 길)
@@ -515,7 +596,7 @@ async function initTrendPage() {
     if (q) { addRecent(q); doSearch(q); }
   });
   clearBtn.addEventListener("click", () => {
-    input.value = ""; clearBtn.hidden = true; showEmpty(true); input.focus();
+    input.value = ""; clearBtn.hidden = true; clearSearchState(); showEmpty(true); input.focus();
   });
 
   function issueThumb(i) {
@@ -533,11 +614,63 @@ async function initTrendPage() {
   }
 
   // 섹션 순서: 이슈 → 예측 → 뉴스 → 유튜브 → 광장
-  function renderResults(q, users, hashtag, issues, markets, news, videos, plaza) {
+  /* 종류별 섹션 헤더 — 실제 갈라 콘텐츠 표식(kind-icons.js)의 아이콘·색을 쓴다.
+     GALLA_KIND 로드 전이면 색 없는 텍스트로 자연 degrade. */
+  function kindHead(k, name, n) {
+    var m = window.GALLA_KIND && GALLA_KIND.meta && GALLA_KIND.meta[k];
+    var ic = m ? GALLA_KIND.icon(k, 15) : "";
+    var col = m ? m.color : "#aeb7c9";
+    return '<div class="sr-sec-head" style="color:' + col + '">' + ic + '<span>' + name + '</span> <b>' + n + '</b></div>';
+  }
+
+  /* 검색어 의도로 섹션 순서를 정한다(건별 반응).
+     기본: 유저 → 이슈 → 예측 → 뉴스 → 영상 → 광장 (사장님: 사람 최상단·이슈 상단).
+     인물형(닉네임 정확/시작 일치) → 유저 확정 최상단. 시사형(뉴스가 이슈보다 압도적) → 뉴스를 위로. */
+  function orderKeys(q, c) {
+    const rank = { widget: 0.1, official: 0.3, user: 1, issue: 2, predict: 3, gnews: 4, news: 5, video: 6, short: 7, long: 8, plaza: 9 };
+    const qn = String(q || "").trim().toLowerCase();
+    if ((c.users || []).some(function (u) { const nk = String(u.nickname || "").toLowerCase(); return nk === qn || (qn.length >= 2 && nk.indexOf(qn) === 0); })) rank.user = 0;
+    const nN = (c.news || []).length, iN = (c.issues || []).length;
+    if (nN >= 6 && nN >= iN * 2) { rank.news = 1.5; rank.gnews = 1.4; }
+    return ["widget", "official", "user", "issue", "predict", "gnews", "news", "video", "short", "long", "plaza"].sort(function (a, b) { return (rank[a] || 9) - (rank[b] || 9); });
+  }
+
+  /* 💹 시세 위젯 카드 (검색 결과 최상단) — 카운트업·등락 글로우 */
+  function widgetCardHTML(w) {
+    if (!w) return "";
+    if (w.qtype === "stock" || w.qtype === "coin" || w.qtype === "fx") {
+      const up = (w.diff || 0) >= 0, sign = up ? "+" : "";
+      const lbl = w.qtype === "fx" ? "환율" : w.qtype === "coin" ? "코인 시세" : "주식 시세";
+      return `<div class="sr-sec" data-k="widget"><div class="sr-widget ${up ? "up" : "down"}">
+        <div class="srw-top"><span class="srw-label">${lbl}</span><span class="srw-badge">LIVE</span></div>
+        <div class="srw-title">${esc(w.title || "")}${(w.code && w.qtype !== "fx") ? " · " + esc(w.code) : ""}</div>
+        <div class="srw-value"><span class="srw-num" data-to="${w.value}">0</span><span class="srw-unit">${esc(w.unit || "원")}</span></div>
+        ${w.diff != null ? `<div class="srw-diff ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${sign}${Math.abs(w.diff).toLocaleString()}${w.pct != null ? ` (${sign}${w.pct}%)` : ""}</div>` : ""}
+        ${w.source ? `<div class="srw-src">${esc(w.source)}</div>` : ""}
+      </div></div>`;
+    }
+    if (w.qtype === "apt" || w.qtype === "flight") {
+      const rows = (w.rows || []).slice(0, 3).map(r => w.qtype === "apt"
+        ? `<div class="srw-row"><span>${esc(r.apt || "")}${r.area ? " " + Math.round(r.area) + "㎡" : ""}${r.floor ? " " + esc(String(r.floor)) + "층" : ""}</span><b>${esc(r.won || r.date || "")}</b></div>`
+        : `<div class="srw-row"><span>${esc(r.airline || "")} ${esc(r.date || "")}</span><b>${(r.price || 0).toLocaleString()}원</b></div>`).join("");
+      return `<div class="sr-sec" data-k="widget"><div class="sr-widget">
+        <div class="srw-top"><span class="srw-label">${w.qtype === "apt" ? "실거래가" : "항공권 최저가"}</span><span class="srw-badge">${esc(w.source || "")}</span></div>
+        <div class="srw-title">${esc(w.title || "")}</div>${rows}</div></div>`;
+    }
+    return "";
+  }
+  function srCountUp(el) {
+    const to = parseFloat(el.dataset.to); if (!isFinite(to)) { el.textContent = el.dataset.to; return; }
+    if (matchMedia("(prefers-reduced-motion:reduce)").matches) { el.textContent = to.toLocaleString(); return; }
+    const dur = 850, t0 = performance.now();
+    (function tick(t) { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(to * e).toLocaleString(); if (p < 1) requestAnimationFrame(tick); })(t0);
+  }
+
+  function renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget) {
     users = users || []; hashtag = hashtag || []; issues = issues || []; markets = markets || []; news = news || [];
-    videos = videos || []; plaza = plaza || [];
-    const total = users.length + hashtag.length + issues.length + markets.length + news.length + videos.length + plaza.length;
-    if (!total) {
+    videos = videos || []; plaza = plaza || []; gnews = gnews || []; shorts = shorts || []; longs = longs || [];
+    const total = users.length + hashtag.length + issues.length + markets.length + news.length + videos.length + plaza.length + gnews.length + shorts.length + longs.length;
+    if (!total && !widget) {
       resultsEl.innerHTML =
         `<div class="sr-none">\u2018${esc(q)}\u2019 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
       return;
@@ -546,7 +679,7 @@ async function initTrendPage() {
 
     /* ── 👤 유저 ── */
     if (users.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">👤 유저 <b>${users.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="user"><div class="sr-sec-head">👤 유저 <b>${users.length}</b></div>`;
       html += users.map(u => {
         const av = isValidThumbnail(u.avatar_url) ? u.avatar_url : "";
         const ini = esc((u.nickname || "?").charAt(0));
@@ -567,7 +700,7 @@ async function initTrendPage() {
 
     /* ── 갈라 이슈 ── */
     if (issues.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">🗳 갈라 이슈 <b>${issues.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="issue">` + kindHead('issue', '갈라 이슈', issues.length);
       html += issues.map(i => {
         const th = issueThumb(i);
         const t2 = (i.pro_count || 0) + (i.con_count || 0);
@@ -587,7 +720,7 @@ async function initTrendPage() {
 
     /* ── 갈라예측 ── */
     if (markets.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">🔮 갈라예측 <b>${markets.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="predict">` + kindHead('predict', '갈라예측', markets.length);
       html += markets.map(m => {
         const top = m._top;
         return `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
@@ -605,7 +738,7 @@ async function initTrendPage() {
 
     /* ── 뉴스 ── */
     if (news.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="news">` + kindHead('news', '뉴스', news.length);
       html += news.map(n =>
         `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
           <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" referrerpolicy="no-referrer" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
@@ -620,7 +753,7 @@ async function initTrendPage() {
 
     /* ── 인기 영상 ── */
     if (videos.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head sr-yt">
+      html += `<div class="sr-sec" data-k="video"><div class="sr-sec-head sr-yt">
         <svg class="yt-official" width="34.1" height="24" viewBox="0 3.545 24 16.91" xmlns="http://www.w3.org/2000/svg" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path fill="#fff" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>인기 영상 <b>${videos.length}</b></div>`;
       html += videos.map(v =>
         `<div class="sr-card video" data-vid="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}">
@@ -637,7 +770,7 @@ async function initTrendPage() {
 
     /* ── 갈라 광장 ── */
     if (plaza.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">🗣 갈라 광장 <b>${plaza.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="plaza">` + kindHead('plaza', '갈라 광장', plaza.length);
       html += plaza.map(p => {
         const th0 = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
       const th = th0 && window.GALLA_thumb ? window.GALLA_thumb(th0, 480) : th0;
@@ -653,10 +786,86 @@ async function initTrendPage() {
       html += `</div>`;
     }
 
+    /* ── 💹 시세 위젯(최상단) ── */
+    if (widget) html += widgetCardHTML(widget);
+
+    /* ── 🏛 공식 사이트(지식패널) ── */
+    const off = officialCard(q);
+    if (off) {
+      html += `<div class="sr-sec" data-k="official"><div class="sr-official">
+        <div class="sr-off-logo">${esc(off.name.charAt(0))}</div>
+        <div class="sr-off-b">
+          <div class="sr-off-nm">${esc(off.name)} 공식 <span class="sr-off-vf">✓</span></div>
+          <div class="sr-off-desc">${esc(off.desc)}</div>
+          <div class="sr-off-links">${off.links.map(l => `<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])} ↗</a>`).join("")}</div>
+        </div>
+      </div></div>`;
+    }
+
+    /* ── 갈라뉴스 (AI 종합) ── */
+    if (gnews.length) {
+      html += `<div class="sr-sec" data-k="gnews">` + kindHead('news', '갈라뉴스', gnews.length);
+      html += gnews.map(n =>
+        `<a class="sr-card" href="news.html?gn=${esc(n.id)}">
+          <div class="sr-thumb">${isValidThumbnail(n.hero_image) ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">AI</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-cat">${esc(n.category || "")} · AI 종합</div>
+            <div class="sr-title">${esc(n.title)}</div>
+            <div class="sr-meta">${timeAgo(n.published_at)}${n.source_count ? ` · 기사 ${n.source_count}건` : ""}</div>
+          </div>
+        </a>`
+      ).join("");
+      html += `</div>`;
+    }
+
+    /* ── 숏판(세로) ── */
+    if (shorts.length) {
+      html += `<div class="sr-sec" data-k="short">` + kindHead('short', '숏판', shorts.length);
+      html += shorts.map(p =>
+        `<a class="sr-card" href="gallari-post.html?id=${esc(p.id)}">
+          <div class="sr-thumb">${isValidThumbnail(p.thumbnail_url) ? `<img src="${esc(p.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">숏판</span>`}<span class="sr-badge-short">세로</span></div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(p.title || p.caption || "")}</div>
+            <div class="sr-meta">조회 ${shortNum(p.view_count)}</div>
+          </div>
+        </a>`
+      ).join("");
+      html += `</div>`;
+    }
+
+    /* ── 롱판(가로) ── */
+    if (longs.length) {
+      html += `<div class="sr-sec" data-k="long">` + kindHead('long', '롱판', longs.length);
+      html += longs.map(p =>
+        `<a class="sr-card" href="gallari-post.html?id=${esc(p.id)}">
+          <div class="sr-thumb">${isValidThumbnail(p.thumbnail_url) ? `<img src="${esc(p.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">롱판</span>`}<span class="sr-badge-vid">▶</span></div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(p.title || p.caption || "")}</div>
+            <div class="sr-meta">조회 ${shortNum(p.view_count)}</div>
+          </div>
+        </a>`
+      ).join("");
+      html += `</div>`;
+    }
+
     resultsEl.innerHTML = html;
+
+    /* 검색어 의도로 섹션 순서 재배열 (건별 반응) — 해시태그(sr-sec 없음)는 제자리 유지 */
+    try {
+      const ord = orderKeys(q, { users: users, news: news, issues: issues });
+      const map = {};
+      resultsEl.querySelectorAll('.sr-sec[data-k]').forEach(function (el) { map[el.getAttribute('data-k')] = el; });
+      ord.forEach(function (k) { if (map[k]) resultsEl.appendChild(map[k]); });
+    } catch (e) { /* 재정렬 실패해도 기본 순서로 노출 */ }
+
+    /* 시세 위젯 숫자 카운트업 애니 */
+    resultsEl.querySelectorAll('.srw-num').forEach(srCountUp);
   }
 
   resultsEl.addEventListener("click", e => {
+    // 🔙 상세로 이동하는 링크(내부 href)를 누르기 직전 검색 상태를 저장 → '뒤로' 시 복원
+    const goLink = e.target.closest('a[href]');
+    if (goLink && goLink.getAttribute('target') !== '_blank') saveSearchState();
     // 뉴스 결과 → 기사 페이지
     const news = e.target.closest(".sr-card.news");
     if (news) {
@@ -1442,8 +1651,8 @@ async function initTrendPage() {
       };
       tryOpen();
     }
-  } else {
-    // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
+  } else if (!restoreSearchState()) {
+    // 🔙 결과→상세→'뒤로' 복원이 우선. 없으면 PTR/재마운트 시 직전 탭 복원(없으면 검색 디폴트).
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
     activateTab(["search", "trending", "news", "hot", "weather", "food", "travel", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
