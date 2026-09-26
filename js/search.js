@@ -635,13 +635,13 @@ async function initTrendPage() {
      기본: 유저 → 이슈 → 예측 → 뉴스 → 영상 → 광장 (사장님: 사람 최상단·이슈 상단).
      인물형(닉네임 정확/시작 일치) → 유저 확정 최상단. 시사형(뉴스가 이슈보다 압도적) → 뉴스를 위로. */
   function orderKeys(q, c) {
-    const rank = { widget: 0.1, official: 0.3, user: 1, issue: 2, predict: 3, gnews: 4, news: 5, video: 6, short: 7, long: 8, food: 8.5, plaza: 9 };
+    const rank = { related: 0.05, widget: 0.1, official: 0.3, user: 1, issue: 2, predict: 3, gnews: 4, news: 5, video: 6, short: 7, long: 8, food: 8.5, plaza: 9 };
     const qn = String(q || "").trim().toLowerCase();
     if ((c.users || []).some(function (u) { const nk = String(u.nickname || "").toLowerCase(); return nk === qn || (qn.length >= 2 && nk.indexOf(qn) === 0); })) rank.user = 0;
     const nN = (c.news || []).length, iN = (c.issues || []).length;
     if (nN >= 6 && nN >= iN * 2) { rank.news = 1.5; rank.gnews = 1.4; }
     if (/맛집|밥집|식당|카페|먹|음식|맛있|점심|저녁|회식/.test(qn)) rank.food = 0.6;   // 맛집 검색이면 맛집을 위로
-    return ["widget", "official", "user", "issue", "predict", "gnews", "news", "video", "short", "long", "food", "plaza"].sort(function (a, b) { return (rank[a] || 9) - (rank[b] || 9); });
+    return ["related", "widget", "official", "user", "issue", "predict", "gnews", "news", "video", "short", "long", "food", "plaza"].sort(function (a, b) { return (rank[a] || 9) - (rank[b] || 9); });
   }
 
   /* 💹 시세 위젯 카드 (검색 결과 최상단) — 카운트업·등락 글로우 */
@@ -678,7 +678,8 @@ async function initTrendPage() {
     wrap.innerHTML = widgetCardHTML(w);
     const node = wrap.firstElementChild;
     if (!node) return;
-    resultsEl.insertBefore(node, resultsEl.firstChild);
+    const rel = resultsEl.querySelector('.sr-sec[data-k="related"]');   // 연관 검색어는 위젯보다 위에 유지
+    resultsEl.insertBefore(node, rel ? rel.nextSibling : resultsEl.firstChild);
     node.querySelectorAll(".srw-num").forEach(srCountUp);
   }
   function srCountUp(el) {
@@ -686,6 +687,26 @@ async function initTrendPage() {
     if (matchMedia("(prefers-reduced-motion:reduce)").matches) { el.textContent = to.toLocaleString(); return; }
     const dur = 850, t0 = performance.now();
     (function tick(t) { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(to * e).toLocaleString(); if (p < 1) requestAnimationFrame(tick); })(t0);
+  }
+
+  /* 🔎 연관 검색어(네이버식) — 검색 결과(뉴스·이슈·갈라뉴스) 제목에서 검색어와 함께 자주 나오는 키워드를 뽑는다.
+     한국어 형태소 없이 공백/기호 분리 + 빈도. 2회 이상 등장한 상위 8개. */
+  const REL_STOP = new Set("공개 주목 관련 대한 위해 이번 오늘 내일 기자 단독 속보 영상 사진 뉴스 최고 최대 우리 그것 이것 지난 최근 이후 이날 통해 대해 밝혀 밝혔 전했 says 있다 없다 한다 된다 했다 하는 되는 이다 라며 했다며 라고".split(/\s+/));
+  function relatedKeywords(q, pools) {
+    const stop = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const stopSet = new Set(stop);
+    const freq = {};
+    (pools || []).forEach(arr => (arr || []).forEach(it => {
+      const t = it.title || it.question || it.headline || "";
+      String(t).split(/[\s,·…\[\]()"'’“”\-—~/|:!?.]+/).forEach(w0 => {
+        const w = w0.replace(/[^가-힣a-zA-Z0-9]/g, "").trim();
+        const lw = w.toLowerCase();
+        if (w.length < 2 || /^\d+$/.test(w) || stopSet.has(lw) || REL_STOP.has(w)) return;
+        if (stop.some(s => s.length >= 2 && lw.indexOf(s) === 0)) return;   // 검색어로 시작하는 파생어(삼성전자에) 제외
+        freq[w] = (freq[w] || 0) + 1;
+      });
+    }));
+    return Object.keys(freq).map(k => [k, freq[k]]).filter(e => e[1] >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0]);
   }
 
   function renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget, food) {
@@ -808,6 +829,10 @@ async function initTrendPage() {
       html += `</div>`;
     }
 
+    /* ── 🔎 연관 검색어(맨 위, 네이버식) ── */
+    const rel = relatedKeywords(q, [issues, gnews, news]);
+    if (rel.length) html += `<div class="sr-sec" data-k="related"><div class="sr-related">${rel.map(k => `<button class="sr-relchip" data-kw="${esc(k)}">${esc(k)}</button>`).join("")}</div></div>`;
+
     /* ── 💹 시세 위젯(최상단) ── */
     if (widget) html += widgetCardHTML(widget);
 
@@ -904,6 +929,9 @@ async function initTrendPage() {
 
   resultsEl.addEventListener("click", e => {
     // 🔙 상세로 이동하는 링크(내부 href)를 누르기 직전 검색 상태를 저장 → '뒤로' 시 복원
+    // 🔎 연관 검색어 칩 → 그 검색어로 재검색
+    const relchip = e.target.closest('.sr-relchip[data-kw]');
+    if (relchip) { e.preventDefault(); runSearch(relchip.dataset.kw, true); return; }
     const goLink = e.target.closest('a[href]');
     if (goLink && goLink.getAttribute('target') !== '_blank') saveSearchState();
     // 🍜 맛집 → 지도 오버레이(같은 화면). GALLA_openFoodPlace 없으면 맛집 탭으로 폴백
