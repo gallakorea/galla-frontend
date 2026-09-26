@@ -819,7 +819,7 @@ async function initTrendPage() {
       html += `<div class="sr-sec" data-k="food"><div class="sr-sec-head" style="color:#ffb020">🍜 <span>맛집</span> <b>${food.length}</b></div>`;
       html += food.map(f => {
         const rate = (f.rating && f.rating_n) ? `★ ${Number(f.rating).toFixed(1)} · 리뷰 ${f.rating_n}` : (f.category || "맛집");
-        return `<a class="sr-card sr-food" href="food.html" data-food="${esc(f.id)}">
+        return `<a class="sr-card sr-food" href="#food" data-food="${esc(f.id)}">
           <div class="sr-thumb"><span class="sr-noimg">🍜</span></div>
           <div class="sr-body">
             <div class="sr-cat">${esc(f.category || "맛집")}</div>
@@ -912,7 +912,7 @@ async function initTrendPage() {
     // 🍜 맛집 → 지도 오버레이(같은 화면). GALLA_openFoodPlace 없으면 맛집 탭으로 폴백
     const foodCard = e.target.closest('.sr-food[data-food]');
     if (foodCard) {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();   // 라우터의 문서 클릭 가로채기(food.html 404)보다 먼저 막는다
       const fid = foodCard.dataset.food;
       if (window.GALLA_openFoodPlace) { try { window.GALLA_openFoodPlace(fid); return; } catch (_) {} }
       if (typeof activateTab === "function") activateTab("food", false);
