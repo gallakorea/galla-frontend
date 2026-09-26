@@ -4978,6 +4978,23 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const tzMin = tzOf(body);   // ⏰ 접속 기기 시간대 — 게스트 경로(guestTurn)와 별도 스코프라 여기도 선언
 
+    if (body?.op === "market_widget") {
+      // 🔎 검색 위젯 — 프론트(search.js)가 시세·환율·부동산·항공권을 '값'으로 받는다.
+      //    비로그인 허용(시크릿 불필요), 인증 게이트 앞이라 게스트도 호출 가능. 값 조회 함수만 쓰므로 유저 상태 무관.
+      const kind = String(body?.kind || "auto");
+      const name = String(body?.name || "").trim();
+      try {
+        let r: any = null;
+        if (kind === "fx") r = await quoteFx(name || "달러");
+        else if (kind === "coin") r = await quoteCoin(name);
+        else if (kind === "stock") r = await quoteStock(name);
+        else if (kind === "apt") r = await aptPrice(name, body?.apt);
+        else if (kind === "flight") r = await flightPrices(name, body?.from, body?.when);
+        else r = (await quoteStock(name).catch(() => null)) || (await quoteCoin(name).catch(() => null)) || (await quoteFx(name).catch(() => null));
+        return json({ ok: true, card: (r && r._card) ? r._card : null });
+      } catch (e) { return json({ ok: false, error: String(e).slice(0, 120) }); }
+    }
+
     if (body?.op === "llm_probe") {
       // 🔬 모델 호환 디버그(운영자) — 지정 모델에 최소/도구 요청을 쏘고 원시 응답을 돌려준다.
       if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
