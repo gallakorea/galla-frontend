@@ -531,12 +531,14 @@ async function initTrendPage() {
   const doSearch = debounce(async q => {
     const my = ++seq;
     _lastQ = q;
-    const [users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget] = await Promise.all([
+    const [users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs] = await Promise.all([
       searchUsers(q), searchHashtag(q, _hashSort), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q),
-      searchGnews(q), searchShorts(q), searchLongs(q), searchWidget(q)
+      searchGnews(q), searchShorts(q), searchLongs(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget);
+    renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, null);
+    // 💹 시세 위젯은 엣지 호출이라 느리다 → 검색 결과를 막지 않고 별도로 붙인다(오면 최상단에 등장)
+    searchWidget(q).then(function (w) { if (my === seq && w) prependWidget(w); });
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -658,6 +660,19 @@ async function initTrendPage() {
         <div class="srw-title">${esc(w.title || "")}</div>${rows}</div></div>`;
     }
     return "";
+  }
+  /* 위젯을 검색 결과 최상단에 끼워 넣는다(엣지 응답이 늦게 와도 결과를 안 막는다). 있으면 교체. */
+  function prependWidget(w) {
+    if (!w || !resultsEl) return;
+    const none = resultsEl.querySelector(".sr-none"); if (none) none.remove();   // 결과 0 + 위젯만인 경우
+    const old = resultsEl.querySelector('.sr-sec[data-k="widget"]');
+    if (old) old.remove();
+    const wrap = document.createElement("div");
+    wrap.innerHTML = widgetCardHTML(w);
+    const node = wrap.firstElementChild;
+    if (!node) return;
+    resultsEl.insertBefore(node, resultsEl.firstChild);
+    node.querySelectorAll(".srw-num").forEach(srCountUp);
   }
   function srCountUp(el) {
     const to = parseFloat(el.dataset.to); if (!isFinite(to)) { el.textContent = el.dataset.to; return; }
