@@ -438,6 +438,15 @@ async function initTrendPage() {
   }
   function searchShorts(q) { return searchPosts(q, "vertical", 8); }
   function searchLongs(q) { return searchPosts(q, "horizontal", 6); }
+  // 🍜 맛집 — food_places(status=live). 이름·주소·분류 매칭(food_name_trgm 인덱스)
+  async function searchFood(q) {
+    // "강남 맛집"을 통째로 찾으면 가게명에 그 문자열이 없어 0건 → '맛집/식당' 같은 일반어를 떼고 핵심어(지역·메뉴)로 찾는다
+    const kw = String(q || "").replace(/맛집|밥집|식당|음식점|먹을\s*곳|맛있는\s*곳|맛있는|추천/g, "").trim() || q;
+    if (!kw || kw.length < 2) return [];
+    // food_places 는 anon 직접 select 가 RLS 로 막혀 있어 definer RPC 로 검색(status=live 공개 컬럼만)
+    const { data } = await supabase.rpc("food_search_public", { p_q: kw });
+    return data || [];
+  }
 
   /* 🏛 공식 사이트(지식패널) — 회사·브랜드·기관을 검색하면 공식 홈/IR/뉴스룸을 바로 안내.
      외부 링크만 노출(스니펫 아님) → 저작권 무관. 정확 일치 또는 별칭만 매칭. */
@@ -531,12 +540,12 @@ async function initTrendPage() {
   const doSearch = debounce(async q => {
     const my = ++seq;
     _lastQ = q;
-    const [users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs] = await Promise.all([
+    const [users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, food] = await Promise.all([
       searchUsers(q), searchHashtag(q, _hashSort), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q),
-      searchGnews(q), searchShorts(q), searchLongs(q)
+      searchGnews(q), searchShorts(q), searchLongs(q), searchFood(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, null);
+    renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, null, food);
     // 💹 시세 위젯은 엣지 호출이라 느리다 → 검색 결과를 막지 않고 별도로 붙인다(오면 최상단에 등장)
     searchWidget(q).then(function (w) { if (my === seq && w) prependWidget(w); });
   }, 240);
@@ -629,12 +638,13 @@ async function initTrendPage() {
      기본: 유저 → 이슈 → 예측 → 뉴스 → 영상 → 광장 (사장님: 사람 최상단·이슈 상단).
      인물형(닉네임 정확/시작 일치) → 유저 확정 최상단. 시사형(뉴스가 이슈보다 압도적) → 뉴스를 위로. */
   function orderKeys(q, c) {
-    const rank = { widget: 0.1, official: 0.3, user: 1, issue: 2, predict: 3, gnews: 4, news: 5, video: 6, short: 7, long: 8, plaza: 9 };
+    const rank = { widget: 0.1, official: 0.3, user: 1, issue: 2, predict: 3, gnews: 4, news: 5, video: 6, short: 7, long: 8, food: 8.5, plaza: 9 };
     const qn = String(q || "").trim().toLowerCase();
     if ((c.users || []).some(function (u) { const nk = String(u.nickname || "").toLowerCase(); return nk === qn || (qn.length >= 2 && nk.indexOf(qn) === 0); })) rank.user = 0;
     const nN = (c.news || []).length, iN = (c.issues || []).length;
     if (nN >= 6 && nN >= iN * 2) { rank.news = 1.5; rank.gnews = 1.4; }
-    return ["widget", "official", "user", "issue", "predict", "gnews", "news", "video", "short", "long", "plaza"].sort(function (a, b) { return (rank[a] || 9) - (rank[b] || 9); });
+    if (/맛집|밥집|식당|카페|먹|음식|맛있|점심|저녁|회식/.test(qn)) rank.food = 0.6;   // 맛집 검색이면 맛집을 위로
+    return ["widget", "official", "user", "issue", "predict", "gnews", "news", "video", "short", "long", "food", "plaza"].sort(function (a, b) { return (rank[a] || 9) - (rank[b] || 9); });
   }
 
   /* 💹 시세 위젯 카드 (검색 결과 최상단) — 카운트업·등락 글로우 */
@@ -681,10 +691,10 @@ async function initTrendPage() {
     (function tick(t) { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(to * e).toLocaleString(); if (p < 1) requestAnimationFrame(tick); })(t0);
   }
 
-  function renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget) {
+  function renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, widget, food) {
     users = users || []; hashtag = hashtag || []; issues = issues || []; markets = markets || []; news = news || [];
-    videos = videos || []; plaza = plaza || []; gnews = gnews || []; shorts = shorts || []; longs = longs || [];
-    const total = users.length + hashtag.length + issues.length + markets.length + news.length + videos.length + plaza.length + gnews.length + shorts.length + longs.length;
+    videos = videos || []; plaza = plaza || []; gnews = gnews || []; shorts = shorts || []; longs = longs || []; food = food || [];
+    const total = users.length + hashtag.length + issues.length + markets.length + news.length + videos.length + plaza.length + gnews.length + shorts.length + longs.length + food.length;
     if (!total && !widget) {
       resultsEl.innerHTML =
         `<div class="sr-none">\u2018${esc(q)}\u2019 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
@@ -804,6 +814,24 @@ async function initTrendPage() {
     /* ── 💹 시세 위젯(최상단) ── */
     if (widget) html += widgetCardHTML(widget);
 
+    /* ── 🍜 맛집 ── */
+    if (food.length) {
+      html += `<div class="sr-sec" data-k="food"><div class="sr-sec-head" style="color:#ffb020">🍜 <span>맛집</span> <b>${food.length}</b></div>`;
+      html += food.map(f => {
+        const rate = (f.rating && f.rating_n) ? `★ ${Number(f.rating).toFixed(1)} · 리뷰 ${f.rating_n}` : (f.category || "맛집");
+        return `<a class="sr-card sr-food" href="food.html" data-food="${esc(f.id)}">
+          <div class="sr-thumb"><span class="sr-noimg">🍜</span></div>
+          <div class="sr-body">
+            <div class="sr-cat">${esc(f.category || "맛집")}</div>
+            <div class="sr-title">${esc(f.name || "")}</div>
+            <div class="sr-meta">${esc(f.address || "")}</div>
+            <div class="sr-meta" style="color:#ffb020">${esc(rate)}</div>
+          </div>
+        </a>`;
+      }).join("");
+      html += `</div>`;
+    }
+
     /* ── 🏛 공식 사이트(지식패널) ── */
     const off = officialCard(q);
     if (off) {
@@ -881,6 +909,15 @@ async function initTrendPage() {
     // 🔙 상세로 이동하는 링크(내부 href)를 누르기 직전 검색 상태를 저장 → '뒤로' 시 복원
     const goLink = e.target.closest('a[href]');
     if (goLink && goLink.getAttribute('target') !== '_blank') saveSearchState();
+    // 🍜 맛집 → 지도 오버레이(같은 화면). GALLA_openFoodPlace 없으면 맛집 탭으로 폴백
+    const foodCard = e.target.closest('.sr-food[data-food]');
+    if (foodCard) {
+      e.preventDefault();
+      const fid = foodCard.dataset.food;
+      if (window.GALLA_openFoodPlace) { try { window.GALLA_openFoodPlace(fid); return; } catch (_) {} }
+      if (typeof activateTab === "function") activateTab("food", false);
+      return;
+    }
     // 뉴스 결과 → 기사 페이지
     const news = e.target.closest(".sr-card.news");
     if (news) {
