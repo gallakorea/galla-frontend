@@ -344,13 +344,19 @@ async function initTrendPage() {
     resultsEl.style.display = show ? "none" : "block";
   }
 
+  /* 다중 단어 검색 — "강남 맛집"처럼 여러 단어면 각 단어가 (어느 컬럼이든) 모두 포함되게 AND 매칭.
+     단일 단어는 기존과 동일. 종합 결과(맛집 + 관련 영상·광장·뉴스)를 위해. */
+  function applyWords(query, cols, q) {
+    const words = String(q || "").trim().split(/\s+/).filter(Boolean);
+    const clause = w => cols.map(c => c + ".ilike.%" + w + "%").join(",");
+    if (words.length <= 1) return query.or(clause(String(q || "").trim()));
+    words.forEach(w => { query = query.or(clause(w)); });   // 단어마다 or 그룹 → 서로 AND
+    return query;
+  }
   async function searchIssues(q) {
-    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
-      .from("issues")
-      .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,created_at")
-      .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
-      .order("created_at", { ascending: false })
-      .limit(12));
+    let query = supabase.from("issues").select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,created_at");
+    query = applyWords(query, ["title", "category"], q);
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(query.order("created_at", { ascending: false }).limit(12));
     return data || [];
   }
   async function searchMarkets(q) {
@@ -382,10 +388,9 @@ async function initTrendPage() {
     return markets;
   }
   async function searchNews(q) {
-    const { data } = await supabase
-      .from("news_articles_raw")
-      .select("id,title,press_name,published_at,thumbnail_url,url,related_group_id")
-      .ilike("title", `%${q}%`)
+    let query = supabase.from("news_articles_raw").select("id,title,press_name,published_at,thumbnail_url,url,related_group_id");
+    query = applyWords(query, ["title"], q);
+    const { data } = await query
       .not("thumbnail_url", "is", null)
       .neq("thumbnail_url", "")
       .order("published_at", { ascending: false })
@@ -395,10 +400,9 @@ async function initTrendPage() {
 
   // 인기 영상 — youtube_hot 은 피드별로 같은 영상이 중복 저장되므로 video_id 로 합친다
   async function searchYoutube(q) {
-    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
-      .from("youtube_hot")
-      .select("video_id,title,channel_title,thumbnail,view_count,duration,is_short")
-      .ilike("title", `%${q}%`)
+    let query = supabase.from("youtube_hot").select("video_id,title,channel_title,thumbnail,view_count,duration,is_short");
+    query = applyWords(query, ["title"], q);
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(query
       .order("view_count", { ascending: false })
       .limit(40));
     const seen = new Set();
@@ -406,23 +410,16 @@ async function initTrendPage() {
   }
 
   async function searchPlaza(q) {
-    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
-      .from("plaza_posts")
-      .select("id,title,category,nickname,user_id,cover_image,thumbnail,up_count,down_count,created_at")
-      .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
-      .order("created_at", { ascending: false })
-      .limit(12));
+    let query = supabase.from("plaza_posts").select("id,title,category,nickname,user_id,cover_image,thumbnail,up_count,down_count,created_at");
+    query = applyWords(query, ["title", "body"], q);
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(query.order("created_at", { ascending: false }).limit(12));
     return data || [];
   }
   // 갈라뉴스(AI 종합 발행분) — 원본뉴스(news_articles_raw)와 별개
   async function searchGnews(q) {
-    const { data } = await (window.GALLA_lfilter||function(q){return q;})(supabase
-      .from("galla_news")
-      .select("id,title,summary,category,hero_image,source_count,published_at")
-      .eq("status", "published")
-      .ilike("title", `%${q}%`)
-      .order("published_at", { ascending: false })
-      .limit(6));
+    let query = supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at").eq("status", "published");
+    query = applyWords(query, ["title", "summary"], q);
+    const { data } = await (window.GALLA_lfilter||function(q){return q;})(query.order("published_at", { ascending: false }).limit(6));
     return data || [];
   }
   // 숏판(세로)·롱판(가로) — posts.kind
