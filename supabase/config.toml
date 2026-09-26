@@ -404,6 +404,10 @@ verify_jwt = false
 verify_jwt = false
 [functions.portone-webhook]
 verify_jwt = false
+# 갈비스 — 자체 인증(로그인 JWT 또는 게스트 deviceId, market_widget 은 비로그인 공개).
+# ⚠️ verify_jwt 를 되살리면 게스트·검색 위젯이 401 로 전부 죽는다. 항상 false 로 배포.
+[functions.galla-friend]
+verify_jwt = false
 # 구글 사진 수집 두 개. 26.9.7 에 계정을 갈아타며 재배포했다가 같은 401 을 또 밟았다 —
 # 목록에 없으면 배포가 verify_jwt 를 되살린다. 크론은 x-cron-secret 으로만 인증한다.
 [functions.ingest-places-photos]
