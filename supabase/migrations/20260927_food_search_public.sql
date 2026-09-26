@@ -1,10 +1,11 @@
--- 🍜 통합검색용 맛집 공개 RPC
--- food_places 는 anon 직접 select 가 RLS 로 막혀 0건(맛집 탭은 food_map definer RPC 로 우회).
--- 검색에서도 definer RPC 로 공개 컬럼만, status='live' 만 노출한다.
-create or replace function public.food_search_public(p_q text)
-returns table(id text, name text, category text, address text, rating numeric, rating_n int)
+-- 🍜 통합검색용 맛집 공개 RPC (cover_url 사진 포함)
+-- food_places 는 anon 직접 select 가 RLS 로 0건(맛집 탭은 food_map definer RPC 로 우회).
+-- 검색에서도 definer RPC 로 공개 컬럼만, status='live' 만 노출한다. cover_url = R2 대표 사진.
+drop function if exists public.food_search_public(text);
+create function public.food_search_public(p_q text)
+returns table(id text, name text, category text, address text, rating numeric, rating_n int, cover_url text)
 language sql security definer stable set search_path = public as $$
-  select f.id::text, f.name, f.category, f.address, f.rating::numeric, f.rating_n::int
+  select f.id::text, f.name, f.category, f.address, f.rating::numeric, f.rating_n::int, f.cover_url
   from public.food_places f
   where f.status = 'live'
     and (f.name ilike '%'||p_q||'%' or f.address ilike '%'||p_q||'%' or f.category ilike '%'||p_q||'%')
