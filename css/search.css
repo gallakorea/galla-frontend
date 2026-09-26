@@ -640,6 +640,11 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 .srw-row:first-of-type { border-top: none; margin-top: 6px; }
 .srw-row b { font-variant-numeric: tabular-nums; }
 
+/* 🔎 연관 검색어(네이버식, 맨 위) */
+.sr-related { display: flex; flex-wrap: wrap; gap: 8px; }
+.sr-relchip { border: 1px solid #22222c; background: #12141c; color: #cdd3e0; border-radius: 999px; padding: 8px 13px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.sr-relchip:active { border-color: #4361ff; color: #6f86ff; }
+
 /* 🏛 공식 사이트(지식패널) */
 .sr-official { display: flex; gap: 12px; align-items: flex-start; background: #12141c; border: 1px solid #1e2230; border-radius: 14px; padding: 13px 14px; }
 .sr-off-logo { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px; color: #fff; background: linear-gradient(135deg, #6a7bff, #3a5bff); }
