@@ -29,6 +29,7 @@
 
   var state = { from: "서울", to: "", when: "", dateGo: "", dateBack: "", oneWay: true, sort: "price", tod: "all", offers: null, loading: false, route: null };
   var ROOT = null;
+  var calOv = null;         // 달력 오버레이 — body 로 포탈(스택 문맥·네비 z-index 회피)
   var calY = 0, calM = 0;   // 달력에 보이는 연·월(0-based month)
 
   var DOW = ["일", "월", "화", "수", "목", "금", "토"];
@@ -133,20 +134,22 @@
     return html;
   }
   function paintCal() {
-    if (!ROOT) return;
-    var mon = ROOT.querySelector("#tf-cal-mon"); if (mon) mon.textContent = calY + "년 " + (calM + 1) + "월";
-    var h = ROOT.querySelector("#tf-cal-h"); if (h) h.textContent = state.oneWay ? "날짜 선택" : (state.dateGo && !state.dateBack ? "오는 날 선택" : "가는 날 선택");
-    var grid = ROOT.querySelector("#tf-cal-grid"); if (grid) grid.innerHTML = calGridHTML();
-    var prev = ROOT.querySelector("#tf-cal-prev");
+    if (!calOv) return;
+    var mon = calOv.querySelector("#tf-cal-mon"); if (mon) mon.textContent = calY + "년 " + (calM + 1) + "월";
+    var h = calOv.querySelector("#tf-cal-h"); if (h) h.textContent = state.oneWay ? "날짜 선택" : (state.dateGo && !state.dateBack ? "오는 날 선택" : "가는 날 선택");
+    var grid = calOv.querySelector("#tf-cal-grid"); if (grid) grid.innerHTML = calGridHTML();
+    var prev = calOv.querySelector("#tf-cal-prev");
     if (prev) { var t = todayKST(); prev.disabled = (calY === t.getUTCFullYear() && calM === t.getUTCMonth()); }
   }
   function openCal() {
     var base = parseIso(state.dateGo) || todayKST();
     calY = base.getUTCFullYear(); calM = base.getUTCMonth();
     paintCal();
-    var ov = ROOT.querySelector("#tf-cal-ov"); if (ov) { ov.hidden = false; requestAnimationFrame(function () { ov.classList.add("on"); }); }
+    // 📌 body 로 포탈 — 스택뷰(transform)·네비(z9999) 위로 확실히 뜨게. 안 그러면 하단 '확인'이 네비에 가림.
+    if (calOv && calOv.parentNode !== document.body) document.body.appendChild(calOv);
+    if (calOv) { calOv.hidden = false; requestAnimationFrame(function () { calOv.classList.add("on"); }); }
   }
-  function closeCal() { var ov = ROOT.querySelector("#tf-cal-ov"); if (ov) { ov.classList.remove("on"); setTimeout(function () { ov.hidden = true; }, 200); } }
+  function closeCal() { if (calOv) { calOv.classList.remove("on"); setTimeout(function () { if (calOv) calOv.hidden = true; }, 200); } }
   function pickDay(isoStr) {
     if (state.oneWay) { state.dateGo = isoStr; state.dateBack = ""; }
     else {
@@ -293,7 +296,8 @@
     });
     // 📅 달력 열기/조작
     ROOT.querySelector("#tf-date").addEventListener("click", openCal);
-    var ov = ROOT.querySelector("#tf-cal-ov");
+    calOv = ROOT.querySelector("#tf-cal-ov");
+    var ov = calOv;
     ov.addEventListener("click", function (e) {
       if (e.target === ov) { closeCal(); return; }                       // 바깥 탭 닫기
       if (e.target.closest("#tf-cal-x")) { closeCal(); return; }
@@ -338,6 +342,9 @@
     ROOT = container;
     if (params && params.to) state.to = String(params.to);
     if (params && params.from) state.from = String(params.from);
+    // body 로 포탈됐던 옛 달력 오버레이 정리(재렌더 시 orphan 누적 방지)
+    var stale = document.querySelector("body > #tf-cal-ov"); if (stale) stale.remove();
+    calOv = null;
     container.innerHTML = shell();
     wire();
     if (state.to) { // 검색창에서 넘어온 경우 바로 검색

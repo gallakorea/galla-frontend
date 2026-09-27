@@ -615,7 +615,12 @@ async function initTrendPage() {
     if (el) el.hidden = !show;
   }
 
-  input.addEventListener("input", () => {
+  /* ⌨️ 한글 IME 이중입력 방지(안드로이드): 조합(composition) 중에는 DOM 을 건드리지 않는다.
+     예전엔 매 input 마다 resultsEl.innerHTML·showEmpty·showBackTrend 로 레이아웃을 바꿔서
+     안드로이드 IME 조합이 깨지고 "항공권"이 "항공권항공권" 으로 재커밋됐다(사장님 제보).
+     → 조합 중엔 clear 버튼 토글만, 실제 검색은 compositionend + 비조합 input 에서만. */
+  let __imeComposing = false;
+  function handleSearchInput() {
     showBackTrend(false);
     const q = input.value.trim();
     clearBtn.hidden = !input.value;
@@ -623,6 +628,12 @@ async function initTrendPage() {
     showEmpty(false);
     resultsEl.innerHTML = `<div class="sr-loading">검색 중…</div>`;
     doSearch(q);
+  }
+  input.addEventListener("compositionstart", () => { __imeComposing = true; });
+  input.addEventListener("compositionend", () => { __imeComposing = false; handleSearchInput(); });
+  input.addEventListener("input", (e) => {
+    if (e.isComposing || __imeComposing) { clearBtn.hidden = !input.value; return; }   // 조합 중엔 렌더 금지
+    handleSearchInput();
   });
   form.addEventListener("submit", e => {
     e.preventDefault();
@@ -1764,12 +1775,13 @@ async function initTrendPage() {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
     // 🔍 돋보기로 온 명시적 검색(tab=search) → 입력창 포커스(커서·키보드). 탐색 진입과 구분.
-    if (qs.get("tab") === "search") setTimeout(function () { try { input.focus(); } catch (_) {} }, 120);
+    // preventScroll: 포커스 시 브라우저의 scroll-into-view 로 화면이 오른쪽으로 밀렸다 정렬되던 것 방지(안드로이드).
+    if (qs.get("tab") === "search") setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (_) { try { input.focus(); } catch (e) {} } }, 260);
     if (qs.get("fp")) openFoodPlaceDeep(qs.get("fp"));
   } else if (PEND && (PEND.tab || PEND.fp)) {
     // SPA: 라우터가 넘겨준 파라미터(보관 → 맛집 상세 등). location.search 는 앱에서 비어 있다.
     if (PEND.tab) activateTab(PEND.tab, false); else activateTab("food", false);
-    if (PEND.tab === "search") setTimeout(function () { try { input.focus(); } catch (_) {} }, 120);   // 돋보기(SPA) 검색 진입 포커스
+    if (PEND.tab === "search") setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (_) { try { input.focus(); } catch (e) {} } }, 260);   // 돋보기(SPA) 검색 진입 포커스(밀림 방지)
     if (PEND.fp) openFoodPlaceDeep(PEND.fp);
     /* 트렌드가 아직 안 떠 있을 때 온 여행 딥링크 — travel.js 가 늦게 실릴 수 있어 잠깐 기다린다 */
     if (PEND.route || PEND.map) {
