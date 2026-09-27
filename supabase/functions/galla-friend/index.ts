@@ -1117,8 +1117,11 @@ async function flightPrices(to: string, from?: string, when?: string): Promise<a
     노선: `${org.name}→${dst.name}(편도)`, 최저가: top.map((x) => `${md(x.departure_at)} ${AIRLINE_KO[x.airline] || x.airline} ${x.transfers ? `경유 ${x.transfers}회` : "직항"} ${Number(x.price).toLocaleString("ko-KR")}원`),
     출처: "아비아세일즈 최근 검색 기준(실시간 좌석가 아님)", 지침: "최저가 1개만 짧게 말하고 「최근 검색 기준이라 예약할 땐 달라질 수 있어」를 덧붙여라. 카드가 붙는다.",
     _card: { qtype: "flight", title: `${org.name} → ${dst.name}`, code: `${org.code}→${dst.code}`, value: Number(top[0].price), unit: "원",
-      rows: top.map((x) => ({ airline: x.airline, date: md(x.departure_at), stops: x.transfers || 0, dur: x.duration || x.duration_to || 0, price: Number(x.price),
-        url: `https://www.aviasales.com${x.link}${String(x.link).includes("?") ? "&" : "?"}marker=${TP_MARKER}&currency=krw` })),   // 원화로(한국어 화면은 아비아세일즈가 지원 안 함)
+      rows: top.map((x) => { const mn = Number(x.duration || x.duration_to || 0); return {
+        airline: AIRLINE_KO[x.airline] || x.airline, date: md(x.departure_at), stops: x.transfers || 0,
+        dur: mn ? `${Math.floor(mn / 60)}시간${mn % 60 ? " " + (mn % 60) + "분" : ""}` : "", price: Number(x.price),
+        url: `https://www.aviasales.com${x.link}${String(x.link).includes("?") ? "&" : "?"}marker=${TP_MARKER}&currency=krw` }; }),   // 원화로(한국어 화면은 아비아세일즈가 지원 안 함)
+      url: `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`,   // 카드 하단 '가격 비교·예약' CTA
       source: "아비아세일즈 최근 검색 기준" },
   };
 }

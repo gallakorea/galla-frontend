@@ -472,6 +472,10 @@ async function initTrendPage() {
     if (/환율|달러|엔화|유로|위안|파운드/.test(s)) return { kind: "fx", name: (s.match(/달러|엔화|유로|위안|파운드/) || ["달러"])[0] };
     if (/비트코인|이더|리플|도지|코인/.test(s)) return { kind: "coin", name: s.replace(/시세|가격|얼마|코인/g, "").trim() || s };
     if (/주가|주식/.test(s)) return { kind: "stock", name: s.replace(/주가|주식|시세|얼마/g, "").trim() };
+    if (/항공권|비행기표|비행깃값|항공\s*최저|비행기.*(얼마|가격|표)/.test(s)) {
+      const to = s.replace(/항공권|비행기표|비행깃값|비행기|항공|최저가|얼마|가격|표|가는|편도|왕복|가고\s*싶|여행/g, "").trim();
+      if (to) return { kind: "flight", name: to };
+    }
     if (officialCard(s)) return { kind: "stock", name: s };   // 사전에 있는 종목(삼성전자 등)은 시세도 함께
     return null;
   }
@@ -662,12 +666,24 @@ async function initTrendPage() {
       </div></div>`;
     }
     if (w.qtype === "apt" || w.qtype === "flight") {
-      const rows = (w.rows || []).slice(0, 3).map(r => w.qtype === "apt"
-        ? `<div class="srw-row"><span>${esc(r.apt || "")}${r.area ? " " + Math.round(r.area) + "㎡" : ""}${r.floor ? " " + esc(String(r.floor)) + "층" : ""}</span><b>${esc(r.won || r.date || "")}</b></div>`
-        : `<div class="srw-row"><span>${esc(r.airline || "")} ${esc(r.date || "")}</span><b>${(r.price || 0).toLocaleString()}원</b></div>`).join("");
+      const rows = (w.rows || []).slice(0, 3).map(function (r) {
+        if (w.qtype === "apt") {
+          return `<div class="srw-row"><span>${esc(r.apt || "")}${r.area ? " " + Math.round(r.area) + "㎡" : ""}${r.floor ? " " + esc(String(r.floor)) + "층" : ""}</span><b>${esc(r.won || r.date || "")}</b></div>`;
+        }
+        // 항공권: 각 행이 예약처로 바로 가는 링크(있으면). 없으면 일반 행.
+        const sub = [r.date && esc(r.date), r.stops != null ? (r.stops ? esc(String(r.stops)) + "회 경유" : "직항") : "", r.dur && esc(r.dur)].filter(Boolean).join(" · ");
+        const price = `<b>${(r.price || 0).toLocaleString()}원</b>`;
+        const label = `<span><span class="srw-air">${esc(r.airline || "항공권")}</span>${sub ? '<span class="srw-sub">' + sub + "</span>" : ""}</span>`;
+        return r.url
+          ? `<a class="srw-row srw-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${label}${price}<span class="srw-go">예약 ↗</span></a>`
+          : `<div class="srw-row">${label}${price}</div>`;
+      }).join("");
+      const cta = (w.qtype === "flight" && w.url)
+        ? `<a class="srw-cta" href="${esc(w.url)}" target="_blank" rel="noopener noreferrer">가격 비교·예약하기 ↗</a>`
+        : "";
       return `<div class="sr-sec" data-k="widget"><div class="sr-widget">
         <div class="srw-top"><span class="srw-label">${w.qtype === "apt" ? "실거래가" : "항공권 최저가"}</span><span class="srw-badge">${esc(w.source || "")}</span></div>
-        <div class="srw-title">${esc(w.title || "")}</div>${rows}</div></div>`;
+        <div class="srw-title">${esc(w.title || "")}</div>${rows}${cta}</div></div>`;
     }
     return "";
   }
