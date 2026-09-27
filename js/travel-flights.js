@@ -31,16 +31,20 @@
   var ROOT = null;
   var calOv = null;         // 달력 오버레이 — body 로 포탈(스택 문맥·네비 z-index 회피)
   var calY = 0, calM = 0;   // 달력에 보이는 연·월(0-based month)
+  var calMode = "go";       // 달력을 연 목적: 'go'(가는 날) | 'back'(오는 날)
 
   var DOW = ["일", "월", "화", "수", "목", "금", "토"];
   function todayKST() { var d = new Date(Date.now() + 9 * 3600000); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); }
   function iso(d) { return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0"); }
   function parseIso(s) { var m = String(s || "").match(/(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; }
   function fmtDate(s) { var d = parseIso(s); if (!d) return ""; return (d.getUTCMonth() + 1) + "월 " + d.getUTCDate() + "일(" + DOW[d.getUTCDay()] + ")"; }
-  function dateLabel() {
-    if (!state.dateGo) return "언제든 · 최저가";
-    if (state.oneWay || !state.dateBack) return fmtDate(state.dateGo);
-    return fmtDate(state.dateGo) + " ~ " + fmtDate(state.dateBack);
+  // 두 날짜 필드(가는 날·오는 날) 라벨 + 오는 날 필드 표시를 갱신한다. 초기화도 여기로 반영.
+  function updateDateFields() {
+    if (!ROOT) return;
+    var g = ROOT.querySelector("#tf-datev-go"); if (g) g.textContent = state.dateGo ? fmtDate(state.dateGo) : "언제든 · 최저가";
+    var b = ROOT.querySelector("#tf-datev-back"); if (b) b.textContent = state.dateBack ? fmtDate(state.dateBack) : "날짜 선택";
+    var backFld = ROOT.querySelector("#tf-date-back"); if (backFld) backFld.hidden = state.oneWay;
+    var goFld = ROOT.querySelector("#tf-date-go"); if (goFld) goFld.classList.toggle("solo", state.oneWay);   // 편도면 가는 날 넓게
   }
 
   function monthOptions() {
@@ -76,13 +80,15 @@
             '<input class="tf-in" id="tf-to" type="text" inputmode="text" placeholder="도시 · 나라" value="' + esc(state.to) + '">' +
           '</label>' +
         '</div>' +
-        '<div class="tf-row2">' +
-          '<button type="button" class="tf-fld tf-when" id="tf-date"><span class="tf-lb">가는 날</span>' +
-            '<span class="tf-datev" id="tf-datev">언제든 · 최저가</span></button>' +
-          '<div class="tf-trip" id="tf-trip">' +
-            '<button type="button" class="tf-tp on" data-ow="1">편도</button>' +
-            '<button type="button" class="tf-tp" data-ow="0">왕복</button>' +
-          '</div>' +
+        '<div class="tf-trip" id="tf-trip">' +
+          '<button type="button" class="tf-tp on" data-ow="1">편도</button>' +
+          '<button type="button" class="tf-tp" data-ow="0">왕복</button>' +
+        '</div>' +
+        '<div class="tf-dates" id="tf-dates">' +
+          '<button type="button" class="tf-fld tf-when" id="tf-date-go"><span class="tf-lb">가는 날</span>' +
+            '<span class="tf-datev" id="tf-datev-go">언제든 · 최저가</span></button>' +
+          '<button type="button" class="tf-fld tf-when" id="tf-date-back" hidden><span class="tf-lb">오는 날</span>' +
+            '<span class="tf-datev" id="tf-datev-back">날짜 선택</span></button>' +
         '</div>' +
         '<div class="tf-pop" id="tf-pop">' + POPULAR.map(function (p) {
           return '<button type="button" class="tf-poch" data-city="' + esc(p.c) + '"><span class="tf-flag">' + p.f + '</span>' + esc(p.c) + "</button>";
@@ -136,13 +142,15 @@
   function paintCal() {
     if (!calOv) return;
     var mon = calOv.querySelector("#tf-cal-mon"); if (mon) mon.textContent = calY + "년 " + (calM + 1) + "월";
-    var h = calOv.querySelector("#tf-cal-h"); if (h) h.textContent = state.oneWay ? "날짜 선택" : (state.dateGo && !state.dateBack ? "오는 날 선택" : "가는 날 선택");
+    var wantBack = !state.oneWay && ((calMode === "back" && state.dateGo) || (state.dateGo && !state.dateBack));
+    var h = calOv.querySelector("#tf-cal-h"); if (h) h.textContent = state.oneWay ? "날짜 선택" : (wantBack ? "오는 날 선택" : "가는 날 선택");
     var grid = calOv.querySelector("#tf-cal-grid"); if (grid) grid.innerHTML = calGridHTML();
     var prev = calOv.querySelector("#tf-cal-prev");
     if (prev) { var t = todayKST(); prev.disabled = (calY === t.getUTCFullYear() && calM === t.getUTCMonth()); }
   }
-  function openCal() {
-    var base = parseIso(state.dateGo) || todayKST();
+  function openCal(mode) {
+    calMode = (mode === "back" && !state.oneWay) ? "back" : "go";
+    var base = parseIso(calMode === "back" ? (state.dateBack || state.dateGo) : state.dateGo) || todayKST();
     calY = base.getUTCFullYear(); calM = base.getUTCMonth();
     paintCal();
     // 📌 body 로 포탈 — 스택뷰(transform)·네비(z9999) 위로 확실히 뜨게. 안 그러면 하단 '확인'이 네비에 가림.
@@ -152,17 +160,18 @@
   function closeCal() { if (calOv) { calOv.classList.remove("on"); setTimeout(function () { if (calOv) calOv.hidden = true; }, 200); } }
   function pickDay(isoStr) {
     if (state.oneWay) { state.dateGo = isoStr; state.dateBack = ""; }
-    else {
-      if (!state.dateGo || state.dateBack) { state.dateGo = isoStr; state.dateBack = ""; }   // 새 범위 시작
-      else if (isoStr < state.dateGo) { state.dateGo = isoStr; }                              // 더 이른 날 → 가는 날 갱신
-      else if (isoStr === state.dateGo) { /* 같은 날 무시 */ }
-      else { state.dateBack = isoStr; }                                                       // 오는 날 확정
+    else if (!state.dateGo || state.dateBack) {          // 시작(둘 다 없음)이거나 이미 완성 → 새 범위 시작
+      state.dateGo = isoStr; state.dateBack = ""; calMode = "back";   // 다음 탭은 오는 날
+    } else if (isoStr <= state.dateGo) {                 // 가는 날보다 이르거나 같으면 → 가는 날 갱신
+      state.dateGo = isoStr;
+    } else {                                             // 가는 날 뒤 → 오는 날 확정
+      state.dateBack = isoStr;
     }
     paintCal();
   }
   function commitDate() {
     state.when = state.dateGo || "";
-    var el = ROOT.querySelector("#tf-datev"); if (el) el.textContent = dateLabel();
+    updateDateFields();
     closeCal();
     if (state.to && state.offers !== null) search();   // 이미 결과가 있으면 새 날짜로 재검색
   }
@@ -294,8 +303,9 @@
       ROOT.querySelector("#tf-to").blur();
       search();
     });
-    // 📅 달력 열기/조작
-    ROOT.querySelector("#tf-date").addEventListener("click", openCal);
+    // 📅 달력 열기/조작 — 가는 날 / 오는 날 각각
+    ROOT.querySelector("#tf-date-go").addEventListener("click", function () { openCal("go"); });
+    ROOT.querySelector("#tf-date-back").addEventListener("click", function () { openCal("back"); });
     calOv = ROOT.querySelector("#tf-cal-ov");
     var ov = calOv;
     ov.addEventListener("click", function (e) {
@@ -322,7 +332,8 @@
       state.oneWay = b.dataset.ow === "1";
       if (state.oneWay) state.dateBack = "";                            // 편도로 바꾸면 오는 날 버림
       this.querySelectorAll(".tf-tp").forEach(function (x) { x.classList.toggle("on", x === b); });
-      var el = ROOT.querySelector("#tf-datev"); if (el) el.textContent = dateLabel();
+      updateDateFields();                                              // 오는 날 필드 표시/숨김·라벨
+      if (!state.oneWay && !state.dateBack && state.dateGo) openCal("back");   // 왕복 켜면 바로 오는 날 고르게
     });
     ROOT.querySelector("#tf-pop").addEventListener("click", function (e) {
       var b = e.target.closest(".tf-poch"); if (!b) return;
@@ -347,6 +358,7 @@
     calOv = null;
     container.innerHTML = shell();
     wire();
+    updateDateFields();   // 두 날짜 필드 초기 라벨·표시
     if (state.to) { // 검색창에서 넘어온 경우 바로 검색
       var inp = ROOT.querySelector("#tf-to"); if (inp) inp.value = state.to;
       search();
