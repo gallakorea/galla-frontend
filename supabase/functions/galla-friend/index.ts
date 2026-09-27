@@ -1044,6 +1044,15 @@ async function quoteFx(name: string): Promise<any> {
 /* ✈️ 항공권 최저가 — Travelpayouts(아비아세일즈) 데이터 API(무료, 최근 48시간 검색 기준 캐시)(26.9.22 사장님: 「최저가로 알려주고 싶다」)
    도시 이름 → 공항 코드는 같은 회사 자동완성(한국어). 예약 링크엔 제휴 마커(576729). 실시간 좌석가가 아니라 「최근 검색 기준」이다. */
 const TP_MARKER = "576729";
+/* ✈️ 아비아세일즈 '검색 딥링크' — 노선+날짜가 URL 에 박혀 넘어간 사이트에 그대로 채워진다.
+   형식: ORIGIN + DDMM(가는날) + DEST + [DDMM(오는날)] + 인원. 개별편 토큰(x.link)은 만료되면
+   빈 검색으로 떨어져서(사장님 지적) 대신 이 안정적 링크를 쓴다. */
+function avDDMM(isoStr: string): string { const d = new Date(isoStr); return String(d.getUTCDate()).padStart(2, "0") + String(d.getUTCMonth() + 1).padStart(2, "0"); }
+function avSearchLink(orgCode: string, depIso: string, dstCode: string, retIso?: string): string {
+  const dep = avDDMM(depIso);
+  const ret = retIso ? avDDMM(retIso) : "";
+  return `https://www.aviasales.com/search/${orgCode}${dep}${dstCode}${ret}1?marker=${TP_MARKER}&currency=krw`;
+}
 const AIRLINE_KO: Record<string, string> = { KE: "대한항공", OZ: "아시아나", "7C": "제주항공", LJ: "진에어", TW: "티웨이항공", ZE: "이스타항공", BX: "에어부산", RS: "에어서울", YP: "에어프레미아", RF: "에어로케이",
   JL: "일본항공", NH: "ANA", MM: "피치항공", ZG: "짚에어", GK: "젯스타재팬", "7G": "스타플라이어", NU: "일본트랜스오션",
   VJ: "비엣젯", VN: "베트남항공", QH: "뱀부항공", BL: "퍼시픽항공",
@@ -1133,8 +1142,8 @@ async function flightPrices(to: string, from?: string, when?: string): Promise<a
       rows: top.map((x) => { const mn = Number(x.duration || x.duration_to || 0); return {
         airline: AIRLINE_KO[x.airline] || x.airline, date: md(x.departure_at), stops: x.transfers || 0,
         dur: mn ? `${Math.floor(mn / 60)}시간${mn % 60 ? " " + (mn % 60) + "분" : ""}` : "", price: Number(x.price),
-        url: `https://www.aviasales.com${x.link}${String(x.link).includes("?") ? "&" : "?"}marker=${TP_MARKER}&currency=krw` }; }),   // 원화로(한국어 화면은 아비아세일즈가 지원 안 함)
-      url: `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`,   // 카드 하단 '가격 비교·예약' CTA
+        url: avSearchLink(org.code, x.departure_at, dst.code) }; }),   // 노선·날짜 박힌 딥링크(만료 토큰 대신)
+      url: avSearchLink(org.code, top[0].departure_at, dst.code),   // CTA: 최저가 편의 날짜로
       source: "아비아세일즈 최근 검색 기준" },
   };
 }
@@ -1164,7 +1173,10 @@ async function flightSearch(to: string, from?: string, when?: string, oneWay = t
     const j = await jget(`https://api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${org.code}&destination=${dst.code}&departure_at=${m}${retParam}&one_way=${oneWay ? "true" : "false"}&sorting=price&currency=krw&market=kr&limit=30&token=${encodeURIComponent(token)}`);
     for (const x of (j?.data || [])) all.push(x);
   }
-  const bookUrl = `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`;
+  const retIso = (!oneWay && retYmd) ? `${retYmd[1]}-${retYmd[2]}-${retYmd[3]}` : undefined;
+  const depFull = /^\d{4}-\d{2}-\d{2}$/.test(dep) ? dep : "";
+  // CTA(가격 비교·예약): 특정 날짜를 골랐으면 그 날짜가 박힌 링크, 아니면 노선만
+  const bookUrl = depFull ? avSearchLink(org.code, depFull, dst.code, retIso) : `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`;
   if (!all.length) return { ok: true, route: `${org.name}→${dst.name}`, from: { code: org.code, name: org.name }, to: { code: dst.code, name: dst.name }, offers: [], bookUrl, oneWay };
   // 같은 (날짜·항공사·가격)은 하나로, 가격 오름차순
   const seen = new Set<string>();
@@ -1181,7 +1193,8 @@ async function flightSearch(to: string, from?: string, when?: string, oneWay = t
       depTime: `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`,
       stops: x.transfers || 0, dur: mn, durText: mn ? `${Math.floor(mn / 60)}시간${mn % 60 ? " " + (mn % 60) + "분" : ""}` : "",
       price: Number(x.price), flight: `${x.airline}${x.flight_number || ""}`,
-      url: `https://www.aviasales.com${x.link}${String(x.link).includes("?") ? "&" : "?"}marker=${TP_MARKER}&currency=krw`,
+      // 그 편의 '가는 날'이 박힌 검색 딥링크 → 넘어간 사이트에 노선·날짜가 그대로 채워진다
+      url: avSearchLink(org.code, x.departure_at, dst.code, retIso),
     });
     if (offers.length >= 24) break;
   }
