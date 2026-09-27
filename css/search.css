@@ -647,7 +647,8 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 
 /* 🏛 공식 사이트(지식패널) */
 .sr-official { display: flex; gap: 12px; align-items: flex-start; background: #12141c; border: 1px solid #1e2230; border-radius: 14px; padding: 13px 14px; }
-.sr-off-logo { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px; color: #fff; background: linear-gradient(135deg, #6a7bff, #3a5bff); }
+.sr-off-logo { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px; color: #fff; background: linear-gradient(135deg, #6a7bff, #3a5bff); overflow: hidden; }
+.sr-off-logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
 .sr-off-b { flex: 1; min-width: 0; }
 .sr-off-nm { font-size: 15px; font-weight: 800; color: #f3f4f6; display: flex; align-items: center; gap: 5px; }
 .sr-off-vf { width: 16px; height: 16px; border-radius: 50%; background: #4361ff; color: #fff; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; }
