@@ -121,6 +121,7 @@
         '<div class="tv-seg" id="tv-seg">' +
         '<button type="button" class="tv-sg on" data-view="feed">둘러보기</button>' +
         '<button type="button" class="tv-sg" data-view="who">누가 갔나</button>' +
+        '<button type="button" class="tv-sg" data-view="flight">✈ 항공권</button>' +
       '</div>' +
         '<button type="button" class="tv-mapbtn" id="tv-openmap" aria-label="지도">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>' +
@@ -178,6 +179,8 @@
       var b = e.target.closest(".tv-sg"); if (!b) return;
       VIEW = b.dataset.view;
       SEC.querySelectorAll(".tv-sg").forEach(function (x) { x.classList.toggle("on", x === b); });
+      applyFlightMode();
+      if (VIEW === "flight") return;                 // 항공권은 자체 UI(칩·대시·load 불필요)
       paintChips(); paintDash(); load();
     });
     CHIPS.addEventListener("click", async function (e) {
@@ -544,6 +547,21 @@
       more.hidden = WHO_END;
     } finally { WHO_BUSY = false; }
     if (!WHO_END) armWhoMore();                             // 다시 관찰 = 아직 보이면 한 번 더
+  }
+
+  /* ✈️ 항공권 세그 — 여행 발견 UI(칩·대시·어디갈래)를 접고 항공권 전용 모듈을 띄운다.
+     모듈(js/travel-flights.js)은 검색 스택 페이지와 공용이다(하이브리드). */
+  function applyFlightMode() {
+    var flight = VIEW === "flight";
+    var vs = SEC && SEC.querySelector("#tv-vs");
+    if (vs) vs.hidden = flight;
+    if (CHIPS) CHIPS.hidden = flight;
+    if (flight) {
+      if (CHIPS2) CHIPS2.hidden = true;
+      if (DASH) { DASH.hidden = true; }
+      if (window.GALLA_TravelFlights && LIST) window.GALLA_TravelFlights.render(LIST, {});
+      else if (LIST) LIST.innerHTML = '<div class="tv-empty">항공권을 불러오지 못했어요.</div>';
+    }
   }
 
   async function load() {

@@ -1,0 +1,119 @@
+/* travel-flights.css — 여행 탭 → 항공권 / 검색 스택 페이지 공용
+   "진짜 여행 가는 느낌": 하늘 히어로 · 흐르는 구름 · 날아가는 비행기 · 보딩패스 카드 */
+.tf { --tf-ink:#f3f4f6; --tf-sub:#9aa3b5; --tf-acc:#4361ff; --tf-card:#12141c; --tf-line:#232633; padding: 0 0 40px; }
+
+/* ── 하늘 히어로 ── */
+.tf-hero { position: relative; height: 132px; border-radius: 0 0 22px 22px; overflow: hidden; margin-bottom: 14px; }
+.tf-sky { position: absolute; inset: 0; background: linear-gradient(160deg, #1b2660 0%, #2a3f8f 38%, #5b6fd6 70%, #7f9af0 100%); background-size: 200% 200%; animation: tfSky 14s ease-in-out infinite; }
+@keyframes tfSky { 0%,100% { background-position: 0% 0%; } 50% { background-position: 100% 60%; } }
+.tf-clouds span { position: absolute; display: block; background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,0)); border-radius: 50%; opacity: .5; filter: blur(2px); }
+.tf-clouds span:nth-child(1) { width: 120px; height: 42px; top: 22px; left: -140px; animation: tfCloud 17s linear infinite; }
+.tf-clouds span:nth-child(2) { width: 80px; height: 30px; top: 62px; left: -120px; animation: tfCloud 23s linear infinite 3s; opacity: .35; }
+.tf-clouds span:nth-child(3) { width: 150px; height: 50px; top: 84px; left: -180px; animation: tfCloud 29s linear infinite 8s; opacity: .28; }
+@keyframes tfCloud { to { transform: translateX(calc(100vw + 200px)); } }
+.tf-heroplane { position: absolute; width: 30px; height: 30px; color: rgba(255,255,255,.92); top: 20px; left: -40px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.3)); animation: tfHeroPlane 9s ease-in-out infinite; }
+@keyframes tfHeroPlane { 0% { transform: translate(-40px, 34px) rotate(-8deg); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate(115vw, -14px) rotate(-14deg); opacity: 0; } }
+.tf-hero-t { position: absolute; left: 18px; bottom: 16px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.35); z-index: 2; }
+.tf-hero-t b { display: block; font-size: 21px; font-weight: 900; letter-spacing: -.01em; }
+.tf-hero-t span { font-size: 12.5px; opacity: .9; }
+
+/* ── 탑승권 검색 폼 ── */
+.tf-form { padding: 0 14px; }
+.tf-route { position: relative; display: flex; gap: 10px; align-items: stretch; }
+.tf-fld { flex: 1; display: flex; flex-direction: column; gap: 4px; background: var(--tf-card); border: 1px solid var(--tf-line); border-radius: 14px; padding: 9px 13px; min-width: 0; }
+.tf-fld-to { flex: 1.35; }
+.tf-lb { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; color: var(--tf-sub); text-transform: uppercase; }
+.tf-sel, .tf-in { border: none; background: transparent; color: var(--tf-ink); font-size: 16px; font-weight: 800; outline: none; width: 100%; padding: 2px 0; -webkit-appearance: none; appearance: none; }
+.tf-in::placeholder { color: #59607250; font-weight: 600; }
+.tf-swap { flex: none; align-self: center; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--tf-line); background: #0e1017; color: var(--tf-acc); display: grid; place-items: center; cursor: pointer; z-index: 2; }
+.tf-swap svg { width: 18px; height: 18px; }
+.tf-swap.spin svg { animation: tfSpin .5s cubic-bezier(.5,0,.2,1); }
+@keyframes tfSpin { to { transform: rotate(180deg); } }
+.tf-row2 { display: flex; gap: 10px; margin-top: 10px; }
+.tf-when { flex: 1.35; }
+.tf-trip { flex: 1; display: flex; background: var(--tf-card); border: 1px solid var(--tf-line); border-radius: 14px; padding: 4px; }
+.tf-tp { flex: 1; border: none; background: transparent; color: var(--tf-sub); font-size: 14px; font-weight: 800; border-radius: 10px; cursor: pointer; transition: .18s; }
+.tf-tp.on { background: var(--tf-acc); color: #fff; }
+
+.tf-pop { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.tf-poch { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--tf-line); background: var(--tf-card); color: #cdd3e0; border-radius: 999px; padding: 7px 13px; font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; }
+.tf-poch:active { border-color: var(--tf-acc); color: #fff; transform: scale(.96); }
+.tf-flag { font-size: 14px; line-height: 1; }
+
+.tf-go { width: 100%; margin-top: 14px; padding: 15px; border: none; border-radius: 15px; background: linear-gradient(120deg, #3550e0, #4361ff 50%, #6f86ff); color: #fff; font-size: 16px; font-weight: 900; letter-spacing: .01em; cursor: pointer; box-shadow: 0 8px 24px -8px rgba(67,97,255,.7); position: relative; overflow: hidden; }
+.tf-go::after { content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: skewX(-18deg); animation: tfShine 3.2s ease-in-out infinite; }
+@keyframes tfShine { 0%,60% { left: -60%; } 100% { left: 130%; } }
+.tf-go:active { transform: translateY(1px); }
+
+/* ── 검색 중: 항로를 나는 비행기 ── */
+.tf-results { padding: 0 14px; }
+.tf-fly { padding: 40px 0 30px; color: var(--tf-acc); }
+.tf-fly-line { position: relative; height: 90px; }
+.tf-fly-arc { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
+.tf-fly-path { animation: tfDash 1s linear infinite; }
+@keyframes tfDash { to { stroke-dashoffset: -20; } }
+.tf-fly-dot { position: absolute; bottom: 6px; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(67,97,255,.25); }
+.tf-fly-dot { left: 10px; } .tf-fly-dot2 { left: auto; right: 10px; }
+.tf-fly-plane { position: absolute; width: 30px; height: 30px; offset-path: path("M12 78 Q150 -6 288 78"); animation: tfFlyMove 1.5s cubic-bezier(.5,0,.5,1) infinite; filter: drop-shadow(0 3px 5px rgba(67,97,255,.5)); }
+@keyframes tfFlyMove { 0% { offset-distance: 0%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+.tf-fly-ep { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: var(--tf-ink); font-weight: 800; }
+.tf-fly-ep span { font-size: 12.5px; color: var(--tf-sub); font-weight: 700; animation: tfBlink 1s ease-in-out infinite; }
+@keyframes tfBlink { 50% { opacity: .35; } }
+
+/* ── 결과 헤더 · 정렬 ── */
+.tf-rhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin: 6px 0 12px; flex-wrap: wrap; }
+.tf-rtitle b { font-size: 17px; font-weight: 900; color: var(--tf-ink); }
+.tf-rtitle span { display: block; font-size: 12.5px; color: var(--tf-sub); margin-top: 2px; }
+.tf-rtitle span b { font-size: 12.5px; color: #ffcf4d; }
+.tf-sort { display: flex; gap: 6px; }
+.tf-so { border: 1px solid var(--tf-line); background: var(--tf-card); color: var(--tf-sub); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.tf-so.on { background: #1c2440; border-color: var(--tf-acc); color: #9fb0ff; }
+
+/* ── 보딩패스 카드 ── */
+.tf-list { display: flex; flex-direction: column; gap: 11px; }
+.tf-card { position: relative; display: flex; align-items: stretch; background: var(--tf-card); border: 1px solid var(--tf-line); border-radius: 16px; text-decoration: none; color: inherit; overflow: hidden; opacity: 0; transform: translateY(14px); animation: tfCardIn .5s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(var(--i) * .06s); -webkit-tap-highlight-color: transparent; }
+@keyframes tfCardIn { to { opacity: 1; transform: none; } }
+.tf-card:active { transform: scale(.985); }
+.tf-card-main { flex: 1; padding: 13px 14px; min-width: 0; }
+.tf-air { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+.tf-air-dot { width: 32px; min-width: 32px; max-width: 32px; height: 32px; box-sizing: border-box; border-radius: 9px; background: linear-gradient(135deg, #2b3350, #3d4a7a); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex: none; overflow: hidden; }
+.tf-air-dot.logo { background: #fff; border: 1px solid #e5e7eb; }
+.tf-air-dot img { width: 26px; height: 26px; object-fit: contain; display: block; }
+.tf-air-t b { font-size: 14px; font-weight: 800; color: var(--tf-ink); }
+.tf-air-t span { display: block; font-size: 11px; color: var(--tf-sub); }
+.tf-leg { display: flex; align-items: center; gap: 8px; }
+.tf-leg-a, .tf-leg-b { text-align: center; min-width: 46px; }
+.tf-leg-b { text-align: right; }
+.tf-leg-a b, .tf-leg-b b { font-size: 15px; font-weight: 900; color: var(--tf-ink); font-variant-numeric: tabular-nums; }
+.tf-leg-a span, .tf-leg-b span { display: block; font-size: 10.5px; color: var(--tf-sub); letter-spacing: .04em; }
+.tf-leg-mid { flex: 1; min-width: 74px; text-align: center; }
+.tf-leg-dur { font-size: 10px; color: var(--tf-sub); white-space: nowrap; }
+.tf-leg-line { position: relative; height: 16px; display: flex; align-items: center; }
+.tf-leg-line i { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--tf-line) 0 5px, transparent 5px 9px); }
+.tf-leg-line svg { width: 16px; height: 16px; color: var(--tf-acc); margin: 0 -2px; }
+.tf-leg-stop { font-size: 10.5px; font-weight: 800; color: #57c98a; }
+.tf-leg-stop.via { color: #e2a23c; }
+/* 절취선 */
+.tf-card-cut { position: relative; width: 0; border-left: 2px dashed var(--tf-line); margin: 10px 0; }
+.tf-card-cut i { position: absolute; left: -7px; width: 12px; height: 12px; border-radius: 50%; background: var(--gl-bg, #0a0a0b); border: 1px solid var(--tf-line); }
+.tf-card-cut i:first-child { top: -16px; } .tf-card-cut i:last-child { bottom: -16px; }
+.tf-card-price { flex: none; width: 108px; padding: 13px 12px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; background: linear-gradient(180deg, rgba(67,97,255,.06), rgba(67,97,255,.02)); }
+.tf-card-price .tf-won { font-size: 18px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.tf-card-price span { font-size: 10.5px; color: #9fb0ff; font-weight: 700; margin-top: 2px; }
+
+.tf-book { display: block; margin: 16px 0 0; text-align: center; text-decoration: none; padding: 14px; border-radius: 14px; background: #12141c; border: 1px solid var(--tf-acc); color: #9fb0ff; font-size: 14.5px; font-weight: 800; }
+.tf-book:active { background: #161a2c; }
+.tf-note { margin: 10px 2px 0; font-size: 11px; color: #6b7280; line-height: 1.5; }
+
+.tf-empty { text-align: center; padding: 46px 20px; }
+.tf-empty b { display: block; font-size: 15px; color: var(--tf-ink); font-weight: 800; }
+.tf-empty span { display: block; font-size: 13px; color: var(--tf-sub); margin-top: 6px; }
+.tf-empty-go { display: inline-block; margin-top: 16px; padding: 11px 18px; border-radius: 12px; background: var(--tf-acc); color: #fff; text-decoration: none; font-size: 13.5px; font-weight: 800; }
+
+.tf-shake { animation: tfShake .4s; }
+@keyframes tfShake { 0%,100% { transform: none; } 20%,60% { transform: translateX(-5px); } 40%,80% { transform: translateX(5px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-sky, .tf-clouds span, .tf-heroplane, .tf-go::after, .tf-fly-plane, .tf-fly-path, .tf-card, .tf-fly-ep span { animation: none !important; }
+  .tf-card { opacity: 1; transform: none; }
+}

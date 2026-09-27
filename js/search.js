@@ -678,8 +678,8 @@ async function initTrendPage() {
           ? `<a class="srw-row srw-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${label}${price}<span class="srw-go">예약 ↗</span></a>`
           : `<div class="srw-row">${label}${price}</div>`;
       }).join("");
-      const cta = (w.qtype === "flight" && w.url)
-        ? `<a class="srw-cta" href="${esc(w.url)}" target="_blank" rel="noopener noreferrer">가격 비교·예약하기 ↗</a>`
+      const cta = (w.qtype === "flight")
+        ? `<button type="button" class="srw-cta srw-more" data-to="${esc(String(w.title || "").split("→").pop().trim())}">✈ 갈라에서 항공권 다 보기</button>`
         : "";
       return `<div class="sr-sec" data-k="widget"><div class="sr-widget">
         <div class="srw-top"><span class="srw-label">${w.qtype === "apt" ? "실거래가" : "항공권 최저가"}</span><span class="srw-badge">${esc(w.source || "")}</span></div>
@@ -954,6 +954,14 @@ async function initTrendPage() {
     // 🔎 연관 검색어 칩 → 그 검색어로 재검색
     const relchip = e.target.closest('.sr-relchip[data-kw]');
     if (relchip) { e.preventDefault(); runSearch(relchip.dataset.kw, true); return; }
+    // ✈️ 항공권 카드 → 갈라 전용 항공권 페이지(스택)로 이어 준다(하이브리드 입구)
+    const flMore = e.target.closest('.srw-more[data-to]');
+    if (flMore) { e.preventDefault(); e.stopPropagation();
+      const to = flMore.dataset.to;
+      if (window.GALLA_openFlights) window.GALLA_openFlights(to);
+      else (window.GALLA_nav || function (u) { location.href = u; })("flights.html?to=" + encodeURIComponent(to));
+      return;
+    }
     const goLink = e.target.closest('a[href]');
     if (goLink && goLink.getAttribute('target') !== '_blank') saveSearchState();
     // 🍜 맛집 → 지도 오버레이(같은 화면). GALLA_openFoodPlace 없으면 맛집 탭으로 폴백
