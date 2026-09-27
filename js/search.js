@@ -602,6 +602,7 @@ async function initTrendPage() {
     e.preventDefault();
     const q = input.value.trim();
     if (q) { addRecent(q); doSearch(q); }
+    input.blur();   // 엔터 시 키보드 내림(iOS: 안 내려가 빈 화면 눌러야 사라지던 것)
   });
   clearBtn.addEventListener("click", () => {
     input.value = ""; clearBtn.hidden = true; clearSearchState(); showEmpty(true); input.focus();
@@ -1714,10 +1715,13 @@ async function initTrendPage() {
     // 🔍 검색 버튼은 ?tab=search 로 온다 — 예전엔 목록에 search 가 없어 아래 「마지막 탭 복원」으로 떨어졌다(2026-09-10 QA)
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
+    // 🔍 돋보기로 온 명시적 검색(tab=search) → 입력창 포커스(커서·키보드). 탐색 진입과 구분.
+    if (qs.get("tab") === "search") setTimeout(function () { try { input.focus(); } catch (_) {} }, 120);
     if (qs.get("fp")) openFoodPlaceDeep(qs.get("fp"));
   } else if (PEND && (PEND.tab || PEND.fp)) {
     // SPA: 라우터가 넘겨준 파라미터(보관 → 맛집 상세 등). location.search 는 앱에서 비어 있다.
     if (PEND.tab) activateTab(PEND.tab, false); else activateTab("food", false);
+    if (PEND.tab === "search") setTimeout(function () { try { input.focus(); } catch (_) {} }, 120);   // 돋보기(SPA) 검색 진입 포커스
     if (PEND.fp) openFoodPlaceDeep(PEND.fp);
     /* 트렌드가 아직 안 떠 있을 때 온 여행 딥링크 — travel.js 가 늦게 실릴 수 있어 잠깐 기다린다 */
     if (PEND.route || PEND.map) {
