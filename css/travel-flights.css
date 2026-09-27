@@ -48,11 +48,12 @@
 .tf-when { text-align: left; cursor: pointer; font-family: inherit; }
 .tf-datev { font-size: 16px; font-weight: 800; color: var(--tf-ink); padding: 2px 0; }
 
-/* 📅 달력 바텀시트 */
-.tf-cal-ov { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; display: flex; align-items: flex-end; }
-.tf-cal-ov.on { opacity: 1; }
-.tf-cal { width: 100%; background: #0e1017; border: 1px solid var(--tf-line); border-bottom: none; border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .26s cubic-bezier(.32,.72,0,1); max-height: 82vh; overflow-y: auto; }
-.tf-cal-ov.on .tf-cal { transform: none; }
+/* 📅 인라인 달력 — 날짜 밑에 펼쳐짐(고정·포탈 없음, 흐름 안에서 스크롤). 네비·transform 문제 없음. */
+.tf-cal-ov { margin-top: 10px; }
+.tf-cal-ov[hidden] { display: none; }
+.tf-cal-ov.on { animation: tfCalIn .22s ease-out; }
+@keyframes tfCalIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.tf-cal { background: var(--tf-card); border: 1px solid var(--tf-line); border-radius: 16px; padding: 14px; }
 .tf-cal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .tf-cal-top b { font-size: 16px; font-weight: 900; color: var(--tf-ink); }
 .tf-cal-x { border: none; background: #1a1d28; color: #cdd3e0; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; cursor: pointer; }
@@ -152,8 +153,9 @@
 .tf-card-cut i:first-child { top: -16px; } .tf-card-cut i:last-child { bottom: -16px; }
 .tf-card-price { position: relative; overflow: hidden; flex: none; width: 108px; padding: 13px 12px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; background: linear-gradient(180deg, rgba(67,97,255,.06), rgba(67,97,255,.02)); }
 /* 가격 패널 광택 스윕(주기적으로 눈길 끌기) */
-.tf-card-price::after { content: ""; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(159,176,255,.22), transparent); transform: skewX(-16deg); animation: tfPriceShine 3.4s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .12s); pointer-events: none; }
-@keyframes tfPriceShine { 0%, 55% { left: -70%; } 100% { left: 160%; } }
+/* 광택 스윕은 카드 등장 때 1회만(무한반복은 24개 동시 리페인트로 화면이 흔들렸다 — 사장님 제보) */
+.tf-card-price::after { content: ""; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(159,176,255,.22), transparent); transform: skewX(-16deg); animation: tfPriceShine 1.1s ease-out both; animation-delay: calc(var(--i, 0) * .06s + .35s); pointer-events: none; }
+@keyframes tfPriceShine { 0% { left: -70%; } 100% { left: 160%; } }
 .tf-card-price .tf-won { font-size: 18px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
 .tf-card-price .tf-won.pop { animation: tfPricePop .5s cubic-bezier(.2, 1.6, .4, 1); }
 @keyframes tfPricePop { 0% { transform: scale(1); } 40% { transform: scale(1.18); color: #cdd7ff; } 100% { transform: scale(1); } }

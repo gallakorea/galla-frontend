@@ -90,6 +90,20 @@
           '<button type="button" class="tf-fld tf-when" id="tf-date-back" hidden><span class="tf-lb">오는 날</span>' +
             '<span class="tf-datev" id="tf-datev-back">날짜 선택</span></button>' +
         '</div>' +
+        // 📅 인라인 달력 — 날짜 밑에 펼쳐진다(고정 오버레이·포탈 없이 흐름 안에서 스크롤). 네비·transform 문제 원천 차단.
+        '<div class="tf-cal-ov" id="tf-cal-ov" hidden>' +
+          '<div class="tf-cal">' +
+            '<div class="tf-cal-top"><b id="tf-cal-h">가는 날 선택</b><button type="button" class="tf-cal-x" id="tf-cal-x" aria-label="닫기">✕</button></div>' +
+            '<div class="tf-cal-nav"><button type="button" id="tf-cal-prev" aria-label="이전 달">‹</button>' +
+              '<span id="tf-cal-mon"></span><button type="button" id="tf-cal-next" aria-label="다음 달">›</button></div>' +
+            '<div class="tf-cal-dow">' + DOW.map(function (d) { return "<span>" + d + "</span>"; }).join("") + "</div>" +
+            '<div class="tf-cal-grid" id="tf-cal-grid"></div>' +
+            '<div class="tf-cal-foot">' +
+              '<button type="button" class="tf-cal-any" id="tf-cal-any">언제든 · 최저가</button>' +
+              '<button type="button" class="tf-cal-ok" id="tf-cal-ok">확인</button>' +
+            "</div>" +
+          "</div>" +
+        "</div>" +
         '<div class="tf-pop" id="tf-pop">' + POPULAR.map(function (p) {
           return '<button type="button" class="tf-poch" data-city="' + esc(p.c) + '"><span class="tf-flag">' + p.f + '</span>' + esc(p.c) + "</button>";
         }).join("") + '</div>' +
@@ -97,20 +111,6 @@
       '</form>' +
 
       '<div class="tf-results" id="tf-results"></div>' +
-
-      '<div class="tf-cal-ov" id="tf-cal-ov" hidden>' +
-        '<div class="tf-cal">' +
-          '<div class="tf-cal-top"><b id="tf-cal-h">가는 날 선택</b><button type="button" class="tf-cal-x" id="tf-cal-x" aria-label="닫기">✕</button></div>' +
-          '<div class="tf-cal-nav"><button type="button" id="tf-cal-prev" aria-label="이전 달">‹</button>' +
-            '<span id="tf-cal-mon"></span><button type="button" id="tf-cal-next" aria-label="다음 달">›</button></div>' +
-          '<div class="tf-cal-dow">' + DOW.map(function (d) { return "<span>" + d + "</span>"; }).join("") + "</div>" +
-          '<div class="tf-cal-grid" id="tf-cal-grid"></div>' +
-          '<div class="tf-cal-foot">' +
-            '<button type="button" class="tf-cal-any" id="tf-cal-any">언제든 · 최저가</button>' +
-            '<button type="button" class="tf-cal-ok" id="tf-cal-ok">확인</button>' +
-          "</div>" +
-        "</div>" +
-      "</div>" +
     "</div>";
   }
 
@@ -153,11 +153,13 @@
     var base = parseIso(calMode === "back" ? (state.dateBack || state.dateGo) : state.dateGo) || todayKST();
     calY = base.getUTCFullYear(); calM = base.getUTCMonth();
     paintCal();
-    // 📌 body 로 포탈 — 스택뷰(transform)·네비(z9999) 위로 확실히 뜨게. 안 그러면 하단 '확인'이 네비에 가림.
-    if (calOv && calOv.parentNode !== document.body) document.body.appendChild(calOv);
-    if (calOv) { calOv.hidden = false; requestAnimationFrame(function () { calOv.classList.add("on"); }); }
+    // 인라인으로 날짜 밑에 펼친다(고정·포탈 없음). 화면 밖이면 살짝 보이게만.
+    if (calOv) {
+      calOv.hidden = false; calOv.classList.add("on");
+      try { calOv.scrollIntoView({ block: "nearest" }); } catch (_) {}
+    }
   }
-  function closeCal() { if (calOv) { calOv.classList.remove("on"); setTimeout(function () { if (calOv) calOv.hidden = true; }, 200); } }
+  function closeCal() { if (calOv) { calOv.classList.remove("on"); calOv.hidden = true; } }
   function pickDay(isoStr) {
     if (state.oneWay) { state.dateGo = isoStr; state.dateBack = ""; }
     else if (!state.dateGo || state.dateBack) {          // 시작(둘 다 없음)이거나 이미 완성 → 새 범위 시작
@@ -291,7 +293,7 @@
     } catch (e) { state.offers = []; }
     state.loading = false;
     paintResults();
-    var box = ROOT.querySelector("#tf-results"); if (box) try { box.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (_) {}
+    // (검색 후 smooth 스크롤 이동 제거 — 키프 얼라이브 판에서 스크롤이 튀어 화면이 흔들렸다)
   }
 
   function wire() {
