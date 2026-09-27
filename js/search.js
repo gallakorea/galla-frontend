@@ -454,8 +454,10 @@ async function initTrendPage() {
     "네이버": { name: "네이버", desc: "인터넷 플랫폼 · 코스피 035420", links: [["공식 홈", "https://www.naver.com/"], ["IR", "https://www.navercorp.com/investment/"]] },
     "카카오": { name: "카카오", desc: "인터넷 플랫폼 · 코스피 035720", links: [["공식 홈", "https://www.kakaocorp.com/"], ["IR", "https://www.kakaocorp.com/ir/"]] },
     "lg에너지솔루션": { name: "LG에너지솔루션", desc: "2차전지 · 코스피 373220", links: [["공식 홈", "https://www.lgensol.com/ko/"], ["IR", "https://www.lgensol.com/ko/company-ir"]] },
+    "갈라": { name: "갈라", domain: "galla.im", desc: "내 편이 있는 콘텐츠 플랫폼 · 갈라랩스", links: [["갈라 바로가기", "https://galla.im/"], ["회사 소개", "https://company.galla.im/"]] },
+    "갈라랩스": { name: "갈라랩스", domain: "company.galla.im", desc: "갈라 운영사 · 법인", links: [["회사 소개", "https://company.galla.im/"], ["갈라 서비스", "https://galla.im/"]] },
   };
-  const OFFICIAL_ALIAS = { "현대차": "현대자동차", "하이닉스": "sk하이닉스", "삼전": "삼성전자", "lg엔솔": "lg에너지솔루션" };
+  const OFFICIAL_ALIAS = { "현대차": "현대자동차", "하이닉스": "sk하이닉스", "삼전": "삼성전자", "lg엔솔": "lg에너지솔루션", "galla": "갈라", "gallalabs": "갈라랩스", "갈라 랩스": "갈라랩스", "갈라labs": "갈라랩스" };
   function officialCard(q) {
     const k = String(q || "").trim().toLowerCase();
     const key = OFFICIAL[k] ? k : (OFFICIAL_ALIAS[k] || null);
@@ -723,9 +725,10 @@ async function initTrendPage() {
 
     /* ── 👤 유저 ── */
     if (users.length) {
-      html += `<div class="sr-sec" data-k="user"><div class="sr-sec-head">👤 유저 <b>${users.length}</b></div>`;
+      html += `<div class="sr-sec" data-k="user"><div class="sr-sec-head">👤 프로필 <b>${users.length}</b></div>`;
       html += users.map(u => {
-        const av = isValidThumbnail(u.avatar_url) ? u.avatar_url : "";
+        // avatar_url 은 R2 상대경로(<uuid>/avatar.jpg)거나 소셜 완전URL 둘 다 온다 → GALLA_avatarSrc 로 완전URL 변환(안 그러면 R2 아바타가 안 떴다)
+        const av = u.avatar_url ? (window.GALLA_avatarSrc ? GALLA_avatarSrc(u.avatar_url, 96) : (isValidThumbnail(u.avatar_url) ? u.avatar_url : "")) : "";
         const ini = esc((u.nickname || "?").charAt(0));
         return `<a class="sr-user" href="mypage.html?user=${esc(u.id)}">
           <span class="sr-ava">${av ? `<img src="${esc(av)}" loading="lazy" onerror="galla_imgFail(this)">` : ini}</span>
