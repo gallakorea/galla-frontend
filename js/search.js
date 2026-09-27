@@ -549,9 +549,29 @@ async function initTrendPage() {
     ]);
     if (my !== seq) return; // 최신 입력만 반영
     renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, null, food);
+    // ✈️ 항공권 키워드면(도시 없거나 미해결이라 카드가 안 와도) 항공권 페이지 입구를 항상 보여준다
+    const isFlightQ = /항공권|비행기\s*표|비행깃값|비행기|항공\s*최저/.test(q);
     // 💹 시세 위젯은 엣지 호출이라 느리다 → 검색 결과를 막지 않고 별도로 붙인다(오면 최상단에 등장)
-    searchWidget(q).then(function (w) { if (my === seq && w) prependWidget(w); });
+    searchWidget(q).then(function (w) {
+      if (my !== seq) return;
+      if (w) prependWidget(w);
+      else if (isFlightQ) prependFlightEntry(q);
+    });
   }, 240);
+
+  /* 도시가 안 잡히는 항공권 검색("항공권"·"김포 항공권" 등)에도 항공권 페이지 입구 카드를 보여준다. */
+  function prependFlightEntry(q) {
+    if (!resultsEl || resultsEl.querySelector('.sr-sec[data-k="widget"]')) return;   // 이미 위젯 있으면 스킵
+    const none = resultsEl.querySelector(".sr-none"); if (none) none.remove();
+    const to = String(q || "").replace(/항공권|비행기\s*표|비행깃값|비행기|항공|최저가|얼마|가격|표|가는|편도|왕복|가고\s*싶|여행|검색/g, "").trim();
+    const wrap = document.createElement("div");
+    wrap.className = "sr-sec"; wrap.setAttribute("data-k", "widget");
+    wrap.innerHTML = `<button type="button" class="sr-flightentry srw-more" data-to="${esc(to)}">
+      <span class="sfe-ic">✈</span>
+      <span class="sfe-t"><b>갈라 항공권${to ? " · " + esc(to) : ""}</b><span>최저가 비교하고 바로 예약까지</span></span>
+      <span class="sfe-go">검색 →</span></button>`;
+    resultsEl.insertBefore(wrap, resultsEl.firstChild);
+  }
 
   function runSearch(kw, addHistory) {
     input.value = kw;

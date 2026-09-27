@@ -647,6 +647,14 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 .srw-sub { font-size: 11.5px; color: #8a93a6; }
 .srw-go { flex: none; font-size: 11px; font-weight: 800; color: #6f86ff; }
 .srw-cta { display: block; width: 100%; margin-top: 12px; text-align: center; text-decoration: none; font-family: inherit; font-size: 14px; font-weight: 800; color: #fff; background: #4361ff; border: none; border-radius: 12px; padding: 13px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* ✈️ 항공권 검색 입구(도시 미해결 시) */
+.sr-flightentry { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font-family: inherit; background: linear-gradient(120deg, #16203f, #1b2650); border: 1px solid #2a3566; border-radius: 15px; padding: 14px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sr-flightentry:active { transform: scale(.99); }
+.sr-flightentry .sfe-ic { font-size: 22px; flex: none; }
+.sr-flightentry .sfe-t { flex: 1; min-width: 0; }
+.sr-flightentry .sfe-t b { display: block; font-size: 15px; font-weight: 800; color: #f3f4f6; }
+.sr-flightentry .sfe-t span { font-size: 12.5px; color: #9fb0ff; }
+.sr-flightentry .sfe-go { flex: none; font-size: 13px; font-weight: 800; color: #9fb0ff; }
 .srw-cta:active { background: #33307f; }
 
 /* 🔎 연관 검색어(네이버식, 맨 위) */
