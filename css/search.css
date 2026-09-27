@@ -161,6 +161,8 @@ body[data-page="search"] .header-inner {
 .tab-panel.active {
   display: block;
 }
+/* 진입 시 순간 가로 오버플로우로 화면이 오른쪽으로 밀렸다 정렬되던 것 방지(안드로이드). clip 은 스크롤 컨테이너를 만들지 않아 안쪽 가로스크롤 행엔 영향 없음. */
+.tab-panel[data-panel="search"] { overflow-x: clip; }
 
 /* =========================
    NEWS DISCOVER CARD

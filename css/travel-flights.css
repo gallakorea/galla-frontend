@@ -47,7 +47,7 @@
 .tf-datev { font-size: 16px; font-weight: 800; color: var(--tf-ink); padding: 2px 0; }
 
 /* 📅 달력 바텀시트 */
-.tf-cal-ov { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; display: flex; align-items: flex-end; }
+.tf-cal-ov { position: fixed; inset: 0; z-index: 10001; background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; display: flex; align-items: flex-end; }
 .tf-cal-ov.on { opacity: 1; }
 .tf-cal { width: 100%; background: #0e1017; border: 1px solid var(--tf-line); border-bottom: none; border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .26s cubic-bezier(.32,.72,0,1); max-height: 82vh; overflow-y: auto; }
 .tf-cal-ov.on .tf-cal { transform: none; }
