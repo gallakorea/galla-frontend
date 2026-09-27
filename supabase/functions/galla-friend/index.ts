@@ -1142,7 +1142,7 @@ async function flightPrices(to: string, from?: string, when?: string): Promise<a
 /* ✈️ 항공권 전용 페이지(여행 탭 → 항공권) — 카드보다 많은 후보를 정렬해서 돌려준다.
    네이버 항공권식: 우리 UI로 검색·비교, 마지막 예약만 제휴사(마커)로 핸드오프.
    from/to 는 한국어 도시명(기본 출발 서울), when 은 'YYYY-MM'·'N월'·비우면 이번·다음 달, oneWay 기본 편도. */
-async function flightSearch(to: string, from?: string, when?: string, oneWay = true): Promise<any> {
+async function flightSearch(to: string, from?: string, when?: string, oneWay = true, whenBack?: string): Promise<any> {
   const token = Deno.env.get("TRAVELPAYOUTS_TOKEN") || "";
   if (!token) return { ok: false, error: "항공권 키 없음" };
   const dst = await tpCity(to);
@@ -1156,9 +1156,12 @@ async function flightSearch(to: string, from?: string, when?: string, oneWay = t
   if (ymd) dep = `${ymd[1]}-${ymd[2].padStart(2, "0")}${ymd[3] ? "-" + ymd[3].padStart(2, "0") : ""}`;
   else if (mm) { const m = +mm[1]; const y = m < now.getUTCMonth() + 1 ? now.getUTCFullYear() + 1 : now.getUTCFullYear(); dep = `${y}-${String(m).padStart(2, "0")}`; }
   const months = dep ? [dep] : [0, 1].map((k) => { const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + k, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`; });
+  // 왕복 + 특정 오는 날(YYYY-MM-DD)이면 return_at 을 붙인다(가는 날도 특정 날일 때 의미).
+  const retYmd = String(whenBack || "").match(/(20\d\d)-(\d{2})-(\d{2})/);
+  const retParam = (!oneWay && retYmd) ? `&return_at=${retYmd[1]}-${retYmd[2]}-${retYmd[3]}` : "";
   const all: any[] = [];
   for (const m of months) {
-    const j = await jget(`https://api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${org.code}&destination=${dst.code}&departure_at=${m}&one_way=${oneWay ? "true" : "false"}&sorting=price&currency=krw&market=kr&limit=30&token=${encodeURIComponent(token)}`);
+    const j = await jget(`https://api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${org.code}&destination=${dst.code}&departure_at=${m}${retParam}&one_way=${oneWay ? "true" : "false"}&sorting=price&currency=krw&market=kr&limit=30&token=${encodeURIComponent(token)}`);
     for (const x of (j?.data || [])) all.push(x);
   }
   const bookUrl = `https://www.aviasales.com/search/${org.code}${dst.code}1?marker=${TP_MARKER}&currency=krw`;
@@ -5061,7 +5064,7 @@ Deno.serve(async (req) => {
     if (body?.op === "flight_search") {
       // ✈️ 여행 탭 → 항공권 전용 페이지. 비로그인 허용(값 조회만). 네이버식: 우리 UI로 비교, 예약만 핸드오프.
       try {
-        const r = await flightSearch(String(body?.to || ""), body?.from ? String(body.from) : undefined, body?.when ? String(body.when) : undefined, body?.oneWay !== false);
+        const r = await flightSearch(String(body?.to || ""), body?.from ? String(body.from) : undefined, body?.when ? String(body.when) : undefined, body?.oneWay !== false, body?.whenBack ? String(body.whenBack) : undefined);
         return json(r);
       } catch (e) { return json({ ok: false, error: String(e).slice(0, 120) }); }
     }

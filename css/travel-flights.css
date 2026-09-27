@@ -11,6 +11,13 @@
 .tf-clouds span:nth-child(2) { width: 80px; height: 30px; top: 62px; left: -120px; animation: tfCloud 23s linear infinite 3s; opacity: .35; }
 .tf-clouds span:nth-child(3) { width: 150px; height: 50px; top: 84px; left: -180px; animation: tfCloud 29s linear infinite 8s; opacity: .28; }
 @keyframes tfCloud { to { transform: translateX(calc(100vw + 200px)); } }
+/* 반짝이는 별 — 히어로에 화려함 한 겹 */
+.tf-stars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px 1px rgba(255,255,255,.8); opacity: 0; animation: tfTwinkle 2.6s ease-in-out infinite; }
+.tf-stars i:nth-child(1) { top: 22px; left: 24%; animation-delay: .2s; }
+.tf-stars i:nth-child(2) { top: 40px; left: 62%; animation-delay: 1.1s; }
+.tf-stars i:nth-child(3) { top: 30px; left: 84%; animation-delay: 1.7s; }
+.tf-stars i:nth-child(4) { top: 58px; left: 44%; animation-delay: .7s; width: 2px; height: 2px; }
+@keyframes tfTwinkle { 0%, 100% { opacity: 0; transform: scale(.6); } 50% { opacity: .95; transform: scale(1); } }
 .tf-heroplane { position: absolute; width: 30px; height: 30px; color: rgba(255,255,255,.92); top: 20px; left: -40px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.3)); animation: tfHeroPlane 9s ease-in-out infinite; }
 @keyframes tfHeroPlane { 0% { transform: translate(-40px, 34px) rotate(-8deg); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate(115vw, -14px) rotate(-14deg); opacity: 0; } }
 .tf-hero-t { position: absolute; left: 18px; bottom: 16px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.35); z-index: 2; }
@@ -34,6 +41,44 @@
 .tf-trip { flex: 1; display: flex; background: var(--tf-card); border: 1px solid var(--tf-line); border-radius: 14px; padding: 4px; }
 .tf-tp { flex: 1; border: none; background: transparent; color: var(--tf-sub); font-size: 14px; font-weight: 800; border-radius: 10px; cursor: pointer; transition: .18s; }
 .tf-tp.on { background: var(--tf-acc); color: #fff; }
+
+/* 날짜 버튼(달력 열기) */
+.tf-when { text-align: left; cursor: pointer; font-family: inherit; }
+.tf-datev { font-size: 16px; font-weight: 800; color: var(--tf-ink); padding: 2px 0; }
+
+/* 📅 달력 바텀시트 */
+.tf-cal-ov { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); opacity: 0; transition: opacity .2s; display: flex; align-items: flex-end; }
+.tf-cal-ov.on { opacity: 1; }
+.tf-cal { width: 100%; background: #0e1017; border: 1px solid var(--tf-line); border-bottom: none; border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .26s cubic-bezier(.32,.72,0,1); max-height: 82vh; overflow-y: auto; }
+.tf-cal-ov.on .tf-cal { transform: none; }
+.tf-cal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tf-cal-top b { font-size: 16px; font-weight: 900; color: var(--tf-ink); }
+.tf-cal-x { border: none; background: #1a1d28; color: #cdd3e0; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; cursor: pointer; }
+.tf-cal-nav { display: flex; align-items: center; justify-content: center; gap: 20px; margin: 6px 0 10px; }
+.tf-cal-nav button { border: none; background: #1a1d28; color: #cdd3e0; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; }
+.tf-cal-nav button:disabled { opacity: .3; }
+.tf-cal-nav span { font-size: 16px; font-weight: 800; color: var(--tf-ink); min-width: 110px; text-align: center; }
+.tf-cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; font-weight: 700; color: var(--tf-sub); padding-bottom: 6px; }
+.tf-cal-dow span:first-child { color: #ff6b7a; } .tf-cal-dow span:last-child { color: #6f86ff; }
+.tf-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.tf-cd { aspect-ratio: 1; border: none; background: transparent; color: var(--tf-ink); font-size: 14px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
+.tf-cd.empty { visibility: hidden; }
+.tf-cd.past { color: #3a3f4c; cursor: default; }
+.tf-cd.sun { color: #ff6b7a; } .tf-cd.sat { color: #6f86ff; }
+.tf-cd.inrange { background: rgba(67,97,255,.15); border-radius: 0; }
+.tf-cd.sel { background: var(--tf-acc); color: #fff; }
+.tf-cd.sel.go { border-radius: 10px 0 0 10px; } .tf-cd.sel.back { border-radius: 0 10px 10px 0; }
+.tf-cd.sel.go.back, .tf-cd.sel:only-of-type { border-radius: 10px; }
+.tf-cal-foot { display: flex; gap: 10px; margin-top: 14px; }
+.tf-cal-any { flex: 1; border: 1px solid var(--tf-line); background: transparent; color: var(--tf-sub); border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; }
+.tf-cal-ok { flex: 1; border: none; background: var(--tf-acc); color: #fff; border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 800; cursor: pointer; }
+
+/* 결과 날짜 칩 + 출발 시간대 필터 */
+.tf-rdate { display: inline-block; margin-top: 3px; font-size: 11.5px; font-weight: 700; color: #9fb0ff; background: rgba(67,97,255,.12); border-radius: 999px; padding: 2px 9px; }
+.tf-tod { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 4px 0 13px; }
+.tf-tod-l { font-size: 12px; font-weight: 700; color: var(--tf-sub); margin-right: 2px; }
+.tf-todch { border: 1px solid var(--tf-line); background: var(--tf-card); color: var(--tf-sub); border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 800; cursor: pointer; font-family: inherit; }
+.tf-todch.on { background: #1c2440; border-color: var(--tf-acc); color: #9fb0ff; }
 
 .tf-pop { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
 .tf-poch { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--tf-line); background: var(--tf-card); color: #cdd3e0; border-radius: 999px; padding: 7px 13px; font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; }
@@ -79,6 +124,12 @@
 .tf-air-dot { width: 32px; min-width: 32px; max-width: 32px; height: 32px; box-sizing: border-box; border-radius: 9px; background: linear-gradient(135deg, #2b3350, #3d4a7a); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex: none; overflow: hidden; }
 .tf-air-dot.logo { background: #fff; border: 1px solid #e5e7eb; }
 .tf-air-dot img { width: 26px; height: 26px; object-fit: contain; display: block; }
+/* 로고 스켈레톤 — 로드 전 셔머, onload 로 .ok 붙으면 이미지 페이드인 */
+.tf-air-dot.logo.skel { background-image: linear-gradient(100deg, #dfe4ec 30%, #f4f7fb 50%, #dfe4ec 70%); background-size: 220% 100%; animation: tfSkel 1.1s linear infinite; }
+.tf-air-dot.logo img { opacity: 0; transition: opacity .28s ease; }
+.tf-air-dot.logo.ok { animation: none; background-image: none; }
+.tf-air-dot.logo.ok img { opacity: 1; }
+@keyframes tfSkel { 0% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
 .tf-air-t b { font-size: 14px; font-weight: 800; color: var(--tf-ink); }
 .tf-air-t span { display: block; font-size: 11px; color: var(--tf-sub); }
 .tf-leg { display: flex; align-items: center; gap: 8px; }
@@ -97,8 +148,13 @@
 .tf-card-cut { position: relative; width: 0; border-left: 2px dashed var(--tf-line); margin: 10px 0; }
 .tf-card-cut i { position: absolute; left: -7px; width: 12px; height: 12px; border-radius: 50%; background: var(--gl-bg, #0a0a0b); border: 1px solid var(--tf-line); }
 .tf-card-cut i:first-child { top: -16px; } .tf-card-cut i:last-child { bottom: -16px; }
-.tf-card-price { flex: none; width: 108px; padding: 13px 12px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; background: linear-gradient(180deg, rgba(67,97,255,.06), rgba(67,97,255,.02)); }
+.tf-card-price { position: relative; overflow: hidden; flex: none; width: 108px; padding: 13px 12px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; background: linear-gradient(180deg, rgba(67,97,255,.06), rgba(67,97,255,.02)); }
+/* 가격 패널 광택 스윕(주기적으로 눈길 끌기) */
+.tf-card-price::after { content: ""; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(159,176,255,.22), transparent); transform: skewX(-16deg); animation: tfPriceShine 3.4s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .12s); pointer-events: none; }
+@keyframes tfPriceShine { 0%, 55% { left: -70%; } 100% { left: 160%; } }
 .tf-card-price .tf-won { font-size: 18px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.tf-card-price .tf-won.pop { animation: tfPricePop .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes tfPricePop { 0% { transform: scale(1); } 40% { transform: scale(1.18); color: #cdd7ff; } 100% { transform: scale(1); } }
 .tf-card-price span { font-size: 10.5px; color: #9fb0ff; font-weight: 700; margin-top: 2px; }
 
 .tf-book { display: block; margin: 16px 0 0; text-align: center; text-decoration: none; padding: 14px; border-radius: 14px; background: #12141c; border: 1px solid var(--tf-acc); color: #9fb0ff; font-size: 14.5px; font-weight: 800; }
@@ -114,6 +170,8 @@
 @keyframes tfShake { 0%,100% { transform: none; } 20%,60% { transform: translateX(-5px); } 40%,80% { transform: translateX(5px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tf-sky, .tf-clouds span, .tf-heroplane, .tf-go::after, .tf-fly-plane, .tf-fly-path, .tf-card, .tf-fly-ep span { animation: none !important; }
+  .tf-sky, .tf-clouds span, .tf-heroplane, .tf-go::after, .tf-fly-plane, .tf-fly-path, .tf-card, .tf-fly-ep span,
+  .tf-stars i, .tf-air-dot.logo.skel, .tf-card-price::after, .tf-card-price .tf-won.pop { animation: none !important; }
   .tf-card { opacity: 1; transform: none; }
+  .tf-air-dot.logo img { opacity: 1; }
 }
