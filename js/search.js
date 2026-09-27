@@ -859,8 +859,9 @@ async function initTrendPage() {
     /* ── 🏛 공식 사이트(지식패널) ── */
     const off = officialCard(q);
     if (off) {
+      const offIni = esc(off.name.charAt(0));
       html += `<div class="sr-sec" data-k="official"><div class="sr-official">
-        <div class="sr-off-logo">${esc(off.name.charAt(0))}</div>
+        <div class="sr-off-logo">${off.domain ? `<img src="https://www.google.com/s2/favicons?sz=128&domain=${esc(off.domain)}" alt="" onerror="this.remove();this.parentNode.textContent='${offIni}'">` : offIni}</div>
         <div class="sr-off-b">
           <div class="sr-off-nm">${esc(off.name)} 공식 <span class="sr-off-vf">✓</span></div>
           <div class="sr-off-desc">${esc(off.desc)}</div>
