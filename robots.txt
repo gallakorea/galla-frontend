@@ -1,45 +1,65 @@
 # GALLA 갈라 — 검색엔진 크롤링 정책
-# 국내 3사(구글/네이버/다음) 모두 허용, 민감 경로만 차단
+# 모든 봇 동일 규칙: 공개 콘텐츠 허용, 기능·계정·프록시 페이지 차단.
+# ⚠️ 봇별 블록(User-agent: Yeti 등)을 따로 두고 Allow:/ 만 적으면 그 봇은 * 의 Disallow 를
+#    통째로 무시한다 — 네이버 Yeti 가 /yt·/login·/reset 을 색인하던 진짜 원인(2026-09-28 수정).
+#    그래서 개별 봇 블록을 없애고 * 하나로 통일한다. clean URL(확장자 없는 앱 라우트)도 함께 막는다.
 
 User-agent: *
 Allow: /
-Disallow: /settings.html
-Disallow: /account-edit.html
-Disallow: /change-password.html
+
+# 인증·계정·기능 페이지 (clean URL + .html 양쪽 — 앱은 clean, 웹 폴백은 .html)
+Disallow: /login
 Disallow: /login.html
+Disallow: /login-history
+Disallow: /login-history.html
+Disallow: /reset
 Disallow: /reset.html
+Disallow: /create
+Disallow: /settings
+Disallow: /settings.html
+Disallow: /account-edit
+Disallow: /account-edit.html
+Disallow: /change-password
+Disallow: /change-password.html
+Disallow: /admin
 Disallow: /admin.html
+Disallow: /admin-login
 Disallow: /admin-login.html
-Disallow: /auth/
+Disallow: /withdraw
 Disallow: /withdraw.html
 Disallow: /withdraw-done.html
-# 💰 개인 금융·계정 화면 — 공개 콘텐츠가 없고 색인될 이유가 없다(2026-08-30 추가)
-Disallow: /revenue-settlement.html
-Disallow: /settlement.html
-Disallow: /gp-history.html
-Disallow: /wallet.html
-Disallow: /charges.html
-Disallow: /saved.html
-Disallow: /dm.html
-Disallow: /quest.html
-Disallow: /login-history.html
+Disallow: /confirm
 Disallow: /confirm.html
 Disallow: /confirm.remix.html
+Disallow: /notifications
 Disallow: /notifications.html
+Disallow: /auth/
+
+# 💰 개인 금융·계정 화면 — 공개 콘텐츠 없음
+Disallow: /revenue-settlement
+Disallow: /revenue-settlement.html
+Disallow: /settlement
+Disallow: /settlement.html
+Disallow: /gp-history
+Disallow: /gp-history.html
+Disallow: /wallet
+Disallow: /wallet.html
+Disallow: /charges
+Disallow: /charges.html
+Disallow: /saved
+Disallow: /saved.html
+Disallow: /dm
+Disallow: /dm.html
+Disallow: /quest
+Disallow: /quest.html
+
+# ▶️ 유튜브 프록시(/yt)는 여기서 막지 않는다 — 이미 색인된 페이지를 빼려면 크롤러가 noindex 태그를
+#    읽어야 하므로 yt.html 에 <meta name="robots" content="noindex"> 를 넣고 크롤은 열어 둔다.
+#    (robots 로 막으면 noindex 를 못 읽어 기존 색인이 유령으로 남는다.)
+
+# 기타
 Disallow: /docs/
 Disallow: /imgproxy
 Disallow: /share/
-
-# 네이버 검색로봇
-User-agent: Yeti
-Allow: /
-
-# 다음(카카오) 검색로봇
-User-agent: Daumoa
-Allow: /
-
-# 구글
-User-agent: Googlebot
-Allow: /
 
 Sitemap: https://galla.im/sitemap.xml
