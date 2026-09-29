@@ -196,11 +196,28 @@
   /* 🧲 판 이동 = 가로 스크롤(폰 스냅). 탭 버튼·코드로 옮길 때만 여기서 스크롤한다 —
      손가락으로 넘길 땐 OS 가 스크롤하고, 멈추면 아래 watchNativeSwipe 가 activateTab 을 부른다. */
   let progScrollUntil = 0;                         // 코드로 옮기는 중(그동안 스크롤 감시가 탭을 바꾸지 않게)
+  let touching = false, touchedAt = 0;             // 손가락 접촉 상태(아래 스와이프 감시가 갱신) — settle 보장 타이머가 참조
+  let settleGuardT = 0;
   function settle(anim) {
     const left = cur * W();
     if (Math.abs(track.scrollLeft - left) < 1) return;
-    progScrollUntil = Date.now() + (anim ? 700 : 80);
+    const until = (progScrollUntil = Date.now() + (anim ? 700 : 80));
     try { track.scrollTo({ left, behavior: anim ? "smooth" : "auto" }); } catch (_) { track.scrollLeft = left; }
+    /* 🛡 보장 타이머 — 무거운 첫 마운트(search.html 등)가 스무스 스크롤을 기아시켜 트랙이 목표에
+       못 닿고 멈추면, scroll 이벤트조차 안 떠 idleT 스냅도 못 걸린다(실기 desync 확증 26.9.29:
+       트렌드 active 인데 화면은 홈). 스크롤 이벤트와 무관하게 위치를 확정한다. 그 사이 새 전환
+       (progScrollUntil 갱신)이나 손가락 접촉이 있으면 손대지 않는다 — 사용자 스와이프 비가로채기. */
+    if (anim) {
+      clearTimeout(settleGuardT);
+      settleGuardT = setTimeout(function () {
+        if (progScrollUntil !== until || touching || stack.length) return;
+        const t = cur * W();
+        if (Math.abs(track.scrollLeft - t) > 2) {
+          try { track.scrollTo({ left: t, behavior: "auto" }); } catch (_) { track.scrollLeft = t; }
+          paintNav();
+        }
+      }, 760);
+    }
   }
 
   function paintNav() {
@@ -514,7 +531,17 @@
       idleT = setTimeout(() => {                      // 스크롤이 멈추면(스냅 완료) 그 판으로 정착
         const g = document.getElementById("nav-glider"); if (g) g.style.transition = "";
         const idx = Math.max(0, Math.min(TABS.length - 1, Math.round(track.scrollLeft / W())));
-        if (Date.now() < progScrollUntil) { paintNav(); return; }
+        if (Date.now() < progScrollUntil) {
+          /* 🩹 코드 이동(스무스 스크롤) 중인데 90ms 멈췄다 = search.html 등 무거운 첫 마운트가
+             스무스 스크롤을 기아시켜 트랙이 목표에 못 닿고 멈춘 것. 네비만 칠하면 '홈 화면인데
+             네비는 트렌드'로 굳는다(트렌드 첫 진입 desync, 26.9.29 사장님 제보·재현). 목표에서
+             벗어나 있으면 즉시 스냅해 뷰=네비 일치. 정상 완료면 이미 목표라 무동작. */
+          const target = cur * W();
+          if (Math.abs(track.scrollLeft - target) > 2) {
+            try { track.scrollTo({ left: target, behavior: "auto" }); } catch (_) { track.scrollLeft = target; }
+          }
+          paintNav(); return;
+        }
         /* ✋ 손가락이 안 닿았는데 판이 움직였다 = 사용자가 넘긴 게 아니다(새로고침 직후 아이폰 배치가 늦어 스크롤이 0 으로 튐 등).
            이때 탭을 바꾸면 마이에서 새로고침했는데 홈으로 튕겼다(26.9.19 사장님). 원래 자리로 되돌린다. */
         if (!touching && Date.now() - touchedAt > 1200) { if (idx !== cur) settle(false); paintNav(); return; }
@@ -525,7 +552,7 @@
     /* 넘긴 직후 판이 아직 미끄러지는 중에 손가락을 대면 폰은 그 손길을 가로 트랙에 붙인다 —
        그대로 위로 쓸면 세로 대신 옆 판으로 넘어갔다(26.9.19 사장님). 닿는 순간 판을 도착 자리에 바로 세우고
        이번 손길 동안은 가로를 잠가, 손길이 판 안 세로 스크롤로 가게 한다. 손을 떼면 풀린다. */
-    let lockedX = false, touching = false, touchedAt = 0;
+    let lockedX = false;   // touching·touchedAt 은 상위 스코프로 승격됨(settle 보장 타이머가 참조)
     track.addEventListener("touchstart", () => { touching = true; touchedAt = Date.now(); }, { passive: true, capture: true });
     const untouch = () => { touching = false; touchedAt = Date.now(); };
     track.addEventListener("touchend", untouch, { passive: true, capture: true });
