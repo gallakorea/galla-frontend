@@ -20,6 +20,7 @@
     /play\(\) request was interrupted/i,  // 오디오/비디오 재생 인터럽트(무해)
     /Transition was skipped/i,            // View Transitions API 경고(무해) — 에러 아님
     /Skipping view transition/i,          // skipTransition() 호출 시 브라우저 경고(무해)
+    /Transition was aborted/i,            // 크로스도큐먼트 @view-transition 이 뷰포트변경·이미reveal 로 중단(무해) — 화면은 정상 렌더
     /cordova\/plugin_list not found/i,    // iosrtc 로더가 cordova 준비 전 require — 무해(재시도로 붙음)
     /module cordova\/.* not found/i,      // 동상: cordova 부팅 타이밍 경고(무해)
   ];
@@ -63,11 +64,15 @@
   window.addEventListener('error', function (ev) {
     // 리소스 로드 실패(img/script 404)는 message 없음 → 스킵(별도 노이즈)
     if (!ev || !ev.message) return;
+    // 무해 노이즈(뷰전환 중단 등)는 브라우저 콘솔 출력까지 억제 — 사용자 콘솔·수집 양쪽 깨끗
+    if (noise(ev.message, ev.filename)) { try { ev.preventDefault(); } catch (_) {} return; }
     send('error', ev.message, ev.error && ev.error.stack, ev.filename, ev.lineno, ev.colno);
   });
   window.addEventListener('unhandledrejection', function (ev) {
     var r = ev && ev.reason;
     var msg = r && (r.message || r.toString && r.toString()) || 'unhandledrejection';
+    // 무해 노이즈(뷰전환 중단 등)는 콘솔 출력까지 억제
+    if (noise(msg, location.pathname)) { try { ev.preventDefault(); } catch (_) {} return; }
     send('promise', msg, r && r.stack, location.pathname);
   });
 
