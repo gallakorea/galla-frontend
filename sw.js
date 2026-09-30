@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v612';   // v612: HTML fetch 를 {cache:'reload'} 로 — 브라우저 HTTP 캐시 옛 HTML 히트 차단(유령버전 진범) / v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
+const SW_VERSION = 'galla-sw-v613';   // v613: navigation HTML 을 URL 문자열 fetch(dest=empty)로 — Sec-Fetch-Dest:document 별 옛 캐시 회피(유령버전 최종수정) / v612: HTML fetch 를 {cache:'reload'} 로 — 브라우저 HTTP 캐시 옛 HTML 히트 차단 / v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
 /* ⚠️ STATIC_CACHE 는 SW 버전과 묶지 않는다.
    예전엔 'galla-static-'+SW_VERSION 이라 SW 를 올릴 때마다 activate 에서 통째로 지워졌다.
    자원 URL 은 ?v= 로 버전돼 있어(불변) 버릴 이유가 없는데도 매 배포마다 전부 재다운로드했다
@@ -75,11 +75,20 @@ self.addEventListener('fetch', (e) => {
     //   반환하면 브라우저가 거부해 전 페이지가 죽는다. 절대 fetch(req.url)로 바꾸지 말 것.
     //   ⚠️ 2026-09-30 근본 수정: fetch(req) 는 req 의 기본 cache 모드라 브라우저 HTTP 디스크
     //   캐시의 옛 HTML 을 히트할 수 있다(navigation 요청 한정). 새 배포가 특정 브라우저에만
-    //   안 보이던 유령 버그의 진범 — reload 로 HTTP 캐시를 우회해 항상 네트워크 최신을 받는다.
-    //   {cache:'reload'} 는 req 객체를 그대로 두고 캐시 모드만 바꾸므로 위 리다이렉트 함정과 무관.
+    //   안 보이던 유령 버그의 진범.
+    //   ⚠️ 2026-09-30 추가 실측: reload 만으로도 부족했다. 브라우저는 Sec-Fetch-Dest 별로
+    //   HTML 을 따로 캐시한다(Vary). navigation 요청(req, dest=document)은 {cache:'reload'}
+    //   로도 옛 document-dest 엔트리를 받는 경우가 있는데, 같은 URL 을 URL 문자열로 새로
+    //   요청하면 dest=empty 라 그 옛 엔트리를 피해 최신을 받는다(실측 확인).
+    //   단 req.url 로 새 요청을 만들면 .html→clean URL 308 리다이렉트를 따라가 'redirected
+    //   response' 가 되어 navigation 에 반환 시 브라우저가 거부하므로, .html 로 끝나는
+    //   요청만 원본 req 로 처리(clean URL 은 리다이렉트가 없어 안전).
     e.respondWith((async () => {
       try {
-        const fresh = await fetch(req, { cache: 'reload' });
+        const dotHtml = /\.html(?:$|\?|#|$)/.test(req.url);
+        const fresh = dotHtml
+          ? await fetch(req, { cache: 'reload' })
+          : await fetch(req.url, { cache: 'reload', credentials: 'include' });
         if (fresh && fresh.ok) {
           const c = await caches.open(PAGE_CACHE);
           c.put(req, fresh.clone());
