@@ -2374,7 +2374,7 @@
       try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"plaza" })); }catch(e){}
       minimize();
       if(window.GALLA_SPA && window.GALLA_SPA.compose){ try{ window.GALLA_SPA.compose("plaza"); return; }catch(e){} }
-      nav("plaza.html?compose=1");
+      nav("search.html?tab=plaza&compose=1");
       return;
     }
     if(a.kind==="draftGallari"){

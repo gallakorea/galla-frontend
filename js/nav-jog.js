@@ -98,7 +98,7 @@
     predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
     plaza:   I('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
   };
-  const WRITE_ROUTE = { galla: 'write.html', short: 'gallari-write.html?kind=vertical', long: 'gallari-write.html?kind=horizontal', predict: 'galla-predict.html?compose=1', plaza: 'plaza.html?compose=1' };
+  const WRITE_ROUTE = { galla: 'write.html', short: 'gallari-write.html?kind=vertical', long: 'gallari-write.html?kind=horizontal', predict: 'galla-predict.html?compose=1', plaza: 'search.html?tab=plaza&compose=1' };
   const WRITE_TABS = [
     { id: 'galla', label: '갈라', icon: WRITE_ICONS.galla },
     { id: 'short', label: '숏판', icon: WRITE_ICONS.gallari },

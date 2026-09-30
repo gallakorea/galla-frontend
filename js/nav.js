@@ -615,7 +615,13 @@ document.addEventListener("DOMContentLoaded", () => {
           const cid = SNAP_SLOT[key];
           const c = cid && f.contentDocument && f.contentDocument.getElementById(cid);
           const h = localStorage.getItem("galla_snap_" + key);
-          if (c && h) c.innerHTML = h;
+          // ⚠️ 버전 가드 — 옛 스냅샷(배포 전 골격)을 미리보기에 넣으면 스와이프로 그 탭에
+          //    안착했을 때 옛 화면이 그대로 남는다(2026-09-30 광장 재편 후 '탭 누르면 옛것' 재발).
+          //    목적지 문서의 galla-ver 와 스냅샷 버전이 다르면 주입하지 않는다(snapshot.js 무효화와 동일 기준).
+          const hv = localStorage.getItem("galla_snap_" + key + ":v");
+          let tv = null;
+          try { const mm = f.contentDocument.querySelector('meta[name="galla-ver"]'); tv = mm && mm.content; } catch (_) {}
+          if (c && h && (!tv || hv === tv)) c.innerHTML = h;
         } catch (_) {}
       });
       pvFrames[key] = f;
