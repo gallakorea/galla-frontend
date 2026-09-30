@@ -60,6 +60,14 @@
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self' capacitor: ionic: http://localhost https://localhost; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://www.youtube.com; font-src 'self' data:
 
+# 🧹 캐시 강제 정리 탈출구 — 옛 버전에 갇힌 브라우저(HTTP 디스크 캐시가 no-cache 를 무시하고
+#    옛 HTML 을 navigation 에 재사용하는 상태)를 위한 경로. galla.im/flush 를 방문하면 이 응답의
+#    Clear-Site-Data 로 HTTP·SW 캐시가 통째로 비워지고, flush.html 이 최신으로 이동한다.
+#    "cache" 만 지정 — 로그인/설정(쿠키·localStorage)은 보존.
+/flush
+  Cache-Control: no-store
+  Clear-Site-Data: "cache"
+
 # 버전 감시 파일 — 셸이 폴링해 새 배포를 감지(앱 웹뷰 자동 리로드). 절대 캐시 금지.
 /version.txt
   Cache-Control: no-store
