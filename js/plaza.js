@@ -112,7 +112,25 @@ async function openPlazaWriteModal() {
   modal.classList.remove("hidden");   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
   jarvisSeedPrefill();   // 🤖 갈라비스 초안이 있으면 채움(본문 해시태그는 GALLA_collectTags가 자동 수집)
+  prefillChannelFromContext();   // 🏛 지금 보고 있는 채널을 자동 선택(draft·seed 가 안 채웠을 때만)
   exposePlazaWorkform();   // 🛠 작업 모드 브리지(갈비스 도킹 미니챗이 광장 폼을 실시간 수정)
+}
+// 🏛 진입 맥락(현재 필터 채널 또는 ?ch= 채널방)을 작성 채널로 프리필.
+//   매번 수동 선택하다 엉뚱한 채널로 발행되던 문제 방지. 기본 7종(select 옵션)만 자동 선택,
+//   레거시·유저 채널은 옵션에 없어 건드리지 않는다(유저 채널 글쓰기는 별도 단계).
+function prefillChannelFromContext() {
+  const c = document.getElementById("plaza-category");
+  if (!c || c.value) return;   // draft/seed 가 이미 채웠으면 사용자 의도 존중
+  let name = "";
+  try { name = (new URLSearchParams(location.search).get("ch") || "").trim(); } catch (_) {}
+  if (!name) {
+    const p = document.querySelector('.tab-panel[data-panel="plaza"]');
+    const active = p && p.querySelector('.plaza-categories button.active');
+    name = active ? active.textContent.trim() : "";
+  }
+  if (!name || name === "전체") return;
+  const ok = Array.prototype.some.call(c.options, function (o) { return o.value === name || o.textContent.trim() === name; });
+  if (ok) { c.value = name; try { c.dispatchEvent(new Event("change", { bubbles: true })); } catch (_) {} }
 }
 // 🛠 작업 모드 브리지 — 갈비스가 광장 초안을 알고 실시간으로 필드 수정(edit_draft → setFields)
 function exposePlazaWorkform() {
