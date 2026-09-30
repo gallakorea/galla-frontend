@@ -997,3 +997,24 @@ html, body {
   background: #14161e; border: 1px solid #232634; color: #9aa3b8; cursor: pointer; white-space: nowrap; transition: all .15s; }
 .pr-head.on { background: linear-gradient(135deg,#4361ff,#3a4fff); border-color: #3a4fff; color: #fff;
   box-shadow: 0 3px 12px rgba(58,79,255,.35); }
+
+/* 채널 카드 부가(DB) · 개설 */
+.plaza-ch-n small { display: block; font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 2px; }
+.plaza-ch-u { font-size: 9px; font-weight: 800; color: #6f86ff; background: rgba(58,79,255,.15); padding: 1px 5px; border-radius: 5px; vertical-align: middle; }
+.plaza-mkch { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; margin: 6px 0 4px;
+  border-radius: 14px; border: 1px dashed #2a2e3c; background: #14161e; color: #6f86ff; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.plaza-mkch:active { background: #1c1e26; }
+.plaza-mk-modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; animation: pcIn .2s ease; }
+.pmk-card { width: 100%; max-width: 340px; background: #14161e; border: 1px solid #232634; border-radius: 18px; padding: 20px; }
+.pmk-card h3 { margin: 0 0 14px; font-size: 17px; font-weight: 800; color: #f3f4f6; }
+.pmk-card input { width: 100%; box-sizing: border-box; background: #0c0d11; border: 1px solid #232634; border-radius: 11px; padding: 11px 13px; font-size: 13.5px; color: #f3f4f6; margin-bottom: 10px; }
+.pmk-card input::placeholder { color: #6b7280; }
+.pmk-emos { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+.pmk-emo { width: 38px; height: 38px; display: grid; place-items: center; font-size: 19px; border-radius: 11px; background: #0c0d11; border: 1px solid #232634; cursor: pointer; }
+.pmk-emo.on { border-color: #3a4fff; background: rgba(58,79,255,.15); }
+.pmk-err { color: #ff5a6e; font-size: 12px; min-height: 16px; margin: 2px 0 8px; }
+.pmk-btns { display: flex; gap: 8px; }
+.pmk-btns button { flex: 1; padding: 11px; border-radius: 12px; font-size: 14px; font-weight: 800; cursor: pointer; border: none; font-family: inherit; }
+#pmk-cancel { background: #1c1e26; color: #9aa3b8; }
+#pmk-create { background: linear-gradient(135deg,#4361ff,#3a4fff); color: #fff; }
+#pmk-create:disabled { opacity: .6; }

@@ -33,12 +33,41 @@
     "음식·맛집": "linear-gradient(135deg,#ff9a5a,#ff5a6e)", "세계·여행": "linear-gradient(135deg,#4d8dff,#6f86ff)",
     "패션·뷰티": "linear-gradient(135deg,#ff5a9a,#c15aff)", "19금": "linear-gradient(135deg,#c15aff,#8a5aff)"
   };
-  function chRow(n, i) {
-    var sub = isSub(n);
-    return '<div class="plaza-ch" data-ch="' + n + '" style="--i:' + (i || 0) + '">' +
-             '<span class="plaza-ch-av" style="background:' + (GRAD[n] || "linear-gradient(135deg,#3a4fff,#6f86ff)") + '">' + (EMO[n] || "💬") + '</span>' +
-             '<span class="plaza-ch-n">' + n + '</span>' +
-             '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + n + '">' + (sub ? "구독중" : "＋ 구독") + '</button>' +
+  var CHCACHE = null;
+  function waitForClient() {
+    return new Promise(function (res) {
+      if (window.supabaseClient) return res(window.supabaseClient);
+      var n = 0, t = setInterval(function () {
+        if (window.supabaseClient || ++n > 50) { clearInterval(t); res(window.supabaseClient || null); }
+      }, 100);
+    });
+  }
+  function loadChannels() {
+    return waitForClient().then(function (sb) {
+      if (!sb) return [];
+      return sb.from("channels")
+        .select("name,emoji,color,description,post_count,follower_count,is_default,owner_id")
+        .order("post_count", { ascending: false })
+        .then(function (r) { CHCACHE = r.data || []; return CHCACHE; });
+    });
+  }
+  function chMeta(name) {
+    var c = CHCACHE && CHCACHE.filter(function (x) { return x.name === name; })[0];
+    return {
+      emoji: (c && c.emoji) || EMO[name] || "💬",
+      color: (c && c.color) || GRAD[name] || "linear-gradient(135deg,#3a4fff,#6f86ff)",
+      posts: (c && c.post_count) || 0,
+      followers: (c && c.follower_count) || 0,
+      isDefault: c ? c.is_default : true
+    };
+  }
+  function chRowDB(ch, i) {
+    var sub = isSub(ch.name), m = chMeta(ch.name);
+    return '<div class="plaza-ch" data-ch="' + ch.name + '" style="--i:' + (i || 0) + '">' +
+             '<span class="plaza-ch-av" style="background:' + m.color + '">' + m.emoji + '</span>' +
+             '<span class="plaza-ch-n">' + ch.name + (ch.is_default ? '' : ' <span class="plaza-ch-u">유저</span>') +
+               '<small>' + (ch.description ? ch.description + ' · ' : '') + '글 ' + (ch.post_count || 0) + '</small></span>' +
+             '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + ch.name + '">' + (sub ? "구독중" : "＋ 구독") + '</button>' +
            '</div>';
   }
 
@@ -55,7 +84,8 @@
     renderRoom(p, name);
   }
   function renderRoom(p, name) {
-    var grad = GRAD[name] || "linear-gradient(135deg,#3a4fff,#6f86ff)";
+    if (!CHCACHE) { loadChannels().then(function () { renderRoom(p, name); }); return; }
+    var m = chMeta(name), grad = m.color;
     var sub = isSub(name);
     var heads = ["전체", "같이가요", "정보", "자유"].map(function (t, i) {
       return '<span class="pr-head' + (i === 0 ? " on" : "") + '">' + t + "</span>";
@@ -65,12 +95,12 @@
       '<button class="pr-back" data-room-back aria-label="뒤로">‹</button>' +
       '<div class="pr-cover" style="background:' + grad + '"></div>' +
       '<div class="pr-top">' +
-        '<span class="pr-av" style="background:' + grad + '">' + (EMO[name] || "💬") + "</span>" +
+        '<span class="pr-av" style="background:' + grad + '">' + m.emoji + "</span>" +
         '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + name + '">' + (sub ? "구독중" : "＋ 구독") + "</button>" +
       "</div>" +
       '<div class="pr-name">' + name + "</div>" +
-      '<div class="pr-meta">🌐 공개 · 팔로워 ' + (1200 + name.length * 137).toLocaleString() + " · 오늘 글 " + (12 + name.length) + "</div>" +
-      '<div class="pr-notice"><span>📢</span><span class="pr-nt">채널 공지 · 규칙 안내 (2)</span><span class="pr-na">›</span></div>' +
+      '<div class="pr-meta">🌐 공개 · 팔로워 ' + m.followers.toLocaleString() + " · 글 " + m.posts + "</div>" +
+      '<div class="pr-notice"><span>📢</span><span class="pr-nt">채널 공지 · 규칙 안내</span><span class="pr-na">›</span></div>' +
       '<div class="pr-heads">' + heads + "</div>";
     room.hidden = false;
     p.querySelector(".plaza-guide").hidden = true;
@@ -93,10 +123,13 @@
 
   function renderExplore(p) {
     var box = p.querySelector("#plaza-explore");
-    var list = channels(p);
-    box.innerHTML =
-      '<div class="plaza-csect">🔥 채널 둘러보기</div>' +
-      list.map(function (n, i) { return chRow(n, i); }).join("");
+    box.innerHTML = '<div class="plaza-csect">채널 불러오는 중…</div>';
+    loadChannels().then(function (list) {
+      box.innerHTML =
+        '<div class="plaza-mkch" data-mkch>＋ 새 채널 만들기</div>' +
+        '<div class="plaza-csect">🔥 인기 채널</div>' +
+        list.map(function (ch, i) { return chRowDB(ch, i); }).join("");
+    });
   }
   function renderMine(p) {
     var box = p.querySelector("#plaza-mine");
@@ -105,7 +138,77 @@
       box.innerHTML = '<div class="plaza-cempty">아직 구독한 채널이 없어요.<br><b>탐색</b>에서 관심 채널을 구독해 보세요.</div>';
       return;
     }
-    box.innerHTML = '<div class="plaza-csect">내 채널</div>' + subs.map(function (n, i) { return chRow(n, i); }).join("");
+    box.innerHTML = '<div class="plaza-csect">불러오는 중…</div>';
+    loadChannels().then(function (list) {
+      var mine = list.filter(function (ch) { return subs.indexOf(ch.name) >= 0; });
+      box.innerHTML = '<div class="plaza-csect">내 채널</div>' + mine.map(function (ch, i) { return chRowDB(ch, i); }).join("");
+    });
+  }
+  // ── 채널 개설 ──
+  function openMkForm(p) {
+    waitForClient().then(function (sb) {
+      if (!sb) return;
+      sb.auth.getSession().then(function (res) {
+        if (!res.data || !res.data.session) {
+          if (window.GALLA_needLogin) GALLA_needLogin("채널을 만들려면 로그인이 필요해요.");
+          return;
+        }
+        showMkModal(p, res.data.session.user.id);
+      });
+    });
+  }
+  function showMkModal(p, uid) {
+    var m = document.createElement("div");
+    m.className = "plaza-mk-modal";
+    m.innerHTML =
+      '<div class="pmk-card">' +
+        '<h3>새 채널 만들기</h3>' +
+        '<input id="pmk-name" placeholder="채널 이름 (예: 자취 요리)" maxlength="20" autocomplete="off">' +
+        '<input id="pmk-desc" placeholder="한 줄 소개 (선택)" maxlength="60" autocomplete="off">' +
+        '<div class="pmk-emos" id="pmk-emos"></div>' +
+        '<div class="pmk-err" id="pmk-err"></div>' +
+        '<div class="pmk-btns"><button type="button" id="pmk-cancel">취소</button><button type="button" id="pmk-create">만들기</button></div>' +
+      '</div>';
+    document.body.appendChild(m);
+    var EMOS = ["💬", "🍜", "✈️", "🎮", "⚽", "🎬", "📈", "🐶", "🎨", "📚", "💪", "🚗", "🎵", "📷"];
+    var pick = "💬";
+    m.querySelector("#pmk-emos").innerHTML = EMOS.map(function (e) {
+      return '<span class="pmk-emo' + (e === pick ? " on" : "") + '" data-emo="' + e + '">' + e + "</span>";
+    }).join("");
+    m.querySelector("#pmk-emos").addEventListener("click", function (e) {
+      var s = e.target.closest("[data-emo]"); if (!s) return;
+      pick = s.dataset.emo;
+      m.querySelectorAll(".pmk-emo").forEach(function (x) { x.classList.toggle("on", x.dataset.emo === pick); });
+    });
+    m.querySelector("#pmk-cancel").onclick = function () { m.remove(); };
+    m.addEventListener("click", function (e) { if (e.target === m) m.remove(); });
+    m.querySelector("#pmk-create").onclick = function () { createChannel(p, m, uid, function () { return pick; }); };
+  }
+  var GRADS_POOL = [
+    "linear-gradient(135deg,#6f86ff,#4361ff)", "linear-gradient(135deg,#ff9a5a,#ff5a6e)",
+    "linear-gradient(135deg,#2fd07a,#1f9d5e)", "linear-gradient(135deg,#8a5aff,#5a6bff)",
+    "linear-gradient(135deg,#ff5a9a,#c15aff)", "linear-gradient(135deg,#4d8dff,#6f86ff)"
+  ];
+  function createChannel(p, m, uid, getEmo) {
+    var name = m.querySelector("#pmk-name").value.trim();
+    var desc = m.querySelector("#pmk-desc").value.trim();
+    var err = m.querySelector("#pmk-err");
+    if (name.length < 2) { err.textContent = "채널 이름을 2자 이상 입력해요."; return; }
+    var btn = m.querySelector("#pmk-create"); btn.disabled = true; btn.textContent = "만드는 중…";
+    var color = GRADS_POOL[Math.floor(Math.random() * GRADS_POOL.length)];
+    waitForClient().then(function (sb) {
+      sb.from("channels").insert({ name: name, description: desc, emoji: getEmo(), color: color, owner_id: uid })
+        .select().single().then(function (r) {
+          if (r.error) {
+            btn.disabled = false; btn.textContent = "만들기";
+            err.textContent = /duplicate|unique/i.test(r.error.message || "") ? "이미 있는 채널 이름이에요." : "만들기 실패 — " + (r.error.message || "");
+            return;
+          }
+          m.remove();
+          CHCACHE = null;
+          renderRoom(p, name);
+        });
+    });
   }
 
   function showSeg(p, s) {
@@ -144,6 +247,7 @@
       var box = p.querySelector(sel);
       if (!box) return;
       box.addEventListener("click", function (e) {
+        if (e.target.closest("[data-mkch]")) { openMkForm(p); return; }
         var sb = e.target.closest("[data-sub]");
         if (sb) {
           var on = toggleSub(sb.dataset.sub);
