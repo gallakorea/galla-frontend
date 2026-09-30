@@ -88,6 +88,8 @@
     p.querySelector("#plaza-mine").hidden = true;
     p.querySelector("#plaza-list").hidden = false;
     clickCat(p, name);
+    // ?ch= 딥링크는 광장 부팅 fetch(전체)와 경합할 수 있다 — 잠시 뒤 채널 필터를 다시 건다
+    setTimeout(function () { var r = p.querySelector("#plaza-room"); if (r && !r.hidden) clickCat(p, name); }, 700);
   }
   function exitRoom(p) {
     p.querySelector("#plaza-room").hidden = true;
@@ -172,6 +174,11 @@
     });
 
     showSeg(p, "feed");
+    // 홈 서랍 등에서 ?ch=<채널> 로 들어오면 그 채널방을 바로 연다
+    try {
+      var ch = new URLSearchParams(location.search).get("ch");
+      if (ch) { CAMEFROM = "explore"; renderRoom(p, ch); }
+    } catch (_) {}
   }
 
   // 즉시 시도 + DOM 준비/SPA 재주입 대비

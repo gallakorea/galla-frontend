@@ -1095,3 +1095,21 @@ body.shorts-open .header { display: none !important; }
 .card-footer .pv-score { min-width: 18px; font-size: 13px; font-weight: 700; color: #d6dae2; }
 .more-btn { width: 40px; height: 40px; background: none; border: 0; border-radius: 10px; }
 .more-btn svg { width: 22px; height: 22px; }
+
+/* ☰ 채널 서랍(즐겨찾기+카테고리) — js/plaza-drawer.js */
+.hdr-group.hdr-right { justify-content: flex-end; }
+.chd-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 1200; }
+.chd-backdrop.on { opacity: 1; pointer-events: auto; }
+.chd { position: fixed; top: 0; bottom: 0; left: 0; width: 80%; max-width: 320px; background: #0c0d11;
+  border-right: 1px solid rgba(255,255,255,.12); transform: translateX(-103%);
+  transition: transform .26s cubic-bezier(.4,0,.2,1); z-index: 1201; display: flex; flex-direction: column;
+  box-shadow: 14px 0 44px rgba(0,0,0,.55); padding-top: env(safe-area-inset-top, 0px); }
+.chd.on { transform: translateX(0); }
+.chd-top { padding: 18px 18px 8px; font-size: 17px; font-weight: 800; color: #f3f4f6; }
+.chd-scroll { flex: 1; overflow-y: auto; padding: 4px 10px 24px; scrollbar-width: none; }
+.chd-scroll::-webkit-scrollbar { display: none; }
+.chd-sect { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; color: #6b7280; padding: 14px 8px 6px; }
+.chd-ch { display: flex; align-items: center; gap: 12px; padding: 9px 8px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.chd-ch:hover { background: #14151a; } .chd-ch:active { background: #1c1e26; }
+.chd-av { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; flex: 0 0 auto; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+.chd-n { flex: 1; font-size: 14px; font-weight: 600; color: #f3f4f6; }
