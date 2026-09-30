@@ -41,6 +41,18 @@
       for (var j = 0; j < keys.length; j++) { try { await caches.delete(keys[j]); } catch (e) {} }
     }
   } catch (e) {}
+  // 화면 스냅샷(빠른 탭 전환용 저장 화면)도 정리한다 — 옛 골격 스냅샷이 남아 새 화면을
+  //   덮는 것을 막는다. 로그인/설정 키(sb-*·supabase·galla_nav 등)는 건드리지 않는다.
+  try {
+    var rm = [];
+    for (var k = 0; k < localStorage.length; k++) { var key = localStorage.key(k); if (key && /snap/i.test(key)) rm.push(key); }
+    rm.forEach(function (key) { try { localStorage.removeItem(key); } catch (e) {} });
+  } catch (e) {}
+  try {
+    var rs = [];
+    for (var s = 0; s < sessionStorage.length; s++) { var sk = sessionStorage.key(s); if (sk && /snap/i.test(sk)) rs.push(sk); }
+    rs.forEach(function (sk) { try { sessionStorage.removeItem(sk); } catch (e) {} });
+  } catch (e) {}
   var to = '/search?tab=plaza';
   try {
     var q = new URLSearchParams(location.search).get('to');

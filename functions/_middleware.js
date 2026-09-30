@@ -351,7 +351,7 @@ function breadcrumbLd(seo) {
   const SEC = {
     "/issue": ["갈라 이슈", `${HOST}/`],
     "/news": ["갈라뉴스", `${HOST}/search.html`],
-    "/plaza_detail": ["갈라 광장", `${HOST}/plaza.html`],
+    "/plaza_detail": ["갈라 광장", `${HOST}/search.html?tab=plaza`],
     "/predict-market": ["갈라예측", `${HOST}/galla-predict.html`],
     "/gallari-post": ["갈라리", `${HOST}/gallari.html`],
   };
