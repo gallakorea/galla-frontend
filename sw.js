@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v611';   // v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
+const SW_VERSION = 'galla-sw-v612';   // v612: HTML fetch 를 {cache:'reload'} 로 — 브라우저 HTTP 캐시 옛 HTML 히트 차단(유령버전 진범) / v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
 /* ⚠️ STATIC_CACHE 는 SW 버전과 묶지 않는다.
    예전엔 'galla-static-'+SW_VERSION 이라 SW 를 올릴 때마다 activate 에서 통째로 지워졌다.
    자원 URL 은 ?v= 로 버전돼 있어(불변) 버릴 이유가 없는데도 매 배포마다 전부 재다운로드했다
@@ -73,10 +73,13 @@ self.addEventListener('fetch', (e) => {
     // HTML: network-first → 캐시 → offline. (원본 req 그대로 — ⚠️ req.url로 새 요청을 만들면
     //   .html→clean URL 308 리다이렉트를 따라가 'redirected response'가 되고, 그걸 내비게이션에
     //   반환하면 브라우저가 거부해 전 페이지가 죽는다. 절대 fetch(req.url)로 바꾸지 말 것.
-    //   CF의 내비게이션-전용 옛 HTML 캐시 문제는 js/plaza.js의 ensurePlazaPanel 자가치유가 처리한다.)
+    //   ⚠️ 2026-09-30 근본 수정: fetch(req) 는 req 의 기본 cache 모드라 브라우저 HTTP 디스크
+    //   캐시의 옛 HTML 을 히트할 수 있다(navigation 요청 한정). 새 배포가 특정 브라우저에만
+    //   안 보이던 유령 버그의 진범 — reload 로 HTTP 캐시를 우회해 항상 네트워크 최신을 받는다.
+    //   {cache:'reload'} 는 req 객체를 그대로 두고 캐시 모드만 바꾸므로 위 리다이렉트 함정과 무관.
     e.respondWith((async () => {
       try {
-        const fresh = await fetch(req);
+        const fresh = await fetch(req, { cache: 'reload' });
         if (fresh && fresh.ok) {
           const c = await caches.open(PAGE_CACHE);
           c.put(req, fresh.clone());
