@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v613';   // v613: navigation HTML 을 URL 문자열 fetch(dest=empty)로 — Sec-Fetch-Dest:document 별 옛 캐시 회피(유령버전 최종수정) / v612: HTML fetch 를 {cache:'reload'} 로 — 브라우저 HTTP 캐시 옛 HTML 히트 차단 / v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
+const SW_VERSION = 'galla-sw-v614';   // v614: navigation HTML 에 1회용 캐시버스터 쿼리 — no-cache 무시하는 오염 브라우저 캐시도 강제 우회(유령버전 최종수정) / v613: URL 문자열 fetch(dest=empty) / v612: HTML fetch 를 {cache:'reload'} 로 — 브라우저 HTTP 캐시 옛 HTML 히트 차단 / v611: /ops(관제 앱) 가로채지 않음   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
 /* ⚠️ STATIC_CACHE 는 SW 버전과 묶지 않는다.
    예전엔 'galla-static-'+SW_VERSION 이라 SW 를 올릴 때마다 activate 에서 통째로 지워졌다.
    자원 URL 은 ?v= 로 버전돼 있어(불변) 버릴 이유가 없는데도 매 배포마다 전부 재다운로드했다
@@ -78,17 +78,20 @@ self.addEventListener('fetch', (e) => {
     //   안 보이던 유령 버그의 진범.
     //   ⚠️ 2026-09-30 추가 실측: reload 만으로도 부족했다. 브라우저는 Sec-Fetch-Dest 별로
     //   HTML 을 따로 캐시한다(Vary). navigation 요청(req, dest=document)은 {cache:'reload'}
-    //   로도 옛 document-dest 엔트리를 받는 경우가 있는데, 같은 URL 을 URL 문자열로 새로
-    //   요청하면 dest=empty 라 그 옛 엔트리를 피해 최신을 받는다(실측 확인).
+    //   로도, URL 문자열 fetch(dest=empty)로도 옛 엔트리를 받는 경우가 있었다(이 브라우저는
+    //   HTTP 캐시가 no-cache 를 무시하고 navigation 버킷에 옛 HTML 을 고착 — 2026-09-30 실측).
+    //   ⚠️ 최종수정: URL 에 1회용 캐시버스터 쿼리를 붙여 캐시 키 자체를 매번 바꾼다 →
+    //   어떤 캐시 버킷도 히트 불가 → 항상 오리진 최신. HTML 은 원래 no-cache 라 손해 없다.
     //   단 req.url 로 새 요청을 만들면 .html→clean URL 308 리다이렉트를 따라가 'redirected
     //   response' 가 되어 navigation 에 반환 시 브라우저가 거부하므로, .html 로 끝나는
     //   요청만 원본 req 로 처리(clean URL 은 리다이렉트가 없어 안전).
     e.respondWith((async () => {
       try {
         const dotHtml = /\.html(?:$|\?|#|$)/.test(req.url);
+        const bust = req.url + (req.url.includes('?') ? '&' : '?') + '__sw=' + Date.now();
         const fresh = dotHtml
           ? await fetch(req, { cache: 'reload' })
-          : await fetch(req.url, { cache: 'reload', credentials: 'include' });
+          : await fetch(bust, { cache: 'reload', credentials: 'include' });
         if (fresh && fresh.ok) {
           const c = await caches.open(PAGE_CACHE);
           c.put(req, fresh.clone());
