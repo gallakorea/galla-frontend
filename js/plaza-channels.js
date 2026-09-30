@@ -49,14 +49,51 @@
            '</div>';
   }
 
-  function goChannel(p, name) {
-    showSeg(p, "feed");
+  var CAMEFROM = "explore";
+  function clickCat(p, name) {
     var btns = p.querySelectorAll(".plaza-categories button"), i;
     for (i = 0; i < btns.length; i++) {
       if (btns[i].textContent.trim() === name) { btns[i].click(); break; }
     }
-    var sc = p.querySelector(".plaza-cview, #plaza-list");
-    if (sc && sc.scrollIntoView) { /* 목록 상단 유지 */ }
+  }
+  function goChannel(p, name) {
+    var a = p.querySelector("#plaza-seg button.active");
+    CAMEFROM = (a && a.dataset.pseg) || "explore";
+    renderRoom(p, name);
+  }
+  function renderRoom(p, name) {
+    var grad = GRAD[name] || "linear-gradient(135deg,#3a4fff,#6f86ff)";
+    var sub = isSub(name);
+    var heads = ["전체", "같이가요", "정보", "자유"].map(function (t, i) {
+      return '<span class="pr-head' + (i === 0 ? " on" : "") + '">' + t + "</span>";
+    }).join("");
+    var room = p.querySelector("#plaza-room");
+    room.innerHTML =
+      '<button class="pr-back" data-room-back aria-label="뒤로">‹</button>' +
+      '<div class="pr-cover" style="background:' + grad + '"></div>' +
+      '<div class="pr-top">' +
+        '<span class="pr-av" style="background:' + grad + '">' + (EMO[name] || "💬") + "</span>" +
+        '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + name + '">' + (sub ? "구독중" : "＋ 구독") + "</button>" +
+      "</div>" +
+      '<div class="pr-name">' + name + "</div>" +
+      '<div class="pr-meta">🌐 공개 · 팔로워 ' + (1200 + name.length * 137).toLocaleString() + " · 오늘 글 " + (12 + name.length) + "</div>" +
+      '<div class="pr-notice"><span>📢</span><span class="pr-nt">채널 공지 · 규칙 안내 (2)</span><span class="pr-na">›</span></div>' +
+      '<div class="pr-heads">' + heads + "</div>";
+    room.hidden = false;
+    p.querySelector(".plaza-guide").hidden = true;
+    p.querySelector("#plaza-seg").hidden = true;
+    p.querySelector(".plaza-categories").hidden = true;
+    p.querySelector(".plaza-toolbar").hidden = true;
+    p.querySelector("#plaza-explore").hidden = true;
+    p.querySelector("#plaza-mine").hidden = true;
+    p.querySelector("#plaza-list").hidden = false;
+    clickCat(p, name);
+  }
+  function exitRoom(p) {
+    p.querySelector("#plaza-room").hidden = true;
+    p.querySelector(".plaza-guide").hidden = false;
+    p.querySelector("#plaza-seg").hidden = false;
+    showSeg(p, CAMEFROM);
   }
 
   function renderExplore(p) {
@@ -77,6 +114,8 @@
   }
 
   function showSeg(p, s) {
+    var room = p.querySelector("#plaza-room"); if (room) room.hidden = true;
+    var guide = p.querySelector(".plaza-guide"); if (guide) guide.hidden = false;
     p.querySelectorAll("#plaza-seg button").forEach(function (b) {
       b.classList.toggle("active", b.dataset.pseg === s);
     });
@@ -121,6 +160,15 @@
         var ch = e.target.closest("[data-ch]");
         if (ch) goChannel(p, ch.dataset.ch);
       });
+    });
+
+    var room = p.querySelector("#plaza-room");
+    if (room) room.addEventListener("click", function (e) {
+      if (e.target.closest("[data-room-back]")) { exitRoom(p); return; }
+      var sb = e.target.closest("[data-sub]");
+      if (sb) { var on = toggleSub(sb.dataset.sub); sb.classList.toggle("on", on); sb.textContent = on ? "구독중" : "＋ 구독"; return; }
+      var h = e.target.closest(".pr-head");
+      if (h) { room.querySelectorAll(".pr-head").forEach(function (x) { x.classList.remove("on"); }); h.classList.add("on"); }
     });
 
     showSeg(p, "feed");
