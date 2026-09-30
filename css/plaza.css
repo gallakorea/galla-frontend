@@ -1018,3 +1018,21 @@ html, body {
 #pmk-cancel { background: #1c1e26; color: #9aa3b8; }
 #pmk-create { background: linear-gradient(135deg,#4361ff,#3a4fff); color: #fff; }
 #pmk-create:disabled { opacity: .6; }
+
+/* ✏️ 광장 드래그 FAB (js/plaza-fab.js) — 반투명·꾹눌러 이동·엣지 스냅. 갈비스 오브 위 기본 배치. */
+.plaza-fab {
+  position: fixed; z-index: 900; width: 52px; height: 52px; border-radius: 50%;
+  border: 0; cursor: grab; color: #fff;
+  background: rgba(111,134,255,.85);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+  touch-action: none;
+  transition: transform .12s, box-shadow .12s, opacity .12s;
+}
+.plaza-fab[hidden] { display: none; }
+.plaza-fab.grab { cursor: grabbing; }
+.plaza-fab.dragging { transform: scale(1.12); box-shadow: 0 10px 26px rgba(0,0,0,.55); opacity: .92; }
+.plaza-fab svg { width: 24px; height: 24px; }
+.plaza-fab:active { transform: scale(.96); }
+.plaza-fab.dragging:active { transform: scale(1.12); }
