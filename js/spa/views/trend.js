@@ -40,6 +40,7 @@ const SCRIPTS = [
   { src: "/js/galla-channels.js" },     // 🏛 광장 채널 단일 소스(이름·이모지·색) — plaza-channels 보다 먼저
   { src: "/js/plaza-channels.js" },     // 광장 세그먼트(피드/탐색/내채널)·채널 구독(비-module)
   { src: "/js/plaza-fab.js" },          // ✏️ 광장 드래그 FAB(탭=글쓰기·꾹=이동·엣지스냅)
+  { src: "/js/plaza-mod.js" },          // ⚙️ 채널 운영자 관리(조정큐·공지·기록)
   // ⚠️ composer-page.js 제거 — SPA 광장 작성은 라우터 DOM-이동 스택 뷰라 불필요(마운트 실패 지점만 늘림). 웹은 search.html이 직접 로드.
   { src: "/js/trend-tab-order.js" },    // 저장된 서브탭 순서 복원(+편집 시트)
   { src: "/js/trend-guide.js" },        // 상단 안내 배너

@@ -6,6 +6,7 @@
 (function () {
   var SUB_KEY = "galla_plaza_channels";
   // 채널 이모지·색은 js/galla-channels.js(GALLA_CHANNELS) 단일 소스에서 온다.
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
   function chEmoji(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.emoji(n)) || "💬"; }
   function chColor(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.color(n)) || "linear-gradient(135deg,#3a4fff,#6f86ff)"; }
 
@@ -80,7 +81,7 @@
     return waitForClient().then(function (sb) {
       if (!sb) return [];
       return sb.from("channels")
-        .select("id,name,emoji,color,description,post_count,follower_count,is_default,owner_id")
+        .select("id,name,emoji,color,description,post_count,follower_count,is_default,owner_id,notice")
         .order("post_count", { ascending: false })
         .then(function (r) { CHCACHE = r.data || []; return CHCACHE; });
     });
@@ -92,7 +93,9 @@
       color: (c && c.color) || chColor(name),
       posts: (c && c.post_count) || 0,
       followers: (c && c.follower_count) || 0,
-      isDefault: c ? c.is_default : true
+      isDefault: c ? c.is_default : true,
+      id: c && c.id,
+      notice: (c && c.notice) || ""
     };
   }
   function chRowDB(ch, i) {
@@ -130,11 +133,14 @@
       '<div class="pr-cover" style="background:' + grad + '"></div>' +
       '<div class="pr-top">' +
         '<span class="pr-av" style="background:' + grad + '">' + m.emoji + "</span>" +
-        '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + name + '">' + (sub ? "구독중" : "＋ 구독") + "</button>" +
+        '<div class="pr-top-acts">' +
+          '<button class="pr-mod" data-mod hidden aria-label="채널 관리"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1.1-1.5V3a2 2 0 0 1 4 0v.1A1.6 1.6 0 0 0 15 4.6a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1.1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></button>' +
+          '<button class="plaza-ch-sub' + (sub ? " on" : "") + '" data-sub="' + esc(name) + '">' + (sub ? "구독중" : "＋ 구독") + "</button>" +
+        '</div>' +
       "</div>" +
-      '<div class="pr-name">' + name + "</div>" +
+      '<div class="pr-name">' + esc(name) + "</div>" +
       '<div class="pr-meta">🌐 공개 · 팔로워 ' + m.followers.toLocaleString() + " · 글 " + m.posts + "</div>" +
-      '<div class="pr-notice"><span>📢</span><span class="pr-nt">채널 공지 · 규칙 안내</span><span class="pr-na">›</span></div>' +
+      '<div class="pr-notice"' + (m.notice ? '' : ' hidden') + '><span>📢</span><span class="pr-nt">' + esc(m.notice || "") + '</span></div>' +
       '<div class="pr-heads">' + heads + "</div>";
     room.hidden = false;
     p.querySelector(".plaza-guide").hidden = true;
@@ -144,6 +150,13 @@
     p.querySelector("#plaza-explore").hidden = true;
     p.querySelector("#plaza-mine").hidden = true;
     p.querySelector("#plaza-list").hidden = false;
+    // ⚙️ 운영자면 채널 관리 버튼 노출(서버 권한 확인)
+    var mb = room.querySelector('[data-mod]');
+    if (mb && m.id && window.GALLA_channelIsMod) {
+      window.GALLA_channelIsMod(m.id).then(function (ok) {
+        if (ok) { mb.hidden = false; mb.onclick = function () { if (window.GALLA_openModPanel) GALLA_openModPanel({ id: m.id, name: name }); }; }
+      });
+    }
     clickCat(p, name);
     // ?ch= 딥링크는 광장 부팅 fetch(전체)와 경합할 수 있다 — 잠시 뒤 채널 필터를 다시 건다
     setTimeout(function () { var r = p.querySelector("#plaza-room"); if (r && !r.hidden) clickCat(p, name); }, 700);
