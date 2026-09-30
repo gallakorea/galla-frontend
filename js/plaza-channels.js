@@ -6,11 +6,9 @@
 (function () {
   var SUB_KEY = "galla_plaza_channels";
   var EMO = {
-    "정치": "🗳️", "사회": "🏛️", "경제": "📈", "투자": "💰", "직장": "🏢",
-    "커리어·이직": "🧭", "연애": "💘", "결혼·육아": "👶", "인간관계": "🤝",
-    "일상": "☕", "패션·뷰티": "💄", "엔터": "🎬", "스포츠": "⚽",
-    "여행": "✈️", "맛집": "🍜", "가치·논쟁": "⚖️", "불만·푸념": "😤",
-    "19금": "🔞", "기타": "📌"
+    "자유·수다": "💬", "정치·사회": "🗳️", "경제·투자": "📈", "직장·경력": "🏢",
+    "연애·결혼": "💘", "엔터·스포츠": "🎬", "음식·맛집": "🍜", "세계·여행": "✈️",
+    "패션·뷰티": "💄", "19금": "🔞"
   };
 
   function panel() { return document.querySelector('.tab-panel[data-panel="plaza"]'); }
@@ -29,16 +27,11 @@
     }).filter(function (n) { return n && n !== "전체"; });
   }
   var GRAD = {
-    "정치": "linear-gradient(135deg,#8a5aff,#5a6bff)", "사회": "linear-gradient(135deg,#6f86ff,#4361ff)",
-    "경제": "linear-gradient(135deg,#2fd07a,#1f9d5e)", "투자": "linear-gradient(135deg,#ffcf5a,#ff9a5a)",
-    "직장": "linear-gradient(135deg,#5ab0ff,#4361ff)", "커리어·이직": "linear-gradient(135deg,#4d8dff,#6f86ff)",
-    "연애": "linear-gradient(135deg,#ff5a9a,#ff5a6e)", "결혼·육아": "linear-gradient(135deg,#ff8a5a,#ff5a9a)",
-    "인간관계": "linear-gradient(135deg,#36c2a0,#2fd07a)", "일상": "linear-gradient(135deg,#a4abb8,#6b7280)",
-    "패션·뷰티": "linear-gradient(135deg,#ff5a9a,#c15aff)", "엔터": "linear-gradient(135deg,#ffcf5a,#ff9a5a)",
-    "스포츠": "linear-gradient(135deg,#2fd07a,#36c2a0)", "여행": "linear-gradient(135deg,#4d8dff,#6f86ff)",
-    "맛집": "linear-gradient(135deg,#ff9a5a,#ff5a6e)", "가치·논쟁": "linear-gradient(135deg,#8a5aff,#5a6bff)",
-    "불만·푸념": "linear-gradient(135deg,#ff5a6e,#c14a4a)", "19금": "linear-gradient(135deg,#c15aff,#8a5aff)",
-    "기타": "linear-gradient(135deg,#6b7280,#4b5563)"
+    "자유·수다": "linear-gradient(135deg,#6f86ff,#4361ff)", "정치·사회": "linear-gradient(135deg,#8a5aff,#5a6bff)",
+    "경제·투자": "linear-gradient(135deg,#2fd07a,#1f9d5e)", "직장·경력": "linear-gradient(135deg,#5ab0ff,#4361ff)",
+    "연애·결혼": "linear-gradient(135deg,#ff5a9a,#ff5a6e)", "엔터·스포츠": "linear-gradient(135deg,#ffcf5a,#ff9a5a)",
+    "음식·맛집": "linear-gradient(135deg,#ff9a5a,#ff5a6e)", "세계·여행": "linear-gradient(135deg,#4d8dff,#6f86ff)",
+    "패션·뷰티": "linear-gradient(135deg,#ff5a9a,#c15aff)", "19금": "linear-gradient(135deg,#c15aff,#8a5aff)"
   };
   function chRow(n, i) {
     var sub = isSub(n);
