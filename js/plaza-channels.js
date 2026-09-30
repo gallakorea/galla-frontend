@@ -5,11 +5,9 @@
    SPA 재주입 대비: data-pcbound 가드로 중복 바인딩 방지, 요소 없으면 조용히 skip. */
 (function () {
   var SUB_KEY = "galla_plaza_channels";
-  var EMO = {
-    "자유·수다": "💬", "정치·사회": "🗳️", "경제·투자": "📈", "직장·경력": "🏢",
-    "연애·결혼": "💘", "엔터·스포츠": "🎬", "음식·맛집": "🍜", "세계·여행": "✈️",
-    "패션·뷰티": "💄", "19금": "🔞"
-  };
+  // 채널 이모지·색은 js/galla-channels.js(GALLA_CHANNELS) 단일 소스에서 온다.
+  function chEmoji(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.emoji(n)) || "💬"; }
+  function chColor(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.color(n)) || "linear-gradient(135deg,#3a4fff,#6f86ff)"; }
 
   function panel() { return document.querySelector('.tab-panel[data-panel="plaza"]'); }
   function getSubs() { try { return JSON.parse(localStorage.getItem(SUB_KEY) || "[]"); } catch (_) { return []; } }
@@ -41,13 +39,6 @@
       return b.textContent.trim();
     }).filter(function (n) { return n && n !== "전체"; });
   }
-  var GRAD = {
-    "자유·수다": "linear-gradient(135deg,#6f86ff,#4361ff)", "정치·사회": "linear-gradient(135deg,#8a5aff,#5a6bff)",
-    "경제·투자": "linear-gradient(135deg,#2fd07a,#1f9d5e)", "직장·경력": "linear-gradient(135deg,#5ab0ff,#4361ff)",
-    "연애·결혼": "linear-gradient(135deg,#ff5a9a,#ff5a6e)", "엔터·스포츠": "linear-gradient(135deg,#ffcf5a,#ff9a5a)",
-    "음식·맛집": "linear-gradient(135deg,#ff9a5a,#ff5a6e)", "세계·여행": "linear-gradient(135deg,#4d8dff,#6f86ff)",
-    "패션·뷰티": "linear-gradient(135deg,#ff5a9a,#c15aff)", "19금": "linear-gradient(135deg,#c15aff,#8a5aff)"
-  };
   var CHCACHE = null;
   function waitForClient() {
     return new Promise(function (res) {
@@ -69,8 +60,8 @@
   function chMeta(name) {
     var c = CHCACHE && CHCACHE.filter(function (x) { return x.name === name; })[0];
     return {
-      emoji: (c && c.emoji) || EMO[name] || "💬",
-      color: (c && c.color) || GRAD[name] || "linear-gradient(135deg,#3a4fff,#6f86ff)",
+      emoji: (c && c.emoji) || chEmoji(name),
+      color: (c && c.color) || chColor(name),
       posts: (c && c.post_count) || 0,
       followers: (c && c.follower_count) || 0,
       isDefault: c ? c.is_default : true

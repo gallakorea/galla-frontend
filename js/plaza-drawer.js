@@ -3,33 +3,23 @@
    홈(index.html) 전용. MPA/SPA 양쪽: index.html <script> + SPA 홈 뷰에서 로드. */
 (function () {
   var SUB_KEY = "galla_plaza_channels";
-  var EMO = {
-    "자유·수다": "💬", "정치·사회": "🗳️", "경제·투자": "📈", "직장·경력": "🏢",
-    "연애·결혼": "💘", "엔터·스포츠": "🎬", "음식·맛집": "🍜", "세계·여행": "✈️",
-    "패션·뷰티": "💄", "19금": "🔞"
-  };
-  var GRAD = {
-    "자유·수다": "linear-gradient(135deg,#6f86ff,#4361ff)", "정치·사회": "linear-gradient(135deg,#8a5aff,#5a6bff)",
-    "경제·투자": "linear-gradient(135deg,#2fd07a,#1f9d5e)", "직장·경력": "linear-gradient(135deg,#5ab0ff,#4361ff)",
-    "연애·결혼": "linear-gradient(135deg,#ff5a9a,#ff5a6e)", "엔터·스포츠": "linear-gradient(135deg,#ffcf5a,#ff9a5a)",
-    "음식·맛집": "linear-gradient(135deg,#ff9a5a,#ff5a6e)", "세계·여행": "linear-gradient(135deg,#4d8dff,#6f86ff)",
-    "패션·뷰티": "linear-gradient(135deg,#ff5a9a,#c15aff)", "19금": "linear-gradient(135deg,#c15aff,#8a5aff)"
-  };
-  var CATS = ["자유·수다", "정치·사회", "경제·투자", "직장·경력", "연애·결혼",
-    "엔터·스포츠", "음식·맛집", "세계·여행", "패션·뷰티", "19금"];
+  // 채널명·이모지·색은 js/galla-channels.js(GALLA_CHANNELS) 단일 소스에서 온다(기본 7종).
+  function cats() { return (window.GALLA_CHANNELS && GALLA_CHANNELS.names()) || []; }
+  function emo(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.emoji(n)) || "💬"; }
+  function grd(n) { return (window.GALLA_CHANNELS && GALLA_CHANNELS.color(n)) || "linear-gradient(135deg,#3a4fff,#6f86ff)"; }
 
   function getSubs() { try { return JSON.parse(localStorage.getItem(SUB_KEY) || "[]"); } catch (_) { return []; } }
   function row(n) {
     return '<div class="chd-ch" data-ch="' + n + '">' +
-             '<span class="chd-av" style="background:' + (GRAD[n] || "linear-gradient(135deg,#3a4fff,#6f86ff)") + '">' + (EMO[n] || "💬") + "</span>" +
+             '<span class="chd-av" style="background:' + grd(n) + '">' + emo(n) + "</span>" +
              '<span class="chd-n">' + n + "</span></div>";
   }
   function render() {
     var body = document.getElementById("chdBody");
     if (!body) return;
-    var subs = getSubs().filter(function (n) { return CATS.indexOf(n) >= 0 || n; });
+    var subs = getSubs().filter(function (n) { return n; });   // 즐겨찾기(구독)는 유저 채널 포함 전부
     var fav = subs.length ? '<div class="chd-sect">⭐ 즐겨찾기</div>' + subs.map(row).join("") : "";
-    body.innerHTML = fav + '<div class="chd-sect">카테고리</div>' + CATS.map(row).join("");
+    body.innerHTML = fav + '<div class="chd-sect">카테고리</div>' + cats().map(row).join("");
   }
   function open() {
     render();

@@ -36,6 +36,7 @@ const SCRIPTS = [
   { src: "/js/search.js" },             // 코어 — GALLA_PAGE_TREND 노출
   { src: "/js/hot-videos.js" },         // 핫튜브(즉시 bind — 이중 모드 처리됨)
   { src: "/js/plaza.js", module: true },// 광장 피드·글쓰기 엔진(원본도 module)
+  { src: "/js/galla-channels.js" },     // 🏛 광장 채널 단일 소스(이름·이모지·색) — plaza-channels 보다 먼저
   { src: "/js/plaza-channels.js" },     // 광장 세그먼트(피드/탐색/내채널)·채널 구독(비-module)
   // ⚠️ composer-page.js 제거 — SPA 광장 작성은 라우터 DOM-이동 스택 뷰라 불필요(마운트 실패 지점만 늘림). 웹은 search.html이 직접 로드.
   { src: "/js/trend-tab-order.js" },    // 저장된 서브탭 순서 복원(+편집 시트)

@@ -27,6 +27,7 @@ const CLASSIC = [
   "/js/ghost.js",           // GALLA_userMap/userBadge(카드 작성자 배지)
   "/js/follow.js",          // 카드 팔로우 버튼
   "/js/owner-actions.js",   // ⋯ 메뉴·카테고리
+  "/js/galla-channels.js",  // 🏛 광장 채널 단일 소스 — plaza-drawer 보다 먼저
   "/js/plaza-drawer.js",    // ☰ 채널 서랍(즐겨찾기+카테고리)
   "/js/index.js",           // 홈 피드 본체(GALLA_PAGE_INDEX 노출)
 ];

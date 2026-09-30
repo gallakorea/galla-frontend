@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-<meta name="galla-ver" content="0932911"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관). ⚠️ 광장/트렌드 골격 바뀌면 반드시 범프(안 하면 옛 galla_snap_trend 가 새 화면 덮어씀) -->
+<meta name="galla-ver" content="0932912"><!-- 배포 도장 — 스냅샷 무효화 기준(스크립트 순서 무관). ⚠️ 광장/트렌드 골격 바뀌면 반드시 범프(안 하면 옛 galla_snap_trend 가 새 화면 덮어씀) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>트렌드 · 검색·핫트렌드·갈라뉴스·광장 | GALLA 갈라</title>
   <meta name="description" content="갈라 통합검색 — 실시간 급상승 키워드, 여러 언론을 AI가 종합한 갈라뉴스, 지금 뜨는 이슈와 인기 영상을 한 곳에서. 대한민국 실시간 트렌드.">
@@ -287,6 +287,8 @@
       </div>
       <!-- 채널방(커버·공지·말머리) — 채널 진입 시 표시, plaza-channels.js -->
       <div class="plaza-room" id="plaza-room" hidden></div>
+      <!-- 기본 채널 7종(js/galla-channels.js DEFAULTS 와 일치). 세계·여행/패션·뷰티/19금은
+           레거시(is_default=false) — 칩에 없고 탐색·채널방으로 접근. 채널 추가는 galla-channels.js 에서. -->
       <section class="plaza-categories">
         <button class="active">전체</button>
         <button>자유·수다</button>
@@ -296,9 +298,6 @@
         <button>연애·결혼</button>
         <button>엔터·스포츠</button>
         <button>음식·맛집</button>
-        <button>세계·여행</button>
-        <button>패션·뷰티</button>
-        <button>19금</button>
       </section>
       <div class="plaza-toolbar">
         <form class="plaza-search" id="plaza-search-form">
@@ -328,6 +327,7 @@
   <div class="plaza-modal-box">
     <h2 class="modal-title">갈라 광장에 글쓰기</h2>
     <div class="modal-category">
+      <!-- 기본 7종(galla-channels.js DEFAULTS). 유저 채널은 채널방에서 글쓰기(4단계). -->
       <select id="plaza-category">
         <option value="">채널 선택</option>
         <option>자유·수다</option>
@@ -337,9 +337,6 @@
         <option>연애·결혼</option>
         <option>엔터·스포츠</option>
         <option>음식·맛집</option>
-        <option>세계·여행</option>
-        <option>패션·뷰티</option>
-        <option>19금</option>
       </select>
     </div>
     <input type="text" id="plaza-title" placeholder="제목" maxlength="120" />
@@ -444,6 +441,7 @@
 <script src="js/report-block.js?v=0918600"></script>
 <script src="js/draft.js?v=0909100"></script>
 <script type="module" src="js/plaza.js?v=0926100"></script>
+<script src="js/galla-channels.js?v=0932911"></script><!-- 🏛 광장 채널 단일 소스(이름·이모지·색) — plaza-channels/drawer 보다 먼저 -->
 <script src="js/plaza-channels.js?v=0932912"></script><!-- 광장 세그먼트(피드/탐색/내채널)·채널 구독 -->
 
 <script src="js/composer-page.js?v=080412"></script>
