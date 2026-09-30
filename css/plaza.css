@@ -933,3 +933,41 @@ html, body {
   font-size: 12.5px; font-weight: 700; padding: 6px 13px; border-radius: 999px; cursor: pointer;
   transition: background .15s, color .15s, border-color .15s; }
 .plaza-sorts button.active { background: rgba(61,79,255,.18); border-color: #3a4fff; color: #cdd6ff; }
+
+/* ═══ 광장 세그먼트(피드/탐색/내채널) · 채널 (plaza-channels.js) ═══ */
+@keyframes pcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pcPulse { 0% { box-shadow: 0 0 0 0 rgba(58,79,255,.55); } 100% { box-shadow: 0 0 0 14px rgba(58,79,255,0); } }
+@keyframes pcSheen { 0% { transform: translateX(-130%) rotate(8deg); } 100% { transform: translateX(240%) rotate(8deg); } }
+
+.plaza-seg { display: flex; border-bottom: 1px solid #232634; margin: 2px 0 4px; }
+.plaza-seg button { flex: 1; background: none; border: none; color: #6b7280; font: inherit;
+  font-weight: 800; font-size: 14px; padding: 12px 0; cursor: pointer; position: relative; transition: color .2s; }
+.plaza-seg button.active { color: #f3f4f6; }
+.plaza-seg button::after { content: ""; position: absolute; left: 50%; right: 50%; bottom: -1px;
+  height: 2.5px; border-radius: 3px; background: linear-gradient(90deg,#6f86ff,#3a4fff);
+  transition: left .26s cubic-bezier(.4,0,.2,1), right .26s cubic-bezier(.4,0,.2,1); }
+.plaza-seg button.active::after { left: 26%; right: 26%; }
+
+.plaza-cview { padding: 4px 0 16px; }
+.plaza-csect { font-size: 14px; font-weight: 800; color: #f3f4f6; padding: 14px 4px 8px; }
+
+.plaza-ch { display: flex; align-items: center; gap: 13px; padding: 11px 6px; border-radius: 14px; cursor: pointer;
+  animation: pcIn .4s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i,0) * .035s); transition: background .16s; }
+.plaza-ch:hover { background: rgba(255,255,255,.03); }
+.plaza-ch:active { background: rgba(255,255,255,.06); }
+.plaza-ch-av { position: relative; width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center;
+  font-size: 22px; flex: 0 0 auto; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  transition: transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s; }
+.plaza-ch-av::after { content: ""; position: absolute; top: 0; left: 0; width: 42%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-130%) rotate(8deg); }
+.plaza-ch:hover .plaza-ch-av { transform: translateY(-2px) scale(1.06); box-shadow: 0 8px 22px rgba(58,79,255,.45); }
+.plaza-ch:hover .plaza-ch-av::after { animation: pcSheen .7s ease; }
+.plaza-ch-n { flex: 1; font-size: 15px; font-weight: 700; color: #f3f4f6; letter-spacing: -.01em; }
+.plaza-ch-sub { background: linear-gradient(135deg,#4361ff,#3a4fff); border: 1px solid #3a4fff; color: #fff;
+  font-size: 12.5px; font-weight: 800; padding: 8px 16px; border-radius: 999px; cursor: pointer; flex: 0 0 auto;
+  box-shadow: 0 3px 12px rgba(58,79,255,.35); transition: transform .14s, box-shadow .2s; }
+.plaza-ch-sub:hover { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(58,79,255,.5); }
+.plaza-ch-sub:active { animation: pcPulse .5s; }
+.plaza-ch-sub.on { background: none; border-color: #2a2e3c; color: #9aa3b8; box-shadow: none; }
+.plaza-cempty { text-align: center; color: #6b7280; font-size: 13.5px; line-height: 1.7; padding: 48px 20px; animation: pcIn .4s ease both; }
+.plaza-cempty b { color: #9aa3b8; }

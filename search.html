@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="./css/food.css?v=0924100" />
   <link rel="stylesheet" href="./css/travel.css?v=0924100" />
   <link rel="stylesheet" href="./css/travel-flights.css?v=0931000" />
-  <link rel="stylesheet" href="css/plaza.css?v=0828020"><!-- 광장 패널(통합) -->
+  <link rel="stylesheet" href="css/plaza.css?v=0930100"><!-- 광장 패널(통합) -->
   <link rel="stylesheet" href="./css/composer-page.css?v=080412">
   <link rel="stylesheet" href="./css/header.css?v=080412">
   <link rel="stylesheet" href="./css/nav.css?v=0808104">
@@ -279,6 +279,12 @@
           사진·동영상·링크와 함께 자유롭게 이야기를 나눠요.
         </p>
       </section>
+      <!-- 🔀 광장 세그먼트: 광장 피드 / 탐색 / 내 채널 (js/plaza-channels.js) -->
+      <div class="plaza-seg" id="plaza-seg" role="tablist">
+        <button class="active" data-pseg="feed" role="tab">광장 피드</button>
+        <button data-pseg="explore" role="tab">탐색</button>
+        <button data-pseg="mine" role="tab">내 채널</button>
+      </div>
       <section class="plaza-categories">
         <button class="active">전체</button>
         <button>정치</button>
@@ -314,6 +320,9 @@
         </div>
       </div>
       <ul class="plaza-list" id="plaza-list"></ul>
+      <!-- 탐색(채널 발견)·내 채널(구독) 뷰 — 세그먼트로 토글 -->
+      <div class="plaza-cview" id="plaza-explore" hidden></div>
+      <div class="plaza-cview" id="plaza-mine" hidden></div>
     </div>
 
   </div>
@@ -447,6 +456,8 @@
 <script src="js/report-block.js?v=0918600"></script>
 <script src="js/draft.js?v=0909100"></script>
 <script type="module" src="js/plaza.js?v=0926100"></script>
+<script src="js/plaza-channels.js?v=0930100"></script><!-- 광장 세그먼트(피드/탐색/내채널)·채널 구독 -->
+
 <script src="js/composer-page.js?v=080412"></script>
 <script src="./js/trend-tab-order.js?v=0909100" defer></script>
 <script src="js/hot-videos.js?v=0932910"></script>
