@@ -70,19 +70,14 @@
    - 비로그인 / 아바타 없음: 기본 사람 아이콘(nav-user.svg) 그대로 유지
      ⚠️ 기본 아바타는 중립 사람 아이콘(default-avatar.png) — 갈라 로고 금지 → 사진 있을 때만 교체
 ============================================================ */
-(async function navProfileIcon() {
+(function navProfileIconSetup() {
+  const AV_KEY = "galla_nav_avatar";
   const ready = () => new Promise(r => {
     if (document.readyState !== "loading") r();
     else document.addEventListener("DOMContentLoaded", r, { once: true });
   });
-  await ready();
 
-  const item = document.querySelector('.nav-item[data-page="mypage"]');
-  const img = item && item.querySelector("img");
-  if (!img) return;
-
-  const AV_KEY = "galla_nav_avatar";
-  const apply = (url) => {
+  const applyTo = (img, url) => {
     if (url) {
       img.removeAttribute("data-base");     // 활성/비활성 스왑이 덮어쓰지 않게
       img.removeAttribute("data-active");
@@ -101,48 +96,72 @@
     }
   };
 
-  /* ⚡ 캐시 즉시 적용 — 네트워크를 기다리지 않아 아바타가 바로 보인다.
-     ('안 나올 때도 있고 느리고 제각각' 원인 = 페이지마다 supabase 왕복 대기) */
-  try { const c = localStorage.getItem(AV_KEY); if (c) apply(c); } catch (_) {}
+  // 🔄 로그인/로그아웃 직후에도 재호출 가능 — reboot 타이밍에 기대지 않고 네비 아바타를 갱신.
+  async function refresh() {
+    await ready();
+    const item = document.querySelector('.nav-item[data-page="mypage"]');
+    const img = item && item.querySelector("img");
+    if (!img) return;
 
-  let photo = null, checked = false;
-  try {
-    const sb = window.supabaseClient ||
-      (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
-    if (sb) {
-      const { data } = await sb.auth.getSession();
-      checked = true;                        // 세션 확인 완료(있든 없든)
-      const uid = data?.session?.user?.id;
-      if (uid) {
-        // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
-        const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
-        if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
+    /* ⚡ 캐시 즉시 적용 — 네트워크를 기다리지 않아 아바타가 바로 보인다.
+       ('안 나올 때도 있고 느리고 제각각' 원인 = 페이지마다 supabase 왕복 대기) */
+    try { const c = localStorage.getItem(AV_KEY); if (c) applyTo(img, c); } catch (_) {}
 
-        /* 🛟 재기 지원금 — GP가 바닥나면 하루 한 번 채워준다.
-           GP는 판매하지 않는 재화라, 다 잃으면 다음 출석까지 예측을 못 한다. 그게 이탈이다.
-           서버가 '임계 미만 + 하루 1회'를 강제하므로 매 진입마다 불러도 안전하다.
-           ⚠️ 실패해도 조용히 넘어간다 — 지원금 때문에 네비가 막히면 안 된다. */
-        try {
-          const key = "galla_relief_" + new Date().toISOString().slice(0, 10);
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, "1");
-            const { data: rel } = await sb.rpc("gp_relief");
-            if (rel?.granted > 0 && window.GALLA_toast)
-              window.GALLA_toast(`🛟 재기 지원금 ${Math.round(rel.granted).toLocaleString()} GP 지급! 다시 붙어보자`);
-          }
-        } catch (_) {}
+    let photo = null, checked = false;
+    try {
+      const sb = window.supabaseClient ||
+        (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+      if (sb) {
+        const { data } = await sb.auth.getSession();
+        checked = true;                        // 세션 확인 완료(있든 없든)
+        const uid = data?.session?.user?.id;
+        if (uid) {
+          // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
+          const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
+          if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
+
+          /* 🛟 재기 지원금 — GP가 바닥나면 하루 한 번 채워준다.
+             GP는 판매하지 않는 재화라, 다 잃으면 다음 출석까지 예측을 못 한다. 그게 이탈이다.
+             서버가 '임계 미만 + 하루 1회'를 강제하므로 매 진입마다 불러도 안전하다.
+             ⚠️ 실패해도 조용히 넘어간다 — 지원금 때문에 네비가 막히면 안 된다. */
+          try {
+            const key = "galla_relief_" + new Date().toISOString().slice(0, 10);
+            if (!sessionStorage.getItem(key)) {
+              sessionStorage.setItem(key, "1");
+              const { data: rel } = await sb.rpc("gp_relief");
+              if (rel?.granted > 0 && window.GALLA_toast)
+                window.GALLA_toast(`🛟 재기 지원금 ${Math.round(rel.granted).toLocaleString()} GP 지급! 다시 붙어보자`);
+            }
+          } catch (_) {}
+        }
       }
-    }
-  } catch (_) { /* 실패 시 캐시/기본 아이콘 유지 */ }
+    } catch (_) { /* 실패 시 캐시/기본 아이콘 유지 */ }
 
-  if (!checked) return;                      // supabase 미탑재 페이지 — 캐시 상태 유지
-  try {
-    if (photo) localStorage.setItem(AV_KEY, photo);
-    else localStorage.removeItem(AV_KEY);    // 로그아웃 — 다음부터 기본 아이콘
-    // 셸 네비(최상위)에도 반영 — 판이 아니라 셸의 아이콘이 실제로 보이는 것
-    if (window.top !== window.self && window.top.GALLA_setNavAvatar) window.top.GALLA_setNavAvatar(photo);
-  } catch (_) {}
-  apply(photo);
+    if (!checked) return;                      // supabase 미탑재 페이지 — 캐시 상태 유지
+    try {
+      if (photo) localStorage.setItem(AV_KEY, photo);
+      else localStorage.removeItem(AV_KEY);    // 로그아웃 — 다음부터 기본 아이콘
+      // 셸 네비(최상위)에도 반영 — 판이 아니라 셸의 아이콘이 실제로 보이는 것
+      if (window.top !== window.self && window.top.GALLA_setNavAvatar) window.top.GALLA_setNavAvatar(photo);
+    } catch (_) {}
+    applyTo(img, photo);
+  }
+  window.GALLA_refreshNavAvatar = refresh;
+  refresh();
+
+  /* 🔑 로그인 직후 즉시 반영 — 패스키·소셜·이메일 로그인이 결국 SIGNED_IN 으로 여기를 지난다.
+     reboot 가 나더라도 부팅 시 다시 도니 무해하고, reboot 전/직후 잔상('사진이 바로 안 바뀜')을 없앤다. */
+  (async function subAuth() {
+    try {
+      const sb = window.supabaseClient ||
+        (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+      if (sb && sb.auth && sb.auth.onAuthStateChange) {
+        sb.auth.onAuthStateChange((ev) => {
+          if (ev === "SIGNED_IN" || ev === "SIGNED_OUT" || ev === "USER_UPDATED") setTimeout(refresh, 0);
+        });
+      }
+    } catch (_) {}
+  })();
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
