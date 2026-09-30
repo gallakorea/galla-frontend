@@ -238,7 +238,7 @@
      순서: 이슈 전황 → 지금 뜨는 영상 → 갈라 예측 → 갈라뉴스 → 맛집·여행 → 광장 HOT → 난장 → 앱.
      각 카드는 실패하면 조용히 사라진다(빈 껍데기 금지). 움직임은 CSS(desktop.css pcr-*)만 — 등장·반짝·확대. */
   const TH = (u, w) => { try { return u ? (window.GALLA_thumb ? window.GALLA_thumb(u, w || 240) : u) : ''; } catch (_) { return u || ''; } };
-  const IMG = (u, w, cls) => u ? `<span class="${cls || 'pcr-th'}"><img src="${esc(TH(u, w))}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('noimg');this.remove()"></span>` : `<span class="${cls || 'pcr-th'} noimg"></span>`;
+  const IMG = (u, w, cls) => u ? `<span class="${cls || 'pcr-th'}"><img src="${esc(TH(u, w))}" alt="" loading="lazy" decoding="async" onerror="this.parentNode&&this.parentNode.classList.add('noimg');this.remove()"></span>` : `<span class="${cls || 'pcr-th'} noimg"></span>`;
   const sN = n => { n = Number(n) || 0; return n >= 1e8 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 1e4 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : n.toLocaleString(); };
   /* 볼 때마다 다음 테마로 — 같은 세션에서 한 바퀴 돌게(새로고침마다 하나씩 전진) */
   function rot(key, n) {
