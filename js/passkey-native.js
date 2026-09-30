@@ -62,39 +62,38 @@
     });
   }
 
-  /* ── PublicKeyCredential 유사 객체(supabase-js hi() 가 읽는 형태) ── */
-  function makeCreateCredential(n) {
-    var rawId = b64uToAb(n.rawId || n.id);
-    var resp = {
+  /* ── PublicKeyCredential 유사 객체 ──
+     supabase-js 검사 2가지를 통과해야 한다:
+       ① yi()/get: `t instanceof PublicKeyCredential`  → 프로토타입을 PublicKeyCredential.prototype 로
+       ② hi()/gi(): `'toJSON' in e` 면 `e.toJSON()` 사용 → 네이티브 JSON(정확한 verify 형식)을 그대로 반환
+     (네이티브 toJSON 은 가짜 this 에서 던지므로 반드시 '내' toJSON 으로 가린다.) */
+  function wrapCredential(n, isCreate) {
+    var proto = (window.PublicKeyCredential && window.PublicKeyCredential.prototype) || Object.prototype;
+    var cred = Object.create(proto);   // instanceof PublicKeyCredential 통과
+    var resp = isCreate ? {
       clientDataJSON: b64uToAb(n.response.clientDataJSON),
       attestationObject: b64uToAb(n.response.attestationObject),
-      getTransports: function () { return ["internal"]; },
-      getAuthenticatorData: function () { return null; },
-      getPublicKey: function () { return null; },
-      getPublicKeyAlgorithm: function () { return -7; }
-    };
-    return {
-      id: n.id, rawId: rawId, type: "public-key",
-      authenticatorAttachment: n.authenticatorAttachment || "platform",
-      response: resp,
-      getClientExtensionResults: function () { return {}; }
-    };
-  }
-  function makeGetCredential(n) {
-    var rawId = b64uToAb(n.rawId || n.id);
-    var resp = {
+      getTransports: function () { return ["internal"]; }
+    } : {
       clientDataJSON: b64uToAb(n.response.clientDataJSON),
       authenticatorData: b64uToAb(n.response.authenticatorData),
       signature: b64uToAb(n.response.signature),
       userHandle: n.response.userHandle ? b64uToAb(n.response.userHandle) : null
     };
-    return {
-      id: n.id, rawId: rawId, type: "public-key",
-      authenticatorAttachment: n.authenticatorAttachment || "platform",
-      response: resp,
-      getClientExtensionResults: function () { return {}; }
-    };
+    Object.defineProperties(cred, {
+      id: { value: n.id, enumerable: true },
+      rawId: { value: b64uToAb(n.rawId || n.id), enumerable: true },
+      type: { value: "public-key", enumerable: true },
+      authenticatorAttachment: { value: n.authenticatorAttachment || "platform", enumerable: true },
+      response: { value: resp, enumerable: true },
+      getClientExtensionResults: { value: function () { return {}; } },
+      // 🔑 supabase-js hi()/gi() 가 이걸 우선 사용한다 — 네이티브 WebAuthn JSON 을 그대로(verify 형식)
+      toJSON: { value: function () { return n; } }
+    });
+    return cred;
   }
+  function makeCreateCredential(n) { return wrapCredential(n, true); }
+  function makeGetCredential(n) { return wrapCredential(n, false); }
 
   /* ── navigator.credentials.create/get 가로채기 ── */
   if (!navigator.credentials) { try { Object.defineProperty(navigator, "credentials", { value: {}, configurable: true }); } catch (_) {} }
