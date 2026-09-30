@@ -53,12 +53,23 @@
      없어 location.replace 가 iframe 만 바꾸고 셸은 로그인 화면에 멈췄다 — 애플/iPad 재현
      (App Store 2.1(a), 빌드 18 리뷰). top 의 셸 함수를 우선 호출해 셸을 홈으로 보낸다. */
   function goHomeAfterAuth() {
+    // 반드시 셸(top) 프레임 기준으로 동작한다(로그인은 스택 뷰라 현재 프레임이 뷰일 수 있다).
     let T = window;
     try { if (window.top) T = window.top; } catch (_) {}
+    // 🔑 SPA(앱/PWA)는 login.js spaDone 과 '동일하게' — 탭 전환만으론 쌓인 로그인 뷰·비로그인 상태가
+    //    안 빠진다. 해시를 홈으로 두고 셸을 1회 리로드해 세션 반영된 새 부팅으로 착지시킨다.
+    //    (빌드18/19 에서 shellGo 로 탭만 바꿔 '로그인해도 그대로, 새로고침해야 넘어감' 이었다.)
+    let isSPA = false;
+    try { isSPA = !!(T.GALLA_SPA || window.GALLA_SPA); } catch (_) {}
+    if (isSPA) {
+      try { T.location.hash = "#/index"; } catch (_) {}
+      try { T.location.reload(); return; } catch (_) {}
+      try { location.hash = "#/index"; location.reload(); return; } catch (_) {}
+    }
+    // 셸 함수(있으면) → 탭 복귀
     try { if (T.GALLA_shellGo) { T.GALLA_shellGo("index.html", "home"); return; } } catch (_) {}
-    try { if (T.GALLA_SPA && T.GALLA_nav) { T.GALLA_nav("index.html"); return; } } catch (_) {}
     if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
-    if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
+    // MPA/웹 브라우저
     try { (T.location || location).replace("index.html"); } catch (_) { location.replace("index.html"); }
   }
 
