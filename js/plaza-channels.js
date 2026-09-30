@@ -20,6 +20,21 @@
     if (i >= 0) s.splice(i, 1); else s.push(n);
     setSubs(s); return i < 0;
   }
+  // 구독은 로그인 필요 — 비로그인은 GALLA_needLogin(쓰기 액션 원칙, disabled 금지).
+  //   [[galla-guest-actions]] 보기·공유만 허용, 구독은 쓰기 성격.
+  function guardedToggleSub(name, btn) {
+    waitForClient().then(function (sb) {
+      if (!sb) return;
+      sb.auth.getSession().then(function (res) {
+        if (!res.data || !res.data.session) {
+          if (window.GALLA_needLogin) GALLA_needLogin("채널 구독은 로그인이 필요해요.");
+          return;
+        }
+        var on = toggleSub(name);
+        if (btn) { btn.classList.toggle("on", on); btn.textContent = on ? "구독중" : "＋ 구독"; }
+      });
+    });
+  }
   function channels(p) {
     // 카테고리 칩(전체 제외)이 곧 채널 목록 — 단일 소스
     return Array.prototype.map.call(p.querySelectorAll(".plaza-categories button"), function (b) {
@@ -253,9 +268,7 @@
         if (e.target.closest("[data-mkch]")) { openMkForm(p); return; }
         var sb = e.target.closest("[data-sub]");
         if (sb) {
-          var on = toggleSub(sb.dataset.sub);
-          sb.classList.toggle("on", on);
-          sb.textContent = on ? "구독중" : "＋ 구독";
+          guardedToggleSub(sb.dataset.sub, sb);
           e.stopPropagation();
           return;
         }
@@ -268,7 +281,7 @@
     if (room) room.addEventListener("click", function (e) {
       if (e.target.closest("[data-room-back]")) { exitRoom(p); return; }
       var sb = e.target.closest("[data-sub]");
-      if (sb) { var on = toggleSub(sb.dataset.sub); sb.classList.toggle("on", on); sb.textContent = on ? "구독중" : "＋ 구독"; return; }
+      if (sb) { guardedToggleSub(sb.dataset.sub, sb); return; }
       var h = e.target.closest(".pr-head");
       if (h) { room.querySelectorAll(".pr-head").forEach(function (x) { x.classList.remove("on"); }); h.classList.add("on"); }
     });
