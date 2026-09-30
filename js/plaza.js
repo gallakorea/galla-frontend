@@ -110,10 +110,26 @@ async function openPlazaWriteModal() {
   const user = await requirePlazaLogin();
   if (!user) return;
   modal.classList.remove("hidden");   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
+  fillCategoryFromSubs();   // 🏛 등록 위치 = 내가 팔로우한 채널(블라인드식). 구독 없으면 기본 7종 유지
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
   jarvisSeedPrefill();   // 🤖 갈라비스 초안이 있으면 채움(본문 해시태그는 GALLA_collectTags가 자동 수집)
   prefillChannelFromContext();   // 🏛 지금 보고 있는 채널을 자동 선택(draft·seed 가 안 채웠을 때만)
   exposePlazaWorkform();   // 🛠 작업 모드 브리지(갈비스 도킹 미니챗이 광장 폼을 실시간 수정)
+}
+// 🏛 등록 위치(작성 채널) 옵션을 '내가 팔로우한 채널'로 채운다(블라인드식 '등록 위치를 선택하세요').
+//   구독이 없으면(비로그인/신규) search.html 의 기본 7종 하드코딩을 그대로 둔다.
+//   가입 시 기본 카테고리를 자동 팔로우하므로 로그인 유저는 최소 7종이 채워진다.
+function fillCategoryFromSubs() {
+  const c = document.getElementById("plaza-category");
+  if (!c) return;
+  let subs = [];
+  try { subs = JSON.parse(localStorage.getItem("galla_plaza_channels") || "[]"); } catch (_) {}
+  if (!Array.isArray(subs) || !subs.length) return;   // 구독 없으면 기본 옵션 유지
+  const esc = function (s) { return String(s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); };
+  const cur = c.value;
+  c.innerHTML = '<option value="">등록 위치를 선택하세요</option>' +
+    subs.map(function (n) { return "<option>" + esc(n) + "</option>"; }).join("");
+  if (cur && subs.indexOf(cur) >= 0) c.value = cur;   // 기존 선택 보존
 }
 // 🏛 진입 맥락(현재 필터 채널 또는 ?ch= 채널방)을 작성 채널로 프리필.
 //   매번 수동 선택하다 엉뚱한 채널로 발행되던 문제 방지. 기본 7종(select 옵션)만 자동 선택,

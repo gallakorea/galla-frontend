@@ -28,8 +28,36 @@
           if (window.GALLA_needLogin) GALLA_needLogin("채널 구독은 로그인이 필요해요.");
           return;
         }
-        var on = toggleSub(name);
+        var uid = res.data.session.user.id;
+        var on = toggleSub(name);   // localStorage 캐시 즉시 반영(UI 동기)
         if (btn) { btn.classList.toggle("on", on); btn.textContent = on ? "구독중" : "＋ 구독"; }
+        // DB(channel_subs) 동기화 — channel_id 는 CHCACHE 에서
+        function writeDB() {
+          var ch = CHCACHE && CHCACHE.filter(function (x) { return x.name === name; })[0];
+          if (!ch) return;
+          if (on) sb.from("channel_subs").upsert({ user_id: uid, channel_id: ch.id }).then(function () {});
+          else sb.from("channel_subs").delete().eq("user_id", uid).eq("channel_id", ch.id).then(function () {});
+        }
+        if (CHCACHE) writeDB(); else loadChannels().then(writeDB);
+      });
+    });
+  }
+  // 로그인 유저의 DB 구독(channel_subs)을 localStorage 캐시에 반영 — 기기 간 동기화 + 가입 자동팔로우 표시
+  function syncSubsFromDB() {
+    waitForClient().then(function (sb) {
+      if (!sb) return;
+      sb.auth.getSession().then(function (res) {
+        if (!res.data || !res.data.session) return;
+        sb.from("channel_subs").select("channels(name)").then(function (r) {
+          if (!r.data) return;
+          var names = r.data.map(function (x) { return x.channels && x.channels.name; }).filter(Boolean);
+          setSubs(names);
+          try {
+            var p = panel();
+            if (p) { var a = p.querySelector('#plaza-seg button.active'); if (a && a.dataset.pseg === 'mine') renderMine(p); }
+          } catch (_) {}
+          try { document.dispatchEvent(new CustomEvent('galla:subs-synced')); } catch (_) {}
+        });
       });
     });
   }
@@ -52,7 +80,7 @@
     return waitForClient().then(function (sb) {
       if (!sb) return [];
       return sb.from("channels")
-        .select("name,emoji,color,description,post_count,follower_count,is_default,owner_id")
+        .select("id,name,emoji,color,description,post_count,follower_count,is_default,owner_id")
         .order("post_count", { ascending: false })
         .then(function (r) { CHCACHE = r.data || []; return CHCACHE; });
     });
@@ -289,4 +317,6 @@
   bind();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   window.GALLA_bindPlazaChannels = bind;
+  window.GALLA_syncPlazaSubs = syncSubsFromDB;
+  syncSubsFromDB();   // 로그인 유저의 DB 구독을 로컬 캐시에 반영(자동팔로우 포함)
 })();
