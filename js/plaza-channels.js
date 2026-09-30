@@ -237,7 +237,10 @@
     if (!p || p.dataset.pcbound) return;
     p.dataset.pcbound = "1";
 
-    p.querySelector("#plaza-seg").addEventListener("click", function (e) {
+    // ⚠️ 옛 HTML(캐시)로 들어와 세그먼트 마크업이 없을 수 있다 — null 이면 여기서
+    //    throw 돼 아래 탐색·내채널·채널방 위임까지 전부 죽는다. 가드로 부분 실패만 허용.
+    var segEl = p.querySelector("#plaza-seg");
+    if (segEl) segEl.addEventListener("click", function (e) {
       var b = e.target.closest("button[data-pseg]");
       if (b) showSeg(p, b.dataset.pseg);
     });

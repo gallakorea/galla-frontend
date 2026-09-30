@@ -1,5 +1,13 @@
 # Cloudflare Pages 보안 헤더 (전 경로)
 /*
+  # 🧭 기본 no-cache — clean URL(확장자 없는 /search 등)까지 HTML을 항상 재검증.
+  #    ⚠️ 예전엔 아래 /*.html 로만 걸었는데 CF Pages splat 은 접미 매칭(/*.html)을
+  #    지원하지 않아 /search·/search.html 이 CF Pages 기본값 public,max-age=0 을 받았고,
+  #    'public' 이라 CF 엣지가 로그인 유저의 navigation(document) HTML 을 캐시 → 새 배포가
+  #    특정 브라우저에만 안 보이는 유령 버그의 근본원인이었다(2026-09-30 실측).
+  #    /* 는 확실히 동작(이 보안헤더가 그 증거). 코드(js/css)·폰트·벤더는 아래 더 구체적인
+  #    규칙이 Cache-Control 을 immutable 로 덮으므로(CF Pages: 더 구체적 규칙 우선) 안전.
+  Cache-Control: no-cache
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
