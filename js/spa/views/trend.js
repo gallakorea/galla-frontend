@@ -21,6 +21,7 @@ const SCRIPTS = [
   { src: "/js/user-sheet.js" },         // 닉네임(data-nick-uid) 프로필 시트
   { src: "/js/share-sheet.js" },        // 광장 공유
   { src: "/js/report-block.js" },       // 광장 신고·차단
+  { src: "/js/owner-actions.js" },      // 광장 목록/채널방 ⋯ (수정·삭제·신고·차단)
   { src: "/js/draft.js" },              // GALLA_draft(광장 임시저장 — plaza.js보다 먼저)
   { src: "/js/plaza-render.js" },       // 광장 본문 렌더러
   { src: "/js/weather.js" },            // 🔴 날씨 탭 — 없으면 "불러오는 중…"에서 영영 멈춘다(실측 2026-08-29)

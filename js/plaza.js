@@ -725,6 +725,9 @@ function proxifyThumb(u) {
 function renderPlazaPosts(posts) {
   plazaListEl = plazaListEl || document.querySelector(".plaza-list");   // 늦게 심긴 패널 대응
   if (!plazaListEl) { console.warn("[plaza] .plaza-list 없음 — 렌더 스킵"); return; }
+  // ⋯ 메뉴(수정/삭제/신고/차단)가 editFields value 로 쓸 원본 캐시 — id → post
+  window.__PLAZA_POST_CACHE = window.__PLAZA_POST_CACHE || {};
+  posts.forEach(function (p) { if (p && p.id != null) window.__PLAZA_POST_CACHE[p.id] = p; });
   plazaListEl.innerHTML = "";
 
   if (posts.length === 0) {
@@ -757,6 +760,9 @@ function renderPlazaPosts(posts) {
               ? window.GALLA_userBadge(post.user_id, post.nickname)
               : escP(post.nickname || "익명")}</span>
             <span class="post-time">${timeAgoK(post.created_at)}</span>
+            <button class="plaza-more2" data-more data-id="${post.id}" data-uid="${escP(post.user_id || "")}" aria-label="더보기">
+              <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+            </button>
           </div>
           <div class="post-title">${escP(post.title)}</div>
           ${excerpt ? `<div class="post-excerpt" data-cmt-text data-cmt-kind="plaza" data-cmt-id="${post.id}" data-cmt-locale="${post.locale || "ko"}">${escP(excerpt)}</div>` : ""}
@@ -837,6 +843,34 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
   gallaShare(btn.dataset.title, window.GALLA_shareUrl ? window.GALLA_shareUrl('plaza', btn.dataset.id) : new URL(`plaza_detail.html?id=${btn.dataset.id}`, location.href).href);
+});
+
+/* 목록 카드 ⋯ 메뉴 (수정/삭제 = 내 글, 신고/차단 = 남의 글 — owner-actions 가 분기, App Store 1.2)
+   피드·채널방 어디서든 상세로 들어가지 않고 바로 조치. */
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".plaza-list")) return;
+  const mb = e.target.closest("[data-more]");
+  if (!mb) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (!window.GALLA_openOwnerMenu) return;
+  const id = mb.dataset.id, uid = mb.dataset.uid || null;
+  const post = (window.__PLAZA_POST_CACHE || {})[id] || {};
+  window.GALLA_openOwnerMenu({
+    table: "plaza_posts", id: id, ownerId: uid, label: "광장 글",
+    editFields: [
+      { key: "title", label: "제목", type: "text", value: post.title || "" },
+      { key: "body", label: "본문", type: "textarea", value: post.body || "" },
+      { key: "category", label: "채널", type: "select", options: (window.GALLA_CHANNELS ? GALLA_CHANNELS.names() : []), value: post.category || "" },
+    ],
+    onSaved: (patch) => {
+      const li = mb.closest("li"); if (li && patch.title != null) { const t = li.querySelector(".post-title"); if (t) t.textContent = patch.title; }
+      if (patch.title != null) post.title = patch.title;
+      if (patch.body != null) post.body = patch.body;
+      if (patch.category != null) post.category = patch.category;
+    },
+    onDeleted: () => { const li = mb.closest("li"); if (li) li.remove(); },
+  });
 });
 
 /* 목록 카드 업/다운 투표 (레딧식, 이벤트 위임) */
