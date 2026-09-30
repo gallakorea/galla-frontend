@@ -388,8 +388,8 @@
       (androidApp ? '' :
       '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
       '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
-    // ⛔ 패스키는 앱(capacitor://localhost origin)에선 RP=galla.im 불가 → 웹에서만 노출(눌러도 안 되는 버튼 제거)
-    if (hasPasskey() && !isDesktopApp() && !isNativeApp())
+    // 🔑 패스키: 웹(origin=galla.im) + iOS 앱(네이티브 폴리필 __gallaPasskeyNative). 안드로이드 앱·웹클립·데스크톱은 제외.
+    if (hasPasskey() && !isDesktopApp() && (!isNativeApp() || window.__gallaPasskeyNative))
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);

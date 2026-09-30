@@ -26,6 +26,7 @@ const SCRIPTS = [
   "/js/titles.js",        // GALLA_openTitles (칭호 타일)
   "/js/gacha.js",         // GALLA_openGacha (가챠 타일)
   "/js/gallian.js",       // GALLA_gallianOf (레벨·XP 게이지)
+  "/js/passkey-native.js",
   "/js/social-auth.js",   // GALLA_passkeyRegister·온보딩 모달
   "/js/account-delete.js",// GALLA_deleteAccount (계정 삭제 — MPA 에만 있었다)
   "/js/stats.js",         // GALLA_openStats (내 글 통계)

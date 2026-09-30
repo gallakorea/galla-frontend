@@ -281,11 +281,12 @@ async function GALLA_settingsInit(root) {
   if (D !== document) {
     // 1) '이 기기에 패스키 등록' 노출 — 패스키 지원 + 홈화면 웹클립 PWA 아님(네이티브 GallaApp은 허용)
     try {
-      // ⛔ 앱(GallaApp)은 origin=capacitor://localhost 라 웹 WebAuthn RP=galla.im 불가 → 앱에선 숨김(웹만 노출)
+      // 🔑 패스키 등록: 웹 + iOS 앱(네이티브 폴리필). 안드로이드 앱·웹클립 제외.
       const isNativeApp = /GallaApp/i.test(navigator.userAgent || "");
       const isWebClip = !isNativeApp &&
         ((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
-      if (window.PublicKeyCredential && navigator.credentials && !isWebClip && !isNativeApp) {
+      const okEnv = (!isNativeApp || window.__gallaPasskeyNative);
+      if (window.PublicKeyCredential && navigator.credentials && !isWebClip && okEnv) {
         const pk = byId("st-passkey"); if (pk) pk.hidden = false;
       }
     } catch (_) {}

@@ -16,6 +16,7 @@ const V = window.GALLA_V ? "?v=" + window.GALLA_V : "";
 
 const SCRIPTS = [
   "/js/login.js",        // 페이지 본체 — GALLA_PAGE_LOGIN 노출
+  "/js/passkey-native.js",
   "/js/social-auth.js",  // GALLA_renderSocialButtons(간편 로그인) — mount가 명시 렌더
 ];
 
