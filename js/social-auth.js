@@ -48,6 +48,20 @@
     App.addListener("appUrlOpen", (event) => handleAuthUrl((event && event.url) || ""));
   }
 
+  /* 🧭 로그인 성공 후 홈으로 — 반드시 셸(top) 프레임에서 이동한다.
+     로그인은 SPA 뷰(iframe)라, 딥링크를 iframe 인스턴스가 처리하면 shellGo 가 그 프레임엔
+     없어 location.replace 가 iframe 만 바꾸고 셸은 로그인 화면에 멈췄다 — 애플/iPad 재현
+     (App Store 2.1(a), 빌드 18 리뷰). top 의 셸 함수를 우선 호출해 셸을 홈으로 보낸다. */
+  function goHomeAfterAuth() {
+    let T = window;
+    try { if (window.top) T = window.top; } catch (_) {}
+    try { if (T.GALLA_shellGo) { T.GALLA_shellGo("index.html", "home"); return; } } catch (_) {}
+    try { if (T.GALLA_SPA && T.GALLA_nav) { T.GALLA_nav("index.html"); return; } } catch (_) {}
+    if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
+    if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
+    try { (T.location || location).replace("index.html"); } catch (_) { location.replace("index.html"); }
+  }
+
   async function handleAuthUrl(url) {
     {
       const pick = (k) => {
@@ -90,9 +104,7 @@
           const { error } = await sb().auth.verifyOtp({ token_hash: th, type: "magiclink" });
           if (error) throw error;
           try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
-          if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
-          if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
-          location.replace("index.html");
+          goHomeAfterAuth(); return;
         } catch (e) { alert("네이버 로그인 처리 실패 — " + (e?.message || "다시 시도해 주세요.")); }
         return;
       }
@@ -122,11 +134,9 @@
         }
         try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
         /* ⚠️ 앱(SPA 셸)에서 location.replace 를 하면 셸 자체가 index.html 로 바뀌어
-           라우터·네비가 통째로 죽는다(실측: 로그인은 됐는데 화면이 스켈레톤에서 멈췄다).
-           셸이면 라우터로 홈에 보내고, 아니면 예전처럼 이동한다. */
-        if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
-        if (window.GALLA_SPA && window.GALLA_nav) { window.GALLA_nav("index.html"); return; }
-        location.replace("index.html");
+           라우터·네비가 통째로 죽는다. 또 로그인은 iframe 뷰라 이 핸들러가 iframe 에서 돌면
+           shellGo 가 없어 iframe 만 바뀌고 셸은 로그인에 멈췄다(애플/iPad). → 항상 top 셸로. */
+        goHomeAfterAuth(); return;
       } catch (e) {
         /* 세션이 이미 있으면 실패가 아니다(다른 경로가 먼저 처리함) — 경고 없이 넘어간다 */
         try { const { data } = await sb().auth.getSession(); if (data && data.session) return; } catch (_) {}
@@ -136,12 +146,21 @@
     }
   }
 
+  /* 우리가 '방금 시작한' 로그인 표식 — 세션이 뒤늦게 SIGNED_IN 으로 올 때, 콜드 스타트 세션
+     복원과 구분해 그때만 홈으로 보낸다(아래 authRescue). top 프레임에 둬 iframe/셸이 공유. */
+  function markAuthPending() {
+    try { (window.top || window).__gallaAuthPending = Date.now(); } catch (_) {}
+    try { window.__gallaAuthPending = Date.now(); } catch (_) {}
+  }
+
   async function signInSocial(provider) {
     const c = sb();
     if (!c) { alert("잠시 후 다시 시도해주세요."); return; }
+    markAuthPending();
     try {
-      // 매번 계정 선택 화면 강제 → 다른 구글 계정 선택/추가 가능(안 그러면 같은 계정으로 자동로그인)
-      const qp = { prompt: "select_account" };
+      // 매번 계정 선택 화면 강제 → 다른 구글 계정 선택/추가 가능(안 그러면 같은 계정으로 자동로그인).
+      // ⚠️ 애플은 prompt=select_account 를 모른다 — 구글에만 붙인다(애플 로그인 흐름 오염 방지).
+      const qp = provider === "google" ? { prompt: "select_account" } : {};
       // 갈라톡 PC: 기본 브라우저로 열고 딥링크(im.galla.app://auth-callback)로 복귀
       if (isDesktopApp()) {
         const { data, error } = await c.auth.signInWithOAuth({
@@ -296,12 +315,13 @@
     if (!hasPasskey()) { alert("이 브라우저는 패스키를 지원하지 않아요."); return false; }
     const c = sb();
     if (!c?.auth?.signInWithPasskey) { alert("패스키 준비 중이에요. 잠시 후 다시 시도해 주세요."); return false; }
+    markAuthPending();
     try {
       const { error } = await c.auth.signInWithPasskey();
       if (error) throw error;
-      // 온보딩 필요하면 처리 후 홈
+      // 온보딩 필요하면 처리 후 홈 — 앱은 iframe 뷰라 반드시 top 셸로 이동(location.replace 금지)
       try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
-      location.replace("index.html");
+      goHomeAfterAuth();
       return true;
     } catch (e) {
       // NotAllowedError = 사용자가 취소했거나, 이 기기에 등록된 패스키가 없음
@@ -357,7 +377,8 @@
       (androidApp ? '' :
       '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
       '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
-    if (hasPasskey() && !isDesktopApp())
+    // ⛔ 패스키는 앱(capacitor://localhost origin)에선 RP=galla.im 불가 → 웹에서만 노출(눌러도 안 되는 버튼 제거)
+    if (hasPasskey() && !isDesktopApp() && !isNativeApp())
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);
@@ -472,6 +493,31 @@
   }
   window.GALLA_onboardGate = onboardGate;
 
+  /* 🛟 로그인 구조 안전망 — 우리가 시작한 로그인(markAuthPending)이 성공해 SIGNED_IN 이 오면,
+     주 이동 경로가 어긋나도(iframe 만 바뀌거나, 콜백 프레임이 shellGo 를 못 찾거나) 무조건
+     셸을 홈으로 보낸다. 세션 '복원'(콜드 스타트)은 pending 표식이 없어 건드리지 않는다.
+     → 애플/구글 '로그인은 됐는데 화면이 안 넘어가고 새로고침해야 넘어가던' 증상의 최종 방어. */
+  let _authRescueBound = false;
+  async function setupAuthRescue() {
+    if (_authRescueBound) return;
+    let c = sb();
+    for (let i = 0; i < 40 && !c; i++) { await new Promise(r => setTimeout(r, 150)); c = sb(); }
+    if (!c || _authRescueBound) return;
+    _authRescueBound = true;
+    try {
+      c.auth.onAuthStateChange(async (ev) => {
+        if (ev !== "SIGNED_IN") return;
+        let pend = 0;
+        try { pend = (window.top || window).__gallaAuthPending || 0; } catch (_) { pend = window.__gallaAuthPending || 0; }
+        if (!pend || (Date.now() - pend) > 180000) return;   // 3분 내 '우리가 시작한' 로그인만
+        try { (window.top || window).__gallaAuthPending = 0; } catch (_) {}
+        try { window.__gallaAuthPending = 0; } catch (_) {}
+        try { if (await needsOnboard()) { await openOnboard(); } } catch (_) {}
+        goHomeAfterAuth();
+      });
+    } catch (_) {}
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const host = document.querySelector("[data-social-auth]")
       || document.getElementById("loginBtn")?.parentElement
@@ -479,5 +525,6 @@
     if (host) renderButtons(host);
     onboardGate();
     setupNativeAuthListener();
+    setupAuthRescue();
   });
 })();

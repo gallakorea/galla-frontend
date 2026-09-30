@@ -124,9 +124,18 @@
     if (!CHCACHE) { loadChannels().then(function () { renderRoom(p, name); }); return; }
     var m = chMeta(name), grad = m.color;
     var sub = isSub(name);
-    var heads = ["전체", "같이가요", "정보", "자유"].map(function (t, i) {
-      return '<span class="pr-head' + (i === 0 ? " on" : "") + '">' + t + "</span>";
+    window.__plazaRoomFlair = null;   // 채널방 진입 시 말머리 필터 초기화(전체)
+    // 말머리 범용 5종 — 전체=값없음(null). data-flair 로 필터한다.
+    var heads = ["전체", "정보", "질문", "후기", "잡담"].map(function (t, i) {
+      return '<span class="pr-head' + (i === 0 ? " on" : "") + '" data-flair="' + (i === 0 ? "" : t) + '">' + t + "</span>";
     }).join("");
+    // 정렬(후끈/최신/조회) — 채널방에도 노출
+    var sorts =
+      '<div class="pr-sort" role="tablist">' +
+        '<button type="button" class="pr-sort-b on" data-psort="hot">🔥 후끈</button>' +
+        '<button type="button" class="pr-sort-b" data-psort="new">🕐 최신</button>' +
+        '<button type="button" class="pr-sort-b" data-psort="views">👁 조회</button>' +
+      '</div>';
     var room = p.querySelector("#plaza-room");
     room.innerHTML =
       '<button class="pr-back" data-room-back aria-label="뒤로">‹</button>' +
@@ -141,7 +150,8 @@
       '<div class="pr-name">' + esc(name) + "</div>" +
       '<div class="pr-meta">🌐 공개 · 팔로워 ' + m.followers.toLocaleString() + " · 글 " + m.posts + "</div>" +
       '<div class="pr-notice"' + (m.notice ? '' : ' hidden') + '><span>📢</span><span class="pr-nt">' + esc(m.notice || "") + '</span></div>' +
-      '<div class="pr-heads">' + heads + "</div>";
+      '<div class="pr-heads">' + heads + "</div>" +
+      sorts;
     room.hidden = false;
     p.querySelector(".plaza-guide").hidden = true;
     p.querySelector("#plaza-seg").hidden = true;
@@ -162,6 +172,7 @@
     setTimeout(function () { var r = p.querySelector("#plaza-room"); if (r && !r.hidden) clickCat(p, name); }, 700);
   }
   function exitRoom(p) {
+    window.__plazaRoomFlair = null;   // 피드로 나갈 때 말머리 필터 해제(누수 방지)
     p.querySelector("#plaza-room").hidden = true;
     p.querySelector(".plaza-guide").hidden = false;
     p.querySelector("#plaza-seg").hidden = false;
@@ -315,7 +326,18 @@
       var sb = e.target.closest("[data-sub]");
       if (sb) { guardedToggleSub(sb.dataset.sub, sb); return; }
       var h = e.target.closest(".pr-head");
-      if (h) { room.querySelectorAll(".pr-head").forEach(function (x) { x.classList.remove("on"); }); h.classList.add("on"); }
+      if (h) {
+        room.querySelectorAll(".pr-head").forEach(function (x) { x.classList.remove("on"); });
+        h.classList.add("on");
+        if (window.GALLA_plazaSetRoomFlair) GALLA_plazaSetRoomFlair(h.dataset.flair || null);
+        return;
+      }
+      var s = e.target.closest(".pr-sort-b");
+      if (s) {
+        room.querySelectorAll(".pr-sort-b").forEach(function (x) { x.classList.remove("on"); });
+        s.classList.add("on");
+        if (window.GALLA_plazaSetSort) GALLA_plazaSetSort(s.dataset.psort || "hot");
+      }
     });
 
     showSeg(p, "feed");

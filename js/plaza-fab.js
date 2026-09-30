@@ -11,7 +11,7 @@
   var THRESH = 8;            // 드래그로 인식하는 최소 이동(px)
   var MARGIN = 14;           // 화면 가장자리 여백
   var SIZE = 52;             // FAB 지름
-  var ORB_CLEAR = 84;        // 갈비스 오브를 피하는 하단 여백(오브 위에 놓기)
+  var ORB_CLEAR = 150;       // 갈비스 오브(#frOrb)를 피하는 하단 여백 — 오브 미탐 시 폴백값(오브 위)
 
   var fab = null, moved = false, downX = 0, downY = 0, baseL = 0, baseT = 0, dragging = false, pid = null;
 
@@ -34,10 +34,19 @@
   function loadPos() { try { return JSON.parse(localStorage.getItem(POS_KEY) || "null"); } catch (_) { return null; } }
 
   function defaultPos() {
-    // 우하단, 갈비스 오브 위
+    // 우하단, 갈비스 오브(#frOrb) '바로 위' — 오브가 FAB 을 덮지 않게 실제 사각형을 읽어 배치.
+    // (오브 z-index 940 > FAB 900 이라, 겹치면 오브가 FAB 을 완전히 가린다 — 반드시 오브 위로.)
     var w = window.innerWidth, h = window.innerHeight;
+    var orb = document.getElementById("frOrb");
+    if (orb) {
+      var r = orb.getBoundingClientRect();
+      if (r && r.width) {
+        return clampPos(r.right - SIZE, r.top - SIZE - 12); // 오브 오른쪽 정렬 · 12px 위
+      }
+    }
     return clampPos(w - SIZE - MARGIN, h - SIZE - ORB_CLEAR);
   }
+  function hasSavedPos() { return !!loadPos(); }
   function applyPos(l, t) {
     var c = clampPos(l, t);
     fab.style.left = c.l + "px";
@@ -111,7 +120,14 @@
 
   function sync() {
     if (!fab) make();
-    fab.hidden = !plazaVisible();
+    var vis = plazaVisible();
+    fab.hidden = !vis;
+    // 사용자가 직접 옮긴 적 없으면, 오브가 뒤늦게 생겨도 항상 오브 '위'로 재배치.
+    if (vis && !dragging && !hasSavedPos()) {
+      var p = defaultPos();
+      fab.style.left = p.l + "px"; fab.style.top = p.t + "px";
+      fab.style.right = "auto"; fab.style.bottom = "auto";
+    }
   }
 
   // 광장 탭 전환·SPA 재주입에 반응

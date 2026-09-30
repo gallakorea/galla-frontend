@@ -400,8 +400,8 @@ function renderNeedGate(issueId, need, total) {
   if (desc) desc.hidden = true;
   const head =
     '<div class="sg-t">누가 어느 편인지, 통계로 볼래요?</div>' +
-    '<div class="sg-s">성별·나이대·지역별로 누가 찬성·반대했는지 보여 줘요.<br>' +
-    '보려면 <b>내 정보 3가지</b>를 넣어 주세요 — 내 투표도 통계에 보태져요.</div>';
+    '<div class="sg-s">나이대·지역별로 누가 찬성·반대했는지 보여 줘요.<br>' +
+    '보려면 <b>출생연도·지역</b>을 넣어 주세요 (성별은 선택) — 내 투표도 통계에 보태져요.</div>';
   if (need === "login") {
     box.innerHTML = head + '<button type="button" class="sg-go" id="sgLogin">로그인하고 통계 보기</button>' +
       '<div class="sg-f">지금 ' + total + '명 참전 중</div>';
@@ -418,7 +418,8 @@ function renderNeedGate(issueId, need, total) {
   box.innerHTML = head +
     '<div class="sg-form">' +
       '<select class="sg-in" id="sgYear" aria-label="출생연도">' + years + '</select>' +
-      '<div class="sg-chips"><button type="button" class="sg-chip" data-g="male">남성</button><button type="button" class="sg-chip" data-g="female">여성</button></div>' +
+      '<div class="sg-glab">성별 <span class="sg-opt">선택</span></div>' +
+      '<div class="sg-chips"><button type="button" class="sg-chip" data-g="male">남성</button><button type="button" class="sg-chip" data-g="female">여성</button><button type="button" class="sg-chip" data-g="">선택 안 함</button></div>' +
       '<select class="sg-in" id="sgRegion" aria-label="지역"><option value="">사는 지역</option>' +
         SG_REGIONS.map(r => '<option value="' + r + '">' + r + '</option>').join("") + '</select>' +
     '</div>' +
@@ -426,7 +427,7 @@ function renderNeedGate(issueId, need, total) {
     '<div class="sg-f">통계엔 묶음(5명 이상)으로만 쓰여요 · 나를 알아볼 수 없어요</div>';
   let g = "";
   const go = box.querySelector("#sgGo"), yr = box.querySelector("#sgYear"), rg = box.querySelector("#sgRegion");
-  const ready = () => { go.disabled = !(yr.value && g && rg.value); };
+  const ready = () => { go.disabled = !(yr.value && rg.value); };  // 성별은 선택 — 버튼 조건에서 뺀다
   box.querySelectorAll(".sg-chip").forEach(c => c.onclick = () => {
     g = c.dataset.g; box.querySelectorAll(".sg-chip").forEach(x => x.classList.toggle("on", x === c)); ready();
   });
@@ -434,7 +435,7 @@ function renderNeedGate(issueId, need, total) {
   go.onclick = async () => {
     go.disabled = true; go.textContent = "저장 중…";
     const { data, error } = await window.supabaseClient.rpc("set_my_demographics",
-      { p_birth_year: parseInt(yr.value, 10), p_gender: g, p_region: rg.value });
+      { p_birth_year: parseInt(yr.value, 10), p_gender: g || null, p_region: rg.value });
     if (error || !data || !data.ok) {
       const M = { age14: "만 14세 이상만 참여할 수 있어요.", birth: "출생연도를 골라 주세요.", gender: "성별을 골라 주세요.", region: "지역을 골라 주세요." };
       (window.GALLA_toast || alert)(M[data && data.reason] || "저장하지 못했어요. 잠시 후 다시 시도해 주세요.");

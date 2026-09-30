@@ -114,6 +114,7 @@ async function openPlazaWriteModal() {
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
   jarvisSeedPrefill();   // 🤖 갈라비스 초안이 있으면 채움(본문 해시태그는 GALLA_collectTags가 자동 수집)
   prefillChannelFromContext();   // 🏛 지금 보고 있는 채널을 자동 선택(draft·seed 가 안 채웠을 때만)
+  resetFlairChips();   // 🏷 말머리는 열 때마다 '없음'으로 시작
   exposePlazaWorkform();   // 🛠 작업 모드 브리지(갈비스 도킹 미니챗이 광장 폼을 실시간 수정)
 }
 // 🏛 등록 위치(작성 채널) 옵션을 '내가 팔로우한 채널'로 채운다(블라인드식 '등록 위치를 선택하세요').
@@ -259,6 +260,40 @@ function bindPlazaSortSearch() {
   }
 }
 bindPlazaSortSearch();
+
+// 🏷 채널방에서 정렬·말머리를 제어하기 위한 공개 훅(plaza-channels.js가 호출).
+window.GALLA_plazaSetSort = function (s) {
+  currentSort = s || "hot";
+  document.querySelectorAll("#plaza-sorts button").forEach(function (b) {
+    b.classList.toggle("active", (b.dataset.sort || "hot") === currentSort);
+  });
+  fetchPlazaPosts();
+};
+window.GALLA_plazaSetRoomFlair = function (f) {
+  window.__plazaRoomFlair = f || null;
+  fetchPlazaPosts();
+};
+
+// ✍️ 글쓰기 모달 말머리 칩(단일 선택). 값은 submit 시 selectedFlair()로 읽는다.
+(function bindFlairChips() {
+  var box = document.getElementById("plaza-flair");
+  if (!box || box.dataset.bound) return;
+  box.dataset.bound = "1";
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest(".pf-chip"); if (!b) return;
+    box.querySelectorAll(".pf-chip").forEach(function (x) { x.classList.remove("active"); });
+    b.classList.add("active");
+  });
+})();
+function selectedFlair() {
+  var a = document.querySelector("#plaza-flair .pf-chip.active");
+  var v = a ? (a.dataset.flair || "") : "";
+  return v || null;
+}
+function resetFlairChips() {
+  var box = document.getElementById("plaza-flair"); if (!box) return;
+  box.querySelectorAll(".pf-chip").forEach(function (x, i) { x.classList.toggle("active", i === 0); });
+}
 
 const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
@@ -615,6 +650,7 @@ async function fetchPlazaPosts(more) {
       up_count,
       view_count,
       locale, hot_score,
+      flair,
       plaza_comments(id)
     `)
   // ⚠️ plaza_comments(count) 금지 — count 집계는 테이블級 SELECT를 요구해 user_id(유령보호 잠금)까지
@@ -634,6 +670,10 @@ async function fetchPlazaPosts(more) {
 
   if (currentCategory !== "전체") {
     query = query.eq("category", currentCategory);
+  }
+  // 🏷 채널방 말머리 필터(전체=null이면 no-op). 채널방에서만 켜진다.
+  if (window.__plazaRoomFlair) {
+    query = query.eq("flair", window.__plazaRoomFlair);
   }
   if (plazaSearchQ) {
     const q = plazaSearchQ.replace(/[%,]/g, " ").trim();
@@ -738,6 +778,7 @@ function renderPlazaPosts(posts) {
   posts.forEach(post => {
     const li = document.createElement("li");
     li.className = "plaza-post";
+    if (post.flair) li.setAttribute("data-flair", post.flair);   // 🏷 말머리
     /* 📊 신호 — 광장은 레딧식(찬반 비율 + 시간감쇠)으로 갈 자리다. 그 랭킹의 분모가 '노출'이다.
        지금은 조회수만 있어 "안 눌린 글"을 구분할 수 없다. */
     if (window.GALLA_signal) {
@@ -756,6 +797,7 @@ function renderPlazaPosts(posts) {
         <div class="post-body">
           <div class="post-head">
             <span class="post-cat">${escP(post.category || "광장")}</span>
+            ${post.flair ? `<span class="post-flair">${escP(post.flair)}</span>` : ""}
             <span class="post-author">${post.user_id && window.GALLA_userBadge
               ? window.GALLA_userBadge(post.user_id, post.nickname)
               : escP(post.nickname || "익명")}</span>
@@ -1001,7 +1043,8 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     nickname: displayName,
     user_id: user.id,
     tags: tags.length ? tags : null,
-    title_pattern: titlePattern
+    title_pattern: titlePattern,
+    flair: selectedFlair()   // 🏷 말머리(범용 5종·없음=null)
   };
 
   const { error } = await supabase

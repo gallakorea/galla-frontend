@@ -321,20 +321,24 @@ function waitForSupabaseClient() {
 
 <!-- Settings 페이지 로직 -->
 <script src="js/gallian.js?v=090801"></script>
-<script src="js/social-auth.js?v=0924100"></script>
+<script src="js/social-auth.js?v=0933001"></script>
 <script>/* '이 기기에 패스키 등록' 노출 — 패스키 지원 + (홈화면 웹클립 PWA가 아님).
      네이티브 앱(UA에 GallaApp)은 Associated Domains로 패스키 가능하므로 노출 유지. */
   (function(){
-    var isWebClip = !/GallaApp/i.test(navigator.userAgent||'') &&
+    // ⛔ 앱(GallaApp)은 웹뷰 origin=capacitor://localhost 라 웹 WebAuthn RP=galla.im 불가(iosScheme=https iOS 불가).
+    //    앱 패스키는 네이티브 ASAuthorization 플러그인 필요 → 되기 전까진 숨겨 깨진 버튼을 막는다. 웹은 그대로.
+    var ua = navigator.userAgent||'';
+    var isNativeApp = /GallaApp/i.test(ua);
+    var isWebClip = !isNativeApp &&
       ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true);
-    if (window.PublicKeyCredential && navigator.credentials && !isWebClip) {
+    if (window.PublicKeyCredential && navigator.credentials && !isWebClip && !isNativeApp) {
       var _pk = document.getElementById('st-passkey'); if (_pk) _pk.hidden = false;
     }
   })();</script>
 <script src="js/account-delete.js?v=080412"></script>
 <script src="js/notify-settings.js?v=0930700"></script>
 <script src="js/invite.js?v=0909100"></script><!-- 🎁 초대 허브 -->
-<script src="js/settings.js?v=0922700"></script>
+<script src="js/settings.js?v=0933001"></script>
 <script src="js/bug-report.js?v=0925800"></script>
 <script>
 /* 📳 흔들어서 신고 — iOS만 권한 동의가 필요하다. 필요한 기기에서만 항목을 보여준다. */

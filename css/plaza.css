@@ -1001,6 +1001,23 @@ html, body {
 .pr-head.on { background: linear-gradient(135deg,#4361ff,#3a4fff); border-color: #3a4fff; color: #fff;
   box-shadow: 0 3px 12px rgba(58,79,255,.35); }
 
+/* 채널방 정렬(후끈/최신/조회) */
+.pr-sort { display: flex; gap: 6px; margin: 4px 2px 2px; }
+.pr-sort-b { flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+  background: #14161e; border: 1px solid #232634; color: #9aa3b8; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.pr-sort-b.on { background: #1d2130; border-color: #3a4fff; color: #cdd6ff; }
+
+/* 🏷 말머리 배지(피드·채널방 카드) */
+.post-flair { display: inline-flex; align-items: center; font-size: 11px; font-weight: 800; line-height: 1;
+  padding: 3px 7px; border-radius: 6px; margin-left: 2px;
+  color: #a9b6ff; background: rgba(58,79,255,.16); border: 1px solid rgba(90,110,255,.34); }
+
+/* ✍️ 글쓰기 모달 말머리 칩 */
+.plaza-flair { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 10px; }
+.pf-chip { font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+  background: #14161e; border: 1px solid #262a38; color: #9aa3b8; cursor: pointer; transition: all .15s; }
+.pf-chip.active { background: linear-gradient(135deg,#4361ff,#3a4fff); border-color: #3a4fff; color: #fff; }
+
 /* 채널 카드 부가(DB) · 개설 */
 .plaza-ch-n small { display: block; font-size: 11px; color: #6b7280; font-weight: 400; margin-top: 2px; }
 .plaza-ch-u { font-size: 9px; font-weight: 800; color: #6f86ff; background: rgba(58,79,255,.15); padding: 1px 5px; border-radius: 5px; vertical-align: middle; }
