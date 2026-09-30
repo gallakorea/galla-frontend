@@ -171,6 +171,11 @@
   }
 
   if (cfg.mode === "shell") {
+    // 🖥 데스크톱(≥1100px, desktop-pc.js 활성 폭)은 desktop-pc.js 가 3컬럼을 직접 그린다.
+    //    모바일 골격 스냅샷을 #app 에 복원/저장하면 순간 모바일 레이아웃이 떴다가 재구성돼
+    //    화면이 좁게 깨졌다 돌아온다(PC 광장 새로고침 flash, 사장님 제보 26.10.1). → 데스크톱은 미사용.
+    var _isPC = false; try { _isPC = window.matchMedia('(min-width: 1100px)').matches; } catch (_) { _isPC = innerWidth >= 1100; }
+    if (_isPC) return;
     if (saved) { el.innerHTML = saved; stripTransient(el); }      // 같은 골격·같은 id — JS가 그대로 바인딩·갱신
     else veilOn(null, 1400);                                       // 셸은 곧 그려지므로 짧게만 가림
     var saveShell = function () {
