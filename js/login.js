@@ -239,6 +239,8 @@
             try { sessionStorage.removeItem("galla_login_next"); } catch (_) {}
             const TAB = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
             const base = next ? next.split("?")[0] : null;
+            // 🚫 로그인 직후 재부팅에 스플래시 다시 안 뜨게(같은 세션·CSS 캐시됨) — 사장님: 「또 스플래시 터져 시간낭비」
+            try { sessionStorage.setItem("galla_splashed", "1"); } catch (_) {}
 
             if (isAppEnv) {
                 // 앱/PWA: 반드시 셸로 복귀(셸 밖이면 조그·스와이프 먹통). next가 탭이면 그 탭을 연다.

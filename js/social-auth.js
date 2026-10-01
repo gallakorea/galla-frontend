@@ -52,25 +52,45 @@
      로그인은 SPA 뷰(iframe)라, 딥링크를 iframe 인스턴스가 처리하면 shellGo 가 그 프레임엔
      없어 location.replace 가 iframe 만 바꾸고 셸은 로그인 화면에 멈췄다 — 애플/iPad 재현
      (App Store 2.1(a), 빌드 18 리뷰). top 의 셸 함수를 우선 호출해 셸을 홈으로 보낸다. */
+  /* 로그인 성공 후 착지 — login.js goHome 과 '동일 규약'으로.
+     ① 온 곳(next)으로 간다(DM 에서 로그인→DM, 마이→마이, 인덱스→인덱스). 무조건 인덱스 금지.
+     ② 게이트 탭(dm/mypage)은 비로그인 때 inert 라 '한 번 재부팅'해야 진짜 화면이 뜬다(router 설계).
+        앱=app-shell.html?tab=<탭>(→ app.html#/<탭> 리다이렉트), 웹=next 페이지.
+     ③ 그 재부팅에서 스플래시가 '또' 뜨면 시간낭비(사장님) → galla_splashed 세팅으로 억제
+        (같은 세션이라 CSS 캐시됨; splash-boot.js 가 이 플래그면 건너뛴다). */
   function goHomeAfterAuth() {
-    // 반드시 셸(top) 프레임 기준으로 동작한다(로그인은 스택 뷰라 현재 프레임이 뷰일 수 있다).
-    let T = window;
-    try { if (window.top) T = window.top; } catch (_) {}
-    // 🔑 SPA(앱/PWA)는 login.js spaDone 과 '동일하게' — 탭 전환만으론 쌓인 로그인 뷰·비로그인 상태가
-    //    안 빠진다. 해시를 홈으로 두고 셸을 1회 리로드해 세션 반영된 새 부팅으로 착지시킨다.
-    //    (빌드18/19 에서 shellGo 로 탭만 바꿔 '로그인해도 그대로, 새로고침해야 넘어감' 이었다.)
-    let isSPA = false;
-    try { isSPA = !!(T.GALLA_SPA || window.GALLA_SPA); } catch (_) {}
-    if (isSPA) {
-      try { T.location.hash = "#/index"; } catch (_) {}
-      try { T.location.reload(); return; } catch (_) {}
-      try { location.hash = "#/index"; location.reload(); return; } catch (_) {}
+    // 🔁 handleAuthUrl 과 authRescue 가 같은 로그인에 둘 다 부를 수 있다 — 먼저 부른 쪽이 next 를
+    //    소비(제거)하면 나중 호출은 next 를 못 찾아 인덱스로 가버린다(사장님: 「무조건 인덱스」 레이스).
+    //    한 번만 이동(이동하면 페이지가 바뀌어 플래그는 어차피 초기화된다).
+    var T0 = window; try { if (window.top) T0 = window.top; } catch (_) {}
+    try { if (T0.__gallaAuthNavigated) return; T0.__gallaAuthNavigated = 1; }
+    catch (_) { if (window.__gallaAuthNavigated) return; window.__gallaAuthNavigated = 1; }
+    var TABMAP = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
+    var TABS = ["index", "predict", "dm", "trend", "mypage"];
+    var isAppEnv = false;
+    try { isAppEnv = (window.GALLA_isApp && window.GALLA_isApp()) || (window.matchMedia && matchMedia("(display-mode: standalone)").matches); } catch (_) {}
+    // 온 곳(next) → 탭 이름
+    var next = null;
+    try { next = new URLSearchParams(location.search).get("next") || sessionStorage.getItem("galla_login_next"); } catch (_) {}
+    try { sessionStorage.removeItem("galla_login_next"); } catch (_) {}
+    var base = next ? String(next).split("?")[0] : null;
+    var tab = (base && TABMAP[base]) ? TABMAP[base] : ((base && TABS.indexOf(base) !== -1) ? base : null);
+    // 🚫 로그인 직후 재부팅에 스플래시 다시 안 뜨게
+    try { sessionStorage.setItem("galla_splashed", "1"); } catch (_) {}
+
+    if (isAppEnv) {
+      var dest = "app-shell.html" + (tab ? "?tab=" + tab : "");
+      var inShell = false; try { inShell = window.top !== window.self; } catch (_) {}
+      try { if (inShell && window.top) { window.top.location.href = dest; return; } } catch (_) {}
+      try { location.replace(dest); return; } catch (_) {}
     }
-    // 셸 함수(있으면) → 탭 복귀
-    try { if (T.GALLA_shellGo) { T.GALLA_shellGo("index.html", "home"); return; } } catch (_) {}
-    if (window.GALLA_shellGo) { window.GALLA_shellGo("index.html", "home"); return; }
-    // MPA/웹 브라우저
-    try { (T.location || location).replace("index.html"); } catch (_) { location.replace("index.html"); }
+    // 웹(MPA) — next 페이지로, 없으면 해당 탭 파일 / 홈
+    var FILE = { index: "index.html", predict: "galla-predict.html", dm: "dm.html", trend: "search.html", mypage: "mypage.html" };
+    var webDest = (tab && FILE[tab]) ? FILE[tab] : "index.html";
+    // next 가 같은 사이트 경로면 그대로(오픈 리다이렉트 차단)
+    if (next && /^[a-z0-9_\-./?=&%]+$/i.test(next) && next.indexOf("//") === -1 && !/^https?:/i.test(next)) webDest = next;
+    try { var W = (window.top && window.top.location) ? window.top.location : location; W.replace(webDest); }
+    catch (_) { try { location.replace(webDest); } catch (__) {} }
   }
 
   async function handleAuthUrl(url) {
