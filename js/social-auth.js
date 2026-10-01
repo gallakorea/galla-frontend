@@ -411,7 +411,8 @@
       '<button type="button" class="soc-btn soc-google" data-act="google"><span class="soc-ic soc-g">G</span> 구글로 계속하기</button>' +
       (androidApp ? '' :
       '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
-      '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
+      '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>' +
+      '<button type="button" class="soc-btn soc-kakao" data-act="kakao"><span class="soc-ic soc-k">K</span> 카카오로 계속하기</button>';
     // 🔑 패스키: 웹(origin=galla.im) + iOS 앱(네이티브 폴리필 __gallaPasskeyNative). 안드로이드 앱·웹클립·데스크톱은 제외.
     if (hasPasskey() && !isDesktopApp() && (!isNativeApp() || window.__gallaPasskeyNative))
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
@@ -422,6 +423,8 @@
     if (ap) ap.onclick = () => signInSocial("apple");
     const nv = box.querySelector('[data-act="naver"]');
     if (nv) nv.onclick = () => signInNaver();
+    const kk = box.querySelector('[data-act="kakao"]');
+    if (kk) kk.onclick = () => signInSocial("kakao");   // Supabase 네이티브 provider(비즈앱 전환으로 account_email 가능)
     const pk = box.querySelector('[data-act="passkey"]');
     if (pk) pk.onclick = () => passkeyLogin();
   }

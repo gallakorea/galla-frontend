@@ -20,6 +20,7 @@
 .soc-google .soc-g { background: #fff; color: #4285F4; font-size: 16px; }
 .soc-naver { background: #03C75A; color: #fff; }
 .soc-naver .soc-n { background: #fff; color: #03C75A; }
+.soc-kakao .soc-k { background: #191600; color: #FEE500; }
 .soc-apple { background: #000; color: #fff; border: 1px solid rgba(255,255,255,.22); }
 .soc-apple .soc-a { width: 17px; height: 20px; border-radius: 0; background: transparent; }
 .soc-passkey { background: #22252e; color: #eef1f7; border: 1px solid rgba(255,255,255,.14); }
