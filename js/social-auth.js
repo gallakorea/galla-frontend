@@ -470,6 +470,19 @@
       const nick = wrap.querySelector("#soco-nick");
       const msg = wrap.querySelector("#soco-nickmsg");
       const err = wrap.querySelector("#soco-err");
+      // 🎁 소셜이 닉네임을 줬으면 미리 채워 준다 — '제안'일 뿐, 바꿀 수 있고 중복은 서버가 잡는다.
+      //    실명 키(name/full_name)는 제외: 구글 실명이 공개닉으로 새면 안 된다. 카카오는 nickname 키로 온다.
+      (async () => {
+        try {
+          const { data } = await sb().auth.getUser();
+          const mm = (data && data.user && data.user.user_metadata) || {};
+          let cand = String(mm.nickname || mm.preferred_username || mm.user_name || "").trim();
+          if (cand && !nick.value) {
+            cand = cand.replace(/[^가-힣a-zA-Z0-9_.\-]/g, "").slice(0, 12);
+            if (cand.length >= 2) { nick.value = cand; nick.dispatchEvent(new Event("input")); }
+          }
+        } catch (_) {}
+      })();
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
       // 닉네임 규칙은 서버와 같다 — 입력하는 동안 바로 알려 준다(모듈이 없는 화면도 있다: 「저장 실패」만 뜨고 이유를 몰랐다, 26.9.21)
       const NICK_RE = /^[가-힣a-zA-Z0-9_.\-]+$/;
