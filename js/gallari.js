@@ -61,7 +61,7 @@
       const U = {}; (users || []).forEach(u => U[u.id] = u);
       const ava = (uid) => {
         const u = U[uid] || {};
-        return window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72) : (u.avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
+        return window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72, uid) : (u.avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
       };
       const thumb = (p) => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || '';
 

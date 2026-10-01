@@ -195,7 +195,7 @@
       const liked = new Set();
       if (uid) { const { data: ml } = await sb().from('post_comment_likes').select('comment_id').eq('user_id', uid).in('comment_id', cs.map(c => c.id)); (ml || []).forEach(r => liked.add(r.comment_id)); }
       list.innerHTML = cs.map(c => { const u = U[c.user_id] || {};
-        return `<div class="grl-c"><img class="grl-cava" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72) : (u.avatar_url || ''))}" alt="" onerror="this.style.visibility='hidden'">
+        return `<div class="grl-c"><img class="grl-cava" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72, c.user_id) : (u.avatar_url || ''))}" alt="" onerror="this.style.visibility='hidden'">
           <div class="grl-cmain"><div class="grl-cnick">${esc(u.nickname || '익명')}<span>${timeago(c.created_at)}</span></div>
             <div class="grl-cbody">${esc(c.body)}</div></div>
           <button class="grl-clike${liked.has(c.id) ? ' on' : ''}" type="button" data-cid="${c.id}">${IC.heart}<b>${c.like_count || 0}</b></button></div>`;

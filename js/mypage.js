@@ -396,7 +396,7 @@ async function GALLA_mypageInit(root, spaParams) {
         })();
 
         if (profileImg) {
-            window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true);
+            window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true, viewUserId);
             // 📷 카톡식 프로필 사진 전체보기 — 탭/꾹 누르면 흐린 배경 + 큰 사진 + 액션
             profileImg.style.cursor = "pointer";
             bindAvatarViewer(profileImg, viewProfile.avatar_url, viewProfile.nickname, viewUserId, isMyPage);
@@ -409,7 +409,7 @@ async function GALLA_mypageInit(root, spaParams) {
     function bindAvatarViewer(imgEl, avatarUrl, nick, uid, isSelf) {
         const escT = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
         const open = () => {
-            const big = window.GALLA_avatarSrc(avatarUrl, 720);
+            const big = window.GALLA_avatarSrc(avatarUrl, 720, uid);
             const profileUrl = window.GALLA_SITE + "/mypage.html?user=" + encodeURIComponent(uid);
             // 말 걸기(오픈프로필) 공유 링크 — 받는 사람이 이 사람에게 1:1 DM으로 바로 연결(+ 미가입이면 가입 유도)
             const talkUrl = window.GALLA_shareUserUrl ? window.GALLA_shareUserUrl(uid) : profileUrl;
@@ -1430,12 +1430,13 @@ async function GALLA_mypageInit(root, spaParams) {
             const u = userMap[fid];
             if (!u) return;
 
-            const avatarSrc = window.GALLA_avatarSrc(u.avatar_url, 96);
+            const avatarSrc = window.GALLA_avatarSrc(u.avatar_url, 96, u.id);
+            const avatarDflt = window.GALLA_genDefaultAvatar(u.id);
 
             const row = document.createElement("div");
             row.className = "user-row";
             row.innerHTML = `
-                <img class="user-row-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src=window.GALLA_DEFAULT_AVATAR">
+                <img class="user-row-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src='${avatarDflt}'">
                 <div class="user-row-info">
                     <div class="user-row-name" data-nick-uid="${u.id}">${u.nickname || "익명의 사용자"}</div>
                     <div class="user-row-level">Lv. ${u.level || 1}</div>

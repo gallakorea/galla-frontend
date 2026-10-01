@@ -249,11 +249,43 @@
      '꾸미기 미반영'이 된다. client 생성만 아래에서 조건부로. */
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 
+  // 🎨 기본 아바타 = 리파인된 '사람 실루엣' + 유저별 배경 톤(시드). 캐릭터 아님 — 같은 아이콘, 품질만 고도화.
+  //   seed(유저 id) 있으면 배경 톤이 유저마다 미세하게 다르고(기본값이 다 똑같지 않게), 없으면 중립(인디고).
+  //   벡터(데이터-URI SVG)라 32px~720px 어디서든 선명. 머리 뒤 은은한 림라이트로 깊이감.
+  var AV_TINTS = [
+    ["#1b1d27", "#0b0b10", "#6f6cff"], ["#171a2e", "#0a0a12", "#8c7cff"],
+    ["#0e2026", "#08080c", "#39c9c0"], ["#211623", "#0d0a0e", "#e07aa6"],
+    ["#1f1b12", "#0d0b07", "#e0b24a"], ["#13202a", "#08080c", "#4aa8ff"],
+    ["#101d16", "#08080c", "#4ad08a"], ["#231320", "#0d080c", "#c77cff"]
+  ];
+  function avHash(s) {
+    s = String(s == null ? "" : s);
+    var h = 1779033703 ^ s.length;
+    for (var i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+    return (h >>> 0);
+  }
+  window.GALLA_genDefaultAvatar = function (seed) {
+    var t = AV_TINTS[seed ? (avHash(seed) % AV_TINTS.length) : 0];
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+      + '<defs>'
+      + '<radialGradient id="b" cx="0.5" cy="0.32" r="0.9"><stop offset="0" stop-color="' + t[0] + '"/><stop offset="1" stop-color="' + t[1] + '"/></radialGradient>'
+      + '<linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dfe2ec"/><stop offset="1" stop-color="#9ea4b8"/></linearGradient>'
+      + '<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>'
+      + '</defs>'
+      + '<rect width="100" height="100" fill="url(#b)"/>'
+      + '<circle cx="50" cy="34" r="20" fill="' + t[2] + '" opacity="0.5" filter="url(#g)"/>'
+      + '<g fill="url(#f)"><circle cx="50" cy="37" r="15.5"/><path d="M20 88 C20 67 33 59 50 59 C67 59 80 67 80 88 Z"/></g>'
+      + '<ellipse cx="44" cy="31" rx="5" ry="6" fill="#ffffff" opacity="0.12"/>'
+      + '</svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  };
+  // 기본(시드 없음) = 중립 인디고. 레거시 참조(onerror 폴백 등) 호환용.
+  window.GALLA_DEFAULT_AVATAR = window.GALLA_genDefaultAvatar();
+
   // 아바타(프로필 사진) URL 해석: avatar_url은 'userid/avatar.jpg' 상대경로.
-  // 없으면 기본 갈라 원형 아이콘. 전역 공용.
-  window.GALLA_DEFAULT_AVATAR = "/assets/app-icons/default-avatar.png";
-  window.GALLA_avatarSrc = function (avatarUrl, size) {
-    if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR;
+  // 없으면 리파인 기본 실루엣(seed로 유저별 톤). 전역 공용.
+  window.GALLA_avatarSrc = function (avatarUrl, size, seed) {
+    if (!avatarUrl) return window.GALLA_genDefaultAvatar(seed);
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
     /* 리사이즈 엔드포인트 경유 — 원본 아바타(≈1MB 실측)를 그대로 받으면
        DM 목록 등에서 기본 이미지 → 사진 교체 깜빡임이 길어진다(사장님 재현).
@@ -262,27 +294,28 @@
     return `${SUPABASE_URL}/storage/v1/render/image/public/profiles/${avatarUrl}?width=${w}&height=${w}&resize=cover`;
   };
   // 공용 아바타 세터 — 전 페이지 프로필사진 통일(설정·마이·DM·댓글 동일 소스/기본값).
-  // avatar_url이 http(s)면 그대로(구글 등), 상대경로면 리사이즈 경유, 없으면 중립 기본아이콘.
-  // bust=true면 캐시버스트(내 프로필 업로드 직후 갱신용).
-  window.GALLA_setAvatar = function (el, avatarUrl, size, bust) {
+  // avatar_url이 http(s)면 그대로(구글 등), 상대경로면 리사이즈 경유, 없으면 seed 기반 기본 실루엣.
+  // bust=true면 캐시버스트(내 프로필 업로드 직후 갱신용). seed=유저 id(없으면 중립).
+  window.GALLA_setAvatar = function (el, avatarUrl, size, bust, seed) {
     if (!el) return;
-    var src = window.GALLA_avatarSrc(avatarUrl, size);
+    var src = window.GALLA_avatarSrc(avatarUrl, size, seed);
     if (bust && avatarUrl && !/^data:/.test(avatarUrl)) src += (src.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
     // 로딩 중엔 '검은 원'만 보이고(전 사진·로고 플래시 방지), 로드되면 부드럽게 페이드인.
     try { el.style.background = "#000"; el.style.transition = "opacity .25s ease"; el.style.opacity = "0"; } catch (_) {}
     var show = function () { try { el.style.opacity = "1"; } catch (_) {} };
     el.onload = show;
-    el.onerror = function () { this.onerror = null; this.src = window.GALLA_DEFAULT_AVATAR; };
+    el.onerror = function () { this.onerror = null; this.src = window.GALLA_genDefaultAvatar(seed); };
     el.src = src;
     if (el.complete && el.naturalWidth) show();   // 캐시로 이미 완료된 경우
     setTimeout(show, 500);                          // 안전망(onload 유실 대비 — 절대 안 보이는 일 없게)
   };
 
-  // onerror 시 기본 아이콘으로 폴백하는 <img> 속성 문자열
-  window.GALLA_avatarImg = function (avatarUrl, cls) {
-    const src = window.GALLA_avatarSrc(avatarUrl);
+  // onerror 시 기본 실루엣으로 폴백하는 <img> 속성 문자열(seed로 유저별 톤)
+  window.GALLA_avatarImg = function (avatarUrl, cls, seed) {
+    const src = window.GALLA_avatarSrc(avatarUrl, undefined, seed);
+    const dflt = window.GALLA_genDefaultAvatar(seed);
     return `<img class="${cls || ''}" src="${src}" alt="프로필" loading="lazy" ` +
-           `onerror="this.onerror=null;this.src='${window.GALLA_DEFAULT_AVATAR}'">`;
+           `onerror="this.onerror=null;this.src='${dflt}'">`;
   };
 
   // 전역 토스트 — 수정/삭제 등 완료 알림(전 페이지 공용). 하단 중앙, 셸 네비 위.
@@ -1104,7 +1137,10 @@
         const hk = "galla_ping_" + new Date().toISOString().slice(0, 13); // 시간 단위 키
         if (!localStorage.getItem(hk)) {
           const { data: s } = await window.supabaseClient.auth.getSession();
-          if (s?.session) { window.supabaseClient.rpc("activity_ping"); localStorage.setItem(hk, "1"); }
+          if (s?.session) {
+            // ⚠️ supabase-js 는 then() 해야 전송된다 — then 없이 두면 요청이 아예 안 나감(26.9.10 역대 0행)
+            window.supabaseClient.rpc("activity_ping").then(function (r) { if (!r.error) localStorage.setItem(hk, "1"); }, function () {});
+          }
         }
       } catch (e) {}
       // 🎁 추천 적용 — 로그인 세션이 있고 보관된 코드가 있으면 1회 시도
@@ -1166,7 +1202,7 @@
         let tz = null; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
         const beat = () => {
           if (document.hidden) return;
-          try { window.supabaseClient.rpc("presence_ping", { p_session: sid, p_tz: tz }); } catch (e) {}
+          try { window.supabaseClient.rpc("presence_ping", { p_session: sid, p_tz: tz }).then(function () {}, function () {}); } catch (e) {}
         };
         beat();
         setInterval(beat, 45000);

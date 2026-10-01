@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>갈비스 HUD 시안</title>
+<style>
+:root{
+  --cy:#3fe0ff; --cy2:#009dff; --am:#ffb347; --ink:#e8f7ff; --dim:#7fa4b8;
+  --glass:rgba(3,12,22,.74); --line:rgba(63,224,255,.38); --bg:#02060b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;padding:14px 16px 60px;}
+h2{font-size:12px;letter-spacing:.2em;color:var(--dim);font-weight:700;margin:26px 0 10px;}
+h2 b{color:var(--cy)}
+.stage{position:relative;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#1a1f28,#0d1016);min-height:120px;padding:18px;}
+.stage.photo{background:url('https://i.ytimg.com/vi/2Vv-BfVoq4g/hqdefault.jpg') center/cover;min-height:360px;}
+.stage.photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.45));}
+
+/* ── 공통 HUD 조각 ── */
+.hud-br{position:absolute;width:12px;height:12px;border:1.5px solid var(--cy);pointer-events:none;filter:drop-shadow(0 0 4px var(--cy));}
+.hud-br.tl{left:-1px;top:-1px;border-right:0;border-bottom:0;border-top-left-radius:6px}
+.hud-br.tr{right:-1px;top:-1px;border-left:0;border-bottom:0;border-top-right-radius:6px}
+.hud-br.bl{left:-1px;bottom:-1px;border-right:0;border-top:0;border-bottom-left-radius:6px}
+.hud-br.br{right:-1px;bottom:-1px;border-left:0;border-top:0;border-bottom-right-radius:6px}
+.hex{position:absolute;inset:0;opacity:.07;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%233fe0ff' stroke-width='1'/%3E%3C/svg%3E");}
+.scan{position:absolute;left:0;right:0;height:40%;top:-40%;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(63,224,255,.16) 70%,rgba(63,224,255,.5) 98%,transparent);animation:scan 2.8s cubic-bezier(.5,0,.5,1) infinite;}
+@keyframes scan{to{top:110%}}
+.lbl{font-size:10.5px;letter-spacing:.18em;color:var(--cy);font-weight:800;text-shadow:0 0 8px rgba(63,224,255,.6)}
+.lbl .am{color:var(--am);text-shadow:0 0 8px rgba(255,179,71,.6)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#3dff9a;box-shadow:0 0 8px #3dff9a;margin-right:6px;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* ── 아크 리액터 + 홀로그램 졸라맨 ── */
+.reactor{position:relative;display:inline-block;flex:0 0 auto}
+.reactor svg{display:block;overflow:visible}
+.r-out{transform-origin:50% 50%;animation:rot 9s linear infinite}
+.r-mid{transform-origin:50% 50%;animation:rot 5s linear infinite reverse}
+.r-tick{transform-origin:50% 50%;animation:rot 14s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.reactor svg{filter:drop-shadow(0 0 4px rgba(63,224,255,.55))}
+.f-eye{transform-box:fill-box;transform-origin:center;animation:fblink 4s infinite}
+@keyframes fblink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.08)}}
+.f-eyes{filter:drop-shadow(0 0 3px #7ff0ff)}
+.f-happy{display:none;filter:drop-shadow(0 0 3px #7ff0ff)}
+.f-mouth rect{transform-box:fill-box;transform-origin:center;animation:fidle 2.4s ease-in-out infinite}
+@keyframes fidle{50%{transform:scaleY(.55)}}
+.f-scan{animation:fscan 2.6s linear infinite}
+@keyframes fscan{from{transform:translateY(0)}to{transform:translateY(80px)}}
+/* 생각 — 눈이 가늘어져 좌우로 훑고, 링이 빨라짐 */
+.think .f-eye{animation:none;transform:scaleY(.4)}
+.think .f-eyes{animation:fscanEye 1.1s ease-in-out infinite}
+@keyframes fscanEye{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}
+.think .f-mouth rect{animation:none;transform:scaleY(.35)}
+/* 말하기 — 입 파형이 목소리처럼 */
+.speak .f-mouth rect{animation:fspeak .5s ease-in-out infinite}
+.speak .f-mouth rect:nth-child(2n){animation-delay:.12s}.speak .f-mouth rect:nth-child(3n){animation-delay:.24s}
+@keyframes fspeak{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1.5)}}
+/* 기쁨 — 눈웃음 ^^ */
+.happy .f-eyes{display:none}.happy .f-happy{display:inline}
+.think .r-out{animation-duration:2s}.think .r-mid{animation-duration:1.2s}
+
+/* ── 1. 닫힌 오브 ── */
+.orb{position:absolute;right:18px;bottom:18px;width:66px;height:66px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,rgba(8,30,48,.95),rgba(2,8,14,.98) 70%);
+  box-shadow:0 0 0 1px rgba(63,224,255,.35),0 0 26px rgba(63,224,255,.35),inset 0 0 18px rgba(63,224,255,.25);}
+.orb .reactor{position:absolute;inset:0}
+.orb::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(63,224,255,.25);animation:ping 2.4s ease-out infinite}
+@keyframes ping{from{transform:scale(.9);opacity:.9}to{transform:scale(1.35);opacity:0}}
+
+/* ── 2. 캡슐 ── */
+.cap{position:relative;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px 0 8px;margin:0 auto;width:290px;
+  background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  border:1px solid var(--line);border-radius:14px;box-shadow:0 0 22px rgba(63,224,255,.18),0 12px 30px rgba(0,0,0,.5);}
+.cap .txt{flex:1;min-width:0;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.caret{display:inline-block;width:7px;height:14px;background:var(--cy);vertical-align:-2px;margin-left:2px;box-shadow:0 0 8px var(--cy);animation:blink 1s steps(1) infinite}
+.eq{display:flex;gap:2px;align-items:center;height:16px}
+.eq i{width:2.5px;background:var(--cy);border-radius:2px;box-shadow:0 0 6px var(--cy);animation:eq .8s ease-in-out infinite}
+.eq i:nth-child(1){height:6px}.eq i:nth-child(2){height:13px;animation-delay:.1s}.eq i:nth-child(3){height:9px;animation-delay:.2s}.eq i:nth-child(4){height:14px;animation-delay:.3s}.eq i:nth-child(5){height:7px;animation-delay:.4s}
+@keyframes eq{50%{transform:scaleY(.35)}}
+
+/* ── 3. 펼친 아일랜드(HUD 패널) ── */
+.panel{position:absolute;left:12px;right:12px;bottom:14px;z-index:2;padding:12px 14px 12px;
+  background:var(--glass);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);
+  border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 0 30px rgba(63,224,255,.2),0 16px 40px rgba(0,0,0,.55);}
+.p-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.p-head .meta{flex:1;min-width:0}
+.p-head .meta .t{font-size:13px;font-weight:800;color:var(--ink);margin-top:2px}
+.p-x{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:rgba(63,224,255,.06);color:var(--cy);display:flex;align-items:center;justify-content:center;font-size:16px}
+.p-msg{font-size:15px;line-height:1.55;color:#f0faff;margin:4px 0 10px}
+.p-msg b{color:var(--cy);font-weight:800}
+.readout{display:flex;gap:6px;margin:0 0 10px}
+.readout span{font-size:11px;font-weight:800;color:var(--am);border:1px solid rgba(255,179,71,.4);border-radius:6px;padding:3px 7px;background:rgba(255,179,71,.07)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.chip{position:relative;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink);
+  padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:rgba(63,224,255,.06);}
+.chip svg{width:14px;height:14px;stroke:var(--cy);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chip::before,.chip::after{content:"";position:absolute;width:5px;height:5px;border-color:var(--cy)}
+.chip::before{left:-1px;top:-1px;border-left:1.5px solid;border-top:1.5px solid}
+.chip::after{right:-1px;bottom:-1px;border-right:1.5px solid;border-bottom:1.5px solid}
+.cmd{display:flex;align-items:center;gap:8px;height:42px;padding:0 6px 0 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.35)}
+.cmd .pr{color:var(--cy);font-weight:900;font-size:14px}
+.cmd .ph{flex:1;color:var(--dim);font-size:14.5px}
+.send{width:32px;height:32px;border-radius:8px;border:0;background:linear-gradient(135deg,var(--cy),var(--cy2));display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(63,224,255,.6)}
+.send svg{width:15px;height:15px;fill:#02121c}
+
+/* ── 4. 대화창(반창·전체창) 머리 + 말풍선 ── */
+.sheet{position:relative;border-radius:18px 18px 0 0;overflow:hidden;background:linear-gradient(180deg,rgba(4,14,26,.97),rgba(2,7,13,.99));border:1px solid var(--line);border-bottom:0;box-shadow:0 -10px 40px rgba(63,224,255,.12)}
+.s-head{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(63,224,255,.18)}
+.s-head .nm{font-size:15px;font-weight:900;letter-spacing:.22em;color:var(--ink);text-shadow:0 0 10px rgba(63,224,255,.5)}
+.s-head .sub{font-size:10px;letter-spacing:.14em;color:var(--dim);margin-top:2px}
+.s-head .sp{flex:1}
+.s-body{position:relative;padding:14px;display:flex;flex-direction:column;gap:8px}
+.b-a{align-self:flex-start;max-width:82%;padding:10px 13px;font-size:14.5px;line-height:1.5;border:1px solid rgba(63,224,255,.3);border-radius:4px 14px 14px 14px;background:rgba(63,224,255,.06)}
+.b-u{align-self:flex-end;max-width:78%;padding:10px 13px;font-size:14.5px;line-height:1.5;color:#1a0f00;border-radius:14px 4px 14px 14px;background:linear-gradient(135deg,#ffcf7a,#ffb347);box-shadow:0 0 14px rgba(255,179,71,.35)}
+</style></head><body>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <radialGradient id="core" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#eaffff"/><stop offset=".35" stop-color="#7ff0ff"/><stop offset="1" stop-color="#0077ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="plate" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#0d3550"/><stop offset=".7" stop-color="#041422"/><stop offset="1" stop-color="#020a12"/></radialGradient>
+  <clipPath id="plateClip"><circle cx="50" cy="50" r="31"/></clipPath>
+  <symbol id="reactor" viewBox="0 0 100 100">
+    <!-- 바깥 자비스 분절 링 + 눈금 -->
+    <g class="r-out"><circle cx="50" cy="50" r="47" fill="none" stroke="#3fe0ff" stroke-width="2.2" stroke-dasharray="22 6 3 6 40 8" opacity=".95"/></g>
+    <g class="r-tick"><circle cx="50" cy="50" r="41.5" fill="none" stroke="#3fe0ff" stroke-width="3.4" stroke-dasharray=".9 4.3" opacity=".5"/></g>
+    <g class="r-mid"><circle cx="50" cy="50" r="36" fill="none" stroke="#ffb347" stroke-width="1.8" stroke-dasharray="52 14 8 14" opacity=".9"/></g>
+    <!-- 얼굴판 -->
+    <circle cx="50" cy="50" r="31" fill="url(#plate)" stroke="#3fe0ff" stroke-opacity=".55" stroke-width="1"/>
+    <g clip-path="url(#plateClip)"><rect class="f-scan" x="18" y="10" width="64" height="6" fill="#3fe0ff" opacity=".18"/></g>
+    <!-- 눈 -->
+    <g class="f-eyes">
+      <rect class="f-eye" x="35.5" y="38" width="9" height="13" rx="4.5" fill="#bdf7ff"/>
+      <rect class="f-eye" x="55.5" y="38" width="9" height="13" rx="4.5" fill="#bdf7ff"/>
+    </g>
+    <g class="f-happy" fill="none" stroke="#bdf7ff" stroke-width="3.2" stroke-linecap="round"><path d="M35 46 q5 -7 10 0"/><path d="M55 46 q5 -7 10 0"/></g>
+    <!-- 입 = 음성 파형 -->
+    <g class="f-mouth" fill="#3fe0ff">
+      <rect x="38" y="60" width="2.6" height="4" rx="1.3"/><rect x="42" y="59" width="2.6" height="6" rx="1.3"/><rect x="46" y="58" width="2.6" height="8" rx="1.3"/>
+      <rect x="50" y="57" width="2.6" height="10" rx="1.3"/><rect x="54" y="58" width="2.6" height="8" rx="1.3"/><rect x="58" y="59" width="2.6" height="6" rx="1.3"/><rect x="62" y="60" width="2.6" height="4" rx="1.3"/>
+    </g>
+  </symbol>
+</defs></svg>
+
+<div class="lbl" style="margin-bottom:4px">G.A.L.V.I.S. <span class="am">얼굴</span> 시안 — 자비스 오마주</div>
+<div style="font-size:12.5px;color:var(--dim)">자비스 음성 링 + 빛나는 눈 + 목소리 파형 입</div>
+<div style="display:flex;justify-content:space-around;align-items:flex-end;margin:16px 0 4px;text-align:center;font-size:11.5px;color:var(--dim)">
+  <div><div class="reactor"><svg width="78" height="78"><use href="#reactor"/></svg></div><div>평소</div></div>
+  <div class="think"><div class="reactor"><svg width="78" height="78"><use href="#reactor"/></svg></div><div>생각 중</div></div>
+  <div class="speak"><div class="reactor"><svg width="78" height="78"><use href="#reactor"/></svg></div><div>말하는 중</div></div>
+  <div class="happy"><div class="reactor"><svg width="78" height="78"><use href="#reactor"/></svg></div><div>기쁨</div></div>
+</div>
+
+<h2><b>01</b> · 닫혔을 때(오브)</h2>
+<div class="stage" style="min-height:110px"><div class="hex"></div>
+  <div style="font-size:13px;color:#9fb0bf">(페이지 오른쪽 아래)</div>
+  <div class="orb"><div class="reactor" style="width:66px;height:66px"><svg width="66" height="66"><use href="#reactor"/></svg></div></div>
+</div>
+
+<h2><b>02</b> · 콘텐츠 볼 때(캡슐) — 생각 중</h2>
+<div class="stage"><div class="hex"></div>
+  <div class="cap think"><span class="hud-br tl"></span><span class="hud-br tr"></span><span class="hud-br bl"></span><span class="hud-br br"></span>
+    <div class="reactor"><svg width="40" height="40"><use href="#reactor"/></svg></div>
+    <div class="txt"><span class="lbl" style="font-size:10px">분석 중</span> 원조마포소금구이 읽는 중<span class="caret"></span></div>
+    <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+</div>
+
+<h2><b>03</b> · 답이 왔을 때(펼친 패널)</h2>
+<div class="stage photo">
+  <div class="panel"><div class="hex"></div><div class="scan"></div>
+    <span class="hud-br tl"></span><span class="hud-br tr"></span><span class="hud-br bl"></span><span class="hud-br br"></span>
+    <div class="p-head speak">
+      <div class="reactor"><svg width="44" height="44"><use href="#reactor"/></svg></div>
+      <div class="meta"><div class="lbl"><span class="dot"></span>갈비스 · 맛집 분석</div><div class="t">원조마포소금구이 강남점</div></div>
+      <div class="p-x">⤢</div><div class="p-x">×</div>
+    </div>
+    <div class="readout"><span>★ 4.5 · 98명</span><span>12:00 영업</span><span>강남구</span></div>
+    <div class="p-msg">평점 <b>4.5</b>에 98명이면 믿을 만해 ㅋㅋ 지금은 문 닫았고 <b>12시</b>에 열어 — 점심에 딱이겠다.</div>
+    <div class="chips">
+      <span class="chip"><svg viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3.5L7 20z"/></svg>저장해줘</span>
+      <span class="chip"><svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>근처 다른 데</span>
+    </div>
+    <div class="cmd"><span class="pr">›</span><span class="ph">갈비스한테 명령해</span><button class="send"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></button></div>
+  </div>
+</div>
+
+<h2><b>04</b> · 대화창(반창·전체창)</h2>
+<div class="sheet"><div class="hex"></div>
+  <div class="s-head"><span class="hud-br tl"></span><span class="hud-br tr"></span>
+    <div class="reactor"><svg width="46" height="46"><use href="#reactor"/></svg></div>
+    <div><div class="nm">G.A.L.V.I.S.</div><div class="sub"><span class="dot"></span>연결됨 · 내 편 AI</div></div>
+    <div class="sp"></div><div class="p-x">×</div>
+  </div>
+  <div class="s-body">
+    <div class="b-a">오 왔구나! 새벽인데 안 자고 ㅎㅎ 반가워</div>
+    <div class="b-u">강남역 고기집 추천해줘</div>
+    <div class="b-a">갈라 지도에 강남 쪽 몇 개 걸렸어 — 골라봐</div>
+  </div>
+</div>
+<script>
+/* <use> 안은 바깥 표정 클래스가 안 먹는다 → 얼굴을 각자 직접 그려 넣는다 */
+var sym=document.getElementById('reactor');
+document.querySelectorAll('svg use[href="#reactor"]').forEach(function(u){ var sv=u.parentNode; sv.setAttribute('viewBox', sym.getAttribute('viewBox')); sv.innerHTML=sym.innerHTML; });
+</script>
+</body></html>

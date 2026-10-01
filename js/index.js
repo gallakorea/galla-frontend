@@ -1816,7 +1816,7 @@ function renderGallariCard(p) {
         : `gallari-reels.html?start=${p.id}&t=post`;
     const text = p.caption || p.title || '';
     const avatarImg = window.GALLA_avatarImg
-        ? window.GALLA_avatarImg(u.avatar_url, 'mah-avatar-img')
+        ? window.GALLA_avatarImg(u.avatar_url, 'mah-avatar-img', u.id)
         : `<div class="mah-avatar">${escHtml((u.nickname || '익').trim().charAt(0))}</div>`;
     return `
     <div class="card glr-feed-card" data-id="${p.id}" data-kind="post" data-uid="${escHtml(p.user_id || '')}"${isLink

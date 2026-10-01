@@ -52,7 +52,7 @@
       sb.from('users').select('id,nickname,avatar_url').eq('id', post.user_id).maybeSingle(),
       me ? sb.from('post_likes').select('post_id').eq('post_id', id).eq('user_id', me).maybeSingle() : Promise.resolve({ data: null }),
     ]);
-    const ava = (u) => window.GALLA_avatarSrc ? window.GALLA_avatarSrc((u || {}).avatar_url, 96) : ((u || {}).avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
+    const ava = (u) => window.GALLA_avatarSrc ? window.GALLA_avatarSrc((u || {}).avatar_url, 96, (u || {}).id) : ((u || {}).avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
     let liked = !!myLike, likeCount = post.like_count || 0;
 
     window.GALLA_DOMAIN = post.kind === 'horizontal' ? 'long' : 'short';
@@ -233,7 +233,7 @@
     $id('glp-cfocus').addEventListener('click', focusC);
 
     // 조회수 +1 (뷰어도 가능한 SECURITY DEFINER RPC)
-    try { sb.rpc('bump_post_view', { p_id: id }); } catch (_) {}
+    try { sb.rpc('bump_post_view', { p_id: id }).then(function () {}, function () {}); } catch (_) {} // then 없으면 미전송
 
     // 롱판(유튜브식) 부가 UX — 설명 접기·프로필·팔로우·다음 영상
     if (post.kind === 'horizontal') {
