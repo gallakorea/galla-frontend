@@ -475,11 +475,20 @@
       (async () => {
         try {
           const { data } = await sb().auth.getUser();
-          const mm = (data && data.user && data.user.user_metadata) || {};
+          const u = data && data.user;
+          const mm = (u && u.user_metadata) || {};
+          const prov = (u && u.app_metadata && u.app_metadata.provider) || "";
           let cand = String(mm.nickname || mm.preferred_username || mm.user_name || "").trim();
+          // 카카오는 실명(name) scope를 안 받아 name/full_name도 '카카오 닉네임'이다 → 폴백 허용.
+          // 구글/애플은 name/full_name이 실명이라 폴백 금지(공개닉 유출 방지).
+          if (!cand && prov === "kakao") cand = String(mm.name || mm.full_name || "").trim();
           if (cand && !nick.value) {
             cand = cand.replace(/[^가-힣a-zA-Z0-9_.\-]/g, "").slice(0, 12);
-            if (cand.length >= 2) { nick.value = cand; nick.dispatchEvent(new Event("input")); }
+            if (cand.length >= 2) {
+              nick.value = cand; nick.dispatchEvent(new Event("input"));
+              const sub = wrap.querySelector(".soco-sub");
+              if (sub) sub.textContent = "닉네임을 가져왔어요 — 약관만 동의하면 끝!";
+            }
           }
         } catch (_) {}
       })();
