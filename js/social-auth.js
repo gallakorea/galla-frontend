@@ -261,6 +261,14 @@
       try { (native ? localStorage : sessionStorage).setItem(NAVER_STATE_KEY, r.state); } catch (_) {}
       if (native) {
         setupNativeAuthListener();
+        /* 🟢 네이버 앱(app-to-app) 인증은 **시스템 브라우저**에서만 뜬다 — 인앱 브라우저
+           (SFSafariViewController/Chrome Custom Tab)는 네이버 앱 실행을 막아 '앱이 안 뜨던' 것
+           (사장님 제보, iOS·안드로이드 둘 다). AppLauncher.openUrl(https) 로 시스템 브라우저를 연다.
+           복귀: 네이버 앱 인증→시스템 브라우저로 code→galla.im/auth-callback.html→token_hash 를
+           im.galla.app:// 로 핸드오프(handleNaverCallback). 상태대조는 앱 localStorage 에서. */
+        const AL = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppLauncher;
+        if (AL && AL.openUrl) { await AL.openUrl({ url: r.url }); return; }
+        // 폴백: AppLauncher 없으면 인앱 브라우저(앱 인증은 안 되지만 웹 로그인은 된다)
         await window.Capacitor.Plugins.Browser.open({ url: r.url, presentationStyle: "popover" });
         return;
       }
