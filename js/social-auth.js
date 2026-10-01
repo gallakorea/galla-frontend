@@ -478,18 +478,33 @@
           const u = data && data.user;
           const mm = (u && u.user_metadata) || {};
           const prov = (u && u.app_metadata && u.app_metadata.provider) || "";
-          let cand = String(mm.nickname || mm.preferred_username || mm.user_name || "").trim();
+          let base = String(mm.nickname || mm.preferred_username || mm.user_name || "").trim();
           // 카카오는 실명(name) scope를 안 받아 name/full_name도 '카카오 닉네임'이다 → 폴백 허용.
           // 구글/애플은 name/full_name이 실명이라 폴백 금지(공개닉 유출 방지).
-          if (!cand && prov === "kakao") cand = String(mm.name || mm.full_name || "").trim();
-          if (cand && !nick.value) {
-            cand = cand.replace(/[^가-힣a-zA-Z0-9_.\-]/g, "").slice(0, 12);
-            if (cand.length >= 2) {
-              nick.value = cand; nick.dispatchEvent(new Event("input"));
-              const sub = wrap.querySelector(".soco-sub");
-              if (sub) sub.textContent = "닉네임을 가져왔어요 — 약관만 동의하면 끝!";
+          if (!base && prov === "kakao") base = String(mm.name || mm.full_name || "").trim();
+          base = base.replace(/[^가-힣a-zA-Z0-9_.\-]/g, "").slice(0, 12);
+          if (base.length < 2 || nick.value) return;
+
+          // 🔁 중복 대책: 구글·네이버·카카오가 같은 닉(frank, minsu…)을 주는 건 흔하다.
+          //    원본이 비어 있으면 그대로, 이미 쓰면 '원본+숫자' 빈 변형을 찾아 제안한다.
+          //    (최종 유니크는 DB 인덱스 users_nickname_norm_uniq + social_onboard 가 보장 — 여긴 UX)
+          const c = sb();
+          const avail = async (v) => { try { const { data: d } = await c.rpc("nickname_available", { p_nick: v }); return d ? !!d.ok : null; } catch (_) { return null; } };
+          let pick = base, changed = false;
+          if ((await avail(base)) === false) {
+            changed = true; pick = base; // 못 찾으면 원본 유지(서버가 최종 거부 → 사용자가 수정)
+            for (let i = 0; i < 6; i++) {
+              const suf = String(Math.floor(10 + Math.random() * 9990)); // 2~4자리
+              const v = base.slice(0, 12 - suf.length) + suf;
+              if (await avail(v) === true) { pick = v; break; }
             }
           }
+          if (nick.value) return; // 그새 사용자가 직접 입력했으면 건드리지 않음
+          nick.value = pick; nick.dispatchEvent(new Event("input"));
+          const sub = wrap.querySelector(".soco-sub");
+          if (sub) sub.textContent = changed
+            ? "같은 닉네임이 있어 비슷하게 제안했어요 — 바꿔도 돼요."
+            : "닉네임을 가져왔어요 — 약관만 동의하면 끝!";
         } catch (_) {}
       })();
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
