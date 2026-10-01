@@ -297,6 +297,13 @@
             const scope = this._root;
             const next = (params && params.next) || null;
 
+            /* 🔑 소셜/패스키 로그인은 spaDone(next) 가 아니라 social-auth.js goHomeAfterAuth 를 타는데
+               (딥링크/SIGNED_IN 경로라 이 mount 의 param 을 못 본다), 그쪽은 sessionStorage 를 읽는다.
+               → next 를 넘겨줘야 'DM 에서 로그인→DM' 이 된다(안 넘기면 무조건 인덱스, 사장님 제보). */
+            try { if (next) sessionStorage.setItem("galla_login_next", next); else sessionStorage.removeItem("galla_login_next"); } catch (_) {}
+            // 새 로그인 시도마다 지난 이동 가드 해제(실패 후 재시도가 막히지 않게)
+            try { (window.top || window).__gallaAuthNavigated = 0; } catch (_) { try { window.__gallaAuthNavigated = 0; } catch (__) {} }
+
             // 🔙 뒤로(취소) = 스택 pop — MPA의 _cancelLogin(문서 이동) 대신
             scope.querySelectorAll(".auth-back").forEach(function (b) {
                 if (b.dataset.spaBound) return;
