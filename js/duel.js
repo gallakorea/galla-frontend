@@ -218,7 +218,7 @@
   // ═══════════ 신청 ═══════════
   async function renderChallenge(oppId, issueId) {
     teardown();
-    if (!ME) { alert("로그인이 필요합니다."); (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
+    if (!ME) { if (window.GALLA_needLogin) { GALLA_needLogin("일기토를 신청하려면 로그인이 필요해요."); return; } (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
     if (oppId === ME) { alert("자기 자신에게는 신청할 수 없어요."); (window.GALLA_nav||function(u){location.href=u})("duel.html"); return; }
     /* 주제는 사용자가 짓는 게 아니라 '논쟁하던 그 이슈'에서 온다(사장님 룰).
        이슈 맥락 없이 들어온 신청(직접 URL 등)은 받지 않는다. */

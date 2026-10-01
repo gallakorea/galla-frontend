@@ -841,13 +841,11 @@ function initIssueVoteBar() {
       let uid = null;
       try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
       if (!uid) {
+        /* 🔑 로그인 유도는 '팝업'으로(DM·마이처럼) — 로그인 페이지 직행 금지(사장님 26.10.1). */
+        if (window.GALLA_needLogin) { window.GALLA_needLogin("참여하려면 로그인이 필요해요."); return; }
         const nextP = "issue.html" + (__SPA_PARAMS ? "?id=" + issueId : location.search);
-        /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
-        if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin(nextP); return; }
-        const go = "login.html?next=" + encodeURIComponent(nextP);
-        try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {}
-        try { (window.top || window).location.href = go; } catch (e2) {}
-        setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);
+        if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin(nextP); return; }   // 폴백
+        try { (window.top || window).location.href = "login.html?next=" + encodeURIComponent(nextP); } catch (e2) {}
         return;
       }
     }

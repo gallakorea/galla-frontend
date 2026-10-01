@@ -369,7 +369,7 @@
   async function me() {
     const c = await sb();
     const { data: { user } } = await c.auth.getUser();
-    if (!user) { (window.GALLA_nav||function(u){location.href=u})("login.html"); return null; }
+    if (!user) { if (window.GALLA_needLogin) GALLA_needLogin("로그인이 필요해요."); else (window.GALLA_nav||function(u){location.href=u})("login.html"); return null; }
     return user;
   }
 

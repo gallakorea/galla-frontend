@@ -51,10 +51,11 @@ async function initPredictPage(){
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
   ME = data?.session?.user || null;
-  await refreshBalance();
-  await loadMyStreak();
   bindUI();
-  await loadMarkets();
+  // 콘텐츠(markets)를 잔액·연승과 **병렬**로 — 예전엔 잔액→연승→콘텐츠를 직렬 await 해서
+  // 콘텐츠가 부가작업 왕복 뒤에야 떴다(로딩 1~2초). bindUI·loadMarkets 는 MY_POINTS/MY_STREAK 에
+  // 의존하지 않아 병렬이 안전하다(26.9.29 로딩지연 개선).
+  await Promise.all([ loadMarkets(), refreshBalance(), loadMyStreak() ]);
 }
 /* 이중 모드 — MPA(단독 문서, body data-page≠'spa')면 기존처럼 자동 초기화.
    SPA(app.html)면 어댑터(js/spa/views/predict.js)가 GALLA_PAGE_PREDICT.mount()를 부를 때까지 대기. */
@@ -205,7 +206,7 @@ function renderDaily(){
   $('pmDailyBtn').onclick = claimDaily;
 }
 async function claimDaily(){
-  if(!ME){ (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
+  if(!ME){ if(window.GALLA_needLogin){ GALLA_needLogin('출석 보상을 받으려면 로그인이 필요해요.'); return; } (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
   const { data, error } = await supa.rpc('claim_daily');
   if(error) return toast('오류가 발생했습니다.');
   const btn=$('pmDailyBtn');

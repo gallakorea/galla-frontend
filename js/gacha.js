@@ -84,7 +84,7 @@
 
   window.GALLA_openGacha = async function () {
     const { data: s } = await sb().auth.getSession();
-    if (!s?.session) { (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
+    if (!s?.session) { if (window.GALLA_needLogin) { GALLA_needLogin("뽑기를 하려면 로그인이 필요해요."); return; } (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
     css();
     document.getElementById("ga-sheet")?.remove();
     sheet = document.createElement("div"); sheet.id = "ga-sheet"; sheet.className = "ga-sheet";

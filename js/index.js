@@ -878,17 +878,16 @@ function attachEvents() {
             const id = Number(card.dataset.id);
             if (typeof window.GALLA_VOTE !== 'function') { await ensureModule('vote'); if (typeof window.GALLA_VOTE !== 'function') return; }
             const gv = card.querySelector('.gv');
-            // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정). 셸이면 최상위 이동.
+            // 0) 로그인 필수 — 로그인/회원가입 '유도 팝업'(GALLA_needLogin)으로(사장님 26.10.1, DM·마이처럼).
             {
                 let uid = null;
                 try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
                 if (!uid) {
-                    /* 앱(SPA)에선 셸 안 로그인 뷰로 — location.href 로 나가면 셸을 벗어난다(26.9.18 비로그인 점검) */
-                    if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin('index.html'); return; }
-                    const go = 'login.html?next=' + encodeURIComponent('index.html');
-                    try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: 'shell', t: 'goto', url: go }, location.origin); } catch (e2) {}
-                    try { (window.top || window).location.href = go; } catch (e2) {}
-                    setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);
+                    /* 🔑 로그인 유도는 '팝업'으로(DM·마이처럼) — 로그인 페이지 직행 금지(사장님 26.10.1).
+                       GALLA_needLogin 이 닫기/로그인하기 선택지를 준다. 셸 이탈 없음. */
+                    if (window.GALLA_needLogin) { window.GALLA_needLogin("투표하려면 로그인이 필요해요."); return; }
+                    if (window.GALLA_gotoLogin) { window.GALLA_gotoLogin('index.html'); return; }   // 폴백
+                    try { (window.top || window).location.href = 'login.html?next=' + encodeURIComponent('index.html'); } catch (e2) {}
                     return;
                 }
             }
