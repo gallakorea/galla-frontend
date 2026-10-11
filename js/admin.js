@@ -107,7 +107,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { crisis: renderCrisis, alerts: renderAlerts, foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, trends: renderTrends, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
+  const MODS = { crisis: renderCrisis, alerts: renderAlerts, foodman: renderFoodManual, travel: renderTravelHarvest, dashboard: renderDashboard, funnel: renderFunnel, trends: renderTrends, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, linkpost: renderLinkPost, ops: renderOps, margin: renderMargin, turns: renderTurns };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod, fromHash) {
@@ -302,6 +302,42 @@
       <p class="ad-sub">구글·네이트/줌 실시간 검색어(최근 50분) + 뉴스·유튜브·커뮤니티 교차 점수. 여기서 이슈·예측을 발제하세요.</p>
       <div class="ad-card"><div class="ad-card-h">현시각 화제 TOP 30 <span class="ad-live-refresh">4대 소스 통합 · 조회 시점 계산</span></div>
         <div>${rows || '<div class="ad-soon">지금 잡히는 트렌드가 없어요.</div>'}</div></div>`;
+  }
+
+  /* 🎯 퍼널·리텐션(26.10.12) — 오픈 전 깔아 둔 자체 측정(app_events). 사람 = 기기(로그인하면 계정과 묶임).
+     핵심 지표는 하나: 이번 주 편을 고른 사람(WAV)과 그들의 D7. 나머지는 그걸 설명하는 보조. */
+  async function renderFunnel(days) {
+    days = days || 14;
+    main().innerHTML = `<div class="ad-loading">퍼널 집계 중…</div>`;
+    const r = await rpc("admin_funnel", { p_days: days });
+    if (!r || !r.ok) { main().innerHTML = `<h1 class="ad-h1">🎯 퍼널·리텐션</h1><div class="ad-soon">불러오지 못했어요.</div>`; return; }
+    const t = r.totals || {};
+    const p = (a, b) => b ? Math.round(a / b * 100) + "%" : "–";
+    const kpi = (l, v, h, a) => `<div class="ad-kpi ${a || ""}"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v">${v}</div><div class="ad-kpi-h">${h || ""}</div></div>`;
+    const src = (r.by_src || []).map(s => `<tr><td>${esc(s.src)}</td><td>${fmt(s.n)}</td><td>${fmt(s.signed)} <small>(${p(s.signed, s.n)})</small></td><td>${fmt(s.voted)} <small>(${p(s.voted, s.n)})</small></td><td>${fmt(s.d1)} <small>(${p(s.d1, s.n)})</small></td></tr>`).join("");
+    const daily = (r.daily || []).slice().reverse().map(d => `<tr><td>${esc(String(d.d).slice(5))}</td><td>${fmt(d.visitors)}</td><td>${fmt(d.new)}</td><td>${fmt(d.signups)}</td><td>${fmt(d.votes)}</td></tr>`).join("");
+    const plat = Object.entries(r.by_platform || {}).map(([k, v]) => `${esc(k)} ${fmt(v)}`).join(" · ") || "–";
+    const tbl = "width:100%;border-collapse:collapse;font-size:13px";
+    main().innerHTML = `<h1 class="ad-h1">🎯 퍼널·리텐션</h1>
+      <p class="ad-sub">최근 <b>${days}일</b> 처음 온 기기 기준 · 테스트·관리자 계정 제외 ·
+        <a href="#" data-days="7">7일</a> · <a href="#" data-days="14">14일</a> · <a href="#" data-days="30">30일</a></p>
+      <div class="ad-kpis">
+        ${kpi("핵심: 주간 투표자(WAV)", fmt(r.wav), "최근 7일 편을 고른 사람", "gold")}
+        ${kpi("신규 방문 기기", fmt(t.new_devices), plat)}
+        ${kpi("가입 전환", p(t.signed, t.new_devices), `${fmt(t.signed)}명`)}
+        ${kpi("첫 투표 전환", p(t.voted, t.new_devices), `${fmt(t.voted)}명`)}
+        ${kpi("D1 재방문", p(t.d1, t.d1_eligible), `${fmt(t.d1)}/${fmt(t.d1_eligible)}`)}
+        ${kpi("D7 재방문", p(t.d7, t.d7_eligible), `${fmt(t.d7)}/${fmt(t.d7_eligible)}`)}
+        ${kpi("투표자 D7", p(t.voter_d7, t.voter_d7_eligible), "편 고른 사람이 7일 뒤 다시 왔나", "live")}
+      </div>
+      <div class="ad-grid2">
+        <div class="ad-card"><div class="ad-card-h">🧭 유입 경로별</div>
+          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>경로</th><th>기기</th><th>가입</th><th>첫 투표</th><th>D1</th></tr>${src || '<tr><td colspan="5" style="color:#5f6a80">아직 데이터 없음</td></tr>'}</table></div>
+        <div class="ad-card"><div class="ad-card-h">📅 일별</div>
+          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>날짜</th><th>방문</th><th>신규</th><th>가입</th><th>투표</th></tr>${daily}</table></div>
+      </div>
+      <p class="ad-sub" style="margin-top:10px">유입 경로는 첫 방문 때 한 번만 정해진다: <code>?utm_source=</code> · 초대코드(ref) · 공유 링크(share) · 외부 사이트(youtube·instagram·naver…) · 앱(app) · 직접(direct). 유튜브 고정댓글 링크엔 <code>?utm_source=yt_채널명</code> 을 붙이면 따로 집계된다.</p>`;
+    main().querySelectorAll("a[data-days]").forEach(a => a.onclick = (e) => { e.preventDefault(); renderFunnel(+a.dataset.days); });
   }
 
   async function renderDashboard() {

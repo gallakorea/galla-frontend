@@ -219,6 +219,17 @@
   setTimeout(hide, MAX);
 })();
 
+/* 📈 자체 측정(26.10.12) — 모든 진입 문서에서 js/track.js 를 비동기로 싣는다(splash-boot 와 같은 도장).
+   첫 화면 그리기를 막지 않는다. 실패해도 무해. */
+(function () {
+  try {
+    if (window.__gallaTrack) return;
+    var v = ""; try { var m = (document.currentScript && document.currentScript.src || "").match(/[?&]v=([0-9a-z]+)/); if (m) v = m[1]; } catch (_) {}
+    var s = document.createElement("script"); s.async = true; s.src = "/js/track.js" + (v ? "?v=" + v : "");
+    (document.head || document.documentElement).appendChild(s);
+  } catch (_) {}
+})();
+
 /* ⚡ 프리커넥트 — 첫 API/미디어 요청 전에 DNS+TLS 핸드셰이크를 미리 끝낸다.
    splash-boot는 전 페이지 head에서 동기 실행되므로 여기가 최적 지점. */
 (function () {
