@@ -75,3 +75,49 @@ function renderInsufficient() {
     </div>`;
   section.removeAttribute("hidden");
 }
+
+/* ==================================================
+   💬 바깥 반응(26.10.11) — 이슈 키워드로 네이버 카페·블로그에서 찾은 **실제 외부 글**.
+   엣지 issue-outside 가 의미 유사도로 거른 것만 온다(관련 없으면 0건 → 섹션 자체를 안 그린다).
+   초기 판의 빈 느낌을 조작 없이 채우는 장치 — 출처를 항상 밝힌다.
+================================================== */
+export async function loadOutside(issue) {
+  const supabase = window.supabaseClient;
+  if (!supabase || !issue?.id) return;
+  let items = [];
+  try {
+    const { data } = await supabase.functions.invoke("issue-outside", { body: { issue_id: issue.id } });
+    items = Array.isArray(data?.items) ? data.items : [];
+  } catch (_) { return; }
+  items = items.filter(it => it && /^https?:\/\//i.test(it.url || "") && it.title);
+  if (!items.length) return;
+
+  const news = document.querySelector(".ai-news");
+  if (!news || !news.parentNode) return;
+  let sec = document.querySelector(".issue-outside");
+  if (!sec) { sec = document.createElement("section"); sec.className = "issue-outside"; news.parentNode.insertBefore(sec, news.nextSibling); }
+
+  const cards = items.map(it => {
+    const kind = it.kind === "blog" ? "블로그" : "카페";
+    return `<a class="report-card" href="${A(it.url)}" data-link="${A(it.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="report-mid">
+        <div class="report-src">${kind} · ${A(it.src)}</div>
+        <div class="report-title">${A(it.title)}</div>
+        ${it.desc ? `<div class="report-desc">${A(it.desc)}</div>` : ""}
+      </div>
+      <div class="report-go">↗</div>
+    </a>`;
+  }).join("");
+  sec.innerHTML = `
+    <div class="ai-box ai-news-box">
+      <div class="ai-box-header">
+        <h3 class="white-title">💬 바깥 반응</h3>
+        <p class="ai-tip">다른 커뮤니티·블로그에서 이 이슈를 다룬 실제 글입니다. 누르면 원문으로 이동합니다.</p>
+      </div>
+      <div class="report-list">${cards}</div>
+    </div>`;
+  // 앱(웹뷰)에서 target=_blank 는 웹뷰를 갈아타 버린다 — 외부 링크는 공용 통로로
+  sec.querySelectorAll("a[data-link]").forEach(a => a.addEventListener("click", e => {
+    if (window.GALLA_openLink) { e.preventDefault(); window.GALLA_openLink(a.dataset.link); }
+  }));
+}

@@ -1,5 +1,5 @@
 import { loadAiArguments } from "./issue-argument.js?v=1011020";
-import { loadAiNews } from "./issue-news.js?v=0926100";
+import { loadAiNews, loadOutside } from "./issue-news.js?v=1011050";
 import { loadStats } from "./issue.stats.js?v=0933001";
 import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=0916100";
 
@@ -213,7 +213,7 @@ if (window.GALLA_initDonations) window.GALLA_initDonations(issue);
 
 /* AI NEWS (관련 보도) — whenNear가 SPA 스크롤root+폴백으로 확실히 로드 */
 if (typeof loadAiNews === "function") {
-  whenNear(PAGE_ROOT.querySelector(".ai-news"), () => loadAiNews(issue));
+  whenNear(PAGE_ROOT.querySelector(".ai-news"), () => { loadAiNews(issue); if (typeof loadOutside === "function") loadOutside(issue); });
 }
 /* 🔥 통계 — 스크롤 접근 시(또는 폴백) 로드 */
 whenNear(qs("stats-section"), () => loadStats(issue.id));

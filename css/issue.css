@@ -2215,3 +2215,8 @@ body {
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .army-label,
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #battle-zone .zone-list { margin-left: -14px; margin-right: -14px; border-radius: 0; border-left: 0; border-right: 0; }
 :is(body[data-page="issue"], .view-host[data-spa-view="issue"]) #stats-locked { width: calc(100% + 32px) !important; max-width: none; box-sizing: border-box; }   /* .stats-section > * 가 width:100% !important 라 이겨야 한다(QA) */
+
+/* 💬 바깥 반응(26.10.11) — 관련 보도 카드와 같은 틀, 요약 한 줄 */
+.issue-outside { margin-top: 12px; }
+.issue-outside .report-desc { margin-top: 3px; font-size: 12px; line-height: 1.45; color: #8f96a6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

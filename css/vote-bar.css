@@ -294,3 +294,21 @@
 .gv-surge .gv-dust { animation-duration: .45s !important; }
 .gv-surge .gv-bar { animation: gvShake .09s linear infinite; }
 @keyframes gvShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+
+/* 🌱 초기 판 연출(26.10.11) — 0명: 첫 표 유도 / 10명 미만: 지금 들어갈 이유 / 첫 표 순간: 크게 출렁 */
+.gv-first { color: #eef1f7; font-weight: 800; letter-spacing: -.2px; animation: gvFirstBreath 2.4s ease-in-out infinite; }
+@keyframes gvFirstBreath { 0%,100% { opacity: .78; } 50% { opacity: 1; } }
+.gv-hint { font-style: normal; margin-left: 6px; font-size: 11px; font-weight: 700; color: #f2c46d; opacity: .92; }
+.gv-empty .gv-pct, .gv-empty .gv-side { opacity: 0; }
+.gv-empty .gv-bar::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%);
+  background-size: 220% 100%; animation: gvEmptySweep 2.6s ease-in-out infinite; }
+@keyframes gvEmptySweep { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+.gv-empty .gv-btn.gv-pro { animation: gvBeat 2.4s ease-in-out infinite; }
+.gv-empty .gv-btn.gv-con { animation: gvBeat 2.4s ease-in-out 1.2s infinite; }
+@keyframes gvBeat { 0%,70%,100% { transform: scale(1); } 80% { transform: scale(1.045); } 90% { transform: scale(.99); } }
+.gv-firstvote .gv-bar { animation: gvFirstJolt .9s cubic-bezier(.2,1.4,.3,1); }
+@keyframes gvFirstJolt { 0% { transform: scaleY(1); } 25% { transform: scaleY(1.35); filter: brightness(1.5); } 60% { transform: scaleY(.92); } 100% { transform: scaleY(1); filter: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .gv-first, .gv-empty .gv-bar::after, .gv-empty .gv-btn, .gv-firstvote .gv-bar { animation: none !important; }
+}

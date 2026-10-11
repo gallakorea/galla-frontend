@@ -34,6 +34,13 @@
     '<div class="gv-rope"><i class="gv-rope-knot"></i></div><div class="gv-team gv-team-con">' + FIG + FIG + WAVE + WAVE + '</div>' +
     '<span class="gv-bub gv-bub-pro">이쪽이야!</span><span class="gv-bub gv-bub-con">우리 편 와!</span></div>';
   const FX = '<i class="gv-bglow"></i><i class="gv-bshine"></i><i class="gv-spark s1"></i><i class="gv-spark s2"></i><i class="gv-spark s3"></i>';
+  /* 🌱 초기 판 연출(26.10.11) — 사람이 적을 때 "0명 참전 · 50:50"은 텅 빈 가게처럼 보인다.
+     0명이면 '첫 표의 주인공', 10명 미만이면 지금 들어갈 이유(한 표로 뒤집힘·초반전)를 보여 준다. 숫자는 진짜 그대로. */
+  function totalHTML(total, pro, con) {
+    if (!total) return '<span class="gv-first">첫 표의 주인공이 되세요</span><b class="gv-c-total" hidden>0</b>';
+    const hint = total < 10 ? (Math.abs(pro - con) <= 1 ? "한 표면 판이 뒤집혀요" : "아직 초반전 · 지금이 기회") : "";
+    return '<b class="gv-c-total">' + total + '</b>명 참전' + (hint ? '<i class="gv-hint">' + hint + '</i>' : "");
+  }
   // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
   function html(o) {
     o = o || {};
@@ -60,13 +67,13 @@
       </div>
       <div class="gv-stats">
         <span class="gv-side gv-side-pro"><b class="gv-c-pro">${total ? pro : "–"}</b>${total ? "명" : ""}</span>
-        <span class="gv-total"><b class="gv-c-total">${total}</b>명 참전</span>
+        <span class="gv-total">${totalHTML(total, pro, con)}</span>
         <span class="gv-side gv-side-con">${total ? '' : ''}<b class="gv-c-con">${total ? con : "–"}</b>${total ? "명" : ""}</span>
       </div>`;
   }
 
   // 컨테이너에 마운트. 이후 update로 갱신.
-  function mount(el, o) { if (!el) return; el.classList.add("gv"); el.innerHTML = html(Object.assign({}, o, { buttons: o && o.buttons })); applyLead(el, (o && o.pro) || 0, (o && o.con) || 0); if (o && o.myStance) setMine(el, o.myStance); }
+  function mount(el, o) { if (!el) return; el.classList.add("gv"); el.classList.toggle("gv-empty", !(((o && o.pro) || 0) + ((o && o.con) || 0))); el.innerHTML = html(Object.assign({}, o, { buttons: o && o.buttons })); applyLead(el, (o && o.pro) || 0, (o && o.con) || 0); if (o && o.myStance) setMine(el, o.myStance); }
 
   function applyLead(el, pro, con) {
     el.classList.remove("gv-lead-pro", "gv-lead-con");
@@ -124,7 +131,24 @@
     const pro = stats.pro || 0, con = stats.con || 0, total = pro + con;
     const pp = pct(pro, con), cp = 100 - pp;
     const q = (s) => el.querySelector(s);
-    const bar = q(".gv-bar"); if (bar) { bar.dataset.pro = pro; bar.dataset.con = con; }
+    const bar = q(".gv-bar");
+    const prevTotal = bar ? ((parseInt(bar.dataset.pro, 10) || 0) + (parseInt(bar.dataset.con, 10) || 0)) : total;
+    if (bar) { bar.dataset.pro = pro; bar.dataset.con = con; }
+    el.classList.toggle("gv-empty", !total);
+    // 문구 단계(0명 / 초반 힌트 / 일반)가 바뀌면 줄을 다시 쓴다 — 같으면 아래 countUp 이 숫자만 굴린다
+    const tEl = q(".gv-total");
+    if (tEl) {
+      const want = totalHTML(total, pro, con).replace(/<b class="gv-c-total"[^>]*>\d+<\/b>/, "");
+      const have = tEl.innerHTML.replace(/<b class="gv-c-total"[^>]*>[^<]*<\/b>/, "");
+      if (want !== have) tEl.innerHTML = totalHTML(total, pro, con);
+    }
+    // 🎉 이 판의 첫 표 — "+1" 대신 "첫 표!" 와 큰 출렁임
+    if (!prevTotal && total && (opts.voted === "pro" || opts.voted === "con") && !reduce()) {
+      const pop = q(opts.voted === "pro" ? ".gv-pop-pro" : ".gv-pop-con");
+      if (pop) { pop.textContent = "첫 표!"; setTimeout(() => { pop.textContent = "+1"; }, 1600); }
+      el.classList.remove("gv-firstvote"); void el.offsetWidth; el.classList.add("gv-firstvote");
+      setTimeout(() => el.classList.remove("gv-firstvote"), 1400);
+    }
     const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle"), kn = q(".gv-knot");
     const fromPP = fp ? (parseFloat(fp.style.width) || pp) : pp;
     if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%"; if (kn) kn.style.left = pp + "%";
