@@ -1820,7 +1820,7 @@ function renderGallariCard(p) {
         : `<div class="mah-avatar">${escHtml((u.nickname || '익').trim().charAt(0))}</div>`;
     return `
     <div class="card glr-feed-card" data-id="${p.id}" data-kind="post" data-uid="${escHtml(p.user_id || '')}"${isLink
-        ? ` onclick="GALLA_openLink('${escHtml(p.link_url)}')"` : ""}>
+        ? ` data-link="${escHtml(p.link_url)}" onclick="GALLA_openLink(this.dataset.link)"` : ""}>
         <div class="media-author-head">
             <div class="mah-left">
                 <div class="mah-avatar"${p.user_id ? ` data-profile-uid="${p.user_id}"` : ''}>${avatarImg}</div>
@@ -2077,7 +2077,7 @@ function pfObserveCards(root) {
     pfSweep();
     setTimeout(pfSweep, 400);
 }
-function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function renderFeedItem(item){
     if (item.type === 'predict') return renderPredictCard(item.data);
     if (item.type === 'plaza') return renderPlazaCard(item.data);

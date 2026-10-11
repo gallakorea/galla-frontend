@@ -758,7 +758,7 @@ function gallaEdgeBase() {
 function proxifyThumb(u) {
   if (!u || typeof u !== "string") return u;
   if (u.startsWith("/") || u.includes("/imgproxy?") || u.includes("supabase.co/storage")) return u;
-  if (!/^https?:\/\//i.test(u)) return u;
+  if (!/^https?:\/\//i.test(u)) return "";   // http(s) 아닌 값은 버린다(따옴표로 속성 탈출해 XSS 를 심던 경로)
   return gallaEdgeBase() + "/imgproxy?u=" + encodeURIComponent(u);
 }
 
@@ -838,7 +838,7 @@ function renderPlazaPosts(posts) {
         ${
           thumb
             ? `<div class="plaza-thumb">
-                 <img src="${thumb}" alt="" loading="lazy" style="opacity:0;transition:opacity .18s"
+                 <img src="${String(thumb).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" alt="" loading="lazy" style="opacity:0;transition:opacity .18s"
                       onload="this.style.opacity=1"
                       onerror="this.closest('.plaza-thumb')?.remove()" />
                </div>`

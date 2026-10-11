@@ -12,6 +12,7 @@
  *     지우고 나면 되돌릴 수 없다.
  */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { isServiceCaller } from "../_shared/auth.ts";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
@@ -76,12 +77,8 @@ serve(async (req) => {
        그래서 환경변수와 직접 대조하는 경로를 먼저 둔다 — 구형 JWT·신형 키 모두 통과. */
     const SRK_ENV = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     if (jwt && SRK_ENV && jwt === SRK_ENV) isService = true;
-    if (!isService) {
-      try {
-        const p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-        isService = p?.role === "service_role";
-      } catch { /* 사용자 토큰이면 아래 관리자 검사로 */ }
-    }
+    // 🔒 role 클레임만 읽으면 가짜 토큰이 통과했다(26.10.11 감사) → 서명까지 확인
+    if (!isService) isService = await isServiceCaller(req);
     if (!isService) {
       const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: auth } } });

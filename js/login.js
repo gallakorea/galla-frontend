@@ -145,7 +145,7 @@
         try {
             const u = new URL(n, location.origin);
             if (u.origin !== location.origin) return null;
-            return u.pathname.replace(/^\//, "") + u.search + u.hash;
+            return u.pathname.replace(/^\/+/, "") + u.search + u.hash;   // 맨 앞 슬래시 전부 제거(///evil → //evil 프로토콜 상대 리다이렉트 방지)
         } catch (_) { return null; }
     }
 

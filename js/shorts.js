@@ -1,3 +1,5 @@
+// 이슈 슬라이드 제목·카테고리는 유저 입력 — HTML 이스케이프(숏판 슬라이드 reels-mix.js 와 같은 기준)
+function _sEsc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 /* =========================================================
    GALLA SHORTS / REELS ENGINE (FINAL)
    - index 기반 전환 (scroll 폐기)
@@ -628,11 +630,11 @@ function buildSection(item) {
       <span class="author-avatar-link" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar", item.user_id) : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}</span>
       <div class="author-info">
         <div class="author-line">
-          <span class="author-name" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${item.author || "익명"}</span>
+          <span class="author-name" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${_sEsc(item.author || "익명")}</span>
           ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
         </div>
-        ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
-        <div class="shorts-title shorts-goto" data-goto="${item.id}" role="link">${item.title || ""}
+        ${item.category ? `<div class="shorts-cat">${_sEsc(item.category)}</div>` : ""}
+        <div class="shorts-title shorts-goto" data-goto="${item.id}" role="link">${_sEsc(item.title || "")}
           <span class="shorts-goto-chip">게시물 보기 ›</span>
         </div>
       </div>

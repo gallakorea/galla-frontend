@@ -27,3 +27,18 @@ export function isServiceKey(req: Request): boolean {
   const t = bearer(req);
   return !!SVC && t.length > 20 && t === SVC;
 }
+
+/** 서비스 호출자인가 — 환경변수 키와 정확히 같거나, role=service_role 이라 적힌 토큰이 **서명까지 진짜**인지
+    관리자 API 에 되물어 확인한다(26.10.11 감사: payload 의 role 만 읽어 가짜 토큰이 통과하던 구멍).
+    구형 JWT 서비스 키·신형 sb_secret 키 둘 다 통과. */
+export async function isServiceCaller(req: Request): Promise<boolean> {
+  if (isServiceKey(req)) return true;
+  const tok = bearer(req);
+  if (!tok || tok.split(".").length !== 3) return false;
+  try {
+    const p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (p?.role !== "service_role") return false;
+    const r = await fetch(`${SB_URL}/auth/v1/admin/users?page=1&per_page=1`, { headers: { apikey: tok, Authorization: `Bearer ${tok}` } });
+    return r.ok;
+  } catch { return false; }
+}

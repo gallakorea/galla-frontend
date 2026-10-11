@@ -9,6 +9,7 @@
    가드: JWT 필수, 플랫폼 일일캡(ai_daily_caps.generate-video), 유저 24h 한도(my_thumbnails kind='video').
    키: SHOTSTACK_API_KEY(필수), SHOTSTACK_ENV(stage=무료·워터마크 / v1=유료·무워터마크, 기본 stage). */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+import { verifiedUid } from "../_shared/auth.ts";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 import { logSpendUnits } from "../_shared/spend.ts";
 
@@ -49,13 +50,6 @@ async function fingerprint(parts: unknown[]): Promise<string> {
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info" };
 const j = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-function callerUid(req: Request): string | null {
-  try {
-    const tok = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    const p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return p.sub || null;
-  } catch { return null; }
-}
 
 // 무료(unminus, 상업이용가능) 배경음 — Shotstack 공개 샘플. 나중에 자체 라이브러리로 교체 가능.
 const MUSIC: Record<string, string> = {
@@ -112,7 +106,7 @@ async function copyToR2(mp4Url: string, uid: string): Promise<string> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  const me = callerUid(req);
+  const me = await verifiedUid(req);   // 🔒 서명 검증(26.10.11 감사)
   if (!me) return j({ error: "auth" }, 401);
   if (!SHOTSTACK_KEY) return j({ error: "no_shotstack_key" }, 503);
 

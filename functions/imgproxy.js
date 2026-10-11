@@ -40,7 +40,7 @@ export async function onRequest(context) {
     const ref = context.request.headers.get("Referer") || "";
     const sfs = context.request.headers.get("Sec-Fetch-Site") || "";
     const okOrigin = sfs === "same-origin" ||
-      /^https:\/\/([a-z0-9-]+\.)?galla\.im\//i.test(ref) || /localhost|127\.0\.0\.1/.test(ref);
+      /^https:\/\/([a-z0-9-]+\.)?galla\.im\//i.test(ref) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(ref);   // ⚠️ 앵커 필수 — localhost.attacker.com 통과하던 구멍(26.10.11)
     if (!okOrigin) return new Response("host not allowed", { status: 403 });
     if (target.protocol !== "https:") return new Response("bad proto", { status: 400 });
   }
@@ -72,6 +72,8 @@ export async function onRequest(context) {
   if (!resp.ok) return new Response("upstream " + resp.status, { status: 502 });
   const ct = resp.headers.get("content-type") || "";
   if (!ct.startsWith("image/")) return new Response("not image", { status: 415 });
+  // 🛡 SVG 는 스크립트를 담을 수 있다 — galla.im 출처로 내보내면 세션 탈취 XSS(26.10.11 감사). 래스터만.
+  if (/svg|xml/i.test(ct)) return new Response("svg not allowed", { status: 415 });
 
   const buf = await resp.arrayBuffer();
   if (buf.byteLength > 6_000_000) return new Response("too big", { status: 413 });
@@ -82,6 +84,7 @@ export async function onRequest(context) {
       "Cache-Control": "public, max-age=604800, immutable",
       "Access-Control-Allow-Origin": "*",
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
       ...(resize ? { "Vary": "Accept" } : {}),
     },
   });

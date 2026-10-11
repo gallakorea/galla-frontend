@@ -635,6 +635,7 @@
   window.GALLA_thumb = function (url, w) {
     try {
       if (!url || typeof url !== "string") return url;
+      if (!safeMediaUrl(url)) return "";                          // 🛡 속성 탈출 문자·비 http 스킴 차단
       if (url.indexOf("/cdn-cgi/image/") !== -1) return url;      // 이미 변환됨
       if (/cloudflarestream\.com\/.+\/thumbnails\//.test(url))
         return url + (url.indexOf("?") === -1 ? "?" : "&") + "width=" + (w || 480) + "&fit=crop";
@@ -663,7 +664,22 @@
   /* 🎠 이슈 미디어 정규화 — 혼합 캐러셀(사진+영상)의 단일 진실.
      새 스키마(row.media[])가 있으면 그대로, 없으면 레거시(images[] + video_url)를 순서 있는
      항목으로 승격. 반환: [{ type:'image'|'video', url, thumb? }]. 모든 렌더러가 이걸 쓴다. */
+  /* 🛡 미디어 URL 정화 — DB 의 url/thumb 는 유저가 넣은 값이라 따옴표로 속성을 깨고 onerror 를 심을 수 있었다(26.10.11 감사).
+     http(s)·상대경로·blob/data:image 만 통과, 속성을 깨는 문자(" ' < > 공백)가 있으면 버린다. */
+  function safeMediaUrl(u) {
+    if (!u || typeof u !== "string") return null;
+    if (/["'<>\s`]/.test(u)) return null;
+    if (/^(https?:\/\/|\/(?!\/)|blob:|data:image\/)/i.test(u)) return u;
+    return null;
+  }
+  window.GALLA_safeMediaUrl = safeMediaUrl;
   window.GALLA_issueMedia = function (row) {
+    var out0 = issueMediaRaw(row);
+    return out0
+      .map(function (m) { return { type: m.type, url: safeMediaUrl(m.url), thumb: safeMediaUrl(m.thumb) }; })
+      .filter(function (m) { return m.url; });
+  };
+  function issueMediaRaw(row) {
     try {
       if (!row) return [];
       if (Array.isArray(row.media) && row.media.length) {
@@ -687,7 +703,7 @@
       if (!out.length && vthumb) out.push({ type: "image", url: vthumb, thumb: null });
       return out;
     } catch (_) { return []; }
-  };
+  }
 
   window.GALLA_isApp = function () {
     try {

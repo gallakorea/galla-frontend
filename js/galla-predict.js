@@ -35,7 +35,7 @@ function fmtCompact(n){
   if (n < 100000000){ const m=n/10000; return (m>=100?Math.round(m):(Math.round(m*10)/10))+'만'; }
   const e=n/100000000; return (e>=100?Math.round(e):(Math.round(e*10)/10))+'억';
 }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function comboMult(n){ return n>=10?2.5:n>=5?1.8:n>=3?1.4:n>=2?1.2:1; }
 function timeLeft(c){
   const ms=new Date(c)-Date.now();

@@ -7,6 +7,7 @@
  *     두 벌이 되면 한쪽만 고쳐서 미묘하게 어긋난다.
  */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { isServiceCaller } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
@@ -28,13 +29,8 @@ serve(async (req) => {
       const { data } = await supaAdmin.rpc("cron_secret_matches", { p_secret: secretHdr });
       allowed = data === true;
     }
-    if (!allowed) {
-      const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
-      try {
-        const p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-        allowed = p?.role === "service_role";
-      } catch { /* 무시 */ }
-    }
+    // 🔒 role 클레임만 읽으면 가짜 토큰이 통과했다(26.10.11 감사) → 서명까지 확인
+    if (!allowed) allowed = await isServiceCaller(req);
     if (!allowed) return json({ ok: false, reason: "forbidden" }, 403);
 
     const supa = supaAdmin;

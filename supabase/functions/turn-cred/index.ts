@@ -4,6 +4,7 @@
    최초 1회 TURN 키가 없으면 CF API로 만들어 app_private_kv에 보관한다(부트스트랩).
    CF 토큰에 Calls 권한이 없으면 STUN 전용으로 우아하게 후퇴 — 통화는 여전히 된다. */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+import { verifiedUid, isServiceKey } from "../_shared/auth.ts";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -17,13 +18,6 @@ const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 const STUN_ONLY = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-function callerUid(req: Request): string | null {
-  try {
-    const tok = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    const p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return p.sub || null;
-  } catch { return null; }
-}
 
 let lastErr = "";   // 진단용 — 시크릿 없는 에러 요약만
 async function getTurnKey(): Promise<{ key_id: string; api_token: string } | null> {
@@ -58,7 +52,8 @@ async function getTurnKey(): Promise<{ key_id: string; api_token: string } | nul
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   // 진단: TURN 준비 여부만 답한다(자격증명 없음) — anon 허용, 모니터링용
-  if (new URL(req.url).searchParams.get("diag")) {
+  // 🔒 진단은 서비스 키로만 — 익명에게 CF 계정 정보가 노출되고 TURN 키 생성까지 일으켰다(26.10.11 감사)
+  if (new URL(req.url).searchParams.get("diag") && isServiceKey(req)) {
     const key = await getTurnKey();
     // 키가 있으면 발급까지 실제 시험 — 자격증명은 반환하지 않고 성사 여부만
     if (key) {
@@ -145,7 +140,7 @@ Deno.serve(async (req) => {
     }
     return j({ turn: !!key, err: key ? undefined : lastErr, readTest, tokenValid, accounts, accProbe });
   }
-  if (!callerUid(req)) return j({ error: "auth" }, 401);   // 로그인 유저만 — 무료 릴레이 남용 방지
+  if (!(await verifiedUid(req))) return j({ error: "auth" }, 401);   // 🔒 서명 검증(26.10.11 감사)   // 로그인 유저만 — 무료 릴레이 남용 방지
   const key = await getTurnKey();
   if (!key) return j(STUN_ONLY);
   try {

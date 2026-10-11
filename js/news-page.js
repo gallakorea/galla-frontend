@@ -11,7 +11,7 @@
   const $ = (s) => document.querySelector(s);
 
   const esc = (s) => (s == null ? "" : String(s))
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
   const timeAgo = (ts) => { if (window.GALLA_ago) return window.GALLA_ago(ts); 
     if (!ts) return "";

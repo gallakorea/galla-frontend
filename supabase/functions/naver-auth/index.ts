@@ -89,7 +89,9 @@ Deno.serve(async (req) => {
       userId = (byId as string | null) ?? null;
     }
     if (!userId) {
-      const { data: byEmail } = await sb.rpc("auth_uid_by_email", { p_email: email });
+      // 🔒 이메일 인증까지 끝난 계정에만 붙인다(26.10.11 감사: 미인증 이메일로 선점 가입해 두면
+      //    피해자가 네이버로 로그인할 때 공격자 계정에 붙고, 공격자는 비번으로 계속 들어올 수 있었다)
+      const { data: byEmail } = await sb.rpc("auth_uid_by_confirmed_email", { p_email: email });
       userId = (byEmail as string | null) ?? null;
     }
     if (!userId) {
@@ -101,8 +103,17 @@ Deno.serve(async (req) => {
       userId = created.data?.user?.id ?? null;
       isNew = !!created.data?.user;
       if (!userId) {   // 동시 로그인 경합
-        const { data: again } = await sb.rpc("auth_uid_by_email", { p_email: email });
+        const { data: again } = await sb.rpc("auth_uid_by_confirmed_email", { p_email: email });
         userId = (again as string | null) ?? null;
+      }
+      if (!userId) {   // 같은 이메일의 '미인증' 계정이 선점돼 있다 → 거기 붙이지 않고 네이버 전용 합성 이메일로 만든다
+        const alt = await sb.auth.admin.createUser({
+          email: `naver_${naverUid}@galla.social`,
+          email_confirm: true,
+          user_metadata: { provider_naver_id: naverUid, avatar_url: p.profile_image || null, full_name: p.nickname || null },
+        });
+        userId = alt.data?.user?.id ?? null;
+        isNew = !!alt.data?.user;
       }
     }
     if (!userId) return j({ error: "user_upsert" }, 500);

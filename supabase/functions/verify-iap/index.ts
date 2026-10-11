@@ -7,6 +7,7 @@
    ⚠️ GP 가 아니라 GC 다 — GP 는 판매하지 않는다(예측 판돈이라 규제 대상). */
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 import { googleGetPurchase, googleConsume, googleGetSubscription, googleAckSubscription } from "../_shared/store.ts";
+import { verifiedUid } from "../_shared/auth.ts";
 
 const sb = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -20,13 +21,6 @@ const CORS = {
 const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-function callerUid(req: Request): string | null {
-  try {
-    const tok = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    const p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return p.sub || null;
-  } catch { return null; }
-}
 
 // gc_products.product_id → 패키지 key 역참조(채널별)
 /* 스토어 상품 id → 우리 패키지 key.
@@ -53,6 +47,9 @@ async function verifyApple(receipt: string): Promise<{ ok: boolean; iosProductId
     const d = await r.json();
     if (d.status === 21007) continue;                 // 샌드박스 영수증 → 다음 URL
     if (d.status !== 0) return { ok: false, raw: d };
+    // 🔒 이 앱(im.galla)의 영수증만 — 다른 앱 영수증의 같은 상품ID 로 GC 를 받아가던 길 차단(26.10.11 감사)
+    const bid = Deno.env.get("APPLE_BUNDLE_ID") || "im.galla";
+    if (d.receipt?.bundle_id && d.receipt.bundle_id !== bid) return { ok: false, raw: { reason: "bundle_mismatch" } };
     const inApp = (d.receipt?.in_app || []).slice(-1)[0] || d.latest_receipt_info?.slice(-1)[0];
     if (!inApp) return { ok: false, raw: d };
     return { ok: true, iosProductId: inApp.product_id, txid: inApp.transaction_id, raw: d };
@@ -80,7 +77,8 @@ async function subProduct(channel: "ios" | "android", productId: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  const uid = callerUid(req);
+  // 🔒 서명까지 검증된 사용자만(26.10.11 감사: payload 의 sub 를 그대로 믿어 남의 계정으로 GC·구독을 받을 수 있었다)
+  const uid = await verifiedUid(req);
   if (!uid) return j({ ok: false, reason: "no_auth" }, 401);
   let payload: { store?: string; receipt?: string; productId?: string; purchaseToken?: string };
   try { payload = await req.json(); } catch { return j({ ok: false, reason: "bad_json" }, 400); }
