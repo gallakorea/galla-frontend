@@ -115,14 +115,25 @@ Deno.serve(async (req) => {
     }
   }
 
+  /* 🔒 PG 잠금(26.10.11) — 포트원 취소를 부르는 동안 유저가 신청 취소(gc_refund_cancel)나
+     관리자 반려를 하면 '현금 환불 + GC 복구'가 둘 다 일어났다. 잠금을 먼저 잡고,
+     못 잡으면(이미 다른 요청이 처리 중·상태 변경) 포트원을 부르지 않는다. */
+  const { data: claim, error: claimErr } = await admin.rpc("gc_refund_claim_pg", { p_refund_id: refundId });
+  if (claimErr || !claim?.ok) {
+    return j({ ...info, auto: false, queued: true, busy: true });
+  }
+
   // 2) 포트원 취소
   const cancel = await cancelPayment(body.charge_id, "청약철회(7일 이내 미사용분)");
   if (!cancel.ok) {
     /* 취소 실패 — 신청은 'requested' 로 남는다. 돈은 안 나갔고 GC 는 잠긴 상태라
-       유저 잔액이 새지 않는다. 다시 눌러도 위의 '이어받기'로 재시도된다. */
+       유저 잔액이 새지 않는다. 잠금을 풀어 다시 눌러 재시도하거나 취소할 수 있게 한다. */
     console.error("refund_cancel_failed", refundId, cancel.detail);
+    const { error: relErr } = await admin.rpc("gc_refund_release_pg", { p_refund_id: refundId });
+    if (relErr) console.error("refund_release_failed", refundId, relErr.message);
     return j({ ...info, auto: false, queued: true, cancel_failed: cancel.detail });
   }
+  // 성공 뒤엔 잠금을 풀지 않는다 — 정산이 실패해도 취소·반려로 GC 를 되돌리지 못하게.
 
   // 3) 장부 닫기 — service_role 전용 RPC
   const { data: settled, error: setErr } = await admin.rpc("gc_refund_settle", {

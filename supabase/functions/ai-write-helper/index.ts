@@ -1,7 +1,24 @@
 // supabase/functions/ai-write-helper/index.ts
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { verifiedUid } from "../_shared/auth.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+
+/* 💰 일일 AI 예산(26.10.11 감사) — app_settings.ai_daily_caps['ai-write-helper'] 를 ai_budget_take 가 센다.
+   확인 자체가 실패하면 기능은 멈추지 않는다(generate-ai-arguments 와 같은 규약). */
+async function aiBudgetOk(fn: string, n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: fn, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    return j?.ok !== false;
+  } catch { return true; }
+}
 
 serve(async (req) => {
   /* ================= CORS ================= */
@@ -15,16 +32,24 @@ serve(async (req) => {
     });
   }
 
+  /* 🔒 26.10.11 감사: 로그인(서명 검증) 사용자만 — 익명이 유료 LLM 을 무제한 돌리던 구멍 */
+  const uid = await verifiedUid(req);
+  if (!uid) return json({ error: "로그인이 필요합니다." }, 401);
+
   try {
-    const {
-      text,
-      stance = "neutral",
-      tone = 3,
-      custom_prompt = null,
-    } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const stance = typeof body?.stance === "string" ? body.stance : "neutral";
+    const tone = Number(body?.tone) || 3;
+    const text = typeof body?.text === "string" ? body.text.slice(0, 4000) : "";
+    const custom_prompt = typeof body?.custom_prompt === "string" && body.custom_prompt.trim()
+      ? body.custom_prompt.slice(0, 500) : null;
 
     if (!text || !text.trim()) {
       return json({ error: "텍스트가 비어 있습니다." }, 400);
+    }
+
+    if (!(await aiBudgetOk("ai-write-helper"))) {
+      return json({ error: "오늘 AI 글쓰기 사용량이 모두 찼습니다. 내일 다시 시도해 주세요.", reason: "daily_cap" }, 429);
     }
 
     /* ======================================================
@@ -124,6 +149,7 @@ ${text}
         body: JSON.stringify({
           model: "gpt-4o-mini",
           temperature: 0.6,
+          max_tokens: 1500,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -133,7 +159,7 @@ ${text}
     );
 
     const jsonRes = await response.json();
-    console.log("[OPENAI RAW RESPONSE]", JSON.stringify(jsonRes));
+    if (!response.ok) console.error("[AI WRITE] upstream", response.status, String(jsonRes?.error?.message || "").slice(0, 160));
 
     const result = jsonRes?.choices?.[0]?.message?.content;
 
@@ -144,7 +170,7 @@ ${text}
     return json({ result });
 
   } catch (err) {
-    console.error("[AI WRITE ERROR]", err);
+    console.error("[AI WRITE ERROR]", String(err).slice(0, 200));
     return json({ error: "AI 처리 중 오류 발생" }, 500);
   }
 });

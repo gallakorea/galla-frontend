@@ -1,3 +1,4 @@
+import { isCronOrService } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
@@ -53,7 +54,7 @@ function extractPressName(originUrl: string): string {
 
 serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   console.log("🔥 collect-raw-news invoked from cron");
 
   const supabase = createClient(

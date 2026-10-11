@@ -1,6 +1,7 @@
 // 🔮 매일 재밌고 자극적인 예측 마켓 5개 자동 생성
 // gpt-4o-mini가 예/아니오 예측 질문 생성 → admin_create_market으로 삽입.
 // 안전: 실존인물 명예훼손·혐오·불법·성인·자살 소재 배제. 위트있고 참여욕구 자극.
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   // 🔒 크론 전용 — x-cron-secret 불일치 거부(anon의 AI 비용남용 차단). env 미설정 시 통과(안전망).
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
   if (!OPENAI) return new Response(JSON.stringify({ ok: false, reason: "no_openai_key" }), { headers: { ...cors, "Content-Type": "application/json" } });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

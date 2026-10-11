@@ -13,6 +13,7 @@
 //
 // 비용: videos.list 는 id 50개까지 **1유닛**. 12,819편이면 257유닛(하루 무료 10,000의 3%).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -36,7 +37,7 @@ async function yt(path: string, params: Record<string, string>) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!YT) return j({ ok: false, reason: "no_yt_key" }, 500);

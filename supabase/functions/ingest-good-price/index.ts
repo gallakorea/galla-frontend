@@ -10,6 +10,7 @@
 //    좌표가 없어 한 건씩 네이버를 불러야 한다 — 오늘 하루 한도를 다 태운 게 정확히 그 짓이다.
 //    이름·시군구가 맞는 기존 가게에만 메뉴를 얹는다. 외부 API 호출은 이 파일의 odcloud 뿐이다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -110,7 +111,7 @@ async function geocode(name: string, addr: string) {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!GOV) return j({ ok: false, reason: "no_gov_key" }, 500);

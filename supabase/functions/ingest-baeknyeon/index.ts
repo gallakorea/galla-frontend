@@ -12,6 +12,7 @@
 //
 // 🔑 DATA_GO_KR_KEY (공공데이터포털 일반 인증키), NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -90,7 +91,7 @@ Deno.serve(async (req) => {
   let naverHalt = "";
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!GOV) return j({ ok: false, reason: "no_gov_key" }, 500);

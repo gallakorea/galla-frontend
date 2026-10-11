@@ -9,6 +9,7 @@
 // 지오코딩은 주소 → 좌표라 상호와 무관하다. 무료 한도 **하루 300만 건**이라 2,147곳은 티도 안 난다.
 // (키 없이 되는 Nominatim 은 오차 중앙값 293m·최악 6.2km 라 맛집 핀으로 못 쓴다.)
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -69,7 +70,7 @@ async function geocode(query: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!KID || !KEY) return j({ ok: false, reason: "no_ncp_key" }, 500);

@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: cb, error: e3 } = await sb.rpc("gc_clawback", {
-      p_user: c.user_id, p_charge_id: paymentId, p_source: "pg_cancel",
+      p_user: c.user_id, p_charge_id: paymentId, p_source: "pg",   // gc_clawbacks.source CHECK 는 apple|google|pg|admin 만 허용(26.10.11: pg_cancel 은 늘 실패했다)
       p_gc: c.gc, p_note: "포트원 결제취소 웹훅",
     });
     if (e3) return j({ ok: false, reason: "clawback_error", detail: e3.message }, 500);

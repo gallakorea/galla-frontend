@@ -1,6 +1,7 @@
 // 🔥 커뮤니티 인기글 → AI 재작성 → 광장 자동 게시
 // 원문 통째 복제 X. 제목을 바탕으로 '원본과 다른' 짧은 광장 글로 재창작 + 출처 아웃링크.
 // 강력 안전필터: 혐오·불법·명예훼손·개인정보·정치극단·성인 → 스킵.
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   // 🔒 크론 전용 — x-cron-secret 불일치 거부(anon의 AI 비용남용 차단). env 미설정 시 통과(안전망).
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
   if (!OPENAI) return new Response(JSON.stringify({ ok: false, reason: "no_openai_key" }), { headers: { ...cors, "Content-Type": "application/json" } });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

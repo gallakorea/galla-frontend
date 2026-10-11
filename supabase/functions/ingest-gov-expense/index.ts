@@ -11,6 +11,7 @@
 //    실패한 장소를 안 남기면 매 회차 같은 걸 다시 묻는다.
 // ⚠️ 음식점이 아닌 결제가 많다(쿠팡·비즈플레이·호텔 등). 네이버 카테고리 가드가 걸러낸다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -142,7 +143,7 @@ const SOURCES: Record<string, {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);

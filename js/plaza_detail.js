@@ -605,9 +605,8 @@ function renderReplies(replies, container) {
 function renderPostBody(body) {
   if (!body) return "";
   if (window.GALLA_renderPlazaBody) return window.GALLA_renderPlazaBody(body);
-  return body
-    .replace(/\[IMAGE\]([\s\S]*?)(?=\n|$)/g, (_, url) =>
-      `<div class="post-image-wrapper"><img src="${url.replace(/\s+/g, "")}" class="post-image" /></div>`)
+  // 렌더러 로드 실패 폴백 — 본문을 그대로 넣으면 남의 글 HTML 이 실행됐다. 이스케이프만 하고 그림은 생략(26.10.11 감사)
+  return String(body).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
     .replace(/\n/g, "<br>");
 }
 

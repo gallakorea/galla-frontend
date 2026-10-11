@@ -12,6 +12,7 @@
 // ⚠️ QLever 를 쓴다. 위키데이터 공식 엔드포인트(WDQS)는 이 정도 질의에서도 60초 타임아웃이
 //    나는 반면 QLever 는 2초 안에 답한다(맛집·여행에서 반복 실측).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -94,7 +95,7 @@ async function commonsCredits(files: string[]) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

@@ -13,6 +13,9 @@ const HOST = "https://galla.im";
 const DEF_IMG = `${HOST}/assets/og/og-default.png`;
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+/* JSON-LD 는 <script> 안이라 HTML 이스케이프가 안 먹는다 — 유저 제목에 '</script>' 를 넣어 galla.im 에서
+   스크립트를 실행시키던 구멍(26.10.11 감사). < 와 줄 구분자를 \u 이스케이프(JSON 의미는 그대로). */
+const ldSafe = (s) => String(s).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 /* OG 가 없는 페이지에 깔아주는 기본 카드(공유 미리보기 공백 방지). */
 const DEFAULT_OG =
   '<meta property="og:type" content="website">' +
@@ -430,8 +433,8 @@ function rewrite(res, seo, linksHtml) {
     // 초대 카드는 검색 색인 대상이 아니라 JSON-LD/스냅샷 없음
     /* 예쁜 주소(/travel/…)에는 ?id= 가 없다. 클라이언트가 자기 id 를 알 길이 여기뿐이다. */
     (seo.placeId ? `<meta name="galla-place-id" content="${esc(seo.placeId)}">` : "") +
-    (seo.jsonld ? `<script type="application/ld+json">${seo.jsonld}</script>` : "") +
-    (seo.h1 ? `<script type="application/ld+json">${breadcrumbLd(seo)}</script>` : "");
+    (seo.jsonld ? `<script type="application/ld+json">${ldSafe(seo.jsonld)}</script>` : "") +
+    (seo.h1 ? `<script type="application/ld+json">${ldSafe(breadcrumbLd(seo))}</script>` : "");
 
   /* 크롤러가 읽을 본문 스냅샷 — JS 미실행인 네이버 Yeti·다음 Daumoa에겐 이게 유일한 본문이다.
      ⚠️ 500자로 자르던 걸 전문(최대 4000자·문단 유지)으로 늘렸다. 133자짜리 뉴스 스냅샷이

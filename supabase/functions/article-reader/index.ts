@@ -1,6 +1,7 @@
 // GALLA 기사 리더 — 뉴스 원문을 서버에서 가져와 본문만 추출해 우리 포맷으로 반환.
 // 프론트는 iframe(X-Frame 차단)이 안 되므로 이 함수로 본문을 받아 직접 렌더한다.
 import { DOMParser, type Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
+import { safeFetch } from "../_shared/safe-fetch.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +19,8 @@ const UA =
 
 const abs = (u: string | null | undefined, base: string): string | null => {
   if (!u) return null;
-  try { return new URL(u, base).href; } catch { return null; }
+  // http(s) 만 — 불투명 경로 스킴(x:a"…)은 따옴표가 살아 남아 클라 속성을 깼다(26.10.11 감사)
+  try { const h = new URL(u, base).href; return /^https?:\/\//i.test(h) ? h : null; } catch { return null; }
 };
 
 // 본문 컨테이너 후보 (한국 언론사에서 흔한 셀렉터)
@@ -67,8 +69,8 @@ Deno.serve(async (req) => {
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 12000);
-    const resp = await fetch(url, {
-      redirect: "follow",
+    // 🛡 리다이렉트도 홉마다 검사(26.10.11 감사: 첫 URL 만 블록리스트 검사 후 redirect follow 였다)
+    const resp = await safeFetch(url, {
       signal: ctl.signal,
       headers: {
         "User-Agent": UA,

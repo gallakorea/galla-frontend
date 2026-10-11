@@ -31,7 +31,7 @@ serve(async (req) => {
     const uploadLength = Number(size);
     if (!uploadLength || uploadLength <= 0) return json({ error: "missing size" }, 400);
     // 최대 6GB 가드 (Stream 계정 한도 내)
-    if (uploadLength > 6 * 1024 * 1024 * 1024) return json({ error: "too_large" }, 413);
+    if (uploadLength > 2 * 1024 * 1024 * 1024) return json({ error: "too_large" }, 413);   // 클라 상한(2GB)과 맞춤(26.10.11)
 
     // Upload-Metadata: "key base64value,key2 base64value2"
     // ⚠️ maxDurationSeconds 미지정 시 Stream이 세션당 기본 4시간(14400s)을 예약 →

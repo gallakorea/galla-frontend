@@ -12,6 +12,7 @@
 // ⚠️ 집계는 우리가 다시 세지 않는다. 클라이언트(로컬 스크립트)가 계산해 보내고
 //    이 함수는 검증·적재만 한다 — 130만 행을 엣지에서 돌릴 수는 없다(150초 제한).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -72,8 +73,7 @@ Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
   const SRV = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const ok = (CRON_SECRET && (xcron === CRON_SECRET || auth.includes(CRON_SECRET))) ||
-             (SRV && auth.includes(SRV));
+  const ok = await isCronOrService(req);   // 🔒 26.10.11: includes 부분일치·fail-open 제거 → 정확 일치/서명 검증
   if (!ok) return j({ ok: false, reason: "unauthorized" }, 401);
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);
 

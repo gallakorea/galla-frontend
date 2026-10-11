@@ -1,3 +1,4 @@
+import { isCronOrService } from "../_shared/auth.ts";
 // 구글 Places API 사용 가능 여부 진단(일회성).
 // ⚠️ 키 값을 절대 응답에 담지 않는다 — 어떤 키가 어떤 이유로 막혔는지만 돌려준다.
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
@@ -10,6 +11,7 @@ const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
 
 Deno.serve(async (req) => {
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   /* 🔴 구글 유료 차단 스위치. 2026-09-04 카드 결제 ₩200,000 사고로 들어왔다.
      지금은 blackid 계정의 **무료 체험 크레딧**(₩414,984, 12/5 만료)으로 돈다 —
      체험 계정은 크레딧이 바닥나면 **스스로 멈추고 카드로 안 넘어간다.**

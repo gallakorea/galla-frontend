@@ -16,25 +16,39 @@
   };
   const supported = () => !!(window.crypto?.subtle && window.isSecureContext !== false);
 
-  let myPriv = null, myPubJwk = null, published = false;
-  const sharedCache = {};   // peerId -> Promise<CryptoKey|null>
+  let myPriv = null, myPubJwk = null, published = false, myOwner = null;
+  let sharedCache = {};   // peerId -> Promise<CryptoKey|null>
 
   async function ensureMyKeys(sb, me) {
+    /* 🔒 키는 '계정'별로(26.10.11 감사) — 예전엔 기기 고정 이름이라, 같은 폰에서 A 로그아웃 → B 로그인 하면
+       A 의 키가 B 의 공개키로 다시 게시되고 B 기기가 A 의 비밀키를 들고 있었다. */
+    if (myOwner !== me) { myPriv = null; myPubJwk = null; published = false; sharedCache = {}; myOwner = me; }
     if (myPriv) return true;
     try {
-      const stored = localStorage.getItem('galla_e2e_priv');
+      const K_PRIV = 'galla_e2e_priv:' + me, K_PUB = 'galla_e2e_pub:' + me;
+      let stored = localStorage.getItem(K_PRIV), storedPub = localStorage.getItem(K_PUB);
+      // 구버전(계정 구분 없는 키) 이관 — 서버에 '내 것'으로 게시된 공개키와 같을 때만 넘겨받는다
+      if (!stored && localStorage.getItem('galla_e2e_priv')) {
+        const lp = JSON.parse(localStorage.getItem('galla_e2e_pub') || 'null');
+        const { data } = await sb.from('user_e2e_keys').select('pub').eq('user_id', me).maybeSingle();
+        if (lp && data && data.pub && data.pub.x === lp.x && data.pub.y === lp.y) {
+          stored = localStorage.getItem('galla_e2e_priv'); storedPub = JSON.stringify(lp);
+          localStorage.setItem(K_PRIV, stored); localStorage.setItem(K_PUB, storedPub);
+          localStorage.removeItem('galla_e2e_priv'); localStorage.removeItem('galla_e2e_pub');
+        }
+      }
       if (stored) {
         myPriv = await crypto.subtle.importKey('jwk', JSON.parse(stored),
           { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveKey']);
-        myPubJwk = JSON.parse(localStorage.getItem('galla_e2e_pub') || 'null');
+        myPubJwk = JSON.parse(storedPub || 'null');
       }
       if (!myPriv || !myPubJwk) {
         const kp = await crypto.subtle.generateKey(
           { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']);
         const privJwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
         myPubJwk = await crypto.subtle.exportKey('jwk', kp.publicKey);
-        localStorage.setItem('galla_e2e_priv', JSON.stringify(privJwk));
-        localStorage.setItem('galla_e2e_pub', JSON.stringify(myPubJwk));
+        localStorage.setItem('galla_e2e_priv:' + me, JSON.stringify(privJwk));
+        localStorage.setItem('galla_e2e_pub:' + me, JSON.stringify(myPubJwk));
         myPriv = kp.privateKey;
       }
       if (!published) {

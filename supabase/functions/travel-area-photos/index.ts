@@ -14,6 +14,7 @@
 // ⚠️ 결과와 무관하게 tried_at 을 찍는다(행을 만든다). '못 찾았다'와 '안 찾아봤다'를 구분하지
 //    않으면 사진 없는 나라를 매 회차 다시 물어본다 — 맛집에서 네 번 밟은 함정과 같다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -107,7 +108,7 @@ async function commons(file: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

@@ -6,6 +6,7 @@
 //
 // 비용: channels.list 1유닛 + playlistItems 50편당 1유닛. 7채널 × 600편 ≈ 90유닛.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -27,7 +28,7 @@ async function yt(path: string, params: Record<string, string>) {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!YT) return j({ ok: false, reason: "no_yt_key" }, 500);

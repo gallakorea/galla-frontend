@@ -7,6 +7,8 @@ import { verifiedUid } from "../_shared/auth.ts";   // 🔒 서명 검증 인증
    사전 준비(사장님, 1회): Cloudflare 대시보드 → Realtime/Calls → SFU 앱 생성 →
      App ID / App Secret 을 Supabase 시크릿 CF_CALLS_APP_ID / CF_CALLS_APP_SECRET 에 등록.
    미설정이면 {ok:false, reason:'unconfigured'} 로 우아하게 후퇴(프론트가 '준비중' 표시). */
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
@@ -15,20 +17,14 @@ const CORS = {
 const j = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-function callerUid(req: Request): string | null {
-  try {
-    const tok = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    const p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return p.sub || null;
-  } catch { return null; }
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return j({ ok: false, reason: "method" }, 405);
 
   // 로그인 유저만 (라이브 난장은 로그인 필수)
-  if (!(await verifiedUid(req))) return j({ ok: false, reason: "auth" }, 401);
+  const uid = await verifiedUid(req);
+  if (!uid) return j({ ok: false, reason: "auth" }, 401);
 
   const APP_ID = Deno.env.get("CF_CALLS_APP_ID");
   const APP_SECRET = Deno.env.get("CF_CALLS_APP_SECRET");
@@ -43,6 +39,17 @@ Deno.serve(async (req) => {
   const method = (payload.method || "POST").toUpperCase();
   if (!["POST", "PUT", "GET"].includes(method)) return j({ ok: false, reason: "badmethod" }, 400);
 
+  /* 🔒 세션 주인만(26.10.11 감사): 세션 id 는 방에 방송돼 누구나 알 수 있었고, 로그인만 되면 남의 세션 트랙을
+     닫거나 갈아끼울 수 있었다. /sessions/new 로 만든 세션을 만든 사람에게 묶고, 이후 경로는 주인만 통과.
+     배포 전에 만들어진(기록 없는) 세션은 처음 쓰는 사람에게 묶는다 — 진행 중인 통화를 끊지 않으려는 이행 규칙. */
+  const sm = path.match(/^\/sessions\/([^/?]+)/);
+  const sid = sm && sm[1] !== "new" ? decodeURIComponent(sm[1]) : null;
+  if (sid) {
+    const { data: own } = await admin.from("rtc_sessions").select("user_id").eq("session_id", sid).maybeSingle();
+    if (own && own.user_id !== uid) return j({ ok: false, reason: "not_owner" }, 403);
+    if (!own) await admin.from("rtc_sessions").insert({ session_id: sid, user_id: uid });
+  }
+
   const url = `https://rtc.live.cloudflare.com/v1/apps/${APP_ID}${path}`;
   try {
     const r = await fetch(url, {
@@ -53,6 +60,9 @@ Deno.serve(async (req) => {
     });
     const text = await r.text();
     let data: unknown; try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    // 새 세션이면 주인 기록
+    const newSid = (!sid && r.ok) ? (data as { sessionId?: string })?.sessionId : null;
+    if (newSid) { try { await admin.from("rtc_sessions").insert({ session_id: newSid, user_id: uid }); } catch { /* */ } }
     return j({ ok: r.ok, status: r.status, data }, 200);
   } catch (e) {
     return j({ ok: false, reason: "upstream", detail: String(e) }, 200);

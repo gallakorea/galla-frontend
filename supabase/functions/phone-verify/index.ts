@@ -93,6 +93,9 @@ Deno.serve(async (req) => {
 
   /* ② 콜백(GET) — 네이버·카카오가 여기로 돌려보낸다 */
   if (req.method === "GET") {
+    /* 🔒 26.10.11 보류 — state 가 uid 에만 묶여 있어, 공격자가 만든 동의 링크를 피해자가 누르면 '피해자 번호·실명'이
+       공격자 계정에 저장됐다. 프론트 호출처 0건(대기 기능) — 브라우저 바인딩·확인 단계 붙이기 전엔 쓰지 않는다. */
+    if (Deno.env.get("PV_CALLBACK_ENABLED") !== "1") return done("web", "fail", "disabled");
     const st = await readState(url.searchParams.get("state") || "");
     if (!st) return done("web", "fail", "state");
     const code = url.searchParams.get("code") || "";

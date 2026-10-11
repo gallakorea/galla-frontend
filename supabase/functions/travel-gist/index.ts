@@ -11,6 +11,7 @@
 //    수확을 세울 만한 일이 아니다 — 그래서 함수를 따로 둔다.
 // ⚠️ 못 만든 영상도 빈 문자열로 표시한다. null 로 두면 매 회차 같은 영상을 또 물어본다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -121,7 +122,7 @@ async function chatJson2(user: string): Promise<string | null> {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);

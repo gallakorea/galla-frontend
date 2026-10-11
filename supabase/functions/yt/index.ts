@@ -57,7 +57,9 @@ const HTML = (id: string) => `<!doctype html>
 
 Deno.serve((req) => {
   const url = new URL(req.url);
-  const id = (url.searchParams.get("v") || "").trim();
+  // 유튜브 영상 id 형식만 — 인라인 <script> 에 그대로 들어가 '</script>' 탈출이 됐다(26.10.11 감사)
+  const raw = (url.searchParams.get("v") || "").trim();
+  const id = /^[A-Za-z0-9_-]{6,20}$/.test(raw) ? raw : "";
   return new Response(HTML(id), {
     headers: {
       "content-type": "text/html; charset=utf-8",

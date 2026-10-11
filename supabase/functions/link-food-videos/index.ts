@@ -8,6 +8,7 @@
 // ⚠️ 짧은 상호는 오탐이 난다("본가", "청기와" 같은 두 글자). 3글자 이상만 매칭하고,
 //    그마저도 채널이 일치하는 영상 안에서만 찾는다 — 다른 채널 영상이 붙으면 거짓말이 된다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -63,7 +64,7 @@ async function syncChannel(slug: string, chId: string, cap: number) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

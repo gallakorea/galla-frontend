@@ -3,6 +3,7 @@
    교사 = Gemini(다른 모델 계열 = 자기증류 붕괴 회피) 우선, 실패 시 DeepSeek 자기비평 폴백.
    외부 도구 데이터(실제 가게명·영상제목)가 필요한 자리는 지어내지 않고 skip.
    크론(매일 UTC 20:00, 보상 갱신 크론 19:30 뒤)이 호출. 원본엔 tags+='distilled'로 재처리 방지. */
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 /* 🔴🔴 구글 유료 API 전면 차단 (2026-09-04). 실제 카드 결제 ₩200,000 이 나갔다.
    Places 월 상한을 1,000 → 20,000 으로 올린 게 발단이고, 크레딧이 덮는다고 본 판단이 틀렸다.
@@ -78,10 +79,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, reason: "GOOGLE_KILL_2026_09_04" }),
       { status: 503, headers: { "content-type": "application/json" } });
   }
-  if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) {
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "@@")) return new Response("forbidden", { status: 403 });
-  }
+  if (!(await isCronOrService(req))) return new Response("forbidden", { status: 403 });   // 🔒 26.10.11 fail-closed
   try {
     const { data: rows } = await sb.from("sft_samples")
       .select("id, brain, ctx, messages, reward")

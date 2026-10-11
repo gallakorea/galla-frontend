@@ -8,6 +8,7 @@
 // ⚖️ 위키미디어는 저작자·라이선스 표시가 의무 — photo_credit/credit 은 그대로 둔다(옮겨도 표시 유지).
 // ⚠️ 받기 실패(404 등)는 tries 를 올려 3번 넘으면 건너뛴다 — 같은 곳에서 큐가 막히지 않게.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
@@ -68,7 +69,7 @@ async function mirror(src: string): Promise<string | null> {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (!CRON_SECRET || (xcron !== CRON_SECRET && !auth.includes(CRON_SECRET))) return j({ ok: false, reason: "unauthorized" }, 401);
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);
   const url = new URL(req.url);
   const n = Math.min(Math.max(Number(url.searchParams.get("n") || "40"), 1), 80);
   const par = Math.min(Math.max(Number(url.searchParams.get("par") || "4"), 1), 8);

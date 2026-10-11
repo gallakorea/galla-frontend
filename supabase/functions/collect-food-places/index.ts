@@ -21,6 +21,7 @@
 // ⚠️ 크론에 Authorization 헤더를 빼면 401 인데 pg_cron 이력엔 'succeeded' 로 남는다.
 //    조용히 아무것도 안 하는 상태가 된다 — 갈비스 크론 4개가 실제로 이 상태였다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -398,7 +399,7 @@ Deno.serve(async (req) => {
      남아 **조용히 아무것도 안 하는 상태**가 된다 — 갈비스 크론 4개가 실제로 그랬다. 둘 다 받는다. */
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!YT) return j({ ok: false, reason: "no_youtube_key" }, 500);

@@ -12,6 +12,7 @@
 //    앵커는 사시사철 검색량이 큰 '일본여행'을 쓴다(계절을 타지만 가장 안정적이다).
 // ⚠️ 그룹은 요청당 최대 5개. 앵커를 빼면 실제로는 회차당 4개 나라씩 돈다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -52,7 +53,7 @@ async function datalab(groups: any[], from: string, to: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!ID || !SEC) return j({ ok: false, reason: "no_naver_key" }, 500);

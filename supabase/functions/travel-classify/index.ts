@@ -14,6 +14,7 @@
 //    (travel_places_to_classify 가 genre is null 만 준다).
 // 💰 배치 25곳씩. 장소당 토큰이 수십 개라 전량(5,700곳) 돌려도 몇백 원 수준이다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -102,7 +103,7 @@ async function chatJson(user: string): Promise<string | null> {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);

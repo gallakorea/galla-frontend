@@ -11,6 +11,7 @@
 // 비용: playlistItems 50편당 1유닛. 채널 업로드를 훑는 것과 같다.
 // ⚠️ 시간 상자를 둔다 — 엣지는 150초에서 조용히 끊긴다(오늘 그걸로 여러 번 당했다).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -31,7 +32,7 @@ async function yt(path: string, params: Record<string, string>) {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

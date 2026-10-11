@@ -1,6 +1,7 @@
 /* flight-deals — 트래블페이아웃(Aviasales) 항공권 최저가 → flight_deals 캐시.
    사장님 26.9.24 「현재 항공권 시세나 환율이랑 연동해서 저렴한 나라들 보여주면서」.
    body {probe:true} 이면 응답 원형만 보고 돌아온다(필드 이름 확인용). */
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const TOKEN = Deno.env.get("TRAVELPAYOUTS_TOKEN") || "";
@@ -22,6 +23,7 @@ const KR = new Set(["SEL", "ICN", "GMP", "CJU", "PUS", "TAE", "KWJ", "CJJ", "RSU
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   if (!TOKEN) return j({ ok: false, reason: "no_token" }, 500);
   let b: any = {}; try { b = await req.json(); } catch { /* 크론은 본문 없음 */ }
 

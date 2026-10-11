@@ -28,6 +28,8 @@ serve(async (req) => {
 
     const { url, name } = await req.json();
     if (!url || typeof url !== "string") return json({ error: "missing url" }, 400);
+    // 🔒 자기 R2 영상만 이관(26.10.11 감사) — 임의 URL 을 우리 Stream 계정으로 끌어와 비용·호스팅을 떠넘기지 못하게
+    if (!url.startsWith(`https://cdn.galla.im/videos/${user.id}/`)) return json({ error: "forbidden_url" }, 403);
 
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/stream/copy`,

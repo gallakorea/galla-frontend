@@ -16,8 +16,10 @@ window.galla_imgFail = function (el) {
   if (box) box.classList.add("thumb-fail");
 };
 function esc(s) {
+  // 따옴표까지 — 속성(src·data-*)에 40여 곳 쓰인다(26.10.11 감사: 아바타 URL 로 속성 탈출 XSS)
   return (s == null ? "" : String(s))
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function timeAgo(ts) { if (window.GALLA_ago) return window.GALLA_ago(ts); 
   if (!ts) return "";
@@ -1077,7 +1079,9 @@ async function initTrendPage() {
   // 광장은 썸네일 없는 글이 많다 → 제목 중심 텍스트 카드(있으면 어둡게 깐 배경, 없으면 카테고리 색).
   function plazaCards(list, ranked = true) {
     return list.map((p, i) => {
-      const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+      const th0 = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+      // CSS url('…') 안은 HTML 이스케이프가 안 먹는다 — 안전한 URL 만(26.10.11)
+      const th = th0 && window.GALLA_safeMediaUrl ? window.GALLA_safeMediaUrl(th0) : null;
       const h = _hue(p.category || p.title);
       const bg = th
         ? `background-image:linear-gradient(180deg,rgba(10,10,14,.2),rgba(10,10,14,.85)),url('${esc(th)}');background-size:cover;background-position:center;`

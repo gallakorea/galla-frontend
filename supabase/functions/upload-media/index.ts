@@ -128,7 +128,9 @@ serve(async (req) => {
 
     const signed = await r2.sign(
       new Request(url, { method: "PUT", headers: putHeaders }),
-      { aws: { signQuery: true }, expiresIn: 3600 }
+      // 🔒 allHeaders: aws4fetch 는 기본으로 content-type 을 서명에서 뺀다 → 서명 URL 로 text/html 을 올려
+      //    cdn.galla.im 에서 HTML 이 서빙될 수 있었다(26.10.11 감사). 클라는 돌려준 headers 를 그대로 보낸다.
+      { aws: { signQuery: true, allHeaders: true }, expiresIn: 3600 }
     );
     return json({
       kind,

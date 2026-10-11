@@ -1165,17 +1165,23 @@ function clipCards(clips: any[], info: ClipInfo[]) {
   return clips.map((c: any, i: number) => ({ clip: i, thumb: c.thumb || null, cap: info[i].cap, role: info[i].role }));
 }
 
+const OWN_MEDIA = /^https:\/\/(cdn\.galla\.im|pub-[a-z0-9]+\.r2\.dev|bidqauputnhkqepvdzrr\.supabase\.co\/storage)\//i;
+
 // ── create: 정렬~매칭까지 실행 후 렌더 큐 투입 ──
 async function runCreate(uid: string, body: any): Promise<Response> {
   _spendUid = uid;   // 💰 이 잡의 모든 AI 호출을 이 유저 앞으로 단다
   const script = String(body?.script || "").slice(0, 2000);
+  // 🔒 클립·음성은 **우리 저장소(cdn.galla.im·R2·Supabase 스토리지)에 올린 파일만**(26.10.11 감사:
+  //    아무 URL 이나 받아 사장님 맥의 렌더 워커가 내려받아 ffmpeg 에 넣었다 — 내부망 접근·로컬 파일 노출 위험).
+  //    썸네일(비전 분석 입력)도 같은 기준 — 남의 클립 URL 에 엉뚱한 분석을 캐시시키던 길도 막힌다.
   const clips = (Array.isArray(body?.clips) ? body.clips : [])
-    .map((c: any) => ({ url: String(c?.url || ""), kind: String(c?.kind || "video"), thumb: c?.thumb ? String(c.thumb) : null, dur: Number(c?.dur) || 8 }))
-    .filter((c: any) => /^https?:\/\//.test(c.url)).slice(0, 15);
+    .map((c: any) => ({ url: String(c?.url || ""), kind: String(c?.kind || "video"), thumb: c?.thumb && OWN_MEDIA.test(String(c.thumb)) ? String(c.thumb) : null, dur: Number(c?.dur) || 8 }))
+    .filter((c: any) => OWN_MEDIA.test(c.url)).slice(0, 15);
   if (!clips.length) return j({ error: "no_clips" }, 400);
   const voiceMode = body?.voice_mode === "ai" ? "ai" : "self";
   let voiceUrl = String(body?.voice_url || "");
-  if (voiceMode === "self" && !/^https?:\/\//.test(voiceUrl)) return j({ error: "no_voice" }, 400);
+  if (voiceUrl && !OWN_MEDIA.test(voiceUrl)) voiceUrl = "";
+  if (voiceMode === "self" && !voiceUrl) return j({ error: "no_voice" }, 400);
 
   const { data: job, error } = await sb.from("agent_jobs")
     .insert({ user_id: uid, kind: "reel", state: "aligning", inputs: { script, clips, voice_mode: voiceMode, voice_url: voiceUrl || null } })

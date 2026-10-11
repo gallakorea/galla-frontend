@@ -11,6 +11,7 @@
 //
 // 🔑 같은 네이버 검색 키로 블로그·뉴스·웹문서를 다 쓴다. 지역검색과 동일 자격증명.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
@@ -201,7 +202,7 @@ async function verify(name: string, hint: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);

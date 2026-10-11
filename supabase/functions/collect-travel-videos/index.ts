@@ -16,6 +16,7 @@
 // ⚠️ 도장(last_synced_at)은 성공 여부와 무관하게 찍는다. 실패한 채널이 큐 맨 앞에
 //    영원히 남아 나머지를 굶기는 게 맛집에서 실제로 벌어진 일이다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch, ytKeyCount } from "../_shared/ytkey.ts";
 
@@ -215,7 +216,7 @@ async function fetchUploads(chId: string, pages: number, known: Set<string>, dee
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!YT) return j({ ok: false, reason: "no_youtube_key" }, 500);

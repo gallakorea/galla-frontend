@@ -1,6 +1,6 @@
 /* 관제센터 SVG 차트 (라인/바) — 의존성 없음 */
 (function () {
-  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])));
 
   // 라인 차트: data = [{label, users}], opts {height, color}
   function lineChart(data, opts = {}) {

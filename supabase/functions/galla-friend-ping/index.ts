@@ -3,6 +3,7 @@
         쿨다운 20h(하루 1회 상한). 런당 상한으로 비용 통제.
    동작: 기억(팔로업·관심사) 기반 개인화 한 줄 생성 → notifications INSERT(→푸시) → pending_ping 저장
         (푸시를 무시해도 다음에 챗 열면 그 말로 시작 — friend.js consume_ping). */
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
@@ -72,11 +73,7 @@ async function genPing(uid: string, nick: string, name: string, mems: { kind: st
 }
 
 Deno.serve(async (req) => {
-  if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) {
-    // 크론 시크릿이 설정돼 있으면 검증 — 임의 호출로 푸시 남발 방지
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "@@")) return new Response("forbidden", { status: 403 });
-  }
+  if (!(await isCronOrService(req))) return new Response("forbidden", { status: 403 });   // 🔒 26.10.11 fail-closed
   try {
     // 대상 선별
     // 🕐 친구다운 케이던스: 반나절(10h)~3주 미접속이면 대상. 2일 창은 너무 보수적이라 대상이 늘 0명이었음(사장님 "선톡 작동 안함").

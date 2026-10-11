@@ -10,6 +10,7 @@
 // ⚠️ summary_at 은 결과와 무관하게 찍는다(RPC 가 그렇게 저장한다).
 //    '못 찾았다'와 '안 찾아봤다'를 안 가르면 설명 없는 곳을 매 회차 다시 물어본다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -99,7 +100,7 @@ async function tourSummary(name: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

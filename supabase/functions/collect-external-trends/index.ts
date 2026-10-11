@@ -2,6 +2,7 @@
 //  - google: 구글 트렌드 realtime RSS (KR) — 키워드 + 대략 검색량
 //  - signal: signal.bz 집계(네이트·줌 등 포털 실시간 검색어) top10
 // 소스별로 전체 삭제 후 최신 스냅샷을 넣는다. 서비스롤로 실행(RLS 우회).
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
@@ -94,7 +95,7 @@ async function replace(source: string, rows: Row[]) {
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const result: Record<string, unknown> = {};
   // 한 소스가 실패해도 다른 소스는 살린다

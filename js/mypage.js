@@ -1436,9 +1436,9 @@ async function GALLA_mypageInit(root, spaParams) {
             const row = document.createElement("div");
             row.className = "user-row";
             row.innerHTML = `
-                <img class="user-row-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src='${avatarDflt}'">
+                <img class="user-row-avatar" src="${String(avatarSrc).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" onerror="this.onerror=null;this.src='${avatarDflt}'">
                 <div class="user-row-info">
-                    <div class="user-row-name" data-nick-uid="${u.id}">${u.nickname || "익명의 사용자"}</div>
+                    <div class="user-row-name" data-nick-uid="${u.id}">${String(u.nickname || "익명의 사용자").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))}</div>
                     <div class="user-row-level">Lv. ${u.level || 1}</div>
                 </div>
             `;

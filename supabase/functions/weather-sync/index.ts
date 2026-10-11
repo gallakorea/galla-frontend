@@ -8,6 +8,7 @@
         PTY(강수형태)가 '지금 실제로 비/눈이 오는지'를 직접 준다. 이 기능의 재미("기상청은
         안 온다는데 우리 동네는 쏟아짐")가 성립하려면 비교 대상이 기상청이어야 한다.
      2) Open-Meteo — 키 없이 동작하는 폴백. 모델 예측값이라 결이 다르지만 없는 것보단 낫다. */
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -143,6 +144,7 @@ async function fromOpenMeteo(rs: Region[]) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   let body: any = {};
   try { body = await req.json(); } catch { /* 크론은 '{}' 를 보낸다 */ }
   const COLS = "code,name,lat,lon,nx,ny,kind";

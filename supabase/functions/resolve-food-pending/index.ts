@@ -18,6 +18,7 @@
 //   둘이 다르다는 걸 매번 헷갈려서, 검색 키가 없으면 NCP 키로도 한 번 시도하고
 //   무엇이 실패했는지 응답에 남긴다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
@@ -139,7 +140,7 @@ async function geocode(addr: string): Promise<{ lat?: number; lon?: number; addr
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);

@@ -5,7 +5,7 @@
 (function () {
   var sbRef = null;
   function sb() { return sbRef || (sbRef = window.supabaseClient) || null; }
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]; }); }
   function toast(m) { try { (window.GALLA_toast || function () {})(m); } catch (_) {} }
 
   window.GALLA_channelIsMod = function (channelId) {

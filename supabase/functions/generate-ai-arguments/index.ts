@@ -48,11 +48,18 @@ Deno.serve(async (req) => {
     const hasPro = exist?.some((d) => d.stance === "pro"), hasCon = exist?.some((d) => d.stance === "con");
     if (hasPro && hasCon) return json({ ok: true, cached: true });
 
+    // 🔒 제목·배경은 **DB 에서** 읽는다(26.10.11 감사: 요청 본문의 title 을 그대로 프롬프트에 넣어
+    //    누구나 아직 카드 없는 이슈에 엉뚱한/주입된 'AI 논점'을 영구히 박을 수 있었다).
+    const { data: iss } = await supa.from("issues")
+      .select("title, one_line, description, visibility, moderation_status")
+      .eq("id", issueId).maybeSingle();
+    if (!iss?.title) return json({ error: "not_found" }, 404);
+    if (iss.visibility && iss.visibility !== "public") return json({ error: "not_public" }, 403);
+    if (iss.moderation_status && /reject|block|hidden|removed/i.test(String(iss.moderation_status))) return json({ error: "moderated" }, 403);
+    const title = String(iss.title).slice(0, 200);
+    const desc = String(iss.description || iss.one_line || "").slice(0, 800);
+    // 예산은 실제로 생성할 이슈가 확인된 뒤에만 차감(없는 id 로 하루치 예산을 태우지 못하게)
     if (!(await aiBudgetOk("generate-ai-arguments"))) return json({ ok: false, reason: "daily_cap" }, 429);
-
-    const title = String(body?.title || "").slice(0, 200);
-    const desc = String(body?.description || body?.one_line || "").slice(0, 800);
-    if (!title) return json({ error: "title required" }, 400);
 
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",

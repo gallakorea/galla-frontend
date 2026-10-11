@@ -12,6 +12,7 @@
     return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   }
   const NATIVE_REDIRECT = "im.galla.app://auth-callback";
+  const AUTH_STARTED_KEY = "galla_auth_started";   // 🔒 이 기기가 로그인을 '직접' 시작한 시각(세션 고정 방어, 26.10.11)
   /* 🖥 갈라톡 PC(데스크톱 셸) — 앱 안에서 구글 로그인 화면을 띄우면 구글이 막는다
      ("브라우저 또는 앱이 안전하지 않을 수 있습니다", 26.9.21 사장님 제보).
      그래서 모바일 앱과 같은 길로 간다: 기본 브라우저로 열고 im.galla.app:// 딥링크로 복귀.
@@ -118,7 +119,7 @@
            · https://galla.im/…             (SITE_URL 폴백·유니버설링크·auth-callback.html)
          PKCE code 경로는 로컬 code_verifier 로 검증되지만, 토큰 직행 경로는 검증이 없어
          출처를 여기서 막아야 한다. */
-      const fromOurCallback = url.indexOf("auth-callback") >= 0 || /^https:\/\/galla\.im\//i.test(url);
+      const fromOurCallback = /^im\.galla\.app:\/\/auth-callback(?:[/?#]|$)/i.test(url) || /^https:\/\/galla\.im\//i.test(url);
       if (!fromOurCallback) return;
       /* 🟢 네이버 핸드오프 — 콜백 페이지가 token_hash+state 를 딥링크로 넘겨준다.
          state 는 이 앱이 로그인을 시작할 때 저장해 둔 값과 반드시 일치해야 한다.
@@ -140,6 +141,16 @@
         return;
       }
       if (!code && !at) return;
+      /* 🔒 토큰 직행(access_token)은 검증 수단이 없다 — 이 기기가 15분 안에 로그인을 시작했을 때만 받는다(1회용).
+         예전엔 아무 앱·웹이 im.galla.app://auth-callback#access_token=<공격자 토큰> 을 열면 피해자 앱이
+         공격자 계정으로 바뀌어, 이후 DM·결제가 공격자 계정으로 들어갔다(26.10.11 감사).
+         PKCE code 는 로컬 code_verifier 로 이미 묶여 있어 그대로 둔다. */
+      if (!code) {
+        let started = 0;
+        try { started = Number(localStorage.getItem(AUTH_STARTED_KEY)) || 0; } catch (_) {}
+        if (!started || Date.now() - started > 15 * 60_000) return;
+        try { localStorage.removeItem(AUTH_STARTED_KEY); } catch (_) {}
+      }
       /* 🔁 같은 코드는 한 번만 — 셸과 SPA 뷰(iframe)가 이 파일을 각자 싣고, 둘 다 top 의
          Capacitor 에 appUrlOpen 리스너를 건다. 그래서 딥링크 하나가 두 번 처리됐다:
          첫 번째가 세션을 만들며 code_verifier 를 지우고, 두 번째가 「PKCE code verifier not
@@ -180,6 +191,7 @@
   /* 우리가 '방금 시작한' 로그인 표식 — 세션이 뒤늦게 SIGNED_IN 으로 올 때, 콜드 스타트 세션
      복원과 구분해 그때만 홈으로 보낸다(아래 authRescue). top 프레임에 둬 iframe/셸이 공유. */
   function markAuthPending() {
+    try { localStorage.setItem(AUTH_STARTED_KEY, String(Date.now())); } catch (_) {}
     try { (window.top || window).__gallaAuthPending = Date.now(); } catch (_) {}
     try { window.__gallaAuthPending = Date.now(); } catch (_) {}
   }

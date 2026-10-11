@@ -10,7 +10,7 @@ function qs(id) {
 /* ==========================================================================
    Load AI Arguments
 ========================================================================== */
-export async function loadAiArguments(issue) {
+export async function loadAiArguments(issue, _retried = false) {
   const supabase = window.supabaseClient;
   if (!supabase || !issue?.id) return;
 
@@ -31,9 +31,11 @@ export async function loadAiArguments(issue) {
 
   /* 2️⃣ 논점이 없으면 생성 */
   if (!pro || !con) {
+    // 생성 실패(일일 상한 등)면 한 번만 다시 본다 — 예전엔 무한 재귀로 시청자마다 계속 생성을 호출했다(26.10.11)
+    if (_retried) return;
     await generateAiArguments(issue);
     await waitForArguments(issue.id);
-    return loadAiArguments(issue); // 🔥 이 줄 추가
+    return loadAiArguments(issue, true);
   }
 
   /* 3️⃣ DOM 렌더 */

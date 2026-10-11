@@ -7,6 +7,7 @@
 // 비용: playlists.list 1유닛(50개까지) · playlistItems.list 1유닛(50편까지). 사실상 공짜다.
 // ⚠️ 먼저 **되는지 재고** 나서 만든다. 오늘 추측으로 만들었다가 버린 게 이미 하나 있다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -27,7 +28,7 @@ async function yt(path: string, params: Record<string, string>) {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

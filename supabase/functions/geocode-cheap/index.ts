@@ -6,6 +6,7 @@
 // 상호로 찾는 지역검색은 등록 안 된 집을 통째로 놓치므로, 주소 지오코딩을 쓴다
 // (실측: 지역검색 76% vs 지오코딩 오차 중앙값 5m).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -53,7 +54,7 @@ async function geocode(q: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!KID || !KEY) return j({ ok: false, reason: "no_ncp_key" }, 500);

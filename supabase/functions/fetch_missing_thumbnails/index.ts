@@ -1,3 +1,4 @@
+import { isCronOrService } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
@@ -21,7 +22,8 @@ function isBadImage(url: string): boolean {
   );
 }
 
-serve(async () => {
+serve(async (req) => {
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });   // 🔒 26.10.11 크론·서버 전용
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

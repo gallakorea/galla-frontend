@@ -11,6 +11,7 @@
 //
 // ⚠️ 동명이인: 이름이 같아도 좌표가 2km 넘게 떨어지면 다른 집이다. 반드시 거른다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
@@ -58,6 +59,7 @@ const j = (o: unknown, s = 200) =>
 const norm = (s: string) => String(s || "").replace(/[\s()\[\]·,\-]/g, "").toLowerCase();
 
 Deno.serve(async (req) => {
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   /* 🔴 구글 유료 차단 스위치. 2026-09-04 카드 결제 ₩200,000 사고로 들어왔다.
      지금은 blackid 계정의 **무료 체험 크레딧**(₩414,984, 12/5 만료)으로 돈다 —
      체험 계정은 크레딧이 바닥나면 **스스로 멈추고 카드로 안 넘어간다.**

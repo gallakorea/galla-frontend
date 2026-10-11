@@ -75,15 +75,10 @@ async function submit(urls) {
   return { ok: false, submitted: urls.length, sample: urls.slice(0, 3), tried };
 }
 
-export async function onRequestPost(context) {
-  try {
-    const body = await context.request.json().catch(() => ({}));
-    const urls = Array.isArray(body.urls) ? body.urls : (body.url ? [body.url] : []);
-    const out = await submit(urls);
-    return json(out, out.ok ? 200 : 400);
-  } catch (e) {
-    return json({ ok: false, reason: String(e).slice(0, 200) }, 500);
-  }
+/* POST(임의 URL 제출)는 인증이 없어 누구나 우리 IndexNow 키로 쓰레기 URL 을 올릴 수 있었다(26.10.11 감사).
+   호출처 0건 → 닫는다. 제출은 크론의 GET ?recent= (DB 에서 뽑은 URL 만) 한 경로로만 한다. */
+export async function onRequestPost() {
+  return json({ ok: false, reason: "method_not_allowed" }, 405);
 }
 
 async function sb(query) {

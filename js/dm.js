@@ -83,6 +83,8 @@
 
   const esc = s => (s == null ? '' : String(s).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
+  // 🛡 링크 스킴 화이트리스트 — meta.url 은 보낸 사람이 마음대로 넣을 수 있다(javascript: 차단, 26.10.11 감사)
+  const safeHref = u => (/^(https?:\/\/|\/(?!\/)|\.?\/?[a-z0-9_-]+\.html(\?|#|$))/i.test(String(u || '')) ? String(u) : '#');
   const avatarColor = id => {
     let h = 0; for (const c of (id || '')) h = (h * 31 + c.charCodeAt(0)) % 360;
     return `hsl(${h} 55% 45%)`;
@@ -1984,7 +1986,7 @@
         : `<div class="dm-set-empty">주고받은 사진이 없어요</div>`}
       <div class="dm-sec">${ICONS.link}링크 <b>${recentLinks.length}</b></div>
       ${recentLinks.length
-        ? recentLinks.map(l => `<a class="dm-cs-link" href="${esc(l.href)}"${l.galla ? '' : ' target="_blank" rel="noopener"'}>${l.galla ? ICONS.bolt + ' ' : ''}${esc(l.label)}</a>`).join('')
+        ? recentLinks.map(l => `<a class="dm-cs-link" href="${esc(safeHref(l.href))}"${l.galla ? '' : ' target="_blank" rel="noopener"'}>${l.galla ? ICONS.bolt + ' ' : ''}${esc(l.label)}</a>`).join('')
         : `<div class="dm-set-empty">주고받은 링크가 없어요</div>`}
       <div class="dm-sec">대화 관리</div>
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
@@ -4440,7 +4442,7 @@
         </span>`;
     } else if (m.kind === 'file' && m.meta?.url) {
       const kb = m.meta.size ? (m.meta.size < 1048576 ? Math.round(m.meta.size/1024)+'KB' : (m.meta.size/1048576).toFixed(1)+'MB') : '';
-      inner = `<a class="dm-file-card" href="${esc(m.meta.url)}" target="_blank" rel="noopener" download>
+      inner = `<a class="dm-file-card" href="${esc(safeHref(m.meta.url))}" target="_blank" rel="noopener" download>
           <span class="dm-file-ic">📁</span>
           <span class="dm-file-mid"><b>${esc(m.meta.name || '파일')}</b><i>${kb} · 받기</i></span>
         </a>`;
@@ -4468,7 +4470,7 @@
       const href = (m.meta.type && PAGE[m.meta.type] && m.meta.id)
         ? `${PAGE[m.meta.type]}.html?id=${m.meta.id}`
         : (m.meta.url || '#');
-      inner = `<a class="dm-share-card" href="${esc(href)}">
+      inner = `<a class="dm-share-card" href="${esc(safeHref(href))}">
           ${m.meta.thumb ? `<span class="dm-share-thumb" style="background-image:url('${esc(m.meta.thumb)}')"></span>` : ''}
           <span class="dm-share-mid">
             <span class="dm-share-title">${esc(m.meta.title || '콘텐츠')}</span>

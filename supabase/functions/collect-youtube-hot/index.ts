@@ -3,6 +3,7 @@
 //
 // 피드(feed) = 방송 카테고리. 유튜브 카테고리 몇 개 + 키워드를 묶어 하나로 만든다.
 // PK가 (feed, video_id)라 같은 영상이 여러 피드에 들어갈 수 있고, rank는 피드 안에서 매긴다.
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import { ytFetch } from "../_shared/ytkey.ts";
 
@@ -275,7 +276,7 @@ const hotScore = (v: any) => {
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (!KEY) return json({ ok: false, error: "YOUTUBE_API_KEY 미설정" }, 500);
 
   /* 🌍 한 번 호출 = 한 언어. 크론이 열린 언어 수만큼 부른다(?locale=en).

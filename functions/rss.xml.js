@@ -19,7 +19,8 @@ async function sb(query) {
   } catch { return []; }
 }
 
-const esc = (s) => String(s || "").replace(/[<>&'"]/g, (c) =>
+// XML 1.0 금지 제어문자는 지운다 — 유저 글 하나에 \u0001 이 있으면 피드 전체가 파싱 불가였다(26.10.11)
+const esc = (s) => String(s || "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, "").replace(/[<>&'"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
 const plain = (s) => String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 const clip = (s, n) => { const t = plain(s); return t.length > n ? t.slice(0, n) + "…" : t; };

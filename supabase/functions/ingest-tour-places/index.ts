@@ -10,6 +10,7 @@
 // ⚖️ 공공누리 Type1/Type3 만 사진을 쓴다(둘 다 상업적 이용 가능). 유형이 비면 가게만 들인다.
 //    이미지는 복제하지 않고 관광공사 CDN URL 을 참조하며 출처를 화면에 띄운다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -28,7 +29,7 @@ const https = (u: string) => String(u || "").trim().replace(/^http:\/\//, "https
 const OK_RIGHTS = new Set(["Type1", "Type3"]);
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!GOV) return j({ ok: false, reason: "no_gov_key" }, 500);

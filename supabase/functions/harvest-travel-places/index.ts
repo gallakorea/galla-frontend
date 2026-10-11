@@ -19,6 +19,7 @@
 // ⚠️ 엣지 유휴 150초. Nominatim 은 정책상 1초에 한 번이라 이 함수의 시간은 거의 전부
 //    지오코딩 대기다. 영상 수(n)를 작게 잡고 자주 도는 게 맞다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { krCity } from "../_shared/krcity.ts";
 
@@ -415,7 +416,7 @@ function classify(cat: string, type: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
 

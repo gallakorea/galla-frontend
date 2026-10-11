@@ -1,5 +1,6 @@
 // 🎨 창작 품질 벤치 — 고정 주제로 '원샷 vs 파이프라인' 초안을 만들어 편집장 루브릭으로 채점, 주간 추이 기록.
 // 파이프라인 개악(프롬프트 수정으로 점수 하락)을 감으로 안 보고 수치로 잡는다. 크론(주1회, x-cron-key) 전용.
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.112.4";
 
 import { logSpend } from "../_shared/spend.ts";
@@ -44,7 +45,7 @@ async function score(draft: any): Promise<number> {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return new Response("nope", { status: 401 });
+  if (!(await isCronOrService(req))) return new Response("nope", { status: 401 });
   const detail: any[] = [];
   let sumP = 0, sumB = 0, n = 0;
   for (const topic of TOPICS) {

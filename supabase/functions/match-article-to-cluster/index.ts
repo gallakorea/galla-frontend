@@ -1,3 +1,4 @@
+import { isCronOrService } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 import OpenAI from "https://esm.sh/openai@4.52.0";
@@ -12,6 +13,7 @@ const openai = new OpenAI({
 });
 
 serve(async (req) => {
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });   // 🔒 26.10.11 크론·서버 전용
   try {
     /* --------------------------------------------------
        1. Request Body

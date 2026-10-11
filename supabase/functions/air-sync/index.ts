@@ -1,5 +1,6 @@
 /* air-sync — 에어코리아(한국환경공단) 미세먼지 실시간 → air_obs 캐시. 사장님 26.9.18 「미세먼지 정보도 얹자 지도랑 다른데도」.
    body {probe:true} 이면 API 두 개(실시간 측정값·측정소 정보)가 우리 키로 열려 있는지만 보고 돌아온다. */
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const KEY = Deno.env.get("DATA_GO_KR_KEY") || "";
@@ -17,6 +18,7 @@ const ST = (n: number) => `https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/g
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   let b: any = {}; try { b = await req.json(); } catch { /* */ }
   if (!KEY) return j({ ok: false, reason: "no_key" }, 500);
   if (b?.probe2) {

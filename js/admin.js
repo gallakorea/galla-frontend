@@ -3,7 +3,7 @@
    ========================================================= */
 (function () {
   const $ = (s, r) => (r || document).querySelector(s);
-  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])));
   const fmt = (n) => (n || 0).toLocaleString();
   /* 🔒 유저가 넣은 URL 은 http(s) 만 링크로 만든다.
      제보·버그신고의 링크·미디어는 이용자가 값을 정한다. esc() 는 `<>&"` 만 바꾸므로
@@ -510,8 +510,8 @@
         ${b.category ? `<div class="ad-tag" style="display:inline-block;margin:4px 0">${esc(b.category)}</div>` : ""}
         <div class="ad-tip-b" style="white-space:pre-wrap">${esc(b.message)}</div>
         ${b.has_shot ? `<button class="ad-btn" data-shot="${b.id}" style="margin-top:6px">📷 스크린샷 보기</button><div class="bg-shot" data-for="${b.id}"></div>` : ""}
-        ${(b.meta && b.meta.trail && b.meta.trail.length) ? `<details style="margin-top:6px"><summary class="ad-tk-m">👣 직전 흔적 ${b.meta.trail.length}개${b.meta.app ? " · 앱" : " · 웹"}</summary>
-          <div class="ad-tk-m" style="white-space:pre-wrap;font-size:11.5px">${b.meta.trail.map(t => (t.k === "page" ? "📄 " : "👆 ") + esc(t.v)).join("\n")}</div></details>` : ""}
+        ${(b.meta && Array.isArray(b.meta.trail) && b.meta.trail.length) ? `<details style="margin-top:6px"><summary class="ad-tk-m">👣 직전 흔적 ${b.meta.trail.length}개${b.meta.app ? " · 앱" : " · 웹"}</summary>
+          <div class="ad-tk-m" style="white-space:pre-wrap;font-size:11.5px">${b.meta.trail.map(t => (t && t.k === "page" ? "📄 " : "👆 ") + esc(t && t.v)).join("\n")}</div></details>` : ""}
         <div class="ad-tk-m" style="margin-top:6px">📍 ${esc(b.page_url || "-")}</div>
         <div class="ad-tk-m" style="opacity:.6;font-size:11px">${esc(b.user_agent || "")}</div>
         ${b.admin_note ? `<div class="ad-tk-r">↳ ${esc(b.admin_note)}</div>` : ""}
@@ -525,7 +525,8 @@
       if (sh) {
         const box = $(`.bg-shot[data-for="${sh.dataset.shot}"]`);
         const url = await rpc("admin_bug_shot", { p_id: Number(sh.dataset.shot) });
-        if (box && typeof url === "string") box.innerHTML = `<img src="${url}" style="max-width:260px;border-radius:10px;margin-top:6px;border:1px solid rgba(255,255,255,.15)">`;
+        // 🔒 shot 은 익명도 넣는 값 — 형식이 맞는 data:image 만, 속성도 이스케이프(26.10.11)
+        if (box && typeof url === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(url)) box.innerHTML = `<img src="${esc(url)}" style="max-width:260px;border-radius:10px;margin-top:6px;border:1px solid rgba(255,255,255,.15)">`;
         sh.remove(); return;
       }
       const btn = e.target.closest("[data-act]"); if (!btn) return;
@@ -676,7 +677,7 @@
     $("#m-q").onkeydown = e => { if (e.key === "Enter") { mQ = e.target.value.trim(); renderMembers(); } };
     const d = await rpc("admin_users", { p_filter: mFilter, p_q: mQ || null, p_limit: 300 });
     const rows = d?.rows || [];
-    const gender = g => g === "male" ? "남" : g === "female" ? "여" : (g || "-");
+    const gender = g => g === "male" ? "남" : g === "female" ? "여" : esc(g || "-");   // 🔒 가입 메타데이터 그대로 들어온 값 — 반드시 이스케이프(26.10.11)
     const cell = (v, cls = "") => `<td class="${cls}">${v}</td>`;
     $("#m-list").innerHTML = rows.length ? `
       <div class="ad-sheet-info">전체 ${fmt(rows.length)}명 · 가로 스크롤로 전체 컬럼 확인</div>
@@ -857,7 +858,7 @@
       <div class="ad-card" id="s-list"><div class="ad-loading">불러오는 중…</div></div>`;
     // 🪙 갈라코인 회계 불변식 — 발행(충전) = 소비(후원) + 보유. drift는 항상 0이어야 한다.
     try {
-      const { data: au } = await sb.from("gc_audit").select("*").maybeSingle();
+      const au = await rpc("admin_gc_audit");   // 뷰 직접 조회는 막았다(26.10.11) — 관리자 RPC 경유
       if (au) {
         const ok = Number(au.drift) === 0;
         const kpi = (l, v, c) => `<div class="ad-kpi"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v"${c ? ` style="color:${c}"` : ""}>${fmt(v)}</div></div>`;

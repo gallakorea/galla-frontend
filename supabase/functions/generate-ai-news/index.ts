@@ -1,3 +1,4 @@
+import { isCronOrService } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts";
 import OpenAI from "https://esm.sh/openai@4.28.0";
@@ -70,6 +71,7 @@ async function sbFetch(path: string, init: RequestInit = {}) {
    Server
 ================================ */
 serve(async (req) => {
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });   // 🔒 26.10.11 크론·서버 전용
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

@@ -1,5 +1,6 @@
 // 🔥 커뮤니티 인기글 수집 — 상위 커뮤니티 다수 (일베 등 고위험 제외)
 // 제목/링크/썸네일만 수집(본문 복제 X). 안전 키워드 사전필터 + 제목 정규화 중복제거.
+import { isCronOrService } from "../_shared/auth.ts";
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
@@ -145,7 +146,7 @@ async function collectOne(src: Src) {
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 

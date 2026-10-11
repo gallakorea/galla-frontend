@@ -1,6 +1,7 @@
 // 갈라뉴스 썸네일 자가 치유 — 히어로가 없거나 깨진(404/403) 기사에 대해
 // 원문 기사에서 og:image / twitter:image 를 다시 긁어와 채운다. 30분마다 크론.
 // 전 매체 공통 안전망(조선일보 &amp; 문제, newsen 등 개별 매체와 무관하게 동작).
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
@@ -49,7 +50,7 @@ async function ogImage(pageUrl: string): Promise<string | null> {
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
   const LIMIT = Math.min(body.limit ?? 40, 100);

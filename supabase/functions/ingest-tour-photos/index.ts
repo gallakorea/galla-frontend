@@ -15,6 +15,7 @@
 //
 // ⚠️ 동명이인 방지: 이름이 같아도 좌표가 2km 넘게 떨어지면 다른 집이다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -52,7 +53,7 @@ async function fetchAll(): Promise<Tour[]> {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!GOV) return j({ ok: false, reason: "no_gov_key" }, 500);

@@ -286,7 +286,10 @@
   // 없으면 리파인 기본 실루엣(seed로 유저별 톤). 전역 공용.
   window.GALLA_avatarSrc = function (avatarUrl, size, seed) {
     if (!avatarUrl) return window.GALLA_genDefaultAvatar(seed);
+    // 🛡 avatar_url 은 본인이 마음대로 바꿀 수 있는 칸 — 속성 탈출 문자·비 http 스킴이면 기본 아바타(26.10.11 감사)
+    if (typeof avatarUrl !== "string" || /["'<>\s`\\]/.test(avatarUrl)) return window.GALLA_genDefaultAvatar(seed);
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(avatarUrl)) return window.GALLA_genDefaultAvatar(seed);
     /* 리사이즈 엔드포인트 경유 — 원본 아바타(≈1MB 실측)를 그대로 받으면
        DM 목록 등에서 기본 이미지 → 사진 교체 깜빡임이 길어진다(사장님 재현).
        96px 표시엔 128px(2x)이면 충분: 981KB→4KB 실측. */

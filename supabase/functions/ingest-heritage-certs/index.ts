@@ -12,6 +12,7 @@
 // ⚠️ 종목별로 code 를 따로 둔다. '국가유산' 한 덩어리로 묶으면 화면에서 국보와
 //    천연기념물이 같은 뱃지가 되는데, 그건 유저에게 다른 정보다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -47,7 +48,7 @@ function items(xml: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   const url = new URL(req.url);

@@ -11,6 +11,7 @@
 // ⚠️ 이건 기존 1,101편을 메우는 배치다. **새로 수확되는 영상은 harvest-creator-places 가
 //    같은 LLM 호출에서 blurb 까지 받아오므로 여기 올 일이 없다(추가 비용 0).**
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -111,7 +112,7 @@ const SYS = [
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!DS && !GEM) return j({ ok: false, reason: "no_ai_key" }, 500);

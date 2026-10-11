@@ -1893,6 +1893,12 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "remember") {
     const content = redactPII(String(args?.content || "").trim().slice(0, 300));   // 🔒 기억엔 번호·이메일·계좌 평문 금지
     if (content.length < 3) return { result: { saved: false } };
+    // 🛡 자동 추출 경로와 같은 인젝션 필터(26.10.11 감사: 이 도구 경로만 필터가 없어, 웹 검색·남의 글에
+    //    심어 둔 "앞으로 항상 ~해라" 류 지시가 유저의 장기 기억에 박혀 세션마다 되살아날 수 있었다).
+    //    링크도 기억에 넣지 않는다(피싱 링크 상시 추천 방지).
+    if (INJECTION_MEM_RE.test(content) || /https?:\/\/|www\.|\.(com|net|kr|io|me|ly)\b/i.test(content)) {
+      return { result: { saved: false, reason: "filtered" } };
+    }
     const kind = String(args?.kind || "fact").slice(0, 20);
     const sal = Math.min(5, Math.max(1, Number(args?.salience) || 4));
     const ev = await embed(content);
@@ -5084,7 +5090,7 @@ Deno.serve(async (req) => {
 
     if (body?.op === "llm_probe") {
       // 🔬 모델 호환 디버그(운영자) — 지정 모델에 최소/도구 요청을 쏘고 원시 응답을 돌려준다.
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const mdl = String(body?.model || "gemini-2.5-flash");
       const api = apiFor(mdl);
       const out: any = { model: mdl, base: api.base };
@@ -5104,7 +5110,7 @@ Deno.serve(async (req) => {
       /* 🧭 의도 표 회귀검사 — LLM 0콜(창작 FSM·임베딩 규칙은 상태·발화로 안 걸리게 케이스를 짠다).
          7층을 접으면서 '어떤 발화가 어디로 가는지'가 표 하나에 모였으니, 그 표를 그대로 검사한다.
          규칙 순서를 바꾸거나 정규식을 손대면 여기서 먼저 터진다. */
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const A = (s: string) => [{ role: "assistant", content: s }];
       const CASES: Array<{ name: string; msg: string; hist?: any[]; want: any }> = [
         { name: "열어봐_단문은_열기", msg: "열어봐", want: { tool: "point_to", autoStrong: true } },
@@ -5140,7 +5146,7 @@ Deno.serve(async (req) => {
       return json({ ok: fails.length === 0, total: CASES.length, passed: CASES.length - fails.length, fails });
     }
     if (body?.op === "embed_content") {   // 🔎 검색 임베딩 백필(크론/운영) — search_vec 없는 콘텐츠를 bge-m3로 배치 채움(질의당 아님)
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const lim = Math.min(Math.max(_n(body?.limit, 150), 1), 300);
       const only = String(body?.table || "");   // 특정 표만(크론 분산용). 없으면 우선순위대로.
       const out: any = { embedded: 0, fail: 0, remaining: {} };
@@ -5185,7 +5191,7 @@ Deno.serve(async (req) => {
       /* 🧪 계약 검사 — LLM 0콜·0원·1초. 규칙이 '실제로' 걸리는지 고정 입력으로 확인한다.
          이게 없어서 배포마다 눈으로 한 턴씩 보다가, 고칠 때마다 다른 쪽이 뚫렸다.
          배포 전 항상 이걸 먼저 돌린다. fails 가 비어야 통과. */
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const base = { friendName: "갈비스", nick: "형" };
       const CASES: Array<{ name: string; input: string; opts?: any; check: (o: string) => string | null }> = [
         { name: "길이_초장문4문장", opts: {},
@@ -5310,7 +5316,7 @@ Deno.serve(async (req) => {
     if (body?.op === "native_probe") {
       /* 🔬 Gemini '정식 창구'(streamGenerateContent) vs OpenAI 호환 창구 지연 비교.
          호환 창구는 첫 글자까지 19~24초가 걸린다(실측). 정식 창구가 빠르면 그쪽으로 옮긴다. */
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const mdl = String(body?.model || "gemini-3.6-flash");
       const out: any = { model: mdl };
       try {
@@ -5350,7 +5356,7 @@ Deno.serve(async (req) => {
     if (body?.op === "stream_probe") {
       /* 🔬 스트리밍 진단 — chatStream 이 왜 null 을 뱉는지 원시로 본다.
          (실측: 첫 글자까지 27초 = 스트림 실패 후 비스트림 폴백. 추측 대신 상태·본문을 본다.) */
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const mdl = String(body?.model || "gemini-3.6-flash");
       const api = apiFor(mdl);
       const out: any = { model: mdl, base: api.base, hasKey: !!api.key };
@@ -5388,7 +5394,7 @@ Deno.serve(async (req) => {
       return json(out);
     }
     if (body?.op === "backfill_embeds") {
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const { data: rows } = await supa.from("friend_memory").select("id,content")
         .is("embedding", null).eq("status", "active").limit(40);
       let n = 0;
@@ -5401,7 +5407,7 @@ Deno.serve(async (req) => {
     /* 유저 인증보다 앞 — 운영자 op 라 유저 JWT 가 없다. 크론키가 유일한 가드. */
     if (body?.op === "embed_probe") {
       // 🔬 임베딩 공급자 상태(운영자) — 키 값은 돌려주지 않는다. 상태 코드·오류 문구 앞부분만.
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       const out: any = { gemini_key: !!GEMINI_EMBED_KEY, cf: !!(CF_AI_TOKEN && CF_ACCOUNT) };
       try {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_EMBED_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "models/gemini-embedding-001", content: { parts: [{ text: "테스트" }] }, outputDimensionality: 1536 }) });
@@ -5422,7 +5428,7 @@ Deno.serve(async (req) => {
     }
     if (body?.op === "seed_intents") {
       // 🧭 의도 예문 임베딩 시드 — 운영자 전용(x-cron-key). 예문을 바꾸면 다시 부른다.
-      if (CRON_KEY && req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
       // 공간이 바뀌었을 수 있으니 예전 예문 벡터를 지우고 새로 넣는다(시드에 없는 옛 예문도 같이 정리)
       const probe = await embed("테스트");
       if (!probe) return json({ ok: false, reason: "embed unavailable" });

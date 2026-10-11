@@ -17,6 +17,7 @@
 // ⚠️ 동명이인: 좌표가 있는 곳은 거리로 거른다(spot 5km, 도시 이상 50km).
 //    좌표가 없는 곳은 이름이 맞아야 받는다 — 아니면 엉뚱한 나라 동명 장소가 박힌다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
@@ -93,6 +94,7 @@ async function search(q: string, lat: number | null, lon: number | null) {
 }
 
 Deno.serve(async (req) => {
+  if (!(await isCronOrService(req))) return j({ ok: false, reason: "unauthorized" }, 401);   // 🔒 26.10.11 크론·서버 전용
   /* 🔴 구글 유료 차단 스위치. 2026-09-04 카드 결제 ₩200,000 사고로 들어왔다.
      지금은 blackid 계정의 **무료 체험 크레딧**(₩414,984, 12/5 만료)으로 돈다 —
      체험 계정은 크레딧이 바닥나면 **스스로 멈추고 카드로 안 넘어간다.**

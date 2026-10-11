@@ -42,3 +42,14 @@ export async function isServiceCaller(req: Request): Promise<boolean> {
     return r.ok;
   } catch { return false; }
 }
+
+/** 크론·서버 전용 관문(26.10.11 감사) — x-cron-secret/x-cron-key 가 env CRON_SECRET 과 같거나, 서명까지 진짜인 서비스 키면 통과.
+    CRON_SECRET 미설정이면 시크릿 경로는 닫힌다(fail-closed). extraKeys: 함수 고유 시크릿(예: GALVIS_CRON_KEY) 추가 허용. */
+export async function isCronOrService(req: Request, extraKeys: string[] = []): Promise<boolean> {
+  const cs = Deno.env.get("CRON_SECRET") || "";
+  const keys = [cs, ...extraKeys].filter((k) => k && k.length >= 8);
+  /* 헤더 값이 '정확히' 같아야 한다(includes 부분일치 금지). 구형 호출 호환으로 Bearer <CRON_SECRET> 도 정확 일치만 인정 */
+  const cand = [req.headers.get("x-cron-secret") || "", req.headers.get("x-cron-key") || "", bearer(req)].filter(Boolean);
+  for (const h of cand) if (keys.includes(h)) return true;
+  return await isServiceCaller(req);
+}

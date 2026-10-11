@@ -1,9 +1,11 @@
+import { isCronOrService } from "../_shared/auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 type Cluster = "A" | "B";
 
 serve(async (req) => {
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });   // 🔒 26.10.11 크론·서버 전용
   try {
     if (req.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });

@@ -15,6 +15,7 @@
 //   ② 영상 제목에서 얻은 **지역이 주소와 맞아야** 한다.
 // 그래도 못 미더우면 안 넣는다. 빈손이 거짓말보다 낫다.
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -92,7 +93,7 @@ function regionOk(hint: string, addr: string) {
 }
 
 Deno.serve(async (req) => {
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_naver_key" }, 500);

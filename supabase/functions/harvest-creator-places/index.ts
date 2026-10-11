@@ -13,6 +13,7 @@
 // ⚠️ '성공했을 때만 도장 찍기'는 오늘만 네 번 밟은 함정이다. 결과와 무관하게 harvested_at 을 남긴다 —
 //    안 그러면 실패한 영상을 매 회차 다시 LLM 에 태우고 네이버를 다시 부른다(유료 API 에서).
 
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -237,7 +238,7 @@ async function verifyByName(name: string, region: string) {
 Deno.serve(async (req) => {
   const xcron = req.headers.get("x-cron-secret") || "";
   const auth = req.headers.get("authorization") || "";
-  if (CRON_SECRET && xcron !== CRON_SECRET && !auth.includes(CRON_SECRET)) {
+  if (!(await isCronOrService(req))) {
     return j({ ok: false, reason: "unauthorized" }, 401);
   }
   if (!S_ID || !S_SEC) return j({ ok: false, reason: "no_search_key" }, 500);

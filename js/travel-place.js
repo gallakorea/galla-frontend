@@ -122,7 +122,7 @@
           ? '<div class="tv-warn">좌표를 아직 못 찾은 곳이에요. 지도에는 안 올라갑니다.</div>' : "") +
         (p.summary
           ? '<p class="tv-desc">' + esc(p.summary) +
-            (p.summary_url
+            (p.summary_url && /^https?:\/\//i.test(p.summary_url)
               ? ' <a href="' + esc(p.summary_url) + '" target="_blank" rel="noopener">' +
                 (p.summary_src === "tour" ? "한국관광공사" : "위키백과") + " ↗</a>"
               : ' <span class="tv-desc-s">' + (p.summary_src === "tour" ? "한국관광공사" : "위키백과") + "</span>") +

@@ -96,6 +96,15 @@ Deno.serve(async (req) => {
       expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
     });
     if (error) return j({ ok: false, reason: "save" });
+    // 🔒 동시 발송 경합(26.10.11): 위 개수 검사는 병렬 요청이 모두 통과할 수 있다 → 넣은 뒤 다시 세서 넘치면 취소
+    {
+      const { count: c1 } = await admin.from("phone_otps").select("id", { count: "exact", head: true }).eq("user_id", uid).gte("created_at", hourAgo);
+      const { count: c2 } = await admin.from("phone_otps").select("id", { count: "exact", head: true }).eq("phone", phone).gte("created_at", dayAgo);
+      if ((c1 || 0) > 5 || (c2 || 0) > 5) {
+        await admin.from("phone_otps").delete().eq("user_id", uid).eq("phone", phone).gte("created_at", new Date(Date.now() - 5000).toISOString());
+        return j({ ok: false, reason: "too_many" });
+      }
+    }
     const sent = await sendSms(phone, `[갈라] 인증번호 ${code} — 5분 안에 입력해 주세요. 타인에게 알려주지 마세요.`);
     if (!sent) return j({ ok: false, reason: "send_fail" });
     return j({ ok: true, ttl: 300 });
@@ -110,11 +119,17 @@ Deno.serve(async (req) => {
     if (!o) return j({ ok: false, reason: "no_code" });
     if (new Date(o.expires_at).getTime() < Date.now()) return j({ ok: false, reason: "expired" });
     if (o.attempts >= 5) return j({ ok: false, reason: "too_many" });
+    /* 🔒 시도 1회를 '먼저' 원자적으로 차지(26.10.11 감사) — 읽고-쓰기 사이에 병렬 요청을 몰면 5회 제한이 무한이 돼
+       남의 번호 6자리를 대입할 수 있었다. attempts 가 그대로일 때만 +1 이 성공한다. */
+    const { data: claim } = await admin.from("phone_otps").update({ attempts: o.attempts + 1 })
+      .eq("id", o.id).eq("attempts", o.attempts).is("used_at", null).select("id");
+    if (!claim || !claim.length) return j({ ok: false, reason: "busy" });
     if ((await sha(code + uid + phone + PEPPER)) !== o.code_hash) {
-      await admin.from("phone_otps").update({ attempts: o.attempts + 1 }).eq("id", o.id);
       return j({ ok: false, reason: "wrong", left: Math.max(0, 4 - o.attempts) });
     }
-    await admin.from("phone_otps").update({ used_at: new Date().toISOString() }).eq("id", o.id);
+    const { data: used } = await admin.from("phone_otps").update({ used_at: new Date().toISOString() })
+      .eq("id", o.id).is("used_at", null).select("id");
+    if (!used || !used.length) return j({ ok: false, reason: "no_code" });
     const { error } = await admin.from("user_profiles").update({
       phone_verified: true, phone, identity_verified_at: new Date().toISOString(),
     }).eq("user_id", uid);

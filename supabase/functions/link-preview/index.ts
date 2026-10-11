@@ -7,9 +7,10 @@ const cors = {
 };
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" } });
+import { safeFetch } from "../_shared/safe-fetch.ts";
 
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
-const abs = (u: string | null, base: string) => { if (!u) return null; try { return new URL(u, base).href; } catch { return null; } };
+const abs = (u: string | null, base: string) => { if (!u) return null; try { const h = new URL(u, base).href; return /^https?:\/\//i.test(h) ? h : null; } catch { return null; } };
 /* ⚠️ 이름 엔티티만 풀면 한글이 통째로 깨진다 — 인스타 OG 제목은 한글을 전부
    숫자 엔티티로 준다(실측: "Instagram&#xc758; PapaB&#xb2d8;" 이 그대로 글 제목이 됐다).
    10진(&#48156;)·16진(&#xc758;) 둘 다 푼다. &amp; 는 이중 이스케이프를 위해 마지막에. */
@@ -88,7 +89,8 @@ Deno.serve(async (req) => {
   try {
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 10000);
-    const resp = await fetch(url, { redirect: "follow", signal: ctl.signal,
+    // 🛡 홉마다 내부망·메타데이터 주소 차단(26.10.11 감사: 호스트 검사 없이 redirect follow 였다)
+    const resp = await safeFetch(url, { signal: ctl.signal,
       headers: { "User-Agent": UA, "Accept": "text/html,*/*;q=0.8", "Accept-Language": "ko-KR,ko;q=0.9" } });
     clearTimeout(timer);
     const finalUrl = resp.url || url;
@@ -103,6 +105,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, url: finalUrl, title, source, image, description });
   } catch (e) {
-    return json({ ok: true, url, title: host, source: host, image: null, error: String(e) }, 200);
+    // 오류 문구는 돌려주지 않는다(내부 호스트·포트 탐지 오라클이 됐다)
+    return json({ ok: true, url, title: host, source: host, image: null }, 200);
   }
 });

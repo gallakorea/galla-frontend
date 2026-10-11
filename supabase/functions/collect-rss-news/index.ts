@@ -1,5 +1,6 @@
 // 뉴스 수집 다변화 — 네이버 API 단일 의존 탈피. 한국 언론사 RSS 병렬 수집.
 // RSS는 키/쿼터 없고 잘 안 막히며 원본 기사 URL을 직접 준다. 네이버가 막혀도 계속 유입.
+import { isCronOrService } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
 const supa = createClient(
@@ -140,7 +141,7 @@ async function parseFeed(name: string, url: string) {
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
-  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
+  if (!(await isCronOrService(req))) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   const started = Date.now();
 
   /* 🌍 수집 대상 = '열린 언어'만. 소스 목록은 코드가 아니라 app_settings에 있다.
