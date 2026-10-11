@@ -71,7 +71,7 @@ async function naver(kind: "cafearticle" | "blog", q: string, n: number) {
       kind: kind === "blog" ? "blog" : "cafe",
       src: strip(kind === "blog" ? it.bloggername : it.cafename) || (kind === "blog" ? "블로그" : "카페"),
       title: strip(it.title).slice(0, 120),
-      desc: strip(it.description).slice(0, 160),
+      desc: strip(it.description).replace(/#[^\s#]+/g, "").replace(/\s+/g, " ").trim().slice(0, 160),   // 해시태그 나열 제거
       url: /^https?:\/\//i.test(it.link || "") ? it.link : "",
       date: it.postdate || null,
     })).filter((x: { url: string; title: string }) => x.url && x.title);
