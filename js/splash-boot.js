@@ -177,6 +177,22 @@
   document.documentElement.appendChild(el);
   document.documentElement.classList.add("splash-lock");
 
+  /* 🔊 갈라 소리 로고(26.10.11) — 빅뱅 애니메이션과 박자를 맞춘 '두-둥'.
+       0~0.6s 응축(빨아들이는 상승음) → 0.62s 빅뱅 「두」(갈·차가운 파랑·왼쪽)
+       → 1.30s 로고 팝 「둥!」(라·5도 위·뜨거운 빨강·오른쪽) → 두 진영이 한 화음으로 피어나고 별이 반짝.
+     앱(네이티브)에서만 — 웹은 자동재생이 막히고, 사이트 열 때 소리 나는 건 실례다.
+     iOS 무음 스위치를 켜 두면 안 난다(기본 오디오 세션). 원본 합성 스크립트: scripts/sonic/make-splash-sound.py
+     끄기: localStorage galla_splash_sound = "off" */
+  try {
+    var isApp = location.protocol === "capacitor:" || /GallaApp/i.test(navigator.userAgent || "");
+    var off = false; try { off = localStorage.getItem("galla_splash_sound") === "off"; } catch (_) {}
+    if (isApp && !off) {
+      var snd = new Audio("/assets/sound/splash-galla.m4a");
+      snd.volume = 0.9;
+      var pr = snd.play(); if (pr && pr.catch) pr.catch(function () {});
+    }
+  } catch (_) {}
+
   var start = Date.now(), done = false;
   var MIN = 1750;                       // 최소 노출(번쩍임 방지)
   var MAX = WAIT_READY ? 7000 : 4000;  // 세이프가드: 콘텐츠 대기 모드는 네트워크를 기다리므로 넉넉히
