@@ -1111,17 +1111,36 @@
     window.GALLA_setNavAvatar(null);
   }
   window.GALLA_clearNavAvatar = clearNavAvatar;
+  /* 🔄 네비 사진을 '지금 로그인 상태'에 맞춘다(26.10.11) — 예전엔 마이 탭에 들어가야만 갱신돼,
+     로그인 직후·앱 첫 실행엔 선 아이콘이 남았다. 로그인=내 사진(없으면 유저별 기본 아바타), 로그아웃=선 아이콘. */
+  async function syncNavAvatarNow() {
+    try {
+      const sb = window.supabaseClient ||
+        (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+      if (!sb) return;
+      const { data } = await sb.auth.getSession();
+      const uid = data && data.session && data.session.user && data.session.user.id;
+      if (!uid) { clearNavAvatar(); return; }
+      const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
+      const photo = window.GALLA_avatarSrc ? window.GALLA_avatarSrc((u && u.avatar_url) || null, 96, uid) : null;
+      try { if (photo) localStorage.setItem("galla_nav_avatar", photo); } catch (_) {}
+      window.GALLA_setNavAvatar(photo);
+    } catch (_) { /* 실패하면 캐시/현 상태 유지 */ }
+  }
+  window.GALLA_syncNavAvatar = syncNavAvatarNow;
   try {
     const av = localStorage.getItem("galla_nav_avatar");
     if (av && isLoggedIn()) window.GALLA_setNavAvatar(av);
     else if (av) localStorage.removeItem("galla_nav_avatar");
   } catch (_) {}
+  setTimeout(syncNavAvatarNow, 600);   // 부팅 직후 한 번 — 캐시가 없거나 낡았으면 바로잡는다
   (function hookSignOut(n) {
     const c = window.supabaseClient;
     if (!c || !c.auth || !c.auth.onAuthStateChange) { if (n < 40) setTimeout(() => hookSignOut(n + 1), 250); return; }
     c.auth.onAuthStateChange((ev) => {
       if (ev === "SIGNED_OUT") { clearNavAvatar(); resyncGated(); }
-      else if (ev === "SIGNED_IN") resyncGated();
+      else if (ev === "SIGNED_IN") { resyncGated(); syncNavAvatarNow(); }
+      else if (ev === "USER_UPDATED") syncNavAvatarNow();
     });
   })(0);
 

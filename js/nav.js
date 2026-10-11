@@ -118,7 +118,8 @@
         if (uid) {
           // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
           const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
-          if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
+          // 로그인이면 사진이 없어도 유저별 기본 아바타 — 로그아웃(선 아이콘)과 구분(26.10.11)
+          if (window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u?.avatar_url || null, 96, uid);
 
           /* 🛟 재기 지원금 — GP가 바닥나면 하루 한 번 채워준다.
              GP는 판매하지 않는 재화라, 다 잃으면 다음 출석까지 예측을 못 한다. 그게 이탈이다.

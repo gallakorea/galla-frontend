@@ -62,7 +62,8 @@ async function syncNavAvatar() {
       return;
     }
     const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
-    const photo = (u?.avatar_url && window.GALLA_avatarSrc) ? window.GALLA_avatarSrc(u.avatar_url) : null;
+    // 로그인 상태면 사진이 없어도 '내 프로필 원'(유저별 기본 아바타) — 로그아웃의 선 아이콘과 한눈에 구분(26.10.11)
+    const photo = window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u?.avatar_url || null, 96, uid) : null;
     try {   // nav.js와 같은 캐시 키 — 다음 부팅 때 라우터가 즉시 적용
       if (photo) localStorage.setItem("galla_nav_avatar", photo);
       else localStorage.removeItem("galla_nav_avatar");

@@ -149,12 +149,13 @@ body {
    로그인 시 내 사진, 비로그인 시 기본 원형 아이콘.
 ============================================================ */
 .nav-item img.nav-avatar {
-  width: 26px;
-  height: 26px;
+  width: 27px;
+  height: 27px;
   border-radius: 50%;
   object-fit: cover;
   background: #1c1c22;
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .28);
+  /* 링을 또렷하게 — 옅으면(.28) 어두운 사진·기본 아바타가 네비 바탕에 묻혀 '작은 사람'만 보였다(26.10.11) */
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .6);
 }
 /* 현재 탭이면 흰 링으로 강조 (다른 아이콘의 active 처리와 톤 통일) */
 .nav-item.active img.nav-avatar {

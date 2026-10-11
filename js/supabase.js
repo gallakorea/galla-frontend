@@ -288,6 +288,10 @@
     if (!avatarUrl) return window.GALLA_genDefaultAvatar(seed);
     // 🛡 avatar_url 은 본인이 마음대로 바꿀 수 있는 칸 — 속성 탈출 문자·비 http 스킴이면 기본 아바타(26.10.11 감사)
     if (typeof avatarUrl !== "string" || /["'<>\s`\\]/.test(avatarUrl)) return window.GALLA_genDefaultAvatar(seed);
+    // 카카오·네이버의 '사진 없음' 회색 실루엣은 사진이 아니다 → 갈라 기본 아바타(26.10.11 사장님 제보: 네비에 작은 회색 사람)
+    if (/kakaocdn\.net\/.*default_profile|account_images%2Fdefault_profile|pstatic\.net\/static\/pwe\/address\/img_profile\.png/i.test(avatarUrl))
+      return window.GALLA_genDefaultAvatar(seed);
+    if (/^http:\/\//i.test(avatarUrl)) avatarUrl = "https://" + avatarUrl.slice(7);   // 앱(capacitor)은 http 이미지를 막는다
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
     if (/^[a-z][a-z0-9+.-]*:/i.test(avatarUrl)) return window.GALLA_genDefaultAvatar(seed);
     /* 리사이즈 엔드포인트 경유 — 원본 아바타(≈1MB 실측)를 그대로 받으면
