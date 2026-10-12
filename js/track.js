@@ -59,10 +59,31 @@
   }
   window.GALLA_track = send;
 
-  // 세션 시작 — 탭/앱 실행당 1회
+  // 🤖 로봇 거르기(26.10.12) — 첫날 '신규 124'가 전부 1회 방문·뉴스/여행 상세 진입·referrer 없음이었다.
+  //   검색엔진 로봇은 JS 를 실행하고 저장공간이 매번 비어 '새 기기'로 찍힌다 → 이름으로 1차, 실제 손길로 2차 거른다.
+  var UA = navigator.userAgent || "";
+  if (navigator.webdriver || /bot|crawl|spider|slurp|yeti|daum|headless|lighthouse|pagespeed|preview|facebookexternalhit|embedly|bingpreview|google-inspectiontool|mediapartners/i.test(UA)) {
+    window.GALLA_track = function () {}; return;
+  }
+
+  // 세션 시작 — 탭/앱 실행당 1회. 사람의 손길(스크롤·터치·클릭·키) 또는 화면을 보고 15초 머문 뒤에만 센다.
   var first = !LS.get("galla_did");
-  var started = false; try { started = !!sessionStorage.getItem("galla_sess"); sessionStorage.setItem("galla_sess", "1"); } catch (_) {}
-  if (!started) send("session_start", { page: location.pathname.slice(0, 60), new_device: first });
+  var started = false; try { started = !!sessionStorage.getItem("galla_sess"); } catch (_) {}
+  if (!started) {
+    var landed = location.pathname.slice(0, 60), done = false;
+    var evs = ["pointerdown", "touchstart", "scroll", "keydown", "wheel"];
+    var fire = function () {
+      if (done) return; done = true;
+      evs.forEach(function (e) { removeEventListener(e, fire, true); });
+      try { sessionStorage.setItem("galla_sess", "1"); } catch (_) {}
+      send("session_start", { page: landed, new_device: first, ua: UA.slice(0, 120) });
+    };
+    evs.forEach(function (e) { addEventListener(e, fire, { capture: true, passive: true }); });
+    var seen = 0, tick = setInterval(function () {
+      if (done) return clearInterval(tick);
+      if (document.visibilityState === "visible" && (seen += 1) >= 15) { clearInterval(tick); fire(); }
+    }, 1000);
+  }
 
   // 로그인 순간(또는 이미 로그인 상태로 들어온 첫 세션) 기기↔계정 연결 — 하루 1회면 충분
   function identifyOnce() {

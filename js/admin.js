@@ -314,29 +314,56 @@
     const t = r.totals || {};
     const p = (a, b) => b ? Math.round(a / b * 100) + "%" : "–";
     const kpi = (l, v, h, a) => `<div class="ad-kpi ${a || ""}"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v">${v}</div><div class="ad-kpi-h">${h || ""}</div></div>`;
-    const src = (r.by_src || []).map(s => `<tr><td>${esc(s.src)}</td><td>${fmt(s.n)}</td><td>${fmt(s.signed)} <small>(${p(s.signed, s.n)})</small></td><td>${fmt(s.voted)} <small>(${p(s.voted, s.n)})</small></td><td>${fmt(s.d1)} <small>(${p(s.d1, s.n)})</small></td></tr>`).join("");
-    const daily = (r.daily || []).slice().reverse().map(d => `<tr><td>${esc(String(d.d).slice(5))}</td><td>${fmt(d.visitors)}</td><td>${fmt(d.new)}</td><td>${fmt(d.signups)}</td><td>${fmt(d.votes)}</td></tr>`).join("");
-    const plat = Object.entries(r.by_platform || {}).map(([k, v]) => `${esc(k)} ${fmt(v)}`).join(" · ") || "–";
+    /* 사장님용 풀이(26.10.12): 영어 약어·코드명을 우리말로, 숫자마다 '그래서 좋은 거냐'를 붙인다 */
+    const START = "2026-10-12";   // 측정 장치를 켠 날 — 이전 날짜의 0은 '안 왔다'가 아니라 '안 쟀다'
+    const SRC_KO = { app: "앱", direct: "직접(주소 입력·즐겨찾기·출처 모름)", naver: "네이버", google: "구글", youtube: "유튜브", instagram: "인스타그램", share: "공유 링크", ref: "친구 초대" };
+    const srcKo = (k) => SRC_KO[k] || (String(k).startsWith("utm:") ? "광고·링크 표시 " + String(k).slice(4) : String(k).startsWith("ref:") ? "외부 사이트 " + String(k).slice(4) : k);
+    const PLAT_KO = { ios: "아이폰 앱", android: "안드로이드 앱", app: "앱", web: "PC 웹", "web-m": "모바일 웹" };
+    const src = (r.by_src || []).map(s => `<tr><td>${esc(srcKo(s.src))}</td><td>${fmt(s.n)}</td><td>${fmt(s.signed)} <small>(${p(s.signed, s.n)})</small></td><td>${fmt(s.voted)} <small>(${p(s.voted, s.n)})</small></td><td>${fmt(s.d1)} <small>(${p(s.d1, s.n)})</small></td></tr>`).join("");
+    const daily = (r.daily || []).slice().reverse().map(d => String(d.d) < START
+      ? `<tr style="color:#4a5163"><td>${esc(String(d.d).slice(5))}</td><td colspan="4">측정 전</td></tr>`
+      : `<tr><td>${esc(String(d.d).slice(5))}</td><td>${fmt(d.visitors)}</td><td>${fmt(d.new)}</td><td>${fmt(d.signups)}</td><td>${fmt(d.votes)}</td></tr>`).join("");
+    const plat = Object.entries(r.by_platform || {}).map(([k, v]) => `${esc(PLAT_KO[k] || k)} ${fmt(v)}`).join(" · ") || "–";
     const tbl = "width:100%;border-collapse:collapse;font-size:13px";
+    // 한 줄 판정 — 숫자를 읽지 않아도 지금 상태를 알 수 있게
+    const nd = t.new_devices || 0, sg = t.signed || 0, vt = t.voted || 0;
+    let verdict;
+    if (!nd) verdict = "아직 방문 기록이 없어요.";
+    else if (!sg && !vt) verdict = `처음 온 기기 <b>${fmt(nd)}</b>대 중 가입·투표한 사람이 <b>0</b>명이에요. 아직 '구경만 하고 떠난다'는 뜻이에요. 오픈 전이라 대부분 검색엔진 로봇·스쳐 간 방문일 가능성이 커요(10.12부터 로봇은 거르도록 고쳤어요).`;
+    else verdict = `처음 온 기기 ${fmt(nd)}대 중 <b>${p(sg, nd)}</b>가 가입, <b>${p(vt, nd)}</b>가 첫 투표까지 했어요. ` +
+      (t.d1_eligible ? `다음 날 다시 온 비율은 <b>${p(t.d1, t.d1_eligible)}</b>예요.` : `다시 오는지(D1)는 하루가 지나야 나와요.`);
+    const help = (l, h) => `<li style="margin:4px 0"><b>${l}</b> — ${h}</li>`;
     main().innerHTML = `<h1 class="ad-h1">🎯 퍼널·리텐션</h1>
-      <p class="ad-sub">최근 <b>${days}일</b> 처음 온 기기 기준 · 테스트·관리자 계정 제외 ·
+      <p class="ad-sub">최근 <b>${days}일</b> 동안 <b>처음 온 기기</b>를 따라가며 가입·투표·재방문을 셉니다 · 테스트·관리자 계정 제외 ·
         <a href="#" data-days="7">7일</a> · <a href="#" data-days="14">14일</a> · <a href="#" data-days="30">30일</a></p>
+      <div class="ad-card" style="margin-bottom:12px;border-color:#3a4aa0"><div class="ad-card-h">📌 한 줄 요약</div>
+        <div style="font-size:14px;line-height:1.7">${verdict}</div></div>
       <div class="ad-kpis">
-        ${kpi("핵심: 주간 투표자(WAV)", fmt(r.wav), "최근 7일 편을 고른 사람", "gold")}
-        ${kpi("신규 방문 기기", fmt(t.new_devices), plat)}
-        ${kpi("가입 전환", p(t.signed, t.new_devices), `${fmt(t.signed)}명`)}
-        ${kpi("첫 투표 전환", p(t.voted, t.new_devices), `${fmt(t.voted)}명`)}
-        ${kpi("D1 재방문", p(t.d1, t.d1_eligible), `${fmt(t.d1)}/${fmt(t.d1_eligible)}`)}
-        ${kpi("D7 재방문", p(t.d7, t.d7_eligible), `${fmt(t.d7)}/${fmt(t.d7_eligible)}`)}
-        ${kpi("투표자 D7", p(t.voter_d7, t.voter_d7_eligible), "편 고른 사람이 7일 뒤 다시 왔나", "live")}
+        ${kpi("핵심: 주간 투표자", fmt(r.wav), "최근 7일 안에 편을 한 번이라도 고른 사람 수. 이게 늘면 서비스가 크는 것", "gold")}
+        ${kpi("신규 방문 기기", fmt(nd), plat)}
+        ${kpi("가입 전환", p(sg, nd), `처음 온 ${fmt(nd)}대 중 가입 ${fmt(sg)}명`)}
+        ${kpi("첫 투표 전환", p(vt, nd), `처음 온 ${fmt(nd)}대 중 편을 고른 ${fmt(vt)}명`)}
+        ${kpi("D1 재방문", p(t.d1, t.d1_eligible), t.d1_eligible ? `다음 날 다시 온 ${fmt(t.d1)} / 대상 ${fmt(t.d1_eligible)}` : "하루가 지나야 계산돼요")}
+        ${kpi("D7 재방문", p(t.d7, t.d7_eligible), t.d7_eligible ? `7일 뒤 다시 온 ${fmt(t.d7)} / 대상 ${fmt(t.d7_eligible)}` : "일주일이 지나야 계산돼요")}
+        ${kpi("투표자 D7", p(t.voter_d7, t.voter_d7_eligible), "편 고른 사람이 7일 뒤에도 왔나 — 투자자가 가장 보는 숫자", "live")}
       </div>
       <div class="ad-grid2">
-        <div class="ad-card"><div class="ad-card-h">🧭 유입 경로별</div>
-          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>경로</th><th>기기</th><th>가입</th><th>첫 투표</th><th>D1</th></tr>${src || '<tr><td colspan="5" style="color:#5f6a80">아직 데이터 없음</td></tr>'}</table></div>
-        <div class="ad-card"><div class="ad-card-h">📅 일별</div>
-          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>날짜</th><th>방문</th><th>신규</th><th>가입</th><th>투표</th></tr>${daily}</table></div>
+        <div class="ad-card"><div class="ad-card-h">🧭 어디서 왔나(유입 경로별)</div>
+          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>경로</th><th>기기</th><th>가입</th><th>첫 투표</th><th>다음 날 재방문</th></tr>${src || '<tr><td colspan="5" style="color:#5f6a80">아직 데이터 없음</td></tr>'}</table></div>
+        <div class="ad-card"><div class="ad-card-h">📅 날짜별</div>
+          <table style="${tbl}"><tr style="color:#7a8190;text-align:left"><th>날짜</th><th>방문 기기</th><th>처음 온 기기</th><th>가입</th><th>투표 수</th></tr>${daily}</table></div>
       </div>
-      <p class="ad-sub" style="margin-top:10px">유입 경로는 첫 방문 때 한 번만 정해진다: <code>?utm_source=</code> · 초대코드(ref) · 공유 링크(share) · 외부 사이트(youtube·instagram·naver…) · 앱(app) · 직접(direct). 유튜브 고정댓글 링크엔 <code>?utm_source=yt_채널명</code> 을 붙이면 따로 집계된다.</p>`;
+      <div class="ad-card" style="margin-top:12px"><div class="ad-card-h">📖 이 화면 읽는 법</div>
+        <ul style="margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.6;color:#c3c9d6">
+          ${help("기기", "사람 대신 '폰·PC 한 대'를 셉니다. 로그인하면 그 계정과 묶여요. 개인정보는 안 남깁니다.")}
+          ${help("흐름", "처음 온다 → 가입한다 → 편을 고른다(첫 투표) → 다음 날·일주일 뒤 다시 온다. 화살표마다 몇 %가 살아남는지가 핵심이에요.")}
+          ${help("가입 전환·첫 투표 전환", "처음 온 기기 중 몇 %가 가입·투표까지 갔나. 일반 소비자 앱 기준 가입 10%, 첫 행동 5%면 출발선, 그 두 배면 좋아요.")}
+          ${help("D1·D7", "Day 1·Day 7. 처음 온 다음 날, 7일 뒤에 다시 왔나. 소셜 앱 기준 D1 30%·D7 15%면 괜찮고, D7 20% 넘으면 투자자가 관심 가져요.")}
+          ${help("주간 투표자", "갈라의 북극성 숫자예요. 방문 수는 로봇·광고로 부풀 수 있지만 '편을 고른 사람'은 못 부풀려요.")}
+          ${help("날짜별 '측정 전'", "10월 12일에 측정 장치를 켰어요. 그 전 날짜는 '아무도 안 왔다'가 아니라 '안 쟀다'예요.")}
+          ${help("방문이 갑자기 느는 날", "대개 검색엔진 로봇이 새 글을 훑고 간 날이에요. 10.12부터 로봇과 '열자마자 닫은' 방문은 빼고 셉니다(스크롤·터치가 있었거나 15초 이상 본 것만).")}
+          ${help("유입 경로", "첫 방문 때 한 번만 정해져요. 유튜브 고정댓글 링크에 <code>?utm_source=yt_채널명</code>을 붙이면 그 채널에서 온 사람만 따로 보여요.")}
+        </ul></div>`;
     main().querySelectorAll("a[data-days]").forEach(a => a.onclick = (e) => { e.preventDefault(); renderFunnel(+a.dataset.days); });
   }
 
