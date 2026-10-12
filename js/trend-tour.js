@@ -83,11 +83,25 @@
     haptic(s.big ? "medium" : "light");
   }
 
+  /* 아이패드 창(26.10.12): SPA 는 탭 판이 가로로 줄지어 있어 첫 번째 일치 요소가 화면 밖 판에 있거나,
+     헤더가 창보다 넓어 중심이 화면 밖으로 나갔다 → 꼬리가 창 왼쪽 끝을 가리켰다.
+     보이는 요소만 고르고, 사각형을 화면 안으로 잘라 그 중심을 가리킨다. */
+  function visibleRect(sel) {
+    var vw = window.innerWidth, vh = window.innerHeight, best = null;
+    document.querySelectorAll(sel).forEach(function (el) {
+      if (best) return;
+      var r = el.getBoundingClientRect();
+      var l = Math.max(0, r.left), t = Math.max(0, r.top), rr = Math.min(vw, r.right), b = Math.min(vh, r.bottom);
+      if (rr - l < 8 || b - t < 8) return;
+      best = { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t };
+    });
+    return best;
+  }
+
   function reposition() {
     if (!OV) return;
     var s = STEPS[idx], ring = OV.querySelector(".dmt-ring"), card = OV.querySelector(".dmt-card");
-    var el = s && s.sel ? document.querySelector(s.sel) : null;
-    var rect = el && el.getBoundingClientRect();
+    var rect = s && s.sel ? visibleRect(s.sel) : null;
     // 코치마크 유지 + 위치 정밀화(사장님 피드백: 방식은 좋은데 '정렬 벗어난 팝업'처럼 보였다)
     // → 카드는 타깃 위/아래에 앵커하고 '말풍선 꼬리'가 타깃 중심을 정확히 가리킨다.
     //   화면 밖으로 못 나가게 좌우 클램프. 타깃 없는 스텝(center)만 정중앙.

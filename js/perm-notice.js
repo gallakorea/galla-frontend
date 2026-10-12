@@ -45,7 +45,8 @@
     st.textContent =
       "#gpn{position:fixed;inset:0;z-index:2147481500;background:#0a0a0b;color:#e9edf6;overflow:auto;" +
         "font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;" +
-        "padding:calc(34px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));" +
+        /* 넓은 화면(아이패드)에선 가운데 560px 폭 — 좌우로 늘어지지 않게(26.10.12) */
+        "padding:calc(34px + env(safe-area-inset-top)) max(22px, calc((100% - 560px) / 2)) calc(28px + env(safe-area-inset-bottom));" +
         "opacity:0;transition:opacity .28s ease}" +
       "#gpn.on{opacity:1}" +
       "#gpn h2{font-size:21px;font-weight:800;margin:0 0 10px;line-height:1.35}" +
@@ -60,7 +61,10 @@
       "#gpn .note{font-size:12px;color:#6f7a93;line-height:1.7;background:#10131a;border-radius:12px;padding:14px 15px;margin-bottom:24px}" +
       "#gpn button{width:100%;border:0;border-radius:13px;padding:16px;font-size:15.5px;font-weight:800;" +
         "background:#2f6bff;color:#fff;font-family:inherit;cursor:pointer}" +
-      "#gpn button:disabled{opacity:.7}";
+      "#gpn button:disabled{opacity:.7}" +
+      /* 「계속」은 항상 화면 아래에 붙어 보인다 — 창이 짧은 아이패드에서 버튼이 화면 밖이라 스크롤해야 찾았다(26.10.12) */
+      "#gpn .gpn-bar{position:sticky;bottom:calc(-28px - env(safe-area-inset-bottom));margin:0 -22px calc(-28px - env(safe-area-inset-bottom));" +
+        "padding:22px 22px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(10,10,11,0),#0a0a0b 22px)}";
     document.head.appendChild(st);
 
     var el = document.createElement("div");
@@ -78,7 +82,7 @@
         "다만 그 기능(통화·촬영·위치 보내기 등)은 쓸 수 없어요.<br>" +
         "허용한 뒤에도 <b>휴대폰 설정 → 갈라</b>에서 언제든 끌 수 있어요.</div>" +
       '<p class="lead" style="margin:-8px 0 14px;font-size:12px">계속을 누르면 항목마다 휴대폰 확인 창이 이어서 떠요. 각 창에서 허용하거나 허용하지 않을 수 있어요.</p>' +
-      '<button type="button" class="gpn-go">계속</button>';
+      '<div class="gpn-bar"><button type="button" class="gpn-go">계속</button></div>';
 
     function row(p) {
       return '<li><span class="ic">' + p.icon + '</span><div><div class="nm">' + p.name +
