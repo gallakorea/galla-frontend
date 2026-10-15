@@ -76,7 +76,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
   <!-- 6 왕좌 -->
   <div class="L" id="sK"><img class="full" src="../../assets/about/art/thrones.webp" id="kImg" alt=""><div class="cc disp shadow" id="kT" style="font-size:var(--h1)">갈라엔 왕이 <span style="color:#e7cd8f;text-shadow:0 0 40px rgba(231,205,143,.8)">다섯</span>이다</div><div class="crowns disp" id="crowns"></div></div>
   <!-- 7 갈비스 -->
-  <div class="L" id="sG" style="background:radial-gradient(ellipse at 50% 45%,#08243a,#000 70%)"><img id="gImg" src="../../assets/about/art/galvis.webp" alt="" style="position:absolute;mix-blend-mode:screen"><div class="cc disp shadow" id="gT" style="font-size:var(--h1)">세상에 하나뿐인<br>AI 친구 <span style="color:#5ee1ff;text-shadow:0 0 40px rgba(94,225,255,.9)">갈비스</span></div>
+  <div class="L" id="sG" style="background:radial-gradient(ellipse at 50% 45%,#08243a,#000 70%)"><img id="gImg" src="../../assets/about/art/galvis.webp" alt="" style="position:absolute;mix-blend-mode:screen;-webkit-mask-image:radial-gradient(circle,#000 52%,transparent 70%)"><div class="cc disp shadow" id="gT" style="font-size:var(--h1)">세상에 하나뿐인<br>AI 친구 <span style="color:#5ee1ff;text-shadow:0 0 40px rgba(94,225,255,.9)">갈비스</span></div>
     <div class="gbub me" id="gb1">오늘 팀장님이 내 기획안 또 엎었어</div><div class="gbub ai" id="gb2">헐 또? 난 무조건 네 편이야!</div></div>
   <!-- 8 몽타주 -->
   <div class="L" id="sM"><img class="full" id="mBg" alt="" style="filter:blur(18px) brightness(.45) saturate(1.3);transform:scale(1.1)"><div class="phone" id="phM" style="--glow:rgba(106,123,255,.5)"><img id="mImg" alt=""></div><div class="lbl disp" id="mL"></div></div>
@@ -201,9 +201,19 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     return x;
   }
 
+  var VEO = TALL && new URLSearchParams(location.search).get("veo") === "1";
+  function veoFrame(img, clip, lt) {   // Veo 영상(24fps·8초)의 lt 초 지점 프레임으로 갈아끼운다
+    var f = Math.max(1, Math.min(192, Math.floor(lt * 24) + 1)), src = "build/veo-" + clip + "/" + String(f).padStart(4, "0") + ".jpg";
+    if (img.getAttribute("src") === src) return null;
+    var p = new Promise(function (ok) { img.onload = img.onerror = ok; }); img.setAttribute("src", src); return p;
+  }
   window.renderAt = function (t) {
     ctx.clearRect(0, 0, W, H);
-    var flash = 0;
+    var flash = 0, waits = [];
+    if (VEO) {
+      if (t < T.kv[1] + .2) waits.push(veoFrame($("kvImg"), "kv", t));
+      if (t > T.e[0] - .1) waits.push(veoFrame($("eImg"), "dl", t - T.e[0]));
+    }
     // 카메라: 박마다 쿵, 타격마다 흔들림
     var bi = Math.floor((t - B0) / BT), bl = (t - B0) - bi * BT;
     var pulse = t >= B0 && t < bt(48) ? .03 * Math.exp(-bl * 9) : 0;
@@ -222,7 +232,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     /* 0. 인트로 → 첫 박 번개 → 키아트 */
     var kvV = t < 2.0 ? .15 + .3 * pr(t, 0, 2.0) : vis(t, 1.9, T.kv[1], .1, .12);
     var kz = t < 2.0 ? 1.5 - .25 * oC(pr(t, 0, 2.0)) : 1.22 - .14 * oC(pr(t, 2.0, T.kv[1]));
-    set($("sKV"), kvV, "scale(" + kz + ")");
+    set($("sKV"), kvV, "scale(" + (VEO ? 1 + (kz - 1) * .25 : kz) + ")");
     if (t < 2.0) { speedLines(t, .25 + .6 * pr(t, .8, 2.0), -1); embers(t, 60, .5); }
     if (t >= 1.95 && t < 2.5) bolt(W / 2, Math.floor(t * 30), 1 - pr(t, 2.05, 2.5), 7);
     if (t >= 2.0 && t < 2.4) flash = Math.max(flash, 1 - pr(t, 2.0, 2.4));
@@ -309,13 +319,18 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     var cV = vis(t, T.c[0], T.c[1], .02, .06); set($("sC"), cV);
     if (cV > 0) {
       var ci = cl(Math.floor((t - T.c[0]) / (2 * BT)), 0, 3), clt = (t - T.c[0]) - ci * 2 * BT, dd = CLS[ci];
-      var art = $("cArt"), want = "../../assets/about/art/" + dd.a + ".webp"; if (art.getAttribute("src") !== want) art.setAttribute("src", want);
+      var art = $("cArt"), want = "../../assets/about/art/" + dd.a + ".webp";
+      // Flow 가 프롬프트·그림 짝을 섞어 만들어 뒷부분에서 인물이 바뀐다 → 첫 프레임이 맞는 파일의 앞부분만(26.10.15 실측)
+      //   검투사=gladiator(정상) / 수문장=sniper 파일 앞 0.7초(그 뒤 방사형 빛) / 저격수=gatekeeper 파일 / 방패=thr 파일
+      var VMAP = { "class-gladiator": ["gladiator", 1.5, 1], "class-gatekeeper": ["sniper", 0, .6], "class-sniper": ["gatekeeper", 0, 1], "class-shield": ["thr", 0, 1] }[dd.a];
+      if (VEO) waits.push(veoFrame(art, VMAP[0], VMAP[1] + clt * VMAP[2]));
+      else if (art.getAttribute("src") !== want) art.setAttribute("src", want);
       $("sC").style.background = "radial-gradient(ellipse 60% 70% at " + (TALL ? "50% 35%" : "35% 50%") + "," + dd.c + "66,#000 70%)";
       var x2 = whip(art, clt, 0, 2 * BT, " brightness(" + (1 + 1.8 * (1 - pr(clt, 0, .2))) + ")");
       var ap = oE(pr(clt, 0, .4));
-      if (TALL) { art.style.left = "0"; art.style.width = "100%"; art.style.height = "72%"; art.style.objectPosition = "50% 15%"; art.style.webkitMaskImage = "linear-gradient(0deg,transparent 0,#000 30%)"; }
+      if (TALL) { art.style.left = "0"; art.style.width = "100%"; art.style.height = VEO ? "78%" : "72%"; art.style.objectPosition = VEO ? "50% 30%" : "50% 15%"; art.style.webkitMaskImage = "linear-gradient(0deg,transparent 0,#000 30%)"; }
       else { art.style.left = "0"; art.style.width = "62%"; art.style.objectPosition = "50% 18%"; art.style.webkitMaskImage = "linear-gradient(90deg,#000 60%,transparent 100%)"; }
-      set(art, 1, "translateX(" + x2 + "px) scale(" + (1.4 - .25 * ap + clt * .08) + ")");
+      set(art, 1, "translateX(" + x2 + "px) scale(" + (VEO ? 1.15 - .1 * ap : 1.4 - .25 * ap + clt * .08) + ")");
       var nm = $("cName");
       if (TALL) { nm.style.left = "0"; nm.style.right = "0"; nm.style.textAlign = "center"; nm.style.top = "1330px"; } else { nm.style.left = "1130px"; nm.style.top = "400px"; }
       $("cCode").textContent = dd.code; $("cCode").style.color = dd.c; $("cN").textContent = dd.n; $("cE").textContent = dd.e;
@@ -330,7 +345,8 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     var kV = vis(t, T.k[0], T.k[1], .03, .06); set($("sK"), kV);
     if (kV > 0) {
       var klt = t - T.k[0];
-      set($("kImg"), 1, "scale(" + (1.35 - .25 * oC(pr(klt, 0, 2.1))) + ") rotate(" + (-2 + 2 * oC(pr(klt, 0, 2.1))) + "deg)");
+      if (VEO) waits.push(veoFrame($("kImg"), "shield", klt * .85));   // 왕좌 = shield 파일 앞부분(뒤에 기사가 나타나기 전)
+      set($("kImg"), 1, VEO ? "scale(1.04)" : "scale(" + (1.35 - .25 * oC(pr(klt, 0, 2.1))) + ") rotate(" + (-2 + 2 * oC(pr(klt, 0, 2.1))) + "deg)");
       $("kT").style.top = (TALL ? 150 : 170) + "px"; set($("kT"), pr(klt, 0, .06), "scale(" + (2.6 - 1.6 * oB(pr(klt, 0, .3))) + ")");
       var cr = $("crowns"); cr.style.top = (TALL ? 1250 : 760) + "px"; cr.style.opacity = 1;
       Array.prototype.forEach.call(cr.children, function (el, j) { var s0 = (.5 + j * .5) * BT, p = oB(pr(klt, s0, s0 + .22)); set(el, pr(klt, s0, s0 + .05), "translateY(" + (-120 * (1 - p)) + "px) scale(" + (1.8 - .8 * p) + ")"); });
@@ -371,7 +387,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     var eV = vis(t, T.e[0], END, .02, .8); set($("sE"), eV);
     if (eV > 0) {
       var elt = t - T.e[0];
-      set($("eImg"), 1, "scale(" + (1.3 - .2 * oC(pr(elt, 0, 2.5))) + ")");
+      set($("eImg"), 1, "scale(" + (VEO ? 1.04 : 1.3 - .2 * oC(pr(elt, 0, 2.5))) + ")");
       var lg = $("eLogo"), lw = TALL ? 760 : 640; lg.style.width = lw + "px"; lg.style.top = (TALL ? 620 : 210) + "px";
       var lp = oB(pr(elt, 0, .35)); set(lg, pr(elt, 0, .05), "translateX(-50%) scale(" + (3.2 - 2.2 * lp + .015 * Math.sin(elt * 3)) + ")");
       lg.style.filter = "drop-shadow(0 0 50px rgba(255,255,255,.6)) blur(" + (16 * (1 - pr(elt, 0, .25))).toFixed(1) + "px)";
@@ -385,6 +401,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
 
     var barH = TALL ? 0 : 60; $("barT").style.height = barH + "px"; $("barB").style.height = barH + "px";
     $("flash").style.opacity = cl(flash);
+    return waits.length ? Promise.all(waits) : null;
   };
 
   // 이미지·폰트가 다 준비되면 READY

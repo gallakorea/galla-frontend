@@ -48,13 +48,13 @@ try {
   await s('Page.enable'); await s('Runtime.enable'); await s('Log.enable');
   await s('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   const ev = async (expr) => { const r = await s('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
-  await s('Page.navigate', { url: 'file://' + path.join(ROOT, 'scripts/promo/promo.html') + '?ar=' + AR });
+  await s('Page.navigate', { url: 'file://' + path.join(ROOT, 'scripts/promo/promo.html') + '?ar=' + AR + (process.env.VEO ? '&veo=1' : '') });
   for (let i = 0; i < 100 && !(await ev('typeof window.READY')).includes('object'); i++) await new Promise((r) => setTimeout(r, 100));
   await ev('READY');
   if (errs.length) throw new Error('페이지 오류: ' + errs.join(' | '));
   const timing = await ev('TIMING');
   fs.writeFileSync(path.join(OUT, `timing-${AR}.json`), JSON.stringify(timing, null, 1));
-  const grab = async (t, fmt = 'png') => { await ev(`renderAt(${t}); new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);
+  const grab = async (t, fmt = 'png') => { await ev(`Promise.resolve(renderAt(${t})).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))`);
     const { data } = await s('Page.captureScreenshot', { format: fmt, quality: fmt === 'jpeg' ? 88 : undefined, clip: { x: 0, y: 0, width: W, height: H, scale: 1 } }); return Buffer.from(data, 'base64'); };
   if (STILLS) {
     for (const t of STILLS) fs.writeFileSync(path.join(OUT, `still-${AR}-${t}.jpg`), await grab(t, 'jpeg'));
