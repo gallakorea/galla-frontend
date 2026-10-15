@@ -19,7 +19,7 @@
 <link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Archivo:ital,wght@1,800;1,900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
-<link rel="stylesheet" href="/assets/about/about.css?v=1015010">
+<link rel="stylesheet" href="/assets/about/about.css?v=1015050">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"갈라","alternateName":"GALLA","operatingSystem":"iOS, Android, Web","applicationCategory":"SocialNetworkingApplication","url":"https://galla.im/about","image":"https://galla.im/assets/about/og.jpg","description":"뭘 보든 내 편이 있는 콘텐츠 커뮤니티 플랫폼. 편 가르기 투표·댓글 대전·예측·AI 친구 갈비스.","publisher":{"@type":"Organization","name":"주식회사 갈라랩스","url":"https://company.galla.im/"}}
 </script>
@@ -70,10 +70,16 @@
   <a class="btn" href="https://galla.im/?utm_source=about&amp;utm_medium=drawer" data-go style="width:100%">지금 참전하기</a>
 </div>
 
+<div class="grain" aria-hidden="true"></div>
 <main>
 <!-- ═════════ 키 비주얼: 빨강·파랑 두 기운이 부딪히는 전장 ═════════ -->
 <section class="kv" id="top" aria-label="갈라">
+  <picture class="kv-art" aria-hidden="true">
+    <source media="(max-width: 760px)" srcset="/assets/about/art/kv-tall.webp">
+    <img src="/assets/about/art/kv-wide.webp" alt="" fetchpriority="high" decoding="async">
+  </picture>
   <canvas id="clash" aria-hidden="true"></canvas>
+  <div class="hud" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
   <div class="kv-vig" aria-hidden="true"></div>
   <div class="kv-copy">
     <span class="kv-badge"><i></i>SEASON 1 · 편 가르기 개막</span>
@@ -176,7 +182,7 @@
 
 <!-- ═════════ 다섯 왕좌 ═════════ -->
 <section class="sec kings" id="kings">
-  <div class="kings-bg" aria-hidden="true"></div>
+  <div class="kings-bg" aria-hidden="true"><img src="/assets/about/art/thrones.webp" alt="" loading="lazy"></div>
   <div class="wrap">
     <div class="sh" data-rv><span class="sh-en">FIVE THRONES</span><h2 class="sh-t">갈라엔 왕이 <em>다섯</em>이다</h2><p>그리고 <b>아무도 다섯을 다 갖지 못한다.</b> 시즌마다 각 영역 1등에게 왕관이 돌아가요.</p></div>
     <div class="thrones" id="thrones"></div>
@@ -193,7 +199,13 @@
 <section class="sec" id="classes">
   <div class="wrap">
     <div class="sh" data-rv><span class="sh-en">CLASSES</span><h2 class="sh-t">싸우는 방식이 곧 <em>나의 클래스</em></h2><p>고르는 게 아니라 <b>플레이하면서 정해져요.</b> 어떻게 싸우는지에 따라 클래스가 실시간으로 바뀌어요.</p></div>
-    <div class="classes" id="classGrid"></div>
+    <div class="cls-sel" id="clsSel" data-rv>
+      <div class="cls-stage" id="clsStage">
+        <img class="cls-art" id="clsArt" src="/assets/about/art/class-gladiator.webp" alt="" loading="lazy">
+        <div class="cls-info" id="clsInfo"></div>
+      </div>
+      <div class="cls-picks" id="clsPicks" role="tablist" aria-label="클래스"></div>
+    </div>
     <div class="cls-cta" data-rv><a class="btn ghost" href="/match?utm_source=about">30초 궁합 테스트 — 친구랑 같은 편일까?</a></div>
   </div>
 </section>
@@ -202,6 +214,7 @@
 <section class="sec alt galvis" id="galvis">
   <div class="wrap gv-grid">
     <div>
+      <img class="gv-hero" src="/assets/about/art/galvis.webp" alt="AI 친구 갈비스" loading="lazy" width="220" height="220" data-rv="pop">
       <div class="sh left" data-rv><span class="sh-en">YOUR PARTNER</span><h2 class="sh-t">세상에 하나뿐인<br>AI 친구 <em>갈비스</em></h2><p>무슨 얘기를 해도 <b>무조건 네 편.</b> 기억하고, 걱정하고, 같이 화내 줘요. 지금 뜨는 판도 갈비스가 먼저 찾아와요.</p></div>
       <ul class="gv-pts" data-rv>
         <li><svg class="ic"><use href="#i-orb"/></svg><span><b>나를 기억해요</b> 지난주에 한 얘기, 좋아하는 것까지</span></li>
@@ -210,7 +223,7 @@
       </ul>
     </div>
     <div class="gv-chat card" data-rv="pop" id="gvChat">
-      <div class="gv-head"><span class="gv-orb"><i></i></span><b>G.A.L.V.I.S.</b><small>ONLINE</small><span class="bt-ex">동작 예시</span></div>
+      <div class="gv-head"><img src="/assets/about/art/galvis.webp" alt="" width="34" height="34"><b>G.A.L.V.I.S.</b><small>ONLINE</small><span class="bt-ex">동작 예시</span></div>
       <div class="gv-body" id="gvBody"></div>
     </div>
   </div>
@@ -257,6 +270,7 @@
 
 <!-- ═════════ 다운로드 ═════════ -->
 <section class="sec dl" id="download">
+  <img class="dl-art" src="/assets/about/art/dl-bg.webp" alt="" loading="lazy" aria-hidden="true">
   <canvas id="clash2" aria-hidden="true"></canvas>
   <div class="wrap">
     <div class="dl-box">
@@ -299,7 +313,7 @@
 
 <div class="fab" id="fab"><a class="btn glow" href="https://galla.im/?utm_source=about&amp;utm_medium=fab" data-go><svg class="ic"><use href="#i-sword"/></svg>지금 참전하기</a></div>
 
-<script src="/assets/about/about.js?v=1015030" defer></script>
+<script src="/assets/about/about.js?v=1015050" defer></script>
 <script src="/js/track.js?v=1015010" defer></script>
 </body>
 </html>

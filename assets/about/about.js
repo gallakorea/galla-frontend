@@ -87,6 +87,14 @@
     function nebula(t) {
       var sx = seam * W;
       ctx.globalCompositeOperation = "source-over";
+      if (opt.overlay) {   // 키아트 위에 얹는 모드 — 배경은 그림이 맡고, 캔버스는 불꽃·입자·경계광만
+        ctx.clearRect(0, 0, W, H);
+        ctx.globalCompositeOperation = "lighter";
+        var gw0 = Math.max(70, W * 0.08), sg0 = ctx.createLinearGradient(sx - gw0, 0, sx + gw0, 0);
+        sg0.addColorStop(0, "rgba(0,0,0,0)"); sg0.addColorStop(0.5, "rgba(190,120,255," + (0.16 + 0.06 * Math.sin(t * 0.004)) + ")"); sg0.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = sg0; ctx.fillRect(sx - gw0, 0, gw0 * 2, H);
+        return;
+      }
       ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = "lighter";
       var blobs = [
@@ -176,8 +184,8 @@
     };
   }
 
-  var kv = $(".kv"), clash = Clash($("#clash"), { dense: innerWidth < 700 ? 0.7 : 1 });
-  Clash($("#clash2"), { dense: 0.5 });
+  var kv = $(".kv"), clash = Clash($("#clash"), { dense: innerWidth < 700 ? 0.45 : 0.6, overlay: true });
+  Clash($("#clash2"), { dense: 0.35, overlay: true });
   // 마우스를 따라 경계가 살짝 기운다(데스크톱만)
   kv.addEventListener("pointermove", function (e) {
     if (e.pointerType !== "mouse") return;
@@ -346,26 +354,34 @@
     $("#thrones").innerHTML = K.map(function (k, i) { return '<div class="throne" data-rv style="--d:' + (i * 0.08) + 's">' + crown.replace('class="crown"', 'class="crown" style="--d:' + (i * 0.4) + 's"').replace(/id="cg"/, 'id="cg' + i + '"').replace(/url\(#cg\)/g, "url(#cg" + i + ")") + "<b>" + k[0] + "</b><span>" + k[1] + "</span><small>KING OF " + k[2] + "</small></div>"; }).join("");
   })();
 
-  /* ── 클래스 — 문장(紋章)은 절차적 SVG ── */
+  /* ── 클래스 — 챔피언 선택 화면식: 큰 일러스트 + 아래 고르기 ── */
   (function () {
     var C = [
-      { code: "HA", n: "돌격 검투사", c: "#ff4d64", d: "가장 먼저 뛰어들어 가장 많이 때린다. 판이 열리면 이미 앞줄에 서 있다.", tags: ["#열혈", "#공격형"], shape: "sword" },
-      { code: "HD", n: "열혈 수문장", c: "#ff8a3d", d: "뜨겁지만 지킬 줄 안다. 우리 진영이 밀릴 때 제일 먼저 막아선다.", tags: ["#열혈", "#수비형"], shape: "gate" },
-      { code: "CA", n: "냉혈 저격수", c: "#5ee1ff", d: "말은 적게, 한 방은 정확하게. 조용히 지켜보다 결정적인 순간에 쏜다.", tags: ["#냉정", "#공격형"], shape: "scope" },
-      { code: "CD", n: "침착한 방패", c: "#7a8bff", d: "흔들리지 않는다. 판이 아무리 뜨거워도 끝까지 자리를 지킨다.", tags: ["#냉정", "#수비형"], shape: "shield" }
+      { code: "HA", n: "돌격 검투사", en: "ASSAULT GLADIATOR", c: "#ff4d64", art: "class-gladiator", d: "가장 먼저 뛰어들어 가장 많이 때린다. 판이 열리면 이미 앞줄에 서 있다.", tags: ["열혈", "공격형"], st: [96, 38, 70] },
+      { code: "HD", n: "열혈 수문장", en: "BLAZING GATEKEEPER", c: "#ff8a3d", art: "class-gatekeeper", d: "뜨겁지만 지킬 줄 안다. 우리 진영이 밀릴 때 제일 먼저 막아선다.", tags: ["열혈", "수비형"], st: [62, 94, 80] },
+      { code: "CA", n: "냉혈 저격수", en: "COLD-BLOODED SNIPER", c: "#5ee1ff", art: "class-sniper", d: "말은 적게, 한 방은 정확하게. 조용히 지켜보다 결정적인 순간에 쏜다.", tags: ["냉정", "공격형"], st: [88, 46, 40] },
+      { code: "CD", n: "침착한 방패", en: "STEADFAST SHIELD", c: "#7a8bff", art: "class-shield", d: "흔들리지 않는다. 판이 아무리 뜨거워도 끝까지 자리를 지킨다.", tags: ["냉정", "수비형"], st: [44, 98, 30] }
     ];
-    function emb(s, c) {
-      var g = '<svg class="emb" viewBox="0 0 200 140" aria-hidden="true"><defs><radialGradient id="eg' + s + '" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="' + c + '" stop-opacity=".45"/><stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient></defs><circle cx="100" cy="70" r="66" fill="url(#eg' + s + ')"/>' +
-        '<circle cx="100" cy="70" r="46" fill="none" stroke="' + c + '" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 5"/>';
-      if (s === "sword") g += '<path d="M100 22l9 14v48h-18V36z" fill="' + c + '"/><path d="M78 86h44v8H78z" fill="#fff"/><path d="M96 94h8v22h-8z" fill="' + c + '"/><circle cx="100" cy="120" r="5" fill="#fff"/>';
-      if (s === "gate") g += '<path d="M64 112V58a36 36 0 0 1 72 0v54h-16V60a20 20 0 0 0-40 0v52z" fill="' + c + '"/><path d="M58 112h84v8H58z" fill="#fff"/><path d="M88 74h24v38H88z" fill="none" stroke="#fff" stroke-width="3"/>';
-      if (s === "scope") g += '<circle cx="100" cy="70" r="30" fill="none" stroke="' + c + '" stroke-width="6"/><circle cx="100" cy="70" r="8" fill="#fff"/><path d="M100 30v20M100 90v20M60 70h20M120 70h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>';
-      if (s === "shield") g += '<path d="M100 24l38 14v30c0 26-17 42-38 52-21-10-38-26-38-52V38z" fill="' + c + '"/><path d="M100 40l24 9v20c0 16-10 27-24 34z" fill="#fff" fill-opacity=".85"/>';
-      return g + "</svg>";
-    }
-    $("#classGrid").innerHTML = C.map(function (k, i) {
-      return '<div class="cls" data-rv style="--cc:' + k.c + ";--d:" + (i * 0.08) + 's">' + emb(k.shape, k.c) + '<span class="code">CLASS ' + k.code + "</span><h3>" + k.n + "</h3><p>" + k.d + '</p><div class="tags">' + k.tags.map(function (t) { return "<i>" + t + "</i>"; }).join("") + "</div></div>";
+    var picks = $("#clsPicks"), art = $("#clsArt"), info = $("#clsInfo"), stage = $("#clsStage"), sel = $("#clsSel"), cur = -1, auto = true;
+    picks.innerHTML = C.map(function (k, i) {
+      return '<button role="tab" aria-selected="false" data-i="' + i + '" style="--cc:' + k.c + '"><img src="/assets/about/art/' + k.art + '.webp" alt="" loading="lazy"><span>' + k.n + "</span></button>";
     }).join("");
+    function bar(l, v) { return '<div class="cls-st"><span>' + l + '</span><i><b style="width:' + v + '%"></b></i></div>'; }
+    function show(i) {
+      if (i === cur) return; cur = i; var k = C[i];
+      sel.style.setProperty("--cc", k.c);
+      $$("button", picks).forEach(function (b, j) { b.setAttribute("aria-selected", j === i ? "true" : "false"); });
+      art.classList.remove("in"); void art.offsetWidth;
+      art.src = "/assets/about/art/" + k.art + ".webp"; art.alt = k.n;
+      art.classList.add("in");
+      info.innerHTML = '<span class="code">CLASS ' + k.code + '</span><h3>' + k.n + '</h3><span class="en">' + k.en + "</span><p>" + k.d + "</p>" +
+        bar("공격", k.st[0]) + bar("방어", k.st[1]) + bar("온도", k.st[2]) +
+        '<div class="tags">' + k.tags.map(function (t) { return "<i>#" + t + "</i>"; }).join("") + "</div>";
+      info.classList.remove("in"); void info.offsetWidth; info.classList.add("in");
+    }
+    picks.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { auto = false; show(+b.dataset.i); haptic(); } });
+    show(0);
+    setInterval(function () { if (!auto || document.hidden) return; var r = sel.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) show((cur + 1) % C.length); }, 4200);
   })();
 
   /* ── 갈비스 대화(동작 예시) ── */
