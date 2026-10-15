@@ -50,7 +50,7 @@ try {
   await s('Page.enable'); await s('Runtime.enable'); await s('Log.enable');
   await s('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   const ev = async (expr) => { const r = await s('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
-  await s('Page.navigate', { url: 'file://' + path.join(ROOT, 'scripts/promo/outro2.html') + '?v=' + VAR });
+  await s('Page.navigate', { url: 'file://' + path.join(ROOT, 'scripts/promo/outro2.html') + '?v=' + VAR + (process.env.VEO ? '&veo=1' : '') });
   for (let i = 0; i < 100 && !(await ev('typeof window.READY')).includes('object'); i++) await new Promise((r) => setTimeout(r, 100));
   await ev('READY');
   if (errs.length) throw new Error('페이지 오류: ' + errs.join(' | '));
@@ -62,7 +62,7 @@ try {
     for (const t of STILLS) fs.writeFileSync(path.join(OUT, `o2still-${VAR}-${t}.jpg`), await grab(t, 'jpeg'));
     console.log('stills', STILLS.length);
   } else if (RANGES) {
-    const orig = path.join(OUT, `outro2-${VAR}.mp4`), parts = [];
+    const orig = path.join(OUT, `outro2-${VAR}${process.env.VEO ? '-veo' : ''}.mp4`), parts = [];
     for (const [a, b] of RANGES) {
       const f0 = Math.floor(a * FPS), f1 = Math.ceil(b * FPS), dst = path.join(OUT, `part-${AR}-${f0}.mp4`);
       ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-', '-c:v', 'libx264', '-preset', 'slow', '-crf', '12', '-pix_fmt', 'yuv420p', dst], { stdio: ['pipe', 'inherit', 'inherit'] });
@@ -80,7 +80,7 @@ try {
     fs.renameSync(tmp, orig); console.log('spliced', orig);
   } else {
     const N = Math.round(timing.END * FPS);
-    const dst = path.join(OUT, `outro2-${VAR}.mp4`);
+    const dst = path.join(OUT, `outro2-${VAR}${process.env.VEO ? '-veo' : ''}.mp4`);
     ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-', '-c:v', 'libx264', '-preset', 'slow', '-crf', '12', '-pix_fmt', 'yuv420p', '-r', String(FPS), dst], { stdio: ['pipe', 'inherit', 'inherit'] });
     const t0 = Date.now();
     for (let i = 0; i < N; i++) {

@@ -48,7 +48,9 @@ html,body{width:1080px;height:1920px;background:#000;overflow:hidden;font-family
              shade: "linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 40%,rgba(0,0,0,.1) 60%,rgba(0,0,0,.65) 100%)" }
   }[V];
   var $ = function (i) { return document.getElementById(i); };
-  $("bg").src = "../../generated-images/outro/" + C.img + ".png";
+  // ?veo=1 이면 배경을 구글 Flow(Veo)로 움직인 영상의 프레임으로(24fps) — 카메라 움직임은 영상이 맡는다
+  var VEO = new URLSearchParams(location.search).get("veo") === "1";
+  $("bg").src = VEO ? "build/veo-" + V + "/0001.jpg" : "../../generated-images/outro/" + C.img + ".png";
   $("shade").style.background = C.shade; $("h").innerHTML = C.h; $("sub").innerHTML = C.sub; $("blk").style.top = C.top + "px";
   if (V === "split") { $("blk").style.top = "190px"; $("sub").style.display = "none"; $("cta").style.marginTop = "420px"; }
   window.TIMING = { END: 8 };
@@ -56,13 +58,18 @@ html,body{width:1080px;height:1920px;background:#000;overflow:hidden;font-family
   var ease = function (p) { return p * p * (3 - 2 * p); };
   function up(el, t, a) { var p = ease(pr(t, a, a + .9)); el.style.opacity = p; el.style.transform = "translateY(" + (28 * (1 - p)) + "px)"; }
   window.renderAt = function (t) {
-    $("bg").style.transform = "scale(" + (1.0 + .06 * ease(pr(t, 0, 8))) + ")";   // 느린 다가가기 하나뿐
+    var wait = null;
+    if (VEO) {
+      var f = Math.min(192, Math.floor(t * 24) + 1), src = "build/veo-" + V + "/" + String(f).padStart(4, "0") + ".jpg";
+      if ($("bg").getAttribute("src") !== src) { wait = new Promise(function (ok) { $("bg").onload = $("bg").onerror = ok; }); $("bg").setAttribute("src", src); }
+    } else $("bg").style.transform = "scale(" + (1.0 + .06 * ease(pr(t, 0, 8))) + ")";   // 느린 다가가기 하나뿐
     up($("logo"), t, .3); up($("h"), t, .8); up($("sub"), t, 1.6); up($("cta"), t, 2.5); up($("gp"), t, 3.1);
     $("url").style.opacity = .55 * ease(pr(t, 3.4, 4.2));
     // 버튼만 은은하게 숨 쉰다(밝기만, 크기·위치 변화 없음)
     var br = t > 3.4 ? .5 + .5 * Math.sin((t - 3.4) * 2.4) : 0;
     $("cta").style.boxShadow = "0 20px 60px rgba(0,0,0,.45),0 0 " + (30 + 30 * br) + "px rgba(255,255,255," + (.15 + .2 * br) + ")";
+    return wait;
   };
-  window.READY = Promise.all([new Promise(function (ok) { $("bg").onload = ok; }), document.fonts.ready]).then(function () { renderAt(0); return true; });
+  window.READY = Promise.all([new Promise(function (ok) { $("bg").onload = ok; }), document.fonts.ready]).then(function () { return Promise.resolve(renderAt(0)); }).then(function () { return true; });
 })();
 </script></body></html>
