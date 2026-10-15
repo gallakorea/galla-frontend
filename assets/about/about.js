@@ -445,7 +445,9 @@
 
   /* ── 배경음악 — 자동재생은 브라우저가 막으니 버튼으로만 켠다. 켜 둔 사람은 다음 방문 첫 터치에 이어서 ── */
   (function () {
-    var btn = $("#bgm"), kvb = $("#kvBgm"), a = new Audio("/assets/about/bgm.m4a"), on = false, fadeT = 0;
+    var btn = $("#bgm"), kvb = $("#kvBgm");
+    if (!btn || !kvb) return;   // 26.10.15 합성 BGM 반려 — 제대로 된 곡이 올 때까지 버튼을 내렸다
+    var a = new Audio("/assets/about/bgm.m4a"), on = false, fadeT = 0;
     a.loop = true; a.preload = "none"; a.volume = 0;
     function fade(to, ms, done) {
       clearInterval(fadeT); var from = a.volume, s = performance.now();
