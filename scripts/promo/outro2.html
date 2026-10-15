@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<!-- 갈라 쇼츠 엔딩 v2(26.10.15) — "촌스럽고 멀미난다" 반영: 그림이 주인공, 글자는 로고·한 줄·행동 유도뿐.
+     움직임은 아주 느린 다가가기 하나 + 글자 부드럽게 나타나기. 흔들림·번쩍임·휙 전환 없음.
+     목표 = 참전·앱 유입: 행동 유도는 하나(프로필 링크), 지금 눌러야 할 이유(가입 +500 GP).
+     인스타 화면 가림 영역(위 250px·아래 400px·오른쪽 아이콘 줄)을 피해 가운데 띠에만 둔다. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&family=Archivo:ital,wght@1,800&display=block">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;background:#000;overflow:hidden;font-family:'Noto Sans KR',sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+#S{position:relative;width:1080px;height:1920px;overflow:hidden}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:50% 60%}
+#shade{position:absolute;inset:0}
+.blk{position:absolute;left:100px;right:160px}
+.o{opacity:0}
+#logo{width:300px;display:block;margin-bottom:46px}
+#h{font-weight:900;font-size:118px;line-height:1.08;letter-spacing:-.045em}
+#h em{font-style:normal}
+#sub{margin-top:30px;font-weight:500;font-size:40px;line-height:1.5;color:rgba(255,255,255,.78);letter-spacing:-.02em}
+#cta{margin-top:64px;display:inline-flex;align-items:center;gap:22px;padding:34px 52px 34px 44px;border-radius:999px;background:#fff;color:#0a0b10;font-weight:900;font-size:48px;letter-spacing:-.03em;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+#cta svg{width:48px;height:48px}
+#gp{margin-top:26px;display:flex;align-items:center;gap:14px;font-weight:700;font-size:36px;color:rgba(255,255,255,.85)}
+#gp b{color:#e7cd8f;font-weight:900}
+#gp i{width:10px;height:10px;border-radius:50%;background:#e7cd8f}
+#url{position:absolute;left:100px;bottom:430px;font-family:'Archivo',sans-serif;font-style:italic;font-weight:800;font-size:34px;letter-spacing:.14em;color:rgba(255,255,255,.55)}
+</style></head><body>
+<div id="S">
+  <img id="bg" alt="">
+  <div id="shade"></div>
+  <div class="blk" id="blk">
+    <img id="logo" class="o" src="../../assets/about/wordmark.png" alt="">
+    <div id="h" class="o"></div>
+    <div id="sub" class="o"></div>
+    <div id="cta" class="o"><span>프로필 링크 → 지금 참전</span><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="#0a0b10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div id="gp" class="o"><i></i>지금 가입하면 <b>+500 GP</b></div>
+  </div>
+  <div id="url" class="o">GALLA.IM</div>
+</div>
+<script>
+(function () {
+  var V = new URLSearchParams(location.search).get("v") || "duel";
+  var C = {
+    duel:  { img: "duel",  top: 330, h: '이 싸움,<br>너도 <em style="background:linear-gradient(90deg,#ff6b7e,#c78bff 55%,#7aa8ff);-webkit-background-clip:text;color:transparent">낄래?</em>', sub: "뭘 보든 편이 갈린다.<br>네 편은 갈라에 있다.",
+             shade: "linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.15) 45%,rgba(0,0,0,.35) 75%,rgba(0,0,0,.8) 100%)" },
+    split: { img: "split", top: 760, h: '너는<br><em style="color:#ff6b7e">어느</em> <em style="color:#7aa8ff">편</em>이야?', sub: "고르는 순간, 싸움은 시작된다.",
+             shade: "linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 30%,rgba(0,0,0,.25) 60%,rgba(0,0,0,.7))" },
+    crowd: { img: "crowd", top: 300, h: '지금,<br>네 편이<br>기다린다', sub: "이 판, 구경만 할 거야?",
+             shade: "linear-gradient(180deg,rgba(0,0,0,.7) 0%,rgba(0,0,0,.35) 40%,rgba(0,0,0,.1) 60%,rgba(0,0,0,.65) 100%)" }
+  }[V];
+  var $ = function (i) { return document.getElementById(i); };
+  $("bg").src = "../../generated-images/outro/" + C.img + ".png";
+  $("shade").style.background = C.shade; $("h").innerHTML = C.h; $("sub").innerHTML = C.sub; $("blk").style.top = C.top + "px";
+  if (V === "split") { $("blk").style.top = "190px"; $("sub").style.display = "none"; $("cta").style.marginTop = "420px"; }
+  window.TIMING = { END: 8 };
+  var cl = function (x) { return Math.max(0, Math.min(1, x)); }, pr = function (t, a, b) { return cl((t - a) / (b - a)); };
+  var ease = function (p) { return p * p * (3 - 2 * p); };
+  function up(el, t, a) { var p = ease(pr(t, a, a + .9)); el.style.opacity = p; el.style.transform = "translateY(" + (28 * (1 - p)) + "px)"; }
+  window.renderAt = function (t) {
+    $("bg").style.transform = "scale(" + (1.0 + .06 * ease(pr(t, 0, 8))) + ")";   // 느린 다가가기 하나뿐
+    up($("logo"), t, .3); up($("h"), t, .8); up($("sub"), t, 1.6); up($("cta"), t, 2.5); up($("gp"), t, 3.1);
+    $("url").style.opacity = .55 * ease(pr(t, 3.4, 4.2));
+    // 버튼만 은은하게 숨 쉰다(밝기만, 크기·위치 변화 없음)
+    var br = t > 3.4 ? .5 + .5 * Math.sin((t - 3.4) * 2.4) : 0;
+    $("cta").style.boxShadow = "0 20px 60px rgba(0,0,0,.45),0 0 " + (30 + 30 * br) + "px rgba(255,255,255," + (.15 + .2 * br) + ")";
+  };
+  window.READY = Promise.all([new Promise(function (ok) { $("bg").onload = ok; }), document.fonts.ready]).then(function () { renderAt(0); return true; });
+})();
+</script></body></html>
