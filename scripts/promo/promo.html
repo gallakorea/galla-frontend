@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<!-- 갈라 홍보 영상(26.10.15) — renderAt(t) 로 시간을 직접 넣어 한 장씩 그리는 '결정적' 페이지.
+     CSS 애니메이션을 쓰지 않는다(프레임 캡처라 시간이 실제로 흐르지 않는다). 곡: Space Adventures(112BPM, 첫 박 2.0초). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Archivo:ital,wght@1,900&family=Noto+Sans+KR:wght@500;700;900&display=block">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Noto Sans KR',sans-serif;color:#fff}
+#S{position:relative;width:100vw;height:100vh;overflow:hidden}
+.L{position:absolute;inset:0;opacity:0;will-change:transform,opacity}
+.full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.disp{font-family:'Black Han Sans',sans-serif;font-weight:400;letter-spacing:-.01em}
+.en{font-family:'Archivo',sans-serif;font-style:italic;font-weight:900}
+.cc{position:absolute;left:0;right:0;text-align:center}
+.shadow{text-shadow:0 6px 0 rgba(0,0,0,.35),0 12px 60px rgba(0,0,0,.95)}
+.r{color:#ff6b7e;text-shadow:0 0 40px rgba(255,77,100,.9),0 10px 40px #000}
+.b{color:#6fa1ff;text-shadow:0 0 40px rgba(61,123,255,.95),0 10px 40px #000}
+#cv{position:absolute;inset:0;width:100%;height:100%;z-index:50;pointer-events:none;mix-blend-mode:screen}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:60}
+#vig{position:absolute;inset:0;z-index:40;pointer-events:none;background:radial-gradient(ellipse 75% 70% at 50% 50%,transparent 55%,rgba(0,0,0,.7) 100%)}
+.bars{position:absolute;left:0;right:0;height:0;background:#000;z-index:45}
+/* VS */
+.half{position:absolute;top:0;bottom:0;width:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.half.l{left:0;background:radial-gradient(ellipse at 30% 50%,#7a0f25,#1a0208 70%)}
+.half.rr{right:0;background:radial-gradient(ellipse at 70% 50%,#0f2f8a,#020818 70%)}
+.vsw{font-size:var(--vs);white-space:nowrap}
+.vsmid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:calc(var(--vs)*.9);z-index:3;text-shadow:0 0 50px #fff,0 0 20px #c78bff}
+/* 폰 */
+.phone{position:absolute;width:var(--pw);border-radius:calc(var(--pw)*.13);padding:calc(var(--pw)*.03);background:linear-gradient(160deg,#2a2d3a,#0c0d12);box-shadow:0 0 0 2px rgba(255,255,255,.12),0 60px 120px rgba(0,0,0,.8),0 0 120px var(--glow,rgba(106,123,255,.35))}
+.phone img{display:block;width:100%;border-radius:calc(var(--pw)*.105)}
+.cap{position:absolute}
+.cap .k{font-size:calc(var(--h1)*.36);letter-spacing:.2em;margin-bottom:.3em}
+.cap .h{font-size:var(--h1);line-height:1.05}
+.cap .s{font-size:calc(var(--h1)*.36);color:#cfd5e4;margin-top:.5em;font-weight:700}
+.gauge{position:absolute;height:calc(var(--h1)*.28);border-radius:999px;overflow:hidden;display:flex;background:#1a1d2a;box-shadow:0 0 40px rgba(0,0,0,.6)}
+.gauge i{display:block;height:100%}
+.bub{position:absolute;padding:.55em 1em;border-radius:1em;font-weight:900;font-size:calc(var(--h1)*.34);white-space:nowrap;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.bub.r{background:#ff4d64;color:#fff;text-shadow:none}.bub.b{background:#3d7bff;color:#fff;text-shadow:none}
+/* 클래스 */
+.clsart{position:absolute;height:100%;object-fit:cover}
+.clsname{position:absolute}
+.clsname .c{font-size:calc(var(--h1)*.34);letter-spacing:.24em}
+.clsname .n{font-size:calc(var(--h1)*1.15);line-height:1}
+.clsname .e{font-size:calc(var(--h1)*.3);letter-spacing:.3em;color:rgba(255,255,255,.6);margin-top:.4em}
+/* 왕좌 */
+.crowns{position:absolute;left:0;right:0;display:flex;justify-content:center;gap:var(--cg)}
+.crown{display:flex;flex-direction:column;align-items:center;gap:.3em;font-size:calc(var(--h1)*.42)}
+.crown svg{width:calc(var(--h1)*1.1);height:calc(var(--h1)*1.1);filter:drop-shadow(0 0 24px rgba(231,205,143,.8))}
+/* 갈비스 */
+.gbub{position:absolute;padding:.6em 1.1em;border-radius:1.1em;font-weight:700;font-size:calc(var(--h1)*.36);max-width:var(--gbw);line-height:1.4;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.gbub.me{background:linear-gradient(135deg,#ff5c8a,#ff4d64)}
+.gbub.ai{background:#1a1d2a;border:2px solid rgba(94,225,255,.35)}
+/* 엔딩 */
+.pill{display:inline-block;padding:.45em 1.3em;border-radius:999px;background:linear-gradient(100deg,#ff4d64,#c04bff,#3d7bff);font-weight:900;box-shadow:0 0 60px rgba(192,75,255,.6)}
+.badge{display:inline-flex;align-items:center;gap:.5em;padding:.4em 1em;border-radius:999px;border:2px solid rgba(255,255,255,.35);background:rgba(0,0,0,.5);letter-spacing:.14em}
+.badge i{width:.6em;height:.6em;border-radius:50%;background:#ff3b56;box-shadow:0 0 20px #ff3b56}
+.lbl{position:absolute;padding:.35em .9em;border-radius:.5em;background:rgba(0,0,0,.6);border:2px solid rgba(255,255,255,.25);font-size:calc(var(--h1)*.42)}
+</style></head>
+<body>
+<div id="S">
+  <!-- 0 인트로·키아트 -->
+  <div class="L" id="sKV"><img class="full" id="kvImg" alt=""></div>
+  <div class="L" id="sT1"><div class="cc disp shadow" id="t1" style="font-size:var(--h1)">세상 모든 콘텐츠,</div><div class="cc disp shadow" id="t2" style="font-size:calc(var(--h1)*1.2)">너는 <span class="r">어느</span> <span class="b">편</span>?</div></div>
+  <!-- 1 VS 연속 -->
+  <div class="L" id="sVS"><div class="half l"><span class="vsw disp r" id="vsA">부먹</span></div><div class="half rr"><span class="vsw disp b" id="vsB">찍먹</span></div><div class="vsmid en">VS</div></div>
+  <!-- 2~4 폰 장면 -->
+  <div class="L" id="sP1"><div class="cap" id="cap1"><div class="k en" style="color:#ff7b8c">STEP 01</div><div class="h disp">편을<br>골라라</div><div class="s">버튼 하나로 진영 선택</div></div><div class="phone" id="ph1" style="--glow:rgba(255,77,100,.45)"><img src="../../assets/about/s-home.webp" alt=""></div><div class="gauge" id="g1"><i style="background:linear-gradient(90deg,#b8193a,#ff4d64)" id="g1r"></i><i style="background:linear-gradient(90deg,#3d7bff,#1b4fd6)" id="g1b"></i></div></div>
+  <div class="L" id="sP2"><div class="cap" id="cap2"><div class="k en" style="color:#d49bff">STEP 02</div><div class="h disp">댓글로<br>싸워라</div><div class="s">공격 · 방어 · 지원 · 일기토</div></div><div class="phone" id="ph2" style="--glow:rgba(192,75,255,.5)"><img src="../../assets/about/s-battle.webp" alt=""></div>
+    <div class="bub r" id="bb1">바삭함 포기는 탕수육 포기</div><div class="bub b" id="bb2">소스가 배어야 완성이지</div><div class="bub r" id="bb3">찍먹은 선택권 존중이다</div></div>
+  <div class="L" id="sP3"><div class="cap" id="cap3"><div class="k en" style="color:#3ee6c1">STEP 03</div><div class="h disp">맞히고<br>쓸어 담아라</div><div class="s">연속 적중 콤보 최대 ×2.5</div></div><div class="phone" id="ph3" style="--glow:rgba(62,230,193,.45)"><img src="../../assets/about/s-predict.webp" alt=""></div>
+    <div class="disp" id="combo" style="position:absolute;color:#3ee6c1;text-shadow:0 0 50px rgba(62,230,193,.9),0 10px 40px #000">COMBO ×2.5</div></div>
+  <!-- 5 클래스 -->
+  <div class="L" id="sC"><img class="clsart" id="cArt" alt=""><div class="clsname" id="cName"><div class="c en" id="cCode"></div><div class="n disp" id="cN"></div><div class="e en" id="cE"></div></div></div>
+  <!-- 6 왕좌 -->
+  <div class="L" id="sK"><img class="full" src="../../assets/about/art/thrones.webp" id="kImg" alt=""><div class="cc disp shadow" id="kT" style="font-size:var(--h1)">갈라엔 왕이 <span style="color:#e7cd8f;text-shadow:0 0 40px rgba(231,205,143,.8)">다섯</span>이다</div><div class="crowns disp" id="crowns"></div></div>
+  <!-- 7 갈비스 -->
+  <div class="L" id="sG" style="background:radial-gradient(ellipse at 50% 45%,#08243a,#000 70%)"><img id="gImg" src="../../assets/about/art/galvis.webp" alt="" style="position:absolute;mix-blend-mode:screen"><div class="cc disp shadow" id="gT" style="font-size:var(--h1)">세상에 하나뿐인<br>AI 친구 <span style="color:#5ee1ff;text-shadow:0 0 40px rgba(94,225,255,.9)">갈비스</span></div>
+    <div class="gbub me" id="gb1">오늘 팀장님이 내 기획안 또 엎었어</div><div class="gbub ai" id="gb2">헐 또? 난 무조건 네 편이야!</div></div>
+  <!-- 8 몽타주 -->
+  <div class="L" id="sM"><img class="full" id="mBg" alt="" style="filter:blur(18px) brightness(.45) saturate(1.3);transform:scale(1.1)"><div class="phone" id="phM" style="--glow:rgba(106,123,255,.5)"><img id="mImg" alt=""></div><div class="lbl disp" id="mL"></div></div>
+  <!-- 9 엔딩 -->
+  <div class="L" id="sE"><img class="full" src="../../assets/about/art/dl-bg.webp" id="eImg" alt=""><div style="position:absolute;inset:0;background:radial-gradient(ellipse 55% 50% at 50% 48%,rgba(0,0,0,.7),rgba(0,0,0,.2) 70%)"></div>
+    <div class="cc" id="eBadge" style="font-size:calc(var(--h1)*.34)"><span class="badge en"><i></i>SEASON 1 OPEN</span></div>
+    <img id="eLogo" src="../../assets/about/wordmark.png" alt="" style="position:absolute;left:50%;filter:drop-shadow(0 0 40px rgba(255,255,255,.5))">
+    <div class="cc disp shadow" id="eT" style="font-size:calc(var(--h1)*.8)">고르고, 싸우고, 왕이 되라</div>
+    <div class="cc" id="eU" style="font-size:calc(var(--h1)*.5)"><span class="pill">galla.im 에서 지금 참전</span></div></div>
+  <div class="bars" id="barT" style="top:0"></div><div class="bars" id="barB" style="bottom:0"></div>
+  <div id="vig"></div>
+  <canvas id="cv"></canvas>
+  <div id="flash"></div>
+</div>
+<script>
+(function () {
+  var AR = new URLSearchParams(location.search).get("ar") || "16x9", TALL = AR === "9x16";
+  var W = TALL ? 1080 : 1920, H = TALL ? 1920 : 1080;
+  var S = document.getElementById("S"), $ = function (id) { return document.getElementById(id); };
+  S.style.setProperty("--h1", (TALL ? 120 : 112) + "px");
+  S.style.setProperty("--vs", (TALL ? 150 : 210) + "px");
+  S.style.setProperty("--pw", (TALL ? 520 : 400) + "px");
+  S.style.setProperty("--cg", (TALL ? 26 : 70) + "px");
+  S.style.setProperty("--gbw", (TALL ? 760 : 620) + "px");
+  $("kvImg").src = "../../assets/about/art/" + (TALL ? "kv-tall" : "kv-wide") + ".webp";
+  $("mBg").src = $("kvImg").src;
+
+  /* 박자: 첫 박 2.0초, 한 박 0.534초(112BPM) */
+  var B0 = 2.0, BT = 0.534, bt = function (n) { return B0 + n * BT; };
+  var END = 46;
+  window.TIMING = { END: END, B0: B0, BT: BT };
+
+  var cl = function (x, a, b) { return Math.max(a == null ? 0 : a, Math.min(b == null ? 1 : b, x)); };
+  var pr = function (t, a, b) { return cl((t - a) / (b - a)); };
+  var oC = function (p) { return 1 - Math.pow(1 - p, 3); };
+  var oB = function (p) { var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
+  var oE = function (p) { return p === 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+  function set(el, o, tr) { el.style.opacity = o; if (tr != null) el.style.transform = tr; }
+  function vis(t, a, b, fi, fo) { return Math.min(pr(t, a, a + (fi || .001)), 1 - pr(t, b - (fo || .001), b)); }
+
+  // 결정적 난수(프레임마다 같은 값)
+  function rnd(seed) { var x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+  var cv = $("cv"), ctx = cv.getContext("2d"); cv.width = W; cv.height = H;
+  function bolt(x, seed, a, w) {
+    if (a <= 0) return;
+    var pts = [], y = -20, k = 0;
+    while (y < H + 20) { pts.push([x + (rnd(seed + k) - .5) * (TALL ? 70 : 60), y]); y += 30 + rnd(seed + k + 99) * 50; k++; }
+    ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = "#c9a2ff"; ctx.shadowBlur = 40;
+    [[w * 4, "rgba(200,150,255,.6)"], [w, "#fff"]].forEach(function (s) { ctx.lineWidth = s[0]; ctx.strokeStyle = s[1]; ctx.beginPath(); pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); });
+    ctx.restore();
+  }
+  function embers(t, n, a) {   // 위로 떠오르는 불씨 — 시간의 함수로 위치를 계산
+    for (var i = 0; i < n; i++) {
+      var sx = rnd(i) * W, sp = 60 + rnd(i + 7) * 160, ph = rnd(i + 3) * 10;
+      var y = H - ((t * sp + ph * 200) % (H + 100)), x = sx + Math.sin(t * 1.3 + i) * 30;
+      var red = rnd(i + 5) < .5; ctx.fillStyle = red ? "rgba(255,120,90," + a + ")" : "rgba(120,170,255," + a + ")";
+      ctx.beginPath(); ctx.arc(x, y, 1.5 + rnd(i + 9) * 2.5, 0, 6.283); ctx.fill();
+    }
+  }
+  function ring(cx, cy, p, col) {   // 원형 충격파(방사형 빛줄기 금지)
+    if (p <= 0 || p >= 1) return;
+    ctx.save(); ctx.globalAlpha = 1 - p; ctx.strokeStyle = col; ctx.lineWidth = 10 * (1 - p) + 1; ctx.shadowColor = col; ctx.shadowBlur = 30;
+    ctx.beginPath(); ctx.arc(cx, cy, 40 + p * Math.max(W, H) * .6, 0, 6.283); ctx.stroke(); ctx.restore();
+  }
+
+  var VS = [["부먹", "찍먹"], ["민초", "반민초"], ["짜장", "짬뽕"], ["강아지", "고양이"], ["여름", "겨울"], ["아침형", "저녁형"], ["깻잎 OK", "깻잎 NO"], ["바로 답장", "천천히"]];
+  var CLS = [
+    { a: "class-gladiator", c: "#ff4d64", code: "CLASS HA", n: "돌격 검투사", e: "ASSAULT GLADIATOR" },
+    { a: "class-gatekeeper", c: "#ff8a3d", code: "CLASS HD", n: "열혈 수문장", e: "BLAZING GATEKEEPER" },
+    { a: "class-sniper", c: "#5ee1ff", code: "CLASS CA", n: "냉혈 저격수", e: "COLD-BLOODED SNIPER" },
+    { a: "class-shield", c: "#7a8bff", code: "CLASS CD", n: "침착한 방패", e: "STEADFAST SHIELD" }
+  ];
+  var MON = [["s-trend", "핫트렌드"], ["s-search", "통합검색"], ["s-galvis", "갈비스"], ["s-talk", "갈라톡 · 삐삐"], ["s-home", "지금 뜨는 판"], ["s-battle", "댓글 대전"], ["s-predict", "갈라예측"], ["s-trend", "실시간 급상승"]];
+  var crownSvg = '<svg viewBox="0 0 64 64"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3cf"/><stop offset=".55" stop-color="#e7cd8f"/><stop offset="1" stop-color="#9d7a35"/></linearGradient></defs><path d="M8 24l12 10 12-20 12 20 12-10-5 26H13z" fill="url(#cg)" stroke="#fff6dc" stroke-width="1.5" stroke-linejoin="round"/><rect x="13" y="50" width="38" height="6" rx="2" fill="url(#cg)"/><circle cx="32" cy="40" r="3.4" fill="#ff5a6e"/></svg>';
+  $("crowns").innerHTML = ["이슈왕", "광장왕", "숏판왕", "롱판왕", "예측왕"].map(function (n) { return '<div class="crown">' + crownSvg + "<span>" + n + "</span></div>"; }).join("");
+  if (TALL) { $("crowns").style.flexWrap = "wrap"; $("crowns").style.padding = "0 80px"; $("crowns").style.rowGap = "40px"; }
+
+  // 장면 구간(초)
+  var T = {
+    kv: [0, bt(7.5)],            // 0~6.0  인트로 + 키아트 + 제목
+    vs: [bt(7.5), bt(16)],       // 6.0~10.5 VS 연속(박마다)
+    p1: [bt(16), bt(21)], p2: [bt(21), bt(25.5)], p3: [bt(25.5), bt(29.5)],
+    c: [bt(29.5), bt(45.5)],     // 클래스 4종 × 4박
+    k: [bt(45.5), bt(53.5)], g: [bt(53.5), bt(61.5)], m: [bt(61.5), bt(69.5)],
+    e: [bt(69.5), END]
+  };
+  window.TIMING.scenes = T;
+
+  window.renderAt = function (t) {
+    ctx.clearRect(0, 0, W, H);
+    var flash = 0;
+
+    /* 0. 인트로: 어둠 → 2.0초 번개 → 키아트 */
+    var kvV = t < 2.0 ? .18 + .22 * pr(t, 0, 2.0) : vis(t, 1.6, T.kv[1], .4, .25);
+    var kz = t < 2.0 ? 1.32 - .1 * pr(t, 0, 2.0) : 1.18 - 0.1 * oC(pr(t, 1.9, T.kv[1]));
+    set($("sKV"), kvV, "scale(" + kz + ")");
+    set($("sT1"), vis(t, 2.2, T.kv[1], .2, .2));
+    var p1t = oB(pr(t, 2.2, 2.75)), p2t = oB(pr(t, 4.2, 4.75));
+    $("t1").style.top = (TALL ? 760 : 380) + "px"; $("t2").style.top = (TALL ? 920 : 520) + "px";
+    set($("t1"), pr(t, 2.2, 2.4), "scale(" + (2.2 - 1.2 * p1t) + ")");
+    set($("t2"), pr(t, 4.2, 4.4), "scale(" + (2.4 - 1.4 * p2t) + ")");
+    if (t < 2.4) embers(t, 40, .5 * pr(t, 0, 1.6));
+    if (t >= 1.95 && t < 2.6) { bolt(W / 2, Math.floor(t * 30), 1 - pr(t, 2.1, 2.6), 6); }
+    flash = Math.max(flash, 1 - pr(t, 2.0, 2.35)) * (t >= 2.0 ? 1 : 0);
+    if (t >= 4.2 && t < 4.5) flash = Math.max(flash, .5 * (1 - pr(t, 4.2, 4.5)));
+    ring(W / 2, H / 2, pr(t, 2.0, 2.9), "rgba(200,160,255,1)");
+    if (t > 2 && t < T.kv[1]) embers(t, 70, .55);
+
+    /* 1. VS 연속 — 박마다 짝이 바뀌고 쾅 */
+    var vsV = vis(t, T.vs[0], T.vs[1], .05, .15); set($("sVS"), vsV);
+    if (vsV > 0) {
+      var k = cl(Math.floor((t - T.vs[0]) / BT), 0, VS.length - 1), lt = (t - T.vs[0]) - k * BT, pp = oB(pr(lt, 0, .22));
+      $("vsA").textContent = VS[k][0]; $("vsB").textContent = VS[k][1];
+      set($("vsA"), 1, "translateX(" + (-260 * (1 - pp)) + "px) scale(" + (1.4 - .4 * pp) + ")");
+      set($("vsB"), 1, "translateX(" + (260 * (1 - pp)) + "px) scale(" + (1.4 - .4 * pp) + ")");
+      bolt(W / 2, k * 13 + 7, .9, 4);
+      flash = Math.max(flash, .35 * (1 - pr(lt, 0, .14)));
+      ring(W / 2, H / 2, pr(lt, 0, .45), k % 2 ? "rgba(90,140,255,1)" : "rgba(255,90,110,1)");
+    }
+
+    /* 2~4. 폰 장면 */
+    [["p1", "sP1", "cap1", "ph1"], ["p2", "sP2", "cap2", "ph2"], ["p3", "sP3", "cap3", "ph3"]].forEach(function (d, i) {
+      var a = T[d[0]][0], b = T[d[0]][1], v = vis(t, a, b, .12, .12), lt = t - a;
+      set($(d[1]), v); if (v <= 0) return;
+      var pin = oB(pr(lt, 0, .5)), drift = lt * 12;
+      if (TALL) {
+        $(d[2]).style.left = "90px"; $(d[2]).style.top = "190px";
+        set($(d[2]), 1, "translateY(" + (60 * (1 - pin)) + "px)");
+        set($(d[3]), 1, "translate(" + (W / 2 - 260) + "px," + (700 + 140 * (1 - pin) - drift) + "px) rotate(" + (i % 2 ? -4 : 4) + "deg)");
+      } else {
+        $(d[2]).style.left = "180px"; $(d[2]).style.top = "300px";
+        set($(d[2]), 1, "translateX(" + (-80 * (1 - pin)) + "px)");
+        set($(d[3]), 1, "translate(" + (1160 + 200 * (1 - pin)) + "px," + (90 - drift) + "px) rotate(" + (i % 2 ? -4 : 4) + "deg)");
+      }
+      flash = Math.max(flash, .4 * (1 - pr(lt, 0, .15)));
+      embers(t, 40, .4);
+    });
+    // 게이지 출렁
+    if (t > T.p1[0] && t < T.p1[1]) {
+      var lt1 = t - T.p1[0], g = $("g1"), gw = TALL ? 900 : 640;
+      g.style.width = gw + "px"; g.style.left = (TALL ? 90 : 180) + "px"; g.style.top = (TALL ? 590 : 700) + "px";
+      var rp = 50 + 18 * Math.sin(lt1 * 4.5) * Math.exp(-lt1 * .5) + 8 * oC(pr(lt1, 1, 2.5));
+      $("g1r").style.width = rp + "%"; $("g1b").style.width = (100 - rp) + "%"; set(g, pr(lt1, .3, .6));
+    }
+    // 댓글 말풍선
+    if (t > T.p2[0] && t < T.p2[1]) {
+      var lt2 = t - T.p2[0];
+      [["bb1", .5, TALL ? [120, 1450] : [880, 260]], ["bb2", 1.05, TALL ? [440, 1600] : [1500, 640]], ["bb3", 1.6, TALL ? [160, 1750] : [820, 860]]].forEach(function (q) {
+        var p = oB(pr(lt2, q[1], q[1] + .35)); var el = $(q[0]); el.style.left = q[2][0] + "px"; el.style.top = q[2][1] + "px";
+        set(el, pr(lt2, q[1], q[1] + .1), "scale(" + (.4 + .6 * p) + ") translateY(" + (-lt2 * 10) + "px)");
+      });
+    }
+    // 콤보
+    if (t > T.p3[0] && t < T.p3[1]) {
+      var lt3 = t - T.p3[0], cp = oB(pr(lt3, .8, 1.15)), c = $("combo");
+      c.style.fontSize = (TALL ? 150 : 140) + "px"; c.style.left = (TALL ? 120 : 760) + "px"; c.style.top = (TALL ? 1500 : 760) + "px";
+      set(c, pr(lt3, .8, .9), "scale(" + (2.2 - 1.2 * cp) + ") rotate(-6deg)");
+      if (lt3 > .8 && lt3 < 1.2) flash = Math.max(flash, .4 * (1 - pr(lt3, .8, 1.1)));
+    }
+
+    /* 5. 클래스 4종 — 4박마다 교체, 쾅 들어오며 이름 */
+    var cV = vis(t, T.c[0], T.c[1], .08, .2); set($("sC"), cV);
+    if (cV > 0) {
+      var ci = cl(Math.floor((t - T.c[0]) / (4 * BT)), 0, 3), clt = (t - T.c[0]) - ci * 4 * BT, d = CLS[ci];
+      var art = $("cArt"), want = "../../assets/about/art/" + d.a + ".webp";
+      if (art.getAttribute("src") !== want) art.setAttribute("src", want);
+      $("sC").style.background = "radial-gradient(ellipse 60% 70% at " + (TALL ? "50% 35%" : "35% 50%") + "," + d.c + "55,#000 70%)";
+      var ap = oE(pr(clt, 0, .6));
+      if (TALL) { art.style.left = "0"; art.style.width = "100%"; art.style.height = "72%"; art.style.objectPosition = "50% 15%"; art.style.webkitMaskImage = "linear-gradient(0deg,transparent 0,#000 30%)"; }
+      else { art.style.left = "0"; art.style.width = "62%"; art.style.objectPosition = "50% 18%"; art.style.webkitMaskImage = "linear-gradient(90deg,#000 60%,transparent 100%)"; }
+      set(art, 1, "scale(" + (1.18 - .14 * ap + clt * .02) + ") translateX(" + (TALL ? 0 : -60 * (1 - ap)) + "px)");
+      art.style.filter = "brightness(" + (1 + 1.5 * (1 - pr(clt, 0, .25))) + ")";
+      var nm = $("cName"); nm.style.color = "#fff";
+      if (TALL) { nm.style.left = "0"; nm.style.right = "0"; nm.style.textAlign = "center"; nm.style.top = "1330px"; }
+      else { nm.style.left = "1130px"; nm.style.top = "400px"; }
+      $("cCode").textContent = d.code; $("cCode").style.color = d.c; $("cN").textContent = d.n; $("cE").textContent = d.e;
+      $("cN").style.textShadow = "0 0 50px " + d.c + ",0 10px 40px #000";
+      var np = oB(pr(clt, .15, .55)); set(nm, pr(clt, .15, .3), "translateY(" + (50 * (1 - np)) + "px)");
+      flash = Math.max(flash, .55 * (1 - pr(clt, 0, .18)));
+      ring(TALL ? W / 2 : W * .3, TALL ? H * .35 : H / 2, pr(clt, 0, .5), d.c);
+      embers(t, 60, .5);
+    }
+
+    /* 6. 다섯 왕좌 */
+    var kV = vis(t, T.k[0], T.k[1], .15, .15); set($("sK"), kV);
+    if (kV > 0) {
+      var klt = t - T.k[0];
+      set($("kImg"), 1, "scale(" + (1.12 - .06 * oC(pr(klt, 0, 4))) + ")");
+      $("kT").style.top = (TALL ? 150 : 170) + "px"; set($("kT"), pr(klt, .1, .4), "scale(" + (1.3 - .3 * oB(pr(klt, .1, .5))) + ")");
+      var cr = $("crowns"); cr.style.top = (TALL ? 1250 : 760) + "px"; cr.style.opacity = 1;
+      Array.prototype.forEach.call(cr.children, function (el, i) { var p = oB(pr(klt, 1.07 + i * BT, 1.07 + i * BT + .3)); set(el, pr(klt, 1.07 + i * BT, 1.07 + i * BT + .1), "translateY(" + (60 * (1 - p)) + "px) scale(" + (.6 + .4 * p) + ")"); });
+      for (var ci2 = 0; ci2 < 5; ci2++) { var lt5 = klt - (1.07 + ci2 * BT); if (lt5 > 0 && lt5 < .15) flash = Math.max(flash, .25 * (1 - lt5 / .15)); }
+    }
+
+    /* 7. 갈비스 */
+    var gV = vis(t, T.g[0], T.g[1], .15, .15); set($("sG"), gV);
+    if (gV > 0) {
+      var glt = t - T.g[0], gi = $("gImg"), sz = TALL ? 640 : 520;
+      gi.style.width = sz + "px"; gi.style.left = (W / 2 - sz / 2) + "px"; gi.style.top = (TALL ? 560 : 120) + "px";
+      set(gi, 1, "translateY(" + (Math.sin(glt * 2.5) * 14) + "px) scale(" + (.7 + .3 * oB(pr(glt, 0, .6))) + ")");
+      $("gT").style.top = (TALL ? 220 : 650) + "px"; set($("gT"), pr(glt, .3, .5), "translateY(" + (30 * (1 - oC(pr(glt, .3, .7)))) + "px)");
+      var b1 = $("gb1"), b2 = $("gb2");
+      if (TALL) { b1.style.right = "90px"; b1.style.top = "1300px"; b2.style.left = "90px"; b2.style.top = "1470px"; }
+      else { b1.style.right = "140px"; b1.style.top = "200px"; b2.style.left = "140px"; b2.style.top = "380px"; }
+      set(b1, pr(glt, 1.1, 1.25), "scale(" + (.5 + .5 * oB(pr(glt, 1.1, 1.45))) + ")");
+      set(b2, pr(glt, 2.2, 2.35), "scale(" + (.5 + .5 * oB(pr(glt, 2.2, 2.55))) + ")");
+      embers(t, 30, .35);
+    }
+
+    /* 8. 몽타주 — 박마다 화면 교체 */
+    var mV = vis(t, T.m[0], T.m[1], .05, .1); set($("sM"), mV);
+    if (mV > 0) {
+      var mi = cl(Math.floor((t - T.m[0]) / BT), 0, MON.length - 1), mlt = (t - T.m[0]) - mi * BT, md = MON[mi];
+      var im = $("mImg"), w2 = "../../assets/about/" + md[0] + ".webp"; if (im.getAttribute("src") !== w2) im.setAttribute("src", w2);
+      var ph = $("phM"), mp = oB(pr(mlt, 0, .25)), mpw = TALL ? 600 : 470;
+      ph.style.setProperty("--pw", mpw + "px");
+      ph.style.left = (W / 2 - mpw / 2) + "px"; ph.style.top = (TALL ? 240 : 40) + "px";
+      set(ph, 1, "scale(" + (1.15 - .15 * mp) + ") rotate(" + ((mi % 2 ? -1 : 1) * 5 * (1 - mp)) + "deg)");
+      var lb = $("mL"); lb.textContent = md[1]; lb.style.left = "50%"; lb.style.top = (TALL ? 1640 : 905) + "px"; lb.style.fontSize = (TALL ? 64 : 52) + "px";
+      set(lb, 1, "translateX(-50%) scale(" + (1.3 - .3 * mp) + ")");
+      flash = Math.max(flash, .3 * (1 - pr(mlt, 0, .12)));
+    }
+
+    /* 9. 엔딩 */
+    var eV = vis(t, T.e[0], END, .2, .9); set($("sE"), eV);
+    if (eV > 0) {
+      var elt = t - T.e[0];
+      set($("eImg"), 1, "scale(" + (1.16 - .1 * oC(pr(elt, 0, 6))) + ")");
+      var lg = $("eLogo"), lw = TALL ? 760 : 640; lg.style.width = lw + "px"; lg.style.top = (TALL ? 620 : 210) + "px";
+      var lp = oB(pr(elt, .6, 1.2)); set(lg, pr(elt, .6, .8), "translateX(-50%) scale(" + (2.4 - 1.4 * lp) + ")");
+      lg.style.filter = "drop-shadow(0 0 40px rgba(255,255,255,.5)) blur(" + (12 * (1 - pr(elt, .6, 1.0))) + "px)";
+      if (elt > .6 && elt < 1.2) { flash = Math.max(flash, .8 * (1 - pr(elt, .6, 1.0))); bolt(W / 2, 5, 1 - pr(elt, .6, 1.2), 7); ring(W / 2, (TALL ? 800 : 380), pr(elt, .6, 1.5), "rgba(220,180,255,1)"); }
+      $("eBadge").style.top = (TALL ? 480 : 110) + "px"; set($("eBadge"), pr(elt, 1.4, 1.7));
+      $("eT").style.top = (TALL ? 1080 : 600) + "px"; set($("eT"), pr(elt, 2.0, 2.3), "translateY(" + (40 * (1 - oC(pr(elt, 2.0, 2.6)))) + "px)");
+      $("eU").style.top = (TALL ? 1260 : 760) + "px"; set($("eU"), pr(elt, 2.9, 3.2), "scale(" + (.7 + .3 * oB(pr(elt, 2.9, 3.4))) + ")");
+      embers(t, 80, .55);
+    }
+
+    // 장면 경계의 시네마 바(가로판만)
+    var barH = TALL ? 0 : 60; $("barT").style.height = barH + "px"; $("barB").style.height = barH + "px";
+    $("flash").style.opacity = cl(flash);
+  };
+
+  // 이미지·폰트가 다 준비되면 READY
+  var imgs = ["kv-wide", "kv-tall", "thrones", "galvis", "dl-bg", "class-gladiator", "class-gatekeeper", "class-sniper", "class-shield"].map(function (n) { return "../../assets/about/art/" + n + ".webp"; })
+    .concat(["s-home", "s-battle", "s-predict", "s-trend", "s-search", "s-galvis", "s-talk"].map(function (n) { return "../../assets/about/" + n + ".webp"; }));
+  window.READY = Promise.all(imgs.map(function (u) { return new Promise(function (ok) { var i = new Image(); i.onload = i.onerror = ok; i.src = u; }); }))
+    .then(function () { return document.fonts.ready; })
+    .then(function () { return Promise.all(Array.prototype.map.call(document.images, function (i) { return i.complete ? 0 : new Promise(function (ok) { i.onload = i.onerror = ok; }); })); })
+    .then(function () { renderAt(0); return true; });
+})();
+</script>
+</body></html>

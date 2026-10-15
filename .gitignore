@@ -20,3 +20,4 @@ scripts/*_out.json
 
 # wrangler 로컬 상태·번들 — 빌드 산출물이라 레포에 있을 이유가 없다(그대로 배포되기까지 했다)
 .wrangler/
+scripts/promo/build/
