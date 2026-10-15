@@ -21,8 +21,8 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
 .bars{position:absolute;left:0;right:0;height:0;background:#000;z-index:45}
 /* VS */
 .half{position:absolute;top:0;bottom:0;width:50%;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.half.l{left:0;background:radial-gradient(ellipse at 30% 50%,#7a0f25,#1a0208 70%)}
-.half.rr{right:0;background:radial-gradient(ellipse at 70% 50%,#0f2f8a,#020818 70%)}
+.half.l{left:0;padding-right:9%;background:radial-gradient(ellipse at 30% 50%,#7a0f25,#1a0208 70%)}
+.half.rr{right:0;padding-left:9%;background:radial-gradient(ellipse at 70% 50%,#0f2f8a,#020818 70%)}
 .vsw{font-size:var(--vs);white-space:nowrap}
 .vsmid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:calc(var(--vs)*.9);z-index:3;text-shadow:0 0 50px #fff,0 0 20px #c78bff}
 /* 폰 */
@@ -58,6 +58,8 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
 </style></head>
 <body>
 <div id="S">
+<div id="cam" style="position:absolute;inset:0;transform-origin:50% 50%">
+  <img class="full" id="bgB" alt="" style="opacity:0;filter:blur(22px) brightness(.4) saturate(1.4)">
   <!-- 0 인트로·키아트 -->
   <div class="L" id="sKV"><img class="full" id="kvImg" alt=""></div>
   <div class="L" id="sT1"><div class="cc disp shadow" id="t1" style="font-size:var(--h1)">세상 모든 콘텐츠,</div><div class="cc disp shadow" id="t2" style="font-size:calc(var(--h1)*1.2)">너는 <span class="r">어느</span> <span class="b">편</span>?</div></div>
@@ -84,6 +86,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     <img id="eLogo" src="../../assets/about/wordmark.png" alt="" style="position:absolute;left:50%;filter:drop-shadow(0 0 40px rgba(255,255,255,.5))">
     <div class="cc disp shadow" id="eT" style="font-size:calc(var(--h1)*.8)">고르고, 싸우고, 왕이 되라</div>
     <div class="cc" id="eU" style="font-size:calc(var(--h1)*.5)"><span class="pill">galla.im 에서 지금 참전</span></div></div>
+</div>
   <div class="bars" id="barT" style="top:0"></div><div class="bars" id="barB" style="bottom:0"></div>
   <div id="vig"></div>
   <canvas id="cv"></canvas>
@@ -104,7 +107,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
 
   /* 박자: 첫 박 2.0초, 한 박 0.534초(112BPM) */
   var B0 = 2.0, BT = 0.534, bt = function (n) { return B0 + n * BT; };
-  var END = 46;
+  var END = 46;   // v2 에서 아래 타임라인이 덮어쓴다
   window.TIMING = { END: END, B0: B0, BT: BT };
 
   var cl = function (x, a, b) { return Math.max(a == null ? 0 : a, Math.min(b == null ? 1 : b, x)); };
@@ -123,6 +126,14 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
     if (a <= 0) return;
     var pts = [], y = -20, k = 0;
     while (y < H + 20) { pts.push([x + (rnd(seed + k) - .5) * (TALL ? 70 : 60), y]); y += 30 + rnd(seed + k + 99) * 50; k++; }
+    ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = "#c9a2ff"; ctx.shadowBlur = 40;
+    [[w * 4, "rgba(200,150,255,.6)"], [w, "#fff"]].forEach(function (s) { ctx.lineWidth = s[0]; ctx.strokeStyle = s[1]; ctx.beginPath(); pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); });
+    ctx.restore();
+  }
+  function boltH(y, seed, a, w) {   // 가로로 지나가는 번개 — 세로판 VS 는 위아래로 갈라서
+    if (a <= 0) return;
+    var pts = [], x = -20, k = 0;
+    while (x < W + 20) { pts.push([x, y + (rnd(seed + k) - .5) * 60]); x += 30 + rnd(seed + k + 99) * 50; k++; }
     ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = "#c9a2ff"; ctx.shadowBlur = 40;
     [[w * 4, "rgba(200,150,255,.6)"], [w, "#fff"]].forEach(function (s) { ctx.lineWidth = s[0]; ctx.strokeStyle = s[1]; ctx.beginPath(); pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); });
     ctx.restore();
@@ -153,168 +164,225 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'No
   $("crowns").innerHTML = ["이슈왕", "광장왕", "숏판왕", "롱판왕", "예측왕"].map(function (n) { return '<div class="crown">' + crownSvg + "<span>" + n + "</span></div>"; }).join("");
   if (TALL) { $("crowns").style.flexWrap = "wrap"; $("crowns").style.padding = "0 80px"; $("crowns").style.rowGap = "40px"; }
 
-  // 장면 구간(초)
-  var T = {
-    kv: [0, bt(7.5)],            // 0~6.0  인트로 + 키아트 + 제목
-    vs: [bt(7.5), bt(16)],       // 6.0~10.5 VS 연속(박마다)
-    p1: [bt(16), bt(21)], p2: [bt(21), bt(25.5)], p3: [bt(25.5), bt(29.5)],
-    c: [bt(29.5), bt(45.5)],     // 클래스 4종 × 4박
-    k: [bt(45.5), bt(53.5)], g: [bt(53.5), bt(61.5)], m: [bt(61.5), bt(69.5)],
-    e: [bt(69.5), END]
-  };
+  // ── v2 타임라인(26.10.15 "정적이다, 다이나믹하게 전면 개편") ──
+  // 곡은 b48(27.632초)에서 곡의 b66(37.244초) 엔딩으로 바로 넘어간다(mux 에서 같은 지점으로 잘라 붙임)
+  END = 34.9; window.TIMING.END = END; window.TIMING.CUT = [bt(48), 37.244];
+  var T = { kv: [0, bt(8)], vs: [bt(8), bt(16)], p1: [bt(16), bt(20)], p2: [bt(20), bt(24)], p3: [bt(24), bt(28)],
+    c: [bt(28), bt(36)], k: [bt(36), bt(40)], g: [bt(40), bt(42)], m: [bt(42), bt(48)], e: [bt(48), END] };
   window.TIMING.scenes = T;
+  // 타격 지점(흔들림·색번짐·효과음) — 세기 함께
+  var HITS = [[bt(0), 1.4], [bt(4), 1.0]];
+  for (var i = 0; i < 8; i++) HITS.push([bt(8 + i), i % 2 ? .7 : .9]);
+  [bt(16), bt(20), bt(24)].forEach(function (x) { HITS.push([x, 1.0]); });
+  for (i = 0; i < 4; i++) HITS.push([bt(28 + i * 2), 1.2]);
+  HITS.push([bt(36), 1.0]); for (i = 0; i < 5; i++) HITS.push([bt(36.5 + i * .5), .45]);
+  HITS.push([bt(40), .9]); for (i = 0; i < 12; i++) HITS.push([bt(42 + i * .5), .5]);
+  HITS.push([bt(48), 1.6]);
+  window.TIMING.hits = HITS;
+  var WHOOSH = [bt(8) - .2, bt(16) - .2, bt(20) - .2, bt(24) - .2, bt(28) - .2, bt(30) - .15, bt(32) - .15, bt(34) - .15, bt(36) - .2, bt(40) - .2, bt(42) - .15];
+  window.TIMING.whoosh = WHOOSH;
+
+  function hitAmp(t, k) { var a = 0; for (var i = 0; i < HITS.length; i++) { var d = t - HITS[i][0]; if (d >= 0 && d < 1) a += HITS[i][1] * Math.exp(-d * (k || 10)); } return a; }
+  function speedLines(t, a, dir) {   // 가로 속도선(방사형 아님)
+    if (a <= 0) return; ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < 70; i++) {
+      var y = rnd(i * 3.1) * H, len = 200 + rnd(i + 1.7) * 700, sp = 2600 + rnd(i + 4) * 3000;
+      var x = (dir || -1) < 0 ? W - ((t * sp + rnd(i) * 4000) % (W + len)) : ((t * sp + rnd(i) * 4000) % (W + len)) - len;
+      var g = ctx.createLinearGradient(x, 0, x + len, 0); var c = rnd(i + 8) < .5 ? "255,140,160" : "140,180,255";
+      g.addColorStop(0, "rgba(" + c + ",0)"); g.addColorStop(.7, "rgba(" + c + "," + (a * .55) + ")"); g.addColorStop(1, "rgba(255,255,255," + a * .8 + ")");
+      ctx.fillStyle = g; ctx.fillRect(x, y, len, 1.5 + rnd(i + 2) * 2.5);
+    }
+    ctx.restore();
+  }
+  function whip(el, lt, dur, out, base) {   // 휙 들어오고 휙 나가기(흐림 포함)
+    var pin = pr(lt, 0, .16), pout = out == null ? 0 : pr(lt, out - .12, out);
+    var x = (1 - oE(pin)) * W * .35 - oC(pout) * W * .35;
+    el.style.filter = "blur(" + ((1 - pin) * 26 + pout * 26).toFixed(1) + "px)" + (base || "");
+    return x;
+  }
 
   window.renderAt = function (t) {
     ctx.clearRect(0, 0, W, H);
     var flash = 0;
+    // 카메라: 박마다 쿵, 타격마다 흔들림
+    var bi = Math.floor((t - B0) / BT), bl = (t - B0) - bi * BT;
+    var pulse = t >= B0 && t < bt(48) ? .03 * Math.exp(-bl * 9) : 0;
+    var sh = hitAmp(t, 13) * (TALL ? 16 : 20);
+    var sx = (rnd(Math.floor(t * 60)) - .5) * sh, sy = (rnd(Math.floor(t * 60) + 5) - .5) * sh, sr = (rnd(Math.floor(t * 60) + 9) - .5) * sh * .04;
+    var cam = $("cam"); cam.style.transform = "translate(" + sx.toFixed(1) + "px," + sy.toFixed(1) + "px) rotate(" + sr.toFixed(2) + "deg) scale(" + (1 + pulse) + ")";
+    var rgb = Math.min(14, hitAmp(t, 16) * 10);
+    cam.style.filter = rgb > .6 ? "drop-shadow(" + rgb.toFixed(1) + "px 0 0 rgba(255,30,80,.55)) drop-shadow(" + (-rgb).toFixed(1) + "px 0 0 rgba(30,140,255,.55))" : "none";
+    flash = Math.max(flash, Math.min(.85, hitAmp(t, 22) * .45));
 
-    /* 0. 인트로: 어둠 → 2.0초 번개 → 키아트 */
-    var kvV = t < 2.0 ? .18 + .22 * pr(t, 0, 2.0) : vis(t, 1.6, T.kv[1], .4, .25);
-    var kz = t < 2.0 ? 1.32 - .1 * pr(t, 0, 2.0) : 1.18 - 0.1 * oC(pr(t, 1.9, T.kv[1]));
+    /* 흐린 배경(폰·갈비스·몽타주 장면 뒤) */
+    var bgV = Math.max(vis(t, T.p1[0], T.p3[1], .1, .1), vis(t, T.g[0], T.m[1], .05, .05));
+    $("bgB").src || ($("bgB").src = $("kvImg").src);
+    set($("bgB"), bgV, "scale(" + (1.25 + .05 * Math.sin(t * .8)) + ") translateX(" + (Math.sin(t * .6) * 40) + "px)");
+
+    /* 0. 인트로 → 첫 박 번개 → 키아트 */
+    var kvV = t < 2.0 ? .15 + .3 * pr(t, 0, 2.0) : vis(t, 1.9, T.kv[1], .1, .12);
+    var kz = t < 2.0 ? 1.5 - .25 * oC(pr(t, 0, 2.0)) : 1.22 - .14 * oC(pr(t, 2.0, T.kv[1]));
     set($("sKV"), kvV, "scale(" + kz + ")");
-    set($("sT1"), vis(t, 2.2, T.kv[1], .2, .2));
-    var p1t = oB(pr(t, 2.2, 2.75)), p2t = oB(pr(t, 4.2, 4.75));
-    $("t1").style.top = (TALL ? 760 : 380) + "px"; $("t2").style.top = (TALL ? 920 : 520) + "px";
-    set($("t1"), pr(t, 2.2, 2.4), "scale(" + (2.2 - 1.2 * p1t) + ")");
-    set($("t2"), pr(t, 4.2, 4.4), "scale(" + (2.4 - 1.4 * p2t) + ")");
-    if (t < 2.4) embers(t, 40, .5 * pr(t, 0, 1.6));
-    if (t >= 1.95 && t < 2.6) { bolt(W / 2, Math.floor(t * 30), 1 - pr(t, 2.1, 2.6), 6); }
-    flash = Math.max(flash, 1 - pr(t, 2.0, 2.35)) * (t >= 2.0 ? 1 : 0);
-    if (t >= 4.2 && t < 4.5) flash = Math.max(flash, .5 * (1 - pr(t, 4.2, 4.5)));
-    ring(W / 2, H / 2, pr(t, 2.0, 2.9), "rgba(200,160,255,1)");
-    if (t > 2 && t < T.kv[1]) embers(t, 70, .55);
+    if (t < 2.0) { speedLines(t, .25 + .6 * pr(t, .8, 2.0), -1); embers(t, 60, .5); }
+    if (t >= 1.95 && t < 2.5) bolt(W / 2, Math.floor(t * 30), 1 - pr(t, 2.05, 2.5), 7);
+    if (t >= 2.0 && t < 2.4) flash = Math.max(flash, 1 - pr(t, 2.0, 2.4));
+    ring(W / 2, H / 2, pr(t, 2.0, 2.7), "rgba(210,170,255,1)");
+    set($("sT1"), vis(t, bt(0), T.kv[1], .05, .12));
+    $("t1").style.top = (TALL ? 760 : 370) + "px"; $("t2").style.top = (TALL ? 930 : 520) + "px";
+    var p1t = oB(pr(t, bt(0), bt(0) + .3)), p2t = oB(pr(t, bt(4), bt(4) + .3));
+    set($("t1"), pr(t, bt(0), bt(0) + .08), "scale(" + (3 - 2 * p1t) + ") rotate(" + (-6 * (1 - p1t)) + "deg)");
+    set($("t2"), pr(t, bt(4), bt(4) + .08), "scale(" + (3.2 - 2.2 * p2t) + ") rotate(" + (6 * (1 - p2t)) + "deg)");
+    if (t > 2 && t < T.kv[1]) { embers(t, 90, .6); speedLines(t, .15, -1); }
 
-    /* 1. VS 연속 — 박마다 짝이 바뀌고 쾅 */
-    var vsV = vis(t, T.vs[0], T.vs[1], .05, .15); set($("sVS"), vsV);
+    /* 1. VS 연타 */
+    var vsV = vis(t, T.vs[0], T.vs[1], .03, .08); set($("sVS"), vsV);
     if (vsV > 0) {
-      var k = cl(Math.floor((t - T.vs[0]) / BT), 0, VS.length - 1), lt = (t - T.vs[0]) - k * BT, pp = oB(pr(lt, 0, .22));
+      var k = cl(Math.floor((t - T.vs[0]) / BT), 0, VS.length - 1), lt = (t - T.vs[0]) - k * BT, pp = oB(pr(lt, 0, .18));
       $("vsA").textContent = VS[k][0]; $("vsB").textContent = VS[k][1];
-      set($("vsA"), 1, "translateX(" + (-260 * (1 - pp)) + "px) scale(" + (1.4 - .4 * pp) + ")");
-      set($("vsB"), 1, "translateX(" + (260 * (1 - pp)) + "px) scale(" + (1.4 - .4 * pp) + ")");
-      bolt(W / 2, k * 13 + 7, .9, 4);
-      flash = Math.max(flash, .35 * (1 - pr(lt, 0, .14)));
-      ring(W / 2, H / 2, pr(lt, 0, .45), k % 2 ? "rgba(90,140,255,1)" : "rgba(255,90,110,1)");
+      var L = document.querySelector("#sVS .half.l"), R = document.querySelector("#sVS .half.rr"), M = document.querySelector("#sVS .vsmid");
+      var lw = 50 + (k % 2 ? -1 : 1) * 5 * oC(pr(lt, 0, .25)), push = Math.sin(lt * 18) * 8 * Math.exp(-lt * 6);
+      if (TALL) {
+        // 세로판: 위(빨강)·아래(파랑)로 갈라 단어마다 화면 폭 전체를 쓴다 → VS 와 절대 안 겹친다
+        L.style.cssText = "left:0;right:0;top:0;width:100%;height:" + lw + "%;padding:0 60px 120px";
+        R.style.cssText = "left:0;right:0;bottom:0;top:auto;width:100%;height:" + (100 - lw) + "%;padding:120px 60px 0";
+        var fz = Math.min(1.8, 5.6 / Math.max(VS[k][0].length, VS[k][1].length));
+        $("vsA").style.fontSize = $("vsB").style.fontSize = "calc(var(--vs) * " + fz.toFixed(2) + ")";
+        set($("vsA"), 1, "translateY(" + (-420 * (1 - pp) + push) + "px) scale(" + (1.6 - .6 * pp) + ")");
+        set($("vsB"), 1, "translateY(" + (420 * (1 - pp) - push) + "px) scale(" + (1.6 - .6 * pp) + ")");
+        M.style.left = "50%"; M.style.top = lw + "%";
+        M.style.transform = "translate(-50%,-50%) scale(" + (1.5 - .5 * oB(pr(lt, 0, .2))) + ")";
+        boltH(H * lw / 100, k * 13 + 7, .95, 5);
+        ring(W / 2, H * lw / 100, pr(lt, 0, .4), k % 2 ? "rgba(90,140,255,1)" : "rgba(255,90,110,1)");
+      } else {
+        var fz2 = Math.min(1, 3.2 / Math.max(VS[k][0].length, VS[k][1].length));   // 긴 말은 글자를 줄여 VS 와 안 겹치게
+        $("vsA").style.fontSize = $("vsB").style.fontSize = "calc(var(--vs) * " + fz2.toFixed(2) + ")";
+        set($("vsA"), 1, "translateX(" + (-420 * (1 - pp) + push) + "px) scale(" + (1.6 - .6 * pp) + ") skewX(" + (-12 * (1 - pp)) + "deg)");
+        set($("vsB"), 1, "translateX(" + (420 * (1 - pp) - push) + "px) scale(" + (1.6 - .6 * pp) + ") skewX(" + (12 * (1 - pp)) + "deg)");
+        L.style.width = lw + "%"; R.style.width = (100 - lw) + "%";
+        M.style.left = lw + "%"; M.style.transform = "translate(-50%,-50%) scale(" + (1.5 - .5 * oB(pr(lt, 0, .2))) + ")";
+        bolt(W * lw / 100, k * 13 + 7, .95, 5);
+        ring(W * lw / 100, H / 2, pr(lt, 0, .4), k % 2 ? "rgba(90,140,255,1)" : "rgba(255,90,110,1)");
+      }
+      speedLines(t, .35, k % 2 ? 1 : -1);
     }
 
-    /* 2~4. 폰 장면 */
-    [["p1", "sP1", "cap1", "ph1"], ["p2", "sP2", "cap2", "ph2"], ["p3", "sP3", "cap3", "ph3"]].forEach(function (d, i) {
-      var a = T[d[0]][0], b = T[d[0]][1], v = vis(t, a, b, .12, .12), lt = t - a;
+    /* 2~4. 폰 장면 — 날아 들어와 계속 움직인다 */
+    [["p1", "sP1", "cap1", "ph1", -1], ["p2", "sP2", "cap2", "ph2", 1], ["p3", "sP3", "cap3", "ph3", -1]].forEach(function (d, i) {
+      var a = T[d[0]][0], b = T[d[0]][1], v = vis(t, a, b, .04, .08), lt = t - a;
       set($(d[1]), v); if (v <= 0) return;
-      var pin = oB(pr(lt, 0, .5)), drift = lt * 12;
+      var pin = oE(pr(lt, 0, .35)), cap = oB(pr(lt, .05, .4)), drift = lt * 26, rot = d[4] * (18 * (1 - pin) + 3 + Math.sin(lt * 2) * 1.5);
+      var x = whip($(d[3]), lt, 0, b - a);
       if (TALL) {
         $(d[2]).style.left = "90px"; $(d[2]).style.top = "190px";
-        set($(d[2]), 1, "translateY(" + (60 * (1 - pin)) + "px)");
-        set($(d[3]), 1, "translate(" + (W / 2 - 260) + "px," + (700 + 140 * (1 - pin) - drift) + "px) rotate(" + (i % 2 ? -4 : 4) + "deg)");
+        set($(d[2]), 1, "translateX(" + (-300 * (1 - cap)) + "px) skewX(" + (-10 * (1 - cap)) + "deg)");
+        set($(d[3]), 1, "translate(" + (W / 2 - 260 + x * .3) + "px," + (700 + 700 * (1 - pin) - drift) + "px) rotate(" + rot + "deg) scale(" + (1.06 - .06 * pin + .02 * Math.sin(lt * 3)) + ")");
       } else {
         $(d[2]).style.left = "180px"; $(d[2]).style.top = "300px";
-        set($(d[2]), 1, "translateX(" + (-80 * (1 - pin)) + "px)");
-        set($(d[3]), 1, "translate(" + (1160 + 200 * (1 - pin)) + "px," + (90 - drift) + "px) rotate(" + (i % 2 ? -4 : 4) + "deg)");
+        set($(d[2]), 1, "translateX(" + (-300 * (1 - cap)) + "px) skewX(" + (-10 * (1 - cap)) + "deg)");
+        set($(d[3]), 1, "translate(" + (1160 + 600 * (1 - pin) + x * .3) + "px," + (90 + 300 * (1 - pin) - drift) + "px) rotate(" + rot + "deg) scale(" + (1.06 - .06 * pin + .02 * Math.sin(lt * 3)) + ")");
       }
-      flash = Math.max(flash, .4 * (1 - pr(lt, 0, .15)));
-      embers(t, 40, .4);
+      speedLines(t, .3 * (1 - pr(lt, 0, .5)) + .08, -1);
+      embers(t, 50, .45);
     });
-    // 게이지 출렁
     if (t > T.p1[0] && t < T.p1[1]) {
       var lt1 = t - T.p1[0], g = $("g1"), gw = TALL ? 900 : 640;
       g.style.width = gw + "px"; g.style.left = (TALL ? 90 : 180) + "px"; g.style.top = (TALL ? 590 : 700) + "px";
-      var rp = 50 + 18 * Math.sin(lt1 * 4.5) * Math.exp(-lt1 * .5) + 8 * oC(pr(lt1, 1, 2.5));
-      $("g1r").style.width = rp + "%"; $("g1b").style.width = (100 - rp) + "%"; set(g, pr(lt1, .3, .6));
+      var rp = 50 + 26 * Math.sin(lt1 * 7) * Math.exp(-lt1 * .7) + 10 * oC(pr(lt1, 1.2, 2));
+      $("g1r").style.width = rp + "%"; $("g1b").style.width = (100 - rp) + "%"; set(g, pr(lt1, .2, .35), "scaleY(" + (1 + .4 * Math.exp(-((lt1 * 7) % 3.14) * 2)) + ")");
     }
-    // 댓글 말풍선
     if (t > T.p2[0] && t < T.p2[1]) {
       var lt2 = t - T.p2[0];
-      [["bb1", .5, TALL ? [120, 1450] : [880, 260]], ["bb2", 1.05, TALL ? [440, 1600] : [1500, 640]], ["bb3", 1.6, TALL ? [160, 1750] : [820, 860]]].forEach(function (q) {
-        var p = oB(pr(lt2, q[1], q[1] + .35)); var el = $(q[0]); el.style.left = q[2][0] + "px"; el.style.top = q[2][1] + "px";
-        set(el, pr(lt2, q[1], q[1] + .1), "scale(" + (.4 + .6 * p) + ") translateY(" + (-lt2 * 10) + "px)");
+      [["bb1", .35, TALL ? [120, 1450] : [880, 240]], ["bb2", .75, TALL ? [440, 1600] : [1500, 620]], ["bb3", 1.15, TALL ? [160, 1750] : [820, 860]]].forEach(function (q, j) {
+        var p = oB(pr(lt2, q[1], q[1] + .25)), el = $(q[0]); el.style.left = q[2][0] + "px"; el.style.top = q[2][1] + "px";
+        set(el, pr(lt2, q[1], q[1] + .06), "scale(" + (.2 + .8 * p) + ") rotate(" + ((j % 2 ? 1 : -1) * 8 * (1 - p)) + "deg) translateY(" + (-lt2 * 20) + "px)");
+        var d0 = lt2 - q[1]; if (d0 > 0 && d0 < .1) flash = Math.max(flash, .25 * (1 - d0 / .1));
       });
     }
-    // 콤보
     if (t > T.p3[0] && t < T.p3[1]) {
-      var lt3 = t - T.p3[0], cp = oB(pr(lt3, .8, 1.15)), c = $("combo");
-      c.style.fontSize = (TALL ? 150 : 140) + "px"; c.style.left = (TALL ? 120 : 760) + "px"; c.style.top = (TALL ? 1500 : 760) + "px";
-      set(c, pr(lt3, .8, .9), "scale(" + (2.2 - 1.2 * cp) + ") rotate(-6deg)");
-      if (lt3 > .8 && lt3 < 1.2) flash = Math.max(flash, .4 * (1 - pr(lt3, .8, 1.1)));
+      var lt3 = t - T.p3[0], cp = oB(pr(lt3, .55, .8)), c = $("combo");
+      c.style.fontSize = (TALL ? 160 : 150) + "px"; c.style.left = (TALL ? 110 : 740) + "px"; c.style.top = (TALL ? 1490 : 750) + "px";
+      set(c, pr(lt3, .55, .62), "scale(" + (3 - 2 * cp + .04 * Math.sin(lt3 * 20)) + ") rotate(-6deg)");
+      if (lt3 > .55 && lt3 < .8) flash = Math.max(flash, .5 * (1 - pr(lt3, .55, .75)));
     }
 
-    /* 5. 클래스 4종 — 4박마다 교체, 쾅 들어오며 이름 */
-    var cV = vis(t, T.c[0], T.c[1], .08, .2); set($("sC"), cV);
+    /* 5. 클래스 — 2박마다 휙휙 */
+    var cV = vis(t, T.c[0], T.c[1], .02, .06); set($("sC"), cV);
     if (cV > 0) {
-      var ci = cl(Math.floor((t - T.c[0]) / (4 * BT)), 0, 3), clt = (t - T.c[0]) - ci * 4 * BT, d = CLS[ci];
-      var art = $("cArt"), want = "../../assets/about/art/" + d.a + ".webp";
-      if (art.getAttribute("src") !== want) art.setAttribute("src", want);
-      $("sC").style.background = "radial-gradient(ellipse 60% 70% at " + (TALL ? "50% 35%" : "35% 50%") + "," + d.c + "55,#000 70%)";
-      var ap = oE(pr(clt, 0, .6));
+      var ci = cl(Math.floor((t - T.c[0]) / (2 * BT)), 0, 3), clt = (t - T.c[0]) - ci * 2 * BT, dd = CLS[ci];
+      var art = $("cArt"), want = "../../assets/about/art/" + dd.a + ".webp"; if (art.getAttribute("src") !== want) art.setAttribute("src", want);
+      $("sC").style.background = "radial-gradient(ellipse 60% 70% at " + (TALL ? "50% 35%" : "35% 50%") + "," + dd.c + "66,#000 70%)";
+      var x2 = whip(art, clt, 0, 2 * BT, " brightness(" + (1 + 1.8 * (1 - pr(clt, 0, .2))) + ")");
+      var ap = oE(pr(clt, 0, .4));
       if (TALL) { art.style.left = "0"; art.style.width = "100%"; art.style.height = "72%"; art.style.objectPosition = "50% 15%"; art.style.webkitMaskImage = "linear-gradient(0deg,transparent 0,#000 30%)"; }
       else { art.style.left = "0"; art.style.width = "62%"; art.style.objectPosition = "50% 18%"; art.style.webkitMaskImage = "linear-gradient(90deg,#000 60%,transparent 100%)"; }
-      set(art, 1, "scale(" + (1.18 - .14 * ap + clt * .02) + ") translateX(" + (TALL ? 0 : -60 * (1 - ap)) + "px)");
-      art.style.filter = "brightness(" + (1 + 1.5 * (1 - pr(clt, 0, .25))) + ")";
-      var nm = $("cName"); nm.style.color = "#fff";
-      if (TALL) { nm.style.left = "0"; nm.style.right = "0"; nm.style.textAlign = "center"; nm.style.top = "1330px"; }
-      else { nm.style.left = "1130px"; nm.style.top = "400px"; }
-      $("cCode").textContent = d.code; $("cCode").style.color = d.c; $("cN").textContent = d.n; $("cE").textContent = d.e;
-      $("cN").style.textShadow = "0 0 50px " + d.c + ",0 10px 40px #000";
-      var np = oB(pr(clt, .15, .55)); set(nm, pr(clt, .15, .3), "translateY(" + (50 * (1 - np)) + "px)");
-      flash = Math.max(flash, .55 * (1 - pr(clt, 0, .18)));
-      ring(TALL ? W / 2 : W * .3, TALL ? H * .35 : H / 2, pr(clt, 0, .5), d.c);
+      set(art, 1, "translateX(" + x2 + "px) scale(" + (1.4 - .25 * ap + clt * .08) + ")");
+      var nm = $("cName");
+      if (TALL) { nm.style.left = "0"; nm.style.right = "0"; nm.style.textAlign = "center"; nm.style.top = "1330px"; } else { nm.style.left = "1130px"; nm.style.top = "400px"; }
+      $("cCode").textContent = dd.code; $("cCode").style.color = dd.c; $("cN").textContent = dd.n; $("cE").textContent = dd.e;
+      $("cN").style.textShadow = "0 0 60px " + dd.c + ",0 10px 40px #000";
+      var np = oB(pr(clt, .08, .3)), nout = pr(clt, 2 * BT - .1, 2 * BT);
+      set(nm, pr(clt, .08, .14) * (1 - nout), "translateX(" + (220 * (1 - np) - 300 * nout) + "px) skewX(" + (-14 * (1 - np)) + "deg) scale(" + (1.5 - .5 * np) + ")");
+      ring(TALL ? W / 2 : W * .3, TALL ? H * .35 : H / 2, pr(clt, 0, .35), dd.c);
+      speedLines(t, .55, -1); embers(t, 70, .55);
+    }
+
+    /* 6. 다섯 왕좌 — 왕관이 반 박마다 쾅 */
+    var kV = vis(t, T.k[0], T.k[1], .03, .06); set($("sK"), kV);
+    if (kV > 0) {
+      var klt = t - T.k[0];
+      set($("kImg"), 1, "scale(" + (1.35 - .25 * oC(pr(klt, 0, 2.1))) + ") rotate(" + (-2 + 2 * oC(pr(klt, 0, 2.1))) + "deg)");
+      $("kT").style.top = (TALL ? 150 : 170) + "px"; set($("kT"), pr(klt, 0, .06), "scale(" + (2.6 - 1.6 * oB(pr(klt, 0, .3))) + ")");
+      var cr = $("crowns"); cr.style.top = (TALL ? 1250 : 760) + "px"; cr.style.opacity = 1;
+      Array.prototype.forEach.call(cr.children, function (el, j) { var s0 = (.5 + j * .5) * BT, p = oB(pr(klt, s0, s0 + .22)); set(el, pr(klt, s0, s0 + .05), "translateY(" + (-120 * (1 - p)) + "px) scale(" + (1.8 - .8 * p) + ")"); });
       embers(t, 60, .5);
     }
 
-    /* 6. 다섯 왕좌 */
-    var kV = vis(t, T.k[0], T.k[1], .15, .15); set($("sK"), kV);
-    if (kV > 0) {
-      var klt = t - T.k[0];
-      set($("kImg"), 1, "scale(" + (1.12 - .06 * oC(pr(klt, 0, 4))) + ")");
-      $("kT").style.top = (TALL ? 150 : 170) + "px"; set($("kT"), pr(klt, .1, .4), "scale(" + (1.3 - .3 * oB(pr(klt, .1, .5))) + ")");
-      var cr = $("crowns"); cr.style.top = (TALL ? 1250 : 760) + "px"; cr.style.opacity = 1;
-      Array.prototype.forEach.call(cr.children, function (el, i) { var p = oB(pr(klt, 1.07 + i * BT, 1.07 + i * BT + .3)); set(el, pr(klt, 1.07 + i * BT, 1.07 + i * BT + .1), "translateY(" + (60 * (1 - p)) + "px) scale(" + (.6 + .4 * p) + ")"); });
-      for (var ci2 = 0; ci2 < 5; ci2++) { var lt5 = klt - (1.07 + ci2 * BT); if (lt5 > 0 && lt5 < .15) flash = Math.max(flash, .25 * (1 - lt5 / .15)); }
-    }
-
-    /* 7. 갈비스 */
-    var gV = vis(t, T.g[0], T.g[1], .15, .15); set($("sG"), gV);
+    /* 7. 갈비스 — 2박 */
+    var gV = vis(t, T.g[0], T.g[1], .03, .06); set($("sG"), gV);
     if (gV > 0) {
       var glt = t - T.g[0], gi = $("gImg"), sz = TALL ? 640 : 520;
+      $("sG").style.background = "transparent";
       gi.style.width = sz + "px"; gi.style.left = (W / 2 - sz / 2) + "px"; gi.style.top = (TALL ? 560 : 120) + "px";
-      set(gi, 1, "translateY(" + (Math.sin(glt * 2.5) * 14) + "px) scale(" + (.7 + .3 * oB(pr(glt, 0, .6))) + ")");
-      $("gT").style.top = (TALL ? 220 : 650) + "px"; set($("gT"), pr(glt, .3, .5), "translateY(" + (30 * (1 - oC(pr(glt, .3, .7)))) + "px)");
+      set(gi, 1, "translateY(" + (Math.sin(glt * 6) * 16) + "px) scale(" + (.3 + .7 * oB(pr(glt, 0, .3))) + ") rotate(" + (-20 * (1 - oB(pr(glt, 0, .3)))) + "deg)");
+      $("gT").style.top = (TALL ? 220 : 650) + "px"; set($("gT"), pr(glt, .08, .14), "scale(" + (2 - oB(pr(glt, .08, .35))) + ")");
       var b1 = $("gb1"), b2 = $("gb2");
       if (TALL) { b1.style.right = "90px"; b1.style.top = "1300px"; b2.style.left = "90px"; b2.style.top = "1470px"; }
       else { b1.style.right = "140px"; b1.style.top = "200px"; b2.style.left = "140px"; b2.style.top = "380px"; }
-      set(b1, pr(glt, 1.1, 1.25), "scale(" + (.5 + .5 * oB(pr(glt, 1.1, 1.45))) + ")");
-      set(b2, pr(glt, 2.2, 2.35), "scale(" + (.5 + .5 * oB(pr(glt, 2.2, 2.55))) + ")");
-      embers(t, 30, .35);
+      set(b1, pr(glt, .3, .36), "scale(" + (.3 + .7 * oB(pr(glt, .3, .55))) + ")");
+      set(b2, pr(glt, .6, .66), "scale(" + (.3 + .7 * oB(pr(glt, .6, .85))) + ")");
     }
 
-    /* 8. 몽타주 — 박마다 화면 교체 */
-    var mV = vis(t, T.m[0], T.m[1], .05, .1); set($("sM"), mV);
+    /* 8. 몽타주 — 반 박마다 */
+    var mV = vis(t, T.m[0], T.m[1], .02, .04); set($("sM"), mV);
     if (mV > 0) {
-      var mi = cl(Math.floor((t - T.m[0]) / BT), 0, MON.length - 1), mlt = (t - T.m[0]) - mi * BT, md = MON[mi];
+      var HB = BT / 2, mi = cl(Math.floor((t - T.m[0]) / HB), 0, 11), mlt = (t - T.m[0]) - mi * HB, md = MON[mi % MON.length];
       var im = $("mImg"), w2 = "../../assets/about/" + md[0] + ".webp"; if (im.getAttribute("src") !== w2) im.setAttribute("src", w2);
-      var ph = $("phM"), mp = oB(pr(mlt, 0, .25)), mpw = TALL ? 600 : 470;
-      ph.style.setProperty("--pw", mpw + "px");
-      ph.style.left = (W / 2 - mpw / 2) + "px"; ph.style.top = (TALL ? 240 : 40) + "px";
-      set(ph, 1, "scale(" + (1.15 - .15 * mp) + ") rotate(" + ((mi % 2 ? -1 : 1) * 5 * (1 - mp)) + "deg)");
+      $("mBg").style.opacity = 0;
+      var ph = $("phM"), mp = oB(pr(mlt, 0, .14)), mpw = TALL ? 600 : 470;
+      ph.style.setProperty("--pw", mpw + "px"); ph.style.left = (W / 2 - mpw / 2) + "px"; ph.style.top = (TALL ? 240 : 40) + "px";
+      set(ph, 1, "scale(" + (1.35 - .35 * mp) + ") rotate(" + ((mi % 2 ? -1 : 1) * 10 * (1 - mp)) + "deg) translateX(" + ((mi % 2 ? -1 : 1) * 160 * (1 - mp)) + "px)");
+      ph.style.filter = "blur(" + (12 * (1 - pr(mlt, 0, .08))).toFixed(1) + "px)";
       var lb = $("mL"); lb.textContent = md[1]; lb.style.left = "50%"; lb.style.top = (TALL ? 1640 : 905) + "px"; lb.style.fontSize = (TALL ? 64 : 52) + "px";
-      set(lb, 1, "translateX(-50%) scale(" + (1.3 - .3 * mp) + ")");
-      flash = Math.max(flash, .3 * (1 - pr(mlt, 0, .12)));
+      set(lb, 1, "translateX(-50%) scale(" + (1.6 - .6 * mp) + ")");
+      speedLines(t, .45, mi % 2 ? 1 : -1);
     }
 
-    /* 9. 엔딩 */
-    var eV = vis(t, T.e[0], END, .2, .9); set($("sE"), eV);
+    /* 9. 엔딩 — 곡 엔딩 첫 박에 로고 쾅 */
+    var eV = vis(t, T.e[0], END, .02, .8); set($("sE"), eV);
     if (eV > 0) {
       var elt = t - T.e[0];
-      set($("eImg"), 1, "scale(" + (1.16 - .1 * oC(pr(elt, 0, 6))) + ")");
+      set($("eImg"), 1, "scale(" + (1.3 - .2 * oC(pr(elt, 0, 2.5))) + ")");
       var lg = $("eLogo"), lw = TALL ? 760 : 640; lg.style.width = lw + "px"; lg.style.top = (TALL ? 620 : 210) + "px";
-      var lp = oB(pr(elt, .6, 1.2)); set(lg, pr(elt, .6, .8), "translateX(-50%) scale(" + (2.4 - 1.4 * lp) + ")");
-      lg.style.filter = "drop-shadow(0 0 40px rgba(255,255,255,.5)) blur(" + (12 * (1 - pr(elt, .6, 1.0))) + "px)";
-      if (elt > .6 && elt < 1.2) { flash = Math.max(flash, .8 * (1 - pr(elt, .6, 1.0))); bolt(W / 2, 5, 1 - pr(elt, .6, 1.2), 7); ring(W / 2, (TALL ? 800 : 380), pr(elt, .6, 1.5), "rgba(220,180,255,1)"); }
-      $("eBadge").style.top = (TALL ? 480 : 110) + "px"; set($("eBadge"), pr(elt, 1.4, 1.7));
-      $("eT").style.top = (TALL ? 1080 : 600) + "px"; set($("eT"), pr(elt, 2.0, 2.3), "translateY(" + (40 * (1 - oC(pr(elt, 2.0, 2.6)))) + "px)");
-      $("eU").style.top = (TALL ? 1260 : 760) + "px"; set($("eU"), pr(elt, 2.9, 3.2), "scale(" + (.7 + .3 * oB(pr(elt, 2.9, 3.4))) + ")");
-      embers(t, 80, .55);
+      var lp = oB(pr(elt, 0, .35)); set(lg, pr(elt, 0, .05), "translateX(-50%) scale(" + (3.2 - 2.2 * lp + .015 * Math.sin(elt * 3)) + ")");
+      lg.style.filter = "drop-shadow(0 0 50px rgba(255,255,255,.6)) blur(" + (16 * (1 - pr(elt, 0, .25))).toFixed(1) + "px)";
+      if (elt < .5) { flash = Math.max(flash, 1 - pr(elt, 0, .35)); bolt(W / 2, 5, 1 - pr(elt, 0, .5), 8); }
+      ring(W / 2, TALL ? 800 : 380, pr(elt, 0, .8), "rgba(220,180,255,1)");
+      $("eBadge").style.top = (TALL ? 480 : 110) + "px"; set($("eBadge"), pr(elt, .5, .6), "scale(" + (1.5 - .5 * oB(pr(elt, .5, .75))) + ")");
+      $("eT").style.top = (TALL ? 1080 : 600) + "px"; set($("eT"), pr(elt, .9, 1.0), "scale(" + (1.8 - .8 * oB(pr(elt, .9, 1.2))) + ")");
+      $("eU").style.top = (TALL ? 1260 : 760) + "px"; set($("eU"), pr(elt, 1.5, 1.6), "scale(" + (.5 + .5 * oB(pr(elt, 1.5, 1.85)) + .02 * Math.sin(elt * 6)) + ")");
+      embers(t, 100, .6);
     }
 
-    // 장면 경계의 시네마 바(가로판만)
     var barH = TALL ? 0 : 60; $("barT").style.height = barH + "px"; $("barB").style.height = barH + "px";
     $("flash").style.opacity = cl(flash);
   };
