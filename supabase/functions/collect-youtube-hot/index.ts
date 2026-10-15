@@ -338,8 +338,16 @@ Deno.serve(async (req) => {
     // (b) 해석된 채널의 최신 업로드 id 수확
     const idFeed = new Map<string, string>();
     const creatorIds: string[] = [];
-    for (const c of chanList) {
-      if (!c.uploads_playlist) continue;
+    /* 💰 6개 조로 나눠 30분마다 한 조만 본다 → 채널당 3시간에 1번(26.10.15).
+       전부 매 런 보던 때: 133채널 × 48런 = 하루 ~6,400유닛(playlistItems 가 쿼터의 80%를 먹었다).
+       급상승은 조회수 '증가 속도'로 정하니 새 업로드가 최대 3시간 늦게 들어와도 순위 영향은 작다. */
+    const GROUPS = 6;
+    const slot = Math.floor(Date.now() / (30 * 60 * 1000)) % GROUPS;
+    const resolved = chanList.filter((c: any) => c.uploads_playlist)
+      .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)));
+    for (let k = 0; k < resolved.length; k++) {
+      if (k % GROUPS !== slot) continue;
+      const c = resolved[k];
       const ids = await playlistRecent(c.uploads_playlist, 6);
       for (const id of ids) { if (!idFeed.has(id)) { idFeed.set(id, c.feed); creatorIds.push(id); } }
     }
