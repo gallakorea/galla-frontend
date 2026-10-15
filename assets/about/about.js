@@ -445,10 +445,14 @@
 
   /* ── 배경음악 — 자동재생은 브라우저가 막으니 버튼으로만 켠다. 켜 둔 사람은 다음 방문 첫 터치에 이어서 ── */
   (function () {
+    /* 곡 2개(Pixabay Content License): A=Space Adventures(Luis_Humanoide) 전체, B=Space War(The_Mountain) 22초부터.
+       들어올 때마다 무작위로 시작하고, 한 곡이 끝나면 다른 곡으로 넘어간다. */
     var btn = $("#bgm"), kvb = $("#kvBgm");
-    if (!btn || !kvb) return;   // 26.10.15 합성 BGM 반려 — 제대로 된 곡이 올 때까지 버튼을 내렸다
-    var a = new Audio("/assets/about/bgm.m4a"), on = false, fadeT = 0;
-    a.loop = true; a.preload = "none"; a.volume = 0;
+    if (!btn || !kvb) return;
+    var LIST = ["/assets/about/bgm-a.m4a", "/assets/about/bgm-b.m4a"], cur = Math.random() < 0.5 ? 0 : 1;
+    var a = new Audio(), on = false, fadeT = 0;
+    a.preload = "none"; a.volume = 0; a.src = LIST[cur];
+    a.addEventListener("ended", function () { cur = 1 - cur; a.src = LIST[cur]; if (on) a.play().catch(function () {}); });
     function fade(to, ms, done) {
       clearInterval(fadeT); var from = a.volume, s = performance.now();
       fadeT = setInterval(function () { var k = Math.min(1, (performance.now() - s) / ms); a.volume = from + (to - from) * k; if (k >= 1) { clearInterval(fadeT); done && done(); } }, 30);
