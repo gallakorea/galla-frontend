@@ -530,6 +530,20 @@ export async function onRequest(context) {
         return new Response(res.body, { status: res.status, headers: h });
       }
     }
+    /* 🎮 galla.im/about — 게임 공식 사이트식 소개 페이지(26.10.15). 전역 CSP 가 구글 폰트를 막으므로
+       이 경로에만 폰트 두 곳을 열어 준다(company 와 같은 방식). 이슈 목록은 Supabase 공개 읽기. */
+    if (url0.pathname === "/about" || url0.pathname === "/about.html") {
+      const res = await next();
+      const h = new Headers(res.headers);
+      h.set("Content-Security-Policy",
+        "upgrade-insecure-requests; default-src 'self'; base-uri 'self'; object-src 'none'; " +
+        "frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' data: https://fonts.gstatic.com; " +
+        "img-src 'self' data: blob: https:; media-src 'self' blob:; " +
+        "connect-src 'self' https://bidqauputnhkqepvdzrr.supabase.co");
+      return new Response(res.body, { status: res.status, headers: h });
+    }
     if (request.method !== "GET") return next();
     const url = url0;
     /* ⚠️ /share/* 는 이미 자기 콘텐츠 전용 OG 카드를 만들어 내보낸다.
