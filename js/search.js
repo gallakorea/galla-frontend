@@ -553,11 +553,14 @@ async function initTrendPage() {
     renderResults(q, users, hashtag, issues, markets, news, videos, plaza, gnews, shorts, longs, null, food);
     // ✈️ 항공권 키워드면(도시 없거나 미해결이라 카드가 안 와도) 항공권 페이지 입구를 항상 보여준다
     const isFlightQ = /항공권|비행기\s*표|비행깃값|비행기|항공\s*최저/.test(q);
+    // 🏨 숙소 키워드면(도시가 없어도) 숙소 페이지 입구를 보여준다 — 항공권 입구와 같은 자리
+    const isHotelQ = !isFlightQ && HOTEL_RE.test(q);
     // 💹 시세 위젯은 엣지 호출이라 느리다 → 검색 결과를 막지 않고 별도로 붙인다(오면 최상단에 등장)
     searchWidget(q).then(function (w) {
       if (my !== seq) return;
       if (w) prependWidget(w);
       else if (isFlightQ) prependFlightEntry(q);
+      else if (isHotelQ) prependHotelEntry(q);
     });
   }, 240);
 
@@ -573,6 +576,33 @@ async function initTrendPage() {
       <span class="sfe-t"><b>갈라 항공권${to ? " · " + esc(to) : ""}</b><span>최저가 비교하고 바로 예약까지</span></span>
       <span class="sfe-go">검색 →</span></button>`;
     resultsEl.insertBefore(wrap, resultsEl.firstChild);
+  }
+
+  /* 🏨 숙소 입구 카드 — "도쿄 숙소"·"오사카 료칸"·그냥 "호텔"에도. 도시는 키워드를 걷어낸 나머지. */
+  const HOTEL_RE = /숙소|호텔|숙박|료칸|리조트|게스트\s*하우스|에어비앤비|펜션|모텔/;
+  function hotelCityOf(q) {
+    return String(q || "")
+      .replace(/숙소|호텔|숙박|료칸|리조트|게스트\s*하우스|에어비앤비|펜션|모텔|추천|예약|최저가|가격|얼마|싼|저렴한|가성비|검색|여행|근처|[0-9]+\s*박/g, "")
+      .replace(/\s+/g, " ").trim();
+  }
+  const HOTEL_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18V6"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/></svg>';
+  function prependHotelEntry(q) {
+    if (!resultsEl || resultsEl.querySelector('.sr-sec[data-k="widget"]')) return;   // 이미 위젯 있으면 스킵
+    const none = resultsEl.querySelector(".sr-none"); if (none) none.remove();
+    const city = hotelCityOf(q);
+    const wrap = document.createElement("div");
+    wrap.className = "sr-sec"; wrap.setAttribute("data-k", "widget");
+    wrap.innerHTML = `<button type="button" class="sr-hotelentry" data-city="${esc(city)}">
+      <span class="she-ic">${HOTEL_IC}</span>
+      <span class="she-t"><b>갈라에서 숙소 다 보기${city ? " · " + esc(city) : ""}</b><span>아고다 요금 비교하고 바로 예약까지</span></span>
+      <span class="she-go">검색 →</span></button>`;
+    const rel = resultsEl.querySelector('.sr-sec[data-k="related"]');   // 연관 검색어는 위에 유지(위젯과 같은 규칙)
+    resultsEl.insertBefore(wrap, rel ? rel.nextSibling : resultsEl.firstChild);
+  }
+  function openHotels(city) {
+    if (window.GALLA_openHotels) return window.GALLA_openHotels(city);
+    if (window.GALLA_SPA && window.GALLA_SPA.push) return window.GALLA_SPA.push("hotels", { city: city || "" });
+    (window.GALLA_nav || function (u) { location.href = u; })("hotels.html?city=" + encodeURIComponent(city || ""));
   }
 
   function runSearch(kw, addHistory) {
@@ -697,6 +727,22 @@ async function initTrendPage() {
         ${w.diff != null ? `<div class="srw-diff ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${sign}${Math.abs(w.diff).toLocaleString()}${w.pct != null ? ` (${sign}${w.pct}%)` : ""}</div>` : ""}
         ${w.source ? `<div class="srw-src">${esc(w.source)}</div>` : ""}
       </div></div>`;
+    }
+    if (w.qtype === "hotel") {
+      const city = w.city || hotelCityOf(w.title || "");
+      const rows = (w.rows || []).slice(0, 3).map(function (r) {
+        const sub = [r.star ? "★" + esc(String(r.star)) : "", r.score ? esc(Number(r.score).toFixed(1)) + "점" : ""].filter(Boolean).join(" · ");
+        const label = `<span><span class="srw-air">${esc(r.name || "숙소")}</span>${sub ? '<span class="srw-sub">' + sub + "</span>" : ""}</span>`;
+        const price = `<b>1박 ${(Number(r.price) || 0).toLocaleString()}원~</b>`;
+        if (r.id) return `<button type="button" class="srw-row srw-link sr-hotelrow" data-city="${esc(city)}" data-hid="${esc(String(r.id))}">${label}${price}<span class="srw-go">자세히 ›</span></button>`;   // 갈라 상세로
+        return /^https?:\/\//.test(r.url || "")
+          ? `<a class="srw-row srw-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" data-ext="1">${label}${price}<span class="srw-go">예약 ↗</span></a>`
+          : `<div class="srw-row">${label}${price}</div>`;
+      }).join("");
+      return `<div class="sr-sec" data-k="widget"><div class="sr-widget">
+        <div class="srw-top"><span class="srw-label">숙소 최저가</span><span class="srw-badge">${esc(w.source || "아고다")}</span></div>
+        <div class="srw-title">${esc(w.title || "")}</div>${rows}
+        <button type="button" class="srw-cta sr-hotelentry-cta" data-city="${esc(city)}">갈라에서 숙소 다 보기</button></div></div>`;
     }
     if (w.qtype === "apt" || w.qtype === "flight") {
       const rows = (w.rows || []).slice(0, 3).map(function (r) {
@@ -987,6 +1033,14 @@ async function initTrendPage() {
     // 🔎 연관 검색어 칩 → 그 검색어로 재검색
     const relchip = e.target.closest('.sr-relchip[data-kw]');
     if (relchip) { e.preventDefault(); runSearch(relchip.dataset.kw, true); return; }
+    // 🏨 숙소 입구 카드 → 갈라 숙소 페이지(스택)
+    const htDet = e.target.closest('.sr-hotelrow[data-hid]');
+    if (htDet) { e.preventDefault(); e.stopPropagation(); if (window.GALLA_openHotels) window.GALLA_openHotels(htDet.dataset.city, { hotelId: htDet.dataset.hid }); else openHotels(htDet.dataset.city); return; }
+    const htMore = e.target.closest('.sr-hotelentry[data-city], .sr-hotelentry-cta[data-city]');
+    if (htMore) { e.preventDefault(); e.stopPropagation(); openHotels(htMore.dataset.city); return; }
+    // 🏨 숙소 행 → 아고다(앱에선 시스템 브라우저 — 웹뷰가 통째로 넘어가지 않게)
+    const htRow = e.target.closest('a.srw-link[data-ext]');
+    if (htRow && window.GALLA_openLink) { e.preventDefault(); window.GALLA_openLink(htRow.getAttribute("href")); return; }
     // ✈️ 항공권 카드 → 갈라 전용 항공권 페이지(스택)로 이어 준다(하이브리드 입구)
     const flMore = e.target.closest('.srw-more[data-to]');
     if (flMore) { e.preventDefault(); e.stopPropagation();

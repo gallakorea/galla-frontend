@@ -1321,7 +1321,7 @@ function mapOffer(x: any, nights: number, row?: any, area?: Area | null) {
     id: Number(x.hotelId), name: x.hotelName || row?.name, img: String(x.imageURL || row?.photos?.[0] || "").replace(/^http:/, "https:"),
     star: Number(x.starRating ?? row?.star ?? 0), score: Number(x.reviewScore ?? row?.rating ?? 0), reviews: Number(x.reviewCount ?? row?.reviews ?? 0),
     price, crossed: Math.round(Number(x.crossedOutRate || 0)), discount: Number(x.discountPercentage ?? x.discountPercent ?? 0) || 0,
-    breakfast: !!x.includeBreakfast, wifi: !!x.freeWifi, url: x.landingURL, roomType: x.roomtypeName || null,
+    breakfast: !!x.includeBreakfast, wifi: !!x.freeWifi, url: x.landingURL, roomType: x.roomtypeName || null, cur: x.currency || null,
     type: row?.type || null, typeKo: row?.type ? (HOTEL_TYPES[row.type] || null) : null,
     area: area?.name || null, distKm: (area && lat != null) ? Math.round(kmBetween(area.lat, area.lng, lat, lng) * 10) / 10 : null,
     address: row?.address || null, lat, lng, totalPrice: price * nights,

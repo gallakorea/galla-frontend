@@ -2013,9 +2013,58 @@
     c.querySelector(".qt-src").textContent=(a.source||"최근 검색 기준")+" · 실제 예약가는 달라질 수 있어요";
     return c;
   }
+  /* 🏨 숙소 카드(아고다) — {qtype:"hotel", title, sub, city, checkIn, checkOut, adults, children, childAges,
+       area, types, minStar, priceMax, rows:[{id,name,star,score,price,img,url,typeKo,area}], url, source}
+     행 탭 = 갈라 숙소 상세(id 있으면 — 갈비스 접고 GALLA_openHotels(city,{hotelId…})), id 없으면 아고다 직행.
+     아래 버튼 = 갈라 숙소 목록(카드에 실린 지역·유형·등급·가격 조건 그대로). */
+  function hotelImg(u){ u=String(u||"").trim(); if(/^\/\//.test(u)) u="https:"+u; if(/^http:\/\//i.test(u)) u="https://"+u.slice(7); return (/^https:\/\//i.test(u) && !/["'<>\s`]/.test(u)) ? u : ""; }
+  function openHotelsFromCard(city, opts){
+    minimize();
+    if(window.GALLA_openHotels){ window.GALLA_openHotels(city, opts); return; }
+    // 숙소 모듈이 아직 안 실린 화면 — 같은 파라미터 규약으로 직접 연다(travel-hotels.js openParams 와 같은 키)
+    var p={ city:city||"" }, map={ checkIn:"in", checkOut:"out", adults:"adults", children:"children", childAges:"ages", area:"area", types:"types", minStar:"minStar", priceMax:"priceMax", hotelId:"hid" };
+    Object.keys(map).forEach(function(k){ var v=opts&&opts[k]; if(v==null||v===""||v===0||(Array.isArray(v)&&!v.length)) return; p[map[k]]=Array.isArray(v)?v.join(","):String(v); });
+    if(window.GALLA_SPA && window.GALLA_SPA.push){ window.GALLA_SPA.push("hotels", p); return; }
+    nav("hotels.html?"+Object.keys(p).map(function(k){ return encodeURIComponent(k)+"="+encodeURIComponent(p[k]); }).join("&"));
+  }
+  function buildHotel(a){
+    var c=el('<div class="fr-qt qt-hotel"><div class="qt-h"><span class="qt-ic qt-ic-ht"><svg viewBox="0 0 24 24"><path d="M3 18V6"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/></svg></span><span class="qt-t"></span></div>'+
+      '<div class="qt-hsub"></div><div class="qt-rows"></div><button type="button" class="qt-htcta">갈라에서 숙소 다 보기</button><div class="qt-src"></div></div>');
+    c.querySelector(".qt-t").textContent=a.title||"숙소";
+    var sub=a.sub||"1박 최저가"; c.querySelector(".qt-hsub").textContent=sub;
+    var base={ checkIn:a.checkIn, checkOut:a.checkOut, adults:a.adults, children:a.children, childAges:a.childAges };
+    var box=c.querySelector(".qt-rows");
+    (a.rows||[]).slice(0,3).forEach(function(r,i){
+      var row=el('<button type="button" class="qt-row qt-frow qt-hrow" style="--i:'+i+'"><span class="qt-hth"><img alt="" loading="lazy" referrerpolicy="no-referrer"></span><div class="qt-rl"><span class="qt-hk"></span><b class="qt-apt"></b><span class="qt-meta"></span></div><div class="qt-rr"><b class="qt-won"></b><span class="qt-date"></span></div></button>');
+      var th=row.querySelector(".qt-hth"), im=row.querySelector("img"), src=hotelImg(r.img);
+      if(src){ im.onload=function(){ th.classList.add("ok"); }; im.onerror=function(){ im.remove(); th.classList.add("no"); }; im.src=src; } else { im.remove(); th.classList.add("no"); }
+      var hk=[r.typeKo, r.area].filter(Boolean).join(" · "); var hkEl=row.querySelector(".qt-hk"); if(hk) hkEl.textContent=hk; else hkEl.remove();
+      row.querySelector(".qt-apt").textContent=r.name||"숙소";
+      var meta=[]; if(Number(r.star)>0) meta.push("★"+r.star); if(Number(r.score)>0) meta.push(Number(r.score).toFixed(1)+"점");
+      row.querySelector(".qt-meta").textContent=meta.join(" · ");
+      row.querySelector(".qt-won").textContent=Number(r.price||0).toLocaleString("ko-KR")+"원~";
+      row.querySelector(".qt-date").textContent="1박 · "+(r.id?"자세히 ›":"예약 ›");
+      if(r.id){
+        // 상세에서 '목록'으로 돌아가면 카드와 같은 조건의 목록이 뜨게 필터도 같이 넘긴다
+        row.addEventListener("click", function(){ var o={}; for(var k in base) o[k]=base[k]; o.area=a.area; o.types=a.types; o.minStar=a.minStar; o.priceMax=a.priceMax; o.hotelId=r.id; openHotelsFromCard(a.city||"", o); });
+      } else {
+        var u=r.url||a.url;
+        if(u) row.addEventListener("click", function(){ runAction({ kind:"open", url:u, title:(r.name||"숙소")+" 예약" }); });
+      }
+      box.appendChild(row);
+    });
+    c.querySelector(".qt-htcta").addEventListener("click", function(){
+      var o={}; for(var k in base) o[k]=base[k];
+      o.area=a.area; o.types=a.types; o.minStar=a.minStar; o.priceMax=a.priceMax;
+      openHotelsFromCard(a.city||"", o);
+    });
+    c.querySelector(".qt-src").textContent=(a.source||"아고다")+" 기준 1박 요금 · 세금·수수료 별도일 수 있어요";
+    return c;
+  }
   function buildQuote(a){
     var t=a.qtype||"stock";
     if(t==="flight") return buildFlight(a);
+    if(t==="hotel") return buildHotel(a);
     if(t==="apt"){
       var c=el('<div class="fr-qt qt-apt"><div class="qt-h"><span class="qt-ic"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg></span><span class="qt-t"></span><span class="qt-cnt"></span></div><div class="qt-rows"></div><div class="qt-src"></div></div>');
       c.querySelector(".qt-t").textContent=a.title||"실거래";

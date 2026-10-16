@@ -31,7 +31,7 @@
   /* 세그먼트는 둘뿐이다. '판정' 랭킹 탭은 사장님 지시로 뺐다 —
      "누적 투표로 갈리게 될 거니" 랭킹을 따로 화면으로 만들 필요가 없다.
      travel_rank RPC 는 그대로 살려둔다(표가 쌓이면 그때 어디든 붙일 수 있게). */
-  var VIEW = "feed";          // feed | who
+  var VIEW = "feed";          // feed | who | flight | hotel
   var COUNTRY = null;         // 나라 필터(ISO2)
   var AREA = null;            // 나라 안의 광역 필터(도쿄도·교토부·온타리오주 …)
   var loading = false;
@@ -122,6 +122,7 @@
         '<button type="button" class="tv-sg on" data-view="feed">둘러보기</button>' +
         '<button type="button" class="tv-sg" data-view="who">누가 갔나</button>' +
         '<button type="button" class="tv-sg" data-view="flight">✈ 항공권</button>' +
+        '<button type="button" class="tv-sg" data-view="hotel"><svg class="tv-sg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18V6"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/></svg>숙소</button>' +
       '</div>' +
         '<button type="button" class="tv-mapbtn" id="tv-openmap" aria-label="지도">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3z"/><path d="M9 3v15M15 6v15"/></svg>' +
@@ -153,6 +154,9 @@
     CHIPS2 = SEC.querySelector("#tv-chips2");
     DASH = SEC.querySelector("#tv-dash");
     LIST = SEC.querySelector("#tv-list");
+    /* 스냅샷이 되살린 세그 표시(.on)와 JS 상태(VIEW)를 맞춘다 — 안 맞추면 '숙소'가 켜진 채 둘러보기 목록이 뜬다 */
+    var on = SEC.querySelector(".tv-sg.on");
+    if (on && on.dataset.view) VIEW = on.dataset.view;
   }
 
   function wire() {
@@ -179,8 +183,8 @@
       var b = e.target.closest(".tv-sg"); if (!b) return;
       VIEW = b.dataset.view;
       SEC.querySelectorAll(".tv-sg").forEach(function (x) { x.classList.toggle("on", x === b); });
-      applyFlightMode();
-      if (VIEW === "flight") return;                 // 항공권은 자체 UI(칩·대시·load 불필요)
+      applyToolMode();
+      if (TOOL_VIEWS[VIEW]) return;                  // 항공권·숙소는 자체 UI(칩·대시·load 불필요)
       paintChips(); paintDash(); load();
     });
     CHIPS.addEventListener("click", async function (e) {
@@ -549,22 +553,29 @@
     if (!WHO_END) armWhoMore();                             // 다시 관찰 = 아직 보이면 한 번 더
   }
 
-  /* ✈️ 항공권 세그 — 여행 발견 UI(칩·대시·어디갈래)를 접고 항공권 전용 모듈을 띄운다.
-     모듈(js/travel-flights.js)은 검색 스택 페이지와 공용이다(하이브리드). */
-  function applyFlightMode() {
-    var flight = VIEW === "flight";
+  /* ✈️🏨 도구 세그(항공권·숙소) — 여행 발견 UI(칩·대시·어디갈래)를 접고 전용 모듈을 띄운다.
+     모듈(js/travel-flights.js · js/travel-hotels.js)은 검색 스택 페이지와 공용이다(하이브리드).
+     새 도구는 여기 한 줄만 더하면 된다 — 세그 버튼 data-view 와 이름을 맞출 것. */
+  var TOOL_VIEWS = {
+    flight: { mod: "GALLA_TravelFlights", fail: "항공권을 불러오지 못했어요." },
+    hotel:  { mod: "GALLA_TravelHotels",  fail: "숙소를 불러오지 못했어요." }
+  };
+  function applyToolMode() {
+    var tool = TOOL_VIEWS[VIEW];
     var vs = SEC && SEC.querySelector("#tv-vs");
-    if (vs) vs.hidden = flight;
-    if (CHIPS) CHIPS.hidden = flight;
-    if (flight) {
+    if (vs) vs.hidden = !!tool;
+    if (CHIPS) CHIPS.hidden = !!tool;
+    if (tool) {
       if (CHIPS2) CHIPS2.hidden = true;
       if (DASH) { DASH.hidden = true; }
-      if (window.GALLA_TravelFlights && LIST) window.GALLA_TravelFlights.render(LIST, {});
-      else if (LIST) LIST.innerHTML = '<div class="tv-empty">항공권을 불러오지 못했어요.</div>';
+      var mod = window[tool.mod];
+      if (mod && LIST) mod.render(LIST, {});
+      else if (LIST) LIST.innerHTML = '<div class="tv-empty">' + tool.fail + "</div>";
     }
   }
 
   async function load() {
+    if (TOOL_VIEWS[VIEW]) { applyToolMode(); return; }   // 재부팅(스냅샷 복원) 때 도구 세그가 발견 목록으로 덮이지 않게
     if (!LIST || loading) return;
     loading = true;
     LIST.innerHTML = '<div class="tv-empty">불러오는 중…</div>';
