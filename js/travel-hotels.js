@@ -462,6 +462,7 @@
             (showCross ? '<span class="th-cross"><s>' + won(crossed) + '원</s><em>' + disc + "%</em></span>" : "") +
             '<span class="th-price"><b class="th-won" data-v="' + (Number(o.price) || 0) + '">0</b>원<small> / 1박</small></span>' +
             (nights > 1 && total ? '<span class="th-total">' + nights + "박 총 " + won(total) + "원</span>" : "") +
+            (o.roomType ? '<span class="th-total th-rt">' + esc(o.roomType) + " 기준</span>" : "") +
           "</div>" +
           '<button type="button" class="th-book" data-book="1">아고다에서 예약' + IC.out + "</button>" +
         "</div>" +
@@ -567,7 +568,7 @@
         (state.total > state.offers.length ? '<span class="th-count-s">상위 ' + state.offers.length + "곳 표시</span>" : "") + "</div>" +
       '<div class="th-list">' + state.offers.map(offerHTML).join("") + "</div>" +
       (safeUrl(m.bookUrl) ? '<a class="th-more" href="' + esc(m.bookUrl) + '" target="_blank" rel="noopener noreferrer" data-url="' + esc(m.bookUrl) + '">아고다에서 더 많은 숙소 보기 ↗</a>' : "") +
-      '<p class="th-note">가격은 아고다 기준 1박 요금(세금·수수료 별도일 수 있음) · 예약은 아고다에서 진행</p>';
+      '<p class="th-note">가격은 아고다 제휴 요금(표시된 객실 기준·세금 별도일 수 있음). 아고다로 넘어가면 더 싼 객실이나 회원 쿠폰가가 보일 수 있어요 · 예약은 아고다에서 진행</p>';
     box.querySelectorAll(".th-won").forEach(countUp);
   }
 
@@ -841,7 +842,7 @@
       (ov ? '<div class="th-dsec"><h3>' + (hasHangul(ov) ? "소개" : "소개(영문)") + '</h3><div class="th-ov" id="th-ov">' + esc(ov) + "</div>" +
         (ov.length > 180 ? '<button type="button" class="th-ovt" data-ov="1">펼치기</button>' : "") + "</div>" : "") +
       (book && o ? '<a class="th-dbook" href="' + esc(book) + '" target="_blank" rel="noopener noreferrer" data-url="' + esc(book) + '">아고다에서 예약' + IC.out + "</a>" : "") +
-      '<p class="th-note">가격은 아고다 기준(세금·수수료 별도일 수 있음) · 예약·결제는 아고다에서 진행돼요</p>' +
+      '<p class="th-note">표시 요금은 위 객실 기준 아고다 제휴 요금이에요(세금 별도일 수 있음). 아고다에서 다른 객실·회원 쿠폰가가 더 쌀 수 있어요 · 예약·결제는 아고다에서 진행돼요</p>' +
     "</div>";
   }
 

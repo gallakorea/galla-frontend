@@ -5381,6 +5381,12 @@ Deno.serve(async (req) => {
       } catch (e) { return json({ ok: false, code: "api_error", error: String(e).slice(0, 120) }); }
     }
 
+    if (body?.op === "hotel_probe") {
+      // 🔬 운영자: 아고다 원시 요청 실험(요금 차이 조사)
+      if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
+      return json(await agodaCall(body?.criteria || {}));
+    }
+
     if (body?.op === "llm_probe") {
       // 🔬 모델 호환 디버그(운영자) — 지정 모델에 최소/도구 요청을 쏘고 원시 응답을 돌려준다.
       if (!CRON_KEY || req.headers.get("x-cron-key") !== CRON_KEY) return json({ ok: false }, 403);
