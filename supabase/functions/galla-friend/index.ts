@@ -45,7 +45,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  market_quote: "💹 시세 확인하는 중…", apt_price: "🏠 실거래가 보는 중…", flight_price: "✈️ 항공권 최저가 보는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
+  market_quote: "💹 시세 확인하는 중…", apt_price: "🏠 실거래가 보는 중…", flight_price: "✈️ 항공권 최저가 보는 중…", hotel_price: "🏨 숙소 요금 보는 중…", weather_now: "🌦 날씨 보는 중…", topic_history: "🎓 갈라 축적 뒤지는 중…", web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_browse: "🧭 갈라 둘러보는 중…", do_action: "✅ 준비하는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…", gen_reel_script: "🎞 릴스 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -1202,6 +1202,277 @@ async function flightSearch(to: string, from?: string, when?: string, oneWay = t
     offers, bookUrl, oneWay, source: "아비아세일즈 최근 검색 기준(실시간 좌석가 아님)" };
 }
 
+/* 🏨 숙소(아고다 Affiliate Lite API) — 항공권과 같은 네이버식: 우리 UI로 비교·상세, 예약만 아고다 landingURL 로 핸드오프(제휴 커미션).
+   키: AGODA_API_KEY(파트너 센터 키 칸 값 「사이트번호:키」 통째로 넣어도 된다)·AGODA_SITE_ID.
+   도시 → city_id 는 agoda_cities, 상세 필터(유형·지역·성급·평점)와 상세 화면은 agoda_hotels(숙소 데이터 파일 적재).
+   실시간 요금은 API 두 갈래: ① 도시 검색(아고다 추천 30곳) ② 숙소 목록 검색(우리 표에서 필터로 고른 후보 id). 둘을 합친다. */
+const AGODA_EP = "http://affiliateapi7643.agoda.com/affiliateservice/lt_v1";
+const CITY_KO_EN: Record<string, string> = {
+  "서울": "Seoul", "부산": "Busan", "제주": "Jeju", "제주도": "Jeju", "강릉": "Gangneung-si", "경주": "Gyeongju-si", "여수": "Yeosu-si", "속초": "Sokcho-si", "인천": "Incheon", "대구": "Daegu", "전주": "Jeonju-si",
+  "도쿄": "Tokyo", "동경": "Tokyo", "오사카": "Osaka", "교토": "Kyoto", "후쿠오카": "Fukuoka", "삿포로": "Sapporo", "오키나와": "Okinawa Main island", "나하": "Naha", "나고야": "Nagoya", "요코하마": "Yokohama", "고베": "Kobe", "나라": "Nara", "벳푸": "Beppu", "유후인": "Yufu", "하코네": "Hakone", "가나자와": "Kanazawa", "히로시마": "Hiroshima",
+  "방콕": "Bangkok", "치앙마이": "Chiang Mai", "푸켓": "Phuket", "파타야": "Pattaya", "끄라비": "Krabi", "코사무이": "Koh Samui",
+  "다낭": "Da Nang", "하노이": "Hanoi", "호치민": "Ho Chi Minh City", "나트랑": "Nha Trang", "냐짱": "Nha Trang", "푸꾸옥": "Phu Quoc Island", "달랏": "Dalat", "호이안": "Hoi An",
+  "세부": "Cebu", "마닐라": "Manila", "보라카이": "Boracay Island", "보홀": "Bohol",
+  "싱가포르": "Singapore", "쿠알라룸푸르": "Kuala Lumpur", "코타키나발루": "Kota Kinabalu", "페낭": "Penang", "랑카위": "Langkawi",
+  "발리": "Bali", "자카르타": "Jakarta",
+  "타이베이": "Taipei", "타이페이": "Taipei", "가오슝": "Kaohsiung", "타이중": "Taichung",
+  "홍콩": "Hong Kong", "마카오": "Macau", "상하이": "Shanghai", "베이징": "Beijing", "북경": "Beijing", "칭다오": "Qingdao", "청도": "Qingdao",
+  "괌": "Guam", "사이판": "Saipan", "하와이": "Honolulu (HI)", "호놀룰루": "Honolulu (HI)",
+  "파리": "Paris", "런던": "London", "로마": "Rome", "밀라노": "Milan", "피렌체": "Florence", "베네치아": "Venice", "바르셀로나": "Barcelona", "마드리드": "Madrid", "프라하": "Prague", "빈": "Vienna", "비엔나": "Vienna", "암스테르담": "Amsterdam", "뮌헨": "Munich", "취리히": "Zurich", "인터라켄": "Interlaken", "이스탄불": "Istanbul", "부다페스트": "Budapest", "리스본": "Lisbon",
+  "두바이": "Dubai", "아부다비": "Abu Dhabi",
+  "뉴욕": "New York (NY)", "로스앤젤레스": "Los Angeles (CA)", "엘에이": "Los Angeles (CA)", "샌프란시스코": "San Francisco (CA)", "라스베이거스": "Las Vegas (NV)", "라스베가스": "Las Vegas (NV)", "시애틀": "Seattle (WA)",
+  "시드니": "Sydney", "멜버른": "Melbourne", "브리즈번": "Brisbane", "골드코스트": "Gold Coast",
+  "일본": "Tokyo", "태국": "Bangkok", "베트남": "Da Nang", "필리핀": "Cebu", "대만": "Taipei", "중국": "Shanghai", "말레이시아": "Kuala Lumpur", "인도네시아": "Bali", "미국": "New York (NY)", "프랑스": "Paris", "영국": "London", "이탈리아": "Rome", "스페인": "Barcelona", "체코": "Prague",
+};
+/* 지역(동네) — 데이터 파일엔 구·동이 없어서 인기 동네 중심 좌표 + 반경(km)으로 정한다. 키 = 영어 도시명 소문자. */
+type Area = { key: string; name: string; lat: number; lng: number; r: number };
+const A = (key: string, name: string, lat: number, lng: number, r = 1.5): Area => ({ key, name, lat, lng, r });
+const CITY_AREAS: Record<string, Area[]> = {
+  "tokyo": [A("shinjuku", "신주쿠", 35.6909, 139.7003), A("shibuya", "시부야", 35.6580, 139.7016), A("ginza", "긴자", 35.6717, 139.7650), A("tokyo-st", "도쿄역", 35.6812, 139.7671), A("ueno", "우에노", 35.7138, 139.7774), A("asakusa", "아사쿠사", 35.7148, 139.7967), A("ikebukuro", "이케부쿠로", 35.7295, 139.7109), A("roppongi", "롯폰기", 35.6628, 139.7314), A("odaiba", "오다이바", 35.6268, 139.7752, 2)],
+  "osaka": [A("namba", "난바", 34.6655, 135.5011), A("shinsaibashi", "신사이바시", 34.6750, 135.5013, 1), A("umeda", "우메다", 34.7025, 135.4959), A("tennoji", "텐노지·신세카이", 34.6467, 135.5134), A("usj", "유니버설시티", 34.6657, 135.4323)],
+  "kyoto": [A("kyoto-st", "교토역", 34.9858, 135.7588), A("gion", "기온", 35.0037, 135.7752, 1.2), A("kawaramachi", "가와라마치", 35.0037, 135.7686, 1.2), A("arashiyama", "아라시야마", 35.0094, 135.6668, 2)],
+  "fukuoka": [A("hakata", "하카타역", 33.5897, 130.4207), A("tenjin", "텐진", 33.5903, 130.3989), A("nakasu", "나카스", 33.5937, 130.4071, 1)],
+  "sapporo": [A("susukino", "스스키노", 43.0556, 141.3533, 1.2), A("sapporo-st", "삿포로역", 43.0687, 141.3508, 1.2), A("odori", "오도리", 43.0597, 141.3543, 1.2)],
+  "seoul": [A("myeongdong", "명동", 37.5636, 126.9827), A("hongdae", "홍대", 37.5563, 126.9220), A("gangnam", "강남", 37.4979, 127.0276, 2), A("dongdaemun", "동대문", 37.5712, 127.0095), A("jamsil", "잠실", 37.5133, 127.1001), A("itaewon", "이태원", 37.5345, 126.9946)],
+  "busan": [A("haeundae", "해운대", 35.1587, 129.1604, 2), A("gwangalli", "광안리", 35.1532, 129.1187), A("seomyeon", "서면", 35.1577, 129.0596), A("nampo", "남포동", 35.0979, 129.0300), A("gijang", "기장", 35.1880, 129.2210, 3)],
+  "jeju": [A("jeju-si", "제주시", 33.4996, 126.5312, 4), A("seogwipo", "서귀포", 33.2541, 126.5600, 4), A("jungmun", "중문", 33.2490, 126.4120, 3), A("aewol", "애월", 33.4620, 126.3290, 4), A("seongsan", "성산", 33.4580, 126.9420, 4)],
+  "bangkok": [A("sukhumvit", "수쿰빗", 13.7380, 100.5600, 2), A("siam", "시암", 13.7456, 100.5341), A("silom", "실롬", 13.7262, 100.5297), A("khaosan", "카오산", 13.7590, 100.4974, 1.2), A("riverside", "리버사이드", 13.7230, 100.5140)],
+  "da nang": [A("mykhe", "미케비치", 16.0600, 108.2470, 2), A("downtown", "한강·시내", 16.0680, 108.2240, 2), A("nonnuoc", "논느억", 15.9980, 108.2650, 3)],
+  "nha trang": [A("beach", "시내·해변", 12.2388, 109.1967, 2.5), A("camranh", "깜란", 11.9980, 109.2190, 6)],
+  "hanoi": [A("hoankiem", "호안끼엠", 21.0285, 105.8542), A("westlake", "서호", 21.0580, 105.8230, 2)],
+  "ho chi minh city": [A("d1", "1군", 10.7769, 106.7009), A("d3", "3군", 10.7840, 106.6860)],
+  "taipei": [A("ximen", "시먼딩", 25.0422, 121.5079, 1), A("main-st", "타이베이역", 25.0478, 121.5170, 1), A("xinyi", "신이(101)", 25.0330, 121.5654), A("zhongshan", "중산", 25.0528, 121.5204, 1)],
+  "hong kong": [A("tst", "침사추이", 22.2976, 114.1722, 1.2), A("central", "센트럴", 22.2819, 114.1580, 1.2), A("causeway", "코즈웨이베이", 22.2802, 114.1838, 1), A("mongkok", "몽콕", 22.3193, 114.1694, 1)],
+  "singapore": [A("marina", "마리나베이", 1.2834, 103.8607), A("orchard", "오차드", 1.3048, 103.8318), A("chinatown", "차이나타운", 1.2833, 103.8443, 1), A("sentosa", "센토사", 1.2494, 103.8303, 2), A("bugis", "부기스", 1.3006, 103.8559, 1)],
+  "cebu": [A("mactan", "막탄", 10.3100, 123.9800, 5), A("cebu-city", "세부시티", 10.3157, 123.8854, 3)],
+  "phuket": [A("patong", "빠통", 7.8961, 98.2966, 2), A("karon", "까론", 7.8460, 98.2970, 1.5), A("kata", "까따", 7.8200, 98.2990, 1.5), A("town", "푸켓타운", 7.8804, 98.3923, 2)],
+  "bali": [A("kuta", "꾸따", -8.7180, 115.1690, 2), A("seminyak", "스미냑", -8.6910, 115.1610, 2), A("ubud", "우붓", -8.5069, 115.2625, 3), A("nusadua", "누사두아", -8.8000, 115.2320, 3), A("canggu", "짱구", -8.6478, 115.1385, 2.5)],
+  "paris": [A("champs", "샹젤리제", 48.8698, 2.3076), A("opera", "오페라", 48.8719, 2.3316, 1), A("marais", "마레", 48.8590, 2.3620, 1), A("montmartre", "몽마르트", 48.8867, 2.3431, 1), A("eiffel", "에펠탑", 48.8584, 2.2945)],
+  "london": [A("westminster", "웨스트민스터", 51.4995, -0.1248), A("covent", "코벤트가든", 51.5117, -0.1240, 1), A("kingscross", "킹스크로스", 51.5308, -0.1238, 1), A("kensington", "켄싱턴", 51.4990, -0.1938)],
+};
+const HOTEL_TYPES: Record<string, string> = { hotel: "호텔", resort: "리조트", hostel: "호스텔", guesthouse: "게스트하우스", apartment: "아파트·레지던스", house: "단독주택·빌라", ryokan: "료칸", capsule: "캡슐호텔", motel: "모텔", pension: "펜션", camping: "캠핑·기타" };
+function kmBetween(a: number, b: number, c: number, d: number): number {
+  const R = 6371, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t;
+  const h = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+async function agodaCity(name: string): Promise<{ id: number; name: string; en: string } | null> {
+  const raw = String(name || "").replace(/(숙소|호텔|숙박|료칸|리조트|게스트하우스|에서|으로|로|가서|여행)$/g, "").replace(/\s+/g, "").trim();
+  if (!raw) return null;
+  const cols = "city_id,name_en,name_ko,hotels";
+  if (/^\d+$/.test(raw)) { const { data } = await supa.from("agoda_cities").select(cols).eq("city_id", +raw).maybeSingle(); return { id: +raw, name: data?.name_ko || data?.name_en || raw, en: data?.name_en || "" }; }
+  const en = CITY_KO_EN[raw] || raw;
+  const ko = CITY_KO_EN[raw] ? raw : "";
+  // 1) 한국어 별칭 → 2) 영어 이름 정확히 → 3) 영어 앞부분 일치 (동명 도시는 숙소 많은 곳)
+  const pickBig = (rows: any[] | null) => (rows && rows.length) ? rows.sort((a, b) => (b.hotels || 0) - (a.hotels || 0))[0] : null;
+  let row: any = null;
+  { const { data } = await supa.from("agoda_cities").select(cols).contains("aliases", [raw]).limit(5); row = pickBig(data); }
+  if (!row) { const { data } = await supa.from("agoda_cities").select(cols).ilike("name_en", en).limit(10); row = pickBig(data); }
+  if (!row && en.length >= 3) { const { data } = await supa.from("agoda_cities").select(cols).ilike("name_en", en.replace(/[%_]/g, "") + "%").limit(10); row = pickBig(data); }
+  return row ? { id: Number(row.city_id), name: row.name_ko || ko || row.name_en, en: row.name_en } : null;
+}
+function ymdKst(addDays: number): string {
+  return new Date(Date.now() + 9 * 3600000 + addDays * 86400000).toISOString().slice(0, 10);
+}
+function agodaKeys(): { site: string; key: string } {
+  let site = (Deno.env.get("AGODA_SITE_ID") || "").trim(), key = (Deno.env.get("AGODA_API_KEY") || "").trim();
+  // 파트너 센터 키 칸은 「사이트번호:키」를 한 줄로 보여준다 → 통째로 넣어도 되게 나눈다(키에 박힌 번호가 정답)
+  if (key.includes(":")) { const [a, b] = key.split(":"); site = a.trim(); key = b.trim(); }
+  return { site, key };
+}
+type Occ = { adults: number; children: number; ages: number[] };
+function normOcc(adults?: any, children?: any, ages?: any): Occ {
+  const a = Math.min(8, Math.max(1, Number(adults) || 2));
+  const c = Math.min(4, Math.max(0, Number(children) || 0));
+  const ag = (Array.isArray(ages) ? ages : []).map((x: any) => Math.min(17, Math.max(0, Number(x) || 0))).slice(0, c);
+  while (ag.length < c) ag.push(8);
+  return { adults: a, children: c, ages: ag };
+}
+function normDates(checkIn?: string, checkOut?: string): { ci: string; co: string; nights: number } {
+  const ok = (x?: string) => /^20\d\d-\d\d-\d\d$/.test(String(x || ""));
+  let ci = ok(checkIn) ? String(checkIn) : ymdKst(14);
+  if (ci < ymdKst(0)) ci = ymdKst(0);
+  let co = ok(checkOut) && String(checkOut) > ci ? String(checkOut) : "";
+  if (!co) { const d = new Date(ci + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); co = d.toISOString().slice(0, 10); }
+  const nights = Math.max(1, Math.min(30, Math.round((Date.parse(co) - Date.parse(ci)) / 86400000)));
+  return { ci, co, nights };
+}
+/* 아고다 호출 하나. 결과 배열 또는 { err } */
+async function agodaCall(criteria: any): Promise<{ results?: any[]; none?: boolean; err?: string }> {
+  const { site, key } = agodaKeys();
+  if (!site || !key) return { err: "no_key" };
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 10000);
+  try {
+    const r = await fetch(AGODA_EP, { method: "POST", signal: ac.signal,
+      headers: { "Content-Type": "application/json", "Accept-Encoding": "gzip,deflate", "Authorization": `${site}:${key}` }, body: JSON.stringify({ criteria }) });
+    const j = await r.json().catch(() => null);
+    if (j?.error?.id === 911) return { none: true, results: [] };
+    if (!j || !Array.isArray(j.results)) return { err: `${r.status}${j?.error?.message ? " " + String(j.error.message).slice(0, 80) : ""}` };
+    return { results: j.results };
+  } catch (_) { return { err: "timeout" }; } finally { clearTimeout(t); }
+}
+function occCriteria(o: Occ) {
+  return { numberOfAdult: o.adults, numberOfChildren: o.children, ...(o.children ? { childrenAges: o.ages } : {}) };
+}
+function mapOffer(x: any, nights: number, row?: any, area?: Area | null) {
+  const price = Math.round(Number(x.dailyRate || 0));
+  const lat = row?.lat ?? null, lng = row?.lng ?? null;
+  return {
+    id: Number(x.hotelId), name: x.hotelName || row?.name, img: String(x.imageURL || row?.photos?.[0] || "").replace(/^http:/, "https:"),
+    star: Number(x.starRating ?? row?.star ?? 0), score: Number(x.reviewScore ?? row?.rating ?? 0), reviews: Number(x.reviewCount ?? row?.reviews ?? 0),
+    price, crossed: Math.round(Number(x.crossedOutRate || 0)), discount: Number(x.discountPercentage ?? x.discountPercent ?? 0) || 0,
+    breakfast: !!x.includeBreakfast, wifi: !!x.freeWifi, url: x.landingURL, roomType: x.roomtypeName || null,
+    type: row?.type || null, typeKo: row?.type ? (HOTEL_TYPES[row.type] || null) : null,
+    area: area?.name || null, distKm: (area && lat != null) ? Math.round(kmBetween(area.lat, area.lng, lat, lng) * 10) / 10 : null,
+    address: row?.address || null, lat, lng, totalPrice: price * nights,
+  };
+}
+const HOTEL_COLS = "hotel_id,city_id,name,type,star,rating,reviews,lat,lng,address,photos";
+async function cityFacets(c: { id: number; en: string }) {
+  const areas = (CITY_AREAS[String(c.en || "").toLowerCase()] || []).map((a) => ({ key: a.key, name: a.name }));
+  const { data } = await supa.rpc("agoda_city_types", { p_city: c.id });
+  const types = (data || []).filter((r: any) => HOTEL_TYPES[r.type]).map((r: any) => ({ key: r.type, name: HOTEL_TYPES[r.type], count: Number(r.n) }));
+  return { areas, types };
+}
+async function hotelCity(city: string): Promise<any> {
+  const c = await agodaCity(city);
+  if (!c) return { ok: false, code: "no_city", error: `'${city}' 도시를 못 찾았어요` };
+  return { ok: true, city: { id: c.id, name: c.name }, ...(await cityFacets(c)) };
+}
+type HotelQuery = { city: string; checkIn?: string; checkOut?: string; adults?: any; children?: any; childAges?: any; area?: string; types?: string[];
+  minStar?: number; minScore?: number; priceMin?: number; priceMax?: number; discountOnly?: boolean; breakfast?: boolean; freeWifi?: boolean; sort?: string; max?: number };
+async function hotelSearch(q: HotelQuery): Promise<any> {
+  const { site } = agodaKeys();
+  if (!site) return { ok: false, code: "no_key", error: "숙소 검색 준비 중" };
+  const c = await agodaCity(q.city);
+  if (!c) return { ok: false, code: "no_city", error: `'${q.city}' 도시를 못 찾았어요` };
+  const { ci, co, nights } = normDates(q.checkIn, q.checkOut);
+  const occ = normOcc(q.adults, q.children, q.childAges);
+  const areas = CITY_AREAS[String(c.en || "").toLowerCase()] || [];
+  const area = q.area ? areas.find((a) => a.key === q.area) || null : null;
+  const types = (q.types || []).filter((t) => HOTEL_TYPES[t]);
+  const minStar = Math.max(0, Math.min(5, Number(q.minStar) || 0)), minScore = Math.max(0, Math.min(10, Number(q.minScore) || 0));
+  const priceMin = Math.max(0, Number(q.priceMin) || 0), priceMax = Math.max(0, Number(q.priceMax) || 0);
+  const sort = String(q.sort || "rec");
+  const base = { city: { id: c.id, name: c.name }, checkIn: ci, checkOut: co, nights, adults: occ.adults, children: occ.children };
+  const facetsP = cityFacets(c);
+
+  // ① 우리 표에서 필터로 후보 고르기(유형·지역·성급·평점) — 리뷰 많은 순 상위
+  let qb = supa.from("agoda_hotels").select(HOTEL_COLS).eq("city_id", c.id);
+  if (types.length) qb = qb.in("type", types);
+  if (minStar) qb = qb.gte("star", minStar);
+  if (minScore) qb = qb.gte("rating", minScore);
+  if (area) {
+    const dLat = area.r / 111, dLng = area.r / (111 * Math.cos(area.lat * Math.PI / 180));
+    qb = qb.gte("lat", area.lat - dLat).lte("lat", area.lat + dLat).gte("lng", area.lng - dLng).lte("lng", area.lng + dLng);
+  }
+  const { data: cand } = await qb.order("reviews", { ascending: false }).limit(area ? 300 : 150);
+  let rows = (cand || []) as any[];
+  if (area) rows = rows.filter((r) => kmBetween(area.lat, area.lng, r.lat, r.lng) <= area.r).slice(0, 150);
+  const byId = new Map<number, any>(rows.map((r) => [Number(r.hotel_id), r]));
+
+  // ② 실시간 요금 — 후보 id 묶음(50개씩) + (지역·유형 필터가 없으면) 아고다 추천 도시 검색 30곳
+  const add = { currency: "KRW", language: "ko-kr", discountOnly: !!q.discountOnly, occupancy: occCriteria(occ) };
+  const calls: Promise<any>[] = [];
+  const ids = rows.map((r) => Number(r.hotel_id));
+  for (let i = 0; i < ids.length && i < 150; i += 50) calls.push(agodaCall({ additional: add, checkInDate: ci, checkOutDate: co, hotelId: ids.slice(i, i + 50) }));
+  const SORTMAP: Record<string, string> = { rec: "Recommended", price_asc: "PriceAsc", price_desc: "PriceDesc", star: "StarRatingDesc", score: "AllGuestsReviewScore", reviews: "AllGuestsReviewScore", distance: "Recommended" };
+  if (!area && !types.length) calls.push(agodaCall({ additional: { ...add, maxResult: 30, sortBy: SORTMAP[sort] || "Recommended", minimumStarRating: minStar, minimumReviewScore: minScore,
+    dailyRate: { minimum: priceMin || 0, maximum: priceMax || 100000000 } }, checkInDate: ci, checkOutDate: co, cityId: c.id }));
+  const outs = await Promise.all(calls);
+  const errs = outs.filter((o) => o.err).map((o) => o.err);
+  if (errs.includes("no_key")) return { ok: false, code: "no_key", error: "숙소 검색 준비 중" };
+
+  // 도시 검색으로만 온 숙소도 표에 있으면 유형·주소를 붙인다
+  const extraIds = outs.flatMap((o) => (o.results || []).map((x: any) => Number(x.hotelId))).filter((id) => !byId.has(id));
+  if (extraIds.length) {
+    const { data } = await supa.from("agoda_hotels").select(HOTEL_COLS).in("hotel_id", extraIds.slice(0, 60));
+    for (const r of (data || [])) byId.set(Number(r.hotel_id), r);
+  }
+  const seen = new Set<number>(); let offers: any[] = [];
+  for (const o of outs) for (const x of (o.results || [])) {
+    const id = Number(x.hotelId); if (seen.has(id)) continue; seen.add(id);
+    offers.push(mapOffer(x, nights, byId.get(id), area));
+  }
+  // ③ 남은 필터(가격·할인·조식·와이파이·성급·평점 — 도시 검색분에도 똑같이)
+  offers = offers.filter((o) => o.url && o.price > 0
+    && (!priceMin || o.price >= priceMin) && (!priceMax || o.price <= priceMax)
+    && (!q.discountOnly || o.discount > 0) && (!q.breakfast || o.breakfast) && (!q.freeWifi || o.wifi)
+    && (!minStar || o.star >= minStar) && (!minScore || o.score >= minScore));
+  const recRank = new Map<number, number>(); offers.forEach((o, i) => recRank.set(o.id, i));
+  const cmp: Record<string, (a: any, b: any) => number> = {
+    price_asc: (a, b) => a.price - b.price, price_desc: (a, b) => b.price - a.price,
+    score: (a, b) => b.score - a.score || b.reviews - a.reviews, reviews: (a, b) => b.reviews - a.reviews,
+    star: (a, b) => b.star - a.star || b.score - a.score, distance: (a, b) => (a.distKm ?? 99) - (b.distKm ?? 99),
+    // 추천: 평점×리뷰 신뢰도 — 아고다 추천 순서를 약하게 섞는다
+    rec: (a, b) => (b.score * Math.log10(10 + b.reviews) - (recRank.get(b.id)! * 0.05)) - (a.score * Math.log10(10 + a.reviews) - (recRank.get(a.id)! * 0.05)),
+  };
+  offers.sort(cmp[sort] || cmp.rec);
+  const facets = await facetsP;
+  const prices = offers.map((o) => o.price);
+  const { site: s2 } = agodaKeys();
+  const bookUrl = `https://www.agoda.com/partners/partnersearch.aspx?cid=${encodeURIComponent(s2)}&city=${c.id}&checkin=${ci}&checkout=${co}&NumberofAdults=${occ.adults}&NumberofChildren=${occ.children}&Rooms=1&currency=KRW`;
+  if (!offers.length) {
+    if (errs.length === outs.length && outs.length) return { ok: false, code: "api_error", error: `아고다 응답 오류(${errs[0]})`, ...base, facets };
+    return { ok: false, code: "no_result", error: "조건에 맞는 빈 방이 없어요", ...base, facets, bookUrl };
+  }
+  const max = Math.min(60, Math.max(1, Number(q.max) || 60));
+  return { ok: true, ...base, total: offers.length, offers: offers.slice(0, max), bookUrl,
+    facets: { ...facets, price: { min: Math.min(...prices), max: Math.max(...prices) } },
+    source: "아고다 실시간 요금(1박, 세금·수수료 별도일 수 있음)" };
+}
+async function hotelDetail(hotelId: number, checkIn?: string, checkOut?: string, adults?: any, children?: any, childAges?: any): Promise<any> {
+  const id = Number(hotelId);
+  if (!id) return { ok: false, code: "bad_id", error: "숙소 번호가 없어요" };
+  const { data: h } = await supa.from("agoda_hotels").select("*").eq("hotel_id", id).maybeSingle();
+  const { ci, co, nights } = normDates(checkIn, checkOut);
+  const occ = normOcc(adults, children, childAges);
+  const r = await agodaCall({ additional: { currency: "KRW", language: "ko-kr", discountOnly: false, occupancy: occCriteria(occ) }, checkInDate: ci, checkOutDate: co, hotelId: [id] });
+  if (r.err === "no_key") return { ok: false, code: "no_key", error: "숙소 검색 준비 중" };
+  const x = (r.results || [])[0];
+  if (!h && !x) return { ok: false, code: "not_found", error: "숙소 정보를 못 찾았어요" };
+  const o = x ? mapOffer(x, nights, h) : null;
+  return { ok: true, nights, checkIn: ci, checkOut: co, adults: occ.adults, children: occ.children, offerError: (!x && r.err) ? r.err : null,
+    hotel: { id, name: h?.name || x?.hotelName, type: h?.type || null, typeKo: h?.type ? HOTEL_TYPES[h.type] : null,
+      star: Number(h?.star ?? x?.starRating ?? 0), score: Number(x?.reviewScore ?? h?.rating ?? 0), reviews: Number(x?.reviewCount ?? h?.reviews ?? 0),
+      address: h?.address || null, zipcode: h?.zipcode || null, lat: h?.lat ?? null, lng: h?.lng ?? null,
+      photos: ((h?.photos?.length ? h.photos : [x?.imageURL].filter(Boolean)) as string[]).map((u) => String(u).replace(/^http:/, "https:").replace(/\?s=\d+x.*$/, "?s=1024x")),
+      overview: h?.overview || null, checkinTime: h?.checkin_time || null, checkoutTime: h?.checkout_time || null,
+      rooms: h?.rooms || null, floors: h?.floors || null, yearOpened: h?.year_opened || null, yearRenovated: h?.year_renovated || null, chain: h?.chain || null },
+    offer: o ? { price: o.price, crossed: o.crossed, discount: o.discount, breakfast: o.breakfast, wifi: o.wifi, roomType: o.roomType, url: o.url, totalPrice: o.totalPrice } : null };
+}
+/* 갈비스 도구: 조건대로 찾아 3곳 + 카드 */
+async function hotelPrices(args: any): Promise<any> {
+  const typeKo: Record<string, string> = { "호텔": "hotel", "리조트": "resort", "호스텔": "hostel", "게스트하우스": "guesthouse", "게하": "guesthouse", "아파트": "apartment", "레지던스": "apartment", "에어비앤비": "apartment", "빌라": "house", "풀빌라": "house", "료칸": "ryokan", "캡슐": "capsule", "모텔": "motel", "펜션": "pension", "캠핑": "camping", "글램핑": "camping" };
+  const types = (Array.isArray(args?.types) ? args.types : String(args?.types || "").split(/[,\s]+/)).map((t: string) => typeKo[t] || t).filter((t: string) => HOTEL_TYPES[t]);
+  const c0 = await agodaCity(String(args?.city || ""));
+  const areas = c0 ? (CITY_AREAS[String(c0.en || "").toLowerCase()] || []) : [];
+  const areaKey = args?.area ? (areas.find((a) => a.name.includes(String(args.area)) || String(args.area).includes(a.name.split("·")[0]) || a.key === args.area)?.key || "") : "";
+  const q: HotelQuery = { city: String(args?.city || ""), checkIn: args?.checkIn, checkOut: args?.checkOut, adults: args?.adults, children: args?.children, childAges: args?.childAges,
+    area: areaKey, types, minStar: Number(args?.minStar) || 0, minScore: Number(args?.minScore) || 0, priceMax: Number(args?.budget) || 0, breakfast: !!args?.breakfast,
+    sort: args?.sort === "price" ? "price_asc" : "rec", max: 20 };
+  const r = await hotelSearch(q);
+  if (!r.ok) {
+    if (r.code === "no_key") return { error: "숙소 검색이 아직 준비 중", 지침: "숙소 가격은 아직 못 본다고 솔직히. 가격 지어내기 금지." };
+    if (r.code === "no_city") return { error: r.error, 지침: "도시를 못 찾았다고 솔직히. 도시 이름을 다시 물어봐라." };
+    if (r.code === "no_result") return { error: "조건에 맞는 빈 방 없음", 지침: "그 조건으론 빈 방이 없다고 솔직히 말하고 조건(날짜·가격·지역)을 하나 풀어보자고 제안해라." };
+    return { error: r.error, 지침: "지금 숙소 가격을 못 가져왔다고 솔직히. 가격 지어내기 금지." };
+  }
+  const top = r.offers.slice(0, 3);
+  const won = (n: number) => `${Number(n).toLocaleString("ko-KR")}원`;
+  const areaName = areaKey ? areas.find((a) => a.key === areaKey)?.name : "";
+  return {
+    도시: r.city.name + (areaName ? ` ${areaName}` : ""), 날짜: `${r.checkIn} ~ ${r.checkOut}(${r.nights}박, 성인 ${r.adults}${r.children ? `·아동 ${r.children}` : ""})`, 찾은수: r.total,
+    숙소: top.map((o: any) => `${o.name}${o.typeKo ? `(${o.typeKo})` : ""} ★${o.star} 평점 ${o.score}${o.reviews ? `(${o.reviews}개)` : ""} 1박 ${won(o.price)}${o.distKm != null ? ` ${o.area}에서 ${o.distKm}km` : ""}`),
+    출처: "아고다 실시간 요금", 지침: "가장 끌리는 1곳만 짧게 말하고 '날짜 바꾸면 달라져'를 덧붙여라. 카드가 붙는다. 날짜를 안 말했으면 2주 뒤 1박 기준이라고 밝혀라.",
+    _card: { qtype: "hotel", title: `${r.city.name}${areaName ? " " + areaName : ""} 숙소`, sub: `${r.checkIn.slice(5).replace("-", "/")} ~ ${r.checkOut.slice(5).replace("-", "/")} · ${r.nights}박 · 성인 ${r.adults}${r.children ? ` · 아동 ${r.children}` : ""} · ${r.total}곳`,
+      city: r.city.name, checkIn: r.checkIn, checkOut: r.checkOut, adults: r.adults, children: r.children,
+      area: areaKey || undefined, types: types.length ? types : undefined, minStar: q.minStar || undefined, priceMax: q.priceMax || undefined,
+      rows: top.map((o: any) => ({ id: o.id, name: o.name, star: o.star, score: o.score, price: o.price, img: o.img, url: o.url, typeKo: o.typeKo, area: o.area, distKm: o.distKm })),
+      url: r.bookUrl, source: "아고다 실시간 요금" },
+  };
+}
+
 async function marketQuote(kind: string, name: string): Promise<any> {
   const nm = String(name || "").trim();
   if (!nm) return { error: "종목·코인 이름이 필요하다" };
@@ -1681,6 +1952,13 @@ const TOOLS = [
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
+  { type: "function", function: { name: "hotel_price", description: "🏨 숙소·호텔 실시간 요금(아고다). '도쿄 호텔 얼마', '다낭 숙소 추천', '오사카 신사이바시 2박 4성급', '방콕 호스텔 3만원 이하', '가족 4명 제주 리조트' 물으면 이걸 써라. 상대가 말한 조건만 채우고 나머진 비워라. 가격·숙소 이름을 추측으로 말하지 마라.", parameters: { type: "object", properties: {
+    city: { type: "string", description: "도시(한국어 가능: 도쿄, 다낭, 제주)" }, area: { type: "string", description: "동네(신주쿠, 난바, 해운대 등, 말했을 때만)" },
+    checkIn: { type: "string", description: "체크인 YYYY-MM-DD(모르면 비움)" }, checkOut: { type: "string", description: "체크아웃 YYYY-MM-DD(모르면 비움)" },
+    adults: { type: "number", description: "성인 수(기본 2)" }, children: { type: "number", description: "아동 수" }, childAges: { type: "array", items: { type: "number" }, description: "아동 나이들" },
+    types: { type: "string", description: "숙소 유형(호텔·리조트·호스텔·게스트하우스·아파트·빌라·료칸·캡슐·모텔·펜션, 여럿이면 쉼표)" },
+    minStar: { type: "number", description: "최소 성급(4성 이상이면 4)" }, minScore: { type: "number", description: "최소 평점(10점 만점)" },
+    budget: { type: "number", description: "1박 최대 예산(원)" }, breakfast: { type: "boolean", description: "조식 포함만" }, sort: { type: "string", enum: ["rec", "price"], description: "싼 곳 원하면 price" } }, required: ["city"] } } },
   { type: "function", function: { name: "flight_price", description: "✈️ 항공권 최저가(최근 검색 기준, 편도). '도쿄 항공권 얼마', '다낭 비행기표 최저가', '10월 오사카 가는 거' 물으면 이걸 써라. 가격을 추측으로 말하지 마라.", parameters: { type: "object", properties: { to: { type: "string", description: "도착 도시(한국어 가능: 도쿄, 다낭)" }, from: { type: "string", description: "출발 도시(없으면 서울)" }, when: { type: "string", description: "출발 시기(10월, 2026-10-05 등, 없으면 비움)" } }, required: ["to"] } } },
   { type: "function", function: { name: "apt_price", description: "🏠 아파트 매매 실거래가(국토교통부 신고 자료, 최근 두 달). '○○동/○○구 아파트 얼마', '래미안 실거래가', '집값' 물으면 이걸 써라. 숫자를 기억·추측으로 말하지 마라.", parameters: { type: "object", properties: { region: { type: "string", description: "시·구·동(예: 서초구 양재동, 분당, 강남구 대치동)" }, apt: { type: "string", description: "단지 이름(있으면)" } }, required: ["region"] } } },
   { type: "function", function: { name: "market_quote", description: "💹 지금 시세를 '실제 값'으로 가져온다(국내주식·코인·환율). '달러 환율/엔화 얼마' 는 kind:fx. 상대가 '○○ 주가/가격/얼마야', '비트코인 얼마', '얼마나 떨어졌어' 물으면 반드시 이걸 써라 — web_search 는 기사만 주지 현재가를 안 준다. 숫자를 기억·추측으로 말하는 건 절대 금지. name 은 상대가 부른 이름 그대로(하이닉스/삼성전자/비트코인/리플).", parameters: { type: "object", properties: { name: { type: "string", description: "종목·코인 이름(하이닉스, 삼성전자, 비트코인, 리플)" }, kind: { type: "string", enum: ["stock", "coin", "fx", "auto"], description: "모르면 auto" } }, required: ["name"] } } },
@@ -1833,6 +2111,7 @@ async function refundGC(uid: string, amount: number) {
 async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "topic_history") return { result: await topicHistory(args?.topic) };
   if (name === "market_quote") return { result: await marketQuote(args?.kind || "auto", args?.name) };
+  if (name === "hotel_price") return { result: await hotelPrices(args || {}) };
   if (name === "flight_price") return { result: await flightPrices(String(args?.to || ""), args?.from, args?.when) };
   if (name === "apt_price") return { result: await aptPrice(String(args?.region || ""), args?.apt) };
   if (name === "weather_now") {
@@ -4313,6 +4592,8 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   /* 🌦 날씨는 market_quote 가 아니라 weather_now — 예전엔 여기 묶여 시세 도구로 가서 web_search 로 샜다(26.9.21 조사) */
   if (/(날씨|기온|비\s*(와|오|올|옴)|눈\s*(와|오|올)|우산|미세먼지|더워|추워|쌀쌀|덥)/.test(m) && !/(주가|코인|시세)/.test(m))
     return { tool: "weather_now", hint: "weather_now로 '실제' 값만(지역 말했으면 region). " + (/(내일)/.test(m) ? "when:tomorrow 로 예보를." : /(모레)/.test(m) ? "when:dayafter 로 예보를." : /(주말|토요일|일요일)/.test(m) ? "when:weekend 로 예보를." : /(이번\s*주|일주일|주간)/.test(m) ? "when:week 로 예보를." : "") + " 기억·추측 기온 절대 금지." };
+  if (/(숙소|호텔|숙박|료칸|리조트|게스트\s*하우스|에어비앤비|묵을\s*(곳|데))/.test(m) && !/(후기|리뷰|사건|사고|뉴스)/.test(m))
+    return { tool: "hotel_price", hint: "hotel_price(city=도시, checkIn/checkOut=YYYY-MM-DD 말했으면, adults)로 아고다 실시간 요금을 가져와 **도구가 준 숙소·가격만** 말해라. 도시를 안 말했으면 어디 묵을지 물어라." };
   /* 🧭 갈라 코너 — 여행·예측·숏판·롱판·광장 목록 */
   if (/(여행|여행지|놀러\s*갈|가볼\s*만|관광|해외\s*어디)/.test(m))
     return { tool: "galla_browse", hint: "galla_browse(section:travel, query=나라·도시·장소 — 없으면 비워서 뜨는 나라)로 갈라 여행 지도의 실제 장소만 말해라. 지어내기 금지." };
@@ -5075,6 +5356,7 @@ Deno.serve(async (req) => {
         else if (kind === "stock") r = await quoteStock(name);
         else if (kind === "apt") r = await aptPrice(name, body?.apt);
         else if (kind === "flight") r = await flightPrices(name, body?.from, body?.when);
+        else if (kind === "hotel") r = await hotelPrices({ city: name, checkIn: body?.checkIn, checkOut: body?.checkOut, adults: body?.adults });
         else r = (await quoteStock(name).catch(() => null)) || (await quoteCoin(name).catch(() => null)) || (await quoteFx(name).catch(() => null));
         return json({ ok: true, card: (r && r._card) ? r._card : null });
       } catch (e) { return json({ ok: false, error: String(e).slice(0, 120) }); }
@@ -5086,6 +5368,17 @@ Deno.serve(async (req) => {
         const r = await flightSearch(String(body?.to || ""), body?.from ? String(body.from) : undefined, body?.when ? String(body.when) : undefined, body?.oneWay !== false, body?.whenBack ? String(body.whenBack) : undefined);
         return json(r);
       } catch (e) { return json({ ok: false, error: String(e).slice(0, 120) }); }
+    }
+
+    if (body?.op === "hotel_search" || body?.op === "hotel_city" || body?.op === "hotel_detail") {
+      // 🏨 여행 탭 → 숙소(검색·필터 칩·상세). 비로그인 허용(값 조회만). 예약은 아고다 landingURL 로 핸드오프.
+      try {
+        if (body.op === "hotel_city") return json(await hotelCity(String(body?.city || "")));
+        if (body.op === "hotel_detail") return json(await hotelDetail(Number(body?.hotelId), body?.checkIn, body?.checkOut, body?.adults, body?.children, body?.childAges));
+        return json(await hotelSearch({ city: String(body?.city || ""), checkIn: body?.checkIn, checkOut: body?.checkOut, adults: body?.adults, children: body?.children, childAges: body?.childAges,
+          area: body?.area ? String(body.area) : "", types: Array.isArray(body?.types) ? body.types.map(String) : [], minStar: body?.minStar, minScore: body?.minScore,
+          priceMin: body?.priceMin, priceMax: body?.priceMax, discountOnly: !!body?.discountOnly, breakfast: !!body?.breakfast, freeWifi: !!body?.freeWifi, sort: body?.sort ? String(body.sort) : "rec" }));
+      } catch (e) { return json({ ok: false, code: "api_error", error: String(e).slice(0, 120) }); }
     }
 
     if (body?.op === "llm_probe") {
@@ -6313,7 +6606,7 @@ ${parts.join("\n")}`;
     }
     /* 🧹 v1 엔진 스위치 폐지(26.9.22) — FRIEND_ENGINE·body.engine 로 옛 엔진을 켤 길을 없앤다. 두 엔진이 섞여 있어 가드가 한쪽에만 걸리던 원인. */
     const _engine = "v2";
-    if (route && /^(market_quote|apt_price|flight_price|weather_now)$/.test(String(route.tool || "")) && _v2State !== "emotion" && !crisis) _v2State = "request";   // 값 조회는 요청이다(26.9.22 시험)
+    if (route && /^(market_quote|apt_price|flight_price|hotel_price|weather_now)$/.test(String(route.tool || "")) && _v2State !== "emotion" && !crisis) _v2State = "request";   // 값 조회는 요청이다(26.9.22 시험)
     const _v2Talk = _v2State !== "request" && !crisis && !work && !handoff
       && !((body?.page as any)?.assist) && !(craft?.state === "planning"
         || (craft?.state === "proposed" && /^(ㅇㅇ|ㅇㅋ|응|웅|어|좋아|좋지|그래|그러자|오키|오케이|ㄱㄱ|고고|가자|해줘|해봐|만들|올려|그걸로|[1-4]\s*번|[abcABC]\s*안)/.test(String(userMsg || "").trim())));   // 「이 판 어때?」 한마디에 proposed 가 찍혀 다음 턴 전체가 창작 모드로 새던 것(26.9.22) — 제안에 '응'한 턴만   // ⚠️ decided.craft 가 아니라 저장돼 있던 상태 — decideIntent 는 경로만 잡혀도 confirmed 를 찍는다(콘텐츠 경로가 대화 턴을 먹던 원인)

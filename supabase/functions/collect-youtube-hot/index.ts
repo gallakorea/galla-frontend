@@ -316,15 +316,15 @@ Deno.serve(async (req) => {
     const { data: chans } = await supa.from("youtube_channels")
       .select("name,feed,channel_id,uploads_playlist,ok");
     const chanList = chans || [];
-    // (a) 미해석 채널 해석(런당 최대 12개 — 검색이 하루 100회 한도라 여러 런에 분산). 결과는 캐시.
+    // (a) 미해석 채널 해석(런당 최대 3개 — search.list 하루 500회 한도, 10분 주기 144런에 분산). 결과는 캐시.
     // ⚡ 핸들(@)은 channels.list=1유닛이라 사실상 공짜 → 런당 상한을 넉넉히.
-    //    이름 검색은 search.list 가 하루 100회 한도라 12개로 계속 분산(쿼터 보호).
+    //    이름 검색은 search.list 가 하루 500회 한도라 런당 3개로 분산(쿼터 보호).
     let handleNow = 0;
     for (const c of chanList) {
       if (c.uploads_playlist || c.ok === false) continue;
       const isHandle = String(c.name || "").startsWith("@");
       if (isHandle) { if (handleNow >= 40) continue; handleNow++; }
-      else { if (resolvedNow >= 12) continue; resolvedNow++; }
+      else { if (resolvedNow >= 3) continue; resolvedNow++; }   // search.list 하루 500회 ÷ 144런 → 3
       const cid = await resolveChannelId(c.name);
       if (cid) {
         c.uploads_playlist = "UU" + cid.slice(2);   // 업로드 재생목록 = UC…→UU…
@@ -338,16 +338,10 @@ Deno.serve(async (req) => {
     // (b) 해석된 채널의 최신 업로드 id 수확
     const idFeed = new Map<string, string>();
     const creatorIds: string[] = [];
-    /* 💰 6개 조로 나눠 30분마다 한 조만 본다 → 채널당 3시간에 1번(26.10.15).
-       전부 매 런 보던 때: 133채널 × 48런 = 하루 ~6,400유닛(playlistItems 가 쿼터의 80%를 먹었다).
-       급상승은 조회수 '증가 속도'로 정하니 새 업로드가 최대 3시간 늦게 들어와도 순위 영향은 작다. */
-    const GROUPS = 6;
-    const slot = Math.floor(Date.now() / (30 * 60 * 1000)) % GROUPS;
-    const resolved = chanList.filter((c: any) => c.uploads_playlist)
-      .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)));
-    for (let k = 0; k < resolved.length; k++) {
-      if (k % GROUPS !== slot) continue;
-      const c = resolved[k];
+    /* 📈 매 런 전 채널을 본다(10분 주기). 26.10.16 쿼터 증설 승인(하루 10만 유닛)으로 6개 조 분할을 풀었다.
+       133채널 × 144런 ≈ 하루 1.9만 유닛 — 차트·수화 포함해도 한도의 1/4 안쪽. */
+    const resolved = chanList.filter((c: any) => c.uploads_playlist);
+    for (const c of resolved) {
       const ids = await playlistRecent(c.uploads_playlist, 6);
       for (const id of ids) { if (!idFeed.has(id)) { idFeed.set(id, c.feed); creatorIds.push(id); } }
     }
