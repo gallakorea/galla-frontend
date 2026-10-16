@@ -337,3 +337,14 @@
   .th-card, .th-skc { opacity: 1; transform: none; }
   .th-ph img { transition: none; }
 }
+/* 제휴가 안내 한 줄 — 아고다로 넘어가면 회원가·쿠폰으로 더 쌀 수 있음(사실만) */
+.th-tip { display: flex; gap: 6px; align-items: flex-start; margin: 2px 0 10px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(124, 92, 255, .10); color: var(--th-sub); font-size: 11.5px; line-height: 1.45; }
+.th-tip svg { width: 13px; height: 13px; flex: 0 0 auto; margin-top: 2px; opacity: .8; }
+.th-tip b { color: var(--th-ink); font-weight: 700; }
+/* 🏅 비교 배지(목록 안 순위) */
+.th-bdgs { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+.th-bdg { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; letter-spacing: -.01em; }
+.th-bdg.b-score { background: rgba(255, 207, 77, .16); color: var(--th-gold); }
+.th-bdg.b-pop { background: rgba(108, 92, 255, .18); color: #b3a8ff; }
+.th-bdg.b-val { background: rgba(52, 211, 153, .15); color: #5ee0a8; }

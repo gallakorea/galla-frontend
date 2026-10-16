@@ -430,7 +430,23 @@
     return bits.join(" · ");
   }
 
+  /* 🏅 비교 배지 — 가격만으로 줄 세우지 않게, 지금 목록 안에서의 순위를 사실 그대로(평점·리뷰·가성비).
+     평점·가성비는 리뷰 50개 이상만(리뷰 3개짜리 9.8점이 1위 먹는 것 방지). */
+  function rankBadges(list) {
+    var out = {}, where = state.area ? areaName(state.area) : (state.cityName || state.city || "");
+    function put(id, t, cls) { (out[id] = out[id] || []).push('<span class="th-bdg ' + cls + '">' + esc(t) + "</span>"); }
+    var solid = list.filter(function (o) { return (Number(o.reviews) || 0) >= 50 && (Number(o.score) || 0) > 0; });
+    solid.slice().sort(function (a, b) { return b.score - a.score || b.reviews - a.reviews; }).slice(0, 3)
+      .forEach(function (o, k) { put(o.id, where + " 평점 " + (k + 1) + "위", "b-score"); });
+    var pop = list.slice().sort(function (a, b) { return (b.reviews || 0) - (a.reviews || 0); })[0];
+    if (pop && pop.reviews >= 100) put(pop.id, "리뷰 최다", "b-pop");
+    var val = solid.filter(function (o) { return o.score >= 8 && o.price > 0; })
+      .sort(function (a, b) { return a.price - b.price; })[0];
+    if (val) put(val.id, "평점 8+ 중 가장 저렴", "b-val");
+    return out;
+  }
   function offerHTML(o, i) {
+    var bdg = (state._badges && state._badges[o.id]) || [];
     var img = imgUrl(o.img), url = safeUrl(o.url) || safeUrl(state.meta && state.meta.bookUrl);
     var disc = Math.round(Number(o.discount) || 0);
     var crossed = Number(o.crossed) || 0;
@@ -451,6 +467,7 @@
       "</div>" +
       '<div class="th-body">' +
         (o.typeKo || place ? '<div class="th-kind">' + (o.typeKo ? '<span class="th-type">' + esc(o.typeKo) + "</span>" : "") + (place ? '<span class="th-place">' + IC.pin + place + "</span>" : "") + "</div>" : "") +
+        (bdg.length ? '<div class="th-bdgs">' + bdg.join("") + "</div>" : "") +
         '<div class="th-nm">' + esc(o.name || "숙소") + "</div>" +
         '<div class="th-meta">' + starsHTML(o.star) +
           (sc > 0 ? '<span class="th-score"><b>' + sc.toFixed(1) + "</b>" + esc(scoreLabel(sc)) + "</span>" : "") +
@@ -464,7 +481,7 @@
             (nights > 1 && total ? '<span class="th-total">' + nights + "박 총 " + won(total) + "원</span>" : "") +
             (o.roomType ? '<span class="th-total th-rt">' + esc(o.roomType) + " 기준</span>" : "") +
           "</div>" +
-          '<button type="button" class="th-book" data-book="1">아고다에서 예약' + IC.out + "</button>" +
+          '<button type="button" class="th-book" data-book="1">아고다 최저가 보기' + IC.out + "</button>" +
         "</div>" +
       "</div>" +
     "</div>";
@@ -566,9 +583,10 @@
     box.innerHTML = headHTML() +
       '<div class="th-count"><b>' + won(state.total || state.offers.length) + "곳</b>" + (lo ? " · 1박 최저 <em>" + won(lo) + "</em>원부터" : "") +
         (state.total > state.offers.length ? '<span class="th-count-s">상위 ' + state.offers.length + "곳 표시</span>" : "") + "</div>" +
-      '<div class="th-list">' + state.offers.map(offerHTML).join("") + "</div>" +
+      '<div class="th-tip">' + IC.out + '<span>표시 가격은 제휴 기준가예요. <b>아고다로 넘어가면 회원가·쿠폰으로 더 싸게</b> 잡히는 경우가 많아요</span></div>' +
+      '<div class="th-list">' + ((state._badges = rankBadges(state.offers)), state.offers.map(offerHTML).join("")) + "</div>" +
       (safeUrl(m.bookUrl) ? '<a class="th-more" href="' + esc(m.bookUrl) + '" target="_blank" rel="noopener noreferrer" data-url="' + esc(m.bookUrl) + '">아고다에서 더 많은 숙소 보기 ↗</a>' : "") +
-      '<p class="th-note">가격은 아고다 제휴 요금(표시된 객실 기준·세금 별도일 수 있음). 아고다로 넘어가면 더 싼 객실이나 회원 쿠폰가가 보일 수 있어요 · 예약은 아고다에서 진행</p>';
+      '<p class="th-note">가격은 표시된 객실 기준 아고다 제휴가(세금 별도일 수 있음) · 다른 객실·회원 쿠폰가는 아고다에서 확인 · 예약은 아고다에서 진행</p>';
     box.querySelectorAll(".th-won").forEach(countUp);
   }
 
@@ -841,8 +859,8 @@
         (mapUrl ? '<button type="button" class="th-mapbtn" data-url="' + esc(mapUrl) + '">' + IC.map + "지도에서 보기</button>" : "") + "</div>" : "") +
       (ov ? '<div class="th-dsec"><h3>' + (hasHangul(ov) ? "소개" : "소개(영문)") + '</h3><div class="th-ov" id="th-ov">' + esc(ov) + "</div>" +
         (ov.length > 180 ? '<button type="button" class="th-ovt" data-ov="1">펼치기</button>' : "") + "</div>" : "") +
-      (book && o ? '<a class="th-dbook" href="' + esc(book) + '" target="_blank" rel="noopener noreferrer" data-url="' + esc(book) + '">아고다에서 예약' + IC.out + "</a>" : "") +
-      '<p class="th-note">표시 요금은 위 객실 기준 아고다 제휴 요금이에요(세금 별도일 수 있음). 아고다에서 다른 객실·회원 쿠폰가가 더 쌀 수 있어요 · 예약·결제는 아고다에서 진행돼요</p>' +
+      (book && o ? '<a class="th-dbook" href="' + esc(book) + '" target="_blank" rel="noopener noreferrer" data-url="' + esc(book) + '">아고다에서 최저가 확인하고 예약' + IC.out + "</a>" : "") +
+      '<p class="th-note">위 요금은 이 객실 기준 제휴가예요(세금 별도일 수 있음). 아고다에선 다른 객실이나 회원가·쿠폰으로 더 싸게 잡히는 경우가 많아요 · 예약·결제는 아고다에서 진행돼요</p>' +
     "</div>";
   }
 

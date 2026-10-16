@@ -2058,7 +2058,7 @@
       o.area=a.area; o.types=a.types; o.minStar=a.minStar; o.priceMax=a.priceMax;
       openHotelsFromCard(a.city||"", o);
     });
-    c.querySelector(".qt-src").textContent=(a.source||"아고다")+" 기준 1박 요금 · 세금·수수료 별도일 수 있어요";
+    c.querySelector(".qt-src").textContent="아고다 제휴가 기준 1박 · 아고다에선 회원가·쿠폰으로 더 쌀 수 있어요";
     return c;
   }
   function buildQuote(a){
