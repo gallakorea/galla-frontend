@@ -52,3 +52,7 @@
 .soco-chips { display: flex; gap: 8px; }
 .soco-chip { flex: 1; height: 46px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #cfd4df; font-size: 15px; font-weight: 800; cursor: pointer; transition: .12s; }
 .soco-chip.on { background: rgba(90,134,255,.22); border-color: #5a86ff; color: #fff; }
+/* 회원가입 1단계 — 간편 가입 버튼을 이메일보다 먼저(26.10.17: 가입 버튼 누르면 이메일 가입만 보이던 문제) */
+.su-social .social-auth { margin-top: 10px; gap: 8px; }
+.soc-su-t { font-size: 13px; font-weight: 800; color: #c9cdd8; margin: 0 0 2px; }
+.su-or { margin: 18px 0 14px; }

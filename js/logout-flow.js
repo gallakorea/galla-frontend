@@ -42,6 +42,8 @@
   function close(dim) { if (!dim) return; dim.classList.remove("on"); setTimeout(function () { dim.remove(); }, 200); }
 
   async function doLogout(dim) {
+    /* 📱 이 폰 알림 주소를 내 계정에서 먼저 뗀다 — 로그아웃한 폰에 내 알림이 계속 오지 않게(세션 있을 때만 가능) */
+    try { if (window.GALLA_releaseNativePush) await window.GALLA_releaseNativePush(); } catch (_) {}
     try { await (window.supabaseClient && window.supabaseClient.auth.signOut()); } catch (_) {}
     /* signOut 이 네트워크로 실패해도 로컬 세션은 반드시 지운다 — 안 그러면
        "로그아웃했는데 그대로 로그인 상태"가 된다(비행기모드·지하철에서 재현). */

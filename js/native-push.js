@@ -14,22 +14,38 @@
   })();
   const PN = () => Cap && Cap.Plugins && Cap.Plugins.PushNotifications;
 
+  /* 🔑 토큰은 기기 것이고 계정은 바뀐다(26.10.17 결함).
+     예전엔 토큰이 오는 순간 로그인 안 돼 있으면 그냥 버렸고, 그 뒤 로그인해도 다시 등록하지 않았다
+     → 첫 실행에 알림을 허용하고 나중에 가입·로그인한 사람은 알림을 영영 못 받았다(잠금화면에 DM 안 뜸).
+     이제 토큰을 기기에 보관해 두고, 로그인될 때마다 「이 기기 = 지금 계정」으로 다시 묶는다.
+     claim RPC 가 같은 토큰을 쥔 다른 계정 행을 지워서, 계정을 바꿔 쓴 폰에 남의 알림이 오지 않게 한다. */
+  const TOK_KEY = "galla_push_tok";
+  function cachedToken() { try { return localStorage.getItem(TOK_KEY) || ""; } catch (_) { return ""; } }
+  async function saveToken(token) {
+    if (!token) return;
+    try { localStorage.setItem(TOK_KEY, token); } catch (_) {}
+    try {
+      const sb = window.supabaseClient; if (!sb) return;
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;   // 로그인되면 onAuthStateChange 가 다시 부른다
+      const { error } = await sb.rpc("claim_native_push_token", { p_token: token, p_platform: PLATFORM });
+      if (error) {   // RPC 가 아직 없을 때를 대비한 예전 방식
+        await sb.from("native_push_tokens").upsert(
+          { user_id: session.user.id, platform: PLATFORM, token, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,platform" });
+      }
+    } catch (_) { /* 저장 실패 무시 — 다음 로그인·실행에 다시 시도 */ }
+  }
+  window.GALLA_releaseNativePush = async function () {
+    const token = cachedToken(); if (!isNative || !token) return;
+    try { const sb = window.supabaseClient; if (sb) await sb.rpc("release_native_push_token", { p_token: token }); } catch (_) {}
+  };
+
   let _bound = false;
   function bindListeners() {
     const pn = PN(); if (!pn || _bound) return; _bound = true;
-    // 토큰 발급 → DB 저장
-    pn.addListener("registration", async (t) => {
-      try {
-        const token = t && t.value; if (!token) return;
-        const sb = window.supabaseClient; if (!sb) return;
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        await sb.from("native_push_tokens").upsert(
-          { user_id: user.id, platform: PLATFORM, token, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,platform" },
-        );
-      } catch (_) { /* 저장 실패 무시 */ }
-    });
+    // 토큰 발급 → 기기에 보관 + (로그인돼 있으면) 지금 계정에 묶기
+    pn.addListener("registration", (t) => { saveToken(t && t.value); });
     pn.addListener("registrationError", () => { /* 등록 실패 — 조용히 */ });
   }
 
@@ -113,7 +129,18 @@
     let tries = 0;
     const iv = setInterval(() => {
       tries++;
-      if (window.supabaseClient || tries > 20) { clearInterval(iv); silentRefresh(); }
+      if (window.supabaseClient || tries > 20) {
+        clearInterval(iv); silentRefresh();
+        /* 로그인·계정 전환 때마다 이 기기 토큰을 지금 계정에 다시 묶는다(가입 직후·재로그인 포함) */
+        try {
+          window.supabaseClient && window.supabaseClient.auth.onAuthStateChange((ev, session) => {
+            if (!session || (ev !== "SIGNED_IN" && ev !== "INITIAL_SESSION")) return;
+            const tok = cachedToken();
+            if (tok) saveToken(tok);
+            silentRefresh();   // 토큰이 없거나 바뀌었으면 새로 받아 registration 에서 저장
+          });
+        } catch (_) {}
+      }
     }, 500);
   }
 })();

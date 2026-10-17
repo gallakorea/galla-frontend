@@ -419,14 +419,15 @@
       } catch (_) { return /Android/i.test(navigator.userAgent) && /GallaApp/i.test(navigator.userAgent); }
     })();
 
-    let html = '<div class="social-div"><span>간편 로그인</span></div>' +
+    const signupMode = host.getAttribute && host.getAttribute("data-mode") === "signup";
+    let html = (signupMode ? '<div class="soc-su-t">3초 간편 가입</div>' : '<div class="social-div"><span>간편 로그인</span></div>') +
       '<button type="button" class="soc-btn soc-google" data-act="google"><span class="soc-ic soc-g">G</span> 구글로 계속하기</button>' +
       (androidApp ? '' :
       '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>') +
       '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>' +
       '<button type="button" class="soc-btn soc-kakao" data-act="kakao"><span class="soc-ic soc-k">K</span> 카카오로 계속하기</button>';
     // 🔑 패스키: 웹(origin=galla.im) + iOS 앱(네이티브 폴리필 __gallaPasskeyNative). 안드로이드 앱·웹클립·데스크톱은 제외.
-    if (hasPasskey() && !isDesktopApp() && (!isNativeApp() || window.__gallaPasskeyNative))
+    if (!signupMode && hasPasskey() && !isDesktopApp() && (!isNativeApp() || window.__gallaPasskeyNative))
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);
